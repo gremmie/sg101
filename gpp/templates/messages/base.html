@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/messages.css" />
+{% endblock %}
+{% block content %}
+<h2>Your Private Messsages</h2>
+<ul class="tab-nav">
+<li><a {% block compose-class %}{% endblock %} 
+   href="{% url messages-compose %}">Compose</a></li>
+<li><a {% block inbox-class %}{% endblock %} 
+   href="{% url messages-inbox %}">Inbox</a></li>
+<li><a {% block outbox-class %}{% endblock %} 
+   href="{% url messages-outbox %}">Outbox</a></li>
+<li><a {% block trash-class %}{% endblock %} 
+   href="{% url messages-trash %}">Trash</a></li>
+<li><a {% block options-class %}{% endblock %} 
+   href="{% url messages-options %}">Options</a></li>
+</ul>
+{% block messages_content %}
+{% endblock %}
+<br />
+{% endblock %}

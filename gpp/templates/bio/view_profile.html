@@ -1,0 +1,79 @@
+{% extends 'bio/base.html' %}
+{% load avatar_tags %}
+{% block title %}User Profile for {{ subject.username }}{% endblock %}
+{% block content %}
+<div class="user_profile">
+   <h2>User Profile for {{ subject.username }}</h2>
+   <p>{% avatar subject %}</p>
+<table>
+   <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>
+   <tr><th>Date Joined</th><td>{{ subject.date_joined|date:"F d, Y" }}</td></tr>
+   <tr><th>Last Login</th><td>{{ subject.last_login|date:"F d, Y @ H:i" }}</td></tr>
+   <tr><th>Active Member</th><td>{{ subject.is_active|yesno:"Yes,No" }}</td></tr>
+   <tr><th>Staff Member</th><td>{{ subject.is_staff|yesno:"Yes,No" }}</td></tr>
+   {% if profile.location %}
+   <tr><th>Location</th><td>{{ profile.location }}</td></tr>
+   {% endif %}
+   {% if profile.occupation %}
+   <tr><th>Occupation</th><td>{{ profile.occupation }}</td></tr>
+   {% endif %}
+   {% if profile.birthday %}
+   <tr><th>Birthday</th><td>{{ profile.birthday|date:"F d" }}</td></tr>
+   {% endif %}
+   {% if profile.interests %}
+   <tr><th>Interests</th><td>{{ profile.interests }}</td></tr>
+   {% endif %}
+   {% if profile.website_1 %}
+   <tr><th>Website 1</th><td><a href="{{ profile.website_1 }}">{{ profile.website_1 }}</a></td></tr>
+   {% endif %}
+   {% if profile.website_2 %}
+   <tr><th>Website 2</th><td><a href="{{ profile.website_2 }}">{{ profile.website_2 }}</a></td></tr>
+   {% endif %}
+   {% if profile.website_3 %}
+   <tr><th>Website 3</th><td><a href="{{ profile.website_3 }}">{{ profile.website_3 }}</a></td></tr>
+   {% endif %}
+   {% if not profile.hide_email %}
+   <tr><th>Email</th><td>{{ subject.email }}</td></tr>
+   {% endif %}
+   {% if profile.icq %}
+   <tr><th>ICQ</th><td>{{ profile.icq }}</td></tr>
+   {% endif %}
+   {% if profile.aim %}
+   <tr><th>AIM</th><td>{{ profile.aim }}</td></tr>
+   {% endif %}
+   {% if profile.yim %}
+   <tr><th>YIM</th><td>{{ profile.yim }}</td></tr>
+   {% endif %}
+   {% if profile.msnm %}
+   <tr><th>MSN</th><td>{{ profile.msnm }}</td></tr>
+   {% endif %}
+   {% if profile.twitter %}
+   <tr><th>Twitter</th><td><a href="{{ profile.twitter }}">{{ profile.twitter }}</a></td></tr>
+   {% endif %}
+   {% if profile.profile_html %}
+   <tr><th>Profile</th><td>{{ profile.profile_html|safe }}</td></tr>
+   {% endif %}
+   {% if profile.signature_html %}
+   <tr><th>Signature</th><td>{{ profile.signature_html|safe }}</td></tr>
+   {% endif %}
+</table>
+</div>
+{% if this_is_me %}
+<ul>
+   <li><a href="{% url bio-edit_profile %}"><img src="{{ MEDIA_URL }}icons/application_edit.png" alt="Edit Profile" /></a>
+   <a href="{% url bio-edit_profile %}">Edit Profile</a></li>
+   <li><a href="{% url bio-change_avatar %}"><img src="{{ MEDIA_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
+      <a href="{% url bio-change_avatar %}">Change Avatar</a></li>
+   <li><a href="{% url django.contrib.auth.views.password_change %}"><img src="{{ MEDIA_URL }}icons/key.png" alt="Change Password" /></a>
+      <a href="{% url django.contrib.auth.views.password_change %}">Change Password</a></li>
+</ul>
+{% else %}
+{% if user.is_authenticated %}
+<p>
+<a href="{% url messages-compose_to subject.username %}">
+   <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a>
+<a href="{% url messages-compose_to subject.username %}">Send a private message to {{ subject.username }}</a>
+</p>
+{% endif %}
+{% endif %}
+{% endblock %}

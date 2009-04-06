@@ -1,0 +1,20 @@
+{% extends 'news/base.html' %}
+{% block title %}News Archive{% endblock %}
+{% block archive-class %}class="active"{% endblock %}
+{% block news_content %}
+<h3>News Archive</h3>
+<p>
+This is our news archive. Click on a link to view the list of stories we published for that month.
+</p>
+
+{% if dates %}
+<ul>
+{% for date in dates %}
+   <li><a href="{% url news-archive_page year=date.year,month=date.month,page=1 %}">
+      {{ date|date:"F, Y" }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+   <p>No archives at this time.</p>
+{% endif %}
+{% endblock %}

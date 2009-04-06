@@ -1,0 +1,24 @@
+{% load comment_tags %}
+{% get_comment_count for download as comment_count %}
+<dt>
+<a href="{% url downloads-download download.id %}">{{ download.title }}</a>
+</dt>
+<dd>
+{{ download.html|safe }}
+<table>
+<tr>
+    <th>Added By:</th>
+        <td><a href="{% url bio-view_profile download.user.username %}">{{ download.user.username }}</a></td>
+    <th>Date:</th><td>{{ download.date_added|date:"M d, Y" }}</td>
+    <th>Size:</th><td>{{ download.size }}</td>
+</tr>
+<tr>
+    <th>Category:</th><td>{{ download.category.title }}</td>
+    <th>Hits:</th><td>{{ download.hits }}</td>
+</tr>
+<tr>
+    <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
+    <th><a href="{% url downloads-comments download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
+</tr>
+</table>
+</dd>

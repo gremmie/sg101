@@ -1,0 +1,23 @@
+{% extends 'weblinks/base.html' %}
+{% block title %}Web Links: Search Results{% endblock %}
+{% block weblinks_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block weblinks_content %}
+<h3>Search Results: {{ query }}</h3>
+
+{% include 'core/pagination_query.html' %}
+
+{% if page.object_list %}
+<dl>
+{% for link in page.object_list %}
+   {% include 'weblinks/link.html' %}
+{% endfor %}
+</dl>
+
+{% include 'core/pagination_query.html' %}
+
+{% else %}
+<p>No results found.</p>
+{% endif %}
+{% endblock %}

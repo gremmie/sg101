@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+   xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+   xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+{% if channel %}
+<atom:link href="{{ request.build_absolute_uri }}" rel="self" type="application/rss+xml" />
+<title>{{ channel.title }}</title>
+<link>{{ channel.link }}</link>
+<language>{{ channel.language }}</language>
+<copyright>{{ channel.copyright }}</copyright>
+<itunes:subtitle>{{ channel.subtitle }}</itunes:subtitle>
+<itunes:author>{{ channel.author }}</itunes:author>
+<itunes:summary>{{ channel.description }}</itunes:summary>
+<description>{{ channel.description }}</description>
+<itunes:owner>
+<itunes:name>{{ channel.owner_name }}</itunes:name>
+<itunes:email>{{ channel.owner_email }}</itunes:email>
+</itunes:owner>
+<itunes:image href="{{ channel.image.url }}" />
+<itunes:category text="{{ channel.category }}" />
+<itunes:explicit>{{ channel.explicit }}</itunes:explicit>
+{% for item in channel.item_set.all %}
+<item>
+<title>{{ item.title }}</title>
+<itunes:author>{{ item.author }}</itunes:author>
+<itunes:subtitle>{{ item.subtitle }}</itunes:subtitle>
+<itunes:summary>{{ item.summary }}</itunes:summary>
+<enclosure url="{{ item.enclosure_url }}" length="{{ item.enclosure_length }}" type="{{ item.enclosure_type }}" />
+<guid>{{ item.enclosure_url }}</guid>
+<pubDate>{{ item.pubdate|date:"D, d M Y H:i:s O" }}</pubDate>
+<itunes:duration>{{ item.duration }}</itunes:duration>
+<itunes:keywords>{{ item.keywords }}</itunes:keywords>
+<itunes:explicit>{{ item.explicit }}</itunes:explicit>
+</item>
+{% endfor %}
+{% endif %}
+</channel>
+</rss>

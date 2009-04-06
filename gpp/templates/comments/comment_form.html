@@ -1,0 +1,11 @@
+{% if user.is_authenticated %}
+<form action="{% url comments-post %}" method="post" id="comment-form">
+{{ form.as_p }}
+<input type="submit" name="post" value="Post Comment" id="comment-form-post"/>
+</form>
+{% else %}
+<p>
+Please <a href="{% url accounts-login %}">login</a> or
+<a href="{% url accounts-register %}">register</a> to leave a comment.
+</p>
+{% endif %}

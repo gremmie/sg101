@@ -1,0 +1,15 @@
+{% extends 'podcast/base.html' %}
+{% block title %}Podcast{% endblock %}
+{% block podcast-content %}
+{% if channel and channel.item_set %}
+   <h3>Podcast Index</h3>
+   <ul>
+   {% for item in channel.item_set.all %}
+      <li><a href="{{ item.get_absolute_url }}">{{ item.title }}</a> &bull;
+         {{ item.subtitle }} &bull; {{ item.pubdate|date:"F d, Y" }}</li>
+   {% endfor %}
+   </ul>
+{% else %}
+<p>No podcasts available at this time.</a>
+{% endif %}
+{% endblock %}

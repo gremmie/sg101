@@ -1,0 +1,10 @@
+Dear {{ to_name }},
+
+Your friend, {{ sender_name }}, wanted to send you a link to an 
+interesting story found on {{ site_name }}.
+
+{{ story_title|safe }}
+http://{{ site_url }}{{ story_link }}
+
+Thanks!
+http://{{ site_url}}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Event Calendar{% endblock %}
+{% block content %}
+<h2>SurfGuitar101 Event Calendar</h2>
+<p>All times are shown in the US/Central time zone. You can add any event on our calendar to your own 
+<a href="http://www.google.com/googlecalendar/overview.html">Google calendar</a>. If you do, the event
+will be displayed in your time zone, and you can have Google send you email or text message reminders for
+the events. Click on any event below to see more details or copy it to your calendar.</p>
+<iframe src="//www.google.com/calendar/embed?showTitle=0&amp;showTz=0&amp;height=540&amp;wkst=1&amp;bgcolor=%23DFDFDF&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;ctz=America%2FChicago" style=" border:solid 1px #777 " width="720" height="540" frameborder="0" scrolling="no"></iframe>
+
+<ul>
+{% if user.is_authenticated %}
+   <li><a href="{% url gcalendar-add %}"><img src="{{ MEDIA_URL}}icons/calendar_add.png" alt="Add" /></a>
+      <a href="{% url gcalendar-add %}">Add an event to our calendar</a>.</li>
+   <li><a href="{% url gcalendar-edit_events %}"><img src="{{ MEDIA_URL}}icons/calendar_edit.png" alt="Edit" /></a>
+      <a href="{% url gcalendar-edit_events %}">Change or delete an event you previously added</a>.</li>
+{% endif %}
+   <li>
+<a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
+<img src="{{ MEDIA_URL }}icons/feed.png" alt="feed" /></a>
+<a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
+RSS Feed</a>
+</li>
+<li>
+Want to embed this calendar on your website or blog? <a href="http://www.google.com/calendar/embedhelper?src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&ctz=America/Chicago">Use this helper tool</a>.
+</li>
+</ul>
+{% endblock %}

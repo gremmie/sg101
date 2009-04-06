@@ -1,0 +1,38 @@
+div.shoutbox-history table {
+   border-collapse: collapse;
+   width: 95%;
+   margin: 1em auto 1em auto;
+   border: 1px solid black;
+}
+div.shoutbox-history table tr {
+   border-top: 1px solid black;
+   border-bottom: 1px solid black;
+}
+div.shoutbox-history table tr th {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    padding: 5px 2px;
+    text-align: center;
+    width: 10%;
+}
+div.shoutbox-history table tr td {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    padding: 5px 5px;
+    width: 90%;
+}
+div.shoutbox-history table tr.odd {
+    background-color: #ddd;
+}
+div.shoutbox-history .date {
+    font-style: italic;
+}
+
+div.shoutbox-history .edit {
+    padding: 5px 5px;
+}
+
+div.shoutbox-history .edit:hover {
+    background-color: #7fffd4;
+    cursor: pointer;
+}

@@ -1,0 +1,33 @@
+ul.tab-nav {
+   border-bottom: 1px solid black;
+   padding-left: 10px;
+   margin: 12px 0px 1em 0px;
+}
+
+ul.tab-nav li {
+   display: inline;
+   overflow: hidden;
+   list-style-type: none;
+}
+
+ul.tab-nav li a, ul.tab-nav li a.active {
+   color: black;
+   background-color: teal;
+   border: 1px solid #300;
+   padding: 2px 5px 2px 5px;
+   text-decoration: none;
+}
+
+ul.tab-nav li a.active {
+   color: #000;
+   background-color: #eee;
+   border-bottom: 1px solid #eee;
+}
+
+ul.tab-nav li a:hover {
+    color: #fff;
+}
+
+ul.tab-nav li a.active:hover {
+    color: #000;
+}

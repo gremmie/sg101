@@ -1,0 +1,18 @@
+{% extends 'weblinks/base.html' %}
+{% block title %}Web Links: Add Link{% endblock %}
+{% block weblinks_content %}
+   <h3>Add Link</h3>
+   {% if add_form %}
+   <form action="." method="post">
+   <table>
+      {{ add_form.as_table }}
+      <tr><td>&nbsp;</td><td><input type="submit" value="Add Link" />
+         <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+   </table>
+   </form>
+   <br />
+   {% else %}
+   <p><strong>Thank you for submitting a link!</strong></p>
+   <p>Your link has been submitted for review to the site staff.</p>
+   {% endif %}
+{% endblock %}

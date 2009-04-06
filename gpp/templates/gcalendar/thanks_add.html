@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Event Calendar - Thanks{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; Thanks</div>
+<h2>Thanks for Submitting an Event!</h2>
+<p>Thanks for submitting an event to our calendar. Your event will be reviewed by the staff,
+and should appear on the calendar shortly. You may be contacted if we have any questions.</p>
+<p><a href="{% url gcalendar-index %}">&laquo; Back to the Event Calendar</a></p>
+{% endblock %}

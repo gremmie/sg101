@@ -1,0 +1,10 @@
+div.potd-details {
+    text-align: center;
+}
+div.potd-details p.caption {
+    font-weight: bold;
+}
+div.potd-details p.details {
+    font-style: italic;
+    font-size: smaller;
+}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block custom_js %}
+{{ form.media }}
+{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; {{ title }}</div>
+<h2>{{ title }}</h2>
+<p>Use this form to add or change an event on our calendar. Please note the following:</p>
+<ul>
+   <li>If applicable, please fill out the <strong>Where</strong> field as completely as you can. 
+   Google will generate a Google map from this information.</li>
+   <li>Currently, images and smilies won't show up correctly on the Google calendar. If you would
+   like to include an image, add a link to it instead.</li>
+   <li>Once submitted, your event will be reviewed by the site staff for approval. Normally it will appear on
+   the calendar within 24 hours.</li>
+</ul>
+<form id="id_gcal_event_form" action="." method="post">
+<table>
+{% if form.non_field_errors %}
+<tr><td>&nbsp;</td><td>{{ form.non_field_errors }}</td></tr>
+{% endif %}
+<tr><th>What:</th><td>{{ form.what.errors }}{{ form.what }}</td></tr>
+<tr><th>When:</th><td>
+      {{ form.start_date.errors }}{{ form.start_date }}
+      {{ form.start_time.errors }}{{ form.start_time }} to
+      {{ form.end_date.errors }}{{ form.end_date }}
+      {{ form.end_time.errors }}{{ form.end_time }}
+      {{ form.all_day.errors }}{{ form.all_day }} <strong>All Day</strong><br />
+      <div id="id_tz_stuff">
+      {{ form.time_zone.errors }}
+      <strong>Time Zone:</strong> <select id="id_tz_area"></select> <select id="id_tz_location"></select>
+      {{ form.time_zone }}
+      </div>
+</td></tr>
+<tr><th>Where:</th><td>{{ form.where.errors }}{{ form.where }}</td></tr>
+<tr><th>Details:</th><td>{{ form.description.errors }}{{ form.description }}</td></tr>
+{# form.as_p #}
+<tr><td>&nbsp;</td><td><input type="submit" name="submit_button" value="Submit" /></td></tr>
+</table>
+</form>
+<p><a href="{% url gcalendar-index %}">&laquo; Back to the Event Calendar</a></p>
+{% endblock %}

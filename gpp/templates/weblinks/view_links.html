@@ -1,0 +1,30 @@
+{% extends 'weblinks/base.html' %}
+{% block title %}Web Links: {{ category.title }}{% endblock %}
+{% block weblinks_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block weblinks_content %}
+<h3>Category: {{ category.title }}</h3>
+
+{% if page.object_list %}
+<ul class="tab-nav">
+   <li><a href="{% url weblinks-view_links category=category.id,sort="title",page="1" %}"
+      {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
+   <li><a href="{% url weblinks-view_links category=category.id,sort="date",page="1" %}"
+      {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
+   <li><a href="{% url weblinks-view_links category=category.id,sort="hits",page="1" %}"
+      {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
+</ul>
+
+{% include 'core/pagination.html' %}
+
+<dl>
+{% for link in page.object_list %}
+   {% include 'weblinks/link.html' %}
+{% endfor %}
+</dl>
+
+{% include 'core/pagination.html' %}
+{% endif %}
+{% endblock %}

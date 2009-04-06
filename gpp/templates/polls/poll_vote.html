@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Polls: {{ poll.question }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/polls.css" />
+{% endblock %}
+{% block content %}
+<h2>Poll</h2>
+<h3>{{ poll.question }}</h3>
+<form action="." method="post">
+   <div class="poll-form">
+   {{ vote_form.as_p }}
+   <input type="submit" value="Vote" />
+   </div>
+</form>
+<p class="poll-nav">
+<a href="{{ poll.get_absolute_url }}">Poll Details</a>
+| <a href="{% url polls.views.poll_results poll.id %}">View Results</a>
+| <a href="{% url polls.views.poll_index %}">Poll Index</a>
+</p>
+<p>This poll was published on {{ poll.start_date|date:"F d, Y" }}.</p>
+{% endblock %}

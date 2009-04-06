@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load comment_tags %}
+{% block title %}Poll Results: {{ poll.question }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/polls.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Polls</h2>
+<h3>{{ poll.question }}</h3>
+<dl class="poll-result">
+{% for choice in choices %}
+   <dt>{{ choice.choice }} - {{ choice.pct|floatformat }}% ({{ choice.votes }} vote{{ choice.votes|pluralize }})</dt>
+   <dd>
+      <div class="poll-percent" style="width: {{ choice.pct|floatformat:0 }}%; background-color: teal; color: white;">
+         <span>&nbsp;</span></div>
+   </dd>
+{% endfor %}
+</dl>
+<p><strong>{{ total_votes }} total vote{{ total_votes|pluralize }}.</strong></p>
+<p class="poll-nav">
+<a href="{{ poll.get_absolute_url }}">Poll Details</a>
+{% if poll.is_open and user.is_authenticated %}
+| <a href="{% url polls.views.poll_vote poll_id=poll.id %}">Vote</a> 
+{% endif %}
+| <a href="{% url polls.views.poll_index %}">Poll Index</a>
+</p>
+
+{% get_comment_count for poll as comment_count %}
+<p>This poll has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
+<hr />
+{% render_comment_list poll %}
+{% if poll.is_open %}
+<p>Leave a comment?</p>
+{% render_comment_form for poll %}
+{% else %}
+<p>Comments are closed for this poll. If you'd like to share your thoughts on this poll 
+with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>SurfGuitar101 Podcast</h2>
+<img src="{{ channel.image.url }}" alt="Podcast Logo" style="float: left; margin-right:10px;" />
+<p>
+Welcome to the <strong>Surfguitar101 Podcast</strong>! The podcast started as an experiment just to see what it took to create a podcast. The reaction was very positive so hopefully we will start seeing new episodes on a semi-regular basis. You can download the podcast episodes here and we are also listed in iTunes.
+</p>
+<p>
+Please discuss the podcasts in our Podcast forum. We'd love to hear your suggestions, and let us know if you would like
+to help in any way. We need producers, interviewers, artwork, etc. you name it. Thanks!
+</p>
+<p>
+In addition to the forum, you can contact us by email at 
+<a href="mailto:podcast@surfguitar101.com">podcast@surfguitar101.com</a>.
+</p>
+<p>
+Subscribe to the podcast via RSS: <a href="{% url podcast.views.feed %}">Feed</a>
+</p>
+<br clear="all" />
+<hr />
+{% block podcast-content %}{% endblock %}
+{% endblock %}

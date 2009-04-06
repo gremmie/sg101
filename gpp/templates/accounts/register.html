@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}New User Registration{% endblock %}
+{% block content %}
+<h2>New User Registration</h2>
+<p>Thank you for your interest in become a member of our community. Please keep the following in mind when
+registering for your account here:</p>
+<ul>
+   <li>Your username must be 30 characters or less, please use letters, digits, and underscores
+   only.</li>
+   <li>An email address is required to use this site. A confirmation email will be sent to the
+   address you supply, and it is necessary to complete the registration process.</li>
+   <li>You must agree to our <a href="{% url legal.views.view "tos" %}" target="_blank">Terms of Service</a>.</li>
+   <li>You must agree to our <a href="{% url legal.views.view "privacy" %}" target="_blank">Privacy Policy</a>.</li>
+</ul>
+<form action="." method="post">
+<table>
+   {{ form.as_table }}
+   <tr><td>&nbsp;</td><td><input type="submit" value="Submit" />
+         <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+</table>
+</form>
+{% endblock %}

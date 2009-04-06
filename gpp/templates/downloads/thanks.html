@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load downloads_tags %}
+{% block title %}Thanks for the Download{% endblock %}
+{% block custom_css %}
+{{ add_form.media }}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+{% endblock %}
+{% block content %}
+<h2>Downloads</h2>
+{% downloads_navigation %}
+<h3>Thanks for the Download</h3>
+<p>Thank you for sending in a download! Your file will be reviewed by the site staff and made
+available shortly.</p>
+{% endblock %}

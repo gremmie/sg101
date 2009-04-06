@@ -1,0 +1,36 @@
+{% extends 'news/base.html' %}
+{% load tagging_tags %}
+{% block title %}News: {{ title }}{% endblock %}
+{% block news_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block news_content %}
+<h3>{{ title }}</h3>
+
+{% if query %}
+{% include 'core/pagination_query.html' %}
+{% else %}
+{% include 'core/pagination.html' %}
+{% endif %}
+
+{% if page.object_list %}
+{% for story in page.object_list %}
+   {% tags_for_object story as story_tags %}
+   {% include 'news/story_summary.html' %}
+{% endfor %}
+<div style="clear:right;"></div>
+{% else %}
+   {% if query %}
+      <p>No results found.</p>
+   {% else %}
+      <p>No news at this time.</p>
+   {% endif %}
+{% endif %}
+
+{% if query %}
+{% include 'core/pagination_query.html' %}
+{% else %}
+{% include 'core/pagination.html' %}
+{% endif %}
+
+{% endblock %}

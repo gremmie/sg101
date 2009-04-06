@@ -1,0 +1,41 @@
+from django.conf.urls.defaults import *
+
+import settings
+from django.contrib import admin
+from news.feeds import LatestNewsFeed
+
+admin.autodiscover()
+
+feeds = {
+   'news': LatestNewsFeed,
+}
+
+urlpatterns = patterns('',
+   (r'^admin/doc/', include('django.contrib.admindocs.urls')),
+   (r'^admin/', include(admin.site.urls)),
+   (r'^accounts/', include('accounts.urls')),
+   (r'^calendar/', include('gcalendar.urls')),
+   (r'^comments/', include('comments.urls')),
+   (r'^contact/', include('contact.urls')),
+   (r'^downloads/', include('downloads.urls')),
+   url(r'^feeds/(?P<url>.*)/$', 
+      'django.contrib.syndication.views.feed', 
+      {'feed_dict': feeds },
+      'feeds-news'),
+   (r'^irc/', include('irc.urls')),
+   (r'^legal/', include('legal.urls')),
+   (r'^links/', include('weblinks.urls')),
+   (r'^member_map/', include('membermap.urls')),
+   (r'^messages/', include('messages.urls')),
+   (r'^news/', include('news.urls')),
+   (r'^podcast/', include('podcast.urls')),
+   (r'^polls/', include('polls.urls')),
+   (r'^potd/', include('potd.urls')),
+   (r'^profile/', include('bio.urls')),
+   (r'^shout/', include('shoutbox.urls')),
+)
+
+if settings.DEBUG:
+   urlpatterns += patterns('',
+      (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+   )

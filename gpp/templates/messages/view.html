@@ -1,0 +1,31 @@
+{% extends 'messages/base.html' %}
+{% block title %}Messages: {{ msg.subject }}{% endblock %}
+{% block messages_content %}
+<h3>Viewing Message: {{ msg.subject }}</h3>
+<table class="message-header">
+   <tr><th>Subject:</th><td>{{ msg.subject }}</td></tr>
+   <tr><th>From:</th><td>{{ msg.sender }}</td></tr>
+   <tr><th>To:</th><td>{{ msg.receiver }}</td></tr>
+   <tr><th>Date Sent:</th><td>{{ msg.send_date|date:"F d, Y g:i:s A T" }}</td></tr>
+   <tr><th>Date Received:</th>
+      <td>{% if msg.unread %}<em>Unread</em>{% else %}{{ msg.read_date|date:"F d, Y g:i:s A T" }}{% endif %}</td></tr>
+</table>
+
+<div class="message-body">
+   {{ msg.html|safe }}
+</div>
+{% if msg.signature_attached %}
+<div class="message-hr"></div>
+<div class="message-signature">
+   {{ msg.sender.get_profile.signature_html|safe }}
+</div>
+{% endif %}
+<p>
+{% if is_deleted %}
+<a href="{% url messages-undelete msg.id %}{% if box %}?box={{ box }}{% endif %}">Undelete</a>
+{% else %}
+<a href="{% url messages-reply msg.id %}{% if box %}?box={{ box }}{% endif %}">Reply</a> |
+<a href="{% url messages-delete msg.id %}{% if box %}?box={{ box }}{% endif %}">Delete</a>
+{% endif %}
+</p>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'news/base.html' %}
+{% load tagging_tags %}
+{% load comment_tags %}
+{% block title %}News: {{ story.title }}{% endblock %}
+{% block news_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
+{% endblock %}
+{% block news_content %}
+<h3>{{ story.title }}</h3>
+<div class="news-details">
+   Submitted by {{ story.submitter.username }} on {{ story.date_published|date:"F d, Y" }}.
+</div>
+<div class="news-content">
+   <a href="{% url news.views.category category=story.category.id,page=1 %}">
+   <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 
+      class="news-icon" /></a>
+   {{ story.short_text|safe }}
+   {{ story.long_text|safe }}
+   <br clear="all" />
+   {% tags_for_object story as story_tags %}
+   {% if story_tags %}
+   <div class="news-tags">
+      <span>Tags:</span>
+      <ul>
+         {% for tag in story_tags %}
+            <li><a href="{% url news-tag_page tag_name=tag.name,page=1 %}">{{ tag.name }}</a></li>
+         {% endfor %}
+      </ul>
+   </div>
+   {% endif %}
+   <p>
+   <a href="{{ story.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png"
+      alt="Story Permalink" title="Story Permalink" /></a>
+   <a href="{% url news.views.email_story story.id %}"><img src="{{ MEDIA_URL }}icons/email_go.png"
+      alt="Send this story to a friend" title="Send this story to a friend" /></a>
+   </p>
+</div>
+{% get_comment_count for story as comment_count %}
+<p>This story has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
+<hr />
+{% render_comment_list story %}
+{% if story.can_comment_on %}
+<p>Leave a comment?</p>
+{% render_comment_form for story %}
+{% else %}
+<p>Comments are closed for this story. If you'd like to share your thoughts on this story 
+with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>
+{% endif %}
+{% endblock %}

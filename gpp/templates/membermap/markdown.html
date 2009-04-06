@@ -1,0 +1,4 @@
+{% load markup %}
+{% load smiley_tags %}
+{% load avatar_tags %}
+{% avatar entry.user "left" %}<a href="{% url bio-view_profile username=entry.user.username %}">{{ entry.user.username }}</a>:<br />{{ entry.message|markdown:"safe"|smilify }}

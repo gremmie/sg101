@@ -1,0 +1,12 @@
+{% extends 'weblinks/base.html' %}
+{% block title %}Web Links: {{ title }}{% endblock %}
+{% block weblinks_content %}
+   <h3>{{ title }}</h3>
+   {% if links %}
+   <dl>
+   {% for link in links %}
+      {% include 'weblinks/link.html' %}
+   {% endfor %}
+   </dl>
+   {% endif %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Contact{% endblock %}
+{% block content %}
+<h2>Contact Us</h2>
+<p>Please use the following form to contact the site management. Your feedback and comments are very
+important to us.</p>
+<form action="{% url contact.views.contact_form %}" method="post">
+<table>
+   <tr><th>{{ form.name.label }}:</th><td>{{ form.name.errors }}{{ form.name }}</td></tr>
+   <tr><th>{{ form.email.label }}:</th><td>{{ form.email.errors }}{{ form.email }}</td></tr>
+   <tr><th>{{ form.subject.label }}:</th><td>{{ form.subject.errors }}{{ form.subject }}</td></tr>
+   <tr style="display:none"><th>{{ form.honeypot.label }}:</th><td>{{ form.honeypot }}</td></tr>
+   <tr><th>{{ form.message.label }}:</th><td>{{ form.message.errors }}{{ form.message }}</td></tr>
+   <tr><td>&nbsp;</td><td><input type="submit" value="Send" /></td></tr>
+</table>
+</form>
+{% endblock %}

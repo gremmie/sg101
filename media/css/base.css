@@ -1,0 +1,100 @@
+body {
+ background-color: #eee;
+}
+#page {
+}
+#header {
+ background-color: teal;
+}
+#header h1 {
+ border-bottom: 1px solid #ccc;
+ font: normal italic 1.5em/18px Georgia, serif;
+ margin-bottom: 11px;
+ color: #57FEFF;
+ margin-left: -108px;
+ padding: 15px 0 21px 108px; 
+}
+#header p {
+ float: left;
+ padding: 60px 24px 24px 24px;
+ font-size: 1.5em;
+ line-height: 1em;
+}
+#header ul {
+ padding-top: 62px;
+ padding-right: 12px;
+ text-align: right;
+ list-style: none;
+}
+#header li {
+ display: inline;
+ margin: 0 12px;
+}
+#header li a {
+ font-size: 1.25em;
+ line-height: 1em;
+ text-decoration: none;
+ color: #57FEFF;
+}
+#header li a:hover {
+ color: #300;
+} 
+#content-primary {
+}
+#content-secondary {
+}
+#footer {
+ height: 192px;
+ background: #333;
+ font-size: 10px;
+ line-height: 1em;
+ text-shadow: 1px 1px 1px #333;
+ color: #fff; 
+}
+#footer p {
+ padding: 24px;
+} 
+ul.app-menu {
+   text-align: center;
+   list-style: none;
+}
+ul.app-menu li {
+   display: inline;
+   border: 1px solid black;
+   padding: 3px 1em;
+   background-color: teal;
+}
+ul.app-menu li a {
+   text-decoration: none;
+   background-color: teal;
+   color: #111;
+}
+ul.app-menu li a:hover {
+   color: #fff;
+}
+div.side-block {
+   margin: 0 0 0.5em 0;
+   padding: 2px 2px;
+   width: 100%;
+}
+div.side-block-title {
+   margin: 0;
+   background-color: teal;
+   color: white;
+   font-weight: bold;
+   text-align: center;
+}
+div.side-block-content {
+   margin: 0;
+   border: 1px solid teal;
+   padding: 2px 2px;
+}
+iframe {
+   margin-bottom: 1em;
+}
+img {
+   border-style: none;
+}
+.breadcrumbs {
+   font-size: x-small;
+}

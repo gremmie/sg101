@@ -1,0 +1,50 @@
+{% extends 'bio/base.html' %}
+{% load avatar_tags %}
+{% block title %}Member List{% endblock %}
+{% block bio_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block content %}
+<h2>Member List</h2>
+
+{% if page.object_list %}
+<ul class="tab-nav">
+   <li><a href="{% url bio-members_full type="user",page="1" %}"
+      {% ifequal type "user" %}class="active" {% endifequal %}>User</a></li>
+   <li><a href="{% url bio-members_full type="date",page="1" %}"
+      {% ifequal type "date" %}class="active" {% endifequal %}>Date</a></li>
+</ul>
+
+{% include 'core/pagination.html' %}
+<div class="members-list">
+<table>
+<tr>
+<th>Avatar</th>
+<th>Username</th>
+<th>Full Name</th>
+<th>Location</th>
+<th>Date Joined</th>
+<th>Contact</th>
+</tr>
+{% for u in page.object_list %}
+<tr class="{% cycle 'even' 'odd' %}">
+   <td><a href="{% url bio-view_profile username=u.username %}">{% avatar u %}</a></td>
+   <td><a href="{% url bio-view_profile username=u.username %}" title="View profile for {{ u.username }}">{{ u.username }}</a></td>
+   <td>{{ u.get_full_name }}</td>
+   <td>{{ u.get_profile.location }}</td>
+   <td>{{ u.date_joined|date:"M. d, Y" }}</td>
+   <td>
+      {% ifnotequal user u %}<a href="{% url messages-compose_to u.username %}">
+         <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
+      {% if not u.get_profile.hide_email %}<a href="mailto:{{ u.email }}">
+         <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}
+   </td>
+</tr>
+{% endfor %}
+</table>
+</div>
+
+{% include 'core/pagination.html' %}
+{% endif %}
+{% endblock %}

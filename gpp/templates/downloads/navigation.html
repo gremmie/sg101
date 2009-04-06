@@ -1,0 +1,11 @@
+<form id="downloads-search" action="{% url downloads-search page=1 %}" method="post">
+    <p>{{ search_form.text }} <input type="submit" value="Search" /></p>
+</form>
+<ul class="app-menu">
+    <li><a href="{% url downloads-index %}">Categories</a></li>
+    <li><a href="{% url downloads-new %}">New</a></li>
+    <li><a href="{% url downloads-popular %}">Popular</a></li>
+    <li><a href="{% url downloads-rating %}">Highest Rated</a></li>
+    <li><a href="{% url downloads-random %}">Random</a></li>
+    <li><a href="{% url downloads-add %}">Add</a></li>
+</ul>

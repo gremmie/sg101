@@ -1,0 +1,30 @@
+div.pagination {
+	padding: 3px;
+}
+div.pagination ul {
+	list-style-type: none;
+}
+div.pagination li {
+	float: left;
+	display: inline;
+	margin: 0 5px 0 0;
+	display: block;
+}
+div.pagination li a {
+	color: #333;
+	padding: 4px;
+	border: 1px solid #333;
+	text-decoration: none;
+	float: left;
+}
+div.pagination li a:hover {
+	color: #333;
+	background: #57FEFF;
+	border: 1px solid #333;
+}
+div.pagination li.current {
+	color: #fff;
+	border: 1px solid #333;
+	padding: 4px;
+	background: teal;
+}

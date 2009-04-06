@@ -1,0 +1,35 @@
+{% extends 'admin/base_site.html' %}
+{% block title %}Sync Events w/Google Calendar{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+   <a href="../../../">Home</a> &rsaquo;
+   <a href="../../">Gcalendar</a> &rsaquo; 
+   <a href="../">Events</a> &rsaquo; Google Sync
+</div>
+{% endblock %}
+{% block content %}
+<h1>Synchronize Approved Events with Google Calendar</h1>
+{% if errors %}
+<ul class="errorlist">
+   {{ errors|unordered_list }}
+</ul>
+{% endif %}
+{% if events %}
+<p>To synchronize the following approved events with the Google calendar, please enter the password for the
+account and click submit.</p>
+<ol>
+{% for event in events %}
+{% if not event.on_calendar %}
+<li><a href="../../{{ event.id }}">{{ event.start_date|date:"M d, Y" }} - {{ event.what }}</a>
+&bull; Submitted by {{ event.user.username }} &bull; <strong>{{ event.get_status_display }}</strong></li>
+{% endif %}
+{% endfor %}
+</ol>
+<form action="." method="POST">
+   {{ form.as_p }}
+   <p><input type="submit" name="submit" value="Submit" /></p>
+</form>
+{% else %}
+<p>No events to synchronize at this time.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools %}
+{% if has_add_permission %}
+<ul class="object-tools"><li><a href="add/{% if is_popup %}?_popup=1{% endif %}" class="addlink">Add {{ name }}</a></li>
+<li><a href="google_sync/">Google Sync</a></li>
+</ul>
+{% endif %}
+{% endblock %}

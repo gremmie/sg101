@@ -1,0 +1,25 @@
+{% load avatar_tags %}
+{% load markup %}
+{% load smiley_tags %}
+<li>
+<div class="comment">
+<div class="comment-avatar">
+<a href="{% url bio-view_profile username=comment.user.username%}">{% avatar comment.user %}</a>
+</div>
+{% if comment.is_removed %}
+<div class="comment-text-removed"><p>This comment has been removed.</p></div>
+{% else %}
+<div class="comment-text">{{ comment.html|safe }}</div>
+{% endif %}
+<div class="comment-details">
+<a href="{% url bio-view_profile username=comment.user.username%}" 
+    title="View profile for {{ comment.user.username }}">{{ comment.user.username }}</a> |
+{{ comment.creation_date|date:"d-M-Y H:i:s" }}
+{% if not comment.is_removed %}
+| <a href="#" class="comment-flag" id="fc-{{ comment.id }}" 
+   title="Flag this comment as spam, abuse, or a violation of site rules.">
+   <img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" /></a>
+{% endif %}
+</div>
+</div>
+</li>

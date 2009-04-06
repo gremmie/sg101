@@ -1,0 +1,16 @@
+<dt>
+<a href="{% url weblinks.views.visit link.id %}" target="_blank">{{ link.title }}</a>
+</dt>
+<dd>
+<p>{{ link.description }}</p>
+<table class="link-stats">
+   <tr>
+      <th>Date:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
+      <th>Hits:</th><td>{{ link.hits }}</td>
+   </tr>
+</table>
+<p>
+   <a href="{% url weblinks.views.report_link link.id %}">Report Broken Link</a>
+</p>
+<br />
+</dd>

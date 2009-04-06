@@ -1,0 +1,26 @@
+#comment-list {
+    font-size: 18px;
+    font-weight: bold;
+    color: #999;
+}
+div.comment {
+    padding: 0.5em;
+    border-bottom: 1px dashed black;
+    font: 12px/18px "Lucida Grande", Verdana, sans-serif; 
+    color: #333;
+}
+div.comment-avatar {
+    float: left;
+    padding-right: 1.5em;
+}
+div.comment-text {
+}
+div.comment-text-removed {
+    font-style: italic;
+}
+div.comment-details {
+    clear: both;
+    font-size: smaller;
+    font-style: italic;
+    padding-top: 0.5em;
+}

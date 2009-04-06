@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load downloads_tags %}
+{% block title %}Downloads: Search Results{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Downloads</h2>
+{% downloads_navigation %}
+<h3>Search Results: {{ query }}</h3>
+
+{% if page.object_list %}
+{% include 'core/pagination_query.html' %}
+
+<dl>
+{% for download in page.object_list %}
+   {% include 'downloads/download.html' %}
+{% endfor %}
+</dl>
+
+{% include 'core/pagination_query.html' %}
+{% else %}
+<p>No results found for &quot;{{ query }}&quot;.</p>
+{% endif %}
+{% endblock %}

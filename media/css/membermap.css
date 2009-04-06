@@ -1,0 +1,20 @@
+#member_map_members_column {
+   float: left;
+}
+#member_map_map {
+   float: left;
+   width: 640px;
+   height: 480px;
+   border: 1px solid black;
+}
+#member_map_info {
+   padding-top: 1em;
+   clear: left;
+}
+.markItUp {
+   width: 600px;
+}
+.markItUpEditor {
+	width:543px;
+	height:200px;
+}

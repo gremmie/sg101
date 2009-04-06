@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Edit Calendar Events{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/gcalendar_edit.js"></script>
+{% endblock %}
+{% block content %}
+<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; Edit Events</div>
+<h2>Edit Calendar Events</h2>
+{% if events %}
+<p>You have the following events on our calendar. Click on the event title to edit it, or click the
+<img src="{{ MEDIA_URL }}icons/cross.png" alt="Cross" /> to delete it. 
+Your changes will be submitted to the site staff for approval, and won't be reflected on the Google
+calendar until then. The approval process usually takes less than 12 hours. Thanks for helping to 
+keep our calendar up to date!
+</p>
+<ul>
+{% for event in events %}
+<li>{{ event.start_date|date:"M d, Y"}} &bull;
+<a href="{% url gcalendar-edit_event event.id %}" title="Edit Event">{{ event.what }}</a>
+<a class="gcal-del" id="gcal-{{ event.id }}" href="#"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete Event" title="Delete Event" /></a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>You either have no events on our calendar, or all your events have pending changes 
+that require admin review.</p>
+{% endif %}
+{% endblock %}

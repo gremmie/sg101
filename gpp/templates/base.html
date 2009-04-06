@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+{% load shoutbox_tags %}
+{% load irc_tags %}
+{% load potd_tags %}
+{% load messages_tags %}
+<head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
+<meta http-equiv="Content-Type" content="text/html" />
+<meta http-equiv="Content-Language" content="en-US" />
+<meta name="robots" content="all" />
+<meta name="Author" content="Brian Neal" />
+<meta name="copyright" content="&copy; 2009 Brian Neal" />
+<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/screen.css" type="text/css" media="screen, projection" />
+<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/print.css" type="text/css" media="print" /> 
+<!--[if IE]>
+<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/ie.css" type="text/css" media="screen, projection" />
+<![endif]-->
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/base.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/shoutbox.css" />
+<!--<script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox.js"></script>-->
+{% block custom_head %}{% endblock %}
+{% block custom_css %}{% endblock %}
+{% block custom_js %}{% endblock %}
+<!-- <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ MEDIA_URL }}images/favicon.ico" /> -->
+</head>
+<body>
+<div id="page" class="container">
+<div id="header" class="span-24">
+   <h1>SurfGuitar101</h1>
+   <p>Header content</p>
+      <ul>
+         {% if user.is_authenticated %}
+         <li>{% unread_messages user %}</li>
+         <li><a href="{% url bio-me %}">My Profile</a></li>
+         <li><a href="{% url accounts-logout %}">Logout</a></li>
+         {% else %}
+         <li><a href="{% url accounts-login %}">Login</a></li>
+         <li><a href="{% url accounts-register %}">Register</a></li>
+         {% endif %}
+      </ul> 
+</div>
+
+<div id="content-secondary" class="span-4 append-1">
+   <ul class="nav-left">
+      <li><a href="{% url news-index_page page=1 %}">Home</a></li>
+      <li><a href="{% url news-index_page page=1 %}">News</a></li>
+      <li><a href="{% url gcalendar-index %}">Calendar</a></li>
+      <li><a href="{% url contact-form %}">Contact</a></li>
+      <li><a href="{% url irc-main %}">IRC</a></li>
+      <li><a href="{% url bio-members %}">Member List</a></li>
+      <li><a href="{% url membermap-index %}">Member Map</a></li>
+      <li><a href="{% url messages-inbox %}">Private Messages</a></li>
+      <li><a href="{% url podcast-main %}">Podcast</a></li>
+      <li><a href="{% url polls-main %}">Polls</a></li>
+      <li><a href="{% url potd-view %}">Photo of the Day</a></li>
+      <li><a href="{% url weblinks-main %}">Links</a></li>
+      <li><a href="{% url downloads-index %}">Downloads</a></li>
+   </ul>
+   {% photo_of_the_day %}
+   {% shoutbox %}
+   {% irc_status %}
+</div>
+
+<div id="content-primary" class="span-19 last">
+   {% block content %}
+   {% endblock %}
+</div>
+
+
+<div id="footer" class="span-24">
+   <p>Website &copy; 2008 by Brian Neal</p>
+</div>
+
+{% if debug %}
+<div id="debug" class="span-24">
+<ol>
+{% for s in sql_queries %}
+<li>{{ s.sql }} : <b>({{ s.time }})</b></li>
+{% endfor %}
+</ol>
+</div>
+{% endif %}
+
+</div>
+</body>
+</html>

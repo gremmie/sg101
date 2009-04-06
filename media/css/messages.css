@@ -1,0 +1,63 @@
+blockquote {
+   margin-left: 2em;
+   border-left: 3px solid grey;
+   padding-left: 3px;
+}
+blockquote ul {
+    margin-left: 1em;
+}
+
+table.messages {
+   border: 1px solid black;
+   border-spacing: 0px;
+   border-collapse: collapse;
+   margin-left: 1em;
+}
+
+table.messages th {
+   color: black;
+   background: #bdd6d6;
+   padding: 3px 4px 3px 4px;
+   font-weight: bold;
+}
+
+table.messages td {
+   border: 1px solid black;
+   padding: 10px 8px;
+}
+
+table.message-header {
+   border-spacing: 0px;
+   border-collapse: collapse;
+   border-top: 1px solid black;
+   border-bottom: 1px solid black;
+}
+
+table.message-header tr {
+   border-bottom: 1px solid black;
+}
+
+table.message-header th {
+   text-align: left;
+   font-weight: bold;
+   padding: 3px;
+}
+
+table.message-header td {
+   text-align: left;
+   padding: 3px;
+}
+
+div.message-body {
+   margin: 1em 1em;
+   padding-top: 5px;
+}
+div.message-signature {
+   font-size: smaller;
+   margin-left: 1em;
+}
+div.message-hr {
+   width: 20%;
+   margin-left: 0;
+   border-top: 1px solid black;
+}

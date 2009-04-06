@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load downloads_tags %}
+{% block title %}Downloads: {{ category.title }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Downloads</h2>
+{% downloads_navigation %}
+<h3>Category: {{ category.title }}</h3>
+
+{% if page.object_list %}
+<ul class="tab-nav">
+   <li><a href="{% url downloads-category category=category.id,sort="title",page="1" %}"
+      {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
+   <li><a href="{% url downloads-category category=category.id,sort="date",page="1" %}"
+      {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
+   <li><a href="{% url downloads-category category=category.id,sort="rating",page="1" %}"
+      {% ifequal s "rating" %}class="active"{% endifequal %}>Rating</a></li>
+   <li><a href="{% url downloads-category category=category.id,sort="hits",page="1" %}"
+      {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
+</ul>
+
+{% include 'core/pagination.html' %}
+
+<dl>
+{% for download in page.object_list %}
+   {% include 'downloads/download.html' %}
+{% endfor %}
+</dl>
+
+{% include 'core/pagination.html' %}
+{% else %}
+<p>No downloads in this category at this time.</p>
+{% endif %}
+{% endblock %}

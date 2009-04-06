@@ -1,0 +1,8 @@
+Feedback Message from {{ site_name }}:
+
+Sender's Name: {{ user_name }}
+Sender's Email: {{ user_email }}
+Message:
+
+{{ message }}
+

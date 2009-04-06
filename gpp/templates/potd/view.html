@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load comment_tags %}
+{% block title %}Photo Of The Day{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/potd.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Photo Of The Day</h2>
+<h3>{% now "l, F d, Y" %}</h3>
+<div class="potd-details">
+{% if potd %}
+<img src="{{ potd.photo.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" />
+<p class="caption">{{ potd.caption }}</p>
+<p class="details">
+Submitted by 
+<a href="{% url bio-view_profile username=potd.user.username %}">{{ potd.user.username }}</a>
+on {{ potd.date_added|date:"d F Y" }}.<br />
+This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
+</p>
+<p class="description">{{ potd.description }}</p>
+<p class="details">
+If you would like us to feature your photo, send it along with your username, a title, and 
+short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar101.com</a>.
+</p>
+{% get_comment_count for potd as comment_count %}
+<p>This photo has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
+<hr />
+</div>
+{% render_comment_list potd %}
+{% if potd.can_comment_on %}
+<p>Leave a comment?</p>
+{% render_comment_form for potd %}
+{% else %}
+<p>Comments are allowed only on today's photo of the day. If you'd like to share your thoughts on this photo 
+with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>
+{% endif %}
+{% else %}
+<p>We're sorry, there doesn't seem to be a photo of the day right now.</p>
+{% endif %}
+{% endblock %}

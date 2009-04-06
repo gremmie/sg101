@@ -1,0 +1,22 @@
+<div class="pagination">
+<ul>
+{% if page.has_previous %}
+<li class="prev"><a href="../{{ page.previous_page_number }}/" title="Go to page {{ page.previous_page_number }}">&laquo; Previous</a></li>
+{% endif %}
+{% for num in page.page_range %}
+{% if num %}
+{% ifequal num page.number %}
+<li class="current">{{ num }}</li>
+{% else %}
+<li class="page"><a href="../{{ num }}/" title="Go to page {{ num }}">{{ num }}</a></li>
+{% endifequal %}
+{% else %}
+<li>&hellip;</li>
+{% endif %}
+{% endfor %}
+{% if page.has_next %}
+<li class="next"><a href="../{{ page.next_page_number }}/" title="Go to page {{ page.next_page_number }}">Next &raquo;</a></li>
+{% endif %}
+</ul>
+</div>
+<br clear="left" />

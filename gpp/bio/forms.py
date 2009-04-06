@@ -1,0 +1,118 @@
+"""
+This file contains the forms used by the bio application.
+"""
+from PIL import ImageFile
+from PIL import Image
+
+try:
+    from cStringIO import StringIO
+except:
+    from StringIO import StringIO
+
+from django import forms
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.contrib.auth.models import User
+
+from bio.models import UserProfile
+
+
+class EditUserForm(forms.ModelForm):
+    """Form for editing the fields of the User model."""
+    email = forms.EmailField(label='Email', required=True)
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+
+
+class EditUserProfileForm(forms.ModelForm):
+    """Form for editing the fields of the UserProfile model."""
+    location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    website_1 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    website_2 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    website_3 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+
+    class Meta:
+        model = UserProfile
+        exclude = ('user', 'avatar', 'profile_html', 'signature_html')
+
+    class Media:
+        css = {
+            'all': ('js/markitup/skins/markitup/style.css',
+                    'js/markitup/sets/markdown/style.css',
+                    'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/redmond/jquery-ui.css',
+                    ),
+        }
+        js = (
+            'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
+            'js/markitup/jquery.markitup.pack.js',
+            'js/markitup/sets/markdown/set.js',
+            'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/jquery-ui.js',
+            'js/bio.js',
+        )
+
+
+def get_image(file):
+    """
+    Returns a PIL Image from the supplied file.
+    Throws ValidationError if the file does not parse as an image file.
+    """
+    parser = ImageFile.Parser()
+    for chunk in file.chunks():
+        parser.feed(chunk)
+    try:
+        image = parser.close()
+        return image
+    except IOError:
+        pass
+    raise forms.ValidationError("Upload a valid image. " +
+            "The file you uploaded was either not an image or a corrupted image.")
+
+
+def scale_image(image, size):
+    """Scales an image file if necessary."""
+
+    # don't upscale
+    if (size, size) >= image.size:
+        return image
+
+    (w, h) = image.size
+    if w > h:
+        diff = (w - h) / 2
+        image = image.crop((diff, 0, w - diff, h))
+    elif h > w:
+        diff = (h - w) / 2
+        image = image.crop((0, diff, w, h - diff))
+    image = image.resize((size, size), Image.ANTIALIAS)
+    return image
+
+
+class UploadAvatarForm(forms.Form):
+    """Form used to change a user's avatar"""
+    avatar_file = forms.ImageField(required=False)
+    image = None
+
+    def clean_avatar_file(self):
+        file = self.cleaned_data['avatar_file']
+        if file is not None:
+            if file.size > settings.MAX_AVATAR_SIZE_BYTES:
+                raise forms.ValidationError("Please upload a file smaller than %s bytes." % \
+                        settings.MAX_AVATAR_SIZE)
+            self.image = get_image(file)
+            self.format = self.image.format
+        return file
+
+    def get_file(self):
+        if self.image is not None:
+            self.image = scale_image(self.image, settings.MAX_AVATAR_SIZE_PIXELS)
+            s = StringIO()
+            self.image.save(s, self.format)
+            return ContentFile(s.getvalue())
+        return None
+
+    def get_filename(self):
+        return self.cleaned_data['avatar_file'].name
+
+# vim: ts=4 sw=4

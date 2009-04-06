@@ -1,0 +1,12 @@
+{% extends 'side_block.html' %}
+{% block block_title %}Photo of the Day{% endblock %}
+{% block block_content %}
+{% if potd %}
+<center>
+<img src="{{ potd.thumb.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" /><br />
+<a href="{% url potd-view %}">{{ potd.caption }}</a>
+</center>
+{% else %}
+<p>No photo at this time.</p>
+{% endif %}
+{% endblock %}

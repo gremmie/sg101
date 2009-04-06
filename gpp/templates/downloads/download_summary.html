@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load downloads_tags %}
+{% block title %}{{ title }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Downloads</h2>
+{% downloads_navigation %}
+<h3>{{ title }}</h3>
+
+{% if downloads %}
+<dl>
+{% for download in downloads %}
+   {% include 'downloads/download.html' %}
+{% endfor %}
+</dl>
+{% else %}
+<p>No downloads available at this time.</p>
+{% endif %}
+{% endblock %}

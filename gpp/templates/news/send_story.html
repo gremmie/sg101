@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}News: Send Story to a Friend{% endblock %}
+{% block content %}
+<h3>Send Story to a Friend</h3>
+{% if send_form %}
+   <p>Would you like to send a link to the story titled <strong>{{ story.title }}</strong> to a friend?
+   Just fill out the form below and click Send.</p>
+   <ul>
+      <li>Your name: {{ user.get_full_name }}</li>
+      <li>Your email: {{ user.email }}</li>
+   </ul>
+   <form action="." method="post">
+      <table>
+         {{ send_form.as_table }}
+         <tr><td>&nbsp;</td><td><input type="submit" value="Send" />
+            <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+      </table>
+   </form>
+{% else %}
+   <p><strong>Thank you for letting your friend know about this story and our site!</strong></p>
+   <p>An email has been sent to your friend with a link to the story.</p>
+{% endif %}
+<br />
+{% endblock %}

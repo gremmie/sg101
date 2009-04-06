@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load downloads_tags %}
+{% block title %}Downloads{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+{% endblock %}
+{% block content %}
+<h2>Downloads</h2>
+{% downloads_navigation %}
+<h3>Categories</h3>
+{% if categories %}
+<p>We have {{ total_dls }} download{{ total_dls|pluralize }} in {{ categories.count }} categories.</p>
+<dl>
+{% for category in categories %}
+<dt>
+<a href="{% url downloads-category category=category.pk,sort="title",page=1 %}">{{ category.title }}</a>
+({{ category.num_downloads }})
+</dt>
+<dd><p>{{ category.description }}</p></dd>
+{% endfor %}
+</dl>
+{% endif %}
+{% endblock %}

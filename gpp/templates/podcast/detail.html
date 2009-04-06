@@ -1,0 +1,12 @@
+{% extends 'podcast/base.html' %}
+{% block title %}Podcast: {{ podcast.title }}{% endblock %}
+{% block podcast-content %}
+<div class="breadcrumb">
+   <a href="{% url podcast.views.index %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
+</div>
+<h3>{{ podcast.pubdate|date:"F d, Y" }} &bull; {{ podcast.title }}</h3>
+<h4>{{ podcast.subtitle }}</h4>
+{{ podcast.summary|linebreaks }}
+<p><a href="{{ podcast.enclosure_url }}">Download Now</a> &bull;
+{{ podcast.enclosure_length|filesizeformat }} &bull; {{ podcast.duration }}</p>
+{% endblock %}

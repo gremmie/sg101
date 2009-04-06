@@ -1,0 +1,36 @@
+span.shoutbox-user {
+   font-weight: bold;
+   text-decoration: underline;
+}
+span.shoutbox-shout {
+}
+span.shoutbox-date {
+   font-style: italic;
+}
+
+div#shoutbox-smiley-frame {
+    margin: 0.5em 2px;
+}
+
+div#shoutbox-smiley-frame img {
+    padding: 1px 1px;
+}
+
+div.smiley_farm img {
+    border: 0;
+    cursor: pointer;
+}
+
+#marqueecontainer {
+position: relative;
+width: 142; /*marquee width */
+height: 200px; /*marquee height */
+background-color: #bdd6d6;
+overflow: hidden;
+overflow: auto;
+border: 1px solid teal;
+padding: 2px;
+padding-left: 4px;
+margin-bottom: 2px;
+}
+
