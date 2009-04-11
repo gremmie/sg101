@@ -98,3 +98,6 @@ img {
 .breadcrumbs {
    font-size: x-small;
 }
+table {
+   width: auto;
+}
