@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
 
-from core.models import SiteConfig
+import settings
 from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
@@ -72,7 +72,7 @@ class RegisterForm(forms.Form):
       # Send the confirmation email
 
       site = Site.objects.get_current()
-      site_config = SiteConfig.objects.get_current()
+      admin_email = settings.ADMINS[0][1]
 
       activation_link = 'http://%s%s' % (site.domain, reverse('accounts.views.register_confirm', 
             kwargs = {'username' : pending_user.username, 'key' : pending_user.key}))
@@ -85,11 +85,11 @@ class RegisterForm(forms.Form):
                'activation_link' : activation_link,
                'username' : pending_user.username,
                'raw_password' : self.cleaned_data['password1'],
-               'admin_email' : site_config.admin_email,
+               'admin_email' : admin_email,
             })
 
       subject = 'Registration Confirmation for ' + site.name
-      send_mail(subject, msg, site_config.admin_email, [self.cleaned_data['email']])
+      send_mail(subject, msg, admin_email, [self.cleaned_data['email']])
 
       return pending_user
 
