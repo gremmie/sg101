@@ -18,6 +18,6 @@
    <form enctype="multipart/form-data" method="POST" action=".">
       {{ form.as_p }}
       <input type="submit" value="Update Avatar" />
-      <input type="button" value="Cancel" onclick="history.back(); return true;" />
+      &nbsp;<a href="{% url bio-me %}">Cancel</a>
    </form>
 {% endblock %}

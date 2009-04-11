@@ -7,7 +7,8 @@
    <table>
       {{ add_form.as_table }}
       <tr><td>&nbsp;</td><td><input type="submit" value="Add Link" />
-         <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+         &nbsp;<a href="{% url weblinks-main %}">Cancel</a>
+         </td></tr>
    </table>
    </form>
    <br />

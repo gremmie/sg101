@@ -6,7 +6,7 @@
 registering for your account here:</p>
 <ul>
    <li>Your username must be 30 characters or less, please use letters, digits, and underscores
-   only.</li>
+   only (no spaces).</li>
    <li>An email address is required to use this site. A confirmation email will be sent to the
    address you supply, and it is necessary to complete the registration process.</li>
    <li>You must agree to our <a href="{% url legal.views.view "tos" %}" target="_blank">Terms of Service</a>.</li>
@@ -15,8 +15,7 @@ registering for your account here:</p>
 <form action="." method="post">
 <table>
    {{ form.as_table }}
-   <tr><td>&nbsp;</td><td><input type="submit" value="Submit" />
-         <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+   <tr><td>&nbsp;</td><td><input type="submit" value="Register" /></td></tr>
 </table>
 </form>
 {% endblock %}

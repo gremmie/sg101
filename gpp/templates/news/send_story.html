@@ -13,7 +13,8 @@
       <table>
          {{ send_form.as_table }}
          <tr><td>&nbsp;</td><td><input type="submit" value="Send" />
-            <input type="button" value="Cancel" onclick="history.back(); return true;" /></td></tr>
+            &nbsp;<a href="{{ story.get_absolute_url }}">Cancel</a>
+         </td></tr>
       </table>
    </form>
 {% else %}
