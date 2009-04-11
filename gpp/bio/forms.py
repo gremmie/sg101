@@ -40,18 +40,13 @@ class EditUserProfileForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': ('js/markitup/skins/markitup/style.css',
-                    'js/markitup/sets/markdown/style.css',
-                    'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/redmond/jquery-ui.css',
-                    ),
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'] + \
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui']
         }
-        js = (
-            'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
-            'js/markitup/jquery.markitup.pack.js',
-            'js/markitup/sets/markdown/set.js',
-            'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/jquery-ui.js',
-            'js/bio.js',
-        )
+        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
+            settings.GPP_THIRD_PARTY_JS['markitup'] + \
+            settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
+            ('js/bio.js', )
 
 
 def get_image(file):

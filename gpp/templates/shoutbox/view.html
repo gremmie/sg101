@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 {% load avatar_tags %}
 {% load smiley_tags %}
+{% load script_tags %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/shoutbox_app.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.jeditable.mini.js"></script>
+{% script_tags "jquery" %}
+{% script_tags "jquery-jeditable" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox_app.js"></script>
 {% endblock %}
 {% block title %}Shout History{% endblock %}

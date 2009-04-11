@@ -140,3 +140,42 @@ AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
 MAX_AVATAR_SIZE_PIXELS = 100
 AVATAR_DEFAULT_URL = MEDIA_URL + AVATAR_DIR + '/default.png'
+
+# URL's of 3rd party Javascript and CSS files.
+# These dictionaries are used by core/templatetags/script_tags, and
+# should also be used by developers when creating form media classes.
+GPP_THIRD_PARTY_JS = {
+    'jquery': (
+        'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
+    ),
+    'jquery-autocomplete': (
+        'js/jquery-autocomplete/lib/jquery.js',
+        'js/jquery-autocomplete/lib/jquery.bgiframe.min.js',
+        'js/jquery-autocomplete/lib/jquery.ajaxQueue.js',
+        'js/jquery-autocomplete/jquery.autocomplete.js',
+    ),
+    'jquery-jeditable': (
+        'js/jquery.jeditable.mini.js',
+    ),
+    'jquery-ui': (
+        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/jquery-ui.js',
+    ),
+    'markitup': (
+        'js/markitup/jquery.markitup.pack.js',
+        'js/markitup/sets/markdown/set.js',
+    ),
+}
+GPP_THIRD_PARTY_CSS = {
+    'jquery-ui': (
+        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/redmond/jquery-ui.css',
+    ),
+    'jquery-autocomplete': (
+        'js/jquery-autocomplete/jquery.autocomplete.css',
+    ),
+    'markitup': (
+        'js/markitup/skins/markitup/style.css',
+        'js/markitup/sets/markdown/style.css',
+    ),
+}
+
+# vim: ts=4 sw=4

@@ -1,17 +1,17 @@
 {% extends 'news/base.html' %}
 {% load tagging_tags %}
 {% load comment_tags %}
+{% load script_tags %}
 {% block title %}News: {{ story.title }}{% endblock %}
 {% block news_css %}
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+{% if story.can_comment_on %}
+{% script_tags "jquery" %}
+{% script_tags "markitup" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
+{% endif %}
 {% endblock %}
 {% block news_content %}
 <h3>{{ story.title }}</h3>

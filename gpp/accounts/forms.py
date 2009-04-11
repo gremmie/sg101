@@ -5,8 +5,8 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
+from django.conf import settings
 
-import settings
 from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername

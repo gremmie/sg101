@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% load comment_tags %}
+{% load script_tags %}
 {% block title %}Poll Results: {{ poll.question }}{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/polls.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+{% if poll.is_open %}
+{% script_tags "jquery" %}
+{% script_tags "markitup" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
+{% endif %}
 {% endblock %}
 {% block content %}
 <h2>Polls</h2>

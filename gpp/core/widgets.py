@@ -5,19 +5,15 @@ Various useful widgets for the GPP application.
 from django import forms
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
+from django.conf import settings
 
 
 class AutoCompleteUserInput(forms.TextInput):
     class Media:
         css = {
-            'all': ('js/jquery-autocomplete/jquery.autocomplete.css',)
+            'all': settings.GPP_THIRD_PARTY_CSS['jquery-autocomplete'],
         }
-        js = (
-            'js/jquery-autocomplete/lib/jquery.js',
-            'js/jquery-autocomplete/lib/jquery.bgiframe.min.js',
-            'js/jquery-autocomplete/lib/jquery.ajaxQueue.js',
-            'js/jquery-autocomplete/jquery.autocomplete.js'
-        )
+        js = settings.GPP_THIRD_PARTY_JS['jquery-autocomplete']
 
     def render(self, name, value, attrs=None):
         url = reverse('messages-ajax_users')

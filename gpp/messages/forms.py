@@ -67,14 +67,9 @@ class ComposeForm(forms.Form):
 
    class Media:
       css = {
-         'all': ('js/markitup/skins/markitup/style.css',
-                 'js/markitup/sets/markdown/style.css')
+         'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
       }
-      js = (
-         'js/messages/compose.js',
-         'js/markitup/jquery.markitup.pack.js',
-         'js/markitup/sets/markdown/set.js',
-      )
+      js = ('js/messages/compose.js', ) + settings.GPP_THIRD_PARTY_JS['markitup']
 
 
 class OptionsForm(forms.ModelForm):

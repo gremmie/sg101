@@ -1,12 +1,12 @@
 """views for the accounts application"""
 
 import datetime
-import settings
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib import auth
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
+from django.conf import settings
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm

@@ -4,6 +4,7 @@ Forms for the gcalendar application.
 import datetime
 import pytz
 from django import forms
+from django.conf import settings
 
 from gcalendar.models import Event
 
@@ -80,19 +81,14 @@ class EventEntryForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': ('js/markitup/skins/markitup/style.css',
-                    'js/markitup/sets/markdown/style.css',
-                    'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/redmond/jquery-ui.css',
-                    'css/gcalendar.css',
-                    )
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'] + \
+                   settings.GPP_THIRD_PARTY_CSS['jquery-ui'] + \
+                   ('css/gcalendar.css', )
         }
-        js = (
-            'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
-            'js/markitup/jquery.markitup.pack.js',
-            'js/markitup/sets/markdown/set.js',
-            'http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/jquery-ui.js',
-            'js/gcalendar.js',
-        )
+        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
+             settings.GPP_THIRD_PARTY_JS['markitup'] + \
+             settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
+             ('js/gcalendar.js', )
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial', {})

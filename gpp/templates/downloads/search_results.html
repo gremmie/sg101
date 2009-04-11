@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load downloads_tags %}
+{% load script_tags %}
 {% block title %}Downloads: Search Results{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
@@ -7,7 +8,7 @@
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+{% script_tags "jquery" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
 {% endblock %}
 {% block content %}

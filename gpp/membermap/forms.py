@@ -2,6 +2,8 @@
 Forms for the member map application.
 """
 from django import forms
+from django.conf import settings
+
 from membermap.models import MapEntry
 
 
@@ -13,12 +15,8 @@ class MapEntryForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': ('js/markitup/skins/markitup/style.css',
-                    'js/markitup/sets/markdown/style.css')
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup']
         }
-        js = (
-            'js/markitup/jquery.markitup.pack.js',
-            'js/markitup/sets/markdown/set.js',
-        )
+        js = settings.GPP_THIRD_PARTY_JS['markitup']
 
 # vim: ts=4 sw=4

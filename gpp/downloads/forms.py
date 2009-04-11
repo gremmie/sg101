@@ -4,6 +4,7 @@ Forms for the downloads application.
 import os
 
 from django import forms
+from django.conf import settings
 
 from downloads.models import Download
 from downloads.models import AllowedExtension
@@ -34,12 +35,9 @@ class AddDownloadForm(forms.ModelForm):
         
     class Media:
         css = {
-            'all': ('js/markitup/skins/markitup/style.css',
-                    'js/markitup/sets/markdown/style.css')
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
         }
-        js = (
-            'js/jquery-1.2.6.min.js',
-            'js/downloads/add.js',
-            'js/markitup/jquery.markitup.pack.js',
-            'js/markitup/sets/markdown/set.js',
-        )
+        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
+             settings.GPP_THIRD_PARTY_JS['markitup'] + \
+            ('js/downloads/add.js', )
+

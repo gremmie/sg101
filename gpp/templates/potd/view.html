@@ -1,17 +1,15 @@
 {% extends 'base.html' %}
 {% load comment_tags %}
+{% load script_tags %}
 {% block title %}Photo Of The Day{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/potd.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/skins/markitup/style.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}js/markitup/sets/markdown/style.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.2.6.min.js"></script>
+{% script_tags "jquery" %}
+{% script_tags "markitup" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/jquery.markitup.pack.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/markitup/sets/markdown/set.js"></script>
 {% endblock %}
 {% block content %}
 <h2>Photo Of The Day</h2>
@@ -39,6 +37,7 @@ short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar10
 {% if potd.can_comment_on %}
 <p>Leave a comment?</p>
 {% render_comment_form for potd %}
+<br />
 {% else %}
 <p>Comments are allowed only on today's photo of the day. If you'd like to share your thoughts on this photo 
 with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>

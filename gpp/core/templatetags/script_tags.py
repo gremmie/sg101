@@ -1,0 +1,28 @@
+"""
+Template tags to generate <link> and <script> tags for 3rd party Javascript scripts.
+"""
+from django import template
+from django.conf import settings
+
+register = template.Library()
+
+@register.simple_tag
+def script_tags(library):
+    s = ''
+    if library in settings.GPP_THIRD_PARTY_CSS:
+        for path in settings.GPP_THIRD_PARTY_CSS[library]:
+            prefix = ''
+            if not path.startswith('http'):
+                prefix = settings.MEDIA_URL
+            s += '<link rel="stylesheet" href="%s%s" type="text/css" />' % (prefix, path)
+
+    if library in settings.GPP_THIRD_PARTY_JS:
+        for path in settings.GPP_THIRD_PARTY_JS[library]:
+            prefix = ''
+            if not path.startswith('http'):
+                prefix = settings.MEDIA_URL
+            s += '<script type="text/javascript" src="%s%s"></script>' % (prefix, path)
+
+    return s
+
+# vim: ts=4 sw=4

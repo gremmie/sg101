@@ -1,6 +1,5 @@
 from django.conf.urls.defaults import *
-
-import settings
+from django.conf import settings
 from django.contrib import admin
 from news.feeds import LatestNewsFeed
 
