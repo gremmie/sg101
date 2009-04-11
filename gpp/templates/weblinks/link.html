@@ -7,10 +7,11 @@
    <tr>
       <th>Date:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
       <th>Hits:</th><td>{{ link.hits }}</td>
+      <td>
+<a href="{% url weblinks.views.report_link link.id %}"><img src="{{ MEDIA_URL }}icons/link_break.png" alt="Broken Link" 
+   title="Report broken link" /></a>
+      </td>
    </tr>
 </table>
-<p>
-   <a href="{% url weblinks.views.report_link link.id %}">Report Broken Link</a>
-</p>
 <br />
 </dd>
