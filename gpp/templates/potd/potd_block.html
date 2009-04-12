@@ -3,7 +3,7 @@
 {% block block_content %}
 {% if potd %}
 <center>
-<img src="{{ potd.thumb.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" /><br />
+<a href="{% url potd-view %}"><img src="{{ potd.thumb.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" /></a><br />
 <a href="{% url potd-view %}">{{ potd.caption }}</a>
 </center>
 {% else %}
