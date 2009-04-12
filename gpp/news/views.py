@@ -18,7 +18,7 @@ from django.http import Http404
 from tagging.models import Tag
 from tagging.models import TaggedItem
 
-from core.functions import clean_html
+from core.html import clean_html
 from core.functions import send_mail
 from core.functions import get_full_name
 from core.paginator import DiggPaginator
