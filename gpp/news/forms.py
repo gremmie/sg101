@@ -3,6 +3,8 @@ Forms for the news application.
 """
 
 from django import forms
+from django.conf import settings
+
 from news.models import PendingStory
 from news.models import Category
 
@@ -18,7 +20,7 @@ class AddNewsForm(forms.ModelForm):
       exclude = ('submitter', 'date_submitted', 'allow_comments', 'approved', 'tags')
 
    class Media:
-      js = ('js/tiny_mce/tiny_mce.js', 'js/tiny_mce_init_std.js')
+      js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 class SearchNewsForm(forms.Form):
@@ -49,5 +51,4 @@ class SendStoryForm(forms.Form):
       
    def name(self):
       return self.cleaned_data['friend_name']
-
 

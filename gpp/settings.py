@@ -164,6 +164,10 @@ GPP_THIRD_PARTY_JS = {
         'js/markitup/jquery.markitup.pack.js',
         'js/markitup/sets/markdown/set.js',
     ),
+    'tiny_mce': (
+        'js/tiny_mce/tiny_mce.js',
+        'js/tiny_mce_init_std.js',
+    ),
 }
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': (

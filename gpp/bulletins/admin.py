@@ -3,6 +3,8 @@ This file contains the automatic admin site definitions for the Bulletins models
 '''
 
 from django.contrib import admin
+from django.conf import settings
+
 from bulletins.models import Bulletin
 
 class BulletinAdmin(admin.ModelAdmin):
@@ -12,7 +14,7 @@ class BulletinAdmin(admin.ModelAdmin):
    date_hierarchy = 'start_date'
 
    class Media:
-      js = ('js/tiny_mce/tiny_mce.js', 'js/tiny_mce_init_admin.js')
+      js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 admin.site.register(Bulletin, BulletinAdmin)

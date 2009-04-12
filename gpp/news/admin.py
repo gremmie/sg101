@@ -3,6 +3,8 @@ This file contains the automatic admin site definitions for the News models.
 """
 
 from django.contrib import admin
+from django.conf import settings
+
 from news.models import PendingStory
 from news.models import Story
 from news.models import Category
@@ -14,7 +16,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
    date_hierarchy = 'date_submitted'
 
    class Media:
-      js = ('js/tiny_mce/tiny_mce.js', 'js/tiny_mce_init_admin.js')
+      js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 class StoryAdmin(admin.ModelAdmin):
@@ -24,7 +26,7 @@ class StoryAdmin(admin.ModelAdmin):
    date_hierarchy = 'date_published'
 
    class Media:
-      js = ('js/tiny_mce/tiny_mce.js', 'js/tiny_mce_init_admin.js')
+      js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 admin.site.register(Category)
