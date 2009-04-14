@@ -13,7 +13,8 @@ class AutoCompleteUserInput(forms.TextInput):
         css = {
             'all': settings.GPP_THIRD_PARTY_CSS['jquery-autocomplete'],
         }
-        js = settings.GPP_THIRD_PARTY_JS['jquery-autocomplete']
+        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
+             settings.GPP_THIRD_PARTY_JS['jquery-autocomplete']
 
     def render(self, name, value, attrs=None):
         url = reverse('messages-ajax_users')
