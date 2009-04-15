@@ -12,4 +12,5 @@ def shoutbox(context):
    return {
       'shouts': shouts,
       'user': context['user'],
+      'MEDIA_URL': context['MEDIA_URL'],
    }

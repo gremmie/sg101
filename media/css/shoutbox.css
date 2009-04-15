@@ -21,7 +21,7 @@ div.smiley_farm img {
     cursor: pointer;
 }
 
-#marqueecontainer {
+#shoutbox-shout-container {
 position: relative;
 width: 142; /*marquee width */
 height: 200px; /*marquee height */

@@ -43,8 +43,7 @@ class EditUserProfileForm(forms.ModelForm):
             'all': settings.GPP_THIRD_PARTY_CSS['markitup'] + \
                 settings.GPP_THIRD_PARTY_CSS['jquery-ui']
         }
-        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
-            settings.GPP_THIRD_PARTY_JS['markitup'] + \
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
             settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
             ('js/bio.js', )
 

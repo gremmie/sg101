@@ -32,6 +32,7 @@ urlpatterns = patterns('',
    (r'^potd/', include('potd.urls')),
    (r'^profile/', include('bio.urls')),
    (r'^shout/', include('shoutbox.urls')),
+   (r'^smiley/', include('smiley.urls')),
 )
 
 if settings.DEBUG:

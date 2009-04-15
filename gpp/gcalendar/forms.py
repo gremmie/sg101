@@ -85,8 +85,7 @@ class EventEntryForm(forms.ModelForm):
                    settings.GPP_THIRD_PARTY_CSS['jquery-ui'] + \
                    ('css/gcalendar.css', )
         }
-        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
-             settings.GPP_THIRD_PARTY_JS['markitup'] + \
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
              settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
              ('js/gcalendar.js', )
 

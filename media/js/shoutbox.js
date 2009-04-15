@@ -1,53 +1,40 @@
-/***********************************************
-* Cross browser Marquee II- © Dynamic Drive (www.dynamicdrive.com)
-* This notice MUST stay intact for legal use
-* Visit http://www.dynamicdrive.com/ for this script and 100s more.
-***********************************************/
-
-var delayb4scroll=2000 //Specify initial delay before marquee starts to scroll on page (2000=2 seconds)
-var marqueespeed=1 //Specify marquee scroll speed (larger is faster 1-10)
-var pauseit=1 //Pause marquee onMousever (0=no. 1=yes)?
-
-////NO NEED TO EDIT BELOW THIS LINE////////////
-
-var copyspeed=marqueespeed
-var pausespeed=(pauseit==0)? copyspeed: 0
-var actualheight=''
-
-function scrollmarquee(){
-if (parseInt(cross_marquee.style.top)>(actualheight*(-1)+8))
-cross_marquee.style.top=parseInt(cross_marquee.style.top)-copyspeed+"px"
-else
-cross_marquee.style.top=parseInt(marqueeheight)+8+"px"
-}
-
-function initializemarquee(){
-cross_marquee=document.getElementById("vmarquee")
-cross_marquee.style.top=0
-marqueeheight=document.getElementById("marqueecontainer").offsetHeight
-actualheight=cross_marquee.offsetHeight
-if (window.opera || navigator.userAgent.indexOf("Netscape/7")!=-1){ //if Opera or Netscape 7x, add scrollbars to scroll and exit
-cross_marquee.style.height=marqueeheight+"px"
-cross_marquee.style.overflow="scroll"
-return
-}
-setTimeout('lefttime=setInterval("scrollmarquee()",30)', delayb4scroll)
-}
-
-if (window.addEventListener)
-window.addEventListener("load", initializemarquee, false)
-else if (window.attachEvent)
-window.attachEvent("onload", initializemarquee)
-else if (document.getElementById)
-window.onload=initializemarquee
-
-///////////////////////////////
-
-function sb_toggle_smilies()
-{
-    var d = document.getElementById("shoutbox-smiley-frame");
-    d.style.display = d.style.display == "none" ? "block" : "none";
-}
+$(document).ready(function() {
+   var submit = $('#shoutbox-submit');
+   submit.click(function () {
+      var input = $('#shoutbox-smiley-input');
+      var msg = input.val();
+      msg = msg.replace(/^\s+/, '');
+      msg = msg.replace(/\s+$/, '');
+      if (msg.length == 0) {
+         return false;
+      }
+      submit.attr('disabled', 'disabled');
+      $.post('/shout/shout/', {
+         msg: msg
+         },
+         function (data, textStatus) {
+            input.val('');
+            if (data != '') {
+               $('#shoutbox-shout-container').prepend(data);
+               $('#shoutbox-shout-container p:first').fadeIn(2500);
+            }
+            submit.removeAttr('disabled');
+         },
+         'html');
+      return false;
+   });
+   var smilies_loaded = false;
+   var smiley_frame = $('#shoutbox-smiley-frame');
+   $('#shoutbox-smilies').click(function () {
+      smiley_frame.toggle();
+      if (!smilies_loaded) {
+         smiley_frame.load('/smiley/farm/', function () {
+            $('#shoutbox-busy-icon').hide();
+            smilies_loaded = true;
+         });
+      }
+   });
+});
 
 function sb_smiley_click(code)
 {

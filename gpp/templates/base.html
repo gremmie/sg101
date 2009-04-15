@@ -6,6 +6,7 @@
 {% load irc_tags %}
 {% load potd_tags %}
 {% load messages_tags %}
+{% load script_tags %}
 <head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
 <meta http-equiv="Content-Type" content="text/html" />
 <meta http-equiv="Content-Language" content="en-US" />
@@ -19,10 +20,13 @@
 <![endif]-->
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/base.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/shoutbox.css" />
-<!--<script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox.js"></script>-->
+{% script_tags "jquery" %}
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
+{% if user.is_authenticated %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox.js"></script>
+{% endif %}
 <!-- <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ MEDIA_URL }}images/favicon.ico" /> -->
 </head>
 <body>

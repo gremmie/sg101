@@ -37,7 +37,6 @@ class AddDownloadForm(forms.ModelForm):
         css = {
             'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
         }
-        js = settings.GPP_THIRD_PARTY_JS['jquery'] + \
-             settings.GPP_THIRD_PARTY_JS['markitup'] + \
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
             ('js/downloads/add.js', )
 

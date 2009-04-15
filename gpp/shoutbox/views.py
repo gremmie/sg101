@@ -10,6 +10,7 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
 from shoutbox.forms import ShoutBoxForm
@@ -18,14 +19,18 @@ from shoutbox.models import Shout
 SHOUTS_PER_PAGE = 10
 
 @login_required
+@require_POST
 def shout(request):
-    if request.method == 'POST':
-        msg = request.POST.get('msg', '').strip()
-        if msg != '':
-            shout = Shout(user=request.user, shout=msg)
-            shout.save()
-            
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+    msg = request.POST.get('msg', '').strip()
+    if msg == '':
+        return HttpResponse('')
+
+    shout = Shout(user=request.user, shout=msg)
+    shout.save()
+    return render_to_response('shoutbox/shout.html', {
+       'shout': shout,
+       },
+       context_instance = RequestContext(request))
 
 
 def view(request, page=1):
@@ -101,3 +106,5 @@ def delete(request):
         return HttpResponse(id)
 
     return HttpResponseForbidden()
+
+# vim: ts=4 sw=4

@@ -2,11 +2,7 @@
 {% load smiley_tags %}
 {% block block_title %}Shoutbox{% endblock %}
 {% block block_content %}
-{% if shouts %}
-<!--<div id="marqueecontainer" onmouseover="copyspeed=pausespeed" onmouseout="copyspeed=marqueespeed">-->
-<div id="marqueecontainer">
-<!--<div id="vmarquee" style="position: absolute; width: 98%; overflow:auto;">-->
-   {# for shout in shouts reversed #}
+<div id="shoutbox-shout-container">
    {% for shout in shouts %}
       <p>
       <span class="shoutbox-user">{{ shout.user.username }}:</span>
@@ -14,20 +10,18 @@
       <span class="shoutbox-date">{{ shout.shout_date|date:"D M d Y H:i:s" }}</span>
       </p>
    {% endfor %}
-<!--</div>-->
 </div>
-{% endif %}
 <center><a href="{% url shoutbox-view page=1 %}">Shout History</a></center>
 {% if user.is_authenticated %}
 <center>
 <form action="{% url shoutbox-shout %}" method="post">
    <input type="text" maxlength="2048" size="13" name="msg" value="" id="shoutbox-smiley-input" />
    <br />
-   <input type="submit" value="Shout" />
-   <input type="button" value="Smilies" onclick="sb_toggle_smilies();" />
+   <input id="shoutbox-submit" type="submit" value="Shout" />
+   <input id="shoutbox-smilies" type="button" value="Smilies" />
 </form>
 <div id="shoutbox-smiley-frame" style="display:none;">
-{% smiley_farm %}
+<img id="shoutbox-busy-icon" src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Please wait" />
 </div>
 </center>
 {% else %}

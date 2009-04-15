@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
-{% load script_tags %}
 {% block title %}Edit Calendar Events{% endblock %}
 {% block custom_js %}
-{% script_tags "jquery" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/gcalendar_edit.js"></script>
 {% endblock %}
 {% block content %}
