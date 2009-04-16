@@ -25,7 +25,7 @@ class CommentAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', 'content_type')
 
 class CommentFlagAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'get_comment_url')
+    list_display = ('__unicode__', 'flag_date', 'get_comment_url')
 
 admin.site.register(Comment, CommentAdmin)
 admin.site.register(CommentFlag, CommentFlagAdmin)

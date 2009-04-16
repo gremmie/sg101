@@ -97,6 +97,7 @@ img {
 }
 .breadcrumbs {
    font-size: x-small;
+   padding-bottom: 0.5em;
 }
 table {
    width: auto;

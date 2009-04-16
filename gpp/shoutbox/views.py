@@ -13,8 +13,10 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
+from core.functions import email_admins
 from shoutbox.forms import ShoutBoxForm
 from shoutbox.models import Shout
+from shoutbox.models import ShoutFlag
 
 SHOUTS_PER_PAGE = 10
 
@@ -33,7 +35,21 @@ def shout(request):
        context_instance = RequestContext(request))
 
 
-def view(request, page=1):
+def view_shout(request, id):
+    """This view is for viewing an individual shout."""
+    try:
+        shout = Shout.objects.get(pk=id)
+    except Shout.DoesNotExist:
+        return render_to_response('shoutbox/missing_shout.html', {},
+           context_instance = RequestContext(request))
+
+    return render_to_response('shoutbox/view_shout.html', {
+       'shout': shout,
+       },
+       context_instance = RequestContext(request))
+
+
+def view_history(request, page=1):
     """This view allows one to view the shoutbox history."""
     paginator = DiggPaginator(Shout.objects.all(), SHOUTS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
     try:
@@ -106,5 +122,33 @@ def delete(request):
         return HttpResponse(id)
 
     return HttpResponseForbidden()
+
+
+@require_POST
+def flag(request):
+    """
+    This function handles the flagging of shouts by users. This function should
+    be the target of an AJAX post.
+    """
+    if not request.user.is_authenticated():
+        return HttpResponse('Please login or register to flag a shout.')
+
+    id = request.POST.get('id', None)
+    if id is None:
+        return HttpResponseBadRequest('No id')
+
+    try:
+        shout = Shout.objects.get(pk=id)
+    except Shout.DoesNotExist:
+        return HttpResponseBadRequest('No shout with id %s' % id)
+
+    flag = ShoutFlag(user=request.user, shout=shout)
+    flag.save()
+    email_admins('A Shout Has Been Flagged', """Hello,
+
+A user has flagged a shout for review.
+""")
+    return HttpResponse('The shout was flagged. A moderator will review the shout shortly. ' \
+            'Thanks for helping to improve the quality of this site.')
 
 # vim: ts=4 sw=4

@@ -11,7 +11,7 @@
       </p>
    {% endfor %}
 </div>
-<center><a href="{% url shoutbox-view page=1 %}">Shout History</a></center>
+<center><a href="{% url shoutbox-history page=1 %}">Shout History</a></center>
 {% if user.is_authenticated %}
 <center>
 <form action="{% url shoutbox-shout %}" method="post">
