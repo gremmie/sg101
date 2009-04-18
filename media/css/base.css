@@ -102,3 +102,9 @@ img {
 table {
    width: auto;
 }
+.errorlist {
+   background: #FBE3E4; 
+   color: #8a1f11;
+   border-color: #FBC2C4;
+   border: 2px solid #ddd;
+}
