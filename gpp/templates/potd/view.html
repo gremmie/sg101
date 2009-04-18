@@ -11,8 +11,12 @@
 <script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
 {% endblock %}
 {% block content %}
+{% if is_current %}
 <h2>Photo Of The Day</h2>
 <h3>{% now "l, F d, Y" %}</h3>
+{% else %}
+<h2>Photo Of The Day Archives</h2>
+{% endif %}
 <div class="potd-details">
 {% if potd %}
 <img src="{{ potd.photo.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" />

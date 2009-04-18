@@ -2,12 +2,12 @@
 {% load markup %}
 {% load smiley_tags %}
 <li>
-<div class="comment">
+<div class="comment" id="c{{ comment.id }}">
 <div class="comment-avatar">
 <a href="{% url bio-view_profile username=comment.user.username%}">{% avatar comment.user %}</a>
 </div>
 {% if comment.is_removed %}
-<div class="comment-text-removed"><p>This comment has been removed.</p></div>
+<div class="comment-text-removed"><p><em>This comment has been removed.</em></p></div>
 {% else %}
 <div class="comment-text">{{ comment.html|safe }}</div>
 {% endif %}

@@ -8,3 +8,9 @@ urlpatterns = patterns('comments.views',
     url(r'^markdown/$', 'markdown_preview', name='comments-markdown_preview'),
     url(r'^post/$', 'post_comment', name='comments-post'),
 )
+
+urlpatterns += patterns('',
+    url(r'^cr/(\d+)/(\d+)/$',
+        'django.contrib.contenttypes.views.shortcut',
+        name='comments-url-redirect'),
+)

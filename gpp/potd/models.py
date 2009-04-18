@@ -34,11 +34,15 @@ class Photo(models.Model):
     date_added = models.DateField(auto_now_add=True)
     potd_count = models.IntegerField(default=0)
 
+    class Meta:
+        ordering = ('-date_added', '-caption')
+
     def __unicode__(self):
         return u'%s (%s)' % (self.caption, self.pk)
 
-    class Meta:
-        ordering = ('-date_added', '-caption')
+    @models.permalink
+    def get_absolute_url(self):
+        return ('potd-archive', [str(self.id)])
 
     def save(self, force_insert=False, force_update=False):
 

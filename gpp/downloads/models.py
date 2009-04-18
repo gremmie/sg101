@@ -67,6 +67,10 @@ class Download(models.Model):
     def __unicode__(self):
         return self.title
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('downloads-download', [str(self.id)])
+
     def save(self, force_insert=False, force_update=False):
         html = render_to_string('downloads/markdown.html', {'data': self.description})
         self.html = html.strip()
