@@ -10,6 +10,7 @@ feeds = {
 }
 
 urlpatterns = patterns('',
+   url(r'^$', 'views.home', name='home'),
    (r'^admin/doc/', include('django.contrib.admindocs.urls')),
    (r'^admin/', include(admin.site.urls)),
    (r'^accounts/', include('accounts.urls')),

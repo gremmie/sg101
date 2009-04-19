@@ -52,7 +52,7 @@ body {
  color: #fff; 
 }
 #footer p {
- padding: 24px;
+   margin: 1em;
 } 
 ul.app-menu {
    text-align: center;

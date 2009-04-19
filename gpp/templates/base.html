@@ -48,7 +48,7 @@
 
 <div id="content-secondary" class="span-4 append-1">
    <ul class="nav-left">
-      <li><a href="{% url news-index_page page=1 %}">Home</a></li>
+      <li><a href="{% url home %}">Home</a></li>
       <li><a href="{% url news-index_page page=1 %}">News</a></li>
       <li><a href="{% url gcalendar-index %}">Calendar</a></li>
       <li><a href="{% url contact-form %}">Contact</a></li>
@@ -74,7 +74,11 @@
 
 
 <div id="footer" class="span-24">
-   <p>Website &copy; 2008 by Brian Neal</p>
+   <p>
+   TODO: Should put links to various policies down here. Additional navigation could go here.
+   Add a colophon.
+   </p>
+   <p>SurfGuitar101.com &copy; 2009 by Brian Neal</p>
 </div>
 
 {% if debug %}
