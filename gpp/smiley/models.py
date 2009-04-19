@@ -23,7 +23,7 @@ class SmileyManager(models.Manager):
 
     def clear_cache(self):
         self.smiley_map = None
-        self.smileis = None
+        self.smilies = None
 
 
 class Smiley(models.Model):
