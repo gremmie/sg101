@@ -12,7 +12,7 @@
 {% block content %}
 <h2>Downloads</h2>
 {% downloads_navigation %}
-<h3>Search Results: {{ query }}</h3>
+<h3>Search Results: {{ query }} - {{ page.paginator.count }} result{{ page.paginator.count|pluralize }}</h3>
 
 {% if page.object_list %}
 {% include 'core/pagination_query.html' %}
