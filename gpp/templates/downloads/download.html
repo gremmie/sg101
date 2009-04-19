@@ -19,7 +19,7 @@
 <tr>
     <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
     <th><img src="{{ MEDIA_URL }}icons/comments.png" alt="Comments" title="Comments" />
-       <a href="{% url downloads-comments download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
+       <a href="{% url downloads-details download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
 </tr>
 </table>
 </dd>

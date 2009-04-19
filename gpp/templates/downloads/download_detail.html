@@ -2,7 +2,7 @@
 {% load downloads_tags %}
 {% load comment_tags %}
 {% load script_tags %}
-{% block title %}Downloads Comments{% endblock %}
+{% block title %}Downloads Details{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/comments.css" />
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
@@ -15,7 +15,7 @@
 {% block content %}
 <h2>Downloads</h2>
 {% downloads_navigation %}
-<h3>Download Comments For {{ download.title }}</h3>
+<h3>Download Details For {{ download.title }}</h3>
 
 <dl>
 {% include 'downloads/download.html' %}

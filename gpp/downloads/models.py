@@ -69,7 +69,7 @@ class Download(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('downloads-download', [str(self.id)])
+        return ('downloads-details', [str(self.id)])
 
     def save(self, force_insert=False, force_update=False):
         html = render_to_string('downloads/markdown.html', {'data': self.description})

@@ -129,11 +129,11 @@ def _redirect_download(download):
 #######################################################################
 
 @login_required
-def comments(request, id):
+def details(request, id):
     download = Download.public_objects.get(pk=id)
     if download is None:
         raise Http404
-    return render_to_response('downloads/download_comments.html', {
+    return render_to_response('downloads/download_detail.html', {
         'download' : download,
         }, 
         context_instance = RequestContext(request))

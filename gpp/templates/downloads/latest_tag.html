@@ -1,0 +1,10 @@
+<h3>New Downloads</h3>
+{% if downloads %}
+<ol>
+   {% for dl in downloads %}
+   <li><a href="{{ dl.get_absolute_url }}">{{ dl.title }}</a></li>
+   {% endfor %}
+</ol>
+{% else %}
+<p>No downloads at this time.</p>
+{% endif %}
