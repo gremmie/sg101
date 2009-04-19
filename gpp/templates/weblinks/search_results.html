@@ -4,7 +4,7 @@
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
 {% endblock %}
 {% block weblinks_content %}
-<h3>Search Results: {{ query }}</h3>
+<h3>Search Results: {{ query }} - {{ page.paginator.count }} result{{ page.paginator.count|pluralize }}</h3>
 
 {% include 'core/pagination_query.html' %}
 

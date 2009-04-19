@@ -1,27 +1,12 @@
 {% extends 'base.html' %}
+{% load weblinks_tags %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/weblinks.css" />
 {% block weblinks_css %}{% endblock %}
 {% endblock %}
 {% block content %}
 <h2>Web Links</h2>
-
-<div class="weblinks-search">
-<form action="{% url weblinks-search page=1 %}" method="post">
-   <p>{{ search_form.text }} <input type="submit" value="Search" /></p>
-</form>
-</div>
-
-<ul class="app-menu">
-<li><a href="{% url weblinks.views.link_index %}">Categories</a></li>
-<li><a href="{% url weblinks.views.new_links %}">New</a></li>
-<li><a href="{% url weblinks.views.popular_links %}">Popular</a></li>
-<li><a href="{% url weblinks.views.random_link %}" target="_blank">Random</a></li>
-{% if user.is_authenticated %}
-<li><a href="{% url weblinks.views.add_link %}">Add</a></li>
-{% endif %}
-</ul>
-
+{% weblinks_navigation %}
 <div class="weblinks-content">
    {% block weblinks_content %}
    {% endblock %}

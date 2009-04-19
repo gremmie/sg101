@@ -34,11 +34,9 @@ def create_paginator(links):
 def link_index(request):
    categories = Category.objects.all()
    total_links = Link.public_objects.all().count()
-   form = SearchForm()
    return render_to_response('weblinks/index.html', {
       'categories': categories, 
       'total_links': total_links,
-      'search_form': form,
       },
       context_instance = RequestContext(request))
 
@@ -49,7 +47,6 @@ def new_links(request):
    return render_to_response('weblinks/link_summary.html', {
       'links': links, 
       'title': 'Newest Links',
-      'search_form': SearchForm(),
       },
       context_instance = RequestContext(request))
 
@@ -60,7 +57,6 @@ def popular_links(request):
    return render_to_response('weblinks/link_summary.html', {
       'links': links, 
       'title': 'Popular Links',
-      'search_form': SearchForm(),
       },
       context_instance = RequestContext(request))
 
@@ -84,7 +80,6 @@ A user has added a new link for your approval.
       add_form = AddLinkForm()
 
    return render_to_response('weblinks/add_link.html', {
-      'search_form': SearchForm(),
       'add_form': add_form,
       },
       context_instance = RequestContext(request))
@@ -94,7 +89,6 @@ A user has added a new link for your approval.
 @login_required
 def add_thanks(request):
    return render_to_response('weblinks/add_link.html', {
-      'search_form': SearchForm(),
       },
       context_instance = RequestContext(request))
 
@@ -131,7 +125,6 @@ def view_links(request, category, sort='title', page='1'):
       's' : sort,
       'category' : cat,
       'page' : the_page, 
-      'search_form': SearchForm(),
       }, 
       context_instance = RequestContext(request))
 
@@ -173,7 +166,6 @@ A user has flagged a link as broken.
 
    return render_to_response('weblinks/report_link.html', {
       'link': link, 
-      'search_form': SearchForm(),
       'report_thanks': False,
       },
       context_instance = RequestContext(request))
@@ -186,7 +178,6 @@ def report_thanks(request, link_id):
    link = get_object_or_404(Link, pk = link_id)
    return render_to_response('weblinks/report_link.html', {
       'link': link, 
-      'search_form': SearchForm(),
       'report_thanks': True,
       },
       context_instance = RequestContext(request))
@@ -221,7 +212,6 @@ def search_links(request, page=1):
    return render_to_response('weblinks/search_results.html', {
       'query': query_text,
       'page': the_page, 
-      'search_form': SearchForm(),
       }, 
       context_instance = RequestContext(request))
 
@@ -231,6 +221,5 @@ def link_detail(request, id):
     link = get_object_or_404(Link, pk=id)
     return render_to_response('weblinks/link_detail.html', {
         'link': link, 
-        'search_form': SearchForm(),
         },
         context_instance = RequestContext(request))
