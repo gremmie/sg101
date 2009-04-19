@@ -43,11 +43,15 @@ class Link(models.Model):
     objects = models.Manager()
     public_objects = PublicLinkManager()
 
+    class Meta:
+        ordering = ('title', )
+
     def __unicode__(self):
         return self.title
 
-    class Meta:
-        ordering = ('title', )
+    @models.permalink
+    def get_absolute_url(self):
+        return ('weblinks-link_detail', [str(self.id)])
 
 
 class FlaggedLinkManager(models.Manager):

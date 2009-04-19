@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load weblinks_tags %}
 {% block title %}Home{% endblock %}
 {% block content %}
 <h2>Welcome to SurfGuitar101!</h2>
@@ -15,7 +16,7 @@ permanent. The site (content, user accounts, etc.) may be wiped at any time whil
 Also, I hope that the look and feel of this site can be greatly improved to something really cool! I'll need
 lots of help for this aspect, as I'm more of a coder than a designer.</p>
 <div class="span-9">
-   Some stuff.
+   {% latest_weblinks %} 
 </div>
 <div class="span-10 last">
    Some more stuff.

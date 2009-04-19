@@ -224,3 +224,13 @@ def search_links(request, page=1):
       'search_form': SearchForm(),
       }, 
       context_instance = RequestContext(request))
+
+#######################################################################
+
+def link_detail(request, id):
+    link = get_object_or_404(Link, pk=id)
+    return render_to_response('weblinks/link_detail.html', {
+        'link': link, 
+        'search_form': SearchForm(),
+        },
+        context_instance = RequestContext(request))

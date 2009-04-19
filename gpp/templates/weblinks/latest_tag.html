@@ -1,0 +1,10 @@
+<h3>New Links</h3>
+{% if links %}
+<ol>
+   {% for link in links %}
+   <li><a href="{{ link.get_absolute_url }}">{{ link.title }}</a></li>
+   {% endfor %}
+</ol>
+{% else %}
+<p>No links at this time.</p>
+{% endif %}
