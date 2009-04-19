@@ -14,6 +14,7 @@ def weblinks_navigation(context):
     return {
         'search_form': SearchForm(),
         'user': context['user'],
+        'MEDIA_URL': context['MEDIA_URL'],
     }
 
 

@@ -9,9 +9,12 @@ from downloads.models import Download
 
 register = template.Library()
 
-@register.inclusion_tag('downloads/navigation.html')
-def downloads_navigation():
-    return {'search_form': SearchForm()}
+@register.inclusion_tag('downloads/navigation.html', takes_context=True)
+def downloads_navigation(context):
+    return {
+        'search_form': SearchForm(),
+        'MEDIA_URL': context['MEDIA_URL'],
+    }
 
 @register.inclusion_tag('downloads/latest_tag.html')
 def latest_downloads():

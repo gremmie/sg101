@@ -108,3 +108,7 @@ table {
    border-color: #FBC2C4;
    border: 2px solid #ddd;
 }
+.app-logo {
+   text-align: center;
+   padding: 0.5em;
+}
