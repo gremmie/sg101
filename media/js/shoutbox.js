@@ -2,9 +2,7 @@ $(document).ready(function() {
    var submit = $('#shoutbox-submit');
    submit.click(function () {
       var input = $('#shoutbox-smiley-input');
-      var msg = input.val();
-      msg = msg.replace(/^\s+/, '');
-      msg = msg.replace(/\s+$/, '');
+      var msg = $.trim(input.val());
       if (msg.length == 0) {
          return false;
       }
