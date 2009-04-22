@@ -1,0 +1,11 @@
+{% load humanize %}
+{% for bulletin in bulletins %}
+<div class="bulletin" id="bulletin-{{ bulletin.id }}">
+   <h3>{{ bulletin.title }}</h3>
+   <div class="bulletin-text">
+      {{ bulletin.text|safe }}
+   </div>
+   <p class="bulletin-meta">Posted: {{ bulletin.start_date|naturalday|capfirst }}
+   {{ bulletin.start_date|date:"H:i" }}.</p>
+</div>
+{% endfor %}
