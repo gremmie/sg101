@@ -27,17 +27,9 @@ class UserProfile(models.Model):
             help_text='Optional; the year is not shown to others')
     occupation = models.CharField(max_length=128, blank=True)
     interests = models.CharField(max_length=255, blank=True)
-    website_1 = models.URLField(verify_exists=False, blank=True)
-    website_2 = models.URLField(verify_exists=False, blank=True)
-    website_3 = models.URLField(verify_exists=False, blank=True)
     profile_text = models.TextField(blank=True)
     profile_html = models.TextField(blank=True)
     hide_email = models.BooleanField(default=True)
-    icq = models.CharField('ICQ', max_length=15, blank=True)
-    aim = models.CharField('AIM', max_length=18, blank=True)
-    yim = models.CharField('YIM', max_length=25, blank=True)
-    msnm = models.CharField('MSN', max_length=25, blank=True)
-    twitter = models.CharField(max_length=64, blank=True)
     signature = models.TextField(blank=True)
     signature_html = models.TextField(blank=True)
     avatar = models.ImageField(upload_to=avatar_file_path, blank=True)
@@ -55,4 +47,3 @@ class UserProfile(models.Model):
         self.signature_html = html.strip()
         super(UserProfile, self).save(*args, **kwargs)
 
-# vim: ts=4 sw=4

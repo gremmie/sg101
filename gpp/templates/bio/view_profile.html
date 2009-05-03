@@ -24,32 +24,11 @@
    {% if profile.interests %}
    <tr><th>Interests</th><td>{{ profile.interests }}</td></tr>
    {% endif %}
-   {% if profile.website_1 %}
-   <tr><th>Website 1</th><td><a href="{{ profile.website_1 }}">{{ profile.website_1 }}</a></td></tr>
-   {% endif %}
-   {% if profile.website_2 %}
-   <tr><th>Website 2</th><td><a href="{{ profile.website_2 }}">{{ profile.website_2 }}</a></td></tr>
-   {% endif %}
-   {% if profile.website_3 %}
-   <tr><th>Website 3</th><td><a href="{{ profile.website_3 }}">{{ profile.website_3 }}</a></td></tr>
-   {% endif %}
    {% if not profile.hide_email %}
    <tr><th>Email</th><td>{{ subject.email }}</td></tr>
    {% endif %}
    {% if profile.icq %}
    <tr><th>ICQ</th><td>{{ profile.icq }}</td></tr>
-   {% endif %}
-   {% if profile.aim %}
-   <tr><th>AIM</th><td>{{ profile.aim }}</td></tr>
-   {% endif %}
-   {% if profile.yim %}
-   <tr><th>YIM</th><td>{{ profile.yim }}</td></tr>
-   {% endif %}
-   {% if profile.msnm %}
-   <tr><th>MSN</th><td>{{ profile.msnm }}</td></tr>
-   {% endif %}
-   {% if profile.twitter %}
-   <tr><th>Twitter</th><td><a href="{{ profile.twitter }}">{{ profile.twitter }}</a></td></tr>
    {% endif %}
    {% if profile.profile_html %}
    <tr><th>Profile</th><td>{{ profile.profile_html|safe }}</td></tr>
@@ -66,6 +45,8 @@
    <a href="{% url bio-edit_profile %}">Edit Profile</a></li>
    <li><a href="{% url bio-change_avatar %}"><img src="{{ MEDIA_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
       <a href="{% url bio-change_avatar %}">Change Avatar</a></li>
+   <li><a href="{% url bio-edit_elsewhere %}"><img src="{{ MEDIA_URL }}icons/link_edit.png" alt="Edit Links" /></a>
+   <a href="{% url bio-edit_elsewhere %}">Edit Elsewhere Links</a></li>
    <li><a href="{% url django.contrib.auth.views.password_change %}"><img src="{{ MEDIA_URL }}icons/key.png" alt="Change Password" /></a>
       <a href="{% url django.contrib.auth.views.password_change %}">Change Password</a></li>
 </ul>

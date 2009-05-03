@@ -30,9 +30,6 @@ class EditUserProfileForm(forms.ModelForm):
     location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
-    website_1 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
-    website_2 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
-    website_3 = forms.URLField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
 
     class Meta:
         model = UserProfile
@@ -109,4 +106,3 @@ class UploadAvatarForm(forms.Form):
     def get_filename(self):
         return self.cleaned_data['avatar_file'].name
 
-# vim: ts=4 sw=4
