@@ -7,7 +7,7 @@ from django.conf import settings
 register = template.Library()
 
 
-@register.inclusion_tag('elsewhere/links_list.html', takes_context=True)
+@register.inclusion_tag('bio/elsewhere_links.html', takes_context=True)
 def elsewhere_links(context, user):
     return {
         'social_nets': user.social_network_profiles.all(),
