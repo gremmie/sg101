@@ -128,3 +128,6 @@ table {
    color: gray;
    text-align: right;
 }
+ul.icon-list li {
+   list-style-type: none;
+}

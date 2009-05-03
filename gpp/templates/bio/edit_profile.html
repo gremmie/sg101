@@ -1,5 +1,6 @@
 {% extends 'bio/base.html' %}
 {% load avatar_tags %}
+{% load elsewhere_tags %}
 {% block title %}Edit Profile{% endblock %}
 {% block custom_js %}
    {{ profile_form.media }}
@@ -17,6 +18,12 @@
    </tr>
    {{ user_form.as_table }}
    {{ profile_form.as_table }}
+   <tr>
+      <td>
+         <a href="{% url bio-edit_elsewhere %}"><img src="{{ MEDIA_URL }}icons/link_edit.png" alt="Edit Links" /></a>
+         <a href="{% url bio-edit_elsewhere %}">Edit Elsewhere Links</a></td>
+      <td>{% elsewhere_links user %}</td>
+   </tr>
    <tr><td>&nbsp;</td><td><input type="submit" name="submit_button" value="Save" />
          <input type="submit" name="submit_button" value="Cancel" /></td></tr>
 </table>

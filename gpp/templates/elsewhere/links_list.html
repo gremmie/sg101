@@ -1,0 +1,31 @@
+{% if social_nets or ims or websites %}
+<ul>
+   {% if social_nets %}
+   <li>Social Networks</li>
+   <ul class="icon-list">
+      {% for net in social_nets %}
+      <li><img src="{{ MEDIA_URL }}elsewhere/{{ net.icon_name }}" alt="{{ net.name }}" />
+      <a href="{{ net.url }}">{{ net.name }}</a></li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+   {% if ims %}
+   <li>Instant Messengers</li>
+   <ul class="icon-list">
+      {% for im in ims %}
+      <li><img src="{{ MEDIA_URL }}elsewhere/{{ im.icon_name }}" alt="{{ im.name }}" />
+      <a href="{{ im.url }}">{{ im.name }}</a></li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+   {% if ims %}
+   <li>Websites</li>
+   <ul class="icon-list">
+      {% for site in websites %}
+      <li><img src="{{ MEDIA_URL }}icons/world.png" alt="{{ site.name }}" />
+      <a href="{{ site.url }}">{{ site.name }}</a></li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+</ul>
+{% endif %}

@@ -10,6 +10,10 @@ from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
+from elsewhere.models import SocialNetworkForm
+from elsewhere.models import InstantMessengerForm
+from elsewhere.models import WebsiteForm
+
 from bio.models import UserProfile
 from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
@@ -134,5 +138,66 @@ def change_avatar(request):
          }, 
         context_instance = RequestContext(request))
 
+#######################################################################
 
-# vim: ts=4 sw=4
+@login_required
+def edit_elsewhere(request):
+    im_id = 'id_im_%s'  # to prevent duplicate ID in HTML output
+    if request.method == 'POST':
+        new_data = request.POST.copy()
+
+        # Add forms
+        if new_data.get('sn-form') or new_data.get('im-form') or new_data.get('w-form'):
+
+            if new_data.get('sn-form'):
+                sn_form = SocialNetworkForm(new_data)
+                im_form = InstantMessengerForm(auto_id=im_id)
+                w_form = WebsiteForm()
+                form = sn_form
+            elif new_data.get('im-form'):
+                sn_form = SocialNetworkForm()
+                im_form = InstantMessengerForm(new_data, auto_id=im_id)
+                w_form = WebsiteForm()
+                form = im_form
+            elif new_data.get('w-form'):
+                sn_form = SocialNetworkForm()
+                im_form = InstantMessengerForm(auto_id=im_id)
+                w_form = WebsiteForm(new_data)
+                form = w_form
+
+            if form.is_valid():
+                profile = form.save(commit=False)
+                profile.user = request.user
+                profile.save()
+                return HttpResponseRedirect(request.path)
+
+        # Delete forms
+        elif new_data.get('delete-sn-form') or new_data.get('delete-im-form') or new_data.get('delete-w-form'):
+            delete_id = request.POST['delete_id']
+
+            if new_data.get('delete-sn-form'):
+                request.user.social_network_profiles.get(id=delete_id).delete()
+            elif new_data.get('delete-im-form'):
+                request.user.instant_messenger_profiles.get(id=delete_id).delete()
+            elif new_data.get('delete-w-form'):
+                request.user.website_profiles.get(id=delete_id).delete()
+
+            return HttpResponseRedirect(request.path)
+
+        # WTF?
+        else:
+            return HttpResponseServerError
+
+    else:
+        # Create blank forms
+        sn_form = SocialNetworkForm()
+        im_form = InstantMessengerForm(auto_id=im_id)
+        w_form = WebsiteForm()
+
+    return render_to_response('bio/edit_elsewhere.html', {
+        'sn_form': sn_form, 
+        'im_form': im_form, 
+        'w_form': w_form,
+        }, 
+        context_instance=RequestContext(request))
+
