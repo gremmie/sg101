@@ -1,0 +1,10 @@
+{% load tagging_tags %}
+{% if stories %}
+<h2>Current News Stories</h2>
+{% for story in stories %}
+   {% tags_for_object story as story_tags %}
+   {% include 'news/story_summary.html' %}
+{% endfor %}
+<hr />
+<p>For more news stories, check out our <a href="{% url news-index_page page=1 %}">news archive</a>.</p>
+{% endif %}

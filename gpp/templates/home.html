@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
 {% load bulletin_tags %}
+{% load news_tags %}
 {% load weblinks_tags %}
 {% load downloads_tags %}
 {% block title %}Home{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />
+{% endblock %}
 {% block content %}
 <h2>Welcome to SurfGuitar101!</h2>
 <p>You are looking at a test version of the new SurfGuitar101 website, dubbed <strong>SG101 2.0</strong>. 
@@ -18,6 +22,7 @@ permanent. The site (content, user accounts, etc.) may be wiped at any time whil
 Also, I hope that the look and feel of this site can be greatly improved to something really cool! I'll need
 lots of help for this aspect, as I'm more of a coder than a designer.</p>
 {% current_bulletins %}
+{% current_news %}
 <div class="span-9 append-1">
    {% latest_weblinks %} 
 </div>

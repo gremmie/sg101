@@ -1,7 +1,11 @@
 {% load comment_tags %}
 {% get_comment_count for story as comment_count %}
 <div class="news-story-container">
+{% if on_home %}
+<h3><a href="{{ story.get_absolute_url }}">{{ story.title }}</a></h3>
+{% else %}
 <h4><a href="{{ story.get_absolute_url }}">{{ story.title }}</a></h4>
+{% endif %}
 <div class="news-details">
    Submitted by {{ story.submitter.username }} on {{ story.date_published|date:"F d, Y" }}.
 </div>
