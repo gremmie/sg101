@@ -7,8 +7,21 @@
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />
 {% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/slideshow.js"></script>
+{% endblock %}
 {% block content %}
 <h2>Welcome to SurfGuitar101!</h2>
+<div class="span-9">
+   <div id="slideshow">
+   <img src="{{ MEDIA_URL }}slideshow/image-1.jpg" alt="Slideshow Image 1" class="active" />
+   <img src="{{ MEDIA_URL }}slideshow/image-2.jpg" alt="Slideshow Image 2" />
+   <img src="{{ MEDIA_URL }}slideshow/image-3.jpg" alt="Slideshow Image 3" />
+   <img src="{{ MEDIA_URL }}slideshow/image-4.jpg" alt="Slideshow Image 4" />
+   <img src="{{ MEDIA_URL }}slideshow/image-5.jpg" alt="Slideshow Image 5" />
+   </div>
+</div>
+<div class="span-10 last">
 <p>You are looking at a test version of the new SurfGuitar101 website, dubbed <strong>SG101 2.0</strong>. 
 All major functionality is here except for the forums (which are still in development). 
 The purpose of this test site is to test the new site software, to get feedback from the user base, and 
@@ -17,6 +30,7 @@ to develop a better theme (colors, logos, layout, etc.) for the site. All bugs a
 to sign up here and give the new site a test drive. Any and all feedback is appreciated! Thank you for
 helping to make this site be the best home on the web for fans and friends of surf music!
 </p>
+</div>
 <p>Remember that this is a test site, and not everything is going to work. Nothing here is
 permanent. The site (content, user accounts, etc.) may be wiped at any time while we fix bugs and add features. 
 Also, I hope that the look and feel of this site can be greatly improved to something really cool! I'll need

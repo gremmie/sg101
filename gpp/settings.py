@@ -106,6 +106,7 @@ INSTALLED_APPS = (
     'comments',
     'contact',
     'core',
+    'donations',
     'downloads',
     'gcalendar',
     'irc',

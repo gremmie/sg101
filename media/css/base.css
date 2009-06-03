@@ -131,3 +131,22 @@ table {
 ul.icon-list li {
    list-style-type: none;
 }
+#slideshow {
+   position:relative;
+   left:15px;
+   height:240px;
+}
+#slideshow img {
+   position:absolute;
+   top:0;
+   left:0;
+   z-index:8;
+   opacity:0.0;
+}
+#slideshow img.active {
+   z-index:10;
+   opacity:1.0;
+}
+#slideshow img.last-active {
+   z-index:9;
+}
