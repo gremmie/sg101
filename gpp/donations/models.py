@@ -1,8 +1,47 @@
 """
 Models for the donations application.
 """
+import datetime
+import decimal
+
 from django.db import models
 from django.contrib import auth
+
+ANONYMOUS = u'Anonymous'
+
+class DonationManager(models.Manager):
+    def monthly_stats(self, year=None, month=None):
+        """
+        Returns a dictionary of statistics for the given month in the given
+        year. If year is None, the current year is used. If month is None,
+        the current month is used.
+        The returned dict has the following keys:
+            'gross': total gross donations
+            'net': total net donations
+            'donors': list of donor names
+        """
+        today = datetime.date.today()
+        if year is None:
+            year = today.year
+        if month is None:
+            month = today.month
+
+        qs = self.filter(payment_date__year=year,
+                payment_date__month=month,
+                test_ipn=False)
+
+        stats = {
+            'gross': decimal.Decimal(), 
+            'net': decimal.Decimal(), 
+            'donors': [],
+            }
+        for donation in qs:
+            stats['gross'] += donation.mc_gross
+            stats['net'] += donation.mc_gross - donation.mc_fee
+            stats['donors'].append(donation.donor())
+
+        return stats
+
 
 class Donation(models.Model):
     """Model to represent a donation to the website."""
@@ -22,6 +61,8 @@ class Donation(models.Model):
     payer_status = models.CharField(max_length=10, blank=True)
     payment_date = models.DateTimeField()
 
+    objects = DonationManager()
+
     class Meta:
         ordering = ('-payment_date', )
 
@@ -34,3 +75,15 @@ class Donation(models.Model):
         if self.user is None:
             self.is_anonymous = True
         super(Donation, self).save(*args, **kwargs)
+
+    def donor(self):
+        """Returns the donor name for the donation."""
+        if self.is_anonymous:
+            return ANONYMOUS
+        if self.user is not None:
+            return self.user.username
+        if self.first_name or self.last_name:
+            name = u'%s %s' % (self.first_name, self.last_name)
+            return name.strip()
+        return ANONYMOUS
+
