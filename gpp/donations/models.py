@@ -6,19 +6,21 @@ import decimal
 
 from django.db import models
 from django.contrib import auth
+from django.conf import settings
 
-ANONYMOUS = u'Anonymous'
 
 class DonationManager(models.Manager):
     def monthly_stats(self, year=None, month=None):
         """
-        Returns a dictionary of statistics for the given month in the given
+        Returns a tuple of items for the given month in the given
         year. If year is None, the current year is used. If month is None,
         the current month is used.
-        The returned dict has the following keys:
+        The returned tuple has the following items, in order:
+            (gross, net, donations)
+        where:
             'gross': total gross donations
             'net': total net donations
-            'donors': list of donor names
+            'donations': list of donation objects
         """
         today = datetime.date.today()
         if year is None:
@@ -28,19 +30,17 @@ class DonationManager(models.Manager):
 
         qs = self.filter(payment_date__year=year,
                 payment_date__month=month,
-                test_ipn=False)
+                test_ipn=False).select_related('user')
 
-        stats = {
-            'gross': decimal.Decimal(), 
-            'net': decimal.Decimal(), 
-            'donors': [],
-            }
+        gross = decimal.Decimal()
+        net = decimal.Decimal()
+        donations = []
         for donation in qs:
-            stats['gross'] += donation.mc_gross
-            stats['net'] += donation.mc_gross - donation.mc_fee
-            stats['donors'].append(donation.donor())
+            gross += donation.mc_gross
+            net += donation.mc_gross - donation.mc_fee
+            donations.append(donation)
 
-        return stats
+        return gross, net, donations
 
 
 class Donation(models.Model):
@@ -71,19 +71,14 @@ class Donation(models.Model):
             return u'%s from %s' % (self.mc_gross, self.user.username)
         return u'%s from %s %s' % (self.mc_gross, self.first_name, self.last_name)
 
-    def save(self, *args, **kwargs):
-        if self.user is None:
-            self.is_anonymous = True
-        super(Donation, self).save(*args, **kwargs)
-
     def donor(self):
         """Returns the donor name for the donation."""
         if self.is_anonymous:
-            return ANONYMOUS
+            return settings.DONATIONS_ANON_NAME
         if self.user is not None:
             return self.user.username
         if self.first_name or self.last_name:
             name = u'%s %s' % (self.first_name, self.last_name)
             return name.strip()
-        return ANONYMOUS
+        return settings.DONATIONS_ANON_NAME
 

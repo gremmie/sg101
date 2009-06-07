@@ -3,6 +3,8 @@
 import os
 import platform
 import local_settings
+from decimal import Decimal
+
 project_path = os.path.abspath(os.path.split(__file__)[0])
 
 DEBUG = local_settings.DEBUG
@@ -144,6 +146,13 @@ AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
 MAX_AVATAR_SIZE_PIXELS = 100
 AVATAR_DEFAULT_URL = MEDIA_URL + AVATAR_DIR + '/default.png'
+DONATIONS_ITEM_NAME = 'Donation for SurfGuitar101.com'
+DONATIONS_BUSINESS = 'brian@surfguitar101.com'
+DONATIONS_BUSINESS_DEBUG = 'brian@surfguitar101.com'
+DONATIONS_GOAL = Decimal('100.00')  # montly goal
+DONATIONS_ANON_NAME = u'Anonymous'
+DONATIONS_ITEM_NUM = 500            # donation w/name listed
+DONATIONS_ITEM_ANON_NUM = 501       # donation listed as anonymous
 
 # URL's of 3rd party Javascript and CSS files.
 # These dictionaries are used by core/templatetags/script_tags, and
@@ -185,4 +194,3 @@ GPP_THIRD_PARTY_CSS = {
     ),
 }
 
-# vim: ts=4 sw=4

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Donations{% endblock %}
+{% block content %}
+<h2>Donations</h2>
+<p>
+SurfGuitar101.com is a member supported website. We don't display ads or have other forms of
+sponsorship. If you enjoy this website, the forums, chatting in IRC, the podcasts, surf music news, 
+the show calendar, and everything else, please consider making a small donation to help cover server 
+and hosting costs.
+</p>
+<p>
+We are currently using Paypal to receive donations. You don't have to be a Paypal member to donate;
+major credit cards are also accepted. If you really don't do Paypal, please 
+<a href="{% url contact-form %}">contact me</a> and we can work something else out.
+</p>
+<p>Thank you for donating to SurfGuitar101.com!</p>
+<h3>Statistics for {% now "F, Y" %}:</h3>
+<table>
+   <tr><th>Goal:</th><td>${{ goal }}</td></tr>
+   <tr><th>Gross:</th><td>${{ gross }}</td></tr>
+   <tr><th>Net:</th><td>${{ net }}</td></tr>
+   <tr><th>Left to Go:</th><td>${{ left }}</td></tr>
+</table>
+{% if donations %}
+<h3>Donors for {% now "F, Y" %}:</h3>
+<ul>
+   {% for donation in donations %}
+   <li>
+      {% if donation.is_anonymous %}
+         {{ anonymous }}
+      {% else %}
+         {% if donation.user %}
+            <a href="{% url bio-view_profile donation.user.username %}">{{ donation.user.username }}</a>
+         {% else %}
+            {{ donation.donor }}
+         {% endif %}
+      {% endif %}
+   </li>
+   {% endfor %}
+</ul>
+{% endif %}
+
+<h3>Donation Form</h3>
+<form action="{{ form_action }}" method="post">
+<fieldset>
+   <legend>Make A Donation</legend>
+   <p>Please select an amount:</p>
+   <ul class="icon-list">
+   <li><input name="amount" type="radio" value="" id="amount_other" />
+      <label for="amount_other">Other:</label>
+      <input name="amount" type="text" value="25.00" id="amount_other" size="7" /></li>
+   <li><input name="amount" type="radio" value="5.00" id="amount_5" />
+      <label for="amount_5">$5</label></li>
+   <li><input name="amount" type="radio" value="10.00" id="amount_10" />
+      <label for="amount_10">$10</label></li>
+   <li><input name="amount" type="radio" value="15.00" id="amount_15" />
+      <label for="amount_15">$15</label></li>
+   <li><input name="amount" type="radio" value="20.00" id="amount_20" />
+      <label for="amount_20">$20</label></li>
+   </ul>
+   {% if user.is_authenticated %}
+      <input type="hidden" name="custom" value="{{ user.username }}" />
+      <p>You are currently logged in. Would you like your site username listed with your donation?</p>
+      <ul class="icon-list">
+         <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
+         <label for="name_yes">Yes, list me as {{ user.username }}</label></li>
+   {% else %}
+   <p>You are not currently logged in. Please <a href="{% url accounts-login %}">log in</a>
+   if you would like your site username listed with your donation. Otherwise you can have your 
+   actual name (from Paypal) listed, or you can be listed as {{ anonymous }}.</p>
+      <ul class="icon-list">
+         <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
+         <label for="name_yes">Yes, list my name as gathered from Paypal</label></li>
+   {% endif %}
+   <li><input name="item_number" type="radio" value="{{ item_anon_number }}" id="name_no" />
+      <label for="name_no">No, list me as {{ anonymous }}</label></li>
+   </ul>
+   <input type="hidden" name="cmd" value="_donations" />
+   <input type="hidden" name="business" value="{{ business }}" />
+   <input type="hidden" name="charset" value="utf-8" />
+   <input type="hidden" name="return" value="http://{{ domain }}{% url donations-thanks %}" />
+   <input type="hidden" name="currency_code" value="USD" />
+   <input type="hidden" name="item_name" value="{{ item_name }}" />
+   <input type="hidden" name="rm" value="1" />
+   <input type="hidden" name="no_note" value="0" />
+   <input type="hidden" name="cn" value="Do you have any comments for {{ domain }}?" />
+   <input type="hidden" name="no_shipping" value="1" />
+   <input type="hidden" name="cancel_return" value="http://{{ domain }}{% url donations-index %}" />
+
+
+   <p><input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif" name="I1" 
+      alt="Submit Button" /></p>
+</fieldset>
+</form>
+
+{% endblock %}
