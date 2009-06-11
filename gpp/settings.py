@@ -2,8 +2,10 @@
 
 import os
 import platform
-import local_settings
 from decimal import Decimal
+import logging
+
+import local_settings
 
 project_path = os.path.abspath(os.path.split(__file__)[0])
 
@@ -157,6 +159,18 @@ DONATIONS_ANON_NAME = u'Anonymous'
 DONATIONS_ITEM_NUM = 500            # donation w/name listed
 DONATIONS_ITEM_ANON_NUM = 501       # donation listed as anonymous
 
+#######################################################################
+# Configure Logging
+#######################################################################
+
+logging.basicConfig(
+        filename=os.path.join(project_path, 'logs', 'gpp.log'),
+        filemode='a',
+        format='%(asctime)s %(levelname)s %(message)s',
+        level=local_settings.LOG_LEVEL)
+
+
+#######################################################################
 # URL's of 3rd party Javascript and CSS files.
 # These dictionaries are used by core/templatetags/script_tags, and
 # should also be used by developers when creating form media classes.

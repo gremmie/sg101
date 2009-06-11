@@ -16,8 +16,9 @@ def send_mail(subject, message, from_email, recipient_list,
         django.core.mail.send_mail(subject, message, from_email, recipient_list,
                 fail_silently, auth_user, auth_password)
 
-    #logging.info('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s' % 
-    #        (from_email, str(recipient_list), subject, message))
+    import logging
+    logging.debug('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s' %
+            (from_email, str(recipient_list), subject, message))
 
 
 def email_admins(subject, message):
