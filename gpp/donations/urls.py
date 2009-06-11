@@ -6,5 +6,8 @@ from django.conf.urls.defaults import *
 urlpatterns = patterns('donations.views',
     url(r'^$', 'index', name='donations-index'),
     url(r'^ipn/$', 'ipn', name='donations-ipn'),
-    url(r'^thanks/$', 'thanks', name='donations-thanks'),
+)
+urlpatterns += patterns('django.views.generic.simple',
+    (r'^thanks/$', 'direct_to_template', 
+        {'template': 'donations/thanks.html'}, 'donations-thanks')
 )

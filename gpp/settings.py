@@ -146,6 +146,9 @@ AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
 MAX_AVATAR_SIZE_PIXELS = 100
 AVATAR_DEFAULT_URL = MEDIA_URL + AVATAR_DIR + '/default.png'
+
+# Donations application settings:
+DONATIONS_DEBUG = True
 DONATIONS_ITEM_NAME = 'Donation for SurfGuitar101.com'
 DONATIONS_BUSINESS = 'brian@surfguitar101.com'
 DONATIONS_BUSINESS_DEBUG = 'brian@surfguitar101.com'
