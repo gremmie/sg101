@@ -4,8 +4,6 @@ import django.core.mail
 from django.contrib.sites.models import Site
 from django.conf import settings
 
-from core import logging
-
 
 def send_mail(subject, message, from_email, recipient_list, 
         fail_silently = False, auth_user = None, auth_password = None):
@@ -18,8 +16,8 @@ def send_mail(subject, message, from_email, recipient_list,
         django.core.mail.send_mail(subject, message, from_email, recipient_list,
                 fail_silently, auth_user, auth_password)
 
-    logging.info('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s' % 
-            (from_email, str(recipient_list), subject, message))
+    #logging.info('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s' % 
+    #        (from_email, str(recipient_list), subject, message))
 
 
 def email_admins(subject, message):
@@ -50,4 +48,3 @@ def get_full_name(user):
         return full_name
     return user.username
 
-# vim: ts=4 sw=4
