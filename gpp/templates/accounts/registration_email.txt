@@ -1,17 +1,12 @@
 Hello,
 
-Welcome to {{ site_name }}!
+Welcome to {{ site_name }}, {{ username }}!
 
 We have received a request from the email address {{ user_email }} to register an account at {{ site_domain }}.
 
 To finish the registration process, please visit the link below to activate your account. The link will expire in 24 hours, after which you will have to register again.
 
 {{ activation_link }}
-
-Here is the account information:
-
-Username: {{ username }}
-Password: {{ raw_password }}
 
 If you did not register with {{ site_domain }}, simply ignore this email. If you have questions or problems, please send an email to {{ admin_email }}.
 

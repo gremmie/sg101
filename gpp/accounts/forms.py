@@ -84,7 +84,6 @@ class RegisterForm(forms.Form):
                'user_email' : pending_user.email,
                'activation_link' : activation_link,
                'username' : pending_user.username,
-               'raw_password' : self.cleaned_data['password1'],
                'admin_email' : admin_email,
             })
 
