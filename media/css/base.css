@@ -54,6 +54,9 @@ body {
 #footer p {
    margin: 1em;
 } 
+#footer a {
+   color: #0ff;
+}
 ul.app-menu {
    text-align: center;
    list-style: none;

@@ -52,6 +52,7 @@
       <li><a href="{% url news-index_page page=1 %}">News</a></li>
       <li><a href="{% url gcalendar-index %}">Calendar</a></li>
       <li><a href="{% url contact-form %}">Contact</a></li>
+      <li><a href="{% url donations-index %}">Donations</a></li>
       <li><a href="{% url irc-main %}">IRC</a></li>
       <li><a href="{% url bio-members %}">Member List</a></li>
       <li><a href="{% url membermap-index %}">Member Map</a></li>
@@ -78,7 +79,19 @@
    TODO: Should put links to various policies down here. Additional navigation could go here.
    Add a colophon.
    </p>
-   <p>SurfGuitar101.com &copy; 2009 by Brian Neal</p>
+   <p>
+   <a href="{% url contact-form %}">Contact Us</a> &bull;
+   <a href="/about/">About Us</a> &bull;
+   <a href="/policy/tos/">Terms of Service</a> &bull; 
+   <a href="/policy/privacy/">Privacy Policy</a> &bull;
+   <a href="/colophon/">Colophon</a>
+   </p>
+   <p>
+   SurfGuitar101.com &copy; 2009 by Brian Neal.
+   All comments and user contributed articles are property of the posters. 
+   </p>
+   <p>Thanks to all the surf bands, past and present. And thanks to all the fans who care about and keep surf
+   music alive.</p>
 </div>
 
 {% if debug %}
