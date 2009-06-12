@@ -1,9 +1,0 @@
-{% extends 'base.html' %}
-{% block title %}{{ policy.title }}{% endblock %}
-{% block content %}
-<h2>{{ policy.title }}</h2>
-<div class="legal">
-   {{ policy.text|linebreaks }}
-</div>
-<p><em>Last Revised: {{ policy.revised_date }}</em></p>
-{% endblock %}

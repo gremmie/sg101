@@ -114,7 +114,6 @@ INSTALLED_APPS = (
     'downloads',
     'gcalendar',
     'irc',
-    'legal',
     'membermap',
     'messages',
     'news',
