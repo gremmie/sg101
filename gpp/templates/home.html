@@ -3,6 +3,7 @@
 {% load news_tags %}
 {% load weblinks_tags %}
 {% load downloads_tags %}
+{% load cache %}
 {% block title %}Home{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />
@@ -35,6 +36,7 @@ helping to make this site be the best home on the web for fans and friends of su
 permanent. The site (content, user accounts, etc.) may be wiped at any time while we fix bugs and add features. 
 Also, I hope that the look and feel of this site can be greatly improved to something really cool! I'll need
 lots of help for this aspect, as I'm more of a coder than a designer.</p>
+{% cache 600 home_content %}
 {% current_bulletins %}
 {% current_news %}
 <div class="span-9 append-1">
@@ -43,4 +45,5 @@ lots of help for this aspect, as I'm more of a coder than a designer.</p>
 <div class="span-9 last">
    {% latest_downloads %} 
 </div>
+{% endcache %}
 {% endblock %}

@@ -7,6 +7,7 @@
 {% load potd_tags %}
 {% load messages_tags %}
 {% load script_tags %}
+{% load cache %}
 <head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
 <meta http-equiv="Content-Type" content="text/html" />
 <meta http-equiv="Content-Language" content="en-US" />
@@ -63,7 +64,9 @@
       <li><a href="{% url weblinks-main %}">Links</a></li>
       <li><a href="{% url downloads-index %}">Downloads</a></li>
    </ul>
-   {% photo_of_the_day %}
+   {% cache 300 potd_block %}
+      {% photo_of_the_day %}
+   {% endcache %}
    {% shoutbox %}
    {% irc_status %}
 </div>

@@ -134,6 +134,15 @@ LOGOUT_URL = '/accounts/logout/'
 FILE_UPLOAD_PERMISSIONS = 0640
 
 #######################################################################
+# Caching
+#######################################################################
+if local_settings.USE_CACHE:
+    CACHE_BACKEND = local_settings.CACHE_BACKEND
+    #CACHE_MIDDLEWARE_SECONDS = local_settings.CACHE_MIDDLEWARE_SECONDS
+    #CACHE_MIDDLEWARE_KEY_PREFIX = local_settings.CACHE_MIDDLEWARE_KEY_PREFIX
+    #CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
+
+#######################################################################
 # Tagging Specific Settings
 #######################################################################
 FORCE_LOWERCASE_TAGS = True
