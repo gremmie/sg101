@@ -22,16 +22,6 @@ from core.paginator import DiggPaginator
 
 #######################################################################
 
-def get_profile(user):
-    try:
-        profile = user.get_profile()
-    except:
-        profile = UserProfile()
-        profile.user = user
-    return profile
-
-#######################################################################
-
 def member_list(request, type='user', page=1):
     if type == 'user':
         users = auth.models.User.objects.all().order_by('username')
@@ -54,7 +44,7 @@ def member_list(request, type='user', page=1):
 
 @login_required
 def my_profile(request):
-    profile = get_profile(request.user)
+    profile = request.user.get_profile()
 
     return render_to_response('bio/view_profile.html', {
         'subject': request.user, 
@@ -73,7 +63,7 @@ def view_profile(request, username):
     if user == request.user:
         return HttpResponseRedirect(reverse('bio.views.my_profile'))
 
-    profile = get_profile(user)
+    profile = user.get_profile()
 
     # work around MySQL's handling of Boolean
     hide_email = bool(profile.hide_email)
@@ -93,7 +83,7 @@ def edit_profile(request):
     if request.method == 'POST':
         if request.POST.get('submit_button', 'Cancel') == 'Cancel':
             return HttpResponseRedirect(reverse('bio.views.my_profile'))
-        profile = get_profile(request.user)
+        profile = request.user.get_profile()
         user_form = EditUserForm(request.POST, instance=request.user)
         profile_form = EditUserProfileForm(request.POST, instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
@@ -103,7 +93,7 @@ def edit_profile(request):
             profile.save()
             return HttpResponseRedirect(reverse('bio.views.my_profile'))
     else:
-        profile = get_profile(request.user)
+        profile = request.user.get_profile()
         user_form = EditUserForm(instance=request.user)
         profile_form = EditUserProfileForm(instance=profile)
 
@@ -120,7 +110,7 @@ def change_avatar(request):
     if request.method == 'POST':
         form = UploadAvatarForm(request.POST, request.FILES)
         if form.is_valid():
-            profile = get_profile(request.user)
+            profile = request.user.get_profile()
             file = form.get_file()
             if profile.avatar.name != '':
                 profile.avatar.delete(save=False)
