@@ -11,11 +11,13 @@ from membermap.models import MapEntry
 def on_profile_save(sender, **kwargs):
     if 'instance' in kwargs:
         profile = kwargs['instance']
-        map_entry = MapEntry.objects.get(user=profile.user)
+        try:
+            map_entry = MapEntry.objects.get(user=profile.user)
+        except MapEntry.DoesNotExist:
+            # Not on the map, no harm, no foul
+            return
         if map_entry is not None:
             map_entry.save()
 
 
 post_save.connect(on_profile_save, sender=UserProfile)
-
-# vim: ts=4 sw=4
