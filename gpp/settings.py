@@ -152,7 +152,7 @@ MAX_TAG_LENGTH = 50
 # GPP Specific Settings
 #######################################################################
 GPP_LOG_LEVEL = 0
-GPP_SEND_EMAIL = False
+GPP_SEND_EMAIL = local_settings.GPP_SEND_EMAIL
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
