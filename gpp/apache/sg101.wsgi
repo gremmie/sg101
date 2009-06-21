@@ -13,7 +13,7 @@ os.environ['PYTHON_EGG_CACHE'] = '/home/var/django-sites/sg101/eggs/'
 
 def offline_handler(environ, start_response):
     wsgi_dir = os.path.dirname(__file__)
-    sys.path.append(project_dir)
+    sys.path.append(wsgi_dir)
 
     offline_file = os.path.join(wsgi_dir, '..', 'templates', 'offline.html')
     if os.path.exists(offline_file):
