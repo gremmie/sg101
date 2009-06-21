@@ -4,7 +4,7 @@ Models for the news application.
 
 import datetime
 from django.db import models
-from django.contrib import auth
+from django.contrib.auth.models import User
 from tagging.fields import TagField
 
 
@@ -27,7 +27,7 @@ class Category(models.Model):
 class PendingStory(models.Model):
    """Stories submitted by users are held pending admin approval"""
    title = models.CharField(max_length=255)
-   submitter = models.ForeignKey(auth.models.User)
+   submitter = models.ForeignKey(User)
    category = models.ForeignKey(Category)
    short_text = models.TextField()
    long_text = models.TextField(blank=True)
@@ -61,7 +61,7 @@ class PendingStory(models.Model):
 class Story(models.Model):
    """Model for news stories"""
    title = models.CharField(max_length=255)
-   submitter = models.ForeignKey(auth.models.User)
+   submitter = models.ForeignKey(User)
    category = models.ForeignKey(Category)
    short_text = models.TextField()
    long_text = models.TextField(blank=True)
