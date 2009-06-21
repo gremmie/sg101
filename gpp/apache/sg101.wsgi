@@ -1,9 +1,9 @@
 import os
 import sys
 
-OFFLINE = True
+OFFLINE = False
 
-sys.path.append('/home/var/django-sites/sg101/django')
+sys.path.append('/home/var/django-sites/sg101')
 sys.path.append('/home/var/django-sites/sg101/3rdparty')
 sys.path.append('/home/var/django-sites/sg101/sg101-trunk')
 sys.path.append('/home/var/django-sites/sg101/sg101-trunk/gpp')
