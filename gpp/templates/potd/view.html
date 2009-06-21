@@ -17,8 +17,8 @@
 {% else %}
 <h2>Photo Of The Day Archives</h2>
 {% endif %}
-<div class="potd-details">
 {% if potd %}
+<div class="potd-details">
 <img src="{{ potd.photo.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" />
 <p class="caption">{{ potd.caption }}</p>
 <p class="details">
