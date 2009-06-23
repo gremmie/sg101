@@ -9,6 +9,7 @@ from django.db import models
 from django.contrib import auth
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.core.cache import cache
 
 
 def avatar_file_path_for_user(username, filename):
@@ -46,4 +47,5 @@ class UserProfile(models.Model):
         html = render_to_string('bio/markdown.html', {'data': self.signature})
         self.signature_html = html.strip()
         super(UserProfile, self).save(*args, **kwargs)
+        cache.delete('avatar_' + self.user.username)
 
