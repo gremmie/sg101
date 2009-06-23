@@ -131,7 +131,7 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/profile/me/'
 LOGOUT_URL = '/accounts/logout/'
 
-FILE_UPLOAD_PERMISSIONS = 0640
+FILE_UPLOAD_PERMISSIONS = 0644
 
 #######################################################################
 # Caching
