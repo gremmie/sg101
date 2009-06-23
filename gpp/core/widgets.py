@@ -28,9 +28,7 @@ jQuery("#id_%s").autocomplete("%s", {
     scroll: true,
     scrollHeight: 300,
     matchContains: true,
-    autoFill: true,
+    autoFill: true
 });
 </script>''' % (name, url))
 
-
-# vim: ts=4 sw=4
