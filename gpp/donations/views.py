@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 
 from donations.models import Donation
 
-PP_DATE_FMT = '%H:%M:%S %b %d, %Y PST'
+PP_DATE_FMT = '%H:%M:%S %b. %d, %Y'
 
 def paypal_params():
     """
@@ -137,6 +137,8 @@ def process_donation(item_number, params):
     if txn_type != 'web_accept':
         logging.warning('IPN: invalid txn_type: %s' % txn_type)
         return
+    
+    logging.debug('web_accept')
 
     # Looks like a donation, save it to the database.
     # Determine which user this came from, if any.
@@ -147,6 +149,7 @@ def process_donation(item_number, params):
         try:
             user = User.objects.get(username__exact=params['custom'])
         except User.DoesNotExist:
+            logging.debug('user does not exist')
             pass
 
     is_anonymous = item_number == settings.DONATIONS_ITEM_ANON_NUM
@@ -166,28 +169,38 @@ def process_donation(item_number, params):
         logging.error('IPN: invalid/missing mc_gross or mc_fee')
         return
 
-    try:
-        payment_date = datetime.datetime.strptime(params['payment_date'], 
-                PP_DATE_FMT)
-    except KeyError, ValueError:
-        logging.error('IPN: invalid/missing payment_date')
+    payment_date = params.get('payment_date')
+    if payment_date is None:
+        logging.error('IPN: missing payment_date')
         return
 
-    donation = Donation(
-        user=user,
-        is_anonymous=is_anonymous,
-        test_ipn=test_ipn,
-        txn_id=txn_id,
-        first_name=first_name,
-        last_name=last_name,
-        payer_email=payer_email,
-        payer_id=payer_id,
-        memo=memo,
-        payer_status=payer_status,
-        mc_gross=mc_gross,
-        mc_fee=mc_fee,
-        payment_date=payment_date)
+    # strip off the timezone
+    payment_date = payment_date[:-4]
+    try:
+        payment_date = datetime.datetime.strptime(payment_date, PP_DATE_FMT)
+    except ValueError:
+        logging.error('IPN: invalid payment_date "%s"' % params['payment_date'])
+        return
 
-    donation.save()
-    logging.info('IPN: donation saved')
+    try:
+        donation = Donation(
+            user=user,
+            is_anonymous=is_anonymous,
+            test_ipn=test_ipn,
+            txn_id=txn_id,
+            txn_type=txn_type,
+            first_name=first_name,
+            last_name=last_name,
+            payer_email=payer_email,
+            payer_id=payer_id,
+            memo=memo,
+            payer_status=payer_status,
+            mc_gross=mc_gross,
+            mc_fee=mc_fee,
+            payment_date=payment_date)
+    except:
+        logging.exception('IPN: exception during donation creation')
+    else:
+        donation.save()
+        logging.info('IPN: donation saved')
 
