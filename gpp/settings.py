@@ -166,8 +166,8 @@ DONATIONS_BUSINESS = 'brian@surfguitar101.com'
 DONATIONS_BUSINESS_DEBUG = 'bgneal_1194212446_biz@gmail.com'
 DONATIONS_GOAL = Decimal('100.00')  # monthly goal
 DONATIONS_ANON_NAME = u'Anonymous'
-DONATIONS_ITEM_NUM = 500            # donation w/name listed
-DONATIONS_ITEM_ANON_NUM = 501       # donation listed as anonymous
+DONATIONS_ITEM_NUM = '500'          # donation w/name listed
+DONATIONS_ITEM_ANON_NUM = '501'     # donation listed as anonymous
 
 #######################################################################
 # Configure Logging
