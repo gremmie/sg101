@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 
 from donations.models import Donation
 
-PP_DATE_FMT = '%H:%M:%S %b. %d, %Y'
+PP_DATE_FMT = '%H:%M:%S %b %d, %Y'
 
 def paypal_params():
     """
