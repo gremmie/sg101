@@ -14,6 +14,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
 <a href="{% url contact-form %}">contact me</a> and we can work something else out.
 </p>
 <p>Thank you for donating to SurfGuitar101.com!</p>
+<div class="span-9 append-1">
 <h3>Statistics for {% now "F, Y" %}:</h3>
 <table>
    <tr><th>Goal:</th><td>${{ goal }}</td></tr>
@@ -21,8 +22,10 @@ major credit cards are also accepted. If you really don't do Paypal, please
    <tr><th>Net:</th><td>${{ net }}</td></tr>
    <tr><th>Left to Go:</th><td>${{ left }}</td></tr>
 </table>
-{% if donations %}
+</div>
+<div class="span-9 last">
 <h3>Donors for {% now "F, Y" %}:</h3>
+{% if donations %}
 <ul>
    {% for donation in donations %}
    <li>
@@ -38,15 +41,18 @@ major credit cards are also accepted. If you really don't do Paypal, please
    </li>
    {% endfor %}
 </ul>
+{% else %}
+<p>We haven't received any donations this month. You could be the first!</p>
 {% endif %}
+</div>
 
-<h3>Donation Form</h3>
+<div class="span-19 last">
 <form action="{{ form_action }}" method="post">
 <fieldset>
    <legend>Make A Donation</legend>
    <p>Please select an amount:</p>
    <ul class="icon-list">
-   <li><input name="amount" type="radio" value="" id="amount_other" />
+   <li><input name="amount" type="radio" value="" id="amount_other_r" />
       <label for="amount_other">Other:</label>
       <input name="amount" type="text" value="25.00" id="amount_other" size="7" /></li>
    <li><input name="amount" type="radio" value="5.00" id="amount_5" />
@@ -92,5 +98,5 @@ major credit cards are also accepted. If you really don't do Paypal, please
       alt="Submit Button" /></p>
 </fieldset>
 </form>
-
+</div>
 {% endblock %}
