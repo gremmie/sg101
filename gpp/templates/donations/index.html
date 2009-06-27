@@ -26,7 +26,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
 <div class="span-9 last">
 <h3>Donors for {% now "F, Y" %}:</h3>
 {% if donations %}
-<ul>
+<ol>
    {% for donation in donations %}
    <li>
       {% if donation.is_anonymous %}
@@ -40,7 +40,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
       {% endif %}
    </li>
    {% endfor %}
-</ul>
+</ol>
 {% else %}
 <p>We haven't received any donations this month. You could be the first!</p>
 {% endif %}
