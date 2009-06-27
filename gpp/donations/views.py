@@ -138,18 +138,15 @@ def process_donation(item_number, params):
         logging.warning('IPN: invalid txn_type: %s' % txn_type)
         return
     
-    logging.debug('web_accept')
-
     # Looks like a donation, save it to the database.
     # Determine which user this came from, if any.
     # The username is stored in the custom field if the user was logged in when
     # the donation was made.
     user = None
-    if 'custom' in params:
+    if 'custom' in params and params['custom']:
         try:
             user = User.objects.get(username__exact=params['custom'])
         except User.DoesNotExist:
-            logging.debug('user does not exist')
             pass
 
     is_anonymous = item_number == settings.DONATIONS_ITEM_ANON_NUM
