@@ -19,11 +19,11 @@ from gcalendar.models import Event
 
 
 class CalendarError(Exception):
-    def __init__(self, errs):
-        self.errs = errs
+    def __init__(self, msg):
+        self.msg = msg
 
     def __str__(self):
-        return repr(self.errs)
+        return repr(self.msg)
 
 
 class Calendar(object):
@@ -41,9 +41,9 @@ class Calendar(object):
         try:
             self.client.ProgrammaticLogin()
         except BadAuthentication:
-            raise CalendarError(['Incorrect password'])
+            raise CalendarError('Incorrect password')
         except Exception, e:
-            raise CalendarError([e])
+            raise CalendarError(str(e))
 
     def sync_events(self, qs):
         request_feed = CalendarEventFeed()
@@ -60,7 +60,11 @@ class Calendar(object):
             else:
                 assert False, 'unexpected status in sync_events'
 
-        response_feed = self.client.ExecuteBatch(request_feed, self.batch_feed)
+        try:
+            response_feed = self.client.ExecuteBatch(request_feed, self.batch_feed)
+        except Exception, e:
+            raise CalendarError('ExecuteBatch exception: %s' % e)
+
         err_msgs = []
         for entry in response_feed.entry:
             i = int(entry.batch_id.text)
@@ -86,13 +90,14 @@ class Calendar(object):
                         (qs[i].title, code, entry.batch_status.reason))
 
         if len(err_msgs) > 0:
-            raise CalendarError(err_msgs)
+            raise CalendarError(', '.join(err_msgs))
 
     def _retrieve_event(self, model):
         try:
             event = self.client.GetCalendarEventEntry(model.google_id)
-        except Exception:
-            raise CalendarError(['Could not retrieve event from Google: %s' % model.what])
+        except Exception, e:
+            raise CalendarError('Could not retrieve event from Google: %s, %s' \
+                    % (model.what, e))
         return event
 
     def _populate_event(self, model, event):
@@ -135,11 +140,10 @@ class Calendar(object):
             try:
                 tz = pytz.timezone(tz_name)
             except pytz.UnknownTimeZoneError:
-                raise CalendarError(['Invalid time zone: %s' (tz_name,)])
+                raise CalendarError('Invalid time zone: %s' (tz_name,))
             local = tz.localize(d)
             zulu = local.astimezone(FixedOffset(0))
             s = zulu.strftime(self.DATE_TIME_TZ_FMT)
 
         return s
 
-# vim: ts=4 sw=4
