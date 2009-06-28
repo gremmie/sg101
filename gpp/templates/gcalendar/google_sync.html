@@ -9,9 +9,9 @@
 {% endblock %}
 {% block content %}
 <h1>Synchronize Approved Events with Google Calendar</h1>
-{% if errors %}
+{% if err_msg %}
 <ul class="errorlist">
-   {{ errors|unordered_list }}
+   <li>{{ err_msg }}</li>
 </ul>
 {% endif %}
 {% if events %}

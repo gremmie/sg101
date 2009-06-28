@@ -15,7 +15,7 @@ def google_sync(request):
     """View to synchronize approved event changes with Google calendar."""
     events = Event.pending_events.all()
     messages = []
-    errors = []
+    err_msg = ''
     if request.method == 'POST':
         form = PasswordForm(request.POST)
         if form.is_valid():
@@ -25,7 +25,7 @@ def google_sync(request):
                         gcalendar.settings.CALENDAR_ID)
                 cal.sync_events(events)
             except CalendarError, e:
-                errors = e.errs
+                err_msg = e.msg
                 events = Event.pending_events.all()
                 form = PasswordForm()
             else:
@@ -38,10 +38,9 @@ def google_sync(request):
 
     return render_to_response('gcalendar/google_sync.html', {
         'messages': messages,
-        'errors': errors,
+        'err_msg': err_msg,
         'events': events,
         'form': form,
         },
         context_instance=RequestContext(request))
 
-# vim: ts=4 sw=4
