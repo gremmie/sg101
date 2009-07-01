@@ -24,6 +24,9 @@
          <a href="{% url bio-edit_elsewhere %}">Edit Elsewhere Links</a></td>
       <td>{% elsewhere_links user %}</td>
    </tr>
+   <tr>
+      <th>Time Zone:</th> 
+      <td><select id="id_tz_area"></select> <select id="id_tz_location"></select></td>
    <tr><td>&nbsp;</td><td><input type="submit" name="submit_button" value="Save" />
          <input type="submit" name="submit_button" value="Cancel" /></td></tr>
 </table>

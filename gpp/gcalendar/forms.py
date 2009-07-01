@@ -87,7 +87,7 @@ class EventEntryForm(forms.ModelForm):
         }
         js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
              settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
-             ('js/gcalendar.js', )
+             ('js/timezone.js', 'js/gcalendar.js', )
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial', {})

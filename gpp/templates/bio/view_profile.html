@@ -37,6 +37,7 @@
    <tr><th>Signature</th><td>{{ profile.signature_html|safe }}</td></tr>
    {% endif %}
    <tr><th>Elsewhere</th><td>{% elsewhere_links subject %}</td></tr>
+   <tr><th>Time Zone</th><td>{{ profile.time_zone }}</td></tr>
 </table>
 </div>
 {% if this_is_me %}

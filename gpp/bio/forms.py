@@ -30,6 +30,7 @@ class EditUserProfileForm(forms.ModelForm):
     location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = UserProfile
@@ -42,7 +43,7 @@ class EditUserProfileForm(forms.ModelForm):
         }
         js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
             settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
-            ('js/bio.js', )
+            ('js/bio.js', 'js/timezone.js')
 
 
 def get_image(file):

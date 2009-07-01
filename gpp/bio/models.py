@@ -34,6 +34,8 @@ class UserProfile(models.Model):
     signature = models.TextField(blank=True)
     signature_html = models.TextField(blank=True)
     avatar = models.ImageField(upload_to=avatar_file_path, blank=True)
+    time_zone = models.CharField(max_length=64, blank=True,
+            default='US/Pacific')
 
     def __unicode__(self):
         return self.user.username
