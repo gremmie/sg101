@@ -1,6 +1,7 @@
 {% extends 'bio/base.html' %}
 {% load avatar_tags %}
 {% load elsewhere_tags %}
+{% load core_tags %}
 {% block title %}User Profile for {{ subject.username }}{% endblock %}
 {% block content %}
 <div class="user_profile">
@@ -10,8 +11,8 @@
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>
    <tr><th>Date Joined</th><td>{{ subject.date_joined|date:"F d, Y" }}</td></tr>
    <tr><th>Last Login</th><td>{{ subject.last_login|date:"F d, Y @ H:i" }}</td></tr>
-   <tr><th>Active Member</th><td>{{ subject.is_active|yesno:"Yes,No" }}</td></tr>
-   <tr><th>Staff Member</th><td>{{ subject.is_staff|yesno:"Yes,No" }}</td></tr>
+   <tr><th>Active Member</th><td>{% bool_icon subject.is_active %}</td></tr>
+   <tr><th>Staff Member</th><td>{% bool_icon subject.is_staff %}</td></tr>
    {% if profile.location %}
    <tr><th>Location</th><td>{{ profile.location }}</td></tr>
    {% endif %}
