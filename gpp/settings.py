@@ -114,6 +114,7 @@ INSTALLED_APPS = (
     'core',
     'donations',
     'downloads',
+    'forums',
     'gcalendar',
     'irc',
     'membermap',
