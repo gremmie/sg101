@@ -1,5 +1,6 @@
 """urls for the accounts application"""
 from django.conf.urls.defaults import *
+from django.conf import settings
 
 urlpatterns = patterns('accounts.views',
     url(r'^register/$', 'register', name='accounts-register'),
@@ -19,8 +20,6 @@ urlpatterns += patterns('',
     (r'^password/', 
         'django.contrib.auth.views.password_change', 
         {'template_name': 'accounts/password_change.html',
-         'post_change_redirect': '/accounts/profile/'}),
+         'post_change_redirect': settings.LOGIN_REDIRECT_URL}),
 )
 
-
-# vim: ts=4 sw=4
