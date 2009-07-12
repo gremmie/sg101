@@ -14,7 +14,7 @@
       <input type="hidden" name="next" value="{{ next }}" /></td></tr>
 </table>
 </form>
-<p>Forgot your password? You can reset it <a href="{% url accounts.views.register %}">here</a>.</p>
-<p>Don't have an account? Why don't you <a href="{% url accounts.views.register %}">register</a>?</p>
+<p>Forgot your password? You can reset it <a href="{% url accounts-password_reset %}">here</a>.</p>
+<p>Don't have an account? Why don't you <a href="{% url accounts-register %}">register</a>?</p>
 
 {% endblock %}
