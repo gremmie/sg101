@@ -133,6 +133,7 @@ LOGIN_REDIRECT_URL = '/profile/me/'
 LOGOUT_URL = '/accounts/logout/'
 
 FILE_UPLOAD_PERMISSIONS = 0644
+DEFAULT_FROM_EMAIL = ADMINS[0][1]
 
 #######################################################################
 # Caching
