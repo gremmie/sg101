@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Forums: {{ forum.name }}{% endblock %}
+{% block content %}
+<h2>Forums: {{ forum.name }}</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a>
+</h3>
+
+<div class="forum-block">
+<table class="forum-index-table">
+   <thead>
+      <tr>
+         <th class="forum-index_title">Topics</th>
+         <th class="forum-index_replies">Replies</th>
+         <th class="forum-index_author">Author</th>
+         <th class="forum-index_views">Views</th>
+         <th class="forum-index_last_post">Last Post</th>
+      </tr>
+   </thead>
+   <tbody>
+   {% for topic in topics %}
+      <tr>
+         <td><h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
+         <td class="forum-index_replies">{{ topic.post_count }}</td>
+         <td class="forum-index_author">{{ topic.user.username }}</td>
+         <td class="forum-index_views">{{ topic.view_count }}</td>
+         <td class="forum-index_last_post">
+            {% if topic.last_post %}
+               {{ topic.last_post.update_date|date }}<br />
+               {{ topic.last_post.user.username }}
+            {% else %}
+               <i>No Posts</i>
+            {% endif %}
+         </td>
+      </tr>
+   {% empty %}
+      <tr>
+         <td colspan="4">
+            <i>No topics available.</i>
+         </td>
+      </tr>
+   {% endfor %}
+   </tbody>
+</table>
+</div>
+{% endblock %}
