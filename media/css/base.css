@@ -153,3 +153,36 @@ ul.icon-list li {
 #slideshow img.last-active {
    z-index:9;
 }
+table.forum-index-table {
+   width:100%;
+}
+table.forum-index-table thead th {
+   background:teal;
+}
+table.forum-index-table th.forum-title {
+   width:65%;
+}
+table.forum-index-table th.forum-topics {
+   width:10%;
+   text-align:center;
+}
+table.forum-index-table th.forum-posts {
+   width:10%;
+   text-align:center;
+}
+table.forum-index-table th.forum-last_post {
+   width:15%;
+   text-align:center;
+}
+table.forum-index-table td.forum-topics {
+   width:10%;
+   text-align:center;
+}
+table.forum-index-table td.forum-posts {
+   width:10%;
+   text-align:center;
+}
+table.forum-index-table td.forum-last_post {
+   width:15%;
+   text-align:center;
+}

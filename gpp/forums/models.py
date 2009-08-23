@@ -42,6 +42,10 @@ class Forum(models.Model):
     def __unicode__(self):
         return self.name
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('forums-forum_index', [self.slug])
+
     def topic_count_update(self):
         """Call to notify the forum that its topic count has been updated."""
         self.topic_count = Topic.objects.filter(forum=self).count()

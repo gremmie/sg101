@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Forums{% endblock %}
+{% block content %}
+<h2>Forums</h2>
+
+<div class="forum-block">
+{% for iter in cats %}
+   <h3>{{ iter.cat }}</h3>
+   <table class="forum-index-table">
+      <thead>
+         <tr>
+            <th class="forum-title">Forum</th>
+            <th class="forum-topics">Topics</th>
+            <th class="forum-posts">Posts</th>
+            <th class="forum-last_post">Last Post</th>
+         </tr>
+      </thead>
+      <tbody>
+         {% for forum in iter.forums %}
+            <tr>
+               <td><h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
+                  <p>{{ forum.description }}</p></td>
+               <td class="forum-topics">{{ forum.topic_count }}</td>
+               <td class="forum-posts">{{ forum.post_count }}</td>
+               <td class="forum-last_post">
+                  {% if forum.last_post %}
+                     {{ forum.last_post.update_date|date }}<br />
+                     {{ forum.last_post.user.username }}
+                  {% else %}
+                     <i>No Posts</i>
+                  {% endif %}
+               </td>
+            </tr>
+         {% endfor %}
+      </tbody>
+   </table>
+{% endfor %}
+</div>
+{% endblock %}

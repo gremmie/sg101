@@ -11,12 +11,16 @@ from forums.models import Post
 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'position', )
+    prepopulated_fields = { 'slug': ('name', ) }
+    save_on_top = True
 
 
 class ForumAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'position', 'topic_count', 'post_count')
     prepopulated_fields = { 'slug': ('name', ) }
     raw_id_fields = ('last_post', )
+    save_on_top = True
+
 
 class TopicAdmin(admin.ModelAdmin):
     list_display = ('name', 'forum', 'creation_date', 'user', 'sticky', 'locked',
@@ -25,6 +29,7 @@ class TopicAdmin(admin.ModelAdmin):
     search_fields = ('name', )
     date_hierarchy = 'creation_date'
     list_filter = ('creation_date', 'update_date', )
+    save_on_top = True
 
 
 class PostAdmin(admin.ModelAdmin):
@@ -34,6 +39,7 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = ('body', )
     date_hierarchy = 'creation_date'
     list_filter = ('creation_date', 'update_date', )
+    save_on_top = True
 
 
 admin.site.register(Category, CategoryAdmin)
