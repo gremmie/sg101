@@ -1,0 +1,6 @@
+{% if post %}
+{{ post.update_date|date:"M d, Y H:i"}}<br />
+<a href="{% url bio-view_profile username=post.user.username %}" title="View profile for {{ post.user.username }}">{{ post.user.username }}</a>
+{% else %}
+<i>No posts</i>
+{% endif %}

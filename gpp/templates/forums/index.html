@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums{% endblock %}
 {% block content %}
 <h2>Forums</h2>
@@ -22,14 +23,7 @@
                   <p>{{ forum.description }}</p></td>
                <td class="forum-topics">{{ forum.topic_count }}</td>
                <td class="forum-posts">{{ forum.post_count }}</td>
-               <td class="forum-last_post">
-                  {% if forum.last_post %}
-                     {{ forum.last_post.update_date|date }}<br />
-                     {{ forum.last_post.user.username }}
-                  {% else %}
-                     <i>No Posts</i>
-                  {% endif %}
-               </td>
+               <td class="forum-last_post">{% last_post_info forum.last_post %}</td>
             </tr>
          {% endfor %}
       </tbody>
