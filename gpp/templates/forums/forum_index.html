@@ -9,6 +9,7 @@
 </h3>
 
 <div class="forum-block">
+<a href="{% url forums-new_topic slug=forum.slug %}">New Post</a>
 <table class="forum-index-table">
    <thead>
       <tr>
@@ -23,7 +24,7 @@
    {% for topic in topics %}
       <tr>
          <td><h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
-         <td class="forum-index_replies">{{ topic.post_count }}</td>
+         <td class="forum-index_replies">{{ topic.reply_count }}</td>
          <td class="forum-index_author">{{ topic.user.username }}</td>
          <td class="forum-index_views">{{ topic.view_count }}</td>
          <td class="forum-index_last_post">

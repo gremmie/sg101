@@ -99,6 +99,15 @@ class Topic(models.Model):
             self.last_post = None
             self.update_date = self.creation_date
 
+    def reply_count(self):
+        """
+        Returns the number of replies to a topic. The first post
+        doesn't count as a reply.
+        """
+        if self.post_count > 1:
+            return self.post_count - 1
+        return 0
+
 
 class Post(models.Model):
     topic = models.ForeignKey(Topic, related_name='posts')
@@ -107,7 +116,7 @@ class Post(models.Model):
     update_date = models.DateTimeField(auto_now=True)
     body = models.TextField()
     html = models.TextField()
-    user_ip = models.IPAddressField(blank=True, default='')
+    user_ip = models.IPAddressField(blank=True, default='', null=True)
 
     class Meta:
         ordering = ('creation_date', )
