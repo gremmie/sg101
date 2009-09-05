@@ -7,20 +7,17 @@ from forums.models import Topic
 from forums.models import Post
 
 
-class TopicForm(forms.ModelForm):
-    """Form for creating a new topic."""
-    
-    class Meta:
-        model = Topic
-        fields = ('name', )
-
-
-class PostForm(forms.ModelForm):
+class PostForm(forms.Form):
     """Form for creating a new post."""
-    
-    class Meta:
-        model = Post
-        fields = ('body', )
+    body = forms.CharField(label='', widget=forms.Textarea)
+
+    def save(self, topic, user, ip=None):
+        """
+        Creates a new post from the form data and supplied arguments.
+        """
+        post = Post(topic=topic, user=user, body=self.cleaned_data['body'],
+                user_ip=user_ip)
+        post.save()
 
 
 class NewTopicForm(forms.Form):
@@ -31,7 +28,7 @@ class NewTopicForm(forms.Form):
     def save(self, forum, user, ip=None):
         """
         Creates the new Topic and first Post from the form data and supplied
-        forum and user objects.
+        arguments.
         """
         topic = Topic(forum=forum,
                 name=self.cleaned_data['name'],

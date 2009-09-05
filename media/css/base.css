@@ -194,3 +194,26 @@ table.forum-index-table .forum-index_last_post {
    width:20%;
    text-align:center;
 }
+table.forum-topic {
+   border:1px solid black;
+   width:100%;
+   margin-top: 5px;
+}
+td.forum-post-author {
+   width:5%;
+   border-right: 1px solid #ccc;
+}
+td.forum-post-body {
+   vertical-align: top;
+   width:95%;
+}
+div.forum-post-info {
+   padding: 2px;
+   font-size:.8em;
+   border-bottom: 1px solid #ccc;
+   margin-bottom: 5px;
+}
+div.forum-post-info img {
+   float: left;
+   margin-right: 5px;
+}

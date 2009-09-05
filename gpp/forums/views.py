@@ -12,6 +12,7 @@ from django.template import RequestContext
 from forums.models import Forum
 from forums.models import Topic
 from forums.forms import NewTopicForm
+from forums.forms import PostForm
 
 
 def index(request):
@@ -54,7 +55,19 @@ def topic_index(request, id):
     """
     Displays all the posts in a topic.
     """
-    raise Http404
+    topic = get_object_or_404(Topic, pk=id)
+    topic.view_count += 1
+    topic.save()
+
+    posts = topic.posts.select_related()
+
+    return render_to_response('forums/topic.html', {
+        'forum': topic.forum,
+        'topic': topic,
+        'posts': posts,
+        'form': PostForm(),
+        },
+        context_instance=RequestContext(request))
 
 
 @login_required
