@@ -10,14 +10,30 @@ from forums.models import Post
 class PostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='', widget=forms.Textarea)
+    topic_id = forms.IntegerField(widget=forms.HiddenInput)
+    topic = None
 
-    def save(self, topic, user, ip=None):
+    class Media:
+        js = ('js/forums.js', )
+
+    def clean_topic_id(self):
+        id = self.cleaned_data['topic_id']
+        print '*********', id
+        try:
+            self.topic = Topic.objects.get(pk=id)
+            print '******** Got a topic'
+        except Topic.DoesNotExist:
+            raise forms.ValidationError('invalid topic')
+        return id 
+
+    def save(self, user, ip=None):
         """
         Creates a new post from the form data and supplied arguments.
         """
-        post = Post(topic=topic, user=user, body=self.cleaned_data['body'],
-                user_ip=user_ip)
+        post = Post(topic=self.topic, user=user, body=self.cleaned_data['body'],
+                user_ip=ip)
         post.save()
+        return post
 
 
 class NewTopicForm(forms.Form):

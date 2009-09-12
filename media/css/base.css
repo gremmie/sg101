@@ -195,17 +195,21 @@ table.forum-index-table .forum-index_last_post {
    text-align:center;
 }
 table.forum-topic {
-   border:1px solid black;
+   border-top:1px solid black;
+   border-left:1px solid black;
+   border-right:1px solid black;
    width:100%;
    margin-top: 5px;
 }
 td.forum-post-author {
    width:5%;
    border-right: 1px solid #ccc;
+   border-bottom: 1px solid black;
 }
 td.forum-post-body {
    vertical-align: top;
    width:95%;
+   border-bottom: 1px solid black;
 }
 div.forum-post-info {
    padding: 2px;

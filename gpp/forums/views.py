@@ -3,11 +3,13 @@ Views for the forums application.
 """
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
+from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.views.decorators.http import require_POST
 
 from forums.models import Forum
 from forums.models import Topic
@@ -67,7 +69,7 @@ def topic_index(request, id):
         'topic': topic,
         'posts': posts,
         'last_page': last_page,
-        'form': PostForm(),
+        'form': PostForm(initial={'topic_id': topic.id}),
         },
         context_instance=RequestContext(request))
 
@@ -105,3 +107,24 @@ def new_topic_thanks(request, tid):
         'topic': topic,
         },
         context_instance=RequestContext(request))
+
+
+@login_required
+@require_POST
+def quick_reply_ajax(request):
+    """
+    This function handles the quick reply to a thread function. This
+    function is meant to be the target of an AJAX post, and returns
+    the HTML for the new post, which the client-side script appends
+    to the document.
+    """
+    form = PostForm(request.POST)
+    if form.is_valid():
+        post = form.save(request.user, request.META.get("REMOTE_ADDR"))
+        return render_to_response('forums/display_post.html', {
+            'post': post,
+            },
+            context_instance=RequestContext(request))
+
+    return HttpResponseBadRequest();
+

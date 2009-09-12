@@ -1,0 +1,17 @@
+{% load avatar_tags %}
+<tr class="forum-post {% cycle 'odd' 'even' %}">
+   <td class="forum-post-author">
+      <a name="p{{ post.id }}"></a>
+      <a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a><br />
+      {% avatar post.user %}
+   </td>
+   <td class="forum-post-body">
+      <div class="forum-post-info quiet">
+         <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
+         Posted on {{ post.creation_date|date:"M d, Y H:i" }}
+      </div>
+      <div class="forum-post-body">
+         {{ post.html|safe }}
+      </div>
+   </td>
+</tr>
