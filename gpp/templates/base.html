@@ -37,8 +37,8 @@
    <p>Header content</p>
       <ul>
          {% if user.is_authenticated %}
+         <li>Welcome, <a href="{% url bio-me %}">{{ user.username }}</a></li>
          <li>{% unread_messages user %}</li>
-         <li><a href="{% url bio-me %}">My Profile</a></li>
          <li><a href="{% url accounts-logout %}">Logout</a></li>
          {% else %}
          <li><a href="{% url accounts-login %}">Login</a></li>
@@ -54,6 +54,7 @@
       <li><a href="{% url gcalendar-index %}">Calendar</a></li>
       <li><a href="{% url contact-form %}">Contact</a></li>
       <li><a href="{% url donations-index %}">Donations</a></li>
+      <li><a href="{% url forums-index %}">Forums</a></li>
       <li><a href="{% url irc-main %}">IRC</a></li>
       <li><a href="{% url bio-members %}">Member List</a></li>
       <li><a href="{% url membermap-index %}">Member Map</a></li>
