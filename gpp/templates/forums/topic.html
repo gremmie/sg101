@@ -11,13 +11,18 @@
 </h3>
 
 <div class="forum-block">
+{% if last_page %}
+<a href="#forum-reply-form">New Reply</a> &bull;
+{% else %}
 <a href="">New Reply</a> &bull;
+{% endif %}
 <a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
 
 <table class="forum-topic">
 {% for post in posts %}
 <tr class="forum-post">
    <td class="forum-post-author">
+      <a name="p{{ post.id }}"></a>
       <a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a><br />
       {% avatar post.user %}
    </td>
@@ -33,10 +38,11 @@
 </tr>
 {% endfor %}
 </table>
-{% if user.is_authenticated %}
+{% if last_page and user.is_authenticated %}
+<a name="forum-reply-form"></a>
 <form action="" method="post">
 <fieldset>
-<legend>Reply to Thread</legend>
+<legend>Reply to &quot;{{ topic.name }}&quot;</legend>
 {{ form.as_p }}
 <input type="submit" value="Submit Reply" />
 </fieldset>

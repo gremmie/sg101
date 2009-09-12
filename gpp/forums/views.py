@@ -60,11 +60,13 @@ def topic_index(request, id):
     topic.save()
 
     posts = topic.posts.select_related()
+    last_page = True    # TODO
 
     return render_to_response('forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'posts': posts,
+        'last_page': last_page,
         'form': PostForm(),
         },
         context_instance=RequestContext(request))
