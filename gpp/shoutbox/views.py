@@ -5,6 +5,7 @@ Views for the Shoutbox application.
 import re
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.core.paginator import InvalidPage
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
