@@ -221,3 +221,9 @@ div.forum-post-info img {
    float: left;
    margin-right: 5px;
 }
+.forums-post-navigation {
+   text-align: right;
+}
+#forums-quick-reply {
+   margin-top: 1.5em;
+}

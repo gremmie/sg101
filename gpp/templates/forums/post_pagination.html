@@ -1,0 +1,24 @@
+<div class="forums-post-navigation">
+{% ifequal page.paginator.num_pages 1 %}
+Page 1 of 1
+{% else %}
+Goto Page:
+{% if page.has_previous %}
+<a href="./?page={{ page.previous_page_number }}">Previous</a>
+{% endif %}
+{% for num in page.page_range %}
+{% if num %}
+{% ifequal num page.number %}
+{{ num }}
+{% else %}
+<a href="./?page={{ num }}">{{ num }}</a>
+{% endifequal %}
+{% else %}
+&hellip;
+{% endif %}
+{% endfor %}
+{% if page.has_next %}
+<a href="./?page={{ page.next_page_number }}">Next</a>
+{% endif %}
+{% endifequal %}
+</div>

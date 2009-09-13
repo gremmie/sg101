@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
 {% block custom_js %}{% if last_page %}{{ form.media }}{% endif %}{% endblock %}
 {% block content %}
@@ -14,15 +15,18 @@
 {% if last_page %}
 <a href="#forum-reply-form">New Reply</a> &bull;
 {% else %}
-<a href="">New Reply</a> &bull;
+<a href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a> &bull;
 {% endif %}
 <a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
+{% post_navigation page %}
 
 <table class="forum-topic" id="forum-topic">
-{% for post in posts %}
+{% for post in page.object_list %}
 {% include 'forums/display_post.html' %}
 {% endfor %}
 </table>
+{% post_navigation page %}
+
 {% if last_page and user.is_authenticated %}
 <a name="forum-reply-form"></a>
 <form action="" method="post" id="forums-quick-reply">

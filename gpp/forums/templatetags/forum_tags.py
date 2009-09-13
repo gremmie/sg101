@@ -9,3 +9,8 @@ register = template.Library()
 @register.inclusion_tag('forums/last_post_info.html')
 def last_post_info(post):
     return {'post': post}
+
+
+@register.inclusion_tag('forums/post_pagination.html')
+def post_navigation(page):
+    return {'page': page}

@@ -4,6 +4,7 @@ Views for the forums application.
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
@@ -11,11 +12,20 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
 
+from core.paginator import DiggPaginator
 from forums.models import Forum
 from forums.models import Topic
 from forums.forms import NewTopicForm
 from forums.forms import PostForm
 
+#######################################################################
+
+POSTS_PER_PAGE = 2
+
+def create_paginator(links):
+   return DiggPaginator(links, POSTS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
+
+#######################################################################
 
 def index(request):
     """
@@ -62,12 +72,19 @@ def topic_index(request, id):
     topic.save()
 
     posts = topic.posts.select_related()
-    last_page = True    # TODO
+    paginator = create_paginator(posts)
+    page_num = int(request.GET.get('page', '1'))
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    last_page = page_num == paginator.num_pages
 
     return render_to_response('forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
-        'posts': posts,
+        'page': page,
         'last_page': last_page,
         'form': PostForm(initial={'topic_id': topic.id}),
         },
@@ -109,7 +126,6 @@ def new_topic_thanks(request, tid):
         context_instance=RequestContext(request))
 
 
-@login_required
 @require_POST
 def quick_reply_ajax(request):
     """
@@ -118,6 +134,9 @@ def quick_reply_ajax(request):
     the HTML for the new post, which the client-side script appends
     to the document.
     """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+
     form = PostForm(request.POST)
     if form.is_valid():
         post = form.save(request.user, request.META.get("REMOTE_ADDR"))
