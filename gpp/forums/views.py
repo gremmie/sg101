@@ -7,6 +7,7 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
+from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -15,6 +16,7 @@ from django.views.decorators.http import require_POST
 from core.paginator import DiggPaginator
 from forums.models import Forum
 from forums.models import Topic
+from forums.models import Post
 from forums.forms import NewTopicForm
 from forums.forms import PostForm
 
@@ -146,4 +148,18 @@ def quick_reply_ajax(request):
             context_instance=RequestContext(request))
 
     return HttpResponseBadRequest();
+
+
+def goto_post(request, post_id):
+    """
+    This function calculates what page a given post is on, then redirects
+    to that URL. This function is the target of get_absolute_url() for
+    Post objects.
+    """
+    post = get_object_or_404(Post, pk=post_id)
+    count = post.topic.posts.filter(creation_date__lt=post.creation_date).count()
+    page = count / POSTS_PER_PAGE + 1
+    url = reverse('forums-topic_index', kwargs={'id': post.topic.id}) + \
+        '?page=%s#p%s' % (page, post.id)
+    return HttpResponseRedirect(url)
 

@@ -121,6 +121,10 @@ class Post(models.Model):
     class Meta:
         ordering = ('creation_date', )
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('forums-goto_post', [self.pk])
+
     def summary(self):
         LIMIT = 50
         if len(self.body) < LIMIT:
