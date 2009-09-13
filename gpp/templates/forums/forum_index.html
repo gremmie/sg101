@@ -10,7 +10,8 @@
 </h3>
 
 <div class="forum-block">
-<a href="{% url forums-new_topic slug=forum.slug %}">New Post</a>
+<a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
+{% forum_page_navigation page %}
 <table class="forum-index-table">
    <thead>
       <tr>
@@ -22,8 +23,8 @@
       </tr>
    </thead>
    <tbody>
-   {% for topic in topics %}
-      <tr>
+   {% for topic in page.object_list %}
+      <tr class="{% cycle 'odd' 'even' %}">
          <td><h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
          <td class="forum-index_replies">{{ topic.reply_count }}</td>
          <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
@@ -41,5 +42,6 @@
    {% endfor %}
    </tbody>
 </table>
+{% forum_page_navigation page %}
 </div>
 {% endblock %}

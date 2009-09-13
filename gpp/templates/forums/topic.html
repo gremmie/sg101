@@ -18,14 +18,14 @@
 <a href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a> &bull;
 {% endif %}
 <a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
-{% post_navigation page %}
+{% forum_page_navigation page %}
 
 <table class="forum-topic" id="forum-topic">
 {% for post in page.object_list %}
 {% include 'forums/display_post.html' %}
 {% endfor %}
 </table>
-{% post_navigation page %}
+{% forum_page_navigation page %}
 
 {% if last_page and user.is_authenticated %}
 <a name="forum-reply-form"></a>

@@ -22,10 +22,14 @@ from forums.forms import PostForm
 
 #######################################################################
 
+TOPICS_PER_PAGE = 50
 POSTS_PER_PAGE = 2
 
-def create_paginator(links):
-   return DiggPaginator(links, POSTS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
+def create_topic_paginator(topics):
+   return DiggPaginator(topics, TOPICS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
+
+def create_post_paginator(posts):
+   return DiggPaginator(posts, POSTS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
 
 #######################################################################
 
@@ -57,10 +61,16 @@ def forum_index(request, slug):
     """
     forum = get_object_or_404(Forum, slug=slug)
     topics = forum.topics.select_related()
+    paginator = create_topic_paginator(topics)
+    page_num = int(request.GET.get('page', 1))
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
     
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
-        'topics': topics,
+        'page': page,
         },
         context_instance=RequestContext(request))
 
@@ -74,8 +84,8 @@ def topic_index(request, id):
     topic.save()
 
     posts = topic.posts.select_related()
-    paginator = create_paginator(posts)
-    page_num = int(request.GET.get('page', '1'))
+    paginator = create_post_paginator(posts)
+    page_num = int(request.GET.get('page', 1))
     try:
         page = paginator.page(page_num)
     except InvalidPage:

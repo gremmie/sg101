@@ -11,6 +11,6 @@ def last_post_info(post):
     return {'post': post}
 
 
-@register.inclusion_tag('forums/post_pagination.html')
-def post_navigation(page):
+@register.inclusion_tag('forums/pagination.html')
+def forum_page_navigation(page):
     return {'page': page}
