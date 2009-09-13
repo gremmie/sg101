@@ -1,2 +1,3 @@
 {% load markup %}
-{{ data|markdown:"safe" }}
+{% load smiley_tags %}
+{{ data|markdown:"safe"|smilify }}

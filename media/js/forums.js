@@ -31,4 +31,5 @@ $(document).ready(function() {
          });
       return false;
    });
+   $('#id_body').markItUp(mySettings);
 });

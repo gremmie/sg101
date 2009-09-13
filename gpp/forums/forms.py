@@ -2,6 +2,7 @@
 Forms for the forums application.
 """
 from django import forms
+from django.conf import settings
 
 from forums.models import Topic
 from forums.models import Post
@@ -14,7 +15,11 @@ class PostForm(forms.Form):
     topic = None
 
     class Media:
-        js = ('js/forums.js', )
+        css = {
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+        }
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
+            ('js/forums.js', )
 
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
@@ -38,8 +43,16 @@ class PostForm(forms.Form):
 
 class NewTopicForm(forms.Form):
     """Form for creating a new topic and 1st post to that topic."""
-    name = forms.CharField(label='Subject', max_length=255)
+    name = forms.CharField(label='Subject', max_length=255,
+            widget=forms.TextInput(attrs={'size': 64}))
     body = forms.CharField(label='', widget=forms.Textarea)
+
+    class Media:
+        css = {
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+        }
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
+            ('js/forums.js', )
 
     def save(self, forum, user, ip=None):
         """
