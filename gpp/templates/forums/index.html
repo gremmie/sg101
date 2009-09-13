@@ -18,12 +18,12 @@
       </thead>
       <tbody>
          {% for forum in iter.forums %}
-            <tr>
+            <tr class="{% cycle 'odd' 'even' %}">
                <td><h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
                   <p>{{ forum.description }}</p></td>
                <td class="forum-topics">{{ forum.topic_count }}</td>
                <td class="forum-posts">{{ forum.post_count }}</td>
-               <td class="forum-last_post">{% last_post_info forum.last_post %}</td>
+               <td class="forum-last_post">{% last_post_info forum.last_post MEDIA_URL %}</td>
             </tr>
          {% endfor %}
       </tbody>
