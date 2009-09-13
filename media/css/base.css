@@ -206,6 +206,7 @@ td.forum-post-author {
    border-right: 1px solid #ccc;
    border-bottom: 1px solid black;
    vertical-align: top;
+   font-size: x-small;
 }
 td.forum-post-body {
    vertical-align: top;
@@ -217,10 +218,16 @@ div.forum-post-info {
    font-size:.8em;
    border-bottom: 1px solid #ccc;
    margin-bottom: 5px;
+   padding-bottom: 5px;
 }
 div.forum-post-info img {
    float: left;
    margin-right: 5px;
+}
+div.forum-post-info-tools {
+   border-top: 1px solid #ccc;
+   padding-top: 5px;
+   text-align: right;
 }
 .forums-post-navigation {
    text-align: right;

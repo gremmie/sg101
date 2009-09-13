@@ -3,6 +3,7 @@ Views for the forums application.
 """
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
+from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
@@ -15,9 +16,11 @@ from django.template import RequestContext
 from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
+from core.functions import email_admins
 from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
+from forums.models import FlaggedPost
 from forums.forms import NewTopicForm
 from forums.forms import PostForm
 
@@ -182,3 +185,30 @@ def goto_post(request, post_id):
         '?page=%s#p%s' % (page, post.id)
     return HttpResponseRedirect(url)
 
+
+@require_POST
+def flag_post(request):
+    """
+    This function handles the flagging of posts by users. This function should
+    be the target of an AJAX post.
+    """
+    if not request.user.is_authenticated():
+        return HttpResponse('Please login or register to flag a post.')
+
+    id = request.POST.get('id')
+    if id is None:
+        return HttpResponseBadRequest('No post id')
+
+    try:
+        post = Post.objects.get(pk=id)
+    except Post.DoesNotExist:
+        return HttpResponseBadRequest('No post with id %s' % id)
+
+    flag = FlaggedPost(user=request.user, post=post)
+    flag.save()
+    email_admins('A Post Has Been Flagged', """Hello,
+
+A user has flagged a forum post for review.
+""")
+    return HttpResponse('The post was flagged. A moderator will review the post shortly. ' \
+            'Thanks for helping to improve the discussions on this site.')

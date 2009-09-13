@@ -145,5 +145,21 @@ class Post(models.Model):
         if self.id == first_post_id:
             self.topic.delete()
 
+
+class FlaggedPost(models.Model):
+    """This model represents a user flagging a post as inappropriate."""
+    user = models.ForeignKey(User)
+    post = models.ForeignKey(Post)
+    flag_date = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return u'Post ID %s flagged by %s' % (self.post.id, self.user.username)
+
+    class Meta:
+        ordering = ('flag_date', )
+
+    def get_post_url(self):
+        return '<a href="%s">Post</a>' % self.post.get_absolute_url()
+    get_post_url.allow_tags = True
+
 # TODO: A "read" table
-# TODO: A flagged post table

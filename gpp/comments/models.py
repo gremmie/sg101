@@ -75,7 +75,7 @@ class CommentFlag(models.Model):
     flag_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return u'Comment ID %s flagged by %s' % (self.comment_id, self.user.username)
+        return u'Comment ID %s flagged by %s' % (self.comment.id, self.user.username)
 
     class Meta:
         ordering = ('flag_date', )

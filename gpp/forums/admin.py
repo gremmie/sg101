@@ -7,6 +7,7 @@ from forums.models import Category
 from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
+from forums.models import FlaggedPost
 
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -43,7 +44,12 @@ class PostAdmin(admin.ModelAdmin):
     save_on_top = True
 
 
+class FlaggedPostAdmin(admin.ModelAdmin):
+    list_display = ('__unicode__', 'flag_date', 'get_post_url')
+
+
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Forum, ForumAdmin)
 admin.site.register(Topic, TopicAdmin)
 admin.site.register(Post, PostAdmin)
+admin.site.register(FlaggedPost, FlaggedPostAdmin)

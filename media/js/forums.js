@@ -31,5 +31,20 @@ $(document).ready(function() {
          });
       return false;
    });
+   $('a.post-flag').click(function () {
+      var id = this.id;
+      if (id.match(/fp-(\d)/)) {
+         id = RegExp.$1;
+         if (confirm('Only flag a post if you feel it is spam, abuse, violates site rules, ' +
+                 'or is not appropriate. ' +
+                 'A moderator will be notified and will review the post. ' +
+                 'Are you sure you want to flag this post?')) {
+             $.post('/forums/flag-post/', { id : id }, function(response) {
+                 alert(response);
+                 }, 'text');
+         }
+     }
+     return false;
+   });
    $('#id_body').markItUp(mySettings);
 });
