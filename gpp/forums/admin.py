@@ -39,6 +39,7 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = ('body', )
     date_hierarchy = 'creation_date'
     list_filter = ('creation_date', 'update_date', )
+    ordering = ('-creation_date', )
     save_on_top = True
 
 

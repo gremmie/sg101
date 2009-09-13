@@ -119,7 +119,7 @@ class Post(models.Model):
     user_ip = models.IPAddressField(blank=True, default='', null=True)
 
     class Meta:
-        ordering = ('-creation_date', )
+        ordering = ('creation_date', )
 
     @models.permalink
     def get_absolute_url(self):

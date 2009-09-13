@@ -10,6 +10,7 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
+from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
 
@@ -67,10 +68,14 @@ def forum_index(request, slug):
         page = paginator.page(page_num)
     except InvalidPage:
         raise Http404
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
     
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
         'page': page,
+        'page_nav': page_nav,
         },
         context_instance=RequestContext(request))
 
@@ -93,10 +98,14 @@ def topic_index(request, id):
 
     last_page = page_num == paginator.num_pages
 
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
     return render_to_response('forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'page': page,
+        'page_nav': page_nav,
         'last_page': last_page,
         'form': PostForm(initial={'topic_id': topic.id}),
         },
