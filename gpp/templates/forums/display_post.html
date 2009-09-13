@@ -4,6 +4,9 @@
       <a name="p{{ post.id }}"></a>
       <a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a><br />
       {% avatar post.user %}
+      Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
+      Posts: {{ post.user.get_profile.forum_post_count }}<br />
+      Location: {{ post.user.get_profile.location }}<br />
    </td>
    <td class="forum-post-body">
       <div class="forum-post-info quiet">
