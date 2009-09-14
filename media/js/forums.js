@@ -39,9 +39,18 @@ $(document).ready(function() {
                  'or is not appropriate. ' +
                  'A moderator will be notified and will review the post. ' +
                  'Are you sure you want to flag this post?')) {
-             $.post('/forums/flag-post/', { id : id }, function(response) {
-                 alert(response);
-                 }, 'text');
+             $.ajax({
+               url: '/forums/flag-post/',
+               type: 'POST',
+               data: {id: id}, 
+               dataType: 'text',
+               success: function (response, textStatus) {
+                  alert(response);
+               },
+               error: function (xhr, textStatus, ex) {
+                  alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+               }
+             });
          }
      }
      return false;

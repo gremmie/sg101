@@ -193,7 +193,7 @@ def flag_post(request):
     be the target of an AJAX post.
     """
     if not request.user.is_authenticated():
-        return HttpResponse('Please login or register to flag a post.')
+        return HttpResponseForbidden('Please login or register to flag a post.')
 
     id = request.POST.get('id')
     if id is None:
