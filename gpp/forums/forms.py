@@ -32,10 +32,8 @@ class PostForm(forms.Form):
 
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
-        print '*********', id
         try:
             self.topic = Topic.objects.get(pk=id)
-            print '******** Got a topic'
         except Topic.DoesNotExist:
             raise forms.ValidationError('invalid topic')
         return id 

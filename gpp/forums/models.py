@@ -2,11 +2,15 @@
 Models for the forums application.
 """
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User, Group
 from django.template.loader import render_to_string
 
 
 class Category(models.Model):
+    """
+    Forums belong to a category, whose access may be assigned to groups.
+    """
     name = models.CharField(max_length=80)
     slug = models.SlugField(max_length=80)
     position = models.IntegerField(blank=True, default=0)
@@ -21,8 +25,49 @@ class Category(models.Model):
     def __unicode__(self):
         return self.name
 
+    def can_access(self, user):
+        """
+        Checks to see if the given user has permission to access
+        this category.
+        If this category has no groups assigned to it, return true.
+        Else, return true if the user belongs to a group that has been
+        assigned to this category, and false otherwise.
+        """
+        if self.groups.count() == 0:
+            return True
+        if user.is_authenticated():
+            return self.groups.filter(user__pk=user.id).count() > 0
+        return False
+
+
+class ForumManager(models.Manager):
+    """
+    The manager for the Forum model. Provides a centralized place to
+    put commonly used and useful queries.
+    """
+
+    def forums_for_user(self, user):
+        """
+        Returns a queryset containing the forums that the given user can
+        "see" due to authenticated status, superuser status and group membership.
+        """
+        if user.is_superuser:
+            qs = self.all()
+        else:
+            user_groups = []
+            if user.is_authenticated():
+                user_groups = user.groups.all()
+
+            qs = self.filter(Q(category__groups__isnull=True) | \
+                    Q(category__groups__in=user_groups))
+
+        return qs.select_related('category', 'last_post', 'last_post__user')
+
 
 class Forum(models.Model):
+    """
+    A forum is a collection of topics.
+    """
     category = models.ForeignKey(Category, related_name='forums')
     name = models.CharField(max_length=80)
     slug = models.SlugField(max_length=80)
@@ -35,6 +80,8 @@ class Forum(models.Model):
     post_count = models.IntegerField(blank=True, default=0)
     last_post = models.OneToOneField('Post', blank=True, null=True,
         related_name='parent_forum')
+
+    objects = ForumManager()
 
     class Meta:
         ordering = ('position', )
@@ -61,6 +108,9 @@ class Forum(models.Model):
 
 
 class Topic(models.Model):
+    """
+    A topic is a thread of discussion, consisting of a series of posts.
+    """
     forum = models.ForeignKey(Forum, related_name='topics')
     name = models.CharField(max_length=255)
     creation_date = models.DateTimeField(auto_now_add=True)
@@ -110,6 +160,9 @@ class Topic(models.Model):
 
 
 class Post(models.Model):
+    """
+    A post is an instance of a user's single contribution to a topic.
+    """
     topic = models.ForeignKey(Topic, related_name='posts')
     user = models.ForeignKey(User, related_name='posts')
     creation_date = models.DateTimeField(auto_now_add=True)

@@ -41,7 +41,7 @@ def index(request):
     """
     This view displays all the forums available, ordered in each category.
     """
-    forums = Forum.objects.all().select_related()
+    forums = Forum.objects.forums_for_user(request.user)
     cats = {}
     for forum in forums:
         cat = cats.setdefault(forum.category.id, {
@@ -63,8 +63,13 @@ def forum_index(request, slug):
     """
     Displays all the topics in a forum.
     """
+    # TODO: use select_related to save queries
     forum = get_object_or_404(Forum, slug=slug)
-    topics = forum.topics.select_related()
+
+    if not forum.category.can_access(request.user):
+        return HttpResponseForbidden()
+
+    topics = forum.topics.select_related('last_post', 'last_post__user')
     paginator = create_topic_paginator(topics)
     page_num = int(request.GET.get('page', 1))
     try:
@@ -87,7 +92,18 @@ def topic_index(request, id):
     """
     Displays all the posts in a topic.
     """
-    topic = get_object_or_404(Topic, pk=id)
+    #topic = get_object_or_404(Topic, pk=id)
+    #TODO: optimize this or package it up somehow
+    # this saves 2 queries vs the get_object_or_404
+    qs = Topic.objects.filter(pk=id).select_related()
+    try:
+        topic = qs[0]
+    except Topic.DoesNotExist:
+        raise Http404
+
+    if not topic.forum.category.can_access(request.user):
+        return HttpResponseForbidden()
+
     topic.view_count += 1
     topic.save()
 
@@ -121,6 +137,10 @@ def new_topic(request, slug):
     This view handles the creation of new topics.
     """
     forum = get_object_or_404(Forum, slug=slug)
+
+    if not forum.category.can_access(request.user):
+        return HttpResponseForbidden()
+
     if request.method == 'POST':
         form = NewTopicForm(request.POST)
         if form.is_valid():
@@ -163,6 +183,9 @@ def quick_reply_ajax(request):
 
     form = PostForm(request.POST)
     if form.is_valid():
+        if not form.topic.forum.category.can_access(request.user):
+            return HttpResponseForbidden()
+
         post = form.save(request.user, request.META.get("REMOTE_ADDR"))
         return render_to_response('forums/display_post.html', {
             'post': post,
