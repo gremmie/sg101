@@ -1,6 +1,8 @@
 """
 Models for the forums application.
 """
+import datetime
+
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
@@ -121,7 +123,7 @@ class Topic(models.Model):
 
     # denormalized fields to reduce database hits
     post_count = models.IntegerField(blank=True, default=0)
-    update_date = models.DateTimeField(auto_now=True)
+    update_date = models.DateTimeField()
     last_post = models.OneToOneField('Post', blank=True, null=True,
         related_name='parent_topic')
 
@@ -157,6 +159,14 @@ class Topic(models.Model):
         if self.post_count > 1:
             return self.post_count - 1
         return 0
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            now = datetime.datetime.now()
+            self.creation_date = now
+            self.update_date = now
+
+        super(Topic, self).save(*args, **kwargs)
 
 
 class Post(models.Model):

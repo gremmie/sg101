@@ -134,13 +134,13 @@ def new_topic(request, slug):
         return HttpResponseForbidden()
 
     if request.method == 'POST':
-        form = NewTopicForm(request.POST)
+        form = NewTopicForm(request.user, forum, request.POST)
         if form.is_valid():
-            topic = form.save(forum, request.user, request.META.get("REMOTE_ADDR"))
+            topic = form.save(request.META.get("REMOTE_ADDR"))
             return HttpResponseRedirect(reverse('forums-new_topic_thanks',
                                             kwargs={'tid': topic.pk}))
     else:
-        form = NewTopicForm()
+        form = NewTopicForm(request.user, forum)
     
     return render_to_response('forums/new_topic.html', {
         'forum': forum,
@@ -175,7 +175,7 @@ def quick_reply_ajax(request):
 
     form = PostForm(request.POST)
     if form.is_valid():
-        if not form.topic.forum.category.can_access(request.user):
+        if form.topic.locked or not form.topic.forum.category.can_access(request.user):
             return HttpResponseForbidden()
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR"))

@@ -11,12 +11,16 @@
 </h3>
 
 <div class="forum-block">
-{% if last_page %}
-<a href="#forum-reply-form">New Reply</a> &bull;
+{% if topic.locked %}
+<img src="{{ MEDIA_URL }}/icons/lock.png" alt="Lock" title="This topic is locked" />
 {% else %}
-<a href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a> &bull;
+{% if last_page %}
+<a href="#forum-reply-form">New Reply</a>
+{% else %}
+<a href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a>
 {% endif %}
-<a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
+{% endif %}
+&bull; <a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
 {{ page_nav }}
 
 <table class="forum-topic" id="forum-topic">
@@ -26,7 +30,7 @@
 </table>
 {{ page_nav }}
 
-{% if last_page and user.is_authenticated %}
+{% if last_page and user.is_authenticated and not topic.locked %}
 <a name="forum-reply-form"></a>
 <form action="" method="post" id="forums-quick-reply">
 <fieldset>

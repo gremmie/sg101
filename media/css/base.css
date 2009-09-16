@@ -235,3 +235,7 @@ div.forum-post-info-tools {
 #forums-quick-reply {
    margin-top: 1.5em;
 }
+img.forums-topic-icon {
+   float: left;
+   margin-right: 3px;
+}
