@@ -63,8 +63,7 @@ def forum_index(request, slug):
     """
     Displays all the topics in a forum.
     """
-    # TODO: use select_related to save queries
-    forum = get_object_or_404(Forum, slug=slug)
+    forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
 
     if not forum.category.can_access(request.user):
         return HttpResponseForbidden()
@@ -92,14 +91,7 @@ def topic_index(request, id):
     """
     Displays all the posts in a topic.
     """
-    #topic = get_object_or_404(Topic, pk=id)
-    #TODO: optimize this or package it up somehow
-    # this saves 2 queries vs the get_object_or_404
-    qs = Topic.objects.filter(pk=id).select_related()
-    try:
-        topic = qs[0]
-    except Topic.DoesNotExist:
-        raise Http404
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
 
     if not topic.forum.category.can_access(request.user):
         return HttpResponseForbidden()
@@ -136,7 +128,7 @@ def new_topic(request, slug):
     """
     This view handles the creation of new topics.
     """
-    forum = get_object_or_404(Forum, slug=slug)
+    forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
 
     if not forum.category.can_access(request.user):
         return HttpResponseForbidden()
@@ -162,7 +154,7 @@ def new_topic_thanks(request, tid):
     """
     This view displays the success page for a newly created topic.
     """
-    topic = get_object_or_404(Topic, pk=tid)
+    topic = get_object_or_404(Topic.objects.select_related(), pk=tid)
     return render_to_response('forums/new_topic_thanks.html', {
         'forum': topic.forum,
         'topic': topic,
@@ -201,7 +193,7 @@ def goto_post(request, post_id):
     to that URL. This function is the target of get_absolute_url() for
     Post objects.
     """
-    post = get_object_or_404(Post, pk=post_id)
+    post = get_object_or_404(Post.objects.select_related(), pk=post_id)
     count = post.topic.posts.filter(creation_date__lt=post.creation_date).count()
     page = count / POSTS_PER_PAGE + 1
     url = reverse('forums-topic_index', kwargs={'id': post.topic.id}) + \
