@@ -25,7 +25,8 @@
    <tbody>
    {% for topic in page.object_list %}
       <tr class="{% cycle 'odd' 'even' %}">
-         <td>{% if topic.locked %}<img src="{{ MEDIA_URL }}icons/lock.png" alt="Locked" title="Locked"
+         <td>{% if topic.sticky %}<img src="{{ MEDIA_URL }}icons/asterisk_orange.png" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
+            {% if topic.locked %}<img src="{{ MEDIA_URL }}icons/lock.png" alt="Locked" title="Locked"
             class="forums-topic-icon" />{% endif %}
          <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
          <td class="forum-index_replies">{{ topic.reply_count }}</td>
