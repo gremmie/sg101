@@ -112,12 +112,21 @@ def topic_index(request, id):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
+    can_moderate = request.user.is_authenticated() and (
+        request.user.is_superuser or \
+        request.user in topic.forum.moderators.all())
+
+    can_reply = request.user.is_authenticated() and (
+        not topic.locked or can_moderate)
+
     return render_to_response('forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'page': page,
         'page_nav': page_nav,
         'last_page': last_page,
+        'can_moderate': can_moderate,
+        'can_reply': can_reply,
         'form': PostForm(initial={'topic_id': topic.id}),
         },
         context_instance=RequestContext(request))

@@ -11,9 +11,14 @@
 </h3>
 
 <div class="forum-block">
+{% if topic.sticky %}
+<img src="{{ MEDIA_URL }}/icons/asterisk_orange.png" alt="Sticky" title="Sticky" />
+{% endif %}
 {% if topic.locked %}
 <img src="{{ MEDIA_URL }}/icons/lock.png" alt="Lock" title="This topic is locked" />
-{% else %}
+{% endif %}
+{% if can_reply %}
+{% if topic.locked or topic.sticky %}&bull;{% endif %}
 {% if last_page %}
 <a href="#forum-reply-form">New Reply</a>
 {% else %}
@@ -30,7 +35,7 @@
 </table>
 {{ page_nav }}
 
-{% if last_page and user.is_authenticated and not topic.locked %}
+{% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
 <form action="" method="post" id="forums-quick-reply">
 <fieldset>
