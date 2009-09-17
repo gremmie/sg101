@@ -1,9 +1,10 @@
 {% load avatar_tags %}
+{% load forum_tags %}
 <tr class="forum-post {% cycle 'odd' 'even' %}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
-      <a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a><br />
-      {% avatar post.user %}
+      <a href="{% url bio-view_profile username=post.user.username %}" title="View Profile for {{ post.user.username }}">{{ post.user.username }}</a><br />
+      <a href="{% url bio-view_profile username=post.user.username %}">{% avatar post.user %}</a>
       Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
       Posts: {{ post.user.get_profile.forum_post_count }}<br />
       Location: {{ post.user.get_profile.location }}<br />
@@ -13,15 +14,19 @@
       <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
          Posted on {{ post.creation_date|date:"M d, Y H:i" }}
          {% if can_moderate %}from IP: {{ post.user_ip }}{% endif %}
-
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}
       </div>
       <div class="forum-post-info-tools">
+      <a href=""><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
+      {% post_edit_button post user can_moderate MEDIA_URL %}
+      {% if can_moderate %}
       <a href="#" class="post-flag" id="fp-{{ post.id }}" 
          title="Flag this post as spam, abuse, or a violation of site rules.">
          <img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" /></a>
+      <a href=""><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" title="Delete post" /></a>
+      {% endif %}
       </div>
    </td>
 </tr>

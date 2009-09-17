@@ -17,3 +17,12 @@ def last_post_info(post, media_url):
 @register.inclusion_tag('forums/pagination.html')
 def forum_page_navigation(page):
     return {'page': page}
+
+
+@register.inclusion_tag('forums/post_edit_button.html')
+def post_edit_button(post, user, can_moderate, media_url):
+    show_button = post.user.id == user.id or can_moderate
+    return {
+        'show_button': show_button,
+        'MEDIA_URL': media_url,
+    }
