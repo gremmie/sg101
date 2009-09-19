@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Forums: Edit Post{% endblock %}
+{% block custom_js %}{{ form.media }}{% endblock %}
+{% block content %}
+<h2>Forums: Edit Post</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+
+<div class="forum-block">
+<table class="forum-topic" id="forum-topic">
+{% include 'forums/display_post.html' %}
+</table>
+
+<a name="forum-reply-form"></a>
+<form action="." method="post" id="forums-quick-reply">
+<fieldset>
+<legend>Edit Post</legend>
+{{ form.as_p }}
+<input type="submit" value="Update Post" id="forums-edit-post" />
+</fieldset>
+</form>
+</div>
+{% endblock %}

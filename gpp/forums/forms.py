@@ -17,7 +17,7 @@ def bump_post_count(user):
     profile.save()
 
 
-class PostForm(forms.Form):
+class NewPostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='', widget=forms.Textarea)
     topic_id = forms.IntegerField(widget=forms.HiddenInput)
@@ -99,3 +99,21 @@ class NewTopicForm(forms.Form):
 
         bump_post_count(self.user)
         return topic
+
+
+class PostForm(forms.ModelForm):
+    """
+    Form for editing an existing post.
+    """
+    body = forms.CharField(label='', widget=forms.Textarea)
+
+    class Meta:
+        model = Post
+        fields = ('body', )
+
+    class Media:
+        css = {
+            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+        }
+        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
+            ('js/forums.js', )

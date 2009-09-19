@@ -21,8 +21,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import FlaggedPost
-from forums.forms import NewTopicForm
-from forums.forms import PostForm
+from forums.forms import NewTopicForm, NewPostForm, PostForm
 
 #######################################################################
 
@@ -127,7 +126,7 @@ def topic_index(request, id):
         'last_page': last_page,
         'can_moderate': can_moderate,
         'can_reply': can_reply,
-        'form': PostForm(initial={'topic_id': topic.id}),
+        'form': NewPostForm(initial={'topic_id': topic.id}),
         },
         context_instance=RequestContext(request))
 
@@ -182,7 +181,7 @@ def quick_reply_ajax(request):
     if not request.user.is_authenticated():
         return HttpResponseForbidden()
 
-    form = PostForm(request.POST)
+    form = NewPostForm(request.POST)
     if form.is_valid():
         if form.topic.locked or not form.topic.forum.category.can_access(request.user):
             return HttpResponseForbidden()
@@ -236,3 +235,35 @@ A user has flagged a forum post for review.
 """)
     return HttpResponse('The post was flagged. A moderator will review the post shortly. ' \
             'Thanks for helping to improve the discussions on this site.')
+
+
+@login_required
+def edit_post(request, id):
+    """
+    This view function allows authorized users to edit posts.
+    The superuser, forum moderators, and original author can edit posts.
+    """
+    post = get_object_or_404(Post.objects.select_related(), pk=id)
+    can_edit = request.user == post.user or \
+            request.user.is_superuser or \
+            request.user in post.topic.forum.moderators.all()
+
+    if not can_edit:
+        return HttpResponseForbidden("You don't have permission to edit that post.")
+
+    if request.method == "POST":
+        form = PostForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(post.get_absolute_url())
+    else:
+        form = PostForm(instance=post)
+
+    return render_to_response('forums/edit_post.html', {
+        'forum': post.topic.forum,
+        'topic': post.topic,
+        'post': post,
+        'form': form,
+        'can_moderate': True,
+        },
+        context_instance=RequestContext(request))

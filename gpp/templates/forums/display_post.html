@@ -17,14 +17,17 @@
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}
+         {% ifnotequal post.creation_date post.update_date %}
+         <p class="small quiet">Last edited: {{ post.update_date|date:"M d, Y H:i:s" }}</p>
+         {% endifnotequal %}
       </div>
       <div class="forum-post-info-tools">
       <a href=""><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
       {% post_edit_button post user can_moderate MEDIA_URL %}
-      {% if can_moderate %}
       <a href="#" class="post-flag" id="fp-{{ post.id }}" 
          title="Flag this post as spam, abuse, or a violation of site rules.">
          <img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" /></a>
+      {% if can_moderate %}
       <a href=""><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" title="Delete post" /></a>
       {% endif %}
       </div>
