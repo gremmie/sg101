@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
-{% block custom_js %}{% if last_page %}{{ form.media }}{% endif %}{% endblock %}
+{% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
 <h2>Forums: {{ topic.name }}</h2>
 

@@ -108,6 +108,18 @@ class Forum(models.Model):
         else:
             self.last_post = None
 
+    def last_post_pre_delete(self):
+        """
+        Call this function prior to deleting the last post in the forum.
+        A new last post will be found, if one exists.
+        This is to avoid the Django cascading delete issue.
+        """
+        try:
+            self.last_post = \
+                Post.objects.filter(topic__forum=self).exclude(pk=self.last_post.pk).latest()
+        except Post.DoesNotExist:
+            self.last_post = None
+
 
 class Topic(models.Model):
     """
@@ -168,6 +180,18 @@ class Topic(models.Model):
 
         super(Topic, self).save(*args, **kwargs)
 
+    def last_post_pre_delete(self):
+        """
+        Call this function prior to deleting the last post in the topic.
+        A new last post will be found, if one exists.
+        This is to avoid the Django cascading delete issue.
+        """
+        try:
+            self.last_post = \
+                Post.objects.filter(topic=self).exclude(pk=self.last_post.pk).latest()
+        except Post.DoesNotExist:
+            self.last_post = None
+
 
 class Post(models.Model):
     """
@@ -183,6 +207,7 @@ class Post(models.Model):
 
     class Meta:
         ordering = ('creation_date', )
+        get_latest_by = 'creation_date'
 
     @models.permalink
     def get_absolute_url(self):

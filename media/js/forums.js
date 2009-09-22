@@ -33,7 +33,7 @@ $(document).ready(function() {
    });
    $('a.post-flag').click(function () {
       var id = this.id;
-      if (id.match(/fp-(\d)/)) {
+      if (id.match(/fp-(\d+)/)) {
          id = RegExp.$1;
          if (confirm('Only flag a post if you feel it is spam, abuse, violates site rules, ' +
                  'or is not appropriate. ' +
@@ -46,6 +46,28 @@ $(document).ready(function() {
                dataType: 'text',
                success: function (response, textStatus) {
                   alert(response);
+               },
+               error: function (xhr, textStatus, ex) {
+                  alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+               }
+             });
+         }
+     }
+     return false;
+   });
+   $('a.post-delete').click(function () {
+      var id = this.id;
+      if (id.match(/dp-(\d+)/)) {
+         id = RegExp.$1;
+         if (confirm('Are you sure you want to delete this post?')) {
+             $.ajax({
+               url: '/forums/delete-post/',
+               type: 'POST',
+               data: {id: id}, 
+               dataType: 'text',
+               success: function (response, textStatus) {
+                  alert(response);
+                  $('#post-' + id).fadeOut(3000);
                },
                error: function (xhr, textStatus, ex) {
                   alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);

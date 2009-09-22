@@ -1,6 +1,6 @@
 {% load avatar_tags %}
 {% load forum_tags %}
-<tr class="forum-post {% cycle 'odd' 'even' %}">
+<tr class="forum-post {% cycle 'odd' 'even' %}" id="post-{{ post.id }}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
       <a href="{% url bio-view_profile username=post.user.username %}" title="View Profile for {{ post.user.username }}">{{ post.user.username }}</a><br />
@@ -28,7 +28,8 @@
          title="Flag this post as spam, abuse, or a violation of site rules.">
          <img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" /></a>
       {% if can_moderate %}
-      <a href=""><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" title="Delete post" /></a>
+      <a href="#" class="post-delete" id="dp-{{ post.id }}"
+         title="Delete this post"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" /></a>
       {% endif %}
       </div>
    </td>

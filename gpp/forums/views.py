@@ -67,7 +67,7 @@ def forum_index(request, slug):
     if not forum.category.can_access(request.user):
         return HttpResponseForbidden()
 
-    topics = forum.topics.select_related('last_post', 'last_post__user')
+    topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
     paginator = create_topic_paginator(topics)
     page_num = int(request.GET.get('page', 1))
     try:
@@ -267,3 +267,79 @@ def edit_post(request, id):
         'can_moderate': True,
         },
         context_instance=RequestContext(request))
+
+
+@require_POST
+def delete_post(request):
+    """
+    This view function allows superusers and forum moderators to delete posts.
+    This function is the target of AJAX calls from the client.
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden('Please login to delete a post.')
+
+    id = request.POST.get('id')
+    if id is None:
+        return HttpResponseBadRequest('No post id')
+
+    post = get_object_or_404(Post.objects.select_related(), pk=id)
+
+    can_delete = request.user.is_superuser or \
+            request.user in post.topic.forum.moderators.all()
+
+    if not can_delete:
+        return HttpResponseForbidden("You don't have permission to delete that post.")
+
+    if post.topic.post_count == 1 and post == post.topic.last_post:
+        _delete_topic(post.topic)
+    else:
+        _delete_post(post)
+
+    return HttpResponse("The post has been deleted.")
+
+
+def _delete_post(post):
+    """
+    Internal function to delete a single post object.
+    Decrements the post author's post count.
+    Adjusts the parent topic and forum's last_post as needed.
+    """
+    # Adjust post creator's post count
+    profile = post.user.get_profile()
+    if profile.forum_post_count > 0:
+        profile.forum_post_count -= 1
+        profile.save()
+
+    # If this post is the last_post in a topic, we need to update
+    # both the topic and parent forum's last post fields. If we don't
+    # the cascading delete will delete them also!
+
+    topic = post.topic
+    if topic.last_post == post:
+        topic.last_post_pre_delete()
+        topic.save()
+
+    forum = topic.forum
+    if forum.last_post == post:
+        forum.last_post_pre_delete()
+        forum.save()
+
+    # Should be safe to delete the post now:
+    post.delete()
+
+
+def _delete_topic(topic):
+    """
+    Internal function to delete an entire topic.
+    Deletes the topic and all posts contained within.
+    Adjusts the parent forum's last_post as needed.
+    Note that we don't bother adjusting all the users'
+    post counts as that doesn't seem to be worth the effort.
+    """
+    if topic.forum.last_post.topic == topic:
+        topic.forum.last_post_pre_delete()
+        topic.forum.save()
+
+    # It should be safe to just delete the topic now. This will
+    # automatically delete all posts in the topic.
+    topic.delete()
