@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Forums: Move Topic{% endblock %}
+{% block content %}
+<h2>Forums: Move Topic</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+
+<div class="forum-block">
+<form action="." method="post">
+<fieldset>
+<legend>Move Topic: {{ topic.name }}</legend>
+   {{ form.as_p }}
+   <input type="submit" value="Move Topic" />
+</fieldset>
+</form>
+</div>
+{% endblock %}

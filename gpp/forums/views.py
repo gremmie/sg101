@@ -22,7 +22,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import FlaggedPost
-from forums.forms import NewTopicForm, NewPostForm, PostForm
+from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm
 
 #######################################################################
 
@@ -398,7 +398,7 @@ def mod_topic_stick(request, id):
         topic.save()
         return HttpResponseRedirect(topic.get_absolute_url())
 
-    return HttpResponseForbidden()    
+    return HttpResponseForbidden()
 
 
 @login_required
@@ -412,7 +412,7 @@ def mod_topic_lock(request, id):
         topic.save()
         return HttpResponseRedirect(topic.get_absolute_url())
 
-    return HttpResponseForbidden()    
+    return HttpResponseForbidden()
 
 
 @login_required
@@ -426,7 +426,44 @@ def mod_topic_delete(request, id):
         _delete_topic(topic)
         return HttpResponseRedirect(forum_url)
 
-    return HttpResponseForbidden()    
+    return HttpResponseForbidden()
+
+
+@login_required
+def mod_topic_move(request, id):
+    """
+    This view function is for moderators to move a topic to a different forum.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    if not _can_moderate(topic.forum, request.user):
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        form = MoveTopicForm(request.user, request.POST)
+        if form.is_valid():
+            new_forum = form.cleaned_data['forums']
+            old_forum = topic.forum
+            if new_forum != old_forum:
+                topic.forum = new_forum
+                topic.save()
+                # Have to adjust foreign keys to last_post, denormalized counts, etc.:
+                old_forum.topic_count_update()
+                old_forum.post_count_update()
+                old_forum.save()
+                new_forum.topic_count_update()
+                new_forum.post_count_update()
+                new_forum.save()
+
+            return HttpResponseRedirect(topic.get_absolute_url())
+    else:
+        form = MoveTopicForm(request.user)
+
+    return render_to_response('forums/move_topic.html', {
+        'forum': topic.forum,
+        'topic': topic,
+        'form': form,
+        },
+        context_instance=RequestContext(request))
 
 
 def _can_moderate(forum, user):

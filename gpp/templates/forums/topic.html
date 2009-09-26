@@ -45,6 +45,8 @@
    <form action="{% url forums-mod_topic_delete topic.id %}" method="post">
       <input type="submit" value="Delete Topic" id="forum-mod-del-topic" />
    </form>
+   <a href="{% url forums-mod_topic_move topic.id %}"><img src="{{ MEDIA_URL }}icons/application_go.png" alt="Move Topic" title="Move Topic" /></a>
+   <a href="{% url forums-mod_topic_move topic.id %}">Move this topic</a>
 </div>
 {% endif %}
 

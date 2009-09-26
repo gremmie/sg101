@@ -4,6 +4,7 @@ Forms for the forums application.
 from django import forms
 from django.conf import settings
 
+from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 
@@ -105,3 +106,17 @@ class PostForm(forms.ModelForm):
         }
         js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
             ('js/forums.js', )
+
+
+class MoveTopicForm(forms.Form):
+   """
+   Form for a moderator to move a topic to a forum.
+   """
+   forums = forms.ModelChoiceField(label='Move to forum', 
+         queryset=Forum.objects.none())
+
+   def __init__(self, user, *args, **kwargs):
+      super(MoveTopicForm, self).__init__(*args, **kwargs)
+      self.fields['forums'].queryset = \
+              Forum.objects.forums_for_user(user).order_by('name')
+
