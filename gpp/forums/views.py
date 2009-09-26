@@ -14,6 +14,7 @@ from django.shortcuts import render_to_response
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
+from django.utils.text import wrap
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
@@ -145,6 +146,7 @@ def new_topic(request, slug):
         form = NewTopicForm(request.user, forum, request.POST)
         if form.is_valid():
             topic = form.save(request.META.get("REMOTE_ADDR"))
+            _bump_post_count(request.user)
             return HttpResponseRedirect(reverse('forums-new_topic_thanks',
                                             kwargs={'tid': topic.pk}))
     else:
@@ -179,20 +181,21 @@ def quick_reply_ajax(request):
     to the document.
     """
     if not request.user.is_authenticated():
-        return HttpResponseForbidden()
+        return HttpResponseForbidden('Please login or register to post.')
 
     form = NewPostForm(request.POST)
     if form.is_valid():
-        if form.topic.locked or not form.topic.forum.category.can_access(request.user):
-            return HttpResponseForbidden()
+        if not _can_post_in_topic(form.topic, request.user):
+            return HttpResponseForbidden("You don't have permission to post in this topic.")
 
-        post = form.save(request.user, request.META.get("REMOTE_ADDR"))
+        post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
+        _bump_post_count(request.user)
         return render_to_response('forums/display_post.html', {
             'post': post,
             },
             context_instance=RequestContext(request))
 
-    return HttpResponseBadRequest();
+    return HttpResponseBadRequest("Invalid post.");
 
 
 def goto_post(request, post_id):
@@ -244,9 +247,11 @@ def edit_post(request, id):
     The superuser, forum moderators, and original author can edit posts.
     """
     post = get_object_or_404(Post.objects.select_related(), pk=id)
-    can_edit = request.user == post.user or \
-            request.user.is_superuser or \
-            request.user in post.topic.forum.moderators.all()
+
+    can_moderate = request.user.is_superuser or \
+        request.user in post.topic.forum.moderators.all()
+
+    can_edit = can_moderate or request.user == post.user
 
     if not can_edit:
         return HttpResponseForbidden("You don't have permission to edit that post.")
@@ -264,7 +269,7 @@ def edit_post(request, id):
         'topic': post.topic,
         'post': post,
         'form': form,
-        'can_moderate': True,
+        'can_moderate': can_moderate,
         },
         context_instance=RequestContext(request))
 
@@ -343,3 +348,74 @@ def _delete_topic(topic):
     # It should be safe to just delete the topic now. This will
     # automatically delete all posts in the topic.
     topic.delete()
+
+
+@login_required
+def new_post(request, topic_id):
+    """
+    This function is the view for creating a normal, non-quick reply
+    to a topic.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=topic_id)
+    can_post = _can_post_in_topic(topic, request.user)
+
+    if can_post:
+        if request.method == 'POST':
+            form = PostForm(request.POST)
+            if form.is_valid():
+                post = form.save(commit=False)
+                post.topic = topic
+                post.user = request.user
+                post.user_ip = request.META.get("REMOTE_ADDR", "")
+                post.save()
+                _bump_post_count(request.user)
+                return HttpResponseRedirect(post.get_absolute_url())
+        else:
+            quote_id = request.GET.get('quote')
+            if quote_id:
+                quote_post = get_object_or_404(Post.objects.select_related(),
+                        pk=quote_id)
+                form = PostForm(initial={'body': _quote_message(quote_post.user.username,
+                    quote_post.body)})
+            else:
+                form = PostForm()
+    else:
+        form = None
+
+    return render_to_response('forums/new_post.html', {
+        'forum': topic.forum,
+        'topic': topic,
+        'form': form,
+        'can_post': can_post,
+        },
+        context_instance=RequestContext(request))
+
+
+def _can_post_in_topic(topic, user):
+    """
+    This function returns true if the given user can post in the given topic
+    and false otherwise.
+    """
+    return (not topic.locked and topic.forum.category.can_access(user)) or \
+            (user.is_superuser or user in topic.forum.moderators.all())
+
+
+def _bump_post_count(user):
+    """
+    Increments the forum_post_count for the given user.
+    """
+    profile = user.get_profile()
+    profile.forum_post_count += 1
+    profile.save()
+
+
+def _quote_message(who, message):
+   """
+   Builds a message reply by quoting the existing message in a
+   typical email-like fashion. The quoting is compatible with Markdown.
+   """
+   header = '*%s wrote:*\n\n' % (who, )
+   lines = wrap(message, 55).split('\n')
+   for i, line in enumerate(lines):
+      lines[i] = '> ' + line
+   return header + '\n'.join(lines)

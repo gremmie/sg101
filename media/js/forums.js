@@ -25,7 +25,8 @@ $(document).ready(function() {
             postButton.removeAttr('disabled').val('Submit Reply');
          },
          error: function (xhr, textStatus, ex) {
-            alert('Oops, an error occurred. Please reload the page and try again.');
+            alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+               xhr.responseText);
             postButton.removeAttr('disabled').val('Submit Reply');
          }
          });

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Forums: New Post{% endblock %}
+{% block custom_js %}{{ form.media }}{% endblock %}
+{% block content %}
+<h2>Forums: New Post</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+
+{% if can_post %}
+<div class="forum-block">
+<a name="forum-reply-form"></a>
+<form action="." method="post" id="forums-reply">
+<fieldset>
+<legend>New Post</legend>
+{{ form.as_p }}
+<input type="submit" value="Submit Post" id="forums-new-post" />
+</fieldset>
+</form>
+</div>
+{% else %}
+   {% if topic.locked %}
+   <p>This topic is locked.</p>
+   {% else %}
+   <p>You don't have permission to post to this topic.</p>
+   {% endif %}
+{% endif %}
+{% endblock %}

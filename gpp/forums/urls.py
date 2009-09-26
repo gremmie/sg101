@@ -13,6 +13,7 @@ urlpatterns = patterns('forums.views',
     url(r'^forum/(?P<slug>[\w\d-]+)/$', 'forum_index', name='forums-forum_index'),
     url(r'^forum/(?P<slug>[\w\d-]+)/new-topic/$', 'new_topic', name='forums-new_topic'),
     url(r'^post/(\d+)/$', 'goto_post', name='forums-goto_post'),
+    url(r'^post/new/(?P<topic_id>\d+)/$', 'new_post', name='forums-new_post'),
     url(r'^quick-reply/$', 'quick_reply_ajax', name='forums-quick_reply'),
 )
 

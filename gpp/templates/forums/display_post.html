@@ -22,7 +22,9 @@
          {% endifnotequal %}
       </div>
       <div class="forum-post-info-tools">
-      <a href=""><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
+      {% if can_reply %}
+         <a href="{% url forums-new_post topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
+      {% endif %}
       {% post_edit_button post user can_moderate MEDIA_URL %}
       <a href="#" class="post-flag" id="fp-{{ post.id }}" 
          title="Flag this post as spam, abuse, or a violation of site rules.">

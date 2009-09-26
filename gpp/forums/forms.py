@@ -8,15 +8,6 @@ from forums.models import Topic
 from forums.models import Post
 
 
-def bump_post_count(user):
-    """
-    Increments the forum_post_count for the given user.
-    """
-    profile = user.get_profile()
-    profile.forum_post_count += 1
-    profile.save()
-
-
 class NewPostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='', widget=forms.Textarea)
@@ -45,7 +36,6 @@ class NewPostForm(forms.Form):
         post = Post(topic=self.topic, user=user, body=self.cleaned_data['body'],
                 user_ip=ip)
         post.save()
-        bump_post_count(user)
         return post
 
 
@@ -96,14 +86,12 @@ class NewTopicForm(forms.Form):
                 body=self.cleaned_data['body'],
                 user_ip=ip)
         post.save()
-
-        bump_post_count(self.user)
         return topic
 
 
 class PostForm(forms.ModelForm):
     """
-    Form for editing an existing post.
+    Form for editing an existing post or a new, non-quick post.
     """
     body = forms.CharField(label='', widget=forms.Textarea)
 
