@@ -242,3 +242,6 @@ img.forums-topic-icon {
    float: left;
    margin-right: 3px;
 }
+div.forum-mod-controls form {
+   display:inline;
+}

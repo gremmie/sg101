@@ -78,5 +78,9 @@ $(document).ready(function() {
      }
      return false;
    });
+   $('#forum-mod-del-topic').click(function () {
+         return confirm('Are you sure you want to delete this topic?\n' +
+            'WARNING: all posts will be lost.');
+   });
    $('#id_body').markItUp(mySettings);
 });

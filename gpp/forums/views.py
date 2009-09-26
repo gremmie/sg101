@@ -112,9 +112,7 @@ def topic_index(request, id):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    can_moderate = request.user.is_authenticated() and (
-        request.user.is_superuser or \
-        request.user in topic.forum.moderators.all())
+    can_moderate = _can_moderate(topic.forum, request.user)
 
     can_reply = request.user.is_authenticated() and (
         not topic.locked or can_moderate)
@@ -248,9 +246,7 @@ def edit_post(request, id):
     """
     post = get_object_or_404(Post.objects.select_related(), pk=id)
 
-    can_moderate = request.user.is_superuser or \
-        request.user in post.topic.forum.moderators.all()
-
+    can_moderate = _can_moderate(post.topic.forum, request.user)
     can_edit = can_moderate or request.user == post.user
 
     if not can_edit:
@@ -389,6 +385,56 @@ def new_post(request, topic_id):
         'can_post': can_post,
         },
         context_instance=RequestContext(request))
+
+
+@login_required
+def mod_topic_stick(request, id):
+    """
+    This view function is for moderators to toggle the sticky status of a topic.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    if _can_moderate(topic.forum, request.user):
+        topic.sticky = not topic.sticky
+        topic.save()
+        return HttpResponseRedirect(topic.get_absolute_url())
+
+    return HttpResponseForbidden()    
+
+
+@login_required
+def mod_topic_lock(request, id):
+    """
+    This view function is for moderators to toggle the locked status of a topic.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    if _can_moderate(topic.forum, request.user):
+        topic.locked = not topic.locked
+        topic.save()
+        return HttpResponseRedirect(topic.get_absolute_url())
+
+    return HttpResponseForbidden()    
+
+
+@login_required
+def mod_topic_delete(request, id):
+    """
+    This view function is for moderators to delete an entire topic.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    if _can_moderate(topic.forum, request.user):
+        forum_url = topic.forum.get_absolute_url()
+        _delete_topic(topic)
+        return HttpResponseRedirect(forum_url)
+
+    return HttpResponseForbidden()    
+
+
+def _can_moderate(forum, user):
+    """
+    Determines if a user has permission to moderate a given forum.
+    """
+    return user.is_authenticated() and (
+            user.is_superuser or user in forum.moderators.all())
 
 
 def _can_post_in_topic(topic, user):

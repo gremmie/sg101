@@ -34,6 +34,19 @@
 {% endfor %}
 </table>
 {{ page_nav }}
+{% if can_moderate %}
+<div class="forum-mod-controls">
+   <form action="{% url forums-mod_topic_stick topic.id %}" method="post">
+      <input type="submit" value="{% if topic.sticky %}Unstick{% else %}Stick{% endif %} Topic" />
+   </form>
+   <form action="{% url forums-mod_topic_lock topic.id %}" method="post">
+      <input type="submit" value="{% if topic.locked %}Unlock{% else %}Lock{% endif %} Topic" />
+   </form>
+   <form action="{% url forums-mod_topic_delete topic.id %}" method="post">
+      <input type="submit" value="Delete Topic" id="forum-mod-del-topic" />
+   </form>
+</div>
+{% endif %}
 
 {% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
