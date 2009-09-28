@@ -78,11 +78,14 @@ def forum_index(request, slug):
 
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
+
+    can_moderate = _can_moderate(forum, request.user)
     
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
         'page': page,
         'page_nav': page_nav,
+        'can_moderate': can_moderate,
         },
         context_instance=RequestContext(request))
 
@@ -443,17 +446,7 @@ def mod_topic_move(request, id):
         if form.is_valid():
             new_forum = form.cleaned_data['forums']
             old_forum = topic.forum
-            if new_forum != old_forum:
-                topic.forum = new_forum
-                topic.save()
-                # Have to adjust foreign keys to last_post, denormalized counts, etc.:
-                old_forum.topic_count_update()
-                old_forum.post_count_update()
-                old_forum.save()
-                new_forum.topic_count_update()
-                new_forum.post_count_update()
-                new_forum.save()
-
+            _move_topic(topic, old_forum, new_forum)
             return HttpResponseRedirect(topic.get_absolute_url())
     else:
         form = MoveTopicForm(request.user)
@@ -461,6 +454,62 @@ def mod_topic_move(request, id):
     return render_to_response('forums/move_topic.html', {
         'forum': topic.forum,
         'topic': topic,
+        'form': form,
+        },
+        context_instance=RequestContext(request))
+
+
+@login_required
+def mod_forum(request, slug):
+    """
+    Displays a view to allow moderators to perform various operations
+    on topics in a forum in bulk. We currently support mass locking/unlocking,
+    stickying and unstickying, moving, and deleting topics.
+    """
+    forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
+    if not _can_moderate(forum, request.user):
+        return HttpResponseForbidden()
+
+    topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
+    paginator = create_topic_paginator(topics)
+    page_num = int(request.REQUEST.get('page', 1))
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+    form = None
+
+    if request.method == 'POST':
+        topic_ids = request.POST.getlist('topic_ids')
+        url = reverse('forums-mod_forum', kwargs={'slug':forum.slug})
+        url += '?page=%s' % page_num
+
+        if len(topic_ids):
+            if request.POST.get('sticky'):
+                _bulk_sticky(forum, topic_ids)
+                return HttpResponseRedirect(url)
+            elif request.POST.get('lock'):
+                _bulk_lock(forum, topic_ids)
+                return HttpResponseRedirect(url)
+            elif request.POST.get('delete'):
+                _bulk_delete(forum, topic_ids)
+                return HttpResponseRedirect(url)
+            elif request.POST.get('move'):
+                form = MoveTopicForm(request.user, request.POST, hide_label=True)
+                if form.is_valid():
+                    _bulk_move(topic_ids, forum, form.cleaned_data['forums'])
+                    return HttpResponseRedirect(url)
+    
+    if form is None:
+        form = MoveTopicForm(request.user, hide_label=True)
+
+    return render_to_response('forums/mod_forum.html', {
+        'forum': forum,
+        'page': page,
+        'page_nav': page_nav,
         'form': form,
         },
         context_instance=RequestContext(request))
@@ -493,12 +542,68 @@ def _bump_post_count(user):
 
 
 def _quote_message(who, message):
-   """
-   Builds a message reply by quoting the existing message in a
-   typical email-like fashion. The quoting is compatible with Markdown.
-   """
-   header = '*%s wrote:*\n\n' % (who, )
-   lines = wrap(message, 55).split('\n')
-   for i, line in enumerate(lines):
-      lines[i] = '> ' + line
-   return header + '\n'.join(lines)
+    """
+    Builds a message reply by quoting the existing message in a
+    typical email-like fashion. The quoting is compatible with Markdown.
+    """
+    header = '*%s wrote:*\n\n' % (who, )
+    lines = wrap(message, 55).split('\n')
+    for i, line in enumerate(lines):
+        lines[i] = '> ' + line
+    return header + '\n'.join(lines)
+
+
+def _move_topic(topic, old_forum, new_forum):
+    if new_forum != old_forum:
+        topic.forum = new_forum
+        topic.save()
+        # Have to adjust foreign keys to last_post, denormalized counts, etc.:
+        old_forum.topic_count_update()
+        old_forum.post_count_update()
+        old_forum.save()
+        new_forum.topic_count_update()
+        new_forum.post_count_update()
+        new_forum.save()
+
+
+def _bulk_sticky(forum, topic_ids):
+    """
+    Performs a toggle on the sticky status for a given list of topic ids.
+    """
+    topics = Topic.objects.filter(pk__in=topic_ids)
+    for topic in topics:
+        if topic.forum == forum:
+            topic.sticky = not topic.sticky
+            topic.save()
+
+
+def _bulk_lock(forum, topic_ids):
+    """
+    Performs a toggle on the locked status for a given list of topic ids.
+    """
+    topics = Topic.objects.filter(pk__in=topic_ids)
+    for topic in topics:
+        if topic.forum == forum:
+            topic.locked = not topic.locked
+            topic.save()
+
+
+def _bulk_delete(forum, topic_ids):
+    """
+    Deletes the list of topics.
+    """
+    topics = Topic.objects.filter(pk__in=topic_ids).select_related()
+    for topic in topics:
+        if topic.forum == forum:
+            _delete_topic(topic)
+
+
+def _bulk_move(topic_ids, old_forum, new_forum):
+    """
+    Moves the list of topics to a new forum.
+    """
+    topics = Topic.objects.filter(pk__in=topic_ids).select_related()
+    for topic in topics:
+        if topic.forum == old_forum:
+            _move_topic(topic, old_forum, new_forum)
+

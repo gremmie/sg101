@@ -38,7 +38,7 @@
       </tr>
    {% empty %}
       <tr>
-         <td colspan="4">
+         <td colspan="5">
             <i>No topics available.</i>
          </td>
       </tr>
@@ -46,5 +46,6 @@
    </tbody>
 </table>
 {{ page_nav }}
+<p><a href="{% url forums-mod_forum slug=forum.slug %}">Moderate this forum</a></p>
 </div>
 {% endblock %}

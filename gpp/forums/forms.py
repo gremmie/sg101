@@ -109,14 +109,20 @@ class PostForm(forms.ModelForm):
 
 
 class MoveTopicForm(forms.Form):
-   """
-   Form for a moderator to move a topic to a forum.
-   """
-   forums = forms.ModelChoiceField(label='Move to forum', 
-         queryset=Forum.objects.none())
+    """
+    Form for a moderator to move a topic to a forum.
+    """
+    forums = forms.ModelChoiceField(label='Move to forum', 
+          queryset=Forum.objects.none())
 
-   def __init__(self, user, *args, **kwargs):
-      super(MoveTopicForm, self).__init__(*args, **kwargs)
-      self.fields['forums'].queryset = \
-              Forum.objects.forums_for_user(user).order_by('name')
+    def __init__(self, user, *args, **kwargs):
+        hide_label = kwargs.pop('hide_label', False) 
+        required = kwargs.pop('required', True)
+        super(MoveTopicForm, self).__init__(*args, **kwargs)
+        self.fields['forums'].queryset = \
+            Forum.objects.forums_for_user(user).order_by('name')
+        if hide_label:
+            self.fields['forums'].label = ''
+        self.fields['forums'].required = required
+        print '#############', required
 

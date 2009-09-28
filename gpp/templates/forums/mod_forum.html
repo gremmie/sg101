@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load forum_tags %}
+{% block title %}Moderate Forum: {{ forum.name }}{% endblock %}
+{% block content %}
+<h2>Moderate Forum: {{ forum.name }}</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a>
+</h3>
+
+<div class="forum-block">
+{{ page_nav }}
+<form action="." method="post">
+<table class="forum-index-table">
+   <thead>
+      <tr>
+         <th class="forum-index_title">Topics</th>
+         <th class="forum-index_replies">Replies</th>
+         <th class="forum-index_author">Author</th>
+         <th class="forum-index_last_post">Last Post</th>
+         <th class="forum-index_select">Select<br /><input type="checkbox" id="forums-master-topic" /></th>
+      </tr>
+   </thead>
+   <tbody>
+   {% for topic in page.object_list %}
+      <tr class="{% cycle 'odd' 'even' %}">
+         <td>{% if topic.sticky %}<img src="{{ MEDIA_URL }}icons/asterisk_orange.png" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
+            {% if topic.locked %}<img src="{{ MEDIA_URL }}icons/lock.png" alt="Locked" title="Locked"
+            class="forums-topic-icon" />{% endif %}
+         <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
+         <td class="forum-index_replies">{{ topic.reply_count }}</td>
+         <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
+         <td class="forum-index_last_post">
+            {% last_post_info topic.last_post MEDIA_URL %}
+         </td>
+         <td class="forum-index_select"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" /></td>
+      </tr>
+   {% empty %}
+      <tr>
+         <td colspan="5">
+            <i>No topics available.</i>
+         </td>
+      </tr>
+   {% endfor %}
+   </tbody>
+</table>
+{{ page_nav }}
+<div class="forum-mod-controls">
+   <input type="submit" value="Toggle Sticky" name="sticky" />
+   <input type="submit" value="Toggle Lock" name="lock" />
+   <input type="submit" value="Delete" name="delete" /><br />
+   <input type="submit" value="Move To:" name="move" />
+   {{ form }}
+   <input type="hidden" name="page" value="{{ page.number }}" />
+</div>
+</form>
+</div>
+{% endblock %}
