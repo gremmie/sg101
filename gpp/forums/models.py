@@ -108,6 +108,14 @@ class Forum(models.Model):
         else:
             self.last_post = None
 
+    def sync(self):
+        """
+        Call to notify the forum that it needs to recompute its
+        denormalized fields.
+        """
+        self.topic_count_update()
+        self.post_count_update()
+
     def last_post_pre_delete(self):
         """
         Call this function prior to deleting the last post in the forum.

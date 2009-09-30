@@ -124,5 +124,4 @@ class MoveTopicForm(forms.Form):
         if hide_label:
             self.fields['forums'].label = ''
         self.fields['forums'].required = required
-        print '#############', required
 

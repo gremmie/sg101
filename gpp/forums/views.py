@@ -558,11 +558,9 @@ def _move_topic(topic, old_forum, new_forum):
         topic.forum = new_forum
         topic.save()
         # Have to adjust foreign keys to last_post, denormalized counts, etc.:
-        old_forum.topic_count_update()
-        old_forum.post_count_update()
+        old_forum.sync()
         old_forum.save()
-        new_forum.topic_count_update()
-        new_forum.post_count_update()
+        new_forum.sync()
         new_forum.save()
 
 

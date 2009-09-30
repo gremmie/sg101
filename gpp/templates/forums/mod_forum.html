@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load forum_tags %}
 {% block title %}Moderate Forum: {{ forum.name }}{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/forums_mod.js"></script>
+{% endblock %}
 {% block content %}
 <h2>Moderate Forum: {{ forum.name }}</h2>
 
@@ -34,7 +37,7 @@
          <td class="forum-index_last_post">
             {% last_post_info topic.last_post MEDIA_URL %}
          </td>
-         <td class="forum-index_select"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" /></td>
+         <td class="forum-index_select"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" class="forums-topic_check" /></td>
       </tr>
    {% empty %}
       <tr>
