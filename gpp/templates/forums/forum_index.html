@@ -10,7 +10,12 @@
 </h3>
 
 <div class="forum-block">
-<a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a>
+{% if user.is_authenticated %}
+<a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a> &bull;
+<form action="{% url forums-catchup slug=forum.slug %}" method="post" style="display:inline">
+   <input type="submit" value="Mark All Topics Read" />
+</form>
+{% endif %}
 {{ page_nav }}
 <table class="forum-index-table">
    <thead>
@@ -46,6 +51,14 @@
    </tbody>
 </table>
 {{ page_nav }}
+{% if user.is_authenticated %}
+<a href="{% url forums-new_topic slug=forum.slug %}">New Topic</a> &bull;
+<form action="{% url forums-catchup slug=forum.slug %}" method="post" style="display:inline">
+   <input type="submit" value="Mark All Topics Read" />
+</form>
+{% endif %}
+{% if can_moderate %}
 <p><a href="{% url forums-mod_forum slug=forum.slug %}">Moderate this forum</a></p>
+{% endif %}
 </div>
 {% endblock %}

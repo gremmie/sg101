@@ -19,7 +19,11 @@
       <tbody>
          {% for forum in iter.forums %}
             <tr class="{% cycle 'odd' 'even' %}">
-               <td><h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
+               <td>
+                  {% if forum.has_unread %}
+                  <img src="{{ MEDIA_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" />
+                  {% endif %}
+                  <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
                   <p>{{ forum.description }}</p></td>
                <td class="forum-topics">{{ forum.topic_count }}</td>
                <td class="forum-posts">{{ forum.post_count }}</td>

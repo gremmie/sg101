@@ -8,6 +8,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import FlaggedPost
+from forums.models import TopicLastVisit
 
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -48,8 +49,14 @@ class FlaggedPostAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'flag_date', 'get_post_url')
 
 
+class TopicLastVisitAdmin(admin.ModelAdmin):
+    raw_id_fields = ('user', 'topic')
+    list_display = ('user', 'topic', 'last_visit')
+
+
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Forum, ForumAdmin)
 admin.site.register(Topic, TopicAdmin)
 admin.site.register(Post, PostAdmin)
 admin.site.register(FlaggedPost, FlaggedPostAdmin)
+admin.site.register(TopicLastVisit, TopicLastVisitAdmin)

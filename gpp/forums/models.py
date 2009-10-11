@@ -9,6 +9,9 @@ from django.contrib.auth.models import User, Group
 from django.template.loader import render_to_string
 
 
+POST_EDIT_DELTA = datetime.timedelta(seconds=3)
+
+
 class Category(models.Model):
     """
     Forums belong to a category, whose access may be assigned to groups.
@@ -128,6 +131,23 @@ class Forum(models.Model):
         except Post.DoesNotExist:
             self.last_post = None
 
+    def catchup(self, user, flv=None):
+        """
+        Call to mark this forum all caught up for the given user (i.e. mark all topics
+        read for this user).
+        """
+        TopicLastVisit.objects.filter(user=user, topic__forum=self).delete()
+        if flv is None:
+            try:
+                flv = ForumLastVisit.objects.get(user=user, forum=self)
+            except ForumLastVisit.DoesNotExist:
+                flv = ForumLastVisit(user=user, forum=self)
+
+        now = datetime.datetime.now()
+        flv.begin_date = now
+        flv.end_date = now
+        flv.save()
+
 
 class Topic(models.Model):
     """
@@ -241,6 +261,9 @@ class Post(models.Model):
         if self.id == first_post_id:
             self.topic.delete()
 
+    def has_been_edited(self):
+        return (self.update_date - self.creation_date) > POST_EDIT_DELTA
+
 
 class FlaggedPost(models.Model):
     """This model represents a user flagging a post as inappropriate."""
@@ -258,4 +281,55 @@ class FlaggedPost(models.Model):
         return '<a href="%s">Post</a>' % self.post.get_absolute_url()
     get_post_url.allow_tags = True
 
-# TODO: A "read" table
+
+class ForumLastVisit(models.Model):
+    """
+    This model records the last time a user visited a forum.
+    It is used to compute if a user has unread topics in a forum.
+    We keep track of a window of time, delimited by begin_date and end_date.
+    Topics updated within this window are tracked, and may have TopicLastVisit
+    objects.
+    Marking a forum as all read sets the begin_date equal to the end_date.
+    """
+    user = models.ForeignKey(User)
+    forum = models.ForeignKey(Forum)
+    begin_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+
+    class Meta:
+        unique_together = ('user', 'forum')
+        ordering = ('-end_date', )
+
+    def __unicode__(self):
+        return u'Forum: %d User: %d Date: %s' % (self.forum.id, self.user.id,
+                self.end_date.strftime('%Y-%m-%d %H:%M:%S'))
+
+    def is_caught_up(self):
+        return self.begin_date == self.end_date
+
+
+class TopicLastVisit(models.Model):
+    """
+    This model records the last time a user read a topic.
+    Objects of this class exist for the window specified in the
+    corresponding ForumLastVisit object.
+    """
+    user = models.ForeignKey(User)
+    topic = models.ForeignKey(Topic)
+    last_visit = models.DateTimeField()
+
+    class Meta:
+        unique_together = ('user', 'topic')
+        ordering = ('-last_visit', )
+
+    def __unicode__(self):
+        return u'Topic: %d User: %d Date: %s' % (self.topic.id, self.user.id,
+                self.last_visit.strftime('%Y-%m-%d %H:%M:%S'))
+
+    def save(self, *args, **kwargs):
+        if self.id is None:
+            self.touch()
+        super(TopicLastVisit, self).save(*args, **kwargs)
+        
+    def touch(self):
+        self.last_visit = datetime.datetime.now()

@@ -17,9 +17,10 @@
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}
-         {% ifnotequal post.creation_date post.update_date %}
+         {% if post.has_been_edited %}
+         <p>{{ post.creation_date|date:"M d, Y H:i:s" }} {{ post.update_date|date:"M d, Y H:i:s" }}</p>
          <p class="small quiet">Last edited: {{ post.update_date|date:"M d, Y H:i:s" }}</p>
-         {% endifnotequal %}
+         {% endif %}
       </div>
       <div class="forum-post-info-tools">
       {% if can_reply %}

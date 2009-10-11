@@ -1,6 +1,8 @@
 """
 Views for the forums application.
 """
+import datetime
+
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
@@ -18,16 +20,15 @@ from django.utils.text import wrap
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
-from forums.models import Forum
-from forums.models import Topic
-from forums.models import Post
-from forums.models import FlaggedPost
+from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
+        ForumLastVisit
 from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm
+from forums.unread import get_forum_unread_status
 
 #######################################################################
 
 TOPICS_PER_PAGE = 50
-POSTS_PER_PAGE = 2
+POSTS_PER_PAGE = 20
 
 def create_topic_paginator(topics):
    return DiggPaginator(topics, TOPICS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
@@ -42,6 +43,7 @@ def index(request):
     This view displays all the forums available, ordered in each category.
     """
     forums = Forum.objects.forums_for_user(request.user)
+    get_forum_unread_status(forums, request.user)
     cats = {}
     for forum in forums:
         cat = cats.setdefault(forum.category.id, {
@@ -111,6 +113,9 @@ def topic_index(request, id):
         raise Http404
 
     last_page = page_num == paginator.num_pages
+
+    if request.user.is_authenticated() and last_page:
+        _update_last_visit(request.user, topic)
 
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
@@ -191,8 +196,10 @@ def quick_reply_ajax(request):
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         _bump_post_count(request.user)
+        _update_last_visit(request.user, form.topic)
         return render_to_response('forums/display_post.html', {
             'post': post,
+            'can_moderate': _can_moderate(form.topic.forum, request.user),
             },
             context_instance=RequestContext(request))
 
@@ -368,6 +375,7 @@ def new_post(request, topic_id):
                 post.user_ip = request.META.get("REMOTE_ADDR", "")
                 post.save()
                 _bump_post_count(request.user)
+                _update_last_visit(request.user, topic)
                 return HttpResponseRedirect(post.get_absolute_url())
         else:
             quote_id = request.GET.get('quote')
@@ -515,6 +523,21 @@ def mod_forum(request, slug):
         context_instance=RequestContext(request))
 
 
+@login_required
+@require_POST
+def forum_catchup(request, slug):
+    """
+    This view marks all the topics in the forum as being read.
+    """
+    forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
+
+    if not forum.category.can_access(request.user):
+        return HttpResponseForbidden()
+
+    forum.catchup(request.user)
+    return HttpResponseRedirect(forum.get_absolute_url())
+
+
 def _can_moderate(forum, user):
     """
     Determines if a user has permission to moderate a given forum.
@@ -604,4 +627,29 @@ def _bulk_move(topic_ids, old_forum, new_forum):
     for topic in topics:
         if topic.forum == old_forum:
             _move_topic(topic, old_forum, new_forum)
+
+
+def _update_last_visit(user, topic):
+    """
+    Does the bookkeeping for the last visit status for the user to the
+    topic/forum.
+    """
+    now = datetime.datetime.now()
+    try:
+        flv = ForumLastVisit.objects.get(user=user, forum=topic.forum)
+    except ForumLastVisit.DoesNotExist:
+        flv = ForumLastVisit(user=user, forum=topic.forum)
+        flv.begin_date = now
+
+    flv.end_date = now
+    flv.save()
+
+    if topic.update_date > flv.begin_date:
+        try:
+            tlv = TopicLastVisit.objects.get(user=user, topic=topic)
+        except TopicLastVisit.DoesNotExist:
+            tlv = TopicLastVisit(user=user, topic=topic)
+
+        tlv.touch()
+        tlv.save()
 
