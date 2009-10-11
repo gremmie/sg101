@@ -10,6 +10,7 @@ from forums.models import ForumLastVisit, TopicLastVisit, Topic
 
 THRESHOLD = datetime.timedelta(days=7)
 
+#######################################################################
 
 def get_forum_unread_status(qs, user):
     if not user.is_authenticated():
@@ -97,3 +98,90 @@ def get_forum_unread_status(qs, user):
             # we are all caught up.
             forum.catchup(user, flv)
             forum.has_unread = False
+
+#######################################################################
+
+def get_topic_unread_status(forum, topics, user):
+
+    # Edge case: no topics 
+    if forum.last_post is None:
+        return
+
+    # This service isn't provided to unauthenticated users
+    if not user.is_authenticated():
+        for topic in topics:
+            topic.has_unread = False
+        return
+
+    now = datetime.datetime.now()
+
+    # Get the ForumLastVisit record
+    try:
+        flv = ForumLastVisit.objects.get(forum=forum, user=user)
+    except ForumLastVisit.DoesNotExist:
+        # One doesn't exist, create a default one for next time,
+        # mark it as having no unread topics, and bail.
+        flv = ForumLastVisit(user=user, forum=forum)
+        flv.begin_date = now
+        flv.end_date = now
+        flv.save()
+        for topic in topics:
+            topic.has_unread = False
+        return
+
+    # Are all the posts before our window? If so, all have been read.
+    if forum.last_post.creation_date < flv.begin_date:
+        for topic in topics:
+            topic.has_unread = False
+        return
+
+    topic_ids = [topic.id for topic in topics]
+    tlvs = TopicLastVisit.objects.filter(user=user, topic__id__in=topic_ids)
+    tlvs = dict([(tlv.topic.id, tlv) for tlv in tlvs])
+
+    # Otherwise we have to go through the topics one by one:
+    for topic in topics:
+        if topic.update_date < flv.begin_date:
+            topic.has_unread = False
+        elif topic.update_date > flv.end_date:
+            topic.has_unread = True
+        elif topic.id in tlvs:
+            topic.has_unread = topic.update_date > tlvs[topic.id].last_visit
+        else:
+            topic.has_unread = True
+
+#######################################################################
+
+def get_post_unread_status(topic, posts, user):
+    # This service isn't provided to unauthenticated users
+    if not user.is_authenticated():
+        for post in posts:
+            post.unread = False
+        return
+
+    # Get the ForumLastVisit record
+    try:
+        flv = ForumLastVisit.objects.get(forum=topic.forum, user=user)
+    except ForumLastVisit.DoesNotExist:
+        # One doesn't exist, all posts are old.
+        for post in posts:
+            post.unread = False
+        return
+
+    # Are all the posts before our window? If so, all have been read.
+    if topic.last_post.creation_date < flv.begin_date:
+        for post in posts:
+            post.unread = False
+        return
+
+    # Do we have a topic last visit record for this topic?
+
+    try:
+        tlv = TopicLastVisit.objects.get(user=user, topic=topic)
+    except TopicLastVisit.DoesNotExist:
+        # No we don't, we could be all caught up, or all are new
+        for post in posts:
+            post.unread = post.creation_date > flv.end_date
+    else:
+        for post in posts:
+            post.unread = post.creation_date > tlv.last_visit

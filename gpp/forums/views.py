@@ -23,7 +23,8 @@ from core.functions import email_admins
 from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
         ForumLastVisit
 from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm
-from forums.unread import get_forum_unread_status
+from forums.unread import get_forum_unread_status, get_topic_unread_status, \
+        get_post_unread_status
 
 #######################################################################
 
@@ -71,6 +72,8 @@ def forum_index(request, slug):
         return HttpResponseForbidden()
 
     topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
+    get_topic_unread_status(forum, topics, request.user)
+
     paginator = create_topic_paginator(topics)
     page_num = int(request.GET.get('page', 1))
     try:
@@ -105,6 +108,8 @@ def topic_index(request, id):
     topic.save()
 
     posts = topic.posts.select_related()
+    get_post_unread_status(topic, posts, request.user)
+
     paginator = create_post_paginator(posts)
     page_num = int(request.GET.get('page', 1))
     try:
@@ -195,6 +200,7 @@ def quick_reply_ajax(request):
             return HttpResponseForbidden("You don't have permission to post in this topic.")
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
+        post.unread = True
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic)
         return render_to_response('forums/display_post.html', {
