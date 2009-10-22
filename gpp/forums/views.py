@@ -22,7 +22,8 @@ from core.paginator import DiggPaginator
 from core.functions import email_admins
 from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
         ForumLastVisit
-from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm
+from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
+        SplitTopicForm
 from forums.unread import get_forum_unread_status, get_topic_unread_status, \
         get_post_unread_status
 
@@ -271,7 +272,9 @@ def edit_post(request, id):
     if request.method == "POST":
         form = PostForm(request.POST, instance=post)
         if form.is_valid():
-            form.save()
+            post = form.save(commit=False)
+            post.touch()
+            post.save()
             return HttpResponseRedirect(post.get_absolute_url())
     else:
         form = PostForm(instance=post)
@@ -544,6 +547,42 @@ def forum_catchup(request, slug):
     return HttpResponseRedirect(forum.get_absolute_url())
 
 
+@login_required
+def mod_topic_split(request, id):
+    """
+    This view function allows moderators to split posts off to a new topic.
+    """
+    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    if not _can_moderate(topic.forum, request.user):
+        return HttpResponseRedirect(topic.get_absolute_url())
+
+    if request.method == "POST":
+        form = SplitTopicForm(request.user, request.POST)
+        if form.is_valid():
+            if form.split_at:
+                _split_topic_at(topic, form.post_ids[0],
+                        form.cleaned_data['forums'],
+                        form.cleaned_data['name'])
+            else:
+                _split_topic(topic, form.post_ids,
+                        form.cleaned_data['forums'],
+                        form.cleaned_data['name'])
+
+            return HttpResponseRedirect(topic.get_absolute_url())
+    else:
+        form = SplitTopicForm(request.user)
+
+    posts = topic.posts.select_related()
+
+    return render_to_response('forums/mod_split_topic.html', {
+        'forum': topic.forum,
+        'topic': topic,
+        'posts': posts,
+        'form': form,
+        },
+        context_instance=RequestContext(request))
+
+
 def _can_moderate(forum, user):
     """
     Determines if a user has permission to moderate a given forum.
@@ -659,3 +698,39 @@ def _update_last_visit(user, topic):
         tlv.touch()
         tlv.save()
 
+
+def _split_topic_at(topic, post_id, new_forum, new_name):
+    """
+    This function splits the post given by post_id and all posts that come
+    after it in the given topic to a new topic in a new forum.
+    It is assumed the caller has been checked for moderator rights.
+    """
+    post = get_object_or_404(Post, id=post_id)
+    if post.topic == topic:
+        post_ids = Post.objects.filter(topic=topic,
+                creation_date__gte=post.creation_date).values_list('id', flat=True)
+        _split_topic(topic, post_ids, new_forum, new_name)
+
+
+def _split_topic(topic, post_ids, new_forum, new_name):
+    """
+    This function splits the posts given by the post_ids list in the
+    given topic to a new topic in a new forum.
+    It is assumed the caller has been checked for moderator rights.
+    """
+    posts = Post.objects.filter(topic=topic, id__in=post_ids)
+    if len(posts) > 0:
+        new_topic = Topic(forum=new_forum, name=new_name, user=posts[0].user)
+        new_topic.save()
+        for post in posts:
+            post.topic = new_topic
+            post.save()
+        
+        topic.post_count_update()
+        topic.save()
+        new_topic.post_count_update()
+        new_topic.save()
+        topic.forum.sync()
+        topic.forum.save()
+        new_forum.sync()
+        new_forum.save()

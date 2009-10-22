@@ -228,7 +228,7 @@ class Post(models.Model):
     topic = models.ForeignKey(Topic, related_name='posts')
     user = models.ForeignKey(User, related_name='posts')
     creation_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now=True)
+    update_date = models.DateTimeField(null=True)
     body = models.TextField()
     html = models.TextField()
     user_ip = models.IPAddressField(blank=True, default='', null=True)
@@ -262,7 +262,11 @@ class Post(models.Model):
             self.topic.delete()
 
     def has_been_edited(self):
-        return (self.update_date - self.creation_date) > POST_EDIT_DELTA
+        return self.update_date is not None
+
+    def touch(self):
+        """Call this function to indicate the post has been edited."""
+        self.update_date = datetime.datetime.now()
 
 
 class FlaggedPost(models.Model):
@@ -327,7 +331,7 @@ class TopicLastVisit(models.Model):
                 self.last_visit.strftime('%Y-%m-%d %H:%M:%S'))
 
     def save(self, *args, **kwargs):
-        if self.id is None:
+        if self.id is one:
             self.touch()
         super(TopicLastVisit, self).save(*args, **kwargs)
         

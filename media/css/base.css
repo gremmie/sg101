@@ -217,6 +217,17 @@ td.forum-post-body {
    width:95%;
    border-bottom: 1px solid black;
 }
+td.forum-post-body-split {
+   vertical-align: top;
+   width:90%;
+   border-bottom: 1px solid black;
+}
+td.forum-post-split-check {
+   width:5%;
+   border-left: 1px solid #ccc;
+   border-bottom: 1px solid black;
+   vertical-align: middle;
+}
 div.forum-post-info {
    padding: 2px;
    font-size:.8em;

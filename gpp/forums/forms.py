@@ -125,3 +125,30 @@ class MoveTopicForm(forms.Form):
             self.fields['forums'].label = ''
         self.fields['forums'].required = required
 
+
+class SplitTopicForm(forms.Form):
+    """
+    Form for a moderator to split posts from a topic to a new topic.
+    """
+    name = forms.CharField(label='New topic title', max_length=255,
+            widget=forms.TextInput(attrs={'size': 64}))
+    forums = forms.ModelChoiceField(label='Forum for new topic', 
+          queryset=Forum.objects.none())
+    post_ids = []
+    split_at = False
+
+    def __init__(self, user, *args, **kwargs):
+        super(SplitTopicForm, self).__init__(*args, **kwargs)
+        self.fields['forums'].queryset = \
+            Forum.objects.forums_for_user(user).order_by('name')
+
+    def clean(self):
+        self.post_ids = self.data.getlist('post_ids')
+        if len(self.post_ids) == 0:
+            raise forms.ValidationError('Please select some posts')
+
+        self.split_at = 'split-at' in self.data
+        if self.split_at and len(self.post_ids) > 1:
+            raise forms.ValidationError('Please select only one post to split the topic at')
+
+        return self.cleaned_data

@@ -47,6 +47,8 @@
    </form>
    <a href="{% url forums-mod_topic_move topic.id %}"><img src="{{ MEDIA_URL }}icons/application_go.png" alt="Move Topic" title="Move Topic" /></a>
    <a href="{% url forums-mod_topic_move topic.id %}">Move this topic</a>
+   <a href="{% url forums-mod_topic_split topic.id %}"><img src="{{ MEDIA_URL }}icons/arrow_branch.png" alt="Split Topic" title="Split Topic" /></a>
+   <a href="{% url forums-mod_topic_split topic.id %}">Split this topic</a>
 </div>
 {% endif %}
 
