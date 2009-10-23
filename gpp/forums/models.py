@@ -331,7 +331,7 @@ class TopicLastVisit(models.Model):
                 self.last_visit.strftime('%Y-%m-%d %H:%M:%S'))
 
     def save(self, *args, **kwargs):
-        if self.id is one:
+        if self.id is None:
             self.touch()
         super(TopicLastVisit, self).save(*args, **kwargs)
         
