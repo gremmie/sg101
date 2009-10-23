@@ -27,6 +27,7 @@ from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
 from forums.unread import get_forum_unread_status, get_topic_unread_status, \
         get_post_unread_status
 
+from bio.models import UserProfile
 #######################################################################
 
 TOPICS_PER_PAGE = 50
@@ -109,7 +110,6 @@ def topic_index(request, id):
     topic.save()
 
     posts = topic.posts.select_related()
-    get_post_unread_status(topic, posts, request.user)
 
     paginator = create_post_paginator(posts)
     page_num = int(request.GET.get('page', 1))
@@ -117,6 +117,17 @@ def topic_index(request, id):
         page = paginator.page(page_num)
     except InvalidPage:
         raise Http404
+    get_post_unread_status(topic, page.object_list, request.user)
+
+    # Attach user profiles to each post to avoid using get_user_profile() in
+    # the template.
+    users = set(post.user.id for post in page.object_list)
+
+    profiles = UserProfile.objects.filter(user__id__in=users).select_related()
+    user_profiles = dict((profile.user.id, profile) for profile in profiles)
+
+    for post in page.object_list:
+        post.user_profile = user_profiles[post.user.id]
 
     last_page = page_num == paginator.num_pages
 
