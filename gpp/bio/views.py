@@ -35,6 +35,16 @@ def member_list(request, type='user', page=1):
     except InvalidPage:
         raise Http404
 
+    # Attach user profiles to each post to avoid using get_user_profile() in
+    # the template.
+    users = set(user.id for user in the_page.object_list)
+
+    profiles = UserProfile.objects.filter(user__id__in=users).select_related()
+    user_profiles = dict((profile.user.id, profile) for profile in profiles)
+
+    for user in the_page.object_list:
+        user.user_profile = user_profiles[user.id]
+
     return render_to_response('bio/members.html', {
         'page': the_page,
         'type': type,

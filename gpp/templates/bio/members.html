@@ -32,12 +32,12 @@
    <td><a href="{% url bio-view_profile username=u.username %}">{% avatar u %}</a></td>
    <td><a href="{% url bio-view_profile username=u.username %}" title="View profile for {{ u.username }}">{{ u.username }}</a></td>
    <td>{{ u.get_full_name }}</td>
-   <td>{{ u.get_profile.location }}</td>
+   <td>{{ u.user_profile.location }}</td>
    <td>{{ u.date_joined|date:"M. d, Y" }}</td>
    <td>
       {% ifnotequal user u %}<a href="{% url messages-compose_to u.username %}">
          <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
-      {% if not u.get_profile.hide_email %}<a href="mailto:{{ u.email }}">
+      {% if not u.user_profile.hide_email %}<a href="mailto:{{ u.email }}">
          <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}
    </td>
 </tr>

@@ -52,7 +52,8 @@ def view_shout(request, id):
 
 def view_history(request, page=1):
     """This view allows one to view the shoutbox history."""
-    paginator = DiggPaginator(Shout.objects.all(), SHOUTS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
+    paginator = DiggPaginator(Shout.objects.all().select_related(), 
+            SHOUTS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
     try:
         the_page = paginator.page(int(page))
     except InvalidPage:
