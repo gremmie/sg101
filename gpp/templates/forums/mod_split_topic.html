@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Forums: Split Topic{% endblock %}
+{% block custom_js %}{{ form.media }}{% endblock %}
+{% block content %}
+<h2>Forums: Split Topic {{ topic.name }}</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+
+<div class="forum-block">
+   <p>
+   Using the form below, you can split a topic into two. You can either specify which posts get
+   split to the new topic ("Split Selected Posts"), or by selecting a post such that all posts
+   at or below the selection get split ("Split At Selected Post").
+   <p>
+   <form action="." method="post">
+   <table>
+   {{ form.as_table }}
+   <tr><td>&nbsp;</td><td>
+   <input type="submit" name="split-selected" value="Split Selected Posts" />
+      <input type="submit" name="split-at" value="Split At Selected Post" /></td></tr>
+   </table>
+
+<table class="forum-topic" id="forum-topic">
+{% for post in posts %}
+<tr class="forum-post {% cycle 'odd' 'even' %}" id="post-{{ post.id }}">
+   <td class="forum-post-author">{{ post.user.username }}</td>
+   <td class="forum-post-body">
+      <div class="forum-post-info quiet">
+      <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
+         Posted on {{ post.creation_date|date:"M d, Y H:i" }} from IP: {{ post.user_ip }}
+      </div>
+      <div class="forum-post-body-split">
+         {{ post.html|safe }}
+      </div>
+   </td>
+   <td class="forum-post-split-check">
+      {% if not forloop.first %}
+      <input type="checkbox" name="post_ids" value="{{ post.id }}" />
+      {% endif %}
+   </td>
+</tr>
+{% endfor %}
+</table>
+</form>
+</div>
+{% endblock %}
