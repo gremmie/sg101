@@ -36,6 +36,7 @@ class UserProfile(models.Model):
     avatar = models.ImageField(upload_to=avatar_file_path, blank=True)
     time_zone = models.CharField(max_length=64, blank=True,
             default='US/Pacific')
+    use_24_time = models.BooleanField(default=False)
     forum_post_count = models.IntegerField(default=0)
 
     def __unicode__(self):

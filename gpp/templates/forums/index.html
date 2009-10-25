@@ -27,11 +27,12 @@
                   <p>{{ forum.description }}</p></td>
                <td class="forum-topics">{{ forum.topic_count }}</td>
                <td class="forum-posts">{{ forum.post_count }}</td>
-               <td class="forum-last_post">{% last_post_info forum.last_post MEDIA_URL %}</td>
+               <td class="forum-last_post">{% last_post_info forum.last_post %}</td>
             </tr>
          {% endfor %}
       </tbody>
    </table>
 {% endfor %}
+<p>{% current_forum_time user %}</p>
 </div>
 {% endblock %}

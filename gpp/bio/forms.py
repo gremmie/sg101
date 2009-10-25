@@ -31,10 +31,11 @@ class EditUserProfileForm(forms.ModelForm):
     occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
+    use_24_time = forms.BooleanField(label='Show times in 24-hour mode', required=False)
 
     class Meta:
         model = UserProfile
-        exclude = ('user', 'avatar', 'profile_html', 'signature_html')
+        exclude = ('user', 'avatar', 'profile_html', 'signature_html', 'forum_post_count')
 
     class Media:
         css = {

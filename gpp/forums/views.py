@@ -218,6 +218,7 @@ def quick_reply_ajax(request):
         return render_to_response('forums/display_post.html', {
             'post': post,
             'can_moderate': _can_moderate(form.topic.forum, request.user),
+            'can_reply': True,
             },
             context_instance=RequestContext(request))
 

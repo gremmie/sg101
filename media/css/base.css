@@ -160,18 +160,18 @@ table.forum-index-table thead th {
    background:teal;
 }
 table.forum-index-table .forum-title {
-   width:60%;
+   width:57%;
 }
 table.forum-index-table .forum-topics {
-   width:10%;
+   width:9%;
    text-align:center;
 }
 table.forum-index-table .forum-posts {
-   width:10%;
+   width:9%;
    text-align:center;
 }
 table.forum-index-table .forum-last_post {
-   width:20%;
+   width:25%;
    text-align:center;
 }
 
@@ -179,19 +179,19 @@ table.forum-index-table .forum-index_title {
    width:50%;
 }
 table.forum-index-table .forum-index_replies {
-   width:10%;
+   width:8%;
    text-align:center;
 }
 table.forum-index-table .forum-index_author {
-   width:10%;
+   width:8%;
    text-align:center;
 }
 table.forum-index-table .forum-index_views {
-   width:10%;
+   width:8%;
    text-align:center;
 }
 table.forum-index-table .forum-index_last_post {
-   width:20%;
+   width:26%;
    text-align:center;
 }
 table.forum-index-table .forum-index_select {

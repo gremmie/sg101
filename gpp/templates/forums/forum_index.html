@@ -40,7 +40,7 @@
          <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
          <td class="forum-index_views">{{ topic.view_count }}</td>
          <td class="forum-index_last_post">
-            {% last_post_info topic.last_post MEDIA_URL %}
+            {% last_post_info topic.last_post %}
          </td>
       </tr>
    {% empty %}
@@ -62,5 +62,6 @@
 {% if can_moderate %}
 <p><a href="{% url forums-mod_forum slug=forum.slug %}">Moderate this forum</a></p>
 {% endif %}
+{% current_forum_time user %}
 </div>
 {% endblock %}

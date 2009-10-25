@@ -35,7 +35,7 @@
          <td class="forum-index_replies">{{ topic.reply_count }}</td>
          <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
          <td class="forum-index_last_post">
-            {% last_post_info topic.last_post MEDIA_URL %}
+            {% last_post_info topic.last_post %}
          </td>
          <td class="forum-index_select"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" class="forums-topic_check" /></td>
       </tr>
