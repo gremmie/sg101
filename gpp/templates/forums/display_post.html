@@ -7,7 +7,17 @@
       <a href="{% url bio-view_profile username=post.user.username %}">{% avatar post.user %}</a>
       Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
       Posts: {{ post.user_profile.forum_post_count }}<br />
+      {% if post.user_profile.location %}
       Location: {{ post.user_profile.location }}<br />
+      {% endif %}
+      {% if user.is_authenticated %}
+      <p>
+      <a href="{% url messages-compose_to post.user.username %}">
+      <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message to {{ post.user.username }}" /></a>
+      {% if not post.user_profile.hide_email %}<a href="mailto:{{ post.user.email }}">
+         <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email to {{ post.user.username}}" /></a>{% endif %}
+      </p>
+      {% endif %}
    </td>
    <td class="forum-post-body">
       <div class="forum-post-info quiet">
@@ -18,6 +28,9 @@
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}
+         {% if post.user_profile.signature_html %}
+            &mdash;{{ post.user_profile.signature_html|safe }}
+         {% endif %}
          {% if post.has_been_edited %}
          <p class="small quiet">Last edited: {{ post.update_date|date:"M d, Y H:i:s" }}</p>
          {% endif %}
