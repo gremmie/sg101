@@ -213,6 +213,7 @@ def quick_reply_ajax(request):
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         post.unread = True
+        post.user_profile = request.user.get_profile()
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic)
         return render_to_response('forums/display_post.html', {
