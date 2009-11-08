@@ -11,7 +11,13 @@
 
 <form action="." method="post">
 {{ form.as_p }}
+<a href="#" id="more_smileys">
+<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
 <input type="submit" name="post" value="Submit" />
 </form>
+
+<div id="smileys_dialog" title="More Smileys">
+<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
+</div>
 
 {% endblock %}

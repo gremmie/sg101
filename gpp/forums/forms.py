@@ -17,10 +17,12 @@ class NewPostForm(forms.Form):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            ('js/forums.js', )
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+                ('js/forums.js', ))
 
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
@@ -55,10 +57,12 @@ class NewTopicForm(forms.Form):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            ('js/forums.js', )
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+                ('js/forums.js', ))
 
     def __init__(self, user, forum, *args, **kwargs):
         super(NewTopicForm, self).__init__(*args, **kwargs)
@@ -102,10 +106,12 @@ class PostForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            ('js/forums.js', )
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+                ('js/forums.js', ))
 
 
 class MoveTopicForm(forms.Form):

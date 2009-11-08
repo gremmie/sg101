@@ -10,10 +10,9 @@ from smiley.models import Smiley
 
 @login_required
 @require_GET
-def farm(request):
+def farm(request, extra=False):
     return render_to_response('smiley/smiley_farm.html', {
-        'smilies': Smiley.objects.get_smilies(),
+        'smilies': Smiley.objects.get_smilies(extra),
         },
         context_instance = RequestContext(request))
 
-# vim: ts=4 sw=4

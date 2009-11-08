@@ -83,4 +83,31 @@ $(document).ready(function() {
             'WARNING: all posts will be lost.');
    });
    $('#id_body').markItUp(mySettings);
+   $('#smileys_dialog').dialog({autoOpen:false});
+   var firstTime = true;
+   $('#more_smileys').click(function () {
+         $('#smileys_dialog').dialog('open');
+         var postBox = $('#id_body')[0];
+         if (firstTime) {
+            $.ajax({
+               url: '/smiley/farm/extra/',
+               type: 'GET',
+               dataType: 'html',
+               success: function(data, textStatus) {
+                  var img = $('#smiley_busy');
+                  img.hide();
+                  img.after(data);
+                  $('#smileys_dialog .smiley_farm img').click(function() {
+                     postBox.value += ' ' + this.alt + ' ';
+                     postBox.focus();
+                  });
+                  firstTime = false;
+               },
+               error: function (xhr, textStatus, ex) {
+                  alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+               }
+            });
+         }
+         return false;
+      });
 });

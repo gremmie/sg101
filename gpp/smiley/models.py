@@ -2,34 +2,38 @@
 Models for the smiley application.
 """
 from django.db import models
+from django.core.cache import cache
+
+CACHE_TIMEOUT = 60 * 5      # seconds
 
 
 class SmileyManager(models.Manager):
-    smiley_map = None
-    smilies = None
 
     def get_smiley_map(self):
-        if self.smiley_map is None:
-            smilies = self.all()
-            self.smiley_map = {}
-            for s in smilies:
-                self.smiley_map[s.code] = s.html()
-        return self.smiley_map
+        map = cache.get('smiley_map')
+        if map:
+            return map
 
-    def get_smilies(self):
-        if self.smilies is None:
-            self.smilies = self.all()
-        return self.smilies
+        map = dict((s.code, s.html()) for s in self.all())
+        cache.set('smiley_map', map, CACHE_TIMEOUT)
+        return map
 
-    def clear_cache(self):
-        self.smiley_map = None
-        self.smilies = None
+    def get_smilies(self, extra=False):
+        key = 'smileys' if not extra else 'smileys_extra'
+        smilies = cache.get(key)
+        if smilies:
+            return smilies
+
+        smilies = self.filter(is_extra=extra)
+        cache.set(key, smilies, CACHE_TIMEOUT)
+        return smilies
 
 
 class Smiley(models.Model):
     image = models.ImageField(upload_to='smiley/images/')
     title = models.CharField(max_length=32)
     code = models.CharField(max_length=32)
+    is_extra = models.BooleanField()
 
     objects = SmileyManager()
 
@@ -45,8 +49,8 @@ class Smiley(models.Model):
 
     def html(self):
         if self.image:
-            return u'<img src="%s" alt="%s" title="%s" />' % \
-                    (self.get_absolute_url(), self.title, self.title)
+            return (u'<img src="%s" alt="%s" title="%s" />' %
+                    (self.get_absolute_url(), self.title, self.title))
         return u''
     html.allow_tags = True
 

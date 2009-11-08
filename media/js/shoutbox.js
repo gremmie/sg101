@@ -28,15 +28,13 @@ $(document).ready(function() {
       if (!smilies_loaded) {
          smiley_frame.load('/smiley/farm/', function () {
             $('#shoutbox-busy-icon').hide();
+            var txt = $("#shoutbox-smiley-input")[0];
+            $('#shoutbox-smiley-frame img').click(function() {
+               txt.value += ' ' + this.alt + ' ';
+               txt.focus();
+            });
             smilies_loaded = true;
          });
       }
    });
 });
-
-function sb_smiley_click(code)
-{
-    var txt = document.getElementById("shoutbox-smiley-input");
-    txt.value += code;
-    txt.focus();
-}

@@ -1,6 +1,5 @@
 <div class="smiley_farm">
 {% for s in smilies %}
-    <img src="{{ s.image.url }}" alt="{{ s.code }}" title="{{ s.title }} {{ s.code }}"
-        onclick="sb_smiley_click(' {{ s.code }} ');" />
+<img src="{{ s.image.url }}" alt="{{ s.code }}" title="{{ s.title }} {{ s.code }}" />
 {% endfor %}
 </div>
