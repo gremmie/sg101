@@ -4,7 +4,7 @@ $(document).ready(function() {
    postButton.click(function () {
       var text = $.trim(postText.val());
       if (text.length == 0) {
-         alert('Please enter some reply text.');
+         alert('Please enter some text.');
          return false;
       }
       $(this).attr('disabled', 'disabled').val('Posting reply...');

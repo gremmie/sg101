@@ -1,24 +1,40 @@
 $(document).ready(function() {
-    $('#comment-form-post').click(function () {
-        $(this).attr('disabled', 'disabled').val('Posting Comment...');
-        $.post('/comments/post/', { 
-            comment : $('#id_comment').val(), 
-            content_type : $('#id_content_type').val(), 
-            object_pk : $('#id_object_pk').val() 
+    var postText = $('#id_comment');
+    var postButton = $('#comment-form-post');
+    postButton.click(function () {
+        var text = $.trim(postText.val());
+        if (text.length == 0) {
+           alert('Please enter some text.');
+           return false;
+        }
+        postButton.attr('disabled', 'disabled').val('Posting Comment...');
+        $.ajax({
+            url: '/comments/post/',
+            type: 'POST',
+            data: {
+               comment : text,
+               content_type : $('#id_content_type').val(), 
+               object_pk : $('#id_object_pk').val() 
             }, 
-            function (data, textStatus) {
-                $('#id_comment').val(''); 
+            dataType: 'html',
+            success: function (data, textStatus) {
+                postText.val(''); 
                 $('#comment-list').append(data);
                 var lastLi = $('#comment-list > li:last');
                 lastLi.hide();
                 lastLi.fadeIn(3000);
-                $('#comment-form-post').removeAttr('disabled').val('Post Comment');
+                postButton.removeAttr('disabled').val('Post Comment');
                 var count = $('#comment-count');
                 if (count.length) {
                     count.html(parseInt(count.html()) + 1);
                 }
             }, 
-            'html');
+            error: function (xhr, textStatus, ex) {
+               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                  xhr.responseText);
+               postButton.removeAttr('disabled').val('Post Comment');
+            }
+        });
         return false;
     });
     $('a.comment-flag').click(function () {
@@ -45,5 +61,5 @@ $(document).ready(function() {
         }
         return false;
     });
-    $('#id_comment').markItUp(mySettings);
+    postText.markItUp(mySettings);
 });
