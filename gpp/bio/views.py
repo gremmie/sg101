@@ -23,6 +23,7 @@ from core.paginator import DiggPaginator
 
 #######################################################################
 
+@login_required
 def member_list(request, type='user', page=1):
     if type == 'user':
         users = auth.models.User.objects.all().order_by('username')
