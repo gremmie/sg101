@@ -6,8 +6,10 @@ import os
 import datetime
 from django.db import models
 from django.contrib.auth.models import User
-from django.template.loader import render_to_string
 from django.template.defaultfilters import filesizeformat
+
+from core.markup import markdown
+from smiley import smilify
 
 
 class Category(models.Model):
@@ -72,8 +74,7 @@ class Download(models.Model):
         return ('downloads-details', [str(self.id)])
 
     def save(self, force_insert=False, force_update=False):
-        html = render_to_string('downloads/markdown.html', {'data': self.description})
-        self.html = html.strip()
+        self.html = smilify(markdown(self.description))
         super(Download, self).save(force_insert, force_update)
 
     def vote(self, vote_value):

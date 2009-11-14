@@ -4,7 +4,8 @@ import datetime
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.template.loader import render_to_string
+from core.markup import markdown
+from smiley import smilify
 
 
 class MessageManager(models.Manager):
@@ -62,8 +63,7 @@ class Message(models.Model):
     def save(self, force_insert = False, force_update = False):
         if not self.id:
             self.send_date = datetime.datetime.now()
-        html = render_to_string('messages/markdown.html', {'data': self.message})
-        self.html = html.strip()
+        self.html = smilify(markdown(self.message))
         super(Message, self).save(force_insert, force_update)
 
     @models.permalink

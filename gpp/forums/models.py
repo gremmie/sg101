@@ -6,7 +6,8 @@ import datetime
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
-from django.template.loader import render_to_string
+from core.markup import markdown
+from smiley import smilify
 
 
 POST_EDIT_DELTA = datetime.timedelta(seconds=3)
@@ -251,8 +252,7 @@ class Post(models.Model):
         return self.summary()
 
     def save(self, *args, **kwargs):
-        html = render_to_string('forums/post.html', {'data': self.body})
-        self.html = html.strip()
+        self.html = smilify(markdown(self.body))
         super(Post, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

@@ -8,8 +8,10 @@ import os.path
 from django.db import models
 from django.contrib import auth
 from django.conf import settings
-from django.template.loader import render_to_string
 from django.core.cache import cache
+
+from core.markup import Markdown
+from smiley import Smilify
 
 
 def avatar_file_path_for_user(username, filename):
@@ -46,10 +48,9 @@ class UserProfile(models.Model):
         ordering = ('user__username', )
 
     def save(self, *args, **kwargs):
-        html = render_to_string('bio/markdown.html', {'data': self.profile_text})
-        self.profile_html = html.strip()
-        html = render_to_string('bio/markdown.html', {'data': self.signature})
-        self.signature_html = html.strip()
+        md = Markdown()
+        sm = Smilify()
+        self.profile_html = sm.convert(md.convert(self.profile_text))
+        self.signature_html = sm.convert(md.convert(self.signature))
         super(UserProfile, self).save(*args, **kwargs)
         cache.delete('avatar_' + self.user.username)
-

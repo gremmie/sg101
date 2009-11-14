@@ -4,7 +4,9 @@ Models for the gcalendar application.
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.template.loader import render_to_string
+
+from core.markup import markdown
+from smiley import smilify
 
 
 class PendingEventManager(models.Manager):
@@ -90,12 +92,9 @@ class Event(models.Model):
         ordering = ('-date_submitted', )
 
     def save(self, *args, **kwargs):
-        html = render_to_string('gcalendar/markdown.html', {'data': self.description})
-        self.html = html.strip()
+        self.html = smilify(markdown(self.description))
         super(Event, self).save(*args, **kwargs)
 
     def needs_approval(self):
         return self.status in (self.NEW, self.EDIT_REQ, self.DEL_REQ)
 
-
-# vim: ts=4 sw=4

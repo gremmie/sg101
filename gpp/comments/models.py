@@ -6,8 +6,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.contrib.auth.models import User
-from django.template.loader import render_to_string
 from django.core import urlresolvers
+
+from core.markup import markdown
+from smiley import smilify
 
 
 COMMENT_MAX_LENGTH = getattr(settings, 'COMMENT_MAX_LENGTH', 3000)
@@ -51,8 +53,7 @@ class Comment(models.Model):
         return u'%s: %s...' % (self.user.username, self.comment[:50])
 
     def save(self, force_insert=False, force_update=False):
-        html = render_to_string('comments/markdown.html', {'data': self.comment})
-        self.html = html.strip()
+        self.html = smilify(markdown(self.comment))
         super(Comment, self).save(force_insert, force_update)
 
     def get_absolute_url(self):

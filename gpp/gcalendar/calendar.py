@@ -86,8 +86,8 @@ class Calendar(object):
                     error = True
 
             if error:
-                err_msgs.append('%s - (%d) %s' % \
-                        (qs[i].title, code, entry.batch_status.reason))
+                err_msgs.append('%s - (%d) %s' % (
+                    qs[i].what, code, entry.batch_status.reason))
 
         if len(err_msgs) > 0:
             raise CalendarError(', '.join(err_msgs))
