@@ -110,4 +110,26 @@ $(document).ready(function() {
          }
          return false;
       });
+   $('#markdown_help_dialog').dialog({autoOpen: false, width: 720, height: 600});
+   var firstTimeMd = true;
+   $('#markdown_help').click(function () {
+         $('#markdown_help_dialog').dialog('open');
+         if (firstTimeMd) {
+            $.ajax({
+               url: '/core/markdown_help/',
+               type: 'GET',
+               dataType: 'html',
+               success: function(data, textStatus) {
+                  var img = $('#markdown_busy');
+                  img.hide();
+                  img.after(data);
+                  firstTimeMd = false;
+               },
+               error: function (xhr, textStatus, ex) {
+                  alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+               }
+            });
+         }
+         return false;
+      });
 });

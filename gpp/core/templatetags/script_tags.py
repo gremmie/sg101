@@ -7,21 +7,22 @@ from django.conf import settings
 register = template.Library()
 
 @register.simple_tag
-def script_tags(library):
+def script_tags(libraries):
     s = ''
-    if library in settings.GPP_THIRD_PARTY_CSS:
-        for path in settings.GPP_THIRD_PARTY_CSS[library]:
-            prefix = ''
-            if not path.startswith('http'):
-                prefix = settings.MEDIA_URL
-            s += '<link rel="stylesheet" href="%s%s" type="text/css" />' % (prefix, path)
+    for library in libraries.split():
+        if library in settings.GPP_THIRD_PARTY_CSS:
+            for path in settings.GPP_THIRD_PARTY_CSS[library]:
+                prefix = ''
+                if not path.startswith('http'):
+                    prefix = settings.MEDIA_URL
+                s += '<link rel="stylesheet" href="%s%s" type="text/css" />' % (prefix, path)
 
-    if library in settings.GPP_THIRD_PARTY_JS:
-        for path in settings.GPP_THIRD_PARTY_JS[library]:
-            prefix = ''
-            if not path.startswith('http'):
-                prefix = settings.MEDIA_URL
-            s += '<script type="text/javascript" src="%s%s"></script>' % (prefix, path)
+        if library in settings.GPP_THIRD_PARTY_JS:
+            for path in settings.GPP_THIRD_PARTY_JS[library]:
+                prefix = ''
+                if not path.startswith('http'):
+                    prefix = settings.MEDIA_URL
+                s += '<script type="text/javascript" src="%s%s"></script>' % (prefix, path)
 
     return s
 

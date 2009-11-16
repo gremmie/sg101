@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: Edit Post{% endblock %}
 {% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
@@ -16,17 +17,6 @@
 </table>
 
 <a name="forum-reply-form"></a>
-<form action="." method="post" id="forums-quick-reply">
-<fieldset>
-<legend>Edit Post</legend>
-{{ form.as_p }}
-<a href="#" id="more_smileys">
-<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
-<input type="submit" value="Update Post" id="forums-edit-post" />
-</fieldset>
-</form>
-</div>
-<div id="smileys_dialog" title="More Smileys">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
+{% show_form "Edit Post" form "Update Post" 0 MEDIA_URL %}
 </div>
 {% endblock %}

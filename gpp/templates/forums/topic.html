@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
 {% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
@@ -54,18 +55,7 @@
 
 {% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
-<form action="" method="post" id="forums-quick-reply">
-<fieldset>
-<legend>Reply to &quot;{{ topic.name }}&quot;</legend>
-{{ form.as_p }}
-<a href="#" id="more_smileys">
-<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
-<input type="submit" value="Submit Reply" id="forums-reply-post" />
-</fieldset>
-</form>
-<div id="smileys_dialog" title="More Smileys">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
-</div>
+{% show_form "Reply to Topic" form "Submit Reply" 1 MEDIA_URL %}
 {% endif %}
 </div>
 {% endblock %}

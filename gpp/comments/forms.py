@@ -66,7 +66,9 @@ class CommentForm(forms.Form):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            ('js/comments.js', )
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+                ('js/comments.js', ))

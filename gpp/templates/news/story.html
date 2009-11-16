@@ -8,7 +8,7 @@
 {% endblock %}
 {% block custom_js %}
 {% if story.can_comment_on %}
-{% script_tags "markitup" %}
+{% script_tags "markitup jquery-ui" %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/comments.js"></script>
 {% endif %}
 {% endblock %}

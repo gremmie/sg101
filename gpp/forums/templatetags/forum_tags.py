@@ -80,3 +80,17 @@ def forum_date(date, user):
         fmt = DATE_FMT_12
 
     return date.strftime(fmt)
+
+
+@register.inclusion_tag('forums/show_form.html')
+def show_form(legend_text, form, submit_value, is_ajax, media_url):
+    """
+    This tag displays the common HTML for a forum form.
+    """
+    return {
+        'legend_text': legend_text,
+        'form': form,
+        'submit_value': submit_value,
+        'is_ajax': is_ajax,
+        'MEDIA_URL': media_url,
+    }

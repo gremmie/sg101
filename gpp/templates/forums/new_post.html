@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: New Post{% endblock %}
 {% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
@@ -13,19 +14,7 @@
 {% if can_post %}
 <div class="forum-block">
 <a name="forum-reply-form"></a>
-<form action="." method="post" id="forums-reply">
-<fieldset>
-<legend>New Post</legend>
-{{ form.as_p }}
-<a href="#" id="more_smileys">
-<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
-<input type="submit" value="Submit Post" id="forums-new-post" />
-</fieldset>
-</form>
-</div>
-<div id="smileys_dialog" title="More Smileys">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
-</div>
+{% show_form "New Post" form "Submit Post" 0 MEDIA_URL %}
 {% else %}
    {% if topic.locked %}
    <p>This topic is locked.</p>
@@ -33,4 +22,5 @@
    <p>You don't have permission to post to this topic.</p>
    {% endif %}
 {% endif %}
+</div>
 {% endblock %}
