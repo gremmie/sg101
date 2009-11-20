@@ -10,8 +10,7 @@ from django.contrib import auth
 from django.conf import settings
 from django.core.cache import cache
 
-from core.markup import Markdown
-from smiley import Smilify
+from core.markup import SiteMarkup
 
 
 def avatar_file_path_for_user(username, filename):
@@ -48,9 +47,8 @@ class UserProfile(models.Model):
         ordering = ('user__username', )
 
     def save(self, *args, **kwargs):
-        md = Markdown()
-        sm = Smilify()
-        self.profile_html = sm.convert(md.convert(self.profile_text))
-        self.signature_html = sm.convert(md.convert(self.signature))
+        sm = SiteMarkup()
+        self.profile_html = sm.convert(self.profile_text)
+        self.signature_html = sm.convert(self.signature)
         super(UserProfile, self).save(*args, **kwargs)
         cache.delete('avatar_' + self.user.username)

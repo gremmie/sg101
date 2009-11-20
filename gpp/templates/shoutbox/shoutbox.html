@@ -6,7 +6,7 @@
    {% for shout in shouts %}
       <p>
       <span class="shoutbox-user">{{ shout.user.username }}:</span>
-      <span class="shoutbox-shout">{{ shout.shout|smilify|urlizetrunc:15 }}</span>
+      <span class="shoutbox-shout">{{ shout.shout|smiley_html|urlizetrunc:15 }}</span>
       <span class="shoutbox-date">{{ shout.shout_date|date:"D M d Y H:i:s" }}</span>
       </p>
    {% endfor %}

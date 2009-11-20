@@ -1,17 +1,19 @@
 """
-This is a thin wrapper around the Markdown class which deals with the
-differences in Markdown versions on the production and development server.
-This code was inspired by the code in 
-django/contrib/markup/templatetags/markup.py.
-Currently, we only have to worry about Markdown 1.6b and 2.0.
+Markup related utitlities useful for the entire project.
 """
 import markdown as _markdown
 from django.utils.encoding import force_unicode
 
-from smiley.utils import smilify
+from smiley import Smilify
 
 class Markdown(object):
-
+    """
+    This is a thin wrapper around the Markdown class which deals with the
+    differences in Markdown versions on the production and development server.
+    This code was inspired by the code in 
+    django/contrib/markup/templatetags/markup.py.
+    Currently, we only have to worry about Markdown 1.6b and 2.0.
+    """
     def __init__(self, safe_mode='escape'):
         # Unicode support only in markdown v1.7 or above. Version_info
         # exists only in markdown v1.6.2rc-2 or above.
@@ -26,5 +28,29 @@ class Markdown(object):
 
 
 def markdown(s):
+    """
+    A convenience function for one-off markdown jobs.
+    """
     md = Markdown()
     return md.convert(s)
+
+
+class SiteMarkup(object):
+    """
+    This class provides site markup by combining markdown and
+    our own smiley markup.
+    """
+    def __init__(self):
+        self.md = Markdown()
+        self.smiley = Smilify()
+
+    def convert(self, s):
+        return self.md.convert(self.smiley.markdown(s))
+
+
+def site_markup(s):
+    """
+    Convenience function for one-off site markup jobs.
+    """
+    sm = SiteMarkup()
+    return sm.convert(s)

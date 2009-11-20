@@ -8,8 +8,7 @@ from django.contrib.contenttypes import generic
 from django.contrib.auth.models import User
 from django.core import urlresolvers
 
-from core.markup import markdown
-from smiley import smilify
+from core.markup import site_markup
 
 
 COMMENT_MAX_LENGTH = getattr(settings, 'COMMENT_MAX_LENGTH', 3000)
@@ -53,7 +52,7 @@ class Comment(models.Model):
         return u'%s: %s...' % (self.user.username, self.comment[:50])
 
     def save(self, force_insert=False, force_update=False):
-        self.html = smilify(markdown(self.comment))
+        self.html = site_markup(self.comment)
         super(Comment, self).save(force_insert, force_update)
 
     def get_absolute_url(self):

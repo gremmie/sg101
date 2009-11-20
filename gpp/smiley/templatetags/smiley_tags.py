@@ -12,11 +12,20 @@ register = template.Library()
 
 @register.filter
 @stringfilter
-def smilify(value, autoescape=False):
+def smiley_html(value, autoescape=False):
     """A filter to "smilify" text by replacing text with HTML img tags of smilies."""
-    from smiley import smilify
-    return mark_safe(smilify(value, autoescape))
-smilify.needs_autoescape = True
+    from smiley import smilify_html
+    return mark_safe(smilify_html(value, autoescape=autoescape))
+smiley_html.needs_autoescape = True
+
+
+@register.filter
+@stringfilter
+def smiley_markdown(value, autoescape=False):
+    """A filter to "smilify" text by replacing text with HTML img tags of smilies."""
+    from smiley import smilify_markdown
+    return mark_safe(smilify_markdown(value, autoescape=autoescape))
+smiley_markdown.needs_autoescape = True
 
 
 @register.inclusion_tag('smiley/smiley_farm.html')

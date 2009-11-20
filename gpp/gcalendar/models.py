@@ -5,8 +5,7 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
 
-from core.markup import markdown
-from smiley import smilify
+from core.markup import site_markup
 
 
 class PendingEventManager(models.Manager):
@@ -92,7 +91,7 @@ class Event(models.Model):
         ordering = ('-date_submitted', )
 
     def save(self, *args, **kwargs):
-        self.html = smilify(markdown(self.description))
+        self.html = site_markup(self.description)
         super(Event, self).save(*args, **kwargs)
 
     def needs_approval(self):

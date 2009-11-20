@@ -1,11 +1,12 @@
 """Models for the messages application."""
 
 import datetime
+
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from core.markup import markdown
-from smiley import smilify
+
+from core.markup import site_markup
 
 
 class MessageManager(models.Manager):
@@ -63,7 +64,7 @@ class Message(models.Model):
     def save(self, force_insert = False, force_update = False):
         if not self.id:
             self.send_date = datetime.datetime.now()
-        self.html = smilify(markdown(self.message))
+        self.html = site_markup(self.message)
         super(Message, self).save(force_insert, force_update)
 
     @models.permalink

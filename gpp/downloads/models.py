@@ -8,8 +8,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.template.defaultfilters import filesizeformat
 
-from core.markup import markdown
-from smiley import smilify
+from core.markup import site_markup
 
 
 class Category(models.Model):
@@ -74,7 +73,7 @@ class Download(models.Model):
         return ('downloads-details', [str(self.id)])
 
     def save(self, force_insert=False, force_update=False):
-        self.html = smilify(markdown(self.description))
+        self.html = site_markup(self.description)
         super(Download, self).save(force_insert, force_update)
 
     def vote(self, vote_value):
