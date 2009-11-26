@@ -9,6 +9,6 @@
 <title>Markdown Preview</title>
 <link rel="stylesheet" type="text/css" href="~/templates/preview.css" />
 </head>
-{{ data|markdown:"safe"|smilify }}
+{{ data|smiley_markdown|markdown:"safe" }}
 </body>
 </html>
