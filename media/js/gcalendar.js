@@ -1,5 +1,4 @@
 $(document).ready(function() {
-    $('#id_description').markItUp(mySettings);
     $('#id_start_date').datepicker({constrainInput: true, 
        onClose: function () {
          var end = $('#id_end_date');

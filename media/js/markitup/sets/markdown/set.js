@@ -78,3 +78,57 @@ miu = {
 		return '\n'+heading;
 	}
 }
+
+$(document).ready(function() {
+   $('.markItUp').markItUp(mySettings);
+
+   $('#smileys_dialog_popup').dialog({autoOpen:false});
+   var firstTimeSmiley = true;
+   $('#more_smileys_link').click(function () {
+       $('#smileys_dialog_popup').dialog('open');
+       var smileyTarget = $('.smileyTarget')[0];
+       if (firstTimeSmiley) {
+         $.ajax({
+            url: '/smiley/farm/extra/',
+            type: 'GET',
+            dataType: 'html',
+            success: function(data, textStatus) {
+               var img = $('#smiley_busy');
+               img.hide();
+               img.after(data);
+               $('#smileys_dialog_popup .smiley_farm img').click(function() {
+                  smileyTarget.value += ' ' + this.alt + ' ';
+                  smileyTarget.focus();
+               });
+               firstTimeSmiley = false;
+            },
+            error: function (xhr, textStatus, ex) {
+               alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+            }
+         });
+       }
+       return false;
+   });
+   $('#markdown_help_dialog_popup').dialog({autoOpen: false, width: 720, height: 600});
+   var firstTimeMdHelp = true;
+   $('#markdown_help_link').click(function () {
+       $('#markdown_help_dialog_popup').dialog('open');
+       if (firstTimeMdHelp) {
+         $.ajax({
+            url: '/core/markdown_help/',
+            type: 'GET',
+            dataType: 'html',
+            success: function(data, textStatus) {
+               var img = $('#markdown_busy');
+               img.hide();
+               img.after(data);
+               firstTimeMdHelp = false;
+            },
+            error: function (xhr, textStatus, ex) {
+               alert('Oops, an error occurred: ' + xhr.statusText + ' - ' + xhr.responseText);
+            }
+         });
+       }
+       return false;
+   });
+});

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block title %}{{ title }}{% endblock %}
 {% block custom_js %}
 {{ form.media }}
@@ -36,7 +37,7 @@
 <tr><th>Where:</th><td>{{ form.where.errors }}{{ form.where }}</td></tr>
 <tr><th>Details:</th><td>{{ form.description.errors }}{{ form.description }}</td></tr>
 {# form.as_p #}
-<tr><td>&nbsp;</td><td><input type="submit" name="submit_button" value="Submit" /></td></tr>
+<tr><td>&nbsp;</td><td>{% comment_dialogs %}<input type="submit" name="submit_button" value="Submit" /></td></tr>
 </table>
 </form>
 <p><a href="{% url gcalendar-index %}">&laquo; Back to the Event Calendar</a></p>

@@ -17,3 +17,7 @@ def bool_icon(flag):
     return u"""<img src="%s" alt="%s" title="%s" />""" % (
             params[0], params[1], params[1])
 
+
+@register.inclusion_tag('core/comment_dialogs.html')
+def comment_dialogs():
+    return {'MEDIA_URL': settings.MEDIA_URL}

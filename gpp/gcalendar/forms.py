@@ -69,6 +69,8 @@ class EventEntryForm(forms.ModelForm):
     end_time = forms.TimeField(required=False, widget=forms.Select(choices=TIME_CHOICES))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     where = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 60}))
+    description = forms.CharField(required=False, 
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     TIME_FORMAT = '%H:%M'
     DEFAULT_START_TIME = '19:00'
@@ -81,13 +83,13 @@ class EventEntryForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'] + \
-                   settings.GPP_THIRD_PARTY_CSS['jquery-ui'] + \
-                   ('css/gcalendar.css', )
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                    settings.GPP_THIRD_PARTY_CSS['jquery-ui'] +
+                    ('css/gcalendar.css', ))
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-             settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
-             ('js/timezone.js', 'js/gcalendar.js', )
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
+              settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+              ('js/timezone.js', 'js/gcalendar.js', ))
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial', {})
@@ -150,5 +152,3 @@ class EventEntryForm(forms.ModelForm):
 class PasswordForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput())
 
-
-# vim: ts=4 sw=4
