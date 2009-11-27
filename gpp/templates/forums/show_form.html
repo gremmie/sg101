@@ -1,17 +1,9 @@
+{% load core_tags %}
 <form action="." method="post">
 <fieldset>
 <legend>{{ legend_text }}</legend>
 {{ form.as_p }}
-<a href="#" id="more_smileys">
-<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
-<a href="#" id="markdown_help">
-<img src="{{ MEDIA_URL }}icons/help.png" alt="Help" title="Help" /></a>
+{% comment_dialogs %}
 <input type="submit" value="{{ submit_value }}" {% if is_ajax %}id="forums-reply-post"{% endif %} />
 </fieldset>
 </form>
-<div id="smileys_dialog" title="More Smileys">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
-</div>
-<div id="markdown_help_dialog" title="Markdown Help">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="markdown_busy" />
-</div>

@@ -11,7 +11,8 @@ from forums.models import Post
 
 class NewPostForm(forms.Form):
     """Form for creating a new post."""
-    body = forms.CharField(label='', widget=forms.Textarea)
+    body = forms.CharField(label='', 
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     topic_id = forms.IntegerField(widget=forms.HiddenInput)
     topic = None
 
@@ -50,7 +51,8 @@ class NewTopicForm(forms.Form):
     """
     name = forms.CharField(label='Subject', max_length=255,
             widget=forms.TextInput(attrs={'size': 64}))
-    body = forms.CharField(label='', widget=forms.Textarea)
+    body = forms.CharField(label='', 
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     user = None
     forum = None
     has_mod_fields = False
@@ -98,7 +100,8 @@ class PostForm(forms.ModelForm):
     """
     Form for editing an existing post or a new, non-quick post.
     """
-    body = forms.CharField(label='', widget=forms.Textarea)
+    body = forms.CharField(label='', 
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     class Meta:
         model = Post
