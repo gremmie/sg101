@@ -6,20 +6,25 @@ from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext
 from django.contrib import auth
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from elsewhere.models import SocialNetworkForm
 from elsewhere.models import InstantMessengerForm
 from elsewhere.models import WebsiteForm
 
 from bio.models import UserProfile
+from bio.models import UserProfileFlag
 from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
 from core.paginator import DiggPaginator
+from core.functions import email_admins
 
 #######################################################################
 
@@ -139,6 +144,32 @@ def change_avatar(request):
         'form': form,
          }, 
         context_instance = RequestContext(request))
+
+#######################################################################
+
+@require_POST
+def flag_profile(request, profile_id):
+    """
+    This function handles the flagging of profiles by users. This function should
+    be the target of an AJAX post.
+    """
+    if not request.user.is_authenticated():
+        return HttpResponse('Please login or register to flag a profile.')
+
+    try:
+        profile = UserProfile.objects.get(pk=profile_id)
+    except UserProfile.DoesNotExist:
+        return HttpResponseBadRequest("That profile doesn't exist.")
+
+    flag = UserProfileFlag(user=request.user, profile=profile)
+    flag.save()
+    email_admins('A Profile Has Been Flagged', """Hello,
+
+A user has flagged a profile for review.
+""")
+    return HttpResponse('The profile was flagged. A moderator will review the' \
+        ' profile shortly. Thanks for helping to improve the content on this ' \
+        'site.')
 
 #######################################################################
 

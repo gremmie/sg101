@@ -52,3 +52,25 @@ class UserProfile(models.Model):
         self.signature_html = sm.convert(self.signature)
         super(UserProfile, self).save(*args, **kwargs)
         cache.delete('avatar_' + self.user.username)
+
+    @models.permalink
+    def get_absolute_url(self):
+        return ('bio-view_profile', (), {'username': self.user.username})
+
+
+class UserProfileFlag(models.Model):
+    """This model represents a user flagging a profile as inappropriate."""
+    user = models.ForeignKey(auth.models.User)
+    profile = models.ForeignKey(UserProfile)
+    flag_date = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return u"%s's profile flagged by %s" % (self.profile.user.username,
+                self.user.username)
+
+    class Meta:
+        ordering = ('flag_date', )
+
+    def get_profile_url(self):
+        return '<a href="%s">Profile</a>' % self.profile.get_absolute_url()
+    get_profile_url.allow_tags = True

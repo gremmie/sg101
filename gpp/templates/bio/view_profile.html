@@ -10,6 +10,7 @@
       $('#bio_profile tr:even').addClass('even');
    });
 </script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/bio.js"></script>
 {% endblock %}
 {% block content %}
 <div class="user_profile">
@@ -62,11 +63,11 @@
 </ul>
 {% else %}
 {% if user.is_authenticated %}
-<p>
-<a href="{% url messages-compose_to subject.username %}">
-   <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a>
-<a href="{% url messages-compose_to subject.username %}">Send a private message to {{ subject.username }}</a>
-</p>
+<ul class="icon-list">
+   <li><a href="{% url messages-compose_to subject.username %}"><img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url messages-compose_to subject.username %}">Send a private message to {{ subject.username }}</a></li>
+   <li><img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" />
+      <a href="#" class="profile-flag" id="fp-{{ profile.id }}">Report this profile</a></li>
+</ul>
 {% endif %}
 {% endif %}
 {% endblock %}

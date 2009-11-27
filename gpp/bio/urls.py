@@ -10,6 +10,7 @@ urlpatterns = patterns('bio.views',
     url(r'^edit/$', 'edit_profile', name='bio-edit_profile'),
     url(r'^edit/elsewhere/$', 'edit_elsewhere', name='bio-edit_elsewhere'),
     url(r'^avatar/$', 'change_avatar', name='bio-change_avatar'),
+    url(r'^flag/(\d+)/$', 'flag_profile', name='bio-flag_profile'),
 )
 
 urlpatterns += patterns('django.views.generic.simple',
@@ -19,5 +20,3 @@ urlpatterns += patterns('django.views.generic.simple',
         name='bio-members'),
 )
 
-
-# vim: ts=4 sw=4
