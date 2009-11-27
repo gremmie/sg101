@@ -14,6 +14,7 @@ from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
 from core.functions import email_admins
+from core.markup import site_markup
 from comments.forms import CommentForm
 from comments.models import Comment
 from comments.models import CommentFlag
@@ -121,6 +122,6 @@ def markdown_preview(request):
         return HttpResponseBadRequest('No data')
 
     return render_to_response('comments/markdown_preview.html', {
-        'data': data,
+        'data': site_markup(data),
         },
         context_instance = RequestContext(request))
