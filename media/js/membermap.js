@@ -30,7 +30,6 @@ var mmap = {
       'and click the Submit button.'
 };
 $(document).ready(function() {
-   $('#id_message').markItUp(mySettings);
    if (GBrowserIsCompatible())
    {
       $(window).unload(GUnload);

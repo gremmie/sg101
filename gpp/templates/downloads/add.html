@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load downloads_tags %}
+{% load core_tags %}
 {% block title %}Add Download{% endblock %}
 {% block custom_css %}
 {{ add_form.media }}
@@ -37,6 +38,7 @@
 <tr>
    <th>&nbsp;</th>
    <td>
+      {% comment_dialogs %}
       <input type="submit" name="submit_button" value="Add Download" />
    </td>
 </table>

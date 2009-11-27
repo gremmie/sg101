@@ -24,7 +24,7 @@ class ComposeForm(forms.Form):
          max_length=30,
          widget=AutoCompleteUserInput())
    subject = forms.CharField(max_length=120, widget=forms.TextInput(attrs={'size': 52}))
-   message = forms.CharField(widget=forms.Textarea(attrs={'rows': 20, 'cols': 80}))
+   message = forms.CharField(widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
    attach_signature = forms.BooleanField(label='Attach Signature?', required=False)
 
    def __init__(self, user, *args, **kwargs):
@@ -67,9 +67,11 @@ class ComposeForm(forms.Form):
 
    class Media:
       css = {
-         'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+          'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                  settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
       }
-      js = ('js/messages/compose.js', ) + settings.GPP_THIRD_PARTY_JS['markitup']
+      js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
+            settings.GPP_THIRD_PARTY_JS['jquery-ui'])
 
 
 class OptionsForm(forms.ModelForm):

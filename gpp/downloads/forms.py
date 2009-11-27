@@ -20,6 +20,10 @@ class SearchForm(forms.Form):
 
 class AddDownloadForm(forms.ModelForm):
     """Form to allow adding downloads."""
+    title = forms.CharField(required=True, 
+            widget=forms.TextInput(attrs={'size': 64, 'maxlength': 64}))
+    description = forms.CharField(required=False, 
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     def clean_file(self):
         file = self.cleaned_data['file']
@@ -35,8 +39,8 @@ class AddDownloadForm(forms.ModelForm):
         
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'],
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                    settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            ('js/downloads/add.js', )
-
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
+              settings.GPP_THIRD_PARTY_JS['jquery-ui'])

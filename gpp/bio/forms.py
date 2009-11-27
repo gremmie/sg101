@@ -32,6 +32,10 @@ class EditUserProfileForm(forms.ModelForm):
     interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     use_24_time = forms.BooleanField(label='Show times in 24-hour mode', required=False)
+    profile_text = forms.CharField(required=False, 
+            widget=forms.Textarea(attrs={'class': 'markItUp'}))
+    signature = forms.CharField(required=False, 
+            widget=forms.Textarea(attrs={'class': 'markItUp'}))
 
     class Meta:
         model = UserProfile

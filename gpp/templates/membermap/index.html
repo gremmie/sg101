@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block title %}Member Map{% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/membermap.js"></script>
@@ -58,11 +59,11 @@ var mmapUser = {
         </ul>
         <form action="" method="post">
             {{ form.as_p }}
-            <p>
+            {% comment_dialogs %}
             <input type="submit" id="member_map_submit" name="submit" value="Submit" />
             <input type="submit" id="member_map_delete" name="delete" value="Delete" />
-            </p>
         </form>
+        <br />
         {% else %}
         <p>
         The member map allows members to place themselves on a google map along with a short message.

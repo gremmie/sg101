@@ -1,4 +1,5 @@
 {% extends 'messages/base.html' %}
+{% load core_tags %}
 {% block title %}Messages: Compose{% endblock %}
 {% block custom_js %}
    {{ compose_form.media }}
@@ -12,6 +13,7 @@
 <tr>
    <td>&nbsp;</td>
    <td>
+      {% comment_dialogs %}
       <input type="submit" name="submit_button" value="Send" />
       <input type="submit" name="submit_button" value="Cancel" />
    </td>
