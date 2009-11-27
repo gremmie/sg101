@@ -20,10 +20,15 @@
     <p>No social network profiles.</p>
 {% endif %}
 
-<h4>Add a Social Network</h4>
 <form method="post" action=".">
+<fieldset>
+<legend>Add a Social Network</legend>
     {{ sn_form.as_p }}
+    <p>For MySpace, you must enter your 
+    <a href="http://faq.myspace.com/app/answers/detail/a_id/278" target="_blank">Myspace Friend ID</a>
+    in the <i>Username</i> box.</p>
     <p><input type="submit" name="sn-form" value="Add Social Network" class="button" /></p>
+</fieldset>
 </form>
 <hr />
 <h3>Instant Messengers</h3>
@@ -44,10 +49,12 @@
     <p>No instant messenger profiles.</p>
 {% endif %}
 
-<h4>Add an Instant Messenger</h4>
 <form method="post" action=".">
+<fieldset>
+<legend>Add an Instant Messenger</legend>
     {{ im_form.as_p }}
     <p><input type="submit" name="im-form" value="Add Instant Messenger" class="button" /></p>
+</fieldset>
 </form>
 <hr />
 <h3>Websites</h3>
@@ -68,10 +75,12 @@
     <p>No website profiles.</p>
 {% endif %}
 
-<h4>Add a Website</h4>
 <form method="post" action=".">
+<fieldset>
+<legend>Add a Website</legend>
     {{ w_form.as_p }}
     <p><input type="submit" name="w-form" value="Add Website" class="button" /></p>
+</fieldset>
 </form>
 <hr />
 <p><a href="{% url bio-edit_profile %}">Back to Your Profile</a></p>
