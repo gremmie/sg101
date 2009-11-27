@@ -14,7 +14,7 @@ class CommentForm(forms.Form):
     comment = forms.CharField(label='',
             min_length=1, 
             max_length=COMMENT_MAX_LENGTH,
-            widget=forms.Textarea)
+            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     content_type = forms.CharField(widget=forms.HiddenInput)
     object_pk = forms.CharField(widget=forms.HiddenInput)
 

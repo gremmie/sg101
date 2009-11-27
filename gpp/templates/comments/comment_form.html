@@ -1,18 +1,10 @@
+{% load core_tags %}
 {% if user.is_authenticated %}
 <form action="{% url comments-post %}" method="post" id="comment-form">
 {{ form.as_p }}
-<a href="#" id="more_smileys">
-<img src="{{ MEDIA_URL }}icons/emoticon_smile.png" alt="More smileys" title="More smileys" /></a>
-<a href="#" id="markdown_help">
-<img src="{{ MEDIA_URL }}icons/help.png" alt="Help" title="Help" /></a>
+{% comment_dialogs %}
 <input type="submit" name="post" value="Post Comment" id="comment-form-post"/>
 </form>
-<div id="smileys_dialog" title="More Smileys">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="smiley_busy" />
-</div>
-<div id="markdown_help_dialog" title="Markdown Help">
-<img src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Loading" id="markdown_busy" />
-</div>
 {% else %}
 <p>
 Please <a href="{% url accounts-login %}">login</a> or
