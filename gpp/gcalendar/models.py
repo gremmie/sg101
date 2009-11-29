@@ -94,6 +94,7 @@ class Event(models.Model):
         self.html = site_markup(self.description)
         super(Event, self).save(*args, **kwargs)
 
-    def needs_approval(self):
-        return self.status in (self.NEW, self.EDIT_REQ, self.DEL_REQ)
+    def is_approved(self):
+        return self.status not in (self.NEW, self.EDIT_REQ, self.DEL_REQ)
+    is_approved.boolean = True
 

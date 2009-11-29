@@ -11,7 +11,7 @@ from gcalendar.admin_views import google_sync
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ('what', 'user', 'start_date', 'where', 'date_submitted',
-            'status', 'needs_approval')
+            'status', 'is_approved')
     list_filter = ('start_date', 'status')
     search_fields = ('what', 'where', 'description')
     raw_id_fields = ('user', )
