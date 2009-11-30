@@ -67,6 +67,14 @@ class Comment(models.Model):
             args=(self.content_type_id, self.object_id)
         )
 
+    def not_removed(self):
+        """
+        Returns not self.is_removed. Used on the admin display for
+        "green board" display purposes.
+        """
+        return not self.is_removed
+    not_removed.boolean = True
+
 
 class CommentFlag(models.Model):
     """This model represents a user flagging a comment as inappropriate."""

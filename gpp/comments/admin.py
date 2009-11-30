@@ -17,7 +17,8 @@ class CommentAdmin(admin.ModelAdmin):
            {'fields': ('ip_address', 'is_public', 'is_removed')}
         ),
      )
-    list_display = ('__unicode__', 'content_type', 'object_id', 'ip_address', 'creation_date', 'is_public', 'is_removed')
+    list_display = ('__unicode__', 'content_type', 'object_id', 'ip_address',
+            'creation_date', 'is_public', 'not_removed')
     list_filter = ('creation_date', 'is_public', 'is_removed')
     date_hierarchy = 'creation_date'
     ordering = ('-creation_date', )
