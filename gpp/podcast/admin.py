@@ -7,13 +7,5 @@ from podcast.models import Channel
 from podcast.models import Item
 
 
-class ItemInline(admin.StackedInline):
-   model = Item
-   extra = 1
-
-
-class ChannelAdmin(admin.ModelAdmin):
-   inlines = (ItemInline, )
-
-
-admin.site.register(Channel, ChannelAdmin)
+admin.site.register(Channel)
+admin.site.register(Item)
