@@ -3,9 +3,7 @@ from django.conf import settings
 from django.contrib import admin
 from news.feeds import LatestNewsFeed
 
-# Use the default admin site, but tell it to use a custom
-# index template:
-admin.site.index_template = 'admin/custom_index.html'
+
 admin.autodiscover()
 
 feeds = {
