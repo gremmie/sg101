@@ -13,6 +13,7 @@
 <itunes:author>{{ channel.author }}</itunes:author>
 <itunes:summary>{{ channel.description }}</itunes:summary>
 <description>{{ channel.description }}</description>
+<itunes:keywords>{{ channel.keywords }}</itunes:keywords>
 <itunes:owner>
 <itunes:name>{{ channel.owner_name }}</itunes:name>
 <itunes:email>{{ channel.owner_email }}</itunes:email>

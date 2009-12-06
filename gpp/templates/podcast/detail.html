@@ -7,6 +7,15 @@
 <h3>{{ podcast.pubdate|date:"F d, Y" }} &bull; {{ podcast.title }}</h3>
 <h4>{{ podcast.subtitle }}</h4>
 {{ podcast.summary|linebreaks }}
-<p><a href="{{ podcast.enclosure_url }}">Download Now</a> &bull;
-{{ podcast.enclosure_length|filesizeformat }} &bull; {{ podcast.duration }}</p>
+<ul>
+   <li>
+   <a href="{{ podcast.enclosure_url }}">Download Now ({{ ext }})</a> &bull;
+   {{ podcast.enclosure_length|filesizeformat }} &bull; {{ podcast.duration }}
+   </li>
+   {% if alt_ext %}
+   <li>
+      <a href="{{ podcast.alt_enclosure_url }}">Download Now ({{ alt_ext }})</a>
+   </li>
+   {% endif %}
+</ul>
 {% endblock %}

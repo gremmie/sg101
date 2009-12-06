@@ -24,6 +24,7 @@ class Channel(models.Model):
    image = models.ImageField(upload_to='podcast')
    category = models.CharField(max_length=64)
    explicit = models.CharField(max_length=8, choices=EXPLICIT_CHOICES)
+   keywords = models.CharField(max_length=255)
 
    def __unicode__(self):
       return self.title
@@ -37,6 +38,7 @@ class Item(models.Model):
    subtitle = models.CharField(max_length=255)
    summary = models.TextField()
    enclosure_url = models.URLField(verify_exists=False)
+   alt_enclosure_url = models.URLField(verify_exists=False, blank=True)
    enclosure_length = models.IntegerField()
    enclosure_type = models.CharField(max_length=32)
    guid = models.CharField(max_length=255)
