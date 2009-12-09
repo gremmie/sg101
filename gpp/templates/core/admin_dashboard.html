@@ -1,18 +1,27 @@
 {% if user.is_staff %}
+{% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links %}
 <ul id="dashboard-list">
-<li><a href="/admin/forums/flaggedpost/">Posts</a>: 
-<span {% if flagged_posts %}class="alert"{% endif %}>{{ flagged_posts }}</span></li>
-<li><a href="/admin/comments/commentflag/">Comments</a>:
-<span {% if flagged_comments %}class="alert"{% endif %}>{{ flagged_comments }}</span></li>
-<li><a href="/admin/bio/userprofileflag/">Profiles</a>:
-<span {% if flagged_profiles %}class="alert"{% endif %}>{{ flagged_profiles }}</span></li>
-<li><a href="/admin/gcalendar/event/">Calendar</a>:
-<span {% if event_requests %}class="alert"{% endif %}>{{ event_requests }}</span></li>
-<li><a href="/admin/news/pendingstory/">News</a>:
-<span {% if new_stories %}class="alert"{% endif %}>{{ new_stories }}</span></li>
-<li><a href="/admin/downloads/download/">Downloads</a>:
-<span {% if new_downloads %}class="alert"{% endif %}>{{ new_downloads }}</span></li>
-<li><a href="/admin/weblinks/link/">Links</a>:
-<span {% if new_links %}class="alert"{% endif %}>{{ new_links }}</span></li>
+{% if flagged_posts %}
+<li><a href="/admin/forums/flaggedpost/">Posts</a>: {{ flagged_posts }}</li>
+{% endif %}
+{% if flagged_comments %}
+<li><a href="/admin/comments/commentflag/">Comments</a>: {{ flagged_comments }}</li>
+{% endif %}
+{% if flagged_profiles %}
+<li><a href="/admin/bio/userprofileflag/">Profiles</a>: {{ flagged_profiles }}</li>
+{% endif %}
+{% if event_requests %}
+<li><a href="/admin/gcalendar/event/">Calendar</a>: {{ event_requests }}</li>
+{% endif %}
+{% if new_stories %}
+<li><a href="/admin/news/pendingstory/">News</a>: {{ new_stories }}</li>
+{% endif %}
+{% if new_downloads %}
+<li><a href="/admin/downloads/download/">Downloads</a>: {{ new_downloads }}</li>
+{% endif %}
+{% if new_links %}
+<li><a href="/admin/weblinks/link/">Links</a>: {{ new_links }}</li>
+{% endif %}
 </ul>
+{% endif %}
 {% endif %}
