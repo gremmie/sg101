@@ -14,6 +14,10 @@
       margin-right: 10px;
       margin-bottom: 4px;
    }
+   #dashboard-list .alert {
+      color: #f55;
+      font-weight: bold;
+   }
 </style>
 {% endblock %}
 
@@ -23,4 +27,4 @@
 <h1 id="site-name">{% trans 'SurfGuitar101.com Site Administration' %}</h1>
 {% endblock %}
 
-{% block nav-global %}{% admin_dashboard %}{% endblock %}
+{% block nav-global %}{% admin_dashboard user %}{% endblock %}

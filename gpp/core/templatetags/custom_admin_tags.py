@@ -17,7 +17,7 @@ register = template.Library()
 
 
 @register.inclusion_tag('core/admin_dashboard.html')
-def admin_dashboard():
+def admin_dashboard(user):
     """
     This tag is used in the admin to create a dashboard
     of pending content that an admin must approve.
@@ -34,6 +34,7 @@ def admin_dashboard():
     new_links = Link.objects.filter(is_public=False).count()
 
     return {
+        'user': user,
         'flagged_profiles': flagged_profiles,
         'flagged_comments': flagged_comments,
         'new_downloads': new_downloads,

@@ -1,9 +1,18 @@
+{% if user.is_staff %}
 <ul id="dashboard-list">
-   <li><a href="/admin/forums/flaggedpost/">Flagged Posts</a>: {{ flagged_posts }}</li>
-   <li><a href="/admin/comments/commentflag/">Flagged Comments</a>: {{ flagged_comments }}</li>
-   <li><a href="/admin/bio/userprofileflag/">Flagged Profiles</a>: {{ flagged_profiles }}</li>
-   <li><a href="/admin/gcalendar/event/">Calendar Requests</a>: {{ event_requests }}</li>
-   <li><a href="/admin/news/pendingstory/">New Stories</a>: {{ new_stories }}</li>
-   <li><a href="/admin/downloads/download/">New Downloads</a>: {{ new_downloads }}</li>
-   <li><a href="/admin/weblinks/link/">New Links</a>: {{ new_links }}</li>
+<li><a href="/admin/forums/flaggedpost/">Posts</a>: 
+<span {% if flagged_posts %}class="alert"{% endif %}>{{ flagged_posts }}</span></li>
+<li><a href="/admin/comments/commentflag/">Comments</a>:
+<span {% if flagged_comments %}class="alert"{% endif %}>{{ flagged_comments }}</span></li>
+<li><a href="/admin/bio/userprofileflag/">Profiles</a>:
+<span {% if flagged_profiles %}class="alert"{% endif %}>{{ flagged_profiles }}</span></li>
+<li><a href="/admin/gcalendar/event/">Calendar</a>:
+<span {% if event_requests %}class="alert"{% endif %}>{{ event_requests }}</span></li>
+<li><a href="/admin/news/pendingstory/">News</a>:
+<span {% if new_stories %}class="alert"{% endif %}>{{ new_stories }}</span></li>
+<li><a href="/admin/downloads/download/">Downloads</a>:
+<span {% if new_downloads %}class="alert"{% endif %}>{{ new_downloads }}</span></li>
+<li><a href="/admin/weblinks/link/">Links</a>:
+<span {% if new_links %}class="alert"{% endif %}>{{ new_links }}</span></li>
 </ul>
+{% endif %}
