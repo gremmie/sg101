@@ -325,12 +325,21 @@ def delete_post(request):
     if not can_delete:
         return HttpResponseForbidden("You don't have permission to delete that post.")
 
+    delete_single_post(post)
+    return HttpResponse("The post has been deleted.")
+
+
+def delete_single_post(post):
+    """
+    This function deletes a single post. It handles the case of where
+    a post is the sole post in a topic by deleting the topic also. It
+    adjusts any foreign keys in Topic or Forum objects that might be pointing
+    to this post before deleting the post to avoid a cascading delete.
+    """
     if post.topic.post_count == 1 and post == post.topic.last_post:
         _delete_topic(post.topic)
     else:
         _delete_post(post)
-
-    return HttpResponse("The post has been deleted.")
 
 
 def _delete_post(post):
@@ -371,7 +380,7 @@ def _delete_topic(topic):
     Note that we don't bother adjusting all the users'
     post counts as that doesn't seem to be worth the effort.
     """
-    if topic.forum.last_post.topic == topic:
+    if topic.forum.last_post and topic.forum.last_post.topic == topic:
         topic.forum.last_post_pre_delete()
         topic.forum.save()
 

@@ -7,7 +7,7 @@
 {% endblock %}
 {% block content %}
 <h2>Member List</h2>
-
+<p>Surfguitar101.com currently has {{ num_members }} active members.</p>
 {% if page.object_list %}
 <ul class="tab-nav">
    <li><a href="{% url bio-members_full type="user",page="1" %}"

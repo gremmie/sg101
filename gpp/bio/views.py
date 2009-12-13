@@ -30,12 +30,17 @@ from core.functions import email_admins
 
 @login_required
 def member_list(request, type='user', page=1):
+    """
+    This view displays the member list. Only active members are displayed.
+    """
+    qs = auth.models.User.objects.filter(is_active=True)
     if type == 'user':
-        users = auth.models.User.objects.all().order_by('username')
+        qs = qs.order_by('username')
     else:
-        users = auth.models.User.objects.all().order_by('date_joined')
+        qs = qs.order_by('date_joined')
+    num_members = qs.count()
 
-    paginator = DiggPaginator(users, 10, body=5, tail=3, margin=3, padding=2)
+    paginator = DiggPaginator(qs, 20, body=5, tail=3, margin=3, padding=2)
     try:
         the_page = paginator.page(int(page))
     except InvalidPage:
@@ -54,6 +59,7 @@ def member_list(request, type='user', page=1):
     return render_to_response('bio/members.html', {
         'page': the_page,
         'type': type,
+        'num_members': num_members,
         }, 
         context_instance = RequestContext(request))
 

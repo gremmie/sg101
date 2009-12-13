@@ -13,6 +13,16 @@ from django.core.cache import cache
 from core.markup import SiteMarkup
 
 
+(STA_ACTIVE, STA_RESIGNED, STA_REMOVED, STA_SUSPENDED, STA_SPAMMER) = range(5)
+
+USER_STATUS_CHOICES = (
+    (STA_ACTIVE, "Active"),
+    (STA_RESIGNED, "Resigned"),
+    (STA_REMOVED, "Removed"),
+    (STA_SUSPENDED, "Suspended"),
+    (STA_SPAMMER, "Spammer"),
+)
+
 def avatar_file_path_for_user(username, filename):
     return os.path.join(settings.AVATAR_DIR, 'users', username, filename)
 
@@ -39,6 +49,9 @@ class UserProfile(models.Model):
             default='US/Pacific')
     use_24_time = models.BooleanField(default=False)
     forum_post_count = models.IntegerField(default=0)
+    status = models.IntegerField(default=STA_ACTIVE,
+            choices=USER_STATUS_CHOICES)
+    status_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
         return self.user.username
