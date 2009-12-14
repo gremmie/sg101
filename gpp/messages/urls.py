@@ -14,7 +14,6 @@ urlpatterns = patterns('messages.views',
     url(r'^undelete/$', 'undelete_bulk', name='messages-undelete_bulk'),
     url(r'^undelete/(\d+)/$', 'undelete', name='messages-undelete'),
     url(r'^options/$', 'options', name='messages-options'),
-    url(r'^ajax/users/$', 'ajax_users', name='messages-ajax_users'),
 )
 
 urlpatterns += patterns('django.views.generic.simple',

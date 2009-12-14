@@ -15,6 +15,7 @@ from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 
 from bio.models import UserProfile
+from core.widgets import AutoCompleteUserInput
 
 
 class EditUserForm(forms.ModelForm):
@@ -112,3 +113,17 @@ class UploadAvatarForm(forms.Form):
     def get_filename(self):
         return self.cleaned_data['avatar_file'].name
 
+
+class SearchUsersForm(forms.Form):
+    """
+    A form to search for users.
+    """
+    username = forms.CharField(max_length=30, widget=AutoCompleteUserInput())
+
+    def clean_username(self):
+      username = self.cleaned_data['username']
+      try:
+         User.objects.get(username=username, is_active=True)
+      except User.DoesNotExist:
+         raise forms.ValidationError("That username does not exist.")
+      return username

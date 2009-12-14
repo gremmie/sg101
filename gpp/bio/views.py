@@ -23,6 +23,7 @@ from bio.models import UserProfileFlag
 from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
+from bio.forms import SearchUsersForm
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 
@@ -237,6 +238,24 @@ def edit_elsewhere(request):
         'sn_form': sn_form, 
         'im_form': im_form, 
         'w_form': w_form,
+        }, 
+        context_instance=RequestContext(request))
+
+#######################################################################
+
+@login_required
+def member_search(request):
+    if request.method == "POST":
+        form = SearchUsersForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            return HttpResponseRedirect(reverse("bio-view_profile", 
+                kwargs={'username': username}))
+    else:
+        form = SearchUsersForm()
+
+    return render_to_response('bio/member_search.html', {
+        'form': form,
         }, 
         context_instance=RequestContext(request))
 

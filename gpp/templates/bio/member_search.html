@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Member Search{% endblock %}
+{% block custom_js %}
+   {{ form.media }}
+{% endblock %}
+{% block content %}
+<h2>Member Search</h2>
+<p>Looking for a member? Start typing a username in the form below.</p>
+<form action="." method="post">
+<fieldset>
+<legend>Member Search</legend>
+   {{ form.as_p }}
+   <p><input type="submit" value="View Profile" /></p>
+</fieldset>
+</form>
+{% endblock %}

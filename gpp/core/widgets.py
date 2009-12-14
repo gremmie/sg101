@@ -16,7 +16,7 @@ class AutoCompleteUserInput(forms.TextInput):
         js = settings.GPP_THIRD_PARTY_JS['jquery-autocomplete']
 
     def render(self, name, value, attrs=None):
-        url = reverse('messages-ajax_users')
+        url = reverse('core-ajax_users')
         output = super(AutoCompleteUserInput, self).render(name, value, attrs)
         return output + mark_safe(u'''\
 <script type="text/javascript">
