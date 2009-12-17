@@ -84,13 +84,17 @@ $(document).ready(function() {
                               alert(address + ' could not be found on Google Maps.');
                               return;
                            }
-                           $.post('/member_map/add/', {
-                              loc : address,
-                              lat : point.lat(),
-                              lon : point.lng(),
-                              msg : $('#id_message').val()
+                           $.ajax({
+                              url: '/member_map/add/', 
+                              type: 'POST',
+                              data: {
+                                 loc : address,
+                                 lat : point.lat(),
+                                 lon : point.lng(),
+                                 msg : $('#id_message').val()
                               },
-                              function(data, textStatus) {
+                              dataType: 'json',
+                              success: function(data, textStatus) {
                                  var wasOnMap = mmap.userOnMap;
                                  if (mmap.userOnMap)
                                  {
@@ -114,7 +118,11 @@ $(document).ready(function() {
                                  alert(wasOnMap ? "Your location has been updated!" : 
                                        "You've been added to the map!");
                               },
-                              'json');
+                              error: function (xhr, textStatus, ex) {
+                                 alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                                    xhr.responseText);
+                              }
+                           });
                      });
                   }
                   return false;
@@ -122,7 +130,11 @@ $(document).ready(function() {
 
                deleteButton.click(function() {
                   deleteButton.attr('disabled', 'disabled').val('Deleting...');
-                  $.post('/member_map/delete/', function(data, textStatus) {
+                  $.ajax({ 
+                     url: '/member_map/delete/', 
+                     type: 'POST',
+                     dataType: 'text',
+                     success: function(data, textStatus) {
                         $('#id_location').val('');
                         $('#id_message').val('');
                         $("#member_map_members option[value='" + mmapUser.userName + "']").remove();
@@ -137,7 +149,11 @@ $(document).ready(function() {
                         mmap.resizeUserList();
                         alert("You've been removed from the map.");
                      },
-                     'text');
+                     error: function (xhr, textStatus, ex) {
+                        alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                           xhr.responseText);
+                     }
+                  });
                   return false;
                });
                

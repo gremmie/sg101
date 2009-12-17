@@ -26,8 +26,12 @@ function dlRatingClick(event)
     var id = star.attr('id');
     if (id.match(/star-(\d+)-(\d+)/))
     {
-        $.post('/downloads/rate/', { id: RegExp.$1, rating: parseInt(RegExp.$2)  + 1},
-            function(rating) {
+        $.ajax({
+            url: '/downloads/rate/', 
+            type: 'POST',
+            data: { id: RegExp.$1, rating: parseInt(RegExp.$2)  + 1},
+            dataType: 'text',
+            success: function(rating) {
                 rating = parseFloat(rating);
                 if (rating < 0)
                 {
@@ -61,7 +65,11 @@ function dlRatingClick(event)
                     }
                 }
             },
-            'text');
+            error: function (xhr, textStatus, ex) {
+                alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                   xhr.responseText);
+            }
+        });
     }
 }
 

@@ -11,13 +11,23 @@ $(document).ready(function() {
          if (confirm('Really delete this shout?')) {
              var id = this.id;
              if (id.match(/^shout-del-(\d+)/)) {
-                $.post('/shout/delete/', { id : RegExp.$1 }, function (id) {
+                $.ajax({
+                   url: '/shout/delete/', 
+                   type: 'POST',
+                   data: { id : RegExp.$1 }, 
+                   dataType: 'text',
+                   success: function (id) {
                     var id = '#shout-del-' + id;
                     $(id).parents('tr').fadeOut(1500, function () {
                         $('div.shoutbox-history table tr:visible:even').removeClass('odd');
                         $('div.shoutbox-history table tr:visible:odd').addClass('odd');
                         });
-                    }, 'text');
+                    },
+                    error: function (xhr, textStatus, ex) {
+                       alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                          xhr.responseText);
+                    }
+                });
              }            
          }
          return false;
@@ -30,11 +40,21 @@ $(document).ready(function() {
                     'or is not appropriate. ' +
                     'A moderator will be notified and will review the shout. ' +
                     'Are you sure you want to flag this shout?')) {
-                $.post('/shout/flag/', { id : id }, function(response) {
-                    alert(response);
-                    }, 'text');
+                $.ajax({
+                   url: '/shout/flag/', 
+                   type: 'POST',
+                   data: { id : id }, 
+                   dataType: 'text',
+                   success: function(response) {
+                      alert(response);
+                   }, 
+                   error: function (xhr, textStatus, ex) {
+                       alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                          xhr.responseText);
+                   }
+                });
              }            
          }
          return false;
      });
- });
+});

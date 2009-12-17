@@ -7,10 +7,12 @@ $(document).ready(function() {
          return false;
       }
       submit.attr('disabled', 'disabled');
-      $.post('/shout/shout/', {
-         msg: msg
-         },
-         function (data, textStatus) {
+      $.ajax({
+         url: '/shout/shout/', 
+         type: 'POST',
+         data: { msg: msg },
+         dataType: 'html',
+         success: function (data, textStatus) {
             input.val('');
             if (data != '') {
                $('#shoutbox-shout-container').prepend(data);
@@ -18,7 +20,11 @@ $(document).ready(function() {
             }
             submit.removeAttr('disabled');
          },
-         'html');
+         error: function (xhr, textStatus, ex) {
+             alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                xhr.responseText);
+         }
+      });
       return false;
    });
    var smilies_loaded = false;
