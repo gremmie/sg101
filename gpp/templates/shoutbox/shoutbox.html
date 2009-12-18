@@ -1,12 +1,11 @@
 {% extends 'side_block.html' %}
-{% load smiley_tags %}
 {% block block_title %}Shoutbox{% endblock %}
 {% block block_content %}
 <div id="shoutbox-shout-container">
    {% for shout in shouts %}
       <p>
       <span class="shoutbox-user">{{ shout.user.username }}:</span>
-      <span class="shoutbox-shout">{{ shout.shout|smiley_html|urlizetrunc:15 }}</span>
+      <span class="shoutbox-shout">{{ shout.html|safe }}</span>
       <span class="shoutbox-date">{{ shout.shout_date|date:"D M d Y H:i:s" }}</span>
       </p>
    {% endfor %}

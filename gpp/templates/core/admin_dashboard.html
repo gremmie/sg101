@@ -1,11 +1,14 @@
 {% if user.is_staff %}
-{% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links %}
+{% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links or flagged_shouts %}
 <ul id="dashboard-list">
 {% if flagged_posts %}
 <li><a href="/admin/forums/flaggedpost/">Posts</a>: {{ flagged_posts }}</li>
 {% endif %}
 {% if flagged_comments %}
 <li><a href="/admin/comments/commentflag/">Comments</a>: {{ flagged_comments }}</li>
+{% endif %}
+{% if flagged_shouts %}
+<li><a href="/admin/shoutbox/shoutflag/">Shouts</a>: {{ flagged_shouts }}</li>
 {% endif %}
 {% if flagged_profiles %}
 <li><a href="/admin/bio/userprofileflag/">Profiles</a>: {{ flagged_profiles }}</li>

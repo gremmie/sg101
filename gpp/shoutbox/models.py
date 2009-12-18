@@ -1,25 +1,39 @@
 """
 Models for the shoutbox application.
 """
+import datetime
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.html import urlize
+
+from smiley import smilify_html
 
 
 class Shout(models.Model):
     user = models.ForeignKey(User)
-    shout_date = models.DateTimeField(auto_now_add=True)
+    shout_date = models.DateTimeField(blank=True)
     shout = models.TextField()
+    html = models.TextField()
+
+    class Meta:
+        ordering = ('-shout_date', )
+
+    def __unicode__(self):
+        if len(self.shout) > 60:
+            return self.shout[:60] + "..."
+        return self.shout
 
     @models.permalink
     def get_absolute_url(self):
         return ('shoutbox-view', [str(self.id)])
 
-    def __unicode__(self):
-        shout = self.shout[:60]
-        return u'Shout from %s: %s' % (self.user.username, shout)
-
-    class Meta:
-        ordering = ('-shout_date', )
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.shout_date = datetime.datetime.now()
+        self.html = urlize(smilify_html(self.shout), trim_url_limit=15, 
+                nofollow=True)
+        super(Shout, self).save(*args, **kwargs)
 
 
 class ShoutFlag(models.Model):
@@ -35,7 +49,8 @@ class ShoutFlag(models.Model):
         ordering = ('flag_date', )
 
     def get_shout_url(self):
-        return '<a href="/admin/shoutbox/shout/%s">Shout</a>' % self.shout.id
+        return '<a href="/admin/shoutbox/shout/%(id)d">Shout #%(id)d</a>' % (
+                {'id': self.shout.id})
     get_shout_url.allow_tags = True
+    get_shout_url.short_description = 'Link to Shout'
 
-# vim: ts=4 sw=4

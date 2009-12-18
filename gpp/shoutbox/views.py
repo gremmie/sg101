@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
+from django.http import Http404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 
@@ -100,10 +101,7 @@ def edit(request):
             return HttpResponseBadRequest()
         shout.shout = new_shout
         shout.save()
-        return render_to_response('shoutbox/render_shout.html', {
-            'shout': shout,
-            },
-            context_instance = RequestContext(request))
+        return HttpResponse(shout.html)
 
     return HttpResponseForbidden()
 

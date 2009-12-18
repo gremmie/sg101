@@ -11,6 +11,7 @@ from forums.models import FlaggedPost
 from gcalendar.models import Event
 from news.models import PendingStory
 from weblinks.models import Link
+from shoutbox.models import ShoutFlag
 
 
 register = template.Library()
@@ -32,6 +33,7 @@ def admin_dashboard(user):
                 Q(status=Event.DEL_REQ)).count()
     new_stories = PendingStory.objects.count()
     new_links = Link.objects.filter(is_public=False).count()
+    flagged_shouts = ShoutFlag.objects.count()
 
     return {
         'user': user,
@@ -42,4 +44,5 @@ def admin_dashboard(user):
         'event_requests': event_requests,
         'new_stories': new_stories,
         'new_links': new_links,
+        'flagged_shouts': flagged_shouts,
         }

@@ -1,12 +1,11 @@
 {% load avatar_tags %}
-{% load smiley_tags %}
 <tr>
 <th>
 <a href="{% url bio-view_profile username=shout.user.username %}">{% avatar shout.user %}</a>
 <a href="{% url bio-view_profile username=shout.user.username %}">{{ shout.user.username }}</a>
 </th>
 <td>
-<div {% ifequal user.id shout.user.id %}class="edit" id="shout-{{ shout.id }}"{% endifequal %}>{{ shout.shout|smiley_html|urlize }}</div>
+<div {% ifequal user.id shout.user.id %}class="edit" id="shout-{{ shout.id }}"{% endifequal %}>{{ shout.html|safe }}</div>
 </div>
 <br />
 <span class="date">{{ shout.shout_date|date:"D M d Y H:i:s" }}</span><br />
