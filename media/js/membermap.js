@@ -18,11 +18,6 @@ var mmap = {
    clear: function() {
       mmap.users.length = 0;
    },
-   resizeUserList: function() {
-      var sel = $('#member_map_members');
-      sel[0].size = Math.min(29, sel[0].length);
-      $('#member_map_count').html(sel[0].length);
-   },
    selectText: "(select)",
    onMapDir: 'You have previously added yourself to the member map. Your information appears below. You may change ' +
       'the information if you wish. To delete yourself from the map, click the Delete button.',
@@ -47,6 +42,7 @@ $(document).ready(function() {
                mmap.map.clearOverlays();
                var sel = $('#member_map_members');
                sel[0].length = 0;
+               sel.append($('<option />').html(mmap.selectText));
                mmap.clear();
                $.each(data.users, function(i, item) {
                   sel.append($('<option />').html(item.name));
@@ -60,7 +56,6 @@ $(document).ready(function() {
                      mmap.userOnMap = true;
                   }
                });
-               sel[0].size = Math.min(29, data.users.length);
                $('#member_map_count').html(data.users.length);
 
                sel = $('#member_map_recent');
@@ -103,6 +98,7 @@ $(document).ready(function() {
                                  else
                                  {
                                     $('#member_map_members').append($('<option />').html(data.name));
+                                    $('#member_map_recent').append($('<option />').html(data.name));
                                     mmap.userOnMap = true;
                                     deleteButton.removeAttr('disabled').val('Delete');
                                  }
@@ -114,7 +110,7 @@ $(document).ready(function() {
                                  mmap.clickUser(mmapUser.userName);
                                  submitButton.removeAttr('disabled').val('Update');
                                  $('#member_map_directions').html(mmap.onMapDir);
-                                 mmap.resizeUserList();
+                                 $('#member_map_count').html($('#member_map_members')[0].length - 1);
                                  alert(wasOnMap ? "Your location has been updated!" : 
                                        "You've been added to the map!");
                               },
@@ -146,7 +142,7 @@ $(document).ready(function() {
                         deleteButton.val('Delete');
                         submitButton.removeAttr('disabled').val('Add');
                         $('#member_map_directions').html(mmap.offMapDir);
-                        mmap.resizeUserList();
+                        $('#member_map_count').html($('#member_map_members')[0].length - 1);
                         alert("You've been removed from the map.");
                      },
                      error: function (xhr, textStatus, ex) {

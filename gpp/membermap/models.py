@@ -7,8 +7,9 @@ from django.template.loader import render_to_string
 from django.template.defaultfilters import escapejs
 import django.utils.simplejson as json
 
+from core.markup import site_markup
 
-# Create your models here.
+
 class MapEntry(models.Model):
     """Represents a user's entry on the map."""
     user = models.ForeignKey(User)
@@ -27,7 +28,10 @@ class MapEntry(models.Model):
         verbose_name_plural = 'map entries'
 
     def save(self, force_insert=False, force_update=False):
-        msg = render_to_string('membermap/markdown.html', {'entry': self}).strip()
+        msg = render_to_string('membermap/markdown.html', {
+            'user': self.user,
+            'msg': site_markup(self.message)}).strip()
+
         self.json = json.dumps({'name': self.user.username,
             'lat': '%10.6f' % self.lat,
             'lon': '%10.6f' % self.lon,
@@ -35,4 +39,3 @@ class MapEntry(models.Model):
             })
         super(MapEntry, self).save(force_insert, force_update)
 
-# vim: ts=4 sw=4

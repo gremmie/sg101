@@ -2,10 +2,10 @@
    float: left;
 }
 #member_map_map {
-   float: left;
-   width: 640px;
-   height: 480px;
+   width: 720px;
+   height: 540px;
    border: 1px solid black;
+   margin: 0 auto;
 }
 #member_map_info {
    padding-top: 1em;
