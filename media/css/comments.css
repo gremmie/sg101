@@ -1,7 +1,9 @@
-#comment-list {
+div.comment-list {
+    float: left;
     font-size: 18px;
     font-weight: bold;
     color: #999;
+    padding-right: .5em;
 }
 div.comment {
     padding: 0.5em;

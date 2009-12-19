@@ -1,8 +1,8 @@
 {% load avatar_tags %}
 {% load markup %}
 {% load smiley_tags %}
-<li>
 <div class="comment" id="c{{ comment.id }}">
+<div class="comment-list">{{ forloop.counter }}.</div>
 <div class="comment-avatar">
 <a href="{% url bio-view_profile username=comment.user.username%}">{% avatar comment.user %}</a>
 </div>
@@ -22,4 +22,3 @@
 {% endif %}
 </div>
 </div>
-</li>
