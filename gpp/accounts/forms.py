@@ -17,15 +17,29 @@ from accounts.models import IllegalEmail
 
 class RegisterForm(forms.Form):
     """Form used to register with the website"""
-    username = forms.RegexField(max_length = 30, regex = r'^\w+$',
-        error_messages = {'invalid' : 'Your username must be 30 characters or less and contain only letters, numbers and underscores.'})
+    username = forms.RegexField(max_length=30, regex = r'^\w+$',
+        error_messages={
+            'invalid': 'Your username must be 30 characters or less and ' \
+                    'contain only letters, numbers and underscores.'})
     email = forms.EmailField()
     password1 = forms.CharField(label = "Password", widget = forms.PasswordInput)
     password2 = forms.CharField(label = "Password confirmation", widget = forms.PasswordInput)
-    agree_tos = forms.BooleanField(required = True, label = 'I agree to the Terms of Service',
-        error_messages = {'required' : 'You have not agreed to our Terms of Service'})
-    agree_privacy = forms.BooleanField(required = True, label = 'I agree to the Privacy Policy',
-        error_messages = {'required' : 'You have not agreed to our Privacy Policy'})
+    agree_age = forms.BooleanField(required=True, 
+        label='I certify that I am over the age of 13',
+        error_messages={
+            'required': 'Sorry, but you must be over the age of 13 to ' \
+                    'register at our site.',
+            })
+    agree_tos = forms.BooleanField(required=True, 
+       label='I agree to the Terms of Service',
+        error_messages={
+            'required': 'You have not agreed to our Terms of Service.',
+            })
+    agree_privacy = forms.BooleanField(required=True,
+        label='I agree to the Privacy Policy',
+        error_messages={
+            'required': 'You have not agreed to our Privacy Policy.',
+            })
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -68,6 +82,8 @@ class RegisterForm(forms.Form):
         password2 = self.cleaned_data["password2"]
         if password1 != password2:
             self._validation_error("The two password fields didn't match.")
+        if len(password1) < 6:
+            self._validation_error("Please choose a password of 6 characters or more.")
         return password2
 
     def save(self):
