@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
 from django.http import Http404
+from django.views.decorators.http import require_POST
 
 from messages.models import Message
 from messages.models import Options
@@ -162,6 +163,7 @@ def compose(request, receiver=None):
 
 
 @login_required
+@require_POST
 def delete(request, msg_id):
     """
     Deletes a given message. The user must be either the sender or
@@ -208,6 +210,7 @@ def delete_bulk(request):
 
 
 @login_required
+@require_POST
 def undelete(request, msg_id):
     """
     Undeletes a given message. The user must be either the sender or

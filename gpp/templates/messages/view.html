@@ -20,12 +20,16 @@
    {{ msg.sender.get_profile.signature_html|safe }}
 </div>
 {% endif %}
-<p>
 {% if is_deleted %}
-<a href="{% url messages-undelete msg.id %}{% if box %}?box={{ box }}{% endif %}">Undelete</a>
+<form action="{% url messages-undelete msg.id %}" method="post">
+   {% if box %}<input type="hidden" name="box" value="{{ box }}" />{% endif %}
+   <input type="submit" value="Undelete" />
+</form>
 {% else %}
 <a href="{% url messages-reply msg.id %}{% if box %}?box={{ box }}{% endif %}">Reply</a> |
-<a href="{% url messages-delete msg.id %}{% if box %}?box={{ box }}{% endif %}">Delete</a>
+<form action="{% url messages-delete msg.id %}" method="post" class="messages-button">
+   {% if box %}<input type="hidden" name="box" value="{{ box }}" />{% endif %}
+   <input type="submit" value="Delete" />
+</form>
 {% endif %}
-</p>
 {% endblock %}
