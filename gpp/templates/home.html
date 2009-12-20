@@ -3,6 +3,7 @@
 {% load news_tags %}
 {% load weblinks_tags %}
 {% load downloads_tags %}
+{% load forum_tags %}
 {% load cache %}
 {% block title %}Home{% endblock %}
 {% block custom_css %}
@@ -39,6 +40,7 @@ lots of help for this aspect, as I'm more of a coder than a designer.</p>
 {% cache 3600 home_bulletins %}
    {% current_bulletins %}
 {% endcache %}
+{% new_posts %}
 {% cache 3600 home_news %}
    {% current_news %}
 {% endcache %}

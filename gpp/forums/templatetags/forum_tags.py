@@ -7,15 +7,25 @@ from pytz import timezone
 from django import template
 from django.conf import settings
 
-register = template.Library()
+from forums.models import Topic
 
+
+register = template.Library()
 
 TIME_FMT_24 = "%H:%M"
 TIME_FMT_12 = "%I:%M %p"
 
 DATE_FMT = "%b %d %Y"
-DATE_FMT_24 = "%s %s" % (DATE_FMT, TIME_FMT_24)
-DATE_FMT_12 = "%s %s" % (DATE_FMT, TIME_FMT_12)
+SHORT_DATE_FMT = "%b %d"
+
+DATE_FMT_24 = (
+    "%s %s" % (DATE_FMT, TIME_FMT_24),          # long format
+    "%s %s" % (TIME_FMT_24, SHORT_DATE_FMT),    # short format
+)
+DATE_FMT_12 = (
+    "%s %s" % (DATE_FMT, TIME_FMT_12),          # long format
+    "%s %s" % (TIME_FMT_12, SHORT_DATE_FMT),    # short format
+)
 
 SERVER_TZ = timezone(settings.TIME_ZONE)
 
@@ -65,11 +75,13 @@ def current_forum_time(user):
 
 
 @register.simple_tag
-def forum_date(date, user):
+def forum_date(date, user, long_format=True):
     """
     This tag displays an arbitrary datetime, adjusted by the user's
     time zone preferences.
     """
+    fmt_index = 0 if long_format else 1
+
     date = SERVER_TZ.localize(date)
     if user.is_authenticated():
         profile = user.get_profile()
@@ -79,7 +91,7 @@ def forum_date(date, user):
     else:
         fmt = DATE_FMT_12
 
-    return date.strftime(fmt)
+    return date.strftime(fmt[fmt_index])
 
 
 @register.inclusion_tag('forums/show_form.html')
@@ -93,4 +105,20 @@ def show_form(legend_text, form, submit_value, is_ajax, media_url):
         'submit_value': submit_value,
         'is_ajax': is_ajax,
         'MEDIA_URL': media_url,
+    }
+
+
+@register.inclusion_tag('forums/new_posts_tag.html', takes_context=True)
+def new_posts(context):
+    """
+    This tag displays the topics that have the newest posts.
+    Only the "public" forums are displayed.
+    """
+    topics = Topic.objects.filter(
+            forum__category__groups__isnull=True).select_related(
+                    'user', 'last_post').order_by('-update_date')[:10]
+
+    return {
+        'topics': topics,
+        'user': context['user'],
     }
