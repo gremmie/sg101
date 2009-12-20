@@ -260,3 +260,9 @@ img.forums-topic-icon {
 div.forum-mod-controls form {
    display:inline;
 }
+table.grid {
+   border-collapse:collapse;
+}
+table.grid th,td {
+   border: 1px solid #eee;
+}
