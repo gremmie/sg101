@@ -83,6 +83,18 @@ def forum_index(request, slug):
     except InvalidPage:
         raise Http404
 
+    # Attach "goto page" navigation links onto those topics that have
+    # more than 1 page:
+
+    for topic in page.object_list:
+        if topic.post_count > POSTS_PER_PAGE:
+            pp = DiggPaginator(range(topic.post_count), POSTS_PER_PAGE, 
+                    body=2, tail=3, margin=1)
+            topic.page_range = pp.page(1).page_range
+        else:
+            topic.page_range = None
+
+
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 

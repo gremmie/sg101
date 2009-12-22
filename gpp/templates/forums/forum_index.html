@@ -35,7 +35,19 @@
             {% if topic.sticky %}<img src="{{ MEDIA_URL }}icons/asterisk_orange.png" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
             {% if topic.locked %}<img src="{{ MEDIA_URL }}icons/lock.png" alt="Locked" title="Locked"
             class="forums-topic-icon" />{% endif %}
-         <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
+            <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4>
+            {% if topic.page_range %}
+            <span class="small">Goto page: [
+            {% for n in topic.page_range %}
+               {% if n %}
+               <a href="{{ topic.get_absolute_url }}?page={{ n }}">{{ n }}</a>
+               {% else %}
+               &hellip;
+               {% endif %}
+            {% endfor %}
+            ]</span>
+            {% endif %}
+         </td>
          <td class="forum-index_replies">{{ topic.reply_count }}</td>
          <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
          <td class="forum-index_views">{{ topic.view_count }}</td>
