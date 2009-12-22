@@ -266,3 +266,7 @@ table.grid {
 table.grid th,td {
    border: 1px solid #eee;
 }
+ul.inline-list li {
+ display: inline;
+ margin: 0 3px;
+}

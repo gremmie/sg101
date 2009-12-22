@@ -75,6 +75,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+    'gpp.forums.middleware.WhosOnline',
 )
 
 ROOT_URLCONF = 'gpp.urls'
