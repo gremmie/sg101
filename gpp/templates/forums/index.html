@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load cache %}
 {% load forum_tags %}
 {% block title %}Forums{% endblock %}
 {% block content %}
@@ -33,6 +34,9 @@
       </tbody>
    </table>
 {% endfor %}
+{% cache 900 forum-stats-block %}
+{% forum_stats %}
+{% endcache %}
 {% whos_online %}
 <p>{% current_forum_time user %}</p>
 </div>

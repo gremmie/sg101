@@ -1,0 +1,8 @@
+<div id="forum-stats">
+Our <strong>{{ user_count }}</strong> users have posted a total of <strong>{{ post_count }}</strong> posts.<br />
+The newest registered user is <a href="{% url bio-view_profile username=latest_user %}">{{ latest_user }}</a>.
+{% if stats %}
+<br />
+The most users ever online was <strong>{{ stats.max_users }}</strong> on {{ stats.max_users_date|date:"P l, N n, Y" }}.
+{% endif %}
+</div>

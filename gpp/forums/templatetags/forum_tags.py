@@ -7,8 +7,11 @@ from pytz import timezone
 from django import template
 from django.conf import settings
 from django.core.cache import cache
+from django.contrib.auth.models import User
 
 from forums.models import Topic
+from forums.models import Post
+from forums.models import Statistic
 
 
 register = template.Library()
@@ -142,4 +145,30 @@ def whos_online():
         'num_guests': num_guests,
         'total': total,
         'users': users,
+    }
+
+
+@register.inclusion_tag('forums/forum_stats_tag.html')
+def forum_stats():
+    """
+    Displays forum statistics.
+    """
+    try:
+        stats = Statistic.objects.get(pk=1)
+    except Statistic.DoesNotExist:
+        stats = None
+
+    post_count = Post.objects.all().count()
+    user_count = User.objects.all().count()
+
+    if user_count > 0:
+        latest_user = User.objects.values_list('username', flat=True).order_by('-date_joined')[0]
+    else:
+        latest_user = None
+
+    return {
+        'stats': stats,
+        'post_count': post_count,
+        'user_count': user_count,
+        'latest_user': latest_user,
     }
