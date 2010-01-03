@@ -1,17 +1,19 @@
 <dt>
-<a href="{% url weblinks.views.visit link.id %}" target="_blank">{{ link.title }}</a>
+<h4>{{ link.title }}</h4>
 </dt>
 <dd>
 <p>{{ link.description }}</p>
+<form action="{% url weblinks-visit link.id %}" method="post">
 <table class="link-stats">
    <tr>
-      <th>Date:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
+      <th>Date Added:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
       <th>Hits:</th><td>{{ link.hits }}</td>
       <td>
-<a href="{% url weblinks.views.report_link link.id %}"><img src="{{ MEDIA_URL }}icons/link_break.png" alt="Broken Link" 
-   title="Report broken link" /></a>
+         <a href="#" class="weblinks-broken" id="link-{{ link.id }}"><img src="{{ MEDIA_URL }}icons/link_break.png" alt="Broken Link" title="Report this link as broken" /></a>
       </td>
    </tr>
+   <tr><td><input type="submit" value="Visit Site" /></td></tr>
 </table>
+</form>
 <br />
 </dd>

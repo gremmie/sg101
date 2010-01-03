@@ -1,5 +1,5 @@
 {% if user.is_staff %}
-{% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links or flagged_shouts %}
+{% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links or flagged_shouts or broken_links %}
 <ul id="dashboard-list">
 {% if flagged_posts %}
 <li><a href="/admin/forums/flaggedpost/">Posts</a>: {{ flagged_posts }}</li>
@@ -23,7 +23,10 @@
 <li><a href="/admin/downloads/download/">Downloads</a>: {{ new_downloads }}</li>
 {% endif %}
 {% if new_links %}
-<li><a href="/admin/weblinks/link/">Links</a>: {{ new_links }}</li>
+<li><a href="/admin/weblinks/link/">New Links</a>: {{ new_links }}</li>
+{% endif %}
+{% if broken_links %}
+<li><a href="/admin/weblinks/flaggedlink/">Broken Links</a>: {{ broken_links }}</li>
 {% endif %}
 </ul>
 {% endif %}

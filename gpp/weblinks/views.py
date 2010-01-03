@@ -8,12 +8,15 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib import auth
 from django.core.paginator import InvalidPage
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import Http404
+from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
@@ -154,34 +157,23 @@ def random_link(request):
 
 #######################################################################
 
-@login_required
+@require_POST
 def report_link(request, link_id):
-   link = get_object_or_404(Link, pk = link_id)
-   if request.method == "POST":
-      FlaggedLink.objects.create(link, request.user)
-      email_admins('A Link Has Been Flagged as Broken', """Hello,
+    """
+    This function is the target of an AJAX POST to report a link as dead.
+    """
+    if not request.user.is_authenticated():
+        return HttpResponse('Please login or register to report a broken link.')
 
-A user has flagged a link as broken.
-""")
-      return HttpResponseRedirect(reverse('weblinks.views.report_thanks', args = (link_id, )))
+    try:
+        link = Link.objects.get(pk=link_id)
+    except Link.DoesNotExist:
+        return HttpResponseBadRequest("That link doesn't exist.")
 
-   return render_to_response('weblinks/report_link.html', {
-      'link': link, 
-      'report_thanks': False,
-      },
-      context_instance = RequestContext(request))
-
-
-#######################################################################
-
-@login_required
-def report_thanks(request, link_id):
-   link = get_object_or_404(Link, pk = link_id)
-   return render_to_response('weblinks/report_link.html', {
-      'link': link, 
-      'report_thanks': True,
-      },
-      context_instance = RequestContext(request))
+    FlaggedLink.objects.create(link, request.user)
+    return HttpResponse("The link was reported. A moderator will review the " \
+            "link shortly. Thanks for helping to improve the content on " \
+            "this site.")
 
 #######################################################################
 

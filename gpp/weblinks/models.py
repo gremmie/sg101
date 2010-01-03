@@ -81,6 +81,12 @@ class FlaggedLink(models.Model):
     def url(self):
         return self.link.url
 
+    def get_link_url(self):
+        return '<a href="%s">Link #%d</a>' % (self.link.get_absolute_url(),
+                self.link.id)
+    get_link_url.allow_tags = True
+    get_link_url.short_description = "View Link on Site"
+
     def __unicode__(self):
         return self.link.title
 

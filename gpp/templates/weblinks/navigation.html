@@ -11,8 +11,12 @@
 <li><a href="{% url weblinks.views.link_index %}">Categories</a></li>
 <li><a href="{% url weblinks.views.new_links %}">New</a></li>
 <li><a href="{% url weblinks.views.popular_links %}">Popular</a></li>
-<li><a href="{% url weblinks.views.random_link %}" target="_blank">Random</a></li>
 {% if user.is_authenticated %}
-<li><a href="{% url weblinks.views.add_link %}">Add</a></li>
+<li><a href="{% url weblinks.views.add_link %}">Add Link</a></li>
 {% endif %}
 </ul>
+<center>
+   <form action="{% url weblinks.views.random_link %}" method="post">
+      <input type="submit" value="Visit a Random Link" />
+   </form>
+</center>
