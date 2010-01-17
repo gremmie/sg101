@@ -3,6 +3,7 @@
 {% load news_tags %}
 {% load weblinks_tags %}
 {% load downloads_tags %}
+{% load poll_tags %}
 {% load forum_tags %}
 {% load cache %}
 {% block title %}Home{% endblock %}
@@ -45,6 +46,7 @@ lots of help for this aspect, as I'm more of a coder than a designer.</p>
    {% current_news %}
 {% endcache %}
 {% cache 3600 home_new_stuff %}
+{% latest_poll %}
 <div class="span-9 append-1">
    {% latest_weblinks %} 
 </div>

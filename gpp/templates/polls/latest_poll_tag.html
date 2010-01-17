@@ -1,0 +1,13 @@
+{% if poll %}
+<div>
+   <h2>Latest Poll</h2>
+   <h3>{{ poll.question }}</h3>
+   <ul>
+      {% for choice in poll.choice_set.all %}
+         <li>{{ choice.choice }}</li>
+      {% endfor %}
+   </ul>
+   <p>Go <a href="{% url polls-detail poll_id=poll.id %}">see the results and vote</a>
+   or check out <a href="{% url polls-main %}">more polls</a>.</p>
+</div>
+{% endif %}
