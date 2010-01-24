@@ -5,6 +5,14 @@
 {% block content %}
 <h2>Forums</h2>
 
+<form action="." method="get" id="forum-query-form">
+   <select name="query">
+      <option value="unread">Show topics with unread posts</option>
+      <option value="mine">Show my posts</option>
+      <option value="unanswered">Show unanswered posts</option>
+   </select><input type="submit" value="Go" />
+</form>
+
 <div class="forum-block">
 {% for iter in cats %}
    <h3>{{ iter.cat }}</h3>

@@ -25,7 +25,7 @@ from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
 from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
         SplitTopicForm
 from forums.unread import get_forum_unread_status, get_topic_unread_status, \
-        get_post_unread_status
+        get_post_unread_status, get_unread_topics
 
 from bio.models import UserProfile
 #######################################################################
@@ -33,11 +33,38 @@ from bio.models import UserProfile
 TOPICS_PER_PAGE = 50
 POSTS_PER_PAGE = 20
 
+
+def get_page_num(request):
+    """Returns the value of the 'page' variable in GET if it exists, or 1
+    if it does not."""
+
+    try:
+        page_num = int(request.GET.get('page', 1))
+    except ValueError:
+        page_num = 1
+
+    return page_num
+
+
 def create_topic_paginator(topics):
    return DiggPaginator(topics, TOPICS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
 
 def create_post_paginator(posts):
    return DiggPaginator(posts, POSTS_PER_PAGE, body=5, tail=2, margin=3, padding=2)
+
+
+def attach_topic_page_ranges(topics):
+    """Attaches a page_range attribute to each topic in the supplied list.
+    This attribute will be None if it is a single page topic. This is used
+    by the templates to generate "goto page x" links.
+    """
+    for topic in topics:
+        if topic.post_count > POSTS_PER_PAGE:
+            pp = DiggPaginator(range(topic.post_count), POSTS_PER_PAGE, 
+                    body=2, tail=3, margin=1)
+            topic.page_range = pp.page(1).page_range
+        else:
+            topic.page_range = None
 
 #######################################################################
 
@@ -45,6 +72,11 @@ def index(request):
     """
     This view displays all the forums available, ordered in each category.
     """
+    # check for special forum queries
+    query = request.GET.get("query")
+    if query == "unread":
+        return HttpResponseRedirect(reverse('forums-unread_topics'))
+
     forums = Forum.objects.forums_for_user(request.user)
     get_forum_unread_status(forums, request.user)
     cats = {}
@@ -77,23 +109,13 @@ def forum_index(request, slug):
     get_topic_unread_status(forum, topics, request.user)
 
     paginator = create_topic_paginator(topics)
-    page_num = int(request.GET.get('page', 1))
+    page_num = get_page_num(request)
     try:
         page = paginator.page(page_num)
     except InvalidPage:
         raise Http404
 
-    # Attach "goto page" navigation links onto those topics that have
-    # more than 1 page:
-
-    for topic in page.object_list:
-        if topic.post_count > POSTS_PER_PAGE:
-            pp = DiggPaginator(range(topic.post_count), POSTS_PER_PAGE, 
-                    body=2, tail=3, margin=1)
-            topic.page_range = pp.page(1).page_range
-        else:
-            topic.page_range = None
-
+    attach_topic_page_ranges(page.object_list)
 
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
@@ -124,7 +146,7 @@ def topic_index(request, id):
     posts = topic.posts.select_related()
 
     paginator = create_post_paginator(posts)
-    page_num = int(request.GET.get('page', 1))
+    page_num = get_page_num(request)
     try:
         page = paginator.page(page_num)
     except InvalidPage:
@@ -525,7 +547,7 @@ def mod_forum(request, slug):
 
     topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
     paginator = create_topic_paginator(topics)
-    page_num = int(request.REQUEST.get('page', 1))
+    page_num = get_page_num(request)
     try:
         page = paginator.page(page_num)
     except InvalidPage:
@@ -615,6 +637,30 @@ def mod_topic_split(request, id):
         'topic': topic,
         'posts': posts,
         'form': form,
+        },
+        context_instance=RequestContext(request))
+
+
+@login_required
+def unread_topics(request):
+    topics = get_unread_topics(request.user)
+
+    paginator = create_topic_paginator(topics)
+    page_num = get_page_num(request)
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    attach_topic_page_ranges(page.object_list)
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
+    return render_to_response('forums/topic_list.html', {
+        'title': 'Topics With Unread Posts',
+        'page': page,
+        'page_nav': page_nav,
         },
         context_instance=RequestContext(request))
 

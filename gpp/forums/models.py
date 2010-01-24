@@ -10,9 +10,6 @@ from django.contrib.auth.models import User, Group
 from core.markup import site_markup
 
 
-POST_EDIT_DELTA = datetime.timedelta(seconds=3)
-
-
 class Category(models.Model):
     """
     Forums belong to a category, whose access may be assigned to groups.
@@ -57,17 +54,23 @@ class ForumManager(models.Manager):
         Returns a queryset containing the forums that the given user can
         "see" due to authenticated status, superuser status and group membership.
         """
+        qs = self._for_user(user)
+        return qs.select_related('category', 'last_post', 'last_post__user')
+
+    def forum_ids_for_user(self, user):
+        """Returns a list of forum IDs that the given user can "see"."""
+        qs = self._for_user(user)
+        return qs.values_list('id', flat=True)
+
+    def _for_user(self, user):
+        """Common code for the xxx_for_user() methods."""
         if user.is_superuser:
             qs = self.all()
         else:
-            user_groups = []
-            if user.is_authenticated():
-                user_groups = user.groups.all()
-
-            qs = self.filter(Q(category__groups__isnull=True) | \
+            user_groups = user.groups.all() if user.is_authenticated() else []
+            qs = self.filter(Q(category__groups__isnull=True) |
                     Q(category__groups__in=user_groups))
-
-        return qs.select_related('category', 'last_post', 'last_post__user')
+        return qs
 
 
 class Forum(models.Model):

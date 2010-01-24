@@ -1,0 +1,9 @@
+<span class="small">Goto page: [
+{% for n in topic.page_range %}
+   {% if n %}
+   <a href="{{ topic.get_absolute_url }}?page={{ n }}">{{ n }}</a>
+   {% else %}
+   &hellip;
+   {% endif %}
+{% endfor %}
+]</span>

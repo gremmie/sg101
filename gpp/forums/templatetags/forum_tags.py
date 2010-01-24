@@ -172,3 +172,20 @@ def forum_stats():
         'user_count': user_count,
         'latest_user': latest_user,
     }
+
+
+@register.inclusion_tag('forums/topic_icons_tag.html')
+def topic_icons(topic):
+    """Displays the "unread", "sticky", and "locked" icons for a given topic."""
+    return {
+        'topic': topic,
+        'MEDIA_URL': settings.MEDIA_URL,
+    }
+
+
+@register.inclusion_tag('forums/topic_page_range_tag.html')
+def topic_page_range(topic):
+    """Displays the page range links for a topic."""
+    return {
+        'topic': topic,
+    }

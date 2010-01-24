@@ -273,3 +273,39 @@ ul.inline-list li {
  display: inline;
  margin: 0 3px;
 }
+table.forum-topic-table {
+   width:100%;
+}
+table.forum-topic-table thead th {
+   background:teal;
+}
+table.forum-topic-table .col-0 {
+   width:23%; 
+   text-align:center;
+}
+table.forum-topic-table .col-1 {
+   width:37%; 
+   text-align:center;
+}
+table.forum-topic-table .col-2 {
+   width:5%;
+   text-align:center;
+}
+table.forum-topic-table .col-3 {
+   width:5%;
+   text-align:center;
+}
+table.forum-topic-table .col-4 {
+   width:5%;
+   text-align:center;
+}
+table.forum-topic-table .col-5 {
+   width:25%;
+   text-align:center;
+}
+table.forum-topic-table .info {
+   text-align:center;
+}
+#forum-query-form {
+   text-align:right;
+}

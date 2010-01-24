@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load forum_tags %}
+{% block title %}Forums: {{ title }}{% endblock %}
+{% block content %}
+<h2>Forums: {{ title }}</h2>
+<h3>
+<a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ title }}
+</h3>
+<div class="forum-block">
+{{ page_nav }}
+<table class="forum-topic-table">
+   <thead>
+      <th class="col-0">Forum</th>
+      <th class="col-1">Topic</th>
+      <th class="col-2">Author</th>
+      <th class="col-3">Replies</th>
+      <th class="col-4">Views</th>
+      <th class="col-5">Last Post</th>
+   </thead>
+   <tbody>
+   {% for topic in page.object_list %}
+      <tr class="{% cycle 'odd' 'even' %}">
+         <td class="col-0">
+            <h4><a href="{{ topic.forum.get_absolute_url }}">{{ topic.forum.name }}</a></h4>
+         </td>
+         <td class="col-1">
+            {% topic_icons topic %}
+            <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4>
+            {% if topic.page_range %}
+               {% topic_page_range topic %}
+            {% endif %}
+         </td>
+         <td class="col-2">
+            <a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a>
+         </td>
+         <td class="col-3">
+            {{ topic.reply_count }}
+         </td>
+         <td class="col-4">
+            {{ topic.view_count }}
+         </td>
+         <td class="col-5">
+            {% last_post_info topic.last_post %}
+         </td>
+      </tr>
+   {% empty %}
+      <tr>
+         <td colspan="6" class="info">
+            <em>No topics meet your search criteria.</em>
+         </td>
+      </tr>
+   {% endfor %}
+   </tbody>
+</table>
+{{ page_nav }}
+</div>
+{% endblock %}

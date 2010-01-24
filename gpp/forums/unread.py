@@ -5,7 +5,9 @@ been read or not.
 """
 import datetime
 
-from forums.models import ForumLastVisit, TopicLastVisit, Topic
+from django.db.models import Q
+
+from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
 
 
 THRESHOLD = datetime.timedelta(days=7)
@@ -186,3 +188,53 @@ def get_post_unread_status(topic, posts, user):
     else:
         for post in posts:
             post.unread = post.creation_date > tlv.last_visit
+
+#######################################################################
+
+def get_unread_topics(user):
+    """Returns a list of topics the user hasn't read yet."""
+    #import pdb; pdb.set_trace()
+
+    # This is only available to authenticated users
+    if not user.is_authenticated():
+        return []
+
+    now = datetime.datetime.now()
+
+    # Obtain list of forums the user can view
+    forums = Forum.objects.forums_for_user(user)
+
+    # Get forum last visit records for the forum ids
+    flvs = ForumLastVisit.objects.filter(user=user,
+            forum__in=forums).select_related()
+    flvs = dict([(flv.forum.id, flv) for flv in flvs])
+
+    unread_topics = []
+    topics = Topic.objects.none()
+    for forum in forums:
+        # if the user hasn't visited the forum, create a last
+        # visit record set to "now"
+        if not forum.id in flvs:
+            flv = ForumLastVisit(user=user, forum=forum, begin_date=now,
+                    end_date=now)
+            flv.save()
+        else:
+            flv = flvs[forum.id]
+            topics |= Topic.objects.filter(forum=forum,
+                update_date__gt=flv.begin_date).order_by('-update_date').select_related()
+
+    if topics is not None:
+        # get all topic last visit records for the topics of interest
+
+        tlvs = TopicLastVisit.objects.filter(user=user, topic__in=topics)
+        tlvs = dict([(tlv.topic.id, tlv) for tlv in tlvs])
+
+        for topic in topics:
+            if topic.id in tlvs:
+                tlv = tlvs[topic.id]
+                if topic.update_date > tlv.last_visit:
+                    unread_topics.append(topic)
+            else:
+                unread_topics.append(topic)
+
+    return unread_topics
