@@ -221,7 +221,8 @@ def get_unread_topics(user):
         else:
             flv = flvs[forum.id]
             topics |= Topic.objects.filter(forum=forum,
-                update_date__gt=flv.begin_date).order_by('-update_date').select_related()
+                update_date__gt=flv.begin_date).order_by('-update_date').select_related(
+                    'forum', 'user', 'last_post', 'last_post__user')
 
     if topics is not None:
         # get all topic last visit records for the topics of interest

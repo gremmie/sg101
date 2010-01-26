@@ -22,6 +22,7 @@ urlpatterns = patterns('forums.views',
     url(r'^post/(\d+)/$', 'goto_post', name='forums-goto_post'),
     url(r'^post/new/(?P<topic_id>\d+)/$', 'new_post', name='forums-new_post'),
     url(r'^quick-reply/$', 'quick_reply_ajax', name='forums-quick_reply'),
+    url(r'^unanswered/$', 'unanswered_topics', name='forums-unanswered_topics'),
     url(r'^unread/$', 'unread_topics', name='forums-unread_topics'),
 )
 

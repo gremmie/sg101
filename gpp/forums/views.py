@@ -76,6 +76,8 @@ def index(request):
     query = request.GET.get("query")
     if query == "unread":
         return HttpResponseRedirect(reverse('forums-unread_topics'))
+    elif query == "unanswered":
+        return HttpResponseRedirect(reverse('forums-unanswered_topics'))
 
     forums = Forum.objects.forums_for_user(request.user)
     get_forum_unread_status(forums, request.user)
@@ -643,6 +645,8 @@ def mod_topic_split(request, id):
 
 @login_required
 def unread_topics(request):
+    """Displays the topics with unread posts for a given user."""
+
     topics = get_unread_topics(request.user)
 
     paginator = create_topic_paginator(topics)
@@ -659,6 +663,34 @@ def unread_topics(request):
 
     return render_to_response('forums/topic_list.html', {
         'title': 'Topics With Unread Posts',
+        'page': page,
+        'page_nav': page_nav,
+        },
+        context_instance=RequestContext(request))
+
+
+def unanswered_topics(request):
+    """Displays the topics with no replies."""
+
+    forum_ids = Forum.objects.forum_ids_for_user(request.user)
+    topics = Topic.objects.filter(forum__id__in=forum_ids,
+            post_count=1).select_related(
+                    'forum', 'user', 'last_post', 'last_post__user')
+
+    paginator = create_topic_paginator(topics)
+    page_num = get_page_num(request)
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    attach_topic_page_ranges(page.object_list)
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
+    return render_to_response('forums/topic_list.html', {
+        'title': 'Unanswered Topics',
         'page': page,
         'page_nav': page_nav,
         },
