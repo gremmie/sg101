@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load forum_tags %}
+{% block title %}Forums: {{ title }}{% endblock %}
+{% block content %}
+<h2>Forums: {{ title }}</h2>
+<h3>
+<a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ title }}
+</h3>
+<div class="forum-block">
+{{ page_nav }}
+{% if page.object_list %}
+<dl id="forums-post-list">
+   {% for post in page.object_list %}
+   <dt>
+      <a href="{{ post.topic.forum.get_absolute_url }}" title="Visit Forum">{{ post.topic.forum.name }}</a> &raquo;
+         <a href="{{ post.topic.get_absolute_url }}" title="Visit Topic">{{ post.topic.name }}</a> &raquo;
+         <a href="{{ post.get_absolute_url }}" title="View Post in Context">
+            {% forum_date post.creation_date user %}</a>
+   </dt>
+   <dd class="{% cycle 'odd' 'even' %}">
+      {{ post.html|safe }}
+   </dd>
+   {% endfor %}
+</dl>
+{% else %}
+   <h4>No posts found.</h4>
+{% endif %}
+{{ page_nav }}
+</div>
+{% endblock %}

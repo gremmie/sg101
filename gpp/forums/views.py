@@ -13,6 +13,7 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
+from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
@@ -75,9 +76,11 @@ def index(request):
     # check for special forum queries
     query = request.GET.get("query")
     if query == "unread":
-        return HttpResponseRedirect(reverse('forums-unread_topics'))
+        return redirect('forums-unread_topics')
     elif query == "unanswered":
-        return HttpResponseRedirect(reverse('forums-unanswered_topics'))
+        return redirect('forums-unanswered_topics')
+    elif query == "mine":
+        return redirect('forums-my_posts')
 
     forums = Forum.objects.forums_for_user(request.user)
     get_forum_unread_status(forums, request.user)
@@ -691,6 +694,33 @@ def unanswered_topics(request):
 
     return render_to_response('forums/topic_list.html', {
         'title': 'Unanswered Topics',
+        'page': page,
+        'page_nav': page_nav,
+        },
+        context_instance=RequestContext(request))
+
+
+@login_required
+def my_posts(request):
+    """Displays a list of posts the requesting user made."""
+
+    forum_ids = Forum.objects.forum_ids_for_user(request.user)
+    posts = Post.objects.filter(user=request.user,
+            topic__forum__id__in=forum_ids).order_by(
+                    '-creation_date').select_related()
+
+    paginator = create_post_paginator(posts)
+    page_num = get_page_num(request)
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
+    return render_to_response('forums/post_list.html', {
+        'title': 'My Posts',
         'page': page,
         'page_nav': page_nav,
         },

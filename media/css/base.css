@@ -309,3 +309,14 @@ table.forum-topic-table .info {
 #forum-query-form {
    text-align:right;
 }
+#forums-post-list dt {
+   margin-top: 0.5em;
+   padding: 3px 0 3px 0;
+}
+#forums-post-list dd {
+   border: 1px solid #555;
+   padding: 0.5em 0.5em;
+}
+#forums-post-list dd.even {
+   background-color:#e5ecf9;
+}
