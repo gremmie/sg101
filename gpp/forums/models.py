@@ -42,6 +42,10 @@ class Category(models.Model):
             return self.groups.filter(user__pk=user.id).count() > 0
         return False
 
+    def is_public(self):
+        """Returns true if this is a public category, viewable by all."""
+        return self.groups.count() == 0
+
 
 class ForumManager(models.Manager):
     """
@@ -61,6 +65,10 @@ class ForumManager(models.Manager):
         """Returns a list of forum IDs that the given user can "see"."""
         qs = self._for_user(user)
         return qs.values_list('id', flat=True)
+
+    def public_forums(self):
+        """Returns a queryset containing the public forums."""
+        return self.filter(category__groups__isnull=True)
 
     def _for_user(self, user):
         """Common code for the xxx_for_user() methods."""

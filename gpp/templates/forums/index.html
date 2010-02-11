@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 {% load cache %}
 {% load forum_tags %}
+{% block custom_head %}
+{% for feed in feeds %}
+<link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
+{% endfor %}
+{% endblock %}
 {% block title %}Forums{% endblock %}
 {% block content %}
-<h2>Forums</h2>
+<h2>Forums <a href="/feeds/forums/"><img src="{{ MEDIA_URL }}icons/feed.png" alt="Forums Feed" title="Forums Feed" /></a></h2>
 
 <form action="." method="get" id="forum-query-form">
    <select name="query">
@@ -32,7 +37,11 @@
                   {% if forum.has_unread %}
                   <img src="{{ MEDIA_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" />
                   {% endif %}
-                  <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
+                  <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a>
+                     {% if forum.has_feed %}
+                     <a href="/feeds/forums/{{ forum.slug }}">
+                        <img src="{{ MEDIA_URL }}icons/feed.png" alt="RSS Feed" title="Feed for this forum" /></a>
+                     {% endif %}</h4>
                   <p>{{ forum.description }}</p></td>
                <td class="forum-topics">{{ forum.topic_count }}</td>
                <td class="forum-posts">{{ forum.post_count }}</td>

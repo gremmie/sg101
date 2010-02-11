@@ -82,10 +82,20 @@ def index(request):
     elif query == "mine":
         return redirect('forums-my_posts')
 
+    public_forums = Forum.objects.public_forums()
+    feeds = [{'name': 'All Forums', 'feed': '/feeds/forums/'}]
+
     forums = Forum.objects.forums_for_user(request.user)
     get_forum_unread_status(forums, request.user)
     cats = {}
     for forum in forums:
+        forum.has_feed = forum in public_forums
+        if forum.has_feed:
+            feeds.append({
+                'name': '%s Forum' % forum.name,
+                'feed': '/feeds/forums/%s/' % forum.slug,
+                })
+
         cat = cats.setdefault(forum.category.id, {
             'cat': forum.category,
             'forums': [],
@@ -97,6 +107,7 @@ def index(request):
 
     return render_to_response('forums/index.html', {
         'cats': cats,
+        'feeds': feeds,
         },
         context_instance=RequestContext(request))
 
