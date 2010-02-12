@@ -7,7 +7,7 @@
 {% block news_css %}{% endblock %}
 {% endblock %}
 {% block content %}
-<h2>SurfGuitar101 News &amp; Articles</h2>
+<h2>SurfGuitar101 News &amp; Articles <a href="{% url feeds-news url="news" %}"><img src="{{ MEDIA_URL }}icons/feed.png" alt="News Feed" title="News Feed" /></a></h2>
 {% if search_form %}
 <div class="news-search">
 <form action="{% url news-search_page page=1 %}" method="post">
