@@ -65,6 +65,8 @@
 {% if user.is_authenticated %}
 <ul class="icon-list">
    <li><a href="{% url messages-compose_to subject.username %}"><img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url messages-compose_to subject.username %}">Send a private message to {{ subject.username }}</a></li>
+   <li><a href="{% url forums-posts_for_user username=subject.username %}"><img src="{{ MEDIA_URL }}icons/comments.png"
+      alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url forums-posts_for_user username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
    <li><img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" />
       <a href="#" class="profile-flag" id="fp-{{ profile.id }}">Report this profile</a></li>
 </ul>

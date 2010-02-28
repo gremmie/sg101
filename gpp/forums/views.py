@@ -4,6 +4,7 @@ Views for the forums application.
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
@@ -714,9 +715,25 @@ def unanswered_topics(request):
 @login_required
 def my_posts(request):
     """Displays a list of posts the requesting user made."""
+    return _user_posts(request, request.user, request.user, 'My Posts')
 
-    forum_ids = Forum.objects.forum_ids_for_user(request.user)
-    posts = Post.objects.filter(user=request.user,
+
+@login_required
+def posts_for_user(request, username):
+    """Displays a list of posts by the given user.
+    Only the forums that the requesting user can see are examined.
+    """
+    target_user = get_object_or_404(User, username=username)
+    return _user_posts(request, target_user, request.user, 'Posts by %s' % username)
+
+
+def _user_posts(request, target_user, req_user, page_title):
+    """Displays a list of posts made by the target user. 
+    req_user is the user trying to view the posts. Only the forums
+    req_user can see are searched.
+    """
+    forum_ids = Forum.objects.forum_ids_for_user(req_user)
+    posts = Post.objects.filter(user=target_user,
             topic__forum__id__in=forum_ids).order_by(
                     '-creation_date').select_related()
 
@@ -731,7 +748,7 @@ def my_posts(request):
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
     return render_to_response('forums/post_list.html', {
-        'title': 'My Posts',
+        'title': page_title,
         'page': page,
         'page_nav': page_nav,
         },
