@@ -58,11 +58,11 @@ ADMIN_MEDIA_PREFIX = local_settings.ADMIN_MEDIA_PREFIX
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = local_settings.SECRET_KEY
 
-# List of callables that know how to import templates from various sources.
+# List of Loader classes that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.load_template_source',
-    'django.template.loaders.app_directories.load_template_source',
-#     'django.template.loaders.eggs.load_template_source',
+    ('django.template.loaders.cached.Loader', (
+        'django.template.loaders.filesystem.Loader',
+    )),
 )
 
 MIDDLEWARE_CLASSES = (
