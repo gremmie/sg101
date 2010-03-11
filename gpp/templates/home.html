@@ -8,7 +8,7 @@
 {% load cache %}
 {% block title %}Home{% endblock %}
 {% block custom_head %}
-<link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url feeds-news url="news" %}" />
+<link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url feeds-news %}" />
 {% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />

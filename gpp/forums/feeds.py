@@ -1,26 +1,36 @@
 """This file contains the feed class for the forums application."""
-import datetime
 
-from django.contrib.syndication.feeds import Feed
+from django.contrib.syndication.views import Feed
 from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 from forums.models import Forum
 from forums.models import Post
+from core.functions import copyright_str
 
-BASE_YEAR = 2010
 
 class ForumsFeed(Feed):
-    """The Feed class for the forums application"""
+    """The Feed class for a specific forum"""
 
-    def get_object(self, bits):
+    ttl = '720'
+    author_name = 'Brian Neal'
+    author_email = 'admin@surfguitar101.com'
+
+    @method_decorator(cache_page(15 * 60))
+    def __call__(self, request, *args, **kwargs):
+        return super(ForumsFeed, self).__call__(request, *args, **kwargs)
+
+    def get_object(self, request, forum_slug):
         # only return public forums
-        if len(bits) == 1:
-            forum = Forum.objects.get(slug=bits[0])
+        if forum_slug:
+            forum = get_object_or_404(Forum, slug=forum_slug)
             if forum.category.groups.count() > 0:
                 raise ObjectDoesNotExist
             return forum
 
-        elif len(bits) == 0:
+        else:
             # return None to indicate we want a combined feed
             return None
 
@@ -45,20 +55,9 @@ class ForumsFeed(Feed):
             return "User posts to SurfGuitar101.com forums."
         return obj.description
 
-    def copyright(self):
-        curr_year = datetime.datetime.now().year
-        if curr_year == BASE_YEAR:
-            year_range = str(BASE_YEAR)
-        else:
-            year_range = "%d - %d" % (BASE_YEAR, curr_year)
+    def feed_copyright(self):
+        return copyright_str()
 
-        return 'Copyright (C) %s, SurfGuitar101.com' % year_range
-
-    ttl = '720'
-
-    title_template = 'forums/feed_title.html'
-    description_template = 'forums/feed_description.html'
-    
     def items(self, obj):
         if obj is None:
             # return a combined feed of public forum threads
@@ -67,6 +66,15 @@ class ForumsFeed(Feed):
         else:
             items = Post.objects.filter(topic__forum__id=obj.id)
         return items.order_by('-creation_date').select_related()[:10]
+
+    def item_title(self, item):
+        return item.topic.name
+
+    def item_description(self, item):
+        return item.html
+
+    def item_author_name(self, item):
+        return item.user.username
 
     def item_pubdate(self, item):
        return item.creation_date

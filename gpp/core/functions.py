@@ -1,4 +1,5 @@
 """This file houses various core utility functions for GPP"""
+import datetime
 
 import django.core.mail
 from django.contrib.sites.models import Site
@@ -49,3 +50,14 @@ def get_full_name(user):
         return full_name
     return user.username
 
+
+BASE_YEAR = 2010
+
+def copyright_str():
+    curr_year = datetime.datetime.now().year
+    if curr_year == BASE_YEAR:
+        year_range = str(BASE_YEAR)
+    else:
+        year_range = "%d - %d" % (BASE_YEAR, curr_year)
+
+    return 'Copyright (C) %s, SurfGuitar101.com' % year_range

@@ -1,19 +1,12 @@
 from django.conf.urls.defaults import *
 from django.conf import settings
 from django.contrib import admin
-from django.views.decorators.cache import cache_page
-from django.contrib.syndication.views import feed as syndication_feed
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
 
 
 admin.autodiscover()
-
-feeds = {
-   'news': LatestNewsFeed,
-   'forums': ForumsFeed,
-}
 
 urlpatterns = patterns('',
    url(r'^$', 'views.home', name='home'),
@@ -26,10 +19,16 @@ urlpatterns = patterns('',
    (r'^core/', include('core.urls')),
    (r'^donations/', include('donations.urls')),
    (r'^downloads/', include('downloads.urls')),
-   url(r'^feeds/(?P<url>.*)/$',
-      cache_page(syndication_feed, 60 * 15),
-      {'feed_dict': feeds},
-      'feeds-news'),
+   url(r'^feeds/news/$',
+       LatestNewsFeed(),
+       name='feeds-news'),
+   url(r'^feeds/forums/$',
+       ForumsFeed(),
+       {'forum_slug': None},
+       'feeds-forum_combined'),
+   url(r'^feeds/forums/(?P<forum_slug>[\w\d-]+)/$',
+       ForumsFeed(),
+       name='feeds-forum'),
    (r'^forums/', include('forums.urls')),
    (r'^irc/', include('irc.urls')),
    (r'^links/', include('weblinks.urls')),
