@@ -1,6 +1,7 @@
 from django.conf.urls.defaults import *
 from django.conf import settings
 from django.contrib import admin
+from django.views.decorators.cache import cache_page
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
@@ -20,14 +21,14 @@ urlpatterns = patterns('',
    (r'^donations/', include('donations.urls')),
    (r'^downloads/', include('downloads.urls')),
    url(r'^feeds/news/$',
-       LatestNewsFeed(),
+       cache_page(LatestNewsFeed(), 6 * 60 * 60),
        name='feeds-news'),
    url(r'^feeds/forums/$',
-       ForumsFeed(),
+       cache_page(ForumsFeed(), 1 * 60 * 60),
        {'forum_slug': None},
        'feeds-forum_combined'),
    url(r'^feeds/forums/(?P<forum_slug>[\w\d-]+)/$',
-       ForumsFeed(),
+       cache_page(ForumsFeed(), 1 * 60 * 60),
        name='feeds-forum'),
    (r'^forums/', include('forums.urls')),
    (r'^irc/', include('irc.urls')),

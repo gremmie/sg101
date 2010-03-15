@@ -3,8 +3,6 @@
 from django.contrib.syndication.views import Feed
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 
 from forums.models import Forum
 from forums.models import Post
@@ -17,10 +15,6 @@ class ForumsFeed(Feed):
     ttl = '720'
     author_name = 'Brian Neal'
     author_email = 'admin@surfguitar101.com'
-
-    @method_decorator(cache_page(15 * 60))
-    def __call__(self, request, *args, **kwargs):
-        return super(ForumsFeed, self).__call__(request, *args, **kwargs)
 
     def get_object(self, request, forum_slug):
         # only return public forums

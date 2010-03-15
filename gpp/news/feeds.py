@@ -2,8 +2,6 @@
 This file contains the feed classes for the news application.
 """
 from django.contrib.syndication.views import Feed
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 
 from news.models import Story
 from core.functions import get_full_name
@@ -19,10 +17,6 @@ class LatestNewsFeed(Feed):
     ttl = '720'
     author_name = 'Brian Neal'
     author_email = 'admin@surfguitar101.com'
-
-    @method_decorator(cache_page(4 * 60 * 60))
-    def __call__(self, request, *args, **kwargs):
-        return super(LatestNewsFeed, self).__call__(request, *args, **kwargs)
 
     def feed_copyright(self):
         return copyright_str()
