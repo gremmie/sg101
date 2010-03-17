@@ -15,6 +15,13 @@
 {% block content %}
 <div class="user_profile">
    <h2>User Profile for {{ subject.username }}</h2>
+   {% if messages %}
+   <ul class="user-messages">
+    {% for message in messages %}
+       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+   </ul>
+   {% endif %}
    <p>{% avatar subject %}</p>
 <table id="bio_profile">
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>

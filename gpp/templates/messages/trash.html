@@ -9,7 +9,7 @@
 {% if messages %}
 <ul class="user-messages">
    {% for msg in messages %}
-      <li>{{ msg }}</li>
+      <li{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</li>
    {% endfor %}
 </ul>
 {% endif %}

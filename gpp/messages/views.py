@@ -5,6 +5,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
 from django.http import Http404
@@ -109,7 +110,7 @@ def reply(request, msg_id):
         compose_form = ComposeForm(request.user, request.POST)
         if compose_form.is_valid():
             compose_form.save(sender=request.user, parent_msg=msg)
-            request.user.message_set.create(message='Reply sent.')
+            messages.success(request, 'Reply sent.')
             return box_redirect(request)
     else:
         if msg.receiver == request.user:
@@ -145,7 +146,7 @@ def compose(request, receiver=None):
         compose_form = ComposeForm(request.user, request.POST)
         if compose_form.is_valid():
             compose_form.save(sender=request.user)
-            request.user.message_set.create(message='Message sent.')
+            messages.success(request, 'Message sent.')
             return HttpResponseRedirect(reverse('messages-inbox'))
     else:
         if receiver is not None:
@@ -177,7 +178,7 @@ def delete(request, msg_id):
     else:
         raise Http404
     msg.save()
-    request.user.message_set.create(message='Message sent to trash.')
+    messages.success(request, 'Message sent to trash.')
 
     return box_redirect(request)
 
@@ -204,7 +205,7 @@ def delete_bulk(request):
             elif msg.receiver == request.user:
                 msg.receiver_delete_date = now
                 msg.save()
-        request.user.message_set.create(message='Messages sent to the trash.')
+        messages.success(request, 'Messages sent to the trash.')
 
     return box_redirect(request)
 
@@ -224,7 +225,7 @@ def undelete(request, msg_id):
     else:
         raise Http404
     msg.save()
-    request.user.message_set.create(message='Message retrieved from the trash.')
+    messages.success(request, 'Message retrieved from the trash.')
 
     return box_redirect(request)
 
@@ -250,7 +251,7 @@ def undelete_bulk(request):
             elif msg.receiver == request.user:
                 msg.receiver_delete_date = None
                 msg.save()
-        request.user.message_set.create(message='Messages retrieved from the trash.')
+        messages.success(request, 'Messages retrieved from the trash.')
 
     return box_redirect(request)
 
@@ -267,7 +268,7 @@ def options(request):
         form = OptionsForm(request.POST, instance=options)
         if form.is_valid():
             form.save()
-            request.user.message_set.create(message='Options saved.')
+            messages.success(request, 'Options saved.')
             return HttpResponseRedirect(reverse('messages-inbox'))
     else:
         try:

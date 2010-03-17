@@ -6,6 +6,7 @@ from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext
 from django.contrib import auth
+from django.contrib import messages
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
@@ -142,7 +143,7 @@ def change_avatar(request):
                 profile.avatar.save(form.get_filename(), file, save=False)
             profile.save()
 
-            request.user.message_set.create(message='Avatar updated.')
+            messages.success(request, 'Avatar updated')
             return HttpResponseRedirect(reverse('bio-me'))
     else:
         form = UploadAvatarForm()

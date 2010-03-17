@@ -62,12 +62,14 @@ SECRET_KEY = local_settings.SECRET_KEY
 TEMPLATE_LOADERS = (
     ('django.template.loaders.cached.Loader', (
         'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
     )),
 )
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     'gpp.forums.middleware.WhosOnline',
@@ -84,10 +86,11 @@ TEMPLATE_DIRS = (
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
-   "django.contrib.auth.context_processors.auth",
-   "django.core.context_processors.debug",
-   "django.core.context_processors.request",
-   "django.core.context_processors.media"
+    "django.contrib.auth.context_processors.auth",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.request",
+    "django.core.context_processors.media",
+    "django.contrib.messages.context_processors.messages",
 )
 
 INSTALLED_APPS = (
@@ -95,11 +98,12 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.flatpages',
     'django.contrib.humanize',
+    'django.contrib.markup',
+    'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django.contrib.markup',
-    'django.contrib.flatpages',
     'elsewhere',
     'tagging',
     'accounts',
@@ -130,6 +134,11 @@ LOGOUT_URL = '/accounts/logout/'
 
 FILE_UPLOAD_PERMISSIONS = 0644
 DEFAULT_FROM_EMAIL = ADMINS[0][1]
+
+#######################################################################
+# Messages
+#######################################################################
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 #######################################################################
 # Caching
