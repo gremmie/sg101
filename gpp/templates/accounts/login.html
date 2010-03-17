@@ -9,6 +9,7 @@
 <tr><td>&nbsp;</td><td><input type="submit" value="Login" /></td></tr>
 </table>
 <input type="hidden" name="next" value="{{ next }}" />
+{% csrf_token %}
 </form>
 
 <ul>
