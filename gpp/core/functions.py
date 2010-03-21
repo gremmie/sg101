@@ -13,7 +13,9 @@ def send_mail(subject, message, from_email, recipient_list,
     log all emails.
     """
 
-    if settings.GPP_SEND_EMAIL:
+    if settings.MAILER_ENQUEUE_MAIL:
+        mailer.enqueue_mail(subject, message, from_email, recipient_list)
+    elif settings.GPP_SEND_EMAIL:
         django.core.mail.send_mail(subject, message, from_email, recipient_list,
                 fail_silently, auth_user, auth_password)
 

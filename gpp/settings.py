@@ -117,6 +117,7 @@ INSTALLED_APPS = (
     'forums',
     'gcalendar',
     'irc',
+    'mailer',
     'membermap',
     'messages',
     'news',
@@ -141,6 +142,12 @@ DEFAULT_FROM_EMAIL = ADMINS[0][1]
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 #######################################################################
+# Email
+#######################################################################
+EMAIL_HOST = local_settings.EMAIL_HOST
+EMAIL_PORT = local_settings.EMAIL_PORT
+
+#######################################################################
 # Caching
 #######################################################################
 if local_settings.USE_CACHE:
@@ -159,7 +166,7 @@ MAX_TAG_LENGTH = 50
 # GPP Specific Settings
 #######################################################################
 GPP_LOG_LEVEL = 0
-GPP_SEND_EMAIL = local_settings.GPP_SEND_EMAIL
+GPP_SEND_EMAIL = local_settings.GPP_SEND_EMAIL  # see MAILER_ENQUEUE_MAIL
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
@@ -175,6 +182,16 @@ DONATIONS_GOAL = Decimal('100.00')  # monthly goal
 DONATIONS_ANON_NAME = u'Anonymous'
 DONATIONS_ITEM_NUM = '500'          # donation w/name listed
 DONATIONS_ITEM_ANON_NUM = '501'     # donation listed as anonymous
+
+# If MAILER_ENQUEUE_MAIL is True, all emails will be stored in the
+# mailer application's mail queue (database table). It is then expected
+# that a daemon or cron job will actually send the mail out. If
+# MAILER_ENQUEUE_MAIL is False, then email will only be sent if
+# the setting GPP_SEND_EMAIL (above) is True. In any event, emails
+# will be logged via the Python logger if the Python logger filter
+# DEBUG is active.
+
+MAILER_ENQUEUE_MAIL = True
 
 #######################################################################
 # Configure Logging
