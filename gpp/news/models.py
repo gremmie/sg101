@@ -37,7 +37,7 @@ class PendingStory(models.Model):
     approved = models.BooleanField(default=False)
     tags = TagField()
 
-    def save(self, force_insert = False, force_update = False):
+    def save(self, *args, **kwargs):
         if self.approved:
             Story.objects.create(title=self.title,
                     submitter=self.submitter,
@@ -50,7 +50,7 @@ class PendingStory(models.Model):
             self.delete()
             cache.delete('home_news')
         else:
-            super(PendingStory, self).save(force_insert, force_update)
+            super(PendingStory, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return self.title
@@ -87,7 +87,7 @@ class Story(models.Model):
         delta = now - self.date_published
         return delta.days < 30
 
-    def save(self, force_insert=False, force_update=False):
-        super(Story, self).save(force_insert, force_update)
+    def save(self, *args, **kwargs):
+        super(Story, self).save(*args, **kwargs)
         cache.delete('home_news')
 

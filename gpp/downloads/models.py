@@ -72,9 +72,9 @@ class Download(models.Model):
     def get_absolute_url(self):
         return ('downloads-details', [str(self.id)])
 
-    def save(self, force_insert=False, force_update=False):
+    def save(self, *args, **kwargs):
         self.html = site_markup(self.description)
-        super(Download, self).save(force_insert, force_update)
+        super(Download, self).save(*args, **kwargs)
 
     def vote(self, vote_value):
         """receives a vote_value and updates internal score accordingly"""

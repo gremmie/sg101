@@ -61,11 +61,11 @@ class Message(models.Model):
             return True
         return False
 
-    def save(self, force_insert = False, force_update = False):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.send_date = datetime.datetime.now()
         self.html = site_markup(self.message)
-        super(Message, self).save(force_insert, force_update)
+        super(Message, self).save(*args, **kwargs)
 
     @models.permalink
     def get_absolute_url(self):

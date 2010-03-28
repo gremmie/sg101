@@ -27,7 +27,7 @@ class MapEntry(models.Model):
         ordering = ('-date_updated', )
         verbose_name_plural = 'map entries'
 
-    def save(self, force_insert=False, force_update=False):
+    def save(self, *args, **kwargs):
         msg = render_to_string('membermap/markdown.html', {
             'user': self.user,
             'msg': site_markup(self.message)}).strip()
@@ -37,5 +37,5 @@ class MapEntry(models.Model):
             'lon': '%10.6f' % self.lon,
             'message': msg,
             })
-        super(MapEntry, self).save(force_insert, force_update)
+        super(MapEntry, self).save(*args, **kwargs)
 

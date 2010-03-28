@@ -51,9 +51,9 @@ class Comment(models.Model):
     def __unicode__(self):
         return u'%s: %s...' % (self.user.username, self.comment[:50])
 
-    def save(self, force_insert=False, force_update=False):
+    def save(self, *args, **kwargs):
         self.html = site_markup(self.comment)
-        super(Comment, self).save(force_insert, force_update)
+        super(Comment, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
         return self.get_content_object_url() + ('#c%s' % self.id)

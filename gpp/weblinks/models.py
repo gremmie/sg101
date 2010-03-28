@@ -71,12 +71,12 @@ class FlaggedLink(models.Model):
 
     objects = FlaggedLinkManager()
 
-    def save(self, force_insert = False, force_update = False):
+    def save(self, *args, **kwargs):
         if self.approved:
             self.link.delete()
             self.delete()
         else:
-            super(FlaggedLink, self).save(force_insert, force_update)
+            super(FlaggedLink, self).save(*args, **kwargs)
 
     def url(self):
         return self.link.url

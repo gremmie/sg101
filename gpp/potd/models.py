@@ -44,7 +44,7 @@ class Photo(models.Model):
     def get_absolute_url(self):
         return ('potd-archive', [str(self.id)])
 
-    def save(self, force_insert=False, force_update=False):
+    def save(self, *args, **kwargs):
 
         if self.thumb:
             self.thumb.delete(save=False)
@@ -60,7 +60,7 @@ class Photo(models.Model):
         thumb_name = os.path.basename(self.photo.path)
         self.thumb.save(thumb_name, ContentFile(s.getvalue()), save=False)
         
-        super(Photo, self).save(force_insert, force_update)
+        super(Photo, self).save(*args, **kwargs)
         Sequence.objects.insert_photo(self.pk)
 
     def delete(self):

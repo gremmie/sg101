@@ -38,8 +38,8 @@ class Bulletin(models.Model):
     def __unicode__(self):
         return self.title
 
-    def save(self, force_insert=False, force_update=False):
-        super(Bulletin, self).save(force_insert, force_update)
+    def save(self, *args, **kwargs):
+        super(Bulletin, self).save(*args, **kwargs)
         cache.delete('home_bulletins')
 
      
