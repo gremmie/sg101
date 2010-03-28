@@ -77,6 +77,7 @@ $(document).ready(function() {
                            if (!point)
                            {
                               alert(address + ' could not be found on Google Maps.');
+                              submitButton.removeAttr('disabled').val('Update');
                               return;
                            }
                            $.ajax({
