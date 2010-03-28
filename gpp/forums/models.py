@@ -172,6 +172,8 @@ class Topic(models.Model):
     view_count = models.IntegerField(blank=True, default=0)
     sticky = models.BooleanField(blank=True, default=False)
     locked = models.BooleanField(blank=True, default=False)
+    subscribers = models.ManyToManyField(User, related_name='subscriptions',
+            verbose_name='subscribers', blank=True)
 
     # denormalized fields to reduce database hits
     post_count = models.IntegerField(blank=True, default=0)

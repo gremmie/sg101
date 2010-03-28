@@ -193,6 +193,9 @@ def topic_index(request, id):
     can_reply = request.user.is_authenticated() and (
         not topic.locked or can_moderate)
 
+    is_subscribed = request.user.is_authenticated() and (
+            topic in request.user.subscriptions.all())
+
     return render_to_response('forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
@@ -202,6 +205,7 @@ def topic_index(request, id):
         'can_moderate': can_moderate,
         'can_reply': can_reply,
         'form': NewPostForm(initial={'topic_id': topic.id}),
+        'is_subscribed': is_subscribed,
         },
         context_instance=RequestContext(request))
 
@@ -434,6 +438,9 @@ def _delete_topic(topic):
     if topic.forum.last_post and topic.forum.last_post.topic == topic:
         topic.forum.last_post_pre_delete()
         topic.forum.save()
+
+    # delete subscriptions to this topic
+    topic.subscribers.clear()
 
     # It should be safe to just delete the topic now. This will
     # automatically delete all posts in the topic.

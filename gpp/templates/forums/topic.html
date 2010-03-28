@@ -57,5 +57,28 @@
 <a name="forum-reply-form"></a>
 {% show_form "Reply to Topic" form "Submit Reply" 1 MEDIA_URL %}
 {% endif %}
+
+{% if user.is_authenticated %}
+<form action={% if is_subscribed %}"{% url forums-unsubscribe_topic topic.id %}"{% else %}"{% url forums-subscribe_topic topic.id %}"{% endif %} method="post">
+<fieldset>
+   <legend>Subscription Options</legend>
+   <p>
+   {% if is_subscribed %}
+      <img src="{{ MEDIA_URL }}icons/email_delete.png" alt="Email" />
+      You are currently subscribed to this topic and will receive an email when new replies are posted.
+      <input type="submit" value="Unsubscribe Me" />
+   {% else %}
+      <img src="{{ MEDIA_URL }}icons/email_add.png" alt="Email" />
+      Would you like to receive an email when someone replies to this topic?
+      <input type="submit" value="Subscribe via Email" />
+   {% endif %}
+   </p>
+   <p>
+   To manage all your forum topic subscriptions, please visit your 
+   <a href="{% url forums-manage_subscriptions %}">subscriptions page</a>.
+   </p>
+</fieldset>
+</form>
+{% endif %}
 </div>
 {% endblock %}

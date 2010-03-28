@@ -5,6 +5,8 @@ import django.core.mail
 from django.contrib.sites.models import Site
 from django.conf import settings
 
+import mailer
+
 
 def send_mail(subject, message, from_email, recipient_list, 
         fail_silently = False, auth_user = None, auth_password = None):

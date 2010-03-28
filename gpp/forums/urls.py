@@ -28,3 +28,9 @@ urlpatterns = patterns('forums.views',
     url(r'^unread/$', 'unread_topics', name='forums-unread_topics'),
 )
 
+urlpatterns += patterns('forums.subscriptions',
+    url(r'^subscribe/(\d+)/$', 'subscribe_topic', name='forums-subscribe_topic'),
+    url(r'^subscriptions/$', 'manage_subscriptions', name='forums-manage_subscriptions'),
+    url(r'^subscriptions/(\d+)/$', 'subscription_status', name='forums-subscription_status'),
+    url(r'^unsubscribe/(\d+)/$', 'unsubscribe_topic', name='forums-unsubscribe_topic'),
+)

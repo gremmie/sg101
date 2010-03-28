@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic{% endblock %}
+{% block content %}
+<h2>Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=topic.forum.slug %}">{{ topic.forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+<p>
+{% if is_subscribed %}
+You are now subscribed to the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.
+You will receive an email notification whenever a new reply is posted.
+{% else %}
+You have successfully unsubscribed to the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.
+You will no longer receive emails when new replies are posted.
+{% endif %}
+</p>
+<p>
+To manage all your forum topic subscriptions, please visit your 
+<a href="{% url forums-manage_subscriptions %}">subscriptions page</a>.
+</p>
+{% endblock %}

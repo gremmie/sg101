@@ -1,0 +1,27 @@
+Hello,
+
+You are receiving this message because you have subscribed to one or
+more forum topics at SurfGuitar101.com.
+
+This is a heads up that {{ poster }} replied to a forum topic you have
+subscribed to:
+
+---
+RE: {{ topic_name }}
+
+{{ message }}
+---
+
+To view this post on the site, please visit:
+{{ post_url }}
+
+If you would like to stop receiving these email notifications, you may
+manage your topic subscriptions at:
+{{ unsubscribe_url }}
+
+Surf's up!
+-The staff at SurfGuitar101.com
+
+P.S. This is an automated message from SurfGuitar101.com. Please do not
+reply to this email unless you wish to report a problem to the staff.
+Thanks!

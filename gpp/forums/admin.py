@@ -27,7 +27,7 @@ class ForumAdmin(admin.ModelAdmin):
 class TopicAdmin(admin.ModelAdmin):
     list_display = ('name', 'forum', 'creation_date', 'update_date', 'user', 'sticky', 'locked',
             'post_count')
-    raw_id_fields = ('user', 'last_post', )
+    raw_id_fields = ('user', 'last_post', 'subscribers')
     search_fields = ('name', )
     date_hierarchy = 'creation_date'
     list_filter = ('creation_date', 'update_date', )

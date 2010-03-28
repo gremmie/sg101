@@ -3,8 +3,9 @@ Signal handlers for the forums application.
 """
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
-from models import Topic
-from models import Post
+
+from forums.models import Topic, Post
+from forums.subscriptions import notify_topic_subscribers
 
 
 def on_topic_save(sender, **kwargs):
@@ -31,6 +32,9 @@ def on_post_save(sender, **kwargs):
         # update the forum
         post.topic.forum.post_count_update()
         post.topic.forum.save()
+
+        # send out any email notifications
+        notify_topic_subscribers(post)
 
 
 def on_post_delete(sender, **kwargs):
