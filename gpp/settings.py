@@ -219,11 +219,6 @@ GPP_THIRD_PARTY_JS = {
     'jquery': (
         'http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js',
     ),
-    'jquery-autocomplete': (
-        'js/jquery-autocomplete/lib/jquery.bgiframe.min.js',
-        'js/jquery-autocomplete/lib/jquery.ajaxQueue.js',
-        'js/jquery-autocomplete/jquery.autocomplete.js',
-    ),
     'jquery-jeditable': (
         'js/jquery.jeditable.mini.js',
     ),
@@ -242,9 +237,6 @@ GPP_THIRD_PARTY_JS = {
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': (
         'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/themes/redmond/jquery-ui.css',
-    ),
-    'jquery-autocomplete': (
-        'js/jquery-autocomplete/jquery.autocomplete.css',
     ),
     'markitup': (
         'js/markitup/skins/markitup/style.css',
