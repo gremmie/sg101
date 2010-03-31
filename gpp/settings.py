@@ -73,14 +73,25 @@ else:
         )),
     )
 
-MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
-    'gpp.forums.middleware.WhosOnline',
-)
+if DEBUG:
+    MIDDLEWARE_CLASSES = (
+        'django.middleware.common.CommonMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+        'gpp.forums.middleware.WhosOnline',
+    )
+else:
+    MIDDLEWARE_CLASSES = (
+        'django.middleware.common.CommonMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+        'gpp.forums.middleware.WhosOnline',
+    )
 
 ROOT_URLCONF = 'gpp.urls'
 
@@ -100,7 +111,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.messages.context_processors.messages",
 )
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -134,7 +145,9 @@ INSTALLED_APPS = (
     'shoutbox',
     'smiley',
     'weblinks',
-)
+]
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/profile/me/'
