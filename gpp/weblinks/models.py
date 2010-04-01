@@ -25,7 +25,8 @@ class Category(models.Model):
 class PublicLinkManager(models.Manager):
     """The manager for all public links."""
     def get_query_set(self):
-        return super(PublicLinkManager, self).get_query_set().filter(is_public=True)
+        return super(PublicLinkManager, self).get_query_set().filter(
+                is_public=True).select_related()
 
 
 class Link(models.Model):

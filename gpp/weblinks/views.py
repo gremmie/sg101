@@ -193,7 +193,7 @@ def search_links(request, page=1):
 
    links = Link.public_objects.filter(
          Q(title__icontains = query_text) |
-         Q(description__icontains = query_text)).order_by('title')
+         Q(description__icontains = query_text)).order_by('title').select_related()
    paginator = create_paginator(links)
    try:
       the_page = paginator.page(int(page))
