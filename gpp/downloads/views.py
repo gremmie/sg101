@@ -64,7 +64,8 @@ def category(request, category, sort='title', page='1'):
         sort = 'title'
     order_by = DOWNLOAD_FIELD_MAP[sort]
 
-    downloads = Download.public_objects.filter(category=cat.pk).order_by(order_by)
+    downloads = Download.public_objects.filter(category=cat.pk).order_by(
+            order_by)
     paginator = create_paginator(downloads)
     try:
         the_page = paginator.page(int(page))
@@ -202,7 +203,8 @@ def search(request, page=1):
 
     dls = Download.objects.filter(
             Q(title__icontains = query_text) |
-            Q(description__icontains = query_text)).order_by('title')
+            Q(description__icontains = query_text)).order_by(
+                    'title').select_related()
     paginator = create_paginator(dls)
     try:
         the_page = paginator.page(int(page))
