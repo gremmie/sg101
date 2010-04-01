@@ -177,6 +177,19 @@ if local_settings.USE_CACHE:
     #CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
 
 #######################################################################
+# Sessions
+#######################################################################
+#SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+SESSION_COOKIE_AGE = 2 * 7 * 24 * 60 * 60   # 2 weeks in seconds
+SESSION_COOKIE_DOMAIN = None
+SESSION_COOKIE_NAME = 'sg101_sessionid'
+SESSION_COOKIE_PATH = '/'
+SESSION_COOKIE_SECURE = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = False
+
+#######################################################################
 # Tagging Specific Settings
 #######################################################################
 FORCE_LOWERCASE_TAGS = True

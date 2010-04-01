@@ -19,6 +19,7 @@ from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
 from django.utils.text import wrap
+from django.db.models import F
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
@@ -152,13 +153,14 @@ def topic_index(request, id):
     """
     Displays all the posts in a topic.
     """
-    topic = get_object_or_404(Topic.objects.select_related(), pk=id)
+    topic = get_object_or_404(Topic.objects.select_related(
+        'forum', 'forum__category', 'last_post'), pk=id)
 
     if not topic.forum.category.can_access(request.user):
         return HttpResponseForbidden()
 
-    topic.view_count += 1
-    topic.save()
+    topic.view_count = F('view_count') + 1
+    topic.save(force_update=True)
 
     posts = topic.posts.select_related()
 
