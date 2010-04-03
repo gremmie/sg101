@@ -1,21 +1,18 @@
-'''
+"""
 This module contains the models for the weblinks application.
-'''
-
+"""
 from django.db import models
 from django.contrib import auth
 
 
 class Category(models.Model):
-    '''Links belong to categories'''
-    title = models.CharField(max_length = 64)
-    description = models.TextField(blank = True)
+    """Links belong to categories"""
+    title = models.CharField(max_length=64)
+    description = models.TextField(blank=True)
+    count = models.IntegerField(default=0)
 
     def __unicode__(self):
         return self.title
-
-    def num_links(self):
-        return Link.public_objects.filter(category = self.pk).count()
 
     class Meta:
         verbose_name_plural = 'Categories'
@@ -30,7 +27,7 @@ class PublicLinkManager(models.Manager):
 
 
 class Link(models.Model):
-    '''Model to represent a web link'''
+    """Model to represent a web link"""
     category = models.ForeignKey(Category)
     title = models.CharField(max_length=128)
     url = models.URLField(verify_exists=False, db_index=True)
@@ -63,7 +60,7 @@ class FlaggedLinkManager(models.Manager):
 
 
 class FlaggedLink(models.Model):
-    '''Model to represent links that have been flagged as broken by users'''
+    """Model to represent links that have been flagged as broken by users"""
     link = models.ForeignKey(Link)
     user = models.ForeignKey(auth.models.User)
     date_flagged = models.DateField(auto_now_add = True)

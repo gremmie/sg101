@@ -5,6 +5,12 @@ from weblinks.models import Category
 from weblinks.models import Link
 from weblinks.models import FlaggedLink
 
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('title', 'description', 'count')
+    readonly_fields = ('count', )
+
+
 class LinkAdmin(admin.ModelAdmin):
     list_display = ('title', 'url', 'category', 'date_added', 'hits', 'is_public')
     list_filter = ('date_added', 'is_public', 'category')
@@ -14,11 +20,12 @@ class LinkAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', )
     save_on_top = True
 
+
 class FlaggedLinkAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'url', 'get_link_url', 'user', 'date_flagged')
     date_hierarchy = 'date_flagged'
     raw_id_fields = ('user', )
 
-admin.site.register(Category)
+admin.site.register(Category, CategoryAdmin)
 admin.site.register(Link, LinkAdmin)
 admin.site.register(FlaggedLink, FlaggedLinkAdmin)

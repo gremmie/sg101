@@ -7,7 +7,7 @@
       <dl>
       {% for category in categories %}
       <dt><a href="{% url weblinks-view_links category=category.id,sort="title",page=1 %}">{{ category.title }}</a>
-       ({{ category.num_links}})</dt>
+       ({{ category.count }})</dt>
          <dd><p>{{ category.description }}</p></dd>
       {% endfor %}
       </dl>
