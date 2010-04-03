@@ -1,6 +1,6 @@
 {% load core_tags %}
 {% if user.is_authenticated %}
-<form action="{% url comments-post %}" method="post" id="comment-form">
+<form action="{% url comments-post %}" method="post" id="comment-form">{% csrf_token %}
 {{ form.as_p }}
 {% comment_dialogs %}
 <input type="submit" name="post" value="Post Comment" id="comment-form-post"/>

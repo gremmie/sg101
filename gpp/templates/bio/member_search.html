@@ -6,7 +6,7 @@
 {% block content %}
 <h2>Member Search</h2>
 <p>Looking for a member? Start typing a username in the form below.</p>
-<form action="." method="post">
+<form action="." method="post">{% csrf_token %}
 <fieldset>
 <legend>Member Search</legend>
    {{ form.as_p }}

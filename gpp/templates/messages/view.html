@@ -21,13 +21,13 @@
 </div>
 {% endif %}
 {% if is_deleted %}
-<form action="{% url messages-undelete msg.id %}" method="post">
+<form action="{% url messages-undelete msg.id %}" method="post">{% csrf_token %}
    {% if box %}<input type="hidden" name="box" value="{{ box }}" />{% endif %}
    <input type="submit" value="Undelete" />
 </form>
 {% else %}
 <a href="{% url messages-reply msg.id %}{% if box %}?box={{ box }}{% endif %}">Reply</a> |
-<form action="{% url messages-delete msg.id %}" method="post" class="messages-button">
+<form action="{% url messages-delete msg.id %}" method="post" class="messages-button">{% csrf_token %}
    {% if box %}<input type="hidden" name="box" value="{{ box }}" />{% endif %}
    <input type="submit" value="Delete" />
 </form>

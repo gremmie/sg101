@@ -37,13 +37,13 @@
 {{ page_nav }}
 {% if can_moderate %}
 <div class="forum-mod-controls">
-   <form action="{% url forums-mod_topic_stick topic.id %}" method="post">
+   <form action="{% url forums-mod_topic_stick topic.id %}" method="post">{% csrf_token %}
       <input type="submit" value="{% if topic.sticky %}Unstick{% else %}Stick{% endif %} Topic" />
    </form>
-   <form action="{% url forums-mod_topic_lock topic.id %}" method="post">
+   <form action="{% url forums-mod_topic_lock topic.id %}" method="post">{% csrf_token %}
       <input type="submit" value="{% if topic.locked %}Unlock{% else %}Lock{% endif %} Topic" />
    </form>
-   <form action="{% url forums-mod_topic_delete topic.id %}" method="post">
+   <form action="{% url forums-mod_topic_delete topic.id %}" method="post">{% csrf_token %}
       <input type="submit" value="Delete Topic" id="forum-mod-del-topic" />
    </form>
    <a href="{% url forums-mod_topic_move topic.id %}"><img src="{{ MEDIA_URL }}icons/application_go.png" alt="Move Topic" title="Move Topic" /></a>
@@ -59,7 +59,7 @@
 {% endif %}
 
 {% if user.is_authenticated %}
-<form action={% if is_subscribed %}"{% url forums-unsubscribe_topic topic.id %}"{% else %}"{% url forums-subscribe_topic topic.id %}"{% endif %} method="post">
+<form action={% if is_subscribed %}"{% url forums-unsubscribe_topic topic.id %}"{% else %}"{% url forums-subscribe_topic topic.id %}"{% endif %} method="post">{% csrf_token %}
 <fieldset>
    <legend>Subscription Options</legend>
    <p>

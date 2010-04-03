@@ -1,5 +1,5 @@
 {% load core_tags %}
-<form action="." method="post">
+<form action="." method="post">{% csrf_token %}
 <fieldset>
 <legend>{{ legend_text }}</legend>
 {{ form.as_p }}

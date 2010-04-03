@@ -13,12 +13,12 @@
 <center><a href="{% url shoutbox-history page=1 %}">Shout History</a></center>
 {% if user.is_authenticated %}
 <center>
-<form action="{% url shoutbox-shout %}" method="post">
+<div>
    <input type="text" maxlength="2048" size="13" name="msg" value="" id="shoutbox-smiley-input" />
    <br />
    <input id="shoutbox-submit" type="submit" value="Shout" />
    <input id="shoutbox-smilies" type="button" value="Smilies" />
-</form>
+</div>
 <div id="shoutbox-smiley-frame" style="display:none;">
 <img id="shoutbox-busy-icon" src="{{ MEDIA_URL }}icons/ajax_busy.gif" alt="Please wait" />
 </div>

@@ -14,7 +14,7 @@
 
 <div class="forum-block">
 {{ page_nav }}
-<form action="." method="post">
+<form action="." method="post">{% csrf_token %}
 <table class="forum-index-table">
    <thead>
       <tr>

@@ -2,7 +2,7 @@
 <img src="{{ MEDIA_URL }}icons/weblinks-logo.jpg" alt="Links Logo" title="Links" />
 </div>
 <div class="weblinks-search">
-<form action="{% url weblinks-search page=1 %}" method="post">
+<form action="{% url weblinks-search page=1 %}" method="post">{% csrf_token %}
    <p>{{ search_form.text }} <input type="submit" value="Search" /></p>
 </form>
 </div>
@@ -16,7 +16,7 @@
 {% endif %}
 </ul>
 <center>
-   <form action="{% url weblinks.views.random_link %}" method="post">
+   <form action="{% url weblinks.views.random_link %}" method="post">{% csrf_token %}
       <input type="submit" value="Visit a Random Link" />
    </form>
 </center>

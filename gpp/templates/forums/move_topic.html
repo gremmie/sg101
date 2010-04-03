@@ -10,7 +10,7 @@
 </h3>
 
 <div class="forum-block">
-<form action="." method="post">
+<form action="." method="post">{% csrf_token %}
 <fieldset>
 <legend>Move Topic: {{ topic.name }}</legend>
    {{ form.as_p }}

@@ -15,7 +15,7 @@
    this it will be scaled down to 100 x 100 pixels. For best results, please ensure your
    image is square.
    </p>
-   <form enctype="multipart/form-data" method="POST" action=".">
+   <form enctype="multipart/form-data" method="POST" action=".">{% csrf_token %}
       {{ form.as_p }}
       <input type="submit" value="Update Avatar" />
       &nbsp;<a href="{% url bio-me %}">Cancel</a>
