@@ -14,7 +14,7 @@
 {% for category in categories %}
 <dt>
 <a href="{% url downloads-category category=category.pk,sort="title",page=1 %}">{{ category.title }}</a>
-({{ category.num_downloads }})
+({{ category.count }})
 </dt>
 <dd><p>{{ category.description }}</p></dd>
 {% endfor %}

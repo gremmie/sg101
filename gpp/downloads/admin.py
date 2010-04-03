@@ -9,27 +9,32 @@ from downloads.models import Category
 from downloads.models import AllowedExtension
 from downloads.models import VoteRecord
 
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('title', 'description', 'count')
+    readonly_fields = ('count', )
+
+
 class DownloadAdmin(admin.ModelAdmin):
-     exclude = ('html', )
-     list_display = ('title', 'user', 'category', 'date_added', 'ip_address',
-                'hits', 'average_score', 'size', 'is_public')
-     list_filter = ('date_added', 'is_public', 'category', 'user', 'ip_address')
-     date_hierarchy = 'date_added'
-     ordering = ('-date_added', )
-     search_fields = ('title', 'description', 'user__username')
-     raw_id_fields = ('user', )
-     save_on_top = True
+    exclude = ('html', )
+    list_display = ('title', 'user', 'category', 'date_added', 'ip_address',
+               'hits', 'average_score', 'size', 'is_public')
+    list_filter = ('date_added', 'is_public', 'category', 'user', 'ip_address')
+    date_hierarchy = 'date_added'
+    ordering = ('-date_added', )
+    search_fields = ('title', 'description', 'user__username')
+    raw_id_fields = ('user', )
+    save_on_top = True
 
 
 class VoteRecordAdmin(admin.ModelAdmin):
-     list_display = ('user', 'download', 'vote_date')
-     list_filter = ('user', 'download')
-     date_hierarchy = 'vote_date'
+    list_display = ('user', 'download', 'vote_date')
+    list_filter = ('user', 'download')
+    date_hierarchy = 'vote_date'
 
 
 admin.site.register(Download, DownloadAdmin)
-admin.site.register(Category)
+admin.site.register(Category, CategoryAdmin)
 admin.site.register(AllowedExtension)
 admin.site.register(VoteRecord, VoteRecordAdmin)
 
-# vim: ts=4 sw=4

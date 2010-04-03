@@ -15,6 +15,7 @@ class Category(models.Model):
     """Downloads belong to categories."""
     title = models.CharField(max_length=64)
     description = models.TextField(blank=True)
+    count = models.IntegerField(default=0, blank=True)
 
     class Meta:
         verbose_name_plural = 'Categories'
@@ -22,9 +23,6 @@ class Category(models.Model):
 
     def __unicode__(self):
         return self.title
-
-    def num_downloads(self):
-        return Download.public_objects.filter(category=self.pk).count()
 
 
 def download_path(instance, filename):
@@ -114,7 +112,7 @@ class VoteRecord(models.Model):
     vote_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return "%s voted on '%s' on %s" % (
+        return u"%s voted on '%s' on %s" % (
                 self.user.username, 
                 self.download.title, 
                 self.vote_date.strftime('%b %d, %Y %H:%M:%S'))
