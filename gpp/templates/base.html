@@ -33,19 +33,20 @@
 <body>
 <div id="page" class="container">
 <div id="header" class="span-24">
-   <h1>SurfGuitar101</h1>
-   <p>Header content</p>
-      <ul>
-         {% if user.is_authenticated %}
-         <li>Welcome, <a href="{% url bio-me %}">{{ user.username }}</a></li>
-         <li><a href="{% url forums-index %}">Forums</a></li>
-         <li>{% unread_messages user %}</li>
-         <li><a href="{% url accounts-logout %}">Logout</a></li>
-         {% else %}
-         <li><a href="{% url accounts-login %}">Login</a></li>
-         <li><a href="{% url accounts-register %}">Register</a></li>
-         {% endif %}
-      </ul> 
+   <p><img src="{{ MEDIA_URL }}themes/kds/sgLogo.png" alt="SurfGuitar101.com Logo" width="446" height="103" /></p>
+</div>
+<div id="header-nav" class="span-24">
+   <ul>
+      {% if user.is_authenticated %}
+      <li>Welcome, <a href="{% url bio-me %}">{{ user.username }}</a></li>
+      <li><a href="{% url forums-index %}">Forums</a></li>
+      <li>{% unread_messages user %}</li>
+      <li><a href="{% url accounts-logout %}">Logout</a></li>
+      {% else %}
+      <li><a href="{% url accounts-login %}">Login</a></li>
+      <li><a href="{% url accounts-register %}">Register</a></li>
+      {% endif %}
+   </ul> 
 </div>
 
 <div id="content-secondary" class="span-4 append-1">
@@ -78,8 +79,7 @@
    {% endblock %}
 </div>
 
-
-<div id="footer" class="span-24">
+<div id="footer" class="prepend-5 span-19">
    <p>
    TODO: Should put links to various policies down here. Additional navigation could go here.
    Add a colophon.
@@ -92,7 +92,7 @@
    <a href="/colophon/">Colophon</a>
    </p>
    <p>
-   SurfGuitar101.com &copy; 2009 by Brian Neal.
+   SurfGuitar101.com &copy; 2010 by Brian Neal.
    All comments and user contributed articles are property of the posters. 
    </p>
    <p>Thanks to all the surf bands, past and present. And thanks to all the fans who care about and keep surf

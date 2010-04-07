@@ -1,61 +1,98 @@
 body {
  background-color: #eee;
+ background: url('../themes/kds/bg.png') no-repeat fixed center;
+}
+tr.even td {
+ background-color: #E0F2F6;
+}
+a {
+ text-decoration: none;
+ color: teal;
+}
+a:hover {
+ text-decoration: underline;
+ color: black;
 }
 #page {
 }
 #header {
- background-color: teal;
-}
-#header h1 {
- border-bottom: 1px solid #ccc;
- font: normal italic 1.5em/18px Georgia, serif;
- margin-bottom: 11px;
- color: #57FEFF;
- margin-left: -108px;
- padding: 15px 0 21px 108px; 
+ background-position: left;
+ background-repeat: no-repeat;
+ text-align: center;
+ display: block;
+ height: 150px;
+ overflow: visible;
+ background-image: url('../themes/kds/headerbg.png');
 }
 #header p {
- float: left;
- padding: 60px 24px 24px 24px;
+ float: none;
+ padding: 40px 24px 0px 24px;
  font-size: 1.5em;
  line-height: 1em;
+ display: block;
+ clear: both;
 }
-#header ul {
- padding-top: 62px;
- padding-right: 12px;
- text-align: right;
+#header-nav {
+ background-color: #E0F2F6;
+ text-align: center;
+}
+#header-nav ul {
+ padding-top: 3px;
+ padding-right: 5px;
+ margin-bottom: 3px;
+ /* text-align: right; */
  list-style: none;
 }
-#header li {
+#header-nav li {
  display: inline;
- margin: 0 12px;
+ margin: 0 24px;
 }
-#header li a {
- font-size: 1.25em;
+#header-nav li a {
+ font-size: 1.0em;
  line-height: 1em;
  text-decoration: none;
- color: #57FEFF;
+ color: teal;
 }
-#header li a:hover {
- color: #300;
+#header-nav li a:hover {
+ color: black;
 } 
 #content-primary {
 }
 #content-secondary {
+ background-color: #E0F2F6;
+ min-height: 1750px;
+}
+#content-secondary ul.nav-left {
+ margin-top: 1.5em;
+ list-style:none;
+}
+#content-secondary ul.nav-left li {
+ background-color: #eee;
+ background-color: #E0F2F6;
+ color: black;
+}
+#content-secondary ul.nav-left li a {
+ text-decoration: none;
+ color: teal;
+}
+#content-secondary ul.nav-left li a:hover {
+ color: black;
 }
 #footer {
- height: 192px;
- background: #333;
+ height: 105px;
  font-size: 10px;
  line-height: 1em;
  text-shadow: 1px 1px 1px #333;
- color: #fff; 
+ background-repeat: no-repeat;
+ background-color: #E0F2F6;
+ color: black;
 }
 #footer p {
-   margin: 1em;
+	margin: 1em;
+	text-align: center;
 } 
 #footer a {
-   color: #0ff;
+   color: teal;
 }
 ul.app-menu {
    text-align: center;
@@ -104,6 +141,7 @@ img {
 }
 table {
    width: auto;
+   border-style: none;
 }
 .errorlist {
    background: #FBE3E4; 
@@ -266,7 +304,7 @@ div.forum-mod-controls form {
 table.grid {
    border-collapse:collapse;
 }
-table.grid th,td {
+table.grid th, table.grid td {
    border: 1px solid #eee;
 }
 ul.inline-list li {
