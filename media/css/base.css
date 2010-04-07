@@ -34,7 +34,7 @@ a:hover {
 }
 #header-nav {
  background-color: #E0F2F6;
- text-align: center;
+ text-align: right;
 }
 #header-nav ul {
  padding-top: 3px;
@@ -45,7 +45,7 @@ a:hover {
 }
 #header-nav li {
  display: inline;
- margin: 0 24px;
+ margin: 0 36px;
 }
 #header-nav li a {
  font-size: 1.0em;
