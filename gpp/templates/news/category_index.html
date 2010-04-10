@@ -12,7 +12,7 @@ Each story is also <strong>tagged</strong> with a set of tags. You may also wish
 
 {% for category, story_set in cat_list %}
    <h3>{{ category.title }}</h3>
-   <p><a href="{% url news.views.category category=category.id,page=1 %}">
+   <p><a href="{% url news.views.category category=category.id page=1 %}">
       <img src="{{ category.icon.url }}" alt="{{ category.title }}" title="{{ category.title }}" />
       </a>
    </p>

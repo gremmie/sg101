@@ -120,6 +120,12 @@ class SearchUsersForm(forms.Form):
     """
     username = forms.CharField(max_length=30, widget=AutoCompleteUserInput())
 
+    class Media:
+        css = {
+          'all': settings.GPP_THIRD_PARTY_CSS['jquery-ui']
+        }
+        js = settings.GPP_THIRD_PARTY_JS['jquery-ui']
+
     def clean_username(self):
       username = self.cleaned_data['username']
       try:

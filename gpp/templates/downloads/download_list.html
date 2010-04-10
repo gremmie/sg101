@@ -16,13 +16,13 @@
 
 {% if page.object_list %}
 <ul class="tab-nav">
-   <li><a href="{% url downloads-category category=category.id,sort="title",page="1" %}"
+   <li><a href="{% url downloads-category category=category.id sort="title" page="1" %}"
       {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
-   <li><a href="{% url downloads-category category=category.id,sort="date",page="1" %}"
+   <li><a href="{% url downloads-category category=category.id sort="date" page="1" %}"
       {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
-   <li><a href="{% url downloads-category category=category.id,sort="rating",page="1" %}"
+   <li><a href="{% url downloads-category category=category.id sort="rating" page="1" %}"
       {% ifequal s "rating" %}class="active"{% endifequal %}>Rating</a></li>
-   <li><a href="{% url downloads-category category=category.id,sort="hits",page="1" %}"
+   <li><a href="{% url downloads-category category=category.id sort="hits" page="1" %}"
       {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
 </ul>
 

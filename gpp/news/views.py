@@ -40,7 +40,7 @@ def create_paginator(stories):
 #######################################################################
 
 def index(request, page=1):
-   stories = Story.objects.all()
+   stories = Story.objects.all().select_related()
    paginator = create_paginator(stories)
    try:
       the_page = paginator.page(int(page))
@@ -87,10 +87,10 @@ def archive(request, year, month, page=1):
 #######################################################################
 
 def category_index(request):
-   categories = Category.objects.all()
+   categories = Category.objects.all().select_related()
    cat_list = []
    for cat in categories:
-      cat_list.append((cat, cat.story_set.all()[:10]))
+      cat_list.append((cat, cat.story_set.defer('tags')[:10]))
 
    return render_to_response('news/category_index.html', {
       'cat_list': cat_list, 
@@ -215,7 +215,7 @@ def tags(request):
 
 def tag(request, tag_name, page=1):
    tag = get_object_or_404(Tag, name=tag_name)
-   stories = TaggedItem.objects.get_by_model(Story, tag)
+   stories = TaggedItem.objects.get_by_model(Story.objects.all().select_related(), tag)
    paginator = create_paginator(stories)
    try:
       the_page = paginator.page(int(page))
@@ -227,7 +227,7 @@ def tag(request, tag_name, page=1):
       'page': the_page,
       'search_form': SearchNewsForm(),
       }, 
-      context_instance = RequestContext(request))
+      context_instance=RequestContext(request))
 
 #######################################################################
 

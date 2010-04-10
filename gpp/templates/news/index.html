@@ -1,5 +1,4 @@
 {% extends 'news/base.html' %}
-{% load tagging_tags %}
 {% block title %}News: {{ title }}{% endblock %}
 {% block news_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
@@ -15,7 +14,6 @@
 
 {% if page.object_list %}
 {% for story in page.object_list %}
-   {% tags_for_object story as story_tags %}
    {% include 'news/story_summary.html' %}
 {% endfor %}
 <div style="clear:right;"></div>

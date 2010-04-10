@@ -12,7 +12,7 @@ of stories with that tag.
    <div class="news-tag-cloud">
    <ul>
    {% for tag in tags %}
-      <li><a href="{% url news-tag_page tag_name=tag.name,page=1 %}">
+      <li><a href="{% url news-tag_page tag_name=tag.name page=1 %}">
          <font size="{{ tag.font_size }}">{{ tag.name }}</font></a></li>
    {% endfor %}
    </ul>
