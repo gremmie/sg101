@@ -19,10 +19,12 @@ $(document).ready(function() {
             dataType: 'html',
             success: function (data, textStatus) {
                 postText.val(''); 
-                $('#comment-list').append(data);
-                var lastLi = $('#comment-list > li:last');
-                lastLi.hide();
-                lastLi.fadeIn(3000);
+                $('#comment-container').append(data);
+                var newDiv = $('#comment-container > div:last');
+                newDiv.hide();
+                var num = $('.comment-list', newDiv);
+                num.html($('#comment-container > div').size() + ".");
+                newDiv.fadeIn(3000);
                 postButton.removeAttr('disabled').val('Post Comment');
                 var count = $('#comment-count');
                 if (count.length) {
