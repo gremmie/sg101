@@ -72,6 +72,7 @@ class EventEntryForm(forms.ModelForm):
     description = forms.CharField(required=False, 
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
+    DATE_FORMAT = '%m/%d/%Y'    # must match the jQuery UI datepicker config
     TIME_FORMAT = '%H:%M'
     DEFAULT_START_TIME = '19:00'
     DEFAULT_END_TIME = '20:00'
@@ -97,7 +98,7 @@ class EventEntryForm(forms.ModelForm):
 
         if len(args) == 0:      # no POST arguments
             if instance is None:
-                init_day = datetime.date.today().strftime('%m/%d/%Y')
+                init_day = datetime.date.today().strftime(self.DATE_FORMAT)
                 if 'start_date' not in initial:
                     initial['start_date'] = init_day
                 if 'end_date' not in initial:
@@ -107,6 +108,8 @@ class EventEntryForm(forms.ModelForm):
                 if 'end_time' not in initial:
                     initial['end_time'] = self.DEFAULT_END_TIME
             else:
+                initial['start_date'] = instance.start_date.strftime(self.DATE_FORMAT)
+                initial['end_date'] = instance.end_date.strftime(self.DATE_FORMAT)
                 if instance.all_day:
                     initial['start_time'] = self.DEFAULT_START_TIME
                     initial['end_time'] = self.DEFAULT_END_TIME

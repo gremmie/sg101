@@ -1,6 +1,6 @@
 $(document).ready(function() {
     $('#id_start_date').datepicker({constrainInput: true, 
-       dateFormat: 'yy-mm-dd',
+       dateFormat: 'mm/dd/yy',
        onClose: function () {
          var end = $('#id_end_date');
          if (this.value > end.val())
@@ -10,7 +10,7 @@ $(document).ready(function() {
        }
        });
     $('#id_end_date').datepicker({constrainInput: true,
-       dateFormat: 'yy-mm-dd',
+       dateFormat: 'mm/dd/yy',
        onClose: function () {
          var start = $('#id_start_date');
          if (this.value < start.val())
