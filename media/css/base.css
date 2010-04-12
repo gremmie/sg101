@@ -113,9 +113,10 @@ ul.app-menu li a:hover {
    color: #fff;
 }
 div.side-block {
-   margin: 0 0 0.5em 0;
-   padding: 2px 2px;
-   width: 100%;
+   margin-bottom:1.2em;
+   margin-left:14px;
+   margin-right:auto;
+   width:160px;
 }
 div.side-block-title {
    margin: 0;
