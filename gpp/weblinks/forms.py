@@ -3,7 +3,7 @@ Forms for the weblinks application.
 """
 
 from django import forms
-from weblinks.models import Link
+from weblinks.models import PendingLink, Link
 
 class SearchForm(forms.Form):
    '''Weblinks search form'''
@@ -26,5 +26,5 @@ class AddLinkForm(forms.ModelForm):
       raise forms.ValidationError('That link already exists in our database.')
 
    class Meta:
-      model = Link
-      exclude = ('user', 'date_added', 'hits', 'is_public')
+      model = PendingLink
+      exclude = ('user', 'date_added')

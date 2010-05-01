@@ -4,6 +4,8 @@ This file contains the automatic admin site definitions for the comment models.
 from django.contrib import admin
 from comments.models import Comment
 from comments.models import CommentFlag
+import bio.badges
+
 
 class CommentAdmin(admin.ModelAdmin):
     fieldsets = (
@@ -25,8 +27,21 @@ class CommentAdmin(admin.ModelAdmin):
     search_fields = ('comment', 'user__username', 'ip_address')
     raw_id_fields = ('user', 'content_type')
 
+
 class CommentFlagAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'flag_date', 'get_comment_url')
+    actions = ('accept_flags', )
+
+    def accept_flags(self, request, qs):
+        """This admin action awards a security pin to the user who reported
+        the comment and then deletes the flagged comment object.
+        """
+        for flag in qs:
+            bio.badges.award_badge(bio.badges.SECURITY_PIN, flag.user)
+            flag.delete()
+
+    accept_flags.short_description = "Accept selected comment flags"
+
 
 admin.site.register(Comment, CommentAdmin)
 admin.site.register(CommentFlag, CommentFlagAdmin)

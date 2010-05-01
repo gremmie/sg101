@@ -6,11 +6,11 @@ from django.db.models import Q
 
 from bio.models import UserProfileFlag
 from comments.models import CommentFlag
-from downloads.models import Download
+from downloads.models import PendingDownload
 from forums.models import FlaggedPost
 from gcalendar.models import Event
 from news.models import PendingStory
-from weblinks.models import Link, FlaggedLink
+from weblinks.models import PendingLink, FlaggedLink
 from shoutbox.models import ShoutFlag
 
 
@@ -25,14 +25,14 @@ def admin_dashboard(user):
     """
     flagged_profiles = UserProfileFlag.objects.count()
     flagged_comments = CommentFlag.objects.count()
-    new_downloads = Download.objects.filter(is_public=False).count()
+    new_downloads = PendingDownload.objects.count()
     flagged_posts = FlaggedPost.objects.count()
     event_requests = Event.objects.filter(
                 Q(status=Event.NEW) | 
                 Q(status=Event.EDIT_REQ) | 
                 Q(status=Event.DEL_REQ)).count()
     new_stories = PendingStory.objects.count()
-    new_links = Link.objects.filter(is_public=False).count()
+    new_links = PendingLink.objects.count()
     broken_links = FlaggedLink.objects.count()
     flagged_shouts = ShoutFlag.objects.count()
 

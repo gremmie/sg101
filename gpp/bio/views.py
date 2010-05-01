@@ -21,6 +21,7 @@ from elsewhere.models import WebsiteForm
 
 from bio.models import UserProfile
 from bio.models import UserProfileFlag
+from bio.models import BadgeOwnership
 from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
@@ -70,12 +71,15 @@ def member_list(request, type='user', page=1):
 @login_required
 def my_profile(request):
     profile = request.user.get_profile()
+    badge_collection = BadgeOwnership.objects.filter(
+            profile=profile).select_related("badge")
 
     return render_to_response('bio/view_profile.html', {
         'subject': request.user, 
         'profile': profile, 
         'hide_email': False,
         'this_is_me': True,
+        'badge_collection': badge_collection,
         }, 
         context_instance = RequestContext(request))
 
@@ -89,15 +93,17 @@ def view_profile(request, username):
         return HttpResponseRedirect(reverse('bio.views.my_profile'))
 
     profile = user.get_profile()
+    hide_email = profile.hide_email
 
-    # work around MySQL's handling of Boolean
-    hide_email = bool(profile.hide_email)
+    badge_collection = BadgeOwnership.objects.filter(
+            profile=profile).select_related("badge")
     
     return render_to_response('bio/view_profile.html', {
         'subject': user, 
         'profile': profile, 
         'hide_email': hide_email,
         'this_is_me': False,
+        'badge_collection': badge_collection,
         }, 
         context_instance = RequestContext(request))
 

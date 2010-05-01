@@ -9,6 +9,7 @@ from forums.models import Topic
 from forums.models import Post
 from forums.models import FlaggedPost
 from forums.models import TopicLastVisit
+import bio.badges
 
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -47,6 +48,17 @@ class PostAdmin(admin.ModelAdmin):
 
 class FlaggedPostAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'flag_date', 'get_post_url')
+    actions = ('accept_flags', )
+
+    def accept_flags(self, request, qs):
+        """This admin action awards a security pin to the user who reported
+        the post and then deletes the flagged post object.
+        """
+        for flag in qs:
+            bio.badges.award_badge(bio.badges.SECURITY_PIN, flag.user)
+            flag.delete()
+
+    accept_flags.short_description = "Accept selected flagged posts"
 
 
 class TopicLastVisitAdmin(admin.ModelAdmin):

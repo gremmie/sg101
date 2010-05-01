@@ -1,7 +1,9 @@
 """This file contains the automatic admin site definitions for the weblinks models"""
+import datetime
 
 from django.contrib import admin
 from weblinks.models import Category
+from weblinks.models import PendingLink
 from weblinks.models import Link
 from weblinks.models import FlaggedLink
 
@@ -9,6 +11,27 @@ from weblinks.models import FlaggedLink
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('title', 'description', 'count')
     readonly_fields = ('count', )
+
+
+class PendingLinkAdmin(admin.ModelAdmin):
+    list_display = ('title', 'url', 'user', 'category', 'date_added')
+    raw_id_fields = ('user', )
+    actions = ('approve_links', )
+
+    def approve_links(self, request, qs):
+        for pending_link in qs:
+            link = Link(category=pending_link.category,
+                    title=pending_link.title,
+                    url=pending_link.url,
+                    description=pending_link.description,
+                    user=pending_link.user,
+                    date_added=datetime.datetime.now(),
+                    hits=0,
+                    is_public=True)
+            link.save()
+            pending_link.delete()
+
+    approve_links.short_description = "Approve selected links"
 
 
 class LinkAdmin(admin.ModelAdmin):
@@ -27,5 +50,6 @@ class FlaggedLinkAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', )
 
 admin.site.register(Category, CategoryAdmin)
+admin.site.register(PendingLink, PendingLinkAdmin)
 admin.site.register(Link, LinkAdmin)
 admin.site.register(FlaggedLink, FlaggedLinkAdmin)

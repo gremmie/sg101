@@ -73,7 +73,6 @@ def add_link(request):
       if add_form.is_valid():
          new_link = add_form.save(commit=False)
          new_link.user = request.user
-         new_link.is_public = False
          new_link.save()
          email_admins('New link for approval', """Hello,
 

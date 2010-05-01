@@ -55,6 +55,16 @@
    {% endif %}
    <tr><th>Elsewhere</th><td>{% elsewhere_links subject %}</td></tr>
    <tr><th>Time Zone</th><td>{{ profile.time_zone }}</td></tr>
+   <tr><th>Badges</th><td>
+         {% if badge_collection %}
+         <table id="badge_summary">
+         <tr><th>Badge</th><th>Qty.</th><th>Name</th><th>Description</th></tr>
+         {% for bo in badge_collection %}
+         <tr><td>{{ bo.badge.html|safe }}</td><td>{{ bo.count }}</td><td>{{ bo.badge.name }}</td><td>{{ bo.badge.description }}</td></tr>
+         {% endfor %}
+         </table>
+         {% endif %}
+      </td></tr>
 </table>
 </div>
 {% if this_is_me %}

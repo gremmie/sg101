@@ -4,11 +4,15 @@ This file contains the admin definitions for the bio application.
 import datetime
 
 from django.contrib import admin
-from bio.models import UserProfile
-from bio.models import UserProfileFlag
+
 import bio.models
 from comments.models import Comment
 from forums.tools import delete_user_posts
+
+
+class BadgeOwnerInline(admin.TabularInline):
+    model = bio.models.BadgeOwnership
+    extra = 1
 
 
 class UserProfileAdmin(admin.ModelAdmin):
@@ -18,6 +22,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'get_status_display', 'status_date')
     list_filter = ('status', )
     date_hierarchy = 'status_date'
+    inlines = (BadgeOwnerInline, )
     actions = (
         'mark_active', 
         'mark_resigned',
@@ -93,5 +98,11 @@ class UserProfileFlagAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'flag_date', 'get_profile_url')
 
 
-admin.site.register(UserProfile, UserProfileAdmin)
-admin.site.register(UserProfileFlag, UserProfileFlagAdmin)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'html', 'order', 'numeric_id', 'description')
+    list_editable = ('order', 'numeric_id')
+
+
+admin.site.register(bio.models.UserProfile, UserProfileAdmin)
+admin.site.register(bio.models.UserProfileFlag, UserProfileFlagAdmin)
+admin.site.register(bio.models.Badge, BadgeAdmin)

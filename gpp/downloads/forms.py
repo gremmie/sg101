@@ -6,7 +6,7 @@ import os
 from django import forms
 from django.conf import settings
 
-from downloads.models import Download
+from downloads.models import PendingDownload
 from downloads.models import AllowedExtension
 
 
@@ -34,7 +34,7 @@ class AddDownloadForm(forms.ModelForm):
         raise forms.ValidationError('The file extension "%s" is not allowed.' % ext)
 
     class Meta:
-        model = Download
+        model = PendingDownload
         fields = ('title', 'category', 'description', 'file')
         
     class Media:

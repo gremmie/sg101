@@ -20,7 +20,7 @@ Each story is also <strong>tagged</strong> with a set of tags. You may also wish
       <ul>
       {% for story in story_set %}
          <li><a href="{{ story.get_absolute_url }}">{{ story.title }}</a> 
-            - {{ story.date_published|date:"F d, Y" }}</li>
+            - {{ story.date_submitted|date:"F d, Y" }}</li>
       {% endfor %}
       </ul>
    {% else %}

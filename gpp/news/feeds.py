@@ -22,7 +22,7 @@ class LatestNewsFeed(Feed):
         return copyright_str()
     
     def items(self):
-        return Story.objects.order_by('-date_published')[:5]
+        return Story.objects.order_by('-date_submitted')[:5]
 
     def item_title(self, item):
         return item.title
@@ -34,7 +34,7 @@ class LatestNewsFeed(Feed):
         return get_full_name(item.submitter)
 
     def item_pubdate(self, item):
-        return item.date_published
+        return item.date_submitted
 
     def item_categories(self, item):
         return (item.category.title, )

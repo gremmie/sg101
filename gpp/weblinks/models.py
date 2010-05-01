@@ -1,6 +1,8 @@
 """
 This module contains the models for the weblinks application.
 """
+import datetime
+
 from django.db import models
 from django.contrib import auth
 
@@ -26,14 +28,21 @@ class PublicLinkManager(models.Manager):
                 is_public=True).select_related()
 
 
-class Link(models.Model):
-    """Model to represent a web link"""
+class LinkBase(models.Model):
+    """Abstract model to aggregate common fields of a web link."""
     category = models.ForeignKey(Category)
     title = models.CharField(max_length=128)
     url = models.URLField(verify_exists=False, db_index=True)
     description = models.TextField(blank=True)
     user = models.ForeignKey(auth.models.User)
-    date_added = models.DateField(auto_now_add=True)
+    date_added = models.DateField()
+
+    class Meta:
+        abstract = True
+
+
+class Link(LinkBase):
+    """Model to represent a web link"""
     hits = models.IntegerField(default=0)
     is_public = models.BooleanField(default=False, db_index=True)
 
@@ -50,6 +59,22 @@ class Link(models.Model):
     @models.permalink
     def get_absolute_url(self):
         return ('weblinks-link_detail', [str(self.id)])
+
+
+class PendingLink(LinkBase):
+    """This model represents links that users submit. They must be approved by
+    an admin before they become visible on the site.
+    """
+    class Meta:
+        ordering = ('date_added', )
+
+    def __unicode__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_added = datetime.datetime.now()
+        super(PendingLink, self).save(*args, **kwargs)
 
 
 class FlaggedLinkManager(models.Manager):

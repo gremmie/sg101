@@ -359,3 +359,9 @@ table.forum-topic-table .info {
 #forums-post-list dd.even {
    background-color:#e5ecf9;
 }
+#badge_summary {
+   border-collapse:collapse;
+}
+#badge_summary th, #badge_summary td {
+   border: 1px solid teal;
+}

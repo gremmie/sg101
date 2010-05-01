@@ -25,32 +25,29 @@ class Category(models.Model):
         ordering = ('title', )
 
 
-class PendingStory(models.Model):
-    """Stories submitted by users are held pending admin approval"""
+class StoryBase(models.Model):
+    """Abstract model to collect common fields."""
     title = models.CharField(max_length=255)
     submitter = models.ForeignKey(User)
     category = models.ForeignKey(Category)
     short_text = models.TextField()
     long_text = models.TextField(blank=True)
-    date_submitted = models.DateTimeField(auto_now_add=True, db_index=True)
+    date_submitted = models.DateTimeField(db_index=True)
     allow_comments = models.BooleanField(default=True)
-    approved = models.BooleanField(default=False)
     tags = TagField()
 
+    class Meta:
+        abstract = True
+
+
+class PendingStory(StoryBase):
+    """Stories submitted by users are held pending admin approval"""
+
     def save(self, *args, **kwargs):
-        if self.approved:
-            Story.objects.create(title=self.title,
-                    submitter=self.submitter,
-                    category=self.category,
-                    short_text=self.short_text,
-                    long_text=self.long_text,
-                    allow_comments=self.allow_comments,
-                    date_published=datetime.datetime.now(),
-                    tags=self.tags)
-            self.delete()
-            cache.delete('home_news')
-        else:
-            super(PendingStory, self).save(*args, **kwargs)
+        if not self.pk:
+            self.date_submitted = datetime.datetime.now()
+
+        super(PendingStory, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return self.title
@@ -60,16 +57,8 @@ class PendingStory(models.Model):
         verbose_name_plural = 'Pending Stories'
 
 
-class Story(models.Model):
+class Story(StoryBase):
     """Model for news stories"""
-    title = models.CharField(max_length=255)
-    submitter = models.ForeignKey(User)
-    category = models.ForeignKey(Category)
-    short_text = models.TextField()
-    long_text = models.TextField(blank=True)
-    allow_comments = models.BooleanField(default=True)
-    date_published = models.DateTimeField(db_index=True)
-    tags = TagField()
 
     @models.permalink
     def get_absolute_url(self):
@@ -79,13 +68,13 @@ class Story(models.Model):
         return self.title
 
     class Meta:
-        ordering = ('-date_published', )
+        ordering = ('-date_submitted', )
         verbose_name_plural = 'Stories'
 
     def can_comment_on(self):
         now = datetime.datetime.now()
-        delta = now - self.date_published
-        return delta.days < 30
+        delta = now - self.date_submitted
+        return self.allow_comments and delta.days < 30
 
     def save(self, *args, **kwargs):
         super(Story, self).save(*args, **kwargs)

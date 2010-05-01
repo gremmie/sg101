@@ -161,7 +161,6 @@ def add(request):
             dl = form.save(commit=False)
             dl.user = request.user
             dl.ip_address = request.META.get('REMOTE_ADDR', None)
-            dl.is_public = False
             dl.save()
             email_admins('New download for approval', """Hello,
 

@@ -7,7 +7,7 @@
 <h4><a href="{{ story.get_absolute_url }}">{{ story.title }}</a></h4>
 {% endif %}
 <div class="news-details">
-   Submitted by {{ story.submitter.username }} on {{ story.date_published|date:"F d, Y" }}.
+   Submitted by {{ story.submitter.username }} on {{ story.date_submitted|date:"F d, Y" }}.
 </div>
 <a href="{% url news.views.category category=story.category.id page=1 %}">
 <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 

@@ -57,7 +57,7 @@ def index(request, page=1):
 #######################################################################
 
 def archive_index(request):
-   dates = Story.objects.dates('date_published', 'month', order='DESC')
+   dates = Story.objects.dates('date_submitted', 'month', order='DESC')
    return render_to_response('news/archive_index.html', {
       'title': 'News Archive',
       'dates': dates, 
@@ -68,7 +68,7 @@ def archive_index(request):
 #######################################################################
 
 def archive(request, year, month, page=1):
-   stories = Story.objects.filter(date_published__year=year, date_published__month=month)
+   stories = Story.objects.filter(date_submitted__year=year, date_submitted__month=month)
    paginator = create_paginator(stories)
    try:
       the_page = paginator.page(int(page))
@@ -144,7 +144,7 @@ def search(request, page=1):
    stories = stories.filter(
          Q(title__icontains=query_text) |
          Q(short_text__icontains=query_text) |
-         Q(long_text__icontains=query_text)).order_by('-date_published')
+         Q(long_text__icontains=query_text)).order_by('-date_submitted')
 
    paginator = create_paginator(stories)
    try:

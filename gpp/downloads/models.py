@@ -45,16 +45,44 @@ class PublicDownloadManager(models.Manager):
                 is_public=True).select_related()
 
 
-class Download(models.Model):
-    """Model to represent a download."""
+class DownloadBase(models.Model):
+    """Abstract model to collect common download fields."""
     title = models.CharField(max_length=128)
     category = models.ForeignKey(Category)
     description = models.TextField()
     html = models.TextField(blank=True)
     file = models.FileField(upload_to=download_path)
     user = models.ForeignKey(User)
-    date_added = models.DateTimeField(auto_now_add=True)
+    date_added = models.DateTimeField()
     ip_address = models.IPAddressField('IP Address')
+
+    class Meta:
+        abstract = True
+
+    def size(self):
+        return filesizeformat(self.file.size)
+
+
+class PendingDownload(DownloadBase):
+    """This model represents pending downloads created by users. These pending
+    downloads must be approved by an admin before they turn into "real"
+    Downloads and are visible on site.
+    """
+    class Meta:
+        ordering = ('date_added', )
+
+    def __unicode__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_added = datetime.datetime.now()
+        self.html = site_markup(self.description)
+        super(PendingDownload, self).save(*args, **kwargs)
+
+
+class Download(DownloadBase):
+    """Model to represent a download."""
     hits = models.IntegerField(default=0)
     average_score = models.FloatField(default=0.0)
     total_votes = models.IntegerField(default=0)
@@ -82,9 +110,6 @@ class Download(models.Model):
         self.total_votes += 1
         self.average_score = total_score / self.total_votes
         return self.average_score
-
-    def size(self):
-        return filesizeformat(self.file.size)
 
 
 class AllowedExtensionManager(models.Manager):

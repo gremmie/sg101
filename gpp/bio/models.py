@@ -23,6 +23,33 @@ USER_STATUS_CHOICES = (
     (STA_SPAMMER, "Spammer"),
 )
 
+
+class Badge(models.Model):
+    """This model represents badges that users can earn."""
+    image = models.ImageField(upload_to='badges')
+    name = models.CharField(max_length=64)
+    description = models.TextField(blank=True)
+    order = models.IntegerField()
+    numeric_id = models.IntegerField(db_index=True)
+
+    class Meta:
+        ordering = ('order', )
+
+    def __unicode__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return self.image.url
+
+    def html(self):
+        """Returns a HTML img tag representation of the badge."""
+        if self.image:
+            return u'<img src="%s" alt="%s" title="%s" />' % (
+                    self.get_absolute_url(), self.name, self.name)
+        return u''
+    html.allow_tags = True
+
+
 def avatar_file_path_for_user(username, filename):
     return os.path.join(settings.AVATAR_DIR, 'users', username, filename)
 
@@ -52,6 +79,7 @@ class UserProfile(models.Model):
     status = models.IntegerField(default=STA_ACTIVE,
             choices=USER_STATUS_CHOICES)
     status_date = models.DateTimeField(auto_now_add=True)
+    badges = models.ManyToManyField(Badge, through="BadgeOwnership")
 
     def __unicode__(self):
         return self.user.username
@@ -70,6 +98,13 @@ class UserProfile(models.Model):
     def get_absolute_url(self):
         return ('bio-view_profile', (), {'username': self.user.username})
 
+    def badge_ownership(self):
+        if hasattr(self, '_badges'):
+            return self._badges
+        self._badges = BadgeOwnership.objects.filter(profile=self).select_related(
+                "badge")
+        return self._badges
+
 
 class UserProfileFlag(models.Model):
     """This model represents a user flagging a profile as inappropriate."""
@@ -87,3 +122,27 @@ class UserProfileFlag(models.Model):
     def get_profile_url(self):
         return '<a href="%s">Profile</a>' % self.profile.get_absolute_url()
     get_profile_url.allow_tags = True
+
+
+class BadgeOwnership(models.Model):
+    """This model represents the ownership of badges by users."""
+    profile = models.ForeignKey(UserProfile)
+    badge = models.ForeignKey(Badge)
+    count = models.IntegerField(default=1)
+
+    class Meta:
+        verbose_name_plural = "badge ownership"
+        ordering = ('badge__order', )
+
+    def __unicode__(self):
+        if self.count == 1:
+            return u"%s owns 1 %s" % (self.profile.user.username,
+                    self.badge.name)
+        else:
+            return u"%s owns %d %s badges" % (self.profile.user.username,
+                    self.count, self.badge.name)
+
+    def badge_count_str(self):
+        if self.count == 1:
+            return u"1 %s" % self.badge.name
+        return u"%d %ss" % (self.count, self.badge.name)

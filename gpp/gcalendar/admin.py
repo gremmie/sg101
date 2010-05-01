@@ -7,6 +7,7 @@ from django.conf.urls.defaults import *
 
 from gcalendar.models import Event
 from gcalendar.admin_views import google_sync
+import bio.badges
 
 
 class EventAdmin(admin.ModelAdmin):
@@ -46,6 +47,9 @@ class EventAdmin(admin.ModelAdmin):
                 event.status = self.pending_states[event.status]
                 event.save()
                 count += 1
+
+                if event.status == Event.NEW_APRV:
+                    bio.badges.award_badge(bio.badges.CALENDAR_PIN, event.user)
 
         msg = "1 event was" if count == 1 else "%d events were" % count
         msg += " approved."
