@@ -30,7 +30,7 @@ from news.forms import AddNewsForm
 from news.forms import SearchNewsForm
 from news.forms import SendStoryForm
 
-NEWS_PER_PAGE = 2
+NEWS_PER_PAGE = 5
 
 #######################################################################
 

@@ -1,8 +1,6 @@
-{% load tagging_tags %}
 {% if stories %}
 <h2>Current News Stories</h2>
 {% for story in stories %}
-   {% tags_for_object story as story_tags %}
    {% include 'news/story_summary.html' %}
 {% endfor %}
 <hr />

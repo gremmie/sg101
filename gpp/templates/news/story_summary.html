@@ -1,3 +1,4 @@
+{% load tagging_tags %}
 {% load comment_tags %}
 {% get_comment_count for story as comment_count %}
 <div class="news-story-container">
@@ -32,11 +33,12 @@ Category: <a href="{% url news.views.category category=story.category.id page=1 
    alt="Send this story to a friend" title="Send this story to a friend" /></a>
 {% endif %}
 </p>
-{% if story.tags %}
+{% tags_for_object story as story_tags %}
+{% if story_tags %}
 <div class="news-tags">
    <img src="{{ MEDIA_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
    <ul>
-      {% for tag in story.tags %}
+      {% for tag in story_tags %}
          <li><a href="{% url news-tag_page tag_name=tag page=1 %}">{{ tag }}</a></li>
       {% endfor %}
    </ul>

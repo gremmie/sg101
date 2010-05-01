@@ -25,8 +25,6 @@
    {{ story.short_text|safe }}
    {{ story.long_text|safe }}
    <br clear="all" />
-   {% tags_for_object story as story_tags %}
-   {% if story_tags %}
    <hr />
    <p>
    Category: <a href="{% url news.views.category category=story.category.id page=1 %}">{{ story.category.title }}</a>
@@ -37,6 +35,8 @@
       alt="Send this story to a friend" title="Send this story to a friend" /></a>
 {% endif %}
    </p>
+   {% tags_for_object story as story_tags %}
+   {% if story_tags %}
    <div class="news-tags">
       <img src="{{ MEDIA_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
       <ul>
