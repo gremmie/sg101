@@ -6,6 +6,7 @@ import datetime
 from django.contrib import admin
 
 import bio.models
+import bio.badges
 from comments.models import Comment
 from forums.tools import delete_user_posts
 
@@ -96,6 +97,20 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 class UserProfileFlagAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'flag_date', 'get_profile_url')
+    actions = ('accept_flags', )
+
+    def accept_flags(self, request, qs):
+        """This action awards a security pin to the user that reported the
+        profile and then deletes the flag.
+        """
+        for flag in qs:
+            bio.badges.award_badge(bio.badges.SECURITY_PIN, flag.user)
+            flag.delete()
+
+    accept_flags.short_description = "Accept selected flagged profiles"
+
+
+
 
 
 class BadgeAdmin(admin.ModelAdmin):
