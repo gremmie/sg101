@@ -238,6 +238,12 @@ logging.basicConfig(
         format='%(asctime)s %(levelname)s %(message)s',
         level=local_settings.LOG_LEVEL)
 
+#######################################################################
+# Django Debug Toolbar 
+#######################################################################
+
+if DEBUG:
+    DEBUG_TOOLBAR_CONFIG = local_settings.DEBUG_TOOLBAR_CONFIG
 
 #######################################################################
 # URL's of 3rd party Javascript and CSS files.

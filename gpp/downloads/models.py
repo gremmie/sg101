@@ -119,7 +119,7 @@ class AllowedExtensionManager(models.Manager):
 
 class AllowedExtension(models.Model):
     """Model to represent the list of allowed file extensions."""
-    extension = models.CharField(max_length=8)
+    extension = models.CharField(max_length=8, help_text="e.g. .txt")
 
     objects = AllowedExtensionManager()
 

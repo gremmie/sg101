@@ -14,14 +14,17 @@ import bio.badges
 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'position', )
+    list_editable = ('position', )
     prepopulated_fields = { 'slug': ('name', ) }
     save_on_top = True
 
 
 class ForumAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'position', 'topic_count', 'post_count')
+    list_editable = ('position', )
     prepopulated_fields = { 'slug': ('name', ) }
     raw_id_fields = ('last_post', )
+    ordering = ('category', )
     save_on_top = True
 
 

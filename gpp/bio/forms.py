@@ -40,7 +40,9 @@ class EditUserProfileForm(forms.ModelForm):
 
     class Meta:
         model = UserProfile
-        exclude = ('user', 'avatar', 'profile_html', 'signature_html', 'forum_post_count')
+        fields = ('location', 'birthday', 'occupation', 'interests',
+            'profile_text', 'hide_email', 'signature', 'time_zone',
+            'use_24_time', )
 
     class Media:
         css = {

@@ -101,5 +101,7 @@ class Options(models.Model):
     def __unicode__(self):
         return self.user.username
 
+    class Meta:
+        verbose_name_plural = "Options"
 
-# vim: ts=4 sw=4
+
