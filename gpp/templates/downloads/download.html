@@ -1,10 +1,11 @@
 {% load comment_tags %}
 {% get_comment_count for download as comment_count %}
 <dt>
-<a href="{% url downloads-download download.id %}">{{ download.title }}</a>
+{{ download.title }}
 </dt>
 <dd>
 {{ download.html|safe }}
+<form action="{% url downloads-download download.id %}" method="post">{% csrf_token %}
 <table>
 <tr>
     <th>Added By:</th>
@@ -14,12 +15,14 @@
 </tr>
 <tr>
     <th>Category:</th><td>{{ download.category.title }}</td>
-    <th>Hits:</th><td>{{ download.hits }}</td>
+    <th>Downloads:</th><td>{{ download.hits }}</td>
 </tr>
 <tr>
     <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
     <th><img src="{{ MEDIA_URL }}icons/comments.png" alt="Comments" title="Comments" />
        <a href="{% url downloads-details download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
 </tr>
+<tr><td><input type="submit" value="Download Now" /></td></tr>
 </table>
+</form>
 </dd>

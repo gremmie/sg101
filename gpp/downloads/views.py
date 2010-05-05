@@ -115,6 +115,7 @@ def rating(request):
 #######################################################################
 
 @login_required
+@require_POST
 def download(request, id):
     download = Download.public_objects.get(pk=id)
     if download is None:
@@ -143,6 +144,7 @@ def details(request, id):
 #######################################################################
 
 @login_required
+@require_POST
 def random_download(request):
     ids = Download.public_objects.values_list('id', flat=True)
     if not ids:

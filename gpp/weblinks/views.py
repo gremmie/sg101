@@ -140,12 +140,14 @@ def _visit_link(request, link):
 
 #######################################################################
 
+@require_POST
 def visit(request, link_id):
    link = get_object_or_404(Link, pk = link_id)
    return _visit_link(request, link)
 
 #######################################################################
 
+@require_POST
 def random_link(request):
    ids = Link.public_objects.values_list('id', flat=True)
    if not ids:
