@@ -4,7 +4,7 @@ Markup related utitlities useful for the entire project.
 import markdown as _markdown
 from django.utils.encoding import force_unicode
 
-from smiley import Smilify
+from smiley import SmilifyMarkdown
 
 class Markdown(object):
     """
@@ -42,10 +42,10 @@ class SiteMarkup(object):
     """
     def __init__(self):
         self.md = Markdown()
-        self.smiley = Smilify()
+        self.smiley = SmilifyMarkdown()
 
     def convert(self, s):
-        return self.md.convert(self.smiley.markdown(s))
+        return self.md.convert(self.smiley.convert(s))
 
 
 def site_markup(s):

@@ -19,18 +19,6 @@ def smiley_html(value, autoescape=False):
 smiley_html.needs_autoescape = True
 
 
-@register.filter
-@stringfilter
-def smiley_markdown(value, autoescape=False):
-    """
-    A filter to "smilify" text by replacing text with Markdown image notation 
-    for smilies.
-    """
-    from smiley import smilify_markdown
-    return mark_safe(smilify_markdown(value, autoescape=autoescape))
-smiley_markdown.needs_autoescape = True
-
-
 @register.inclusion_tag('smiley/smiley_farm.html')
 def smiley_farm():
     """An inclusion tag that displays all of the smilies in clickable form."""

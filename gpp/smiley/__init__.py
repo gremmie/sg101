@@ -1,5 +1,5 @@
 """
-Smiley class and function.
+Smiley classes and functions.
 """
 import re
 
@@ -9,22 +9,18 @@ from django.utils.html import conditional_escape
 from smiley.models import Smiley
 
 
-class Smilify(object):
+class SmilifyHtml(object):
     """
-    A class to "smilify" text by replacing text with either HTML img tags 
-    or markdown syntax for smiley images.
+    A class to "smilify" text by replacing text with HTML img tags for smiley
+    images.
     """
-    HTML = 0
-    MARKDOWN = 1
-
     def __init__(self):
         self.map = Smiley.objects.get_smiley_map()
 
-    def _convert(self, value, rep_index, autoescape=False):
+    def convert(self, value, autoescape=False):
         """
-        Converts and returns the supplied text with either the
-        HTML or markdown version of the smileys according to the
-        output parameter.
+        Converts and returns the supplied text with the HTML version of the
+        smileys.
         """
         if not autoescape or isinstance(value, SafeData):
             esc = lambda x: x
@@ -34,39 +30,35 @@ class Smilify(object):
         words = value.split()
         for i, word in enumerate(words):
             if word in self.map:
-                words[i] = self.map[word][rep_index]
+                words[i] = self.map[word]
             else:
                 words[i] = esc(words[i])
         return u' '.join(words)
 
-    def html(self, value, autoescape=False):
-        """
-        Converts the supplied text by replacing the smiley codes with
-        HTML img tags.
-        """
-        return self._convert(value, self.HTML, autoescape=autoescape)
 
-    def markdown(self, value, autoescape=False):
+class SmilifyMarkdown(object):
+    """
+    A class to "smilify" text by replacing text with Markdown image syntax for
+    smiley images.
+    """
+    def __init__(self):
+        self.regexes = Smiley.objects.get_smiley_regexes()
+
+    def convert(self, s):
         """
-        Converts the supplied text by replacing the smiley codes with
-        markdown image syntax.
+        Returns a string copy of the input s that has the smiley codes replaced
+        with Markdown for smiley images.
         """
-        return self._convert(value, self.MARKDOWN, autoescape=autoescape)
-        
+        for regex, repl in self.regexes:
+            s = regex.sub(repl, s)
+        return s
+
 
 def smilify_html(value, autoescape=False):
     """
     A convenience function to "smilify" text by replacing text with HTML
     img tags of smilies.
     """
-    s = Smilify()
-    return s.html(value, autoescape=autoescape)
+    s = SmilifyHtml()
+    return s.convert(value, autoescape=autoescape)
 
-
-def smilify_markdown(value, autoescape=False):
-    """
-    A convenience function to "smilify" text by replacing text with 
-    markdown syntax for the images of smilies.
-    """
-    s = Smilify()
-    return s.markdown(value, autoescape=autoescape)
