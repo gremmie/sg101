@@ -34,3 +34,8 @@ urlpatterns += patterns('forums.subscriptions',
     url(r'^subscriptions/(\d+)/$', 'subscription_status', name='forums-subscription_status'),
     url(r'^unsubscribe/(\d+)/$', 'unsubscribe_topic', name='forums-unsubscribe_topic'),
 )
+
+urlpatterns += patterns('forums.spam',
+    url(r'^spammer/(\d+)/$', 'spammer', name='forums-spammer'),
+    url(r'^spammer/nailed/(\d+)/$', 'spammer_nailed', name='forums-spammer_nailed'),
+)

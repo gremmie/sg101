@@ -49,6 +49,10 @@
       {% if can_moderate %}
       <a href="#" class="post-delete" id="dp-{{ post.id }}"
          title="Delete this post"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" /></a>
+         {% if post.user != user %}
+         <a href="{% url forums-spammer post.id %}" title="This is spam">
+            <img src="{{ MEDIA_URL }}icons/exclamation.png" alt="Spammer" /></a>
+         {% endif %}
       {% endif %}
       </div>
    </td>
