@@ -5,7 +5,6 @@ Bulletins allow the sited admins to display and manage important notices for the
 import datetime
 from django.db import models
 from django.db.models import Q
-from django.core.cache import cache
 
 
 class BulletinManager(models.Manager):
@@ -37,9 +36,3 @@ class Bulletin(models.Model):
 
     def __unicode__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        super(Bulletin, self).save(*args, **kwargs)
-        cache.delete('home_bulletins')
-
-     

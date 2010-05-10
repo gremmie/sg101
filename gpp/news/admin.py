@@ -5,7 +5,6 @@ import datetime
 
 from django.contrib import admin
 from django.conf import settings
-from django.core.cache import cache
 
 from news.models import PendingStory
 from news.models import Story
@@ -31,7 +30,6 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     tags=pending_story.tags)
             story.save()
             pending_story.delete()
-            cache.delete('home_news')
 
     approve_story.short_description = "Approve selected pending stories"
 

@@ -5,7 +5,6 @@ Models for the news application.
 import datetime
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.cache import cache
 from tagging.fields import TagField
 
 
@@ -75,8 +74,3 @@ class Story(StoryBase):
         now = datetime.datetime.now()
         delta = now - self.date_submitted
         return self.allow_comments and delta.days < 30
-
-    def save(self, *args, **kwargs):
-        super(Story, self).save(*args, **kwargs)
-        cache.delete('home_news')
-
