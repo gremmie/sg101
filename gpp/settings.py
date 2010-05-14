@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     'elsewhere',
     'tagging',
     'accounts',
+    'antispam',
     'bio',
     'bulletins',
     'comments',
