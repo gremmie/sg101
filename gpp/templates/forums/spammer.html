@@ -3,7 +3,7 @@
 {% block content %}
 <h2>Deactivate Spammer: {{ post.user.username }}</h2>
 
-{% if can_moderate %}
+{% if can_moderate and can_deactivate %}
 <p>Please confirm that you wish to mark the user
 <a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a> as a
 spammer based on <a href="{% url forums-goto_post post.id %}">this post</a>. 
@@ -15,7 +15,12 @@ you wish to proceed!</strong></p>
    <input type="submit" value="Deactivate {{ post.user.username }}" />
 </form>
 {% else %}
-<p>Sorry, but you don't have permission to deactivate spammers in that post's forum.</p>
+   {% if can_moderate %}
+   <p>That user is no longer a stranger, and can't be deactivated like this. Please
+   contact the site admin if that user is now posting spam.</p>
+   {% else %}
+   <p>Sorry, but you don't have permission to deactivate spammers in that post's forum.</p>
+   {% endif %}
 {% endif %}
 <hr />
 <p>

@@ -18,13 +18,16 @@ from core.markup import site_markup
 from comments.forms import CommentForm
 from comments.models import Comment
 from comments.models import CommentFlag
+import antispam
+import antispam.utils
+
 
 @login_required
 @require_POST
 def post_comment(request):
     """
     This function handles the posting of comments. If successful, returns
-    the comment text as the response. This function is mean't to be the target
+    the comment text as the response. This function is meant to be the target
     of an AJAX post.
     """
     # Look up the object we're trying to comment about
@@ -66,9 +69,13 @@ def post_comment(request):
     if not form.is_valid():
         return HttpResponseBadRequest('Invalid comment; missing parameters?')
 
-    # else, create and save the comment
-
     comment = form.get_comment_object(request.user, request.META.get("REMOTE_ADDR", None))
+
+    # Check for spam 
+
+    if antispam.utils.spam_check(request, comment.comment):
+        return HttpResponseForbidden(antispam.BUSTED_MESSAGE)
+
     comment.save()
 
     # return the rendered comment

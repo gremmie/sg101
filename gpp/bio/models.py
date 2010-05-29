@@ -12,8 +12,17 @@ from django.core.cache import cache
 
 from core.markup import SiteMarkup
 
-
-(STA_ACTIVE, STA_RESIGNED, STA_REMOVED, STA_SUSPENDED, STA_SPAMMER) = range(5)
+# These are the secondary user status enumeration values. 
+(STA_ACTIVE,        # User is a full member in good standing.
+ STA_RESIGNED,      # User has voluntarily asked to be removed.
+ STA_REMOVED,       # User was removed for bad behavior.
+ STA_SUSPENDED,     # User is temporarily suspended; e.g. a stranger tripped
+                    # the spam filter.
+ STA_SPAMMER,       # User has been removed for spamming.
+ STA_STRANGER,      # New member, isn't fully trusted yet. Their comments and
+                    # forum posts are scanned for spam. They can have their
+                    # accounts deactivated by moderators for spamming.
+ ) = range(6)
 
 USER_STATUS_CHOICES = (
     (STA_ACTIVE, "Active"),
@@ -21,6 +30,7 @@ USER_STATUS_CHOICES = (
     (STA_REMOVED, "Removed"),
     (STA_SUSPENDED, "Suspended"),
     (STA_SPAMMER, "Spammer"),
+    (STA_STRANGER, "Stranger")
 )
 
 
@@ -76,7 +86,7 @@ class UserProfile(models.Model):
             default='US/Pacific')
     use_24_time = models.BooleanField(default=False)
     forum_post_count = models.IntegerField(default=0)
-    status = models.IntegerField(default=STA_ACTIVE,
+    status = models.IntegerField(default=STA_STRANGER,
             choices=USER_STATUS_CHOICES)
     status_date = models.DateTimeField(auto_now_add=True)
     badges = models.ManyToManyField(Badge, through="BadgeOwnership")
@@ -104,6 +114,18 @@ class UserProfile(models.Model):
         self._badges = BadgeOwnership.objects.filter(profile=self).select_related(
                 "badge")
         return self._badges
+
+    def is_stranger(self):
+        """Returns True if this user profile status is STA_STRANGER."""
+        return self.status == STA_STRANGER
+
+    def user_is_active(self):
+        """Returns the profile's user is_active status. This function exists
+        for the admin.
+        """
+        return self.user.is_active
+    user_is_active.boolean = True
+    user_is_active.short_description = "Is Active"
 
 
 class UserProfileFlag(models.Model):

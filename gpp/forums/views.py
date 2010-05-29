@@ -31,6 +31,9 @@ from forums.unread import get_forum_unread_status, get_topic_unread_status, \
         get_post_unread_status, get_unread_topics
 
 from bio.models import UserProfile
+import antispam
+import antispam.utils
+
 #######################################################################
 
 TOPICS_PER_PAGE = 50
@@ -225,6 +228,9 @@ def new_topic(request, slug):
     if request.method == 'POST':
         form = NewTopicForm(request.user, forum, request.POST)
         if form.is_valid():
+            if antispam.utils.spam_check(request, form.cleaned_data['body']):
+                return HttpResponseRedirect(reverse('antispam-suspended'))
+
             topic = form.save(request.META.get("REMOTE_ADDR"))
             _bump_post_count(request.user)
             return HttpResponseRedirect(reverse('forums-new_topic_thanks',
@@ -267,6 +273,8 @@ def quick_reply_ajax(request):
     if form.is_valid():
         if not _can_post_in_topic(form.topic, request.user):
             return HttpResponseForbidden("You don't have permission to post in this topic.")
+        if antispam.utils.spam_check(request, form.cleaned_data['body']):
+            return HttpResponseForbidden(antispam.BUSTED_MESSAGE)
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         post.unread = True
@@ -342,6 +350,8 @@ def edit_post(request, id):
     if request.method == "POST":
         form = PostForm(request.POST, instance=post)
         if form.is_valid():
+            if antispam.utils.spam_check(request, form.cleaned_data['body']):
+                return HttpResponseRedirect(reverse('antispam-suspended'))
             post = form.save(commit=False)
             post.touch()
             post.save()
@@ -462,6 +472,8 @@ def new_post(request, topic_id):
         if request.method == 'POST':
             form = PostForm(request.POST)
             if form.is_valid():
+                if antispam.utils.spam_check(request, form.cleaned_data['body']):
+                    return HttpResponseRedirect(reverse('antispam-suspended'))
                 post = form.save(commit=False)
                 post.topic = topic
                 post.user = request.user

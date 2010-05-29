@@ -365,3 +365,9 @@ table.forum-topic-table .info {
 #badge_summary th, #badge_summary td {
    border: 1px solid teal;
 }
+.error a {
+   text-decoration: underline;
+}
+.stranger {
+   background:#FFF6BF;
+}

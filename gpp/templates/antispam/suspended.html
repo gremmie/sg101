@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Account Suspension Status{% endblock %}
+{% block content %}
+<h2>Account Suspension Status</h2>
+{% if not is_active %}
+<p class="error">
+Your post has tripped our spam filter. Your account has been suspended pending
+a review of your post. If this was a mistake, we sincerely apologize and promise
+your account will be restored soon. We regret having to take this drastic measure, but
+the high volume of spam we recieve has forced us to take this action. If you have any
+questions, please feel to <a href="{% url contact-form %}">contact us</a>.
+</p>
+{% else %}
+<p class="success">
+Your account has been restored and you should be able to make comments and forum
+posts. We apologize for any inconvenience.
+</p>
+{% endif %}
+{% endblock %}

@@ -20,7 +20,8 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__first_name', 'user__last_name',
             'user__email')
     exclude = ('profile_html', 'signature_html')
-    list_display = ('__unicode__', 'get_status_display', 'status_date')
+    list_display = ('__unicode__', 'user_is_active', 'get_status_display', 'status_date')
+    readonly_fields = ('status', 'status_date')
     list_filter = ('status', )
     date_hierarchy = 'status_date'
     inlines = (BadgeOwnerInline, )
@@ -30,6 +31,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         'mark_removed',
         'mark_suspended',
         'mark_spammer',
+        'mark_stranger',
     )
 
     def get_status_display(self, obj):
@@ -44,7 +46,8 @@ class UserProfileAdmin(admin.ModelAdmin):
         """
         now = datetime.datetime.now()
         for profile in qs:
-            profile.user.is_active = status == bio.models.STA_ACTIVE
+            profile.user.is_active = (status == bio.models.STA_ACTIVE or
+                    status == bio.models.STA_STRANGER)
             profile.user.save()
             profile.status = status
             profile.status_date = now
@@ -93,6 +96,13 @@ class UserProfileAdmin(admin.ModelAdmin):
             Comment.objects.filter(user=profile.user).delete()
             delete_user_posts(profile.user)
     mark_spammer.short_description = "Mark selected users as spammers"
+
+    def mark_stranger(self, request, qs):
+        """
+        Marks users as strangers. Updates their profile status to STA_STRANGER.
+        """
+        self.mark_user_status(request, qs, bio.models.STA_STRANGER)
+    mark_stranger.short_description = "Mark selected users as strangers"
 
 
 class UserProfileFlagAdmin(admin.ModelAdmin):

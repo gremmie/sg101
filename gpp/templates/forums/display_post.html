@@ -23,7 +23,7 @@
       {% endif %}
    </td>
    <td class="forum-post-body">
-      <div class="forum-post-info quiet">
+      <div class="forum-post-info quiet{% if post.user_profile.is_stranger %} stranger{% endif %}">
       {% if post.unread %}<img src="{{ MEDIA_URL }}icons/new.png" alt="New" title="New" />{% endif %}
       <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
          Posted on {% forum_date post.creation_date user %}
@@ -49,7 +49,11 @@
       {% if can_moderate %}
       <a href="#" class="post-delete" id="dp-{{ post.id }}"
          title="Delete this post"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" /></a>
-         {% if post.user != user %}
+         {% if post.user != user and post.user_profile.is_stranger %}
+         <br />
+         <span class="quiet">Stranger options:</span>
+         <a href="{% url forums-stranger post.id %}" title="This stranger seems legitimate">
+            <img src="{{ MEDIA_URL }}icons/tick.png" alt="Acquaintance" /></a>
          <a href="{% url forums-spammer post.id %}" title="This is spam">
             <img src="{{ MEDIA_URL }}icons/exclamation.png" alt="Spammer" /></a>
          {% endif %}

@@ -38,4 +38,5 @@ urlpatterns += patterns('forums.subscriptions',
 urlpatterns += patterns('forums.spam',
     url(r'^spammer/(\d+)/$', 'spammer', name='forums-spammer'),
     url(r'^spammer/nailed/(\d+)/$', 'spammer_nailed', name='forums-spammer_nailed'),
+    url(r'^stranger/(\d+)/$', 'stranger', name='forums-stranger'),
 )

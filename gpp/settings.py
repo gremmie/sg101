@@ -81,8 +81,9 @@ if DEBUG:
         'django.contrib.messages.middleware.MessageMiddleware',
         'debug_toolbar.middleware.DebugToolbarMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
-        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+        'gpp.core.middleware.InactiveUserMiddleware',
         'gpp.forums.middleware.WhosOnline',
+        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     )
 else:
     MIDDLEWARE_CLASSES = (
@@ -91,8 +92,9 @@ else:
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
-        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+        'gpp.core.middleware.InactiveUserMiddleware',
         'gpp.forums.middleware.WhosOnline',
+        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     )
 
 ROOT_URLCONF = 'gpp.urls'

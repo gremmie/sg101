@@ -19,4 +19,5 @@ class SpamPhrase(models.Model):
 
     def save(self, *args, **kwargs):
         cache.delete(SPAM_PHRASE_KEY)
+        self.phrase = self.phrase.lower()
         super(SpamPhrase, self).save(*args, **kwargs)

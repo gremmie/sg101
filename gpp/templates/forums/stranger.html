@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Promote Stranger: {{ post.user.username }}{% endblock %}
+{% block content %}
+<h2>Promote Stranger: {{ post.user.username }}</h2>
+
+{% if can_moderate and can_promote %}
+<p>All new users are considered &quot;<em>strangers</em>&quot; until approved by a moderator. 
+Strangers have their posts automatically scanned for spam phrases. Moderators can also instantly 
+deactivate stranger accounts if the spam filter does not catch them. If you promote a stranger, 
+these checks (which are somewhat expensive for the webserver) will no longer be performed, 
+and moderators won't be able to deactivate them on the spot. You may wish to wait until the user 
+has posted at least 10 times before making your decision.</p>
+<p>Please confirm that you wish to promote the new user
+<a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a> from
+<em>stranger</em> status based on <a href="{% url forums-goto_post post.id %}">this post</a>. 
+</p>
+<form action="." method="post">{% csrf_token %}
+   <input type="submit" value="Yes, {{ post.user.username }} seems legit and is not a stranger" />
+</form>
+{% else %}
+   {% if can_moderate %}
+   <p>That user is no longer a stranger, and can't be promoted again.</p>
+   {% else %}
+   <p>Sorry, but you don't have permission to promote users in that post's forum.</p>
+   {% endif %}
+{% endif %}
+<hr />
+<p>
+<a href="{% url forums-goto_post post.id %}">Return to the post</a>.
+</p>
+{% endblock %}
