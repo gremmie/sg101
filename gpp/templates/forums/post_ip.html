@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Post IP Address Info: {{ post.user_ip }}{% endblock %}
+{% block content %}
+<h2>Post IP Address Info: {{ post.user_ip }}</h2>
+<p>
+This <a href="{{ post.get_absolute_url }}">post</a> was created by
+<a href="{% url bio-view_profile username=post.user.username %}">{{ post.user.username }}</a> from the IP address
+<a href="http://www.dnsstuff.com/tools/whois/?ip={{ post.user_ip }}">{{ post.user_ip }}</a>.
+</p>
+{% if ip_users %}
+<p>All users who have posted from {{ post.user_ip }}:</p>
+<ul>
+{% for user in ip_users %}
+<li><a href="{% url bio-view_profile username=user %}">{{ user }}</a>
+   (<a href="{% url forums-posts_for_user username=user %}">posts</a>)</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -27,7 +27,7 @@
       {% if post.unread %}<img src="{{ MEDIA_URL }}icons/new.png" alt="New" title="New" />{% endif %}
       <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
          Posted on {% forum_date post.creation_date user %}
-         {% if can_moderate %}from IP: {{ post.user_ip }}{% endif %}
+         {% if can_moderate %}from IP: <a href="{% url forums-post_ip_info post.id %}">{{ post.user_ip }}</a>{% endif %}
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}

@@ -748,6 +748,24 @@ def posts_for_user(request, username):
     return _user_posts(request, target_user, request.user, 'Posts by %s' % username)
 
 
+@login_required
+def post_ip_info(request, post_id):
+    """Displays information about the IP address the post was made from."""
+    post = get_object_or_404(Post.objects.select_related(), pk=post_id)
+
+    if not _can_moderate(post.topic.forum, request.user):
+        return HttpResponseForbidden("You don't have permission for this post.")
+
+    ip_users = sorted(set(Post.objects.filter(
+        user_ip=post.user_ip).values_list('user__username', flat=True)))
+
+    return render_to_response('forums/post_ip.html', {
+        'post': post,
+        'ip_users': ip_users,
+        },
+        context_instance=RequestContext(request))
+
+
 def _user_posts(request, target_user, req_user, page_title):
     """Displays a list of posts made by the target user. 
     req_user is the user trying to view the posts. Only the forums
