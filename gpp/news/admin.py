@@ -27,7 +27,8 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     long_text=pending_story.long_text,
                     date_submitted=datetime.datetime.now(),
                     allow_comments=pending_story.allow_comments,
-                    tags=pending_story.tags)
+                    tags=pending_story.tags,
+                    front_page_expiration=pending_story.front_page_expiration)
             story.save()
             pending_story.delete()
 

@@ -34,6 +34,7 @@ class StoryBase(models.Model):
     date_submitted = models.DateTimeField(db_index=True)
     allow_comments = models.BooleanField(default=True)
     tags = TagField()
+    front_page_expiration = models.DateField(null=True, blank=True)
 
     class Meta:
         abstract = True

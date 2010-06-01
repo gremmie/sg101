@@ -17,7 +17,7 @@ class AddNewsForm(forms.ModelForm):
 
    class Meta:
       model = PendingStory
-      exclude = ('submitter', 'date_submitted', 'allow_comments', 'approved', 'tags')
+      fields = ('title', 'category', 'short_text', 'long_text')
 
    class Media:
       js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
