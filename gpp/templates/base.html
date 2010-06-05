@@ -41,6 +41,7 @@
       <li>Welcome, <a href="{% url bio-me %}">{{ user.username }}</a></li>
       <li><a href="{% url forums-index %}">Forums</a></li>
       <li>{% unread_messages user %}</li>
+      <li><a href="{% url haystack_search %}">Search</a></li>
       <li><a href="{% url accounts-logout %}">Logout</a></li>
       {% else %}
       <li><a href="{% url accounts-login %}">Login</a></li>
@@ -66,6 +67,7 @@
       <li><a href="{% url potd-view %}">Photo of the Day</a></li>
       <li><a href="{% url weblinks-main %}">Links</a></li>
       <li><a href="{% url downloads-index %}">Downloads</a></li>
+      <li><a href="{% url haystack_search %}">Search</a></li>
    </ul>
    {% cache 300 potd_block %}
       {% photo_of_the_day %}

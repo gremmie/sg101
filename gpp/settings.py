@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'elsewhere',
     'tagging',
+    'haystack',
     'accounts',
     'antispam',
     'bio',
@@ -199,6 +200,14 @@ SESSION_SAVE_EVERY_REQUEST = False
 #######################################################################
 FORCE_LOWERCASE_TAGS = True
 MAX_TAG_LENGTH = 50
+
+#######################################################################
+# Haystack Search Settings
+#######################################################################
+HAYSTACK_SITECONF = 'gpp.search_sites'
+HAYSTACK_SEARCH_ENGINE = 'xapian'
+HAYSTACK_XAPIAN_PATH = os.path.join(project_path, 'xapian_index')
+
 
 #######################################################################
 # GPP Specific Settings

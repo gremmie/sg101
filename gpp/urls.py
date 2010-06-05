@@ -3,6 +3,8 @@ from django.conf import settings
 from django.contrib import admin
 from django.views.decorators.cache import cache_page
 
+from haystack.views import SearchView, search_view_factory
+
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
 
@@ -44,6 +46,13 @@ urlpatterns = patterns('',
    (r'^shout/', include('shoutbox.urls')),
    (r'^smiley/', include('smiley.urls')),
 )
+
+# Haystack search views
+urlpatterns += patterns('haystack.views',
+    url(r'^search/$', search_view_factory(view_class=SearchView, load_all=False),
+        name='haystack_search'),
+)
+
 
 if settings.DEBUG:
    urlpatterns += patterns('',

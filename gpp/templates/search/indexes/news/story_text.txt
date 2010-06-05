@@ -1,0 +1,6 @@
+{{ object.title }}
+{{ object.submitter.username }}
+{{ object.submitter.get_full_name }}
+{{ object.short_text }}
+{{ object.long_text }}
+{{ object.tags }}

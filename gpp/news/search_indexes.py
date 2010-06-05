@@ -1,0 +1,16 @@
+"""Haystack search index for the news application."""
+from haystack.indexes import *
+from haystack import site
+from news.models import Story
+
+
+class StoryIndex(SearchIndex):
+    text = CharField(document=True, use_template=True)
+    author = CharField(model_attr='submitter')
+    pub_date = DateTimeField(model_attr='date_submitted')
+
+    title = CharField(use_template=True, indexed=False)
+    summary = CharField(use_template=True, indexed=False)
+
+
+site.register(Story, StoryIndex)
