@@ -19,7 +19,7 @@
       <dl>
       {% for result in page.object_list %}
          <dt>
-         {{ result.verbose_name }}: <a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a> &bull; ({{ result.score }})
+         {{ result.verbose_name }}: <a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a> ({{ result.score }})
          </dt>
          <dd>
             {% highlight result.object.search_summary with query css_class "highlight" max_length 200 %}

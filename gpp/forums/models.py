@@ -281,6 +281,12 @@ class Post(models.Model):
         """Call this function to indicate the post has been edited."""
         self.update_date = datetime.datetime.now()
 
+    def search_title(self):
+        return u"%s by %s" % (self.topic.name, self.user.username)
+
+    def search_summary(self):
+        return self.body
+
 
 class FlaggedPost(models.Model):
     """This model represents a user flagging a post as inappropriate."""
