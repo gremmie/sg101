@@ -9,8 +9,5 @@ class StoryIndex(SearchIndex):
     author = CharField(model_attr='submitter')
     pub_date = DateTimeField(model_attr='date_submitted')
 
-    title = CharField(use_template=True, indexed=False)
-    summary = CharField(use_template=True, indexed=False)
-
 
 site.register(Story, StoryIndex)

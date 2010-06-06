@@ -75,3 +75,9 @@ class Story(StoryBase):
         now = datetime.datetime.now()
         delta = now - self.date_submitted
         return self.allow_comments and delta.days < 30
+
+    def search_title(self):
+        return self.title
+
+    def search_summary(self):
+        return u"\n".join((self.short_text, self.long_text))

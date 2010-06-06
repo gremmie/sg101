@@ -1,2 +1,0 @@
-{{ object.short_text|safe }}
-{{ object.long_text|safe }}

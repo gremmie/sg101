@@ -60,6 +60,12 @@ class Link(LinkBase):
     def get_absolute_url(self):
         return ('weblinks-link_detail', [str(self.id)])
 
+    def search_title(self):
+        return self.title
+
+    def search_summary(self):
+        return self.description
+
 
 class PendingLink(LinkBase):
     """This model represents links that users submit. They must be approved by

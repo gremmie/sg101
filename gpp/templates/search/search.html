@@ -19,13 +19,15 @@
       <dl>
       {% for result in page.object_list %}
          <dt>
-            {{ result.verbose_name }}: {{ result.title|safe }} &bull; {{ result.score }}
+         {{ result.verbose_name }}: <a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a> &bull; ({{ result.score }})
          </dt>
          <dd>
-            {% highlight result.summary with query css_class "highlight" max_length 200 %}
+            {% highlight result.object.search_summary with query css_class "highlight" max_length 200 %}
          </dd>
       {% endfor %}
       </dl>
+      {% else %}
+      <p>No results found for <em>{{ query }}</em>.</p>
       {% endif %}
 
       {% if page.has_previous or page.has_next %}

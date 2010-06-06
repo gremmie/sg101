@@ -49,7 +49,7 @@ urlpatterns = patterns('',
 
 # Haystack search views
 urlpatterns += patterns('haystack.views',
-    url(r'^search/$', search_view_factory(view_class=SearchView, load_all=False),
+    url(r'^search/$', search_view_factory(view_class=SearchView, load_all=True),
         name='haystack_search'),
 )
 
