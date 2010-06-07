@@ -127,6 +127,16 @@ class UserProfile(models.Model):
     user_is_active.boolean = True
     user_is_active.short_description = "Is Active"
 
+    def search_title(self):
+        full_name = self.user.get_full_name()
+        if full_name:
+            return u"%s (%s)" % (self.user.username, full_name)
+        return self.user.username
+
+    def search_summary(self):
+        return u"\n".join((self.location, self.occupation, self.interests,
+            self.profile_text, self.signature))
+
 
 class UserProfileFlag(models.Model):
     """This model represents a user flagging a profile as inappropriate."""

@@ -1,0 +1,7 @@
+{{ object.user.username }}
+{{ object.user.get_full_name }}
+{{ object.location }}
+{{ object.occupation }}
+{{ object.interests }}
+{{ object.profile_text }}
+{{ object.signature }}

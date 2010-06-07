@@ -8,7 +8,10 @@
 {% block content %}
 <h2>Member List</h2>
 <p>Surfguitar101.com currently has {{ num_members }} active members. Looking for a
-particular user? Try our <a href="{% url bio-member_search %}">member search</a>.</p>
+particular user? Try our <a href="{% url bio-member_search %}">member search</a>, or
+you can use our <a href="{% url haystack_search %}">search function</a> to search
+user profiles.
+</p>
 {% if page.object_list %}
 <ul class="tab-nav">
    <li><a href="{% url bio-members_full type='user' page=1 %}"
