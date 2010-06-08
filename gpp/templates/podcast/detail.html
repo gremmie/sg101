@@ -1,7 +1,7 @@
 {% extends 'podcast/base.html' %}
 {% block title %}Podcast: {{ podcast.title }}{% endblock %}
 {% block podcast-content %}
-<div class="breadcrumb">
+<div class="breadcrumbs">
    <a href="{% url podcast.views.index %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
 </div>
 <h3>{{ podcast.pubdate|date:"F d, Y" }} &bull; {{ podcast.title }}</h3>

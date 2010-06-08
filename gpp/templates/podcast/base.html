@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>SurfGuitar101 Podcast</h2>
+<h2><a href="{% url podcast-main %}">SurfGuitar101 Podcast</a></h2>
 <img src="{{ channel.image.url }}" alt="Podcast Logo" style="float: left; margin-right:10px;" />
 <p>
 Welcome to the <strong>Surfguitar101 Podcast</strong>! The podcast started as an experiment just to see what it took to create a podcast. The reaction was very positive so hopefully we will start seeing new episodes on a semi-regular basis. You can download the podcast episodes here and we are also listed in iTunes.
@@ -15,6 +15,9 @@ In addition to the forum, you can contact us by email at
 </p>
 <p>
 Subscribe to the podcast via RSS: <a href="{% url podcast.views.feed %}">Feed</a>
+</p>
+<p>
+<strong>Hey iTunes users!</strong> Here is our <a href="http://itunes.apple.com/WebObjects/MZStore.woa/wa/viewPodcast?id=284928526">listing in iTunes</a>. Follow the previous link and then click the subscribe button to let iTunes automatically download episodes for you.
 </p>
 <br clear="all" />
 <hr />
