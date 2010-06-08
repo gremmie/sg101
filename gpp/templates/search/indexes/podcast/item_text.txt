@@ -1,0 +1,5 @@
+{{ object.title }}
+{{ object.author }}
+{{ object.subtitle }}
+{{ object.summary }}
+{{ object.keywords }}
