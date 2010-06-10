@@ -69,7 +69,8 @@ class Story(StoryBase):
 
     class Meta:
         ordering = ('-date_submitted', )
-        verbose_name_plural = 'Stories'
+        verbose_name = 'news story'
+        verbose_name_plural = 'news stories'
 
     def can_comment_on(self):
         now = datetime.datetime.now()

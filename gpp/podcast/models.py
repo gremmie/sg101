@@ -56,6 +56,8 @@ class Item(models.Model):
 
     class Meta:
         ordering = ('-pubdate', )
+        verbose_name = 'podcast'
+        verbose_name_plural = 'podcasts'
 
     def search_title(self):
         return "%s: %s" % (self.title, self.subtitle)

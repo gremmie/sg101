@@ -250,6 +250,8 @@ class Post(models.Model):
     class Meta:
         ordering = ('creation_date', )
         get_latest_by = 'creation_date'
+        verbose_name = 'forum post'
+        verbose_name_plural = 'forum posts'
 
     @models.permalink
     def get_absolute_url(self):
