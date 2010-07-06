@@ -82,7 +82,7 @@ if DEBUG:
         'debug_toolbar.middleware.DebugToolbarMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'gpp.core.middleware.InactiveUserMiddleware',
-        'gpp.forums.middleware.WhosOnline',
+        'gpp.core.middleware.WhosOnline',
         'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     )
 else:
@@ -93,7 +93,7 @@ else:
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'gpp.core.middleware.InactiveUserMiddleware',
-        'gpp.forums.middleware.WhosOnline',
+        'gpp.core.middleware.WhosOnline',
         'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     )
 

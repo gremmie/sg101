@@ -128,26 +128,6 @@ def new_posts(context):
     }
 
 
-@register.inclusion_tag('forums/whos_online_tag.html')
-def whos_online():
-    """
-    Displays a list of who is online.
-    """
-    users_online = cache.get('users_online', {})
-    guests_online = cache.get('guests_online', {})
-    num_users = len(users_online)
-    num_guests = len(guests_online)
-    total = num_users + num_guests
-    users = sorted(users_online.keys())
-
-    return {
-        'num_users': num_users,
-        'num_guests': num_guests,
-        'total': total,
-        'users': users,
-    }
-
-
 @register.inclusion_tag('forums/forum_stats_tag.html')
 def forum_stats():
     """

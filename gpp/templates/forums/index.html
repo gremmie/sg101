@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load cache %}
 {% load forum_tags %}
+{% load core_tags %}
 {% block custom_head %}
 {% for feed in feeds %}
 <link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
