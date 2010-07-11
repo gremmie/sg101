@@ -1,6 +1,8 @@
 """
 This module contains misc. utility functions for forum management.
 """
+import logging
+
 from forums.models import Post, Topic, Forum, ForumLastVisit, TopicLastVisit
 
 
@@ -67,3 +69,36 @@ def delete_user_posts(user):
     TopicLastVisit.objects.filter(user=user).delete()
     ForumLastVisit.objects.filter(user=user).delete()
 
+
+def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
+        locked=False):
+    """Programmatically create a topic & first post in a given forum.
+
+    This function creates a new topic in the forum that has the slug
+    specified by the 'forum_slug' argument. Other arguments are as follows:
+    'user' - create the topic and post with this user as the owner
+    'topic_name' - topic name (title)
+    'post_body' - topic post body (as markup, not HTML)
+    'ip' - IP address for the post (as a string)
+    'sticky' - if True, the post will be stickied
+    'locked' - if True, the post will be locked
+
+    """
+    try:
+        forum = Forum.objects.get(slug=forum_slug)
+    except Forum.DoesNotExist:
+        logging.error('could not create_topic for forum_slug=%s' % forum_slug)
+        raise
+
+    topic = Topic(forum=forum,
+            name=topic_name,
+            user=user,
+            sticky=sticky,
+            locked=locked)
+    topic.save()
+
+    post = Post(topic=topic,
+            user=user,
+            body=post_body,
+            user_ip=ip)
+    post.save()

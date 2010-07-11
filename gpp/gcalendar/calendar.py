@@ -72,11 +72,14 @@ class Calendar(object):
 
             error = False
             if qs[i].status == Event.NEW_APRV or qs[i].status == Event.EDIT_APRV:
-                if (code == 201 and qs[i].status == Event.NEW_APRV) or \
-                        (code == 200 and qs[i].status == Event.EDIT_APRV):
+                if (code == 201 and qs[i].status == Event.NEW_APRV) or (
+                       code == 200 and qs[i].status == Event.EDIT_APRV):
                     qs[i].google_id = entry.id.text
+                    qs[i].google_url = entry.GetHtmlLink().href
                     qs[i].status = Event.ON_CAL
                     qs[i].save()
+                    if code == 201:
+                        qs[i].notify_on_calendar()
                 else:
                     error = True
             elif qs[i].status == Event.DEL_APRV:

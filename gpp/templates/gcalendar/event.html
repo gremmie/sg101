@@ -36,7 +36,9 @@
 </td></tr>
 <tr><th>Where:</th><td>{{ form.where.errors }}{{ form.where }}</td></tr>
 <tr><th>Details:</th><td>{{ form.description.errors }}{{ form.description }}</td></tr>
-{# form.as_p #}
+{% if form.create_forum_thread %}
+<tr><td>&nbsp;</td><td>{{ form.create_forum_thread }} <strong>Create a forum thread for this event?</strong></td></tr>
+{% endif %}
 <tr><td>&nbsp;</td><td>{% comment_dialogs %}<input type="submit" name="submit_button" value="Submit" /></td></tr>
 </table>
 </form>

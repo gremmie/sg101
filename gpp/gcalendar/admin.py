@@ -12,12 +12,12 @@ import bio.badges
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ('what', 'user', 'start_date', 'where', 'date_submitted',
-            'status', 'is_approved')
+            'status', 'is_approved', 'google_html')
     list_filter = ('start_date', 'status')
     date_hierarchy = 'start_date'
     search_fields = ('what', 'where', 'description')
     raw_id_fields = ('user', )
-    exclude = ('html', 'google_id')
+    exclude = ('html', 'google_id', 'google_url')
     save_on_top = True
     actions = ('approve_events', )
 

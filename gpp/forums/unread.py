@@ -193,7 +193,6 @@ def get_post_unread_status(topic, posts, user):
 
 def get_unread_topics(user):
     """Returns a list of topics the user hasn't read yet."""
-    #import pdb; pdb.set_trace()
 
     # This is only available to authenticated users
     if not user.is_authenticated():

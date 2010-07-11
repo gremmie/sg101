@@ -80,7 +80,7 @@ class EventEntryForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('what', 'start_date', 'start_time', 'end_date', 'end_time',
-            'all_day', 'time_zone', 'where', 'description')
+            'all_day', 'time_zone', 'where', 'description', 'create_forum_thread')
 
     class Media:
         css = {
@@ -122,6 +122,10 @@ class EventEntryForm(forms.ModelForm):
             kwargs['initial'] = initial
 
         super(EventEntryForm, self).__init__(*args, **kwargs)
+
+        # We don't want the user to create a forum thread on an existing event
+        if instance is not None:
+            del self.fields['create_forum_thread']
 
     def clean(self):
         start_date = self.cleaned_data.get('start_date')

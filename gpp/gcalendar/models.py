@@ -6,7 +6,10 @@ from django.db.models import Q
 from django.contrib.auth.models import User
 
 from core.markup import site_markup
+import forums.tools
 
+
+GIG_FORUM_SLUG = "gigs"
 
 class PendingEventManager(models.Manager):
     """A manager for pending events."""
@@ -37,14 +40,6 @@ class Event(models.Model):
         (ON_CAL, 'On Calendar'),
     )
 
-    REPEAT_CHOICES = (
-        ('none', 'Does not repeat'),
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-        ('yearly', 'Yearly')
-    )
-
     user = models.ForeignKey(User)
     what = models.CharField(max_length=255)
     start_date = models.DateField()
@@ -53,33 +48,16 @@ class Event(models.Model):
     end_time = models.TimeField(null=True, blank=True)
     time_zone = models.CharField(max_length=64, blank=True)
     all_day = models.BooleanField(default=False)
-    repeat = models.CharField(max_length=7, choices=REPEAT_CHOICES)
-    repeat_interval = models.IntegerField(null=True, blank=True,
-        help_text='Only valid for repeating events.')
-    until_date = models.DateField(null=True, blank=True,
-        help_text='Only valid for repeating events; leave blank for no end date.')
-    weekly_sun = models.BooleanField(default=False, verbose_name='Weekly on Sun',
-        help_text='Only valid for weekly repeats.')
-    weekly_mon = models.BooleanField(default=False, verbose_name='Weekly on Mon',
-        help_text='Only valid for weekly repeats.')
-    weekly_tue = models.BooleanField(default=False, verbose_name='Weekly on Tue',
-        help_text='Only valid for weekly repeats.')
-    weekly_wed = models.BooleanField(default=False, verbose_name='Weekly on Wed',
-        help_text='Only valid for weekly repeats.')
-    weekly_thu = models.BooleanField(default=False, verbose_name='Weekly on Thu',
-        help_text='Only valid for weekly repeats.')
-    weekly_fri = models.BooleanField(default=False, verbose_name='Weekly on Fri',
-        help_text='Only valid for weekly repeats.')
-    weekly_sat = models.BooleanField(default=False, verbose_name='Weekly on Sat',
-        help_text='Only valid for weekly repeats.')
-    monthly_by_day = models.BooleanField(default=False,
-        help_text='Only valid for monthly repeats; Checked: By day of the month, Unchecked: By day of the week.')
     where = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     html = models.TextField(blank=True)
     date_submitted = models.DateTimeField(auto_now_add=True)
     google_id = models.CharField(max_length=255, blank=True)
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=NEW, db_index=True)
+    google_url = models.URLField(verify_exists=False, max_length=255,
+            blank=True)
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=NEW,
+            db_index=True)
+    create_forum_thread = models.BooleanField(default=False)
 
     objects = models.Manager()
     pending_events = PendingEventManager()
@@ -98,3 +76,31 @@ class Event(models.Model):
         return self.status not in (self.NEW, self.EDIT_REQ, self.DEL_REQ)
     is_approved.boolean = True
 
+    def google_html(self):
+        """Returns a HTML <a> tag to the event if it exits."""
+        if self.google_url:
+            return u'<a href="%s">On Google</a>' % self.google_url
+        return u''
+    google_html.allow_tags = True
+    google_html.short_description = 'Google Link'
+
+    def notify_on_calendar(self):
+        """
+        This function should be called when the event has been added to the
+        Google calendar for the first time. This gives us a chance to perform
+        any first-time processing, like creating a forum thread.
+        """
+        if self.create_forum_thread:
+            topic_name = '%s: %s' % (self.start_date.strftime('%m/%d/%Y'),
+                    self.what)
+            post_body = "%s\n\n[Link to event on Google Calendar](%s)" % (
+                    self.description, self.google_url)
+
+            forums.tools.create_topic(
+                forum_slug=GIG_FORUM_SLUG,
+                user=self.user, 
+                topic_name=topic_name,
+                post_body=post_body)
+
+            self.create_forum_thread = False
+            self.save()
