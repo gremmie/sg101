@@ -39,7 +39,7 @@ class WhosOnline(object):
         Keep track of who is online.
         """
         if request.is_ajax():
-            return
+            return response
 
         if request.user.is_authenticated():
             if request.COOKIES.get(ONLINE_COOKIE) is None:
