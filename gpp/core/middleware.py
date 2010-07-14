@@ -38,7 +38,12 @@ class WhosOnline(object):
         """
         Keep track of who is online.
         """
-        if request.is_ajax():
+        # Note that some requests may not have a user attribute
+        # as these may have been redirected in the middleware chain before
+        # the auth middleware got a chance to run. If this is the case, just
+        # bail out. We also ignore AJAX requests.
+
+        if not hasattr(request, 'user') or request.is_ajax():
             return response
 
         if request.user.is_authenticated():
