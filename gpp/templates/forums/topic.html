@@ -59,7 +59,7 @@
 {% endif %}
 
 {% if user.is_authenticated %}
-<form action={% if is_bookmarked %}"{% url forums-unfavorite_topic topic.id %}"{% else %}"{% url forums-favorite_topic topic.id %}"{% endif %} method="post">{% csrf_token %}
+<form action={% if is_favorite %}"{% url forums-unfavorite_topic topic.id %}"{% else %}"{% url forums-favorite_topic topic.id %}"{% endif %} method="post">{% csrf_token %}
 <fieldset>
    <legend>Favorite Options</legend>
    <p>
