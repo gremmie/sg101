@@ -74,18 +74,22 @@ def attach_topic_page_ranges(topics):
 
 #######################################################################
 
+SPECIAL_QUERIES = {
+    'unread': 'forums-unread_topics',
+    'unanswered': 'forums-unanswered_topics',
+    'mine': 'forums-my_posts',
+    'favorites': 'forums-manage_favorites',
+    'subscriptions': 'forums-manage_subscriptions',
+}
+
 def index(request):
     """
     This view displays all the forums available, ordered in each category.
     """
     # check for special forum queries
     query = request.GET.get("query")
-    if query == "unread":
-        return redirect('forums-unread_topics')
-    elif query == "unanswered":
-        return redirect('forums-unanswered_topics')
-    elif query == "mine":
-        return redirect('forums-my_posts')
+    if query in SPECIAL_QUERIES:
+        return redirect(SPECIAL_QUERIES[query])
 
     public_forums = Forum.objects.public_forums()
     feeds = [{'name': 'All Forums', 'feed': '/feeds/forums/'}]
@@ -198,6 +202,9 @@ def topic_index(request, id):
     can_reply = request.user.is_authenticated() and (
         not topic.locked or can_moderate)
 
+    is_favorite = request.user.is_authenticated() and (
+            topic in request.user.favorite_topics.all())
+
     is_subscribed = request.user.is_authenticated() and (
             topic in request.user.subscriptions.all())
 
@@ -210,6 +217,7 @@ def topic_index(request, id):
         'can_moderate': can_moderate,
         'can_reply': can_reply,
         'form': NewPostForm(initial={'topic_id': topic.id}),
+        'is_favorite': is_favorite,
         'is_subscribed': is_subscribed,
         },
         context_instance=RequestContext(request))
@@ -453,6 +461,7 @@ def _delete_topic(topic):
 
     # delete subscriptions to this topic
     topic.subscribers.clear()
+    topic.bookmarkers.clear()
 
     # It should be safe to just delete the topic now. This will
     # automatically delete all posts in the topic.

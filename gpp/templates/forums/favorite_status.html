@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Forums: Favorite Topics{% endblock %}
+{% block content %}
+<h2>Forums: Favorite Topics</h2>
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
+   <a href="{% url forums-forum_index slug=topic.forum.slug %}">{{ topic.forum.name }}</a> &raquo;
+   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
+</h3>
+<p>
+{% if is_favorite %}
+The forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a> has been added to your 
+<a href="{% url forums-manage_favorites %}">favorites</a>.
+{% else %}
+The forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a> has been removed from your
+<a href="{% url forums-manage_favorites %}">favorites</a>.
+{% endif %}
+</p>
+<p>
+To manage all your forum topic favorites, please visit your 
+<a href="{% url forums-manage_favorites %}">favorites page</a>.
+</p>
+{% endblock %}

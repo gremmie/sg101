@@ -59,6 +59,27 @@
 {% endif %}
 
 {% if user.is_authenticated %}
+<form action={% if is_bookmarked %}"{% url forums-unfavorite_topic topic.id %}"{% else %}"{% url forums-favorite_topic topic.id %}"{% endif %} method="post">{% csrf_token %}
+<fieldset>
+   <legend>Favorite Options</legend>
+   <p>
+   {% if is_favorite %}
+      <img src="{{ MEDIA_URL }}icons/delete.png" alt="Favorite" />
+      You currently have saved this topic in your list of favorites.
+      <input type="submit" value="Remove from favorites" />
+   {% else %}
+      <img src="{{ MEDIA_URL }}icons/add.png" alt="Favorite" />
+      Would you like to save this topic to your favorites list?
+      <input type="submit" value="Save to favorites" />
+   {% endif %}
+   </p>
+   <p>
+   To manage all your forum topic favorites, please visit your 
+   <a href="{% url forums-manage_favorites %}">favorites page</a>.
+   </p>
+</fieldset>
+</form>
+
 <form action={% if is_subscribed %}"{% url forums-unsubscribe_topic topic.id %}"{% else %}"{% url forums-subscribe_topic topic.id %}"{% endif %} method="post">{% csrf_token %}
 <fieldset>
    <legend>Subscription Options</legend>

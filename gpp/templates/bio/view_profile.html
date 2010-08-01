@@ -22,7 +22,16 @@
     {% endfor %}
    </ul>
    {% endif %}
+   {% if this_is_me %}
+   <p>{% avatar subject %}
+   <ul>
+      <li><a href="">My favorite forum topics</a></li>
+      <li><a href="">My forum topic subscriptions</a></li>
+   </ul>
+   </p>
+   {% else %}
    <p>{% avatar subject %}</p>
+   {% endif %}
 <table id="bio_profile">
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>
    <tr><th>Date Joined</th><td>{{ subject.date_joined|date:"F d, Y" }}</td></tr>

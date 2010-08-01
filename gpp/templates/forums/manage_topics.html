@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Forums: {{ page_title }}{% endblock %}
+{% block custom_js %}
+<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function() {
+   $('#master_check').click(function() {
+      var master_checked = this.checked;
+      $('.topic_box').each(function(index) {
+         this.checked = master_checked;
+      });
+   });
+   $('#topic_form').submit(function() {
+      var checked = false;
+      $('.topic_box').each(function(index) {
+         checked = checked || this.checked;
+      });
+      if (!checked) {
+         alert("Please select some topics to remove.");
+         return false;
+      }
+      return confirm("Are you sure you wish to remove the selected topics from your list?");
+   });
+});
+//]]>
+</script>
+{% endblock %}
+{% block content %}
+<h2>Forums: {{ page_title }}</h2>
+
+<h3>
+   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ page_title }}
+</h3>
+<p>{{ description }}</p>
+{% include 'forums/pagination.html' %}
+<form id="topic_form" action="." method="post">{% csrf_token %}
+<table class="forum-topic-table">
+   <thead>
+      <tr>
+         <th>Forum</th>
+         <th>Topic</th>
+         <th><input type="checkbox" id="master_check" /></th>
+      </tr>
+   </thead>
+   <tbody>
+      {% for topic in page.object_list %}
+         <tr>
+            <td><a href="{{ topic.forum.get_absolute_url }}">{{ topic.forum.name }}</a></td>
+            <td><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></td>
+            <td><input type="checkbox" class="topic_box" name="delete_ids" value="{{ topic.id }}" /></td>
+         </tr>
+      {% empty %}
+         <tr><td colspan="3"><em>No topics found</em></td></tr>
+      {% endfor %}
+   </tbody>
+</table>
+{% include 'forums/pagination.html' %}
+{% if page.object_list %}
+<input type="hidden" name="page" value="{{ page.number }}" />
+<input type="submit" name="delete_selected" value="Delete Selected" />
+{% endif %}
+</form>
+{% endblock %}

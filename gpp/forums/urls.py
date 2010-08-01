@@ -3,7 +3,7 @@ URLs for the forums application.
 """
 from django.conf.urls.defaults import *
 
-urlpatterns = patterns('forums.views',
+urlpatterns = patterns('forums.views.main',
     url(r'^$', 'index', name='forums-index'),
     url(r'^new-topic-success/(?P<tid>\d+)$', 'new_topic_thanks', name='forums-new_topic_thanks'),
     url(r'^topic/(?P<id>\d+)/$', 'topic_index', name='forums-topic_index'),
@@ -29,14 +29,21 @@ urlpatterns = patterns('forums.views',
     url(r'^unread/$', 'unread_topics', name='forums-unread_topics'),
 )
 
-urlpatterns += patterns('forums.subscriptions',
+urlpatterns += patterns('forums.views.favorites',
+    url(r'^favorite/(\d+)/$', 'favorite_topic', name='forums-favorite_topic'),
+    url(r'^favorites/$', 'manage_favorites', name='forums-manage_favorites'),
+    url(r'^favorites/(\d+)/$', 'favorites_status', name='forums-favorites_status'),
+    url(r'^unfavorite/(\d+)/$', 'unfavorite_topic', name='forums-unfavorite_topic'),
+)
+
+urlpatterns += patterns('forums.views.subscriptions',
     url(r'^subscribe/(\d+)/$', 'subscribe_topic', name='forums-subscribe_topic'),
     url(r'^subscriptions/$', 'manage_subscriptions', name='forums-manage_subscriptions'),
     url(r'^subscriptions/(\d+)/$', 'subscription_status', name='forums-subscription_status'),
     url(r'^unsubscribe/(\d+)/$', 'unsubscribe_topic', name='forums-unsubscribe_topic'),
 )
 
-urlpatterns += patterns('forums.spam',
+urlpatterns += patterns('forums.views.spam',
     url(r'^spammer/(\d+)/$', 'spammer', name='forums-spammer'),
     url(r'^spammer/nailed/(\d+)/$', 'spammer_nailed', name='forums-spammer_nailed'),
     url(r'^stranger/(\d+)/$', 'stranger', name='forums-stranger'),

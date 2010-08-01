@@ -174,6 +174,8 @@ class Topic(models.Model):
     locked = models.BooleanField(blank=True, default=False)
     subscribers = models.ManyToManyField(User, related_name='subscriptions',
             verbose_name='subscribers', blank=True)
+    bookmarkers = models.ManyToManyField(User, related_name='favorite_topics',
+            verbose_name='bookmarkers', blank=True)
 
     # denormalized fields to reduce database hits
     post_count = models.IntegerField(blank=True, default=0)

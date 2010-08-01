@@ -5,7 +5,7 @@ from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
 
 from forums.models import Topic, Post
-from forums.subscriptions import notify_topic_subscribers
+from forums.views.subscriptions import notify_topic_subscribers
 
 
 def on_topic_save(sender, **kwargs):

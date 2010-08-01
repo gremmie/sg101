@@ -51,7 +51,7 @@ def subscribe_topic(request, topic_id):
         topic.subscribers.add(request.user)
         return HttpResponseRedirect(
             reverse("forums-subscription_status", args=[topic.id]))
-    raise Http404
+    raise Http404   # TODO return HttpResponseForbidden instead
 
 
 @login_required
@@ -97,7 +97,7 @@ def manage_subscriptions(request):
     else:
         page_num = request.GET.get('page', 1)
 
-    topics = user.subscriptions.select_related().order_by('-creation_date')
+    topics = user.subscriptions.select_related().order_by('-update_date')
     paginator = DiggPaginator(topics, 20, body=5, tail=2, margin=3, padding=2)
     try:
         page_num = int(page_num)
@@ -108,7 +108,9 @@ def manage_subscriptions(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('forums/manage_subscriptions.html', {
+    return render_to_response('forums/manage_topics.html', {
+        'page_title': 'Topic Subscriptions',
+        'description': 'The forum topics you are currently subscribed to are listed below.',
         'page': page,
         },
         context_instance=RequestContext(request))
