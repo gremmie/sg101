@@ -878,10 +878,19 @@ def _bulk_delete(forum, topic_ids):
     """
     Deletes the list of topics.
     """
-    topics = Topic.objects.filter(pk__in=topic_ids).select_related()
-    for topic in topics:
-        if topic.forum == forum:
-            _delete_topic(topic)
+    # Because we are deleting stuff, retrieve each topic one at a
+    # time since we are going to be adjusting de-normalized fields
+    # during deletes. In particular, we can't do this:
+    #   topics = Topic.objects.filter(pk__in=topic_ids).select_related()
+    #   for topic in topics:
+    # since topic.forum.last_post can go stale after a delete.
+
+    for id in topic_ids:
+        try:
+            topic = Topic.objects.select_related().get(pk=id)
+        except Topic.DoesNotExist:
+            continue
+        _delete_topic(topic)
 
 
 def _bulk_move(topic_ids, old_forum, new_forum):
