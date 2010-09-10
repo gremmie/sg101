@@ -1,0 +1,30 @@
+[
+    {
+        "pk": 1, 
+        "model": "accounts.illegalusername", 
+        "fields": {
+            "username": "root"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "accounts.illegalusername", 
+        "fields": {
+            "username": "sg101"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "accounts.illegalusername", 
+        "fields": {
+            "username": "surfguitar101"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "accounts.illegalusername", 
+        "fields": {
+            "username": "webmaster"
+        }
+    }
+]

@@ -1,0 +1,237 @@
+[
+    {
+        "pk": 1, 
+        "model": "forums.category", 
+        "fields": {
+            "position": 0, 
+            "name": "SurfGuitar101.com Site Specific", 
+            "groups": [], 
+            "slug": "surfguitar101com-site-specific"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "forums.category", 
+        "fields": {
+            "position": 1, 
+            "name": "Surf Music", 
+            "groups": [], 
+            "slug": "surf-music"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "forums.category", 
+        "fields": {
+            "position": 2, 
+            "name": "Classifieds", 
+            "groups": [], 
+            "slug": "classifieds"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "forums.category", 
+        "fields": {
+            "position": 3, 
+            "name": "Off-Topic", 
+            "groups": [], 
+            "slug": "off-topic"
+        }
+    }, 
+    {
+        "pk": 14, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 1, 
+            "description": "For general discussion about this site only, including news and rules. Start here. Anything relating to surf music should go to the Surf Music General Discussion forum, below.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 0, 
+            "last_post": null, 
+            "slug": "surfguitar101-website", 
+            "name": "SurfGuitar101 Website"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "Main surf music discussion forum. Insert glissando sound here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 0, 
+            "last_post": null, 
+            "slug": "surf-music", 
+            "name": "Surf Music General Discussion"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 3, 
+            "description": "For sale and trading of surf music related items only.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 0, 
+            "last_post": null, 
+            "slug": "for-sale-trade", 
+            "name": "For Sale / Trade"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 4, 
+            "description": "General off-topic chit-chat. Grab a cool drink and hop in. New members please introduce yourselves here. This forum is dedicated to the memory of Rip Thrillby and Spanky Twangler.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 0, 
+            "last_post": null, 
+            "slug": "shallow-end", 
+            "name": "The Shallow End"
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 3, 
+            "description": "Need someone to play with? Starting a band? Need a gig? Post here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 1, 
+            "last_post": null, 
+            "slug": "musicians-gigs-wanted", 
+            "name": "Musicians & Gigs Wanted"
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "Please post show announcements here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 1, 
+            "last_post": null, 
+            "slug": "gigs", 
+            "name": "Show Announcements"
+        }
+    }, 
+    {
+        "pk": 9, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 1, 
+            "description": "Got an idea for the site? Something not working? Post here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 1, 
+            "last_post": null, 
+            "slug": "suggestion-box", 
+            "name": "Suggestion Box"
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "Playing, performing, and writing surf music. All instruments welcome.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 2, 
+            "last_post": null, 
+            "slug": "surf-musician", 
+            "name": "Surf Musician"
+        }
+    }, 
+    {
+        "pk": 10, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 1, 
+            "description": "Feedback, suggestions, playlists, and discussions about the SurfGuitar101 podcast.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 2, 
+            "last_post": null, 
+            "slug": "sg101-podcast", 
+            "name": "SG101 Podcast"
+        }
+    }, 
+    {
+        "pk": 7, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "For questions and discussions about instruments, amplifiers, and yes, outboard reverb units!", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 3, 
+            "last_post": null, 
+            "slug": "gear", 
+            "name": "Gear"
+        }
+    }, 
+    {
+        "pk": 11, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "For discussion of recording techniques.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 4, 
+            "last_post": null, 
+            "slug": "recording-corner", 
+            "name": "Recording Corner"
+        }
+    }, 
+    {
+        "pk": 12, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "Got a link to a surf or surf-related video? Post it here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 5, 
+            "last_post": null, 
+            "slug": "surf-videos", 
+            "name": "Surf Videos"
+        }
+    }, 
+    {
+        "pk": 13, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "Please post your reviews of surf music releases here.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [], 
+            "position": 6, 
+            "last_post": null, 
+            "slug": "music-reviews", 
+            "name": "Music Reviews"
+        }
+    }
+]

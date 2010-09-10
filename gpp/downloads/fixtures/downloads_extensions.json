@@ -1,0 +1,86 @@
+[
+    {
+        "pk": 7, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".gif"
+        }
+    }, 
+    {
+        "pk": 9, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".jpeg"
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".jpg"
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".m4a"
+        }
+    }, 
+    {
+        "pk": 10, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".mov"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".mp3"
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".mp4"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".pdf"
+        }
+    }, 
+    {
+        "pk": 13, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".png"
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".txt"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".wma"
+        }
+    }, 
+    {
+        "pk": 11, 
+        "model": "downloads.allowedextension", 
+        "fields": {
+            "extension": ".zip"
+        }
+    }
+]

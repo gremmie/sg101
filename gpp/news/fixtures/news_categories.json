@@ -1,0 +1,90 @@
+[
+    {
+        "pk": 2, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_articles.jpg", 
+            "title": "Articles"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_bands.jpg", 
+            "title": "Bands"
+        }
+    }, 
+    {
+        "pk": 11, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/video.gif", 
+            "title": "Featured Videos"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_gear.jpg", 
+            "title": "Gear"
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_interviews.jpg", 
+            "title": "Interviews"
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_reviews.jpg", 
+            "title": "Reviews"
+        }
+    }, 
+    {
+        "pk": 7, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_showannoun.jpg", 
+            "title": "Show Announcements"
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_showreport.jpg", 
+            "title": "Show Reports"
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_sitenews.jpg", 
+            "title": "Site News"
+        }
+    }, 
+    {
+        "pk": 9, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_surfscene.jpg", 
+            "title": "Surf Scene News"
+        }
+    }, 
+    {
+        "pk": 10, 
+        "model": "news.category", 
+        "fields": {
+            "icon": "news/categories/nch_tab.jpg", 
+            "title": "Tablature"
+        }
+    }
+]

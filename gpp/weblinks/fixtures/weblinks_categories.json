@@ -1,0 +1,101 @@
+[
+    {
+        "pk": 1,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Bands"
+        }
+    },
+    {
+        "pk": 5,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Fan Sites"
+        }
+    },
+    {
+        "pk": 4,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Gear"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Music Merchants"
+        }
+    },
+    {
+        "pk": 8,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Other"
+        }
+    },
+    {
+        "pk": 11,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "Do you have a photo gallery of surf bands somewhere on the web? Why not add a link to it here?",
+            "title": "Photo Galleries"
+        }
+    },
+    {
+        "pk": 10,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Podcasts"
+        }
+    },
+    {
+        "pk": 6,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Radio"
+        }
+    },
+    {
+        "pk": 3,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Record Labels"
+        }
+    },
+    {
+        "pk": 7,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "",
+            "title": "Tablature"
+        }
+    },
+    {
+        "pk": 9,
+        "model": "weblinks.category",
+        "fields": {
+            "count": 0,
+            "description": "Links to surf videos on the web",
+            "title": "Videos"
+        }
+    }
+]

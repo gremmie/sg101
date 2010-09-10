@@ -1,0 +1,74 @@
+[
+    {
+        "pk": 1, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Jam along to backing tracks made by your fellow SG101'ers!", 
+            "title": "Backing Tracks"
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "User demos.", 
+            "title": "Demos"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Recordings of user gear in action.", 
+            "title": "Gear Samples"
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Interviews with surf scenesters.", 
+            "title": "Interviews"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Anything else.", 
+            "title": "Misc"
+        }
+    }, 
+    {
+        "pk": 7, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Legal music created by members.", 
+            "title": "Music"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "Please upload original surf music ringtones here.", 
+            "title": "Ringtones"
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "downloads.category", 
+        "fields": {
+            "count": 0, 
+            "description": "User contributed tablature. Please upload in .pdf or .txt formats only.", 
+            "title": "Tablature"
+        }
+    }
+]

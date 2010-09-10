@@ -1,0 +1,202 @@
+[
+    {
+        "pk": 22, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/upset.gif", 
+            "code": ":argh:", 
+            "title": "Argh"
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/biggrin.gif", 
+            "code": ":-D", 
+            "title": "Big Grin"
+        }
+    }, 
+    {
+        "pk": 7, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/bigrazz.gif", 
+            "code": ":-P", 
+            "title": "Big Razz"
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/confused.gif", 
+            "code": "o_O", 
+            "title": "Confused"
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/cool.gif", 
+            "code": "8^)", 
+            "title": "Cool"
+        }
+    }, 
+    {
+        "pk": 9, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/cry.gif", 
+            "code": ":-(", 
+            "title": "Cry"
+        }
+    }, 
+    {
+        "pk": 10, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/dead.gif", 
+            "code": "x_x", 
+            "title": "Dead"
+        }
+    }, 
+    {
+        "pk": 11, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/embarrassed.gif", 
+            "code": ":-#", 
+            "title": "Embarrassed"
+        }
+    }, 
+    {
+        "pk": 13, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/laugh.gif", 
+            "code": ":lol:", 
+            "title": "LOL"
+        }
+    }, 
+    {
+        "pk": 14, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/mad.gif", 
+            "code": "X-(", 
+            "title": "Mad"
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/no.gif", 
+            "code": ":no:", 
+            "title": "No"
+        }
+    }, 
+    {
+        "pk": 15, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/none.gif", 
+            "code": ":-|", 
+            "title": "None"
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/bigeek.gif", 
+            "code": ":shock:", 
+            "title": "Shock"
+        }
+    }, 
+    {
+        "pk": 19, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/sigh.gif", 
+            "code": ":sigh:", 
+            "title": "Sigh"
+        }
+    }, 
+    {
+        "pk": 20, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/smile.gif", 
+            "code": ":-)", 
+            "title": "Smile"
+        }
+    }, 
+    {
+        "pk": 21, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/uhoh.gif", 
+            "code": ":uh-oh:", 
+            "title": "Uh-Oh"
+        }
+    }, 
+    {
+        "pk": 17, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/rolleyes.gif", 
+            "code": ":whatever:", 
+            "title": "Whatever"
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/smilewinkgrin.gif", 
+            "code": ";-)", 
+            "title": "Wink"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/yes.gif", 
+            "code": ":yes:", 
+            "title": "Yes"
+        }
+    }, 
+    {
+        "pk": 18, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": false, 
+            "image": "smiley/images/sleep.gif", 
+            "code": ":sleep:", 
+            "title": "Zzzzz"
+        }
+    }
+]

@@ -1,0 +1,101 @@
+[
+    {
+        "pk": 7, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 2, 
+            "image": "badges/newspaper.png", 
+            "order": 0, 
+            "name": "News Pin", 
+            "description": "For submitting a news article to the site news."
+        }
+    }, 
+    {
+        "pk": 4, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 1, 
+            "image": "badges/date.png", 
+            "order": 1, 
+            "name": "Calendar Pin", 
+            "description": "For adding an event to the site calendar."
+        }
+    }, 
+    {
+        "pk": 9, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 3, 
+            "image": "badges/world_link.png", 
+            "order": 2, 
+            "name": "Link Pin", 
+            "description": "For submitting a link to the site web links database."
+        }
+    }, 
+    {
+        "pk": 5, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 4, 
+            "image": "badges/disk.png", 
+            "order": 3, 
+            "name": "Download Pin", 
+            "description": "For uploading a file to the site downloads library."
+        }
+    }, 
+    {
+        "pk": 6, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 0, 
+            "image": "badges/money_dollar.png", 
+            "order": 4, 
+            "name": "Contributor Pin", 
+            "description": "For making a donation to the site."
+        }
+    }, 
+    {
+        "pk": 8, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 5, 
+            "image": "badges/shield.png", 
+            "order": 5, 
+            "name": "Security Pin", 
+            "description": "For reporting spam or abuse."
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 100, 
+            "image": "badges/award_star_bronze_1.png", 
+            "order": 6, 
+            "name": "Bronze Star", 
+            "description": "For service to the site and community."
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 101, 
+            "image": "badges/award_star_silver_2.png", 
+            "order": 7, 
+            "name": "Silver Star", 
+            "description": "For distinguished and dedicated service to the site and community."
+        }
+    }, 
+    {
+        "pk": 3, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 102, 
+            "image": "badges/award_star_gold_3.png", 
+            "order": 8, 
+            "name": "Gold Star", 
+            "description": "For exceptional and meritorious service to the site and community."
+        }
+    }
+]

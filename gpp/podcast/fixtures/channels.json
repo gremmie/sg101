@@ -1,0 +1,21 @@
+[
+    {
+        "pk": 1, 
+        "model": "podcast.channel", 
+        "fields": {
+            "category": "Music", 
+            "owner_name": "Brian Neal", 
+            "subtitle": "SurfGuitar101's podcast features the best in instrumental surf music from the 1960's to the present.", 
+            "language": "en", 
+            "copyright": "(C) Copyright 2007-2010 Brian Neal", 
+            "author": "SurfGuitar101.com Podcasters", 
+            "image": "podcast/podcast_logo.jpg", 
+            "title": "Surfguitar101.com's Podcast", 
+            "explicit": "no", 
+            "owner_email": "podcast@surfguitar101.com", 
+            "link": "http://surfguitar101.com/podcast/", 
+            "keywords": "surf, surf music, surf rock, instrumental, sixties, retro, instro, dick dale, surf guitar, sg101, reverb, instrumental surf", 
+            "description": "We play the best instrumental surf music from the 1960's to the present day, as well as interviews with surf musicians and surf music scene news."
+        }
+    }
+]
