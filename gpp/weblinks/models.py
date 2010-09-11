@@ -4,7 +4,7 @@ This module contains the models for the weblinks application.
 import datetime
 
 from django.db import models
-from django.contrib import auth
+from django.contrib.auth.models import User
 
 
 class Category(models.Model):
@@ -34,7 +34,7 @@ class LinkBase(models.Model):
     title = models.CharField(max_length=128)
     url = models.URLField(verify_exists=False, db_index=True)
     description = models.TextField(blank=True)
-    user = models.ForeignKey(auth.models.User)
+    user = models.ForeignKey(User)
     date_added = models.DateField()
 
     class Meta:
@@ -93,7 +93,7 @@ class FlaggedLinkManager(models.Manager):
 class FlaggedLink(models.Model):
     """Model to represent links that have been flagged as broken by users"""
     link = models.ForeignKey(Link)
-    user = models.ForeignKey(auth.models.User)
+    user = models.ForeignKey(User)
     date_flagged = models.DateField(auto_now_add = True)
     approved = models.BooleanField(default = False, 
         help_text = 'Check this and save to remove the referenced link from the database')
