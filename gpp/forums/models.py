@@ -361,21 +361,3 @@ class TopicLastVisit(models.Model):
     def touch(self):
         self.last_visit = datetime.datetime.now()
 
-
-class Statistic(models.Model):
-    """
-    This model keeps track of forum statistics. Currently, the only statistic
-    is the maximum number of users online. This stat is computed by a mgmt.
-    command that is run on a cron job to peek at the "users_online" dict
-    that is maintained in cache by the forums middleware.
-    """
-    max_users = models.IntegerField()
-    max_users_date = models.DateTimeField()
-
-    def __unicode__(self):
-        return u'%d users on %s' % (self.max_users, 
-                self.max_users_date.strftime('%Y-%m-%d %H:%M:%S'))
-
-    def save(self, *args, **kwargs):
-        self.max_users_date = datetime.datetime.now()
-        super(Statistic, self).save(*args, **kwargs)

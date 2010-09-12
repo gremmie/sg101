@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 
 from forums.models import Topic
 from forums.models import Post
-from forums.models import Statistic
+from core.models import Statistic
 
 
 register = template.Library()
