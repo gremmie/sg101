@@ -12,6 +12,8 @@ from django.contrib.sites.models import Site
 from django.http import HttpResponse
 from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_exempt
+
 
 from donations.models import Donation
 
@@ -55,6 +57,7 @@ def index(request):
         context_instance = RequestContext(request))
 
 
+@csrf_exempt
 def ipn(request):
     """
     This function is the IPN listener and handles the IPN POST from Paypal.
