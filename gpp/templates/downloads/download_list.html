@@ -11,18 +11,18 @@
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>
-{% downloads_navigation %}
+{% include 'downloads/navigation.html' %}
 <h3>Category: {{ category.title }}</h3>
 
 {% if page.object_list %}
 <ul class="tab-nav">
-   <li><a href="{% url downloads-category category=category.id sort="title" page="1" %}"
+   <li><a href="{% url downloads-category slug=category.slug sort="title" %}"
       {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
-   <li><a href="{% url downloads-category category=category.id sort="date" page="1" %}"
+   <li><a href="{% url downloads-category slug=category.slug sort="date" %}"
       {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
-   <li><a href="{% url downloads-category category=category.id sort="rating" page="1" %}"
+   <li><a href="{% url downloads-category slug=category.slug sort="rating" %}"
       {% ifequal s "rating" %}class="active"{% endifequal %}>Rating</a></li>
-   <li><a href="{% url downloads-category category=category.id sort="hits" page="1" %}"
+   <li><a href="{% url downloads-category slug=category.slug sort="hits" %}"
       {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
 </ul>
 

@@ -14,7 +14,8 @@ from downloads.models import VoteRecord
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description', 'count')
+    list_display = ('title', 'slug', 'description', 'count')
+    prepopulated_fields = {'slug': ('title', )}
     readonly_fields = ('count', )
 
 

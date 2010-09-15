@@ -80,3 +80,16 @@ def get_ip(request):
         ip = match.group(1) if match else None
 
     return ip
+
+
+def get_page(qdict):
+    """Attempts to retrieve the value for "page" from the given query dict and
+    return it as an integer. If the key cannot be found or converted to an
+    integer, 1 is returned.
+    """
+    n = qdict.get('page', 1)
+    try:
+        n = int(n)
+    except ValueError:
+        n = 1
+    return n

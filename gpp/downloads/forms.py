@@ -10,14 +10,6 @@ from downloads.models import PendingDownload
 from downloads.models import AllowedExtension
 
 
-class SearchForm(forms.Form):
-    """Downloads search form."""
-    text = forms.CharField(max_length=30)
-
-    def query(self):
-        return self.cleaned_data['text']
-
-
 class AddDownloadForm(forms.ModelForm):
     """Form to allow adding downloads."""
     title = forms.CharField(required=True, 

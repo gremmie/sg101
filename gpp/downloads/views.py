@@ -18,15 +18,15 @@ from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
+from core.functions import get_page
 from downloads.models import Category
 from downloads.models import Download
 from downloads.models import VoteRecord
 from downloads.forms import AddDownloadForm
-from downloads.forms import SearchForm
 
 #######################################################################
 
-DLS_PER_PAGE = 10
+DLS_PER_PAGE = 1
 
 def create_paginator(dls):
    return DiggPaginator(dls, DLS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
@@ -54,9 +54,9 @@ DOWNLOAD_FIELD_MAP = {
 }
 
 @login_required
-def category(request, category, sort='title', page='1'):
+def category(request, slug, sort='title'):
     try:
-        cat = Category.objects.get(pk=category)
+        cat = Category.objects.get(slug=slug)
     except Category.DoesNotExist:
         raise Http404
 
@@ -67,8 +67,9 @@ def category(request, category, sort='title', page='1'):
     downloads = Download.public_objects.filter(category=cat.pk).order_by(
             order_by)
     paginator = create_paginator(downloads)
+    page = get_page(request.GET)
     try:
-        the_page = paginator.page(int(page))
+        the_page = paginator.page(page)
     except InvalidPage:
         raise Http404
 
@@ -187,41 +188,6 @@ def thanks(request):
 
 #######################################################################
 
-@login_required
-def search(request, page=1):
-    if request.method == 'POST':
-        form = SearchForm(request.POST)
-        if form.is_valid():
-            query_text = form.query()
-            page = 1
-        else:
-            return HttpResponseRedirect(reverse('downloads-index'))
-    else:
-        if 'query' in request.GET:
-            query_text = request.GET['query']
-        else:
-            return HttpResponseRedirect(reverse('downloads-index'))
-
-    dls = Download.objects.filter(
-            Q(title__icontains = query_text) |
-            Q(description__icontains = query_text)).order_by(
-                    'title').select_related()
-    paginator = create_paginator(dls)
-    try:
-        the_page = paginator.page(int(page))
-    except EmptyPage:
-        dls = Download.objects.none()
-    except InvalidPage:
-        raise Http404
-
-    return render_to_response('downloads/search_results.html', {
-        'query': query_text,
-        'page': the_page, 
-        }, 
-        context_instance = RequestContext(request))
-
-#######################################################################
-
 @require_POST
 def rate_download(request):
     """This function is called by AJAX to rate a download."""
@@ -245,7 +211,8 @@ def rate_download(request):
             return HttpResponseBadRequest('Invalid download id.')
 
         # prevent multiple votes from the same user
-        vote_record, created = VoteRecord.objects.get_or_create(download=download, user=request.user)
+        vote_record, created = VoteRecord.objects.get_or_create(
+                download=download, user=request.user)
         if created:
             new_score = download.vote(rating)
             download.save()

@@ -6,14 +6,14 @@
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>
-{% downloads_navigation %}
+{% include 'downloads/navigation.html' %}
 <h3>Categories</h3>
 {% if categories %}
 <p>We have {{ total_dls }} download{{ total_dls|pluralize }} in {{ categories.count }} categories.</p>
 <dl>
 {% for category in categories %}
 <dt>
-<a href="{% url downloads-category category=category.pk sort="title" page=1 %}">{{ category.title }}</a>
+<a href="{% url downloads-category slug=category.slug sort="title" %}">{{ category.title }}</a>
 ({{ category.count }})
 </dt>
 <dd><p>{{ category.description }}</p></dd>

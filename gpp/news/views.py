@@ -22,6 +22,7 @@ from tagging.models import TaggedItem
 from core.html import clean_html
 from core.functions import send_mail
 from core.functions import get_full_name
+from core.functions import get_page
 from core.paginator import DiggPaginator
 from news.models import Category
 from news.models import PendingStory
@@ -38,25 +39,11 @@ def create_paginator(stories):
 
 #######################################################################
 
-def _get_page(qdict):
-    """Attempts to retrieve the value for "page" from the given query dict and
-    return it as an integer. If the key cannot be found or converted to an
-    integer, 1 is returned.
-    """
-    n = qdict.get('page', 1)
-    try:
-        n = int(n)
-    except ValueError:
-        n = 1
-    return n
-
-#######################################################################
-
 def index(request):
    stories = Story.objects.all().select_related()
    paginator = create_paginator(stories)
 
-   page = _get_page(request.GET)
+   page = get_page(request.GET)
    try:
       the_page = paginator.page(page)
    except InvalidPage:
@@ -83,7 +70,7 @@ def archive_index(request):
 def archive(request, year, month):
    stories = Story.objects.filter(date_submitted__year=year, date_submitted__month=month)
    paginator = create_paginator(stories)
-   page = _get_page(request.GET)
+   page = get_page(request.GET)
    try:
       the_page = paginator.page(page)
    except InvalidPage:
@@ -116,7 +103,7 @@ def category(request, slug):
    category = get_object_or_404(Category, slug=slug)
    stories = Story.objects.filter(category=category)
    paginator = create_paginator(stories)
-   page = _get_page(request.GET)
+   page = get_page(request.GET)
    try:
       the_page = paginator.page(page)
    except InvalidPage:
@@ -181,7 +168,7 @@ def tag(request, tag_name):
    tag = get_object_or_404(Tag, name=tag_name)
    stories = TaggedItem.objects.get_by_model(Story.objects.all().select_related(), tag)
    paginator = create_paginator(stories)
-   page = _get_page(request.GET)
+   page = get_page(request.GET)
    try:
       the_page = paginator.page(page)
    except InvalidPage:

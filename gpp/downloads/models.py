@@ -14,6 +14,7 @@ from core.markup import site_markup
 class Category(models.Model):
     """Downloads belong to categories."""
     title = models.CharField(max_length=64)
+    slug = models.SlugField(max_length=64)
     description = models.TextField(blank=True)
     count = models.IntegerField(default=0, blank=True)
 
