@@ -5,13 +5,6 @@ Forms for the weblinks application.
 from django import forms
 from weblinks.models import PendingLink, Link
 
-class SearchForm(forms.Form):
-   '''Weblinks search form'''
-   text = forms.CharField(max_length = 30)
-
-   def query(self):
-      return self.cleaned_data['text']
-
 
 class AddLinkForm(forms.ModelForm):
    title = forms.CharField(widget = forms.TextInput(attrs = {'size': 52}))

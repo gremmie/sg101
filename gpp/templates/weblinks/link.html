@@ -7,6 +7,7 @@
 <table class="link-stats">
    <tr>
       <th>Added by:</th><td><a href="{% url bio-view_profile link.user.username %}">{{ link.user.username }}</a></td>
+      <th>Category:</th><td><a href="{% url weblinks-view_links slug=link.category.slug sort='date' %}">{{ link.category.title }}</a></td>
    </tr>
    <tr>
       <th>Date Added:</th><td>{{ link.date_added|date:"M d, Y" }}</td>

@@ -1,100 +1,111 @@
 [
     {
-        "pk": 1,
-        "model": "weblinks.category",
+        "pk": 1, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 215, 
+            "description": "", 
+            "slug": "bands", 
             "title": "Bands"
         }
-    },
+    }, 
     {
-        "pk": 5,
-        "model": "weblinks.category",
+        "pk": 5, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 21, 
+            "description": "", 
+            "slug": "fan-sites", 
             "title": "Fan Sites"
         }
-    },
+    }, 
     {
-        "pk": 4,
-        "model": "weblinks.category",
+        "pk": 4, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 28, 
+            "description": "", 
+            "slug": "gear", 
             "title": "Gear"
         }
-    },
+    }, 
     {
-        "pk": 2,
-        "model": "weblinks.category",
+        "pk": 2, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 7, 
+            "description": "", 
+            "slug": "music-merchants", 
             "title": "Music Merchants"
         }
-    },
+    }, 
     {
-        "pk": 8,
-        "model": "weblinks.category",
+        "pk": 8, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 6, 
+            "description": "", 
+            "slug": "other", 
             "title": "Other"
         }
-    },
+    }, 
     {
-        "pk": 11,
-        "model": "weblinks.category",
+        "pk": 11, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "Do you have a photo gallery of surf bands somewhere on the web? Why not add a link to it here?",
+            "count": 17, 
+            "description": "Do you have a photo gallery of surf bands somewhere on the web? Why not add a link to it here?", 
+            "slug": "photo-galleries", 
             "title": "Photo Galleries"
         }
-    },
+    }, 
     {
-        "pk": 10,
-        "model": "weblinks.category",
+        "pk": 10, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 4, 
+            "description": "", 
+            "slug": "podcasts", 
             "title": "Podcasts"
         }
-    },
+    }, 
     {
-        "pk": 6,
-        "model": "weblinks.category",
+        "pk": 6, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 8, 
+            "description": "", 
+            "slug": "radio", 
             "title": "Radio"
         }
-    },
+    }, 
     {
-        "pk": 3,
-        "model": "weblinks.category",
+        "pk": 3, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 13, 
+            "description": "", 
+            "slug": "record-labels", 
             "title": "Record Labels"
         }
-    },
+    }, 
     {
-        "pk": 7,
-        "model": "weblinks.category",
+        "pk": 7, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "",
+            "count": 4, 
+            "description": "", 
+            "slug": "tablature", 
             "title": "Tablature"
         }
-    },
+    }, 
     {
-        "pk": 9,
-        "model": "weblinks.category",
+        "pk": 9, 
+        "model": "weblinks.category", 
         "fields": {
-            "count": 0,
-            "description": "Links to surf videos on the web",
+            "count": 31, 
+            "description": "Links to surf videos on the web", 
+            "slug": "videos", 
             "title": "Videos"
         }
     }

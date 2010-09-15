@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 class Category(models.Model):
     """Links belong to categories"""
     title = models.CharField(max_length=64)
+    slug = models.SlugField(max_length=64)
     description = models.TextField(blank=True)
     count = models.IntegerField(default=0)
 

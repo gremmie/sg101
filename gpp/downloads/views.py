@@ -26,7 +26,7 @@ from downloads.forms import AddDownloadForm
 
 #######################################################################
 
-DLS_PER_PAGE = 1
+DLS_PER_PAGE = 10
 
 def create_paginator(dls):
    return DiggPaginator(dls, DLS_PER_PAGE, body=5, tail=3, margin=3, padding=2)

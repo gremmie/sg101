@@ -20,10 +20,10 @@ from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
+from core.functions import get_page
 from weblinks.models import Category
 from weblinks.models import Link
 from weblinks.models import FlaggedLink
-from weblinks.forms import SearchForm
 from weblinks.forms import AddLinkForm
 
 #######################################################################
@@ -47,9 +47,16 @@ def link_index(request):
 #######################################################################
 
 def new_links(request):
-   links = Link.public_objects.order_by('-date_added')[:LINKS_PER_PAGE]
+   links = Link.public_objects.order_by('-date_added')
+   paginator = create_paginator(links)
+   page = get_page(request.GET)
+   try:
+      the_page = paginator.page(page)
+   except InvalidPage:
+      raise Http404
+
    return render_to_response('weblinks/link_summary.html', {
-      'links': links, 
+      'page': the_page, 
       'title': 'Newest Links',
       },
       context_instance = RequestContext(request))
@@ -57,9 +64,15 @@ def new_links(request):
 #######################################################################
 
 def popular_links(request):
-   links = Link.public_objects.order_by('-hits')[:LINKS_PER_PAGE]
+   links = Link.public_objects.order_by('-hits')
+   paginator = create_paginator(links)
+   page = get_page(request.GET)
+   try:
+      the_page = paginator.page(page)
+   except InvalidPage:
+      raise Http404
    return render_to_response('weblinks/link_summary.html', {
-      'links': links, 
+      'page': the_page, 
       'title': 'Popular Links',
       },
       context_instance = RequestContext(request))
@@ -78,7 +91,7 @@ def add_link(request):
 
 A user has added a new link for your approval.
 """)
-         return HttpResponseRedirect(reverse('weblinks.views.add_thanks'))
+         return HttpResponseRedirect(reverse('weblinks-add_thanks'))
    else:
       add_form = AddLinkForm()
 
@@ -105,9 +118,9 @@ LINK_FIELD_MAP = {
    'hits': '-hits'
 }
 
-def view_links(request, category, sort='title', page='1'):
+def view_links(request, slug, sort='title'):
    try:
-      cat = Category.objects.get(pk=category)
+      cat = Category.objects.get(slug=slug)
    except Category.DoesNotExist:
       raise Http404
 
@@ -117,10 +130,11 @@ def view_links(request, category, sort='title', page='1'):
       sort = 'title'
       order_by = LINK_FIELD_MAP['title']
 
-   links = Link.public_objects.filter(category = category).order_by(order_by)
+   links = Link.public_objects.filter(category=cat).order_by(order_by)
    paginator = create_paginator(links)
+   page = get_page(request.GET)
    try:
-      the_page = paginator.page(int(page))
+      the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
 
@@ -175,39 +189,6 @@ def report_link(request, link_id):
     return HttpResponse("The link was reported. A moderator will review the " \
             "link shortly. Thanks for helping to improve the content on " \
             "this site.")
-
-#######################################################################
-
-def search_links(request, page=1):
-   if request.method == 'POST':
-      form = SearchForm(request.POST)
-      if form.is_valid():
-         query_text = form.query()
-         page = 1
-      else:
-         return HttpResponseRedirect(reverse('weblinks.views.link_index'))
-   else:
-      if 'query' in request.GET:
-         query_text = request.GET['query']
-      else:
-         return HttpResponseRedirect(reverse('weblinks.views.link_index'))
-
-   links = Link.public_objects.filter(
-         Q(title__icontains = query_text) |
-         Q(description__icontains = query_text)).order_by('title').select_related()
-   paginator = create_paginator(links)
-   try:
-      the_page = paginator.page(int(page))
-   except EmptyPage:
-      links = Link.public_objects.none()
-   except InvalidPage:
-      raise Http404
-
-   return render_to_response('weblinks/search_results.html', {
-      'query': query_text,
-      'page': the_page, 
-      }, 
-      context_instance = RequestContext(request))
 
 #######################################################################
 

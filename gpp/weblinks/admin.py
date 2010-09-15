@@ -9,7 +9,8 @@ from weblinks.models import FlaggedLink
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description', 'count')
+    list_display = ('title', 'slug', 'description', 'count')
+    prepopulated_fields = {'slug': ('title', )}
     readonly_fields = ('count', )
 
 

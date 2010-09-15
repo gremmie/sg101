@@ -1,22 +1,16 @@
 <div class="app-logo">
 <img src="{{ MEDIA_URL }}icons/weblinks-logo.jpg" alt="Links Logo" title="Links" />
 </div>
-<div class="weblinks-search">
-<form action="{% url weblinks-search page=1 %}" method="post">{% csrf_token %}
-   <p>{{ search_form.text }} <input type="submit" value="Search" /></p>
-</form>
-</div>
-
 <ul class="app-menu">
-<li><a href="{% url weblinks.views.link_index %}">Categories</a></li>
-<li><a href="{% url weblinks.views.new_links %}">New</a></li>
-<li><a href="{% url weblinks.views.popular_links %}">Popular</a></li>
+<li><a href="{% url weblinks-main %}">Categories</a></li>
+<li><a href="{% url weblinks-new_links %}">New</a></li>
+<li><a href="{% url weblinks-popular_links %}">Popular</a></li>
 {% if user.is_authenticated %}
-<li><a href="{% url weblinks.views.add_link %}">Add Link</a></li>
+<li><a href="{% url weblinks-add_link %}">Add Link</a></li>
 {% endif %}
 </ul>
 <center>
-   <form action="{% url weblinks.views.random_link %}" method="post">{% csrf_token %}
+   <form action="{% url weblinks-random_link %}" method="post">{% csrf_token %}
       <input type="submit" value="Visit a Random Link" />
    </form>
 </center>
