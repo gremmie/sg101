@@ -10,7 +10,7 @@
 <div class="news-details">
    Submitted by {{ story.submitter.username }} on {{ story.date_submitted|date:"F d, Y" }}.
 </div>
-<a href="{% url news.views.category category=story.category.id page=1 %}">
+<a href="{% url news-category slug=story.category.slug %}">
 <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 
    class="news-icon" /></a>
 <div class="news-content">
@@ -24,7 +24,7 @@
 {% endif %}
 <hr />
 <p>
-Category: <a href="{% url news.views.category category=story.category.id page=1 %}">{{ story.category.title }}</a>
+Category: <a href="{% url news-category slug=story.category.slug %}">{{ story.category.title }}</a>
 <img src="{{ MEDIA_URL }}icons/comments.png" alt="Comments" title="Comments" />
 <a href="{{ story.get_absolute_url }}">{{ comment_count }} comment{{ comment_count|pluralize }}</a>
 <a href="{{ story.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Permalink" title="Permalink" /></a>
@@ -39,7 +39,7 @@ Category: <a href="{% url news.views.category category=story.category.id page=1 
    <img src="{{ MEDIA_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
    <ul>
       {% for tag in story_tags %}
-         <li><a href="{% url news-tag_page tag_name=tag page=1 %}">{{ tag }}</a></li>
+         <li><a href="{% url news-tag_page tag_name=tag %}">{{ tag }}</a></li>
       {% endfor %}
    </ul>
 </div>

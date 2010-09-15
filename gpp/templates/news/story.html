@@ -19,7 +19,7 @@
 </div>
 <hr />
 <div class="news-content">
-   <a href="{% url news.views.category category=story.category.id page=1 %}">
+   <a href="{% url news-category slug=story.category.slug %}">
    <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 
       class="news-icon" /></a>
    {{ story.short_text|safe }}
@@ -27,7 +27,7 @@
    <br clear="all" />
    <hr />
    <p>
-   Category: <a href="{% url news.views.category category=story.category.id page=1 %}">{{ story.category.title }}</a>
+   Category: <a href="{% url news-category slug=story.category.slug %}">{{ story.category.title }}</a>
    <a href="{{ story.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png"
       alt="Story Permalink" title="Story Permalink" /></a>
 {% if user.is_authenticated %}
@@ -41,7 +41,7 @@
       <img src="{{ MEDIA_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
       <ul>
          {% for tag in story_tags %}
-            <li><a href="{% url news-tag_page tag_name=tag.name page=1 %}">{{ tag.name }}</a></li>
+            <li><a href="{% url news-tag_page tag_name=tag.name %}">{{ tag.name }}</a></li>
          {% endfor %}
       </ul>
    </div>

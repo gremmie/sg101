@@ -8,19 +8,13 @@
 {% endblock %}
 {% block content %}
 <h2>SurfGuitar101 News &amp; Articles <a href="{% url feeds-news %}"><img src="{{ MEDIA_URL }}icons/feed.png" alt="News Feed" title="News Feed" /></a></h2>
-{% if search_form %}
-<div class="news-search">
-<form action="{% url news-search_page page=1 %}" method="post">{% csrf_token %}
-   <p>{{ search_form.text }} {{ search_form.category }} <input type="submit" value="Search" /></p>
-</form>
-</div>
-{% endif %}
+
 <ul class="app-menu">
-<li><a href="{% url news-index_page page=1 %}">News Main</a></li>
+<li><a href="{% url news-index_page %}">News Main</a></li>
 <li><a href="{% url news-archive_index %}">Archive</a></li>
-<li><a href="{% url news.views.category_index %}">Categories</a></li>
+<li><a href="{% url news-category_index %}">Categories</a></li>
 <li><a href="{% url news-tag_index %}">Tags</a></li>
-<li><a href="{% url news.views.submit %}">Submit News</a></li>
+<li><a href="{% url news-submit %}">Submit News</a></li>
 </ul>
 {% block news_content %}
 {% endblock %}

@@ -6,29 +6,15 @@
 {% block news_content %}
 <h3>{{ title }}</h3>
 
-{% if query %}
-{% include 'core/pagination_query.html' %}
-{% else %}
-{% include 'core/pagination.html' %}
-{% endif %}
-
 {% if page.object_list %}
+{% include 'core/pagination.html' %}
 {% for story in page.object_list %}
    {% include 'news/story_summary.html' %}
 {% endfor %}
+{% include 'core/pagination.html' %}
 <div style="clear:right;"></div>
 {% else %}
-   {% if query %}
-      <p>No results found.</p>
-   {% else %}
-      <p>No news at this time.</p>
-   {% endif %}
-{% endif %}
-
-{% if query %}
-{% include 'core/pagination_query.html' %}
-{% else %}
-{% include 'core/pagination.html' %}
+   <p>No news at this time.</p>
 {% endif %}
 
 {% endblock %}

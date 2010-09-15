@@ -27,7 +27,6 @@ from news.models import Category
 from news.models import PendingStory
 from news.models import Story
 from news.forms import AddNewsForm
-from news.forms import SearchNewsForm
 from news.forms import SendStoryForm
 
 NEWS_PER_PAGE = 5
@@ -39,18 +38,33 @@ def create_paginator(stories):
 
 #######################################################################
 
-def index(request, page=1):
+def _get_page(qdict):
+    """Attempts to retrieve the value for "page" from the given query dict and
+    return it as an integer. If the key cannot be found or converted to an
+    integer, 1 is returned.
+    """
+    n = qdict.get('page', 1)
+    try:
+        n = int(n)
+    except ValueError:
+        n = 1
+    return n
+
+#######################################################################
+
+def index(request):
    stories = Story.objects.all().select_related()
    paginator = create_paginator(stories)
+
+   page = _get_page(request.GET)
    try:
-      the_page = paginator.page(int(page))
+      the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
 
    return render_to_response('news/index.html', {
       'title': 'Main Index',
       'page': the_page,
-      'search_form': SearchNewsForm(),
       }, 
       context_instance = RequestContext(request))
 
@@ -61,17 +75,17 @@ def archive_index(request):
    return render_to_response('news/archive_index.html', {
       'title': 'News Archive',
       'dates': dates, 
-      'search_form': SearchNewsForm(),
       }, 
       context_instance = RequestContext(request))
 
 #######################################################################
 
-def archive(request, year, month, page=1):
+def archive(request, year, month):
    stories = Story.objects.filter(date_submitted__year=year, date_submitted__month=month)
    paginator = create_paginator(stories)
+   page = _get_page(request.GET)
    try:
-      the_page = paginator.page(int(page))
+      the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
 
@@ -80,7 +94,6 @@ def archive(request, year, month, page=1):
    return render_to_response('news/index.html', {
       'title': 'Archive for %s, %s' % (month_name, year),
       'page': the_page,
-      'search_form': SearchNewsForm(),
       }, 
       context_instance = RequestContext(request))
 
@@ -94,69 +107,24 @@ def category_index(request):
 
    return render_to_response('news/category_index.html', {
       'cat_list': cat_list, 
-      'search_form': SearchNewsForm(),
       }, 
       context_instance = RequestContext(request))
 
 #######################################################################
 
-def category(request, category, page=1):
-   category = get_object_or_404(Category, pk=category)
+def category(request, slug):
+   category = get_object_or_404(Category, slug=slug)
    stories = Story.objects.filter(category=category)
    paginator = create_paginator(stories)
+   page = _get_page(request.GET)
    try:
-      the_page = paginator.page(int(page))
+      the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
 
    return render_to_response('news/index.html', {
       'title': 'Category: ' + category.title,
       'page': the_page,
-      'search_form': SearchNewsForm(),
-      }, 
-      context_instance = RequestContext(request))
-
-#######################################################################
-
-def search(request, page=1):
-   if request.method == 'POST':
-      form = SearchNewsForm(request.POST)
-      if form.is_valid():
-         query_text = form.get_query()
-         category = form.get_category()
-         page = 1
-      else:
-         return HttpResponseRedirect(reverse('news.views.index'))
-   else:
-      if 'query' in request.GET:
-         query_text = request.GET['query']
-         category = request.GET.get('category', None)
-      else:
-         return HttpResponseRedirect(reverse('news.views.index'))
-
-   if category is not None:
-      stories = Story.objects.filter(category=category)
-      cat_qual = ' in category "%s"' % category.title
-   else:
-      stories = Story.objects.all()
-      cat_qual = ''
-
-   stories = stories.filter(
-         Q(title__icontains=query_text) |
-         Q(short_text__icontains=query_text) |
-         Q(long_text__icontains=query_text)).order_by('-date_submitted')
-
-   paginator = create_paginator(stories)
-   try:
-      the_page = paginator.page(int(page))
-   except InvalidPage:
-      raise Http404
-
-   return render_to_response('news/index.html', {
-      'title': 'Search Results for "%s"%s' % (query_text, cat_qual),
-      'query': query_text,
-      'page': the_page,
-      'search_form': SearchNewsForm(),
       }, 
       context_instance = RequestContext(request))
 
@@ -166,7 +134,6 @@ def story(request, story_id):
    story = get_object_or_404(Story, pk=story_id)
    return render_to_response('news/story.html', {
       'story': story,
-      'search_form': SearchNewsForm(),
       },
       context_instance=RequestContext(request))
 
@@ -188,7 +155,6 @@ def submit(request):
 
    return render_to_response('news/submit_news.html', {
       'add_form': add_form,
-      'search_form': SearchNewsForm(),
       },
       context_instance = RequestContext(request))
 
@@ -197,7 +163,6 @@ def submit(request):
 @login_required
 def submit_thanks(request):
    return render_to_response('news/submit_news.html', {
-      'search_form': SearchNewsForm(),
       },
       context_instance = RequestContext(request))
 
@@ -207,25 +172,24 @@ def tags(request):
    tags = Tag.objects.cloud_for_model(Story)
    return render_to_response('news/tag_index.html', {
       'tags': tags,
-      'search_form': SearchNewsForm(),
       },
       context_instance = RequestContext(request))
 
 #######################################################################
 
-def tag(request, tag_name, page=1):
+def tag(request, tag_name):
    tag = get_object_or_404(Tag, name=tag_name)
    stories = TaggedItem.objects.get_by_model(Story.objects.all().select_related(), tag)
    paginator = create_paginator(stories)
+   page = _get_page(request.GET)
    try:
-      the_page = paginator.page(int(page))
+      the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
 
    return render_to_response('news/index.html', {
       'title': 'Stories with tag: "%s"' % tag_name,
       'page': the_page,
-      'search_form': SearchNewsForm(),
       }, 
       context_instance=RequestContext(request))
 

@@ -10,6 +10,12 @@ from news.models import PendingStory
 from news.models import Story
 from news.models import Category
 
+
+class CategoryAdmin(admin.ModelAdmin):
+    prepopulated_fields = {'slug': ("title", )}
+    list_display = ('title', 'slug')
+
+
 class PendingStoryAdmin(admin.ModelAdmin):
     list_display = ('title', 'date_submitted', 'submitter')
     list_filter = ('date_submitted', )
@@ -48,6 +54,6 @@ class StoryAdmin(admin.ModelAdmin):
         js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
-admin.site.register(Category)
+admin.site.register(Category, CategoryAdmin)
 admin.site.register(Story, StoryAdmin)
 admin.site.register(PendingStory, PendingStoryAdmin)

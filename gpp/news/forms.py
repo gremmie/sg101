@@ -23,24 +23,6 @@ class AddNewsForm(forms.ModelForm):
       js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
-class SearchNewsForm(forms.Form):
-   """Form for a user to search news stories."""
-   text = forms.CharField(max_length=30)
-   category = forms.ModelChoiceField(label='', 
-         required=False,
-         empty_label='(All Categories)',
-         queryset=Category.objects.all())
-
-   def get_query(self):
-      return self.cleaned_data['text']
-
-   def get_category(self):
-      cat = self.cleaned_data['category']
-      if cat:
-         return cat
-      return None
-
-
 class SendStoryForm(forms.Form):
    """Form for sending a news story via email to a friend."""
    friend_name = forms.CharField(label="Friend's Name", max_length=64)

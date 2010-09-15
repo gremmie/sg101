@@ -10,7 +10,8 @@ from tagging.fields import TagField
 
 class Category(models.Model):
     """News stories belong to categories"""
-    title = models.CharField(max_length = 64)
+    title = models.CharField(max_length=64)
+    slug = models.SlugField(max_length=64)
     icon = models.ImageField(upload_to='news/categories/', blank=True)
 
     def __unicode__(self):

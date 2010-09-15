@@ -4,6 +4,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_articles.jpg", 
+            "slug": "articles", 
             "title": "Articles"
         }
     }, 
@@ -12,6 +13,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_bands.jpg", 
+            "slug": "bands", 
             "title": "Bands"
         }
     }, 
@@ -20,6 +22,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/video.gif", 
+            "slug": "featured-videos", 
             "title": "Featured Videos"
         }
     }, 
@@ -28,6 +31,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_gear.jpg", 
+            "slug": "gear", 
             "title": "Gear"
         }
     }, 
@@ -36,6 +40,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_interviews.jpg", 
+            "slug": "interviews", 
             "title": "Interviews"
         }
     }, 
@@ -44,6 +49,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_reviews.jpg", 
+            "slug": "reviews", 
             "title": "Reviews"
         }
     }, 
@@ -52,6 +58,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_showannoun.jpg", 
+            "slug": "show-announcements", 
             "title": "Show Announcements"
         }
     }, 
@@ -60,6 +67,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_showreport.jpg", 
+            "slug": "show-reports", 
             "title": "Show Reports"
         }
     }, 
@@ -68,6 +76,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_sitenews.jpg", 
+            "slug": "site-news", 
             "title": "Site News"
         }
     }, 
@@ -76,6 +85,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_surfscene.jpg", 
+            "slug": "surf-scene-news", 
             "title": "Surf Scene News"
         }
     }, 
@@ -84,6 +94,7 @@
         "model": "news.category", 
         "fields": {
             "icon": "news/categories/nch_tab.jpg", 
+            "slug": "tablature", 
             "title": "Tablature"
         }
     }
