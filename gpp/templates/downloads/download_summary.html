@@ -3,6 +3,8 @@
 {% block title %}{{ title }}{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
 {% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
@@ -12,12 +14,14 @@
 {% include 'downloads/navigation.html' %}
 <h3>{{ title }}</h3>
 
-{% if downloads %}
+{% if page.object_list %}
+{% include 'core/pagination.html' %}
 <dl>
-{% for download in downloads %}
+{% for download in page.object_list %}
    {% include 'downloads/download.html' %}
 {% endfor %}
 </dl>
+{% include 'core/pagination.html' %}
 {% else %}
 <p>No downloads available at this time.</p>
 {% endif %}

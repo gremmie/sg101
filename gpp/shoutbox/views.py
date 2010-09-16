@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
+from core.functions import get_page
 from shoutbox.forms import ShoutBoxForm
 from shoutbox.models import Shout
 from shoutbox.models import ShoutFlag
@@ -51,12 +52,13 @@ def view_shout(request, id):
        context_instance = RequestContext(request))
 
 
-def view_history(request, page=1):
+def view_history(request):
     """This view allows one to view the shoutbox history."""
     paginator = DiggPaginator(Shout.objects.all().select_related(), 
             SHOUTS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
+    page = get_page(request.GET)
     try:
-        the_page = paginator.page(int(page))
+        the_page = paginator.page(page)
     except InvalidPage:
         raise Http404
 

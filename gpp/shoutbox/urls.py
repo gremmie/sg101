@@ -11,7 +11,5 @@ urlpatterns = patterns('shoutbox.views',
     url(r'^shout/$', 'shout', name='shoutbox-shout'),
     url(r'^text/$', 'text', name='shoutbox-text'),
     url(r'^view/(\d+)/$', 'view_shout', name='shoutbox-view'),
-    url(r'^view/history/(?P<page>\d+)/$', 'view_history', name='shoutbox-history'),
+    url(r'^view/history/$', 'view_history', name='shoutbox-history'),
 )
-
-# vim: ts=4 sw=4

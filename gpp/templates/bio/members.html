@@ -14,9 +14,9 @@ user profiles.
 </p>
 {% if page.object_list %}
 <ul class="tab-nav">
-   <li><a href="{% url bio-members_full type='user' page=1 %}"
+   <li><a href="{% url bio-member_list type='user' %}"
       {% ifequal type "user" %}class="active" {% endifequal %}>User</a></li>
-   <li><a href="{% url bio-members_full type='date' page=1 %}"
+   <li><a href="{% url bio-member_list type='date' %}"
       {% ifequal type "date" %}class="active" {% endifequal %}>Date</a></li>
 </ul>
 

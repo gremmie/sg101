@@ -84,10 +84,20 @@ def category(request, slug, sort='title'):
 
 @login_required
 def new(request):
-    downloads = Download.public_objects.order_by('-date_added')[:DLS_PER_PAGE]
+    """Display new downloads with pagination."""
+
+    downloads = Download.public_objects.order_by('-date_added')
+
+    paginator = create_paginator(downloads)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
+
     return render_to_response('downloads/download_summary.html', {
-        'downloads' : downloads,
-        'title' : 'Newest Downloads',
+        'page': the_page,
+        'title': 'Newest Downloads',
         }, 
         context_instance = RequestContext(request))
 
@@ -95,10 +105,20 @@ def new(request):
 
 @login_required
 def popular(request):
-    downloads = Download.public_objects.order_by('-hits')[:DLS_PER_PAGE]
+    """Display popular downloads with pagination."""
+
+    downloads = Download.public_objects.order_by('-hits')
+
+    paginator = create_paginator(downloads)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
+
     return render_to_response('downloads/download_summary.html', {
-        'downloads' : downloads,
-        'title' : 'Popular Downloads',
+        'page': the_page,
+        'title': 'Popular Downloads',
         }, 
         context_instance = RequestContext(request))
 
@@ -106,10 +126,19 @@ def popular(request):
 
 @login_required
 def rating(request):
-    downloads = Download.public_objects.order_by('-average_score')[:DLS_PER_PAGE]
+    """Display downloads by rating with pagination."""
+
+    downloads = Download.public_objects.order_by('-average_score')
+    paginator = create_paginator(downloads)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
+
     return render_to_response('downloads/download_summary.html', {
-        'downloads' : downloads,
-        'title' : 'Highest Rated Downloads',
+        'page': the_page,
+        'title': 'Highest Rated Downloads',
         }, 
         context_instance = RequestContext(request))
 

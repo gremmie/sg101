@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
+from django.http import Http404
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
@@ -28,11 +29,12 @@ from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
 from core.paginator import DiggPaginator
 from core.functions import email_admins
+from core.functions import get_page
 
 #######################################################################
 
 @login_required
-def member_list(request, type='user', page=1):
+def member_list(request, type='user'):
     """
     This view displays the member list. Only active members are displayed.
     """
@@ -44,8 +46,9 @@ def member_list(request, type='user', page=1):
     num_members = qs.count()
 
     paginator = DiggPaginator(qs, 20, body=5, tail=3, margin=3, padding=2)
+    page = get_page(request.GET)
     try:
-        the_page = paginator.page(int(page))
+        the_page = paginator.page(page)
     except InvalidPage:
         raise Http404
 
