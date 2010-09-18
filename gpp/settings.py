@@ -104,7 +104,6 @@ TEMPLATE_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     os.path.join(project_path, 'templates'),
-    '/home/brian/coding/python/django/django-elsewhere/elsewhere/templates',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -178,14 +177,13 @@ EMAIL_PORT = local_settings.EMAIL_PORT
 #######################################################################
 if local_settings.USE_CACHE:
     CACHE_BACKEND = local_settings.CACHE_BACKEND
-    #CACHE_MIDDLEWARE_SECONDS = local_settings.CACHE_MIDDLEWARE_SECONDS
-    #CACHE_MIDDLEWARE_KEY_PREFIX = local_settings.CACHE_MIDDLEWARE_KEY_PREFIX
-    #CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
+    CACHE_MIDDLEWARE_SECONDS = local_settings.CACHE_MIDDLEWARE_SECONDS
+    CACHE_MIDDLEWARE_KEY_PREFIX = local_settings.CACHE_MIDDLEWARE_KEY_PREFIX
+    CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
 
 #######################################################################
 # Sessions
 #######################################################################
-#SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 SESSION_COOKIE_AGE = 2 * 7 * 24 * 60 * 60   # 2 weeks in seconds
 SESSION_COOKIE_DOMAIN = None
