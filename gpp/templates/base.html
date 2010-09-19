@@ -54,9 +54,11 @@
    <ul class="nav-left">
       <li><a href="{% url home %}">Home</a></li>
       <li><a href="{% url news-index_page %}">News</a></li>
+      <li><a href="{% url news-submit %}">Submit News</a></li>
       <li><a href="{% url gcalendar-index %}">Calendar</a></li>
       <li><a href="{% url contact-form %}">Contact</a></li>
       <li><a href="{% url donations-index %}">Donations</a></li>
+      <li><a href="{% url downloads-index %}">Downloads</a></li>
       <li><a href="{% url forums-index %}">Forums</a></li>
       <li><a href="{% url irc-main %}">IRC</a></li>
       <li><a href="{% url bio-member_list type='user' %}">Member List</a></li>
@@ -66,7 +68,6 @@
       <li><a href="{% url polls-main %}">Polls</a></li>
       <li><a href="{% url potd-view %}">Photo of the Day</a></li>
       <li><a href="{% url weblinks-main %}">Links</a></li>
-      <li><a href="{% url downloads-index %}">Downloads</a></li>
       <li><a href="{% url haystack_search %}">Search</a></li>
    </ul>
    {% cache 300 potd_block %}
