@@ -9,14 +9,15 @@ from django.conf import settings
 import mailer
 
 
-def send_mail(subject, message, from_email, recipient_list, 
-        fail_silently = False, auth_user = None, auth_password = None):
+def send_mail(subject, message, from_email, recipient_list,
+        fail_silently=False, auth_user=None, auth_password=None,
+        expedite=False):
     """The main gpp send email function.
     Use this function to send email from the site. It will obey debug settings and
-    log all emails.
+    log all emails. The expedite flag, when True, will bypass the mail queue.
     """
 
-    if settings.MAILER_ENQUEUE_MAIL:
+    if settings.MAILER_ENQUEUE_MAIL and not expedite:
         mailer.enqueue_mail(subject, message, from_email, recipient_list)
     elif settings.GPP_SEND_EMAIL:
         django.core.mail.send_mail(subject, message, from_email, recipient_list,

@@ -110,7 +110,8 @@ class RegisterForm(forms.Form):
                 })
 
         subject = 'Registration Confirmation for ' + site.name
-        send_mail(subject, msg, admin_email, [self.cleaned_data['email']])
+        send_mail(subject, msg, admin_email, [self.cleaned_data['email']],
+                expedite=True)
         logging.info('Accounts/registration conf. email sent to %s for user %s; IP = %s' % \
                 (self.cleaned_data['email'], pending_user.username, self.ip))
 
