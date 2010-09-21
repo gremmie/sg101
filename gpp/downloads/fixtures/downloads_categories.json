@@ -43,7 +43,7 @@
         "pk": 3, 
         "model": "downloads.category", 
         "fields": {
-            "count": 2, 
+            "count": 0, 
             "description": "Anything else.", 
             "slug": "misc", 
             "title": "Misc"

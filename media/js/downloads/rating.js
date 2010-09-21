@@ -5,7 +5,7 @@ function dlRatingOver(event)
     for (var i = 0; i <= event.data; ++i)
     {
         var star = $(stars[i]);
-        star.attr('src', '/static/downloads/stars/rating_over.gif');
+        star.attr('src', '/media/downloads/stars/rating_over.gif');
     }
 }
 
@@ -16,7 +16,7 @@ function dlRatingOut(event)
     for (var i = 0; i <= event.data; ++i)
     {
         var star = $(stars[i]);
-        star.attr('src', '/static/downloads/stars/rating_' + star.attr('class') + '.gif');
+        star.attr('src', '/media/downloads/stars/rating_' + star.attr('class') + '.gif');
     }
 }
 
@@ -48,19 +48,19 @@ function dlRatingClick(event)
                     s.removeClass(s.attr('class'));
                     if (rating >= 1.0)
                     {
-                        s.attr('src', '/static/downloads/stars/rating_on.gif');
+                        s.attr('src', '/media/downloads/stars/rating_on.gif');
                         s.addClass('on')
                         rating -= 1.0;
                     }
                     else if (rating >= 0.5)
                     {
-                        s.attr('src', '/static/downloads/stars/rating_half.gif');
+                        s.attr('src', '/media/downloads/stars/rating_half.gif');
                         s.addClass('half')
                         rating = 0;
                     }
                     else
                     {
-                        s.attr('src', '/static/downloads/stars/rating_off.gif');
+                        s.attr('src', '/media/downloads/stars/rating_off.gif');
                         s.addClass('off')
                     }
                 }
@@ -89,19 +89,19 @@ $(document).ready(function() {
             var star = $('<img />');
             if (rating >= 1)
             {
-                star.attr('src', '/static/downloads/stars/rating_on.gif');
+                star.attr('src', '/media/downloads/stars/rating_on.gif');
                 star.addClass('on')
                 --rating;
             }
             else if (rating >= 0.5)
             {
-                star.attr('src', '/static/downloads/stars/rating_half.gif');
+                star.attr('src', '/media/downloads/stars/rating_half.gif');
                 star.addClass('half')
                 rating = 0;
             }
             else
             {
-                star.attr('src', '/static/downloads/stars/rating_off.gif');
+                star.attr('src', '/media/downloads/stars/rating_off.gif');
                 star.addClass('off')
             }
             star.attr('alt', 'star');
