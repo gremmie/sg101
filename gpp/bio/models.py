@@ -6,7 +6,7 @@ I would have picked profile for this application, but that is already taken, app
 import os.path
 
 from django.db import models
-from django.contrib import auth
+from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.cache import cache
 
@@ -70,7 +70,7 @@ def avatar_file_path(instance, filename):
 class UserProfile(models.Model):
     """model to represent additional information about users"""
 
-    user = models.ForeignKey(auth.models.User, unique=True)
+    user = models.ForeignKey(User, unique=True)
     location = models.CharField(max_length=128, blank=True)
     birthday = models.DateField(blank=True, null=True,
             help_text='Optional; the year is not shown to others')
@@ -140,7 +140,7 @@ class UserProfile(models.Model):
 
 class UserProfileFlag(models.Model):
     """This model represents a user flagging a profile as inappropriate."""
-    user = models.ForeignKey(auth.models.User)
+    user = models.ForeignKey(User)
     profile = models.ForeignKey(UserProfile)
     flag_date = models.DateTimeField(auto_now_add=True)
 

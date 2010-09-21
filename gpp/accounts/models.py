@@ -7,13 +7,13 @@ import hashlib
 import base64
 
 from django.db import models
-from django.contrib import auth
+from django.contrib.auth.models import User
 from django.conf import settings
 
 
 class IllegalUsername(models.Model):
    """model to represent the list of illegal usernames"""
-   username = models.CharField(max_length = 30, db_index = True)
+   username = models.CharField(max_length=30, db_index=True)
 
    def __unicode__(self):
       return self.username
@@ -24,7 +24,7 @@ class IllegalUsername(models.Model):
 
 class IllegalEmail(models.Model):
    """model to represent the list of illegal/restricted email addresses"""
-   email = models.EmailField(db_index = True)
+   email = models.EmailField(db_index=True)
 
    def __unicode__(self):
       return self.email
@@ -41,7 +41,7 @@ class PendingUserManager(models.Manager):
    def create_pending_user(self, username, email, password):
       '''creates a new pending user and saves it to the database'''
 
-      temp_user = auth.models.User()
+      temp_user = User()
       temp_user.set_password(password)
 
       now = datetime.datetime.now() 
@@ -58,8 +58,8 @@ class PendingUserManager(models.Manager):
 
 
    def purge_expired(self):
-      expire_time = datetime.datetime.now() - datetime.timedelta(days = 1)
-      expired_pending_users = self.filter(date_joined__lt = expire_time)
+      expire_time = datetime.datetime.now() - datetime.timedelta(days=1)
+      expired_pending_users = self.filter(date_joined__lt=expire_time)
       expired_pending_users.delete()
 
 
@@ -77,11 +77,11 @@ class PendingUserManager(models.Manager):
 class PendingUser(models.Model):
    """model for holding users while they go through the email registration cycle"""
 
-   username = models.CharField(max_length = 30, db_index = True)
+   username = models.CharField(max_length=30, db_index=True)
    email = models.EmailField()
-   password = models.CharField(max_length = 128)
-   date_joined = models.DateTimeField(default = datetime.datetime.now, db_index = True)
-   key = models.CharField(max_length = 20, editable = True)
+   password = models.CharField(max_length=128)
+   date_joined = models.DateTimeField(default=datetime.datetime.now, db_index=True)
+   key = models.CharField(max_length=20, editable=True)
 
    objects = PendingUserManager()
 

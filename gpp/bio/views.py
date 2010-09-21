@@ -5,8 +5,8 @@ Views for the bio application.
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext
-from django.contrib import auth
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
@@ -38,7 +38,7 @@ def member_list(request, type='user'):
     """
     This view displays the member list. Only active members are displayed.
     """
-    qs = auth.models.User.objects.filter(is_active=True)
+    qs = User.objects.filter(is_active=True)
     if type == 'user':
         qs = qs.order_by('username')
     else:
@@ -91,7 +91,7 @@ def my_profile(request):
 @login_required
 def view_profile(request, username):
 
-    user = get_object_or_404(auth.models.User, username = username)
+    user = get_object_or_404(User, username=username)
     if user == request.user:
         return HttpResponseRedirect(reverse('bio.views.my_profile'))
 

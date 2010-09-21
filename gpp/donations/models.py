@@ -5,7 +5,7 @@ import datetime
 import decimal
 
 from django.db import models
-from django.contrib import auth
+from django.contrib.auth.models import User
 from django.conf import settings
 
 
@@ -46,7 +46,7 @@ class DonationManager(models.Manager):
 class Donation(models.Model):
     """Model to represent a donation to the website."""
 
-    user = models.ForeignKey(auth.models.User, null=True, blank=True)
+    user = models.ForeignKey(User, null=True, blank=True)
     is_anonymous = models.BooleanField()
     test_ipn = models.BooleanField(default=False, verbose_name="Test IPN")
     txn_id = models.CharField(max_length=20, verbose_name="Txn ID")

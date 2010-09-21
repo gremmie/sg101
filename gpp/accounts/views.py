@@ -5,7 +5,7 @@ import logging
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.contrib import auth
+from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.conf import settings
@@ -69,7 +69,7 @@ def register_confirm(request, username, key):
             },
             context_instance = RequestContext(request))
 
-    new_user = auth.models.User()
+    new_user = User()
 
     new_user.username = pending_user.username
     new_user.first_name = ''
