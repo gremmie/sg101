@@ -25,8 +25,8 @@
    {% if this_is_me %}
    <p>{% avatar subject %}
    <ul>
-      <li><a href="">My favorite forum topics</a></li>
-      <li><a href="">My forum topic subscriptions</a></li>
+      <li><a href="{% url forums-manage_favorites %}">My favorite forum topics</a></li>
+      <li><a href="{% url forums-manage_subscriptions %}">My forum topic subscriptions</a></li>
    </ul>
    </p>
    {% else %}
