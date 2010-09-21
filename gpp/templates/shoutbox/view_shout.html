@@ -9,7 +9,7 @@
 {% endblock %}
 {% block title %}Shout #{{ shout.id }}{% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url shoutbox-history page=1 %}">Shoutbox History</a> &raquo; Shout #{{ shout.id }}</div>
+<div class="breadcrumbs"><a href="{% url shoutbox-history %}">Shoutbox History</a> &raquo; Shout #{{ shout.id }}</div>
 <h2>Shout #{{ shout.id }}</h2>
 <div class="shoutbox-history">
 <table>
