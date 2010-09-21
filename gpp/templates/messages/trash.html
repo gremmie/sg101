@@ -15,7 +15,7 @@
 {% endif %}
 {% if msgs %}
    <form action="{% url messages-undelete_bulk %}" method="post" name="messages_box_form"
-      onsubmit="return messages_confirm_undelete();">
+      onsubmit="return messages_confirm_undelete();">{% csrf_token %}
    <table class="messages">
    <tr>
       <th>From</th>
