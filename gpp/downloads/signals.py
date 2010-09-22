@@ -37,5 +37,7 @@ def on_download_delete(sender, **kwargs):
     cat.save()
 
 
-post_save.connect(on_download_save, sender=Download)
-post_delete.connect(on_download_delete, sender=Download)
+post_save.connect(on_download_save, sender=Download,
+        dispatch_uid='downloads.signals')
+post_delete.connect(on_download_delete, sender=Download,
+        dispatch_uid='downloads.signals')

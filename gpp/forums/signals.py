@@ -49,8 +49,8 @@ def on_post_delete(sender, **kwargs):
     post.topic.forum.save()
 
 
-post_save.connect(on_topic_save, sender=Topic)
-post_delete.connect(on_topic_delete, sender=Topic)
+post_save.connect(on_topic_save, sender=Topic, dispatch_uid='forums.signals')
+post_delete.connect(on_topic_delete, sender=Topic, dispatch_uid='forums.signals')
 
-post_save.connect(on_post_save, sender=Post)
-post_delete.connect(on_post_delete, sender=Post)
+post_save.connect(on_post_save, sender=Post, dispatch_uid='forums.signals')
+post_delete.connect(on_post_delete, sender=Post, dispatch_uid='forums.signals')

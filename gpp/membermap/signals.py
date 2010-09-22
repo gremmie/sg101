@@ -9,6 +9,7 @@ from membermap.models import MapEntry
 
 
 def on_profile_save(sender, **kwargs):
+    import pdb; pdb.set_trace()
     if 'instance' in kwargs:
         profile = kwargs['instance']
         try:
@@ -20,4 +21,6 @@ def on_profile_save(sender, **kwargs):
             map_entry.save()
 
 
-post_save.connect(on_profile_save, sender=UserProfile)
+post_save.connect(on_profile_save,
+        sender=UserProfile,
+        dispatch_uid='membermap.signals')

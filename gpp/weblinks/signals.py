@@ -37,5 +37,5 @@ def on_link_delete(sender, **kwargs):
     cat.save()
 
 
-post_save.connect(on_link_save, sender=Link)
-post_delete.connect(on_link_delete, sender=Link)
+post_save.connect(on_link_save, sender=Link, dispatch_uid='weblinks.signals')
+post_delete.connect(on_link_delete, sender=Link, dispatch_uid='weblinks.signals')

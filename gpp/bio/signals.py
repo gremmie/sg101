@@ -64,8 +64,8 @@ def on_story_save(sender, **kwargs):
         bio.badges.award_badge(bio.badges.NEWS_PIN, story.submitter)
 
 
-post_save.connect(on_user_save, sender=User)
-post_save.connect(on_donation_save, sender=Donation)
-post_save.connect(on_link_save, sender=Link)
-post_save.connect(on_download_save, sender=Download)
-post_save.connect(on_story_save, sender=Story)
+post_save.connect(on_user_save, sender=User, dispatch_uid='bio.signals')
+post_save.connect(on_donation_save, sender=Donation, dispatch_uid='bio.signals')
+post_save.connect(on_link_save, sender=Link, dispatch_uid='bio.signals')
+post_save.connect(on_download_save, sender=Download, dispatch_uid='bio.signals')
+post_save.connect(on_story_save, sender=Story, dispatch_uid='bio.signals')
