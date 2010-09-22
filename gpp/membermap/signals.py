@@ -9,7 +9,6 @@ from membermap.models import MapEntry
 
 
 def on_profile_save(sender, **kwargs):
-    import pdb; pdb.set_trace()
     if 'instance' in kwargs:
         profile = kwargs['instance']
         try:
