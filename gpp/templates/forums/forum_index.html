@@ -1,8 +1,17 @@
 {% extends 'base.html' %}
 {% load forum_tags %}
+{% block custom_head %}
+{% if feed %}
+<link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
+{% endif %}
+{% endblock %}
 {% block title %}Forums: {{ forum.name }}{% endblock %}
 {% block content %}
-<h2>Forums: {{ forum.name }}</h2>
+<h2>Forums: {{ forum.name }}
+   {% if feed %}
+   <a href="{{ feed.feed }}"><img src="{{ MEDIA_URL }}icons/feed.png" alt="RSS Feed" title="Feed for this forum" /></a>
+   {% endif %}
+</h2>
 
 <h3>
    <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;

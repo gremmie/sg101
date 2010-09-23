@@ -38,6 +38,8 @@ import antispam.utils
 
 TOPICS_PER_PAGE = 50
 POSTS_PER_PAGE = 20
+FEED_BASE = '/feeds/forums/'
+FORUM_FEED = FEED_BASE + '%s/'
 
 
 def get_page_num(request):
@@ -92,7 +94,7 @@ def index(request):
         return redirect(SPECIAL_QUERIES[query])
 
     public_forums = Forum.objects.public_forums()
-    feeds = [{'name': 'All Forums', 'feed': '/feeds/forums/'}]
+    feeds = [{'name': 'All Forums', 'feed': FEED_BASE}]
 
     forums = Forum.objects.forums_for_user(request.user)
     get_forum_unread_status(forums, request.user)
@@ -102,7 +104,7 @@ def index(request):
         if forum.has_feed:
             feeds.append({
                 'name': '%s Forum' % forum.name,
-                'feed': '/feeds/forums/%s/' % forum.slug,
+                'feed': FORUM_FEED % forum.slug,
                 })
 
         cat = cats.setdefault(forum.category.id, {
@@ -130,6 +132,13 @@ def forum_index(request, slug):
     if not forum.category.can_access(request.user):
         return HttpResponseForbidden()
 
+    feed = None
+    if not forum.category.groups.all():
+        feed = {
+            'name': '%s Forum' % forum.name,
+            'feed': FORUM_FEED % forum.slug,
+        }
+
     topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
     get_topic_unread_status(forum, topics, request.user)
 
@@ -149,6 +158,7 @@ def forum_index(request, slug):
     
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
+        'feed': feed,
         'page': page,
         'page_nav': page_nav,
         'can_moderate': can_moderate,
