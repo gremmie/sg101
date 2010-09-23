@@ -35,7 +35,7 @@ $(document).ready(function() {
        var area_match = tz.match(/^(\w+)\/.*$/);
        if (area_match != null)
        {
-          var i = gcalTzInfo.areas.indexOf(area_match[1]);
+          var i = $.inArray(area_match[1], gcalTzInfo.areas);
           tz_area.options.selectedIndex = (i != -1) ? i : gcalTzInfo.default_area;
        }
        else
@@ -63,7 +63,7 @@ $(document).ready(function() {
        if (loc_match != null)
        {
           var loc = loc_match[1].replace(/_/g, ' ');
-          var i = gcalTzInfo.locations[tz_area.options.selectedIndex].indexOf(loc);
+          var i = $.inArray(loc, gcalTzInfo.locations[tz_area.options.selectedIndex]);
           tz_loc.options.selectedIndex = (i != -1) ? i : gcalTzInfo.default_location;
        }
        else
