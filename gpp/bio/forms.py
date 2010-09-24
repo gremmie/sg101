@@ -1,9 +1,6 @@
 """
 This file contains the forms used by the bio application.
 """
-from PIL import ImageFile
-from PIL import Image
-
 try:
     from cStringIO import StringIO
 except:
@@ -16,6 +13,7 @@ from django.contrib.auth.models import User
 
 from bio.models import UserProfile
 from core.widgets import AutoCompleteUserInput
+from core.image import parse_image, downscale_image_square
 
 
 class EditUserForm(forms.ModelForm):
@@ -54,66 +52,51 @@ class EditUserProfileForm(forms.ModelForm):
             ('js/bio.js', 'js/timezone.js')
 
 
-def get_image(file):
-    """
-    Returns a PIL Image from the supplied file.
-    Throws ValidationError if the file does not parse as an image file.
-    """
-    parser = ImageFile.Parser()
-    for chunk in file.chunks():
-        parser.feed(chunk)
-    try:
-        image = parser.close()
-        return image
-    except IOError:
-        pass
-    raise forms.ValidationError("Upload a valid image. " +
-            "The file you uploaded was either not an image or a corrupted image.")
-
-
-def scale_image(image, size):
-    """Scales an image file if necessary."""
-
-    # don't upscale
-    if (size, size) >= image.size:
-        return image
-
-    (w, h) = image.size
-    if w > h:
-        diff = (w - h) / 2
-        image = image.crop((diff, 0, w - diff, h))
-    elif h > w:
-        diff = (h - w) / 2
-        image = image.crop((0, diff, w, h - diff))
-    image = image.resize((size, size), Image.ANTIALIAS)
-    return image
-
-
 class UploadAvatarForm(forms.Form):
     """Form used to change a user's avatar"""
     avatar_file = forms.ImageField(required=False)
     image = None
 
     def clean_avatar_file(self):
-        file = self.cleaned_data['avatar_file']
-        if file is not None:
-            if file.size > settings.MAX_AVATAR_SIZE_BYTES:
-                raise forms.ValidationError("Please upload a file smaller than %s bytes." % \
-                        settings.MAX_AVATAR_SIZE)
-            self.image = get_image(file)
-            self.format = self.image.format
-        return file
+        f = self.cleaned_data['avatar_file']
+        if f is not None:
+            if f.size > settings.MAX_AVATAR_SIZE_BYTES:
+                raise forms.ValidationError("Please upload a file smaller than "
+                    "%s bytes." % settings.MAX_AVATAR_SIZE)
+            try:
+                self.image = parse_image(f)
+            except IOError:
+                raise forms.ValidationError("Please upload a valid image. "
+                    "The file you uploaded was either not an image or a "
+                    "corrupted image.")
+            self.file_type = self.image.format
+        return f
 
-    def get_file(self):
-        if self.image is not None:
-            self.image = scale_image(self.image, settings.MAX_AVATAR_SIZE_PIXELS)
+    def save(self):
+        """
+        Perform any down-scaling needed on the new file, then return a tuple of
+        (filename, file object). Note that the file object returned may not
+        have a name; use the returned filename instead.
+
+        """
+        if not self.cleaned_data['avatar_file']:
+            return None, None
+
+        name = self.cleaned_data['avatar_file'].name
+        dim = settings.MAX_AVATAR_SIZE_PIXELS
+        max_size = (dim, dim)
+        if self.image and self.image.size > max_size:
+            self.image = downscale_image_square(self.image, dim)
+
+            # We need to return a Django File now. To get that from here,
+            # write the image data info a StringIO and then construct a
+            # Django ContentFile from that. The ContentFile has no name,
+            # that is why we return one ourselves explicitly.
             s = StringIO()
-            self.image.save(s, self.format)
-            return ContentFile(s.getvalue())
-        return None
-
-    def get_filename(self):
-        return self.cleaned_data['avatar_file'].name
+            self.image.save(s, self.file_type)
+            return name, ContentFile(s.getvalue())
+            
+        return name, self.cleaned_data['avatar_file']
 
 
 class SearchUsersForm(forms.Form):

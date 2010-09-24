@@ -144,12 +144,21 @@ def change_avatar(request):
     if request.method == 'POST':
         form = UploadAvatarForm(request.POST, request.FILES)
         if form.is_valid():
+            # Update the profile with the new avatar
             profile = request.user.get_profile()
-            file = form.get_file()
+
+            # First delete any old avatar file
             if profile.avatar.name != '':
                 profile.avatar.delete(save=False)
-            if file is not None:
-                profile.avatar.save(form.get_filename(), file, save=False)
+
+            try:
+                name, avatar = form.save()
+            except IOError:
+                messages.error(request, 'A file error occurred.')
+                return HttpResponseRedirect(reverse('bio-me'))
+
+            if avatar is not None:
+                profile.avatar.save(name, avatar, save=False)
             profile.save()
 
             messages.success(request, 'Avatar updated')
