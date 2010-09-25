@@ -169,6 +169,7 @@ table {
    font-size: x-small;
    color: gray;
    text-align: right;
+   clear: both;
 }
 ul.icon-list li {
    list-style-type: none;
