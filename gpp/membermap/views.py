@@ -2,14 +2,21 @@
 Views for the membermap application.
 """
 from django.shortcuts import render_to_response
+from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.views.decorators.http import require_POST
+import django.utils.simplejson as json
+from django.core.cache import cache
 
 from membermap.models import MapEntry
 from membermap.forms import MapEntryForm
+from bio.models import UserProfile
+
+CACHE_KEY = 'membermap_json'
+CACHE_TIMEOUT = 5 * 60
 
 
 def index(request):
@@ -39,16 +46,51 @@ def query(request):
         "users" : array of user objects
         "recent" : array of usernames recently modified
     """
-    if request.user.is_authenticated():
-        qs = MapEntry.objects.values_list('json', flat=True).order_by('user__username')
-        s = '{"users":[' + ','.join(qs) + '], "recent":['
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden('You must be logged in.')
 
-        names = MapEntry.objects.values_list('user__username', flat=True)[:10]
-        s += ','.join(['"%s"' % name for name in names])
-        s += ']}'
+    # Do we have all the JSON cached?
+    s = cache.get(CACHE_KEY)
+    if s:
         return HttpResponse(s, content_type='application/json')
 
-    return HttpResponseForbidden('You must be logged in.')
+    # Compute JSON for the map
+    entries = MapEntry.objects.all().select_related().order_by('user__username')
+    users = []
+    user_ids = []
+    recent = []
+    for entry in entries.iterator():
+        users.append(dict(name=entry.user.username,
+            lat=entry.lat,
+            lon=entry.lon,
+            message=entry.html,
+            ))
+        user_ids.append(entry.user.id)
+        recent.append((entry.date_updated, entry.user.username))
+
+    # Get avatars for all users
+    profiles = UserProfile.objects.filter(user__in=user_ids).select_related()
+    avatars = {}
+    for profile in profiles.iterator():
+        if profile.avatar and profile.avatar.url:
+            avatars[profile.user.username] = profile.avatar.url
+
+    # Render the messages that go in the balloons
+    for user in users:
+        user['message'] = render_to_string('membermap/balloon.html',
+                dict(user=user, avatar_url=avatars.get(user['name'])))
+
+    # Produce the list of recent updates
+    recent.sort(reverse=True)
+    del recent[10:]
+    recent = [entry[1] for entry in recent]
+
+    # Create the JSON for the map
+    result = dict(users=users, recent=recent)
+    s = json.dumps(result, ensure_ascii=False)
+
+    cache.set(CACHE_KEY, s, CACHE_TIMEOUT)
+    return HttpResponse(s, content_type='application/json')
 
 
 @require_POST
@@ -85,7 +127,23 @@ def add(request):
     entry.message = msg
     entry.save()
 
-    return HttpResponse(entry.json, content_type='application/json')
+    cache.delete(CACHE_KEY)
+
+    avatar_url = None
+    profile = entry.user.get_profile()
+    if profile.avatar and profile.avatar.url:
+        avatar_url = profile.avatar.url
+
+    u = dict(name=entry.user.username,
+            lat=entry.lat,
+            lon=entry.lon,
+            message=entry.html)
+
+    u['message'] = render_to_string('membermap/balloon.html',
+        dict(user=u, avatar_url=avatar_url))
+
+    result = json.dumps(u, ensure_ascii=False)
+    return HttpResponse(result, content_type='application/json')
 
 
 @require_POST
@@ -102,7 +160,6 @@ def delete(request):
         pass
     else:
         entry.delete()
+        cache.delete(CACHE_KEY)
 
     return HttpResponse('')
-
-# vim: ts=4 sw=4

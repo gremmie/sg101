@@ -7,7 +7,7 @@ from django.contrib import admin
 from membermap.models import MapEntry
 
 class MapEntryAdmin(admin.ModelAdmin):
-   exclude = ('json', )
+   exclude = ('html', )
    list_display = ('user', 'location', 'lat', 'lon', 'date_updated')
    list_filter = ('date_updated', )
    date_hierarchy = 'date_updated'

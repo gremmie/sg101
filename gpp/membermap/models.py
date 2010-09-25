@@ -1,11 +1,9 @@
 """
 Models for the member map application.
 """
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
-from django.template.loader import render_to_string
-from django.template.defaultfilters import escapejs
-import django.utils.simplejson as json
 
 from core.markup import site_markup
 
@@ -17,25 +15,18 @@ class MapEntry(models.Model):
     lat = models.FloatField()
     lon = models.FloatField()
     message = models.TextField(blank=True)
-    json = models.TextField(blank=True)
-    date_updated = models.DateTimeField(auto_now_add=True)
+    html = models.TextField(blank=True)
+    date_updated = models.DateTimeField()
 
     def __unicode__(self):
-        return u'Entry for %s' % self.user.username
+        return u'Map entry for %s' % self.user.username
 
     class Meta:
         ordering = ('-date_updated', )
         verbose_name_plural = 'map entries'
 
     def save(self, *args, **kwargs):
-        msg = render_to_string('membermap/markdown.html', {
-            'user': self.user,
-            'msg': site_markup(self.message)}).strip()
-
-        self.json = json.dumps({'name': self.user.username,
-            'lat': '%10.6f' % self.lat,
-            'lon': '%10.6f' % self.lon,
-            'message': msg,
-            })
+        self.html = site_markup(self.message)
+        self.date_updated = datetime.datetime.now()
         super(MapEntry, self).save(*args, **kwargs)
 

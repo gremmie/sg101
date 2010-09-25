@@ -1,0 +1,6 @@
+{% if avatar_url %}
+<a href="{% url bio-view_profile username=user.name %}">
+<img src="{{ avatar_url }}" alt="{{ user.name }}" style="float:left;margin-right:3px;" /></a>
+{% endif %}
+<a href="{% url bio-view_profile username=user.name %}">{{ user.name }}</a>:<br />
+{{ user.message|safe }}
