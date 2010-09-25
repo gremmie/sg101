@@ -27,7 +27,7 @@ Submitted by
 on {{ potd.date_added|date:"d F Y" }}.<br />
 This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
 </p>
-<p class="description">{{ potd.description }}</p>
+<p class="description">{{ potd.description|safe }}</p>
 <p class="details">
 If you would like us to feature your photo, send it along with your username, a title, and 
 short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar101.com</a>.
