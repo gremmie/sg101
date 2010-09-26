@@ -31,5 +31,6 @@ div.smiley_farm img {
 }
 #shoutbox-shout-container p {
    margin-left: 2px;
-   margin-top: 2px;
+   margin-right: 2px;
+   margin-top: 0.5em;
 }
