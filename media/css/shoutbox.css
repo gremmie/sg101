@@ -7,20 +7,16 @@ span.shoutbox-shout {
 span.shoutbox-date {
    font-style: italic;
 }
-
 div#shoutbox-smiley-frame {
     margin: 0.5em 2px;
 }
-
 div#shoutbox-smiley-frame img {
     padding: 1px 1px;
 }
-
 div.smiley_farm img {
     border: 0;
     cursor: pointer;
 }
-
 #shoutbox-shout-container {
    margin: auto;
    width: 142px;
@@ -33,4 +29,7 @@ div.smiley_farm img {
    -moz-border-radius: 5px;
    border-radius: 5px;
 }
-
+#shoutbox-shout-container p {
+   margin-left: 2px;
+   margin-top: 2px;
+}
