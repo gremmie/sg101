@@ -22,15 +22,15 @@ div.smiley_farm img {
 }
 
 #shoutbox-shout-container {
-position: relative;
-width: 142; /*marquee width */
-height: 200px; /*marquee height */
-background-color: #bdd6d6;
-overflow: hidden;
-overflow: auto;
-border: 1px solid teal;
-padding: 2px;
-padding-left: 4px;
-margin-bottom: 2px;
+   margin: auto;
+   width: 142px;
+   height: 200px;
+   background-color: #bdd6d6;
+   border: 1px solid teal;
+   padding: 2px;
+   padding-left: 4px;
+   margin-bottom: 2px;
+   -moz-border-radius: 5px;
+   border-radius: 5px;
 }
 

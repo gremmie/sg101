@@ -25,9 +25,8 @@
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
-{% if user.is_authenticated %}
+<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.cycle.all.min.js"></script>
 <script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox.js"></script>
-{% endif %}
 <!-- <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ MEDIA_URL }}images/favicon.ico" /> -->
 </head>
 <body>

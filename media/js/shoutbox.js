@@ -1,4 +1,24 @@
 $(document).ready(function() {
+
+   var numShouts = $('#shoutbox-shout-container > p').size(); 
+   var sbCycleOpts = null;
+   var sbCycle = $('#shoutbox-shout-container').cycle({
+      fx: 'scrollUp',
+      timeout: 5000,
+      pause: 1,
+      next: '#shoutbox-next',
+      prev: '#shoutbox-prev',
+      before: function(curr, next, opts) {
+         if (!opts.addSlide || sbCycleOpts) return;
+         sbCycleOpts = opts;
+      }
+   });
+   function addShout(shout) {
+      ++numShouts;
+      sbCycleOpts.addSlide(shout);
+      $('#shoutbox-shout-container').cycle(numShouts - 1);
+   }
+
    var submit = $('#shoutbox-submit');
    submit.click(function () {
       var input = $('#shoutbox-smiley-input');
@@ -15,8 +35,7 @@ $(document).ready(function() {
          success: function (data, textStatus) {
             input.val('');
             if (data != '') {
-               $('#shoutbox-shout-container').prepend(data);
-               $('#shoutbox-shout-container p:first').fadeIn(2500);
+               addShout(data);
             }
             submit.removeAttr('disabled');
          },

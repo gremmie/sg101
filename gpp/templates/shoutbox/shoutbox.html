@@ -3,7 +3,7 @@
 {% block block_title %}Shoutbox{% endblock %}
 {% block block_content %}
 <div id="shoutbox-shout-container">
-   {% for shout in shouts %}
+   {% for shout in shouts reversed %}
       <p>
       <span class="shoutbox-user">{{ shout.user.username }}:</span>
       <span class="shoutbox-shout">{{ shout.html|safe }}</span><br />
@@ -11,7 +11,11 @@
       </p>
    {% endfor %}
 </div>
-<center><a href="{% url shoutbox-history %}">Shout History</a></center>
+<center>
+   <button type="button" id="shoutbox-prev" title="Previous">&laquo;</button>
+   <a href="{% url shoutbox-history %}">Shout History</a>
+   <button type="button" id="shoutbox-next" title="Next">&raquo;</button>
+</center>
 {% if user.is_authenticated %}
 <center>
 <div>
