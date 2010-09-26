@@ -58,6 +58,10 @@ def whos_online():
     return info
 
 
+# A somewhat ugly hack until we decide if we should be using UTC time
+# everywhere or not.
+repoze.timeago._NOW = datetime.datetime.now
+
 @register.filter(name='elapsed')
 def elapsed(timestamp):
     """
