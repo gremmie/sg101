@@ -124,11 +124,19 @@ div.side-block-title {
    color: white;
    font-weight: bold;
    text-align: center;
+   border-top-left-radius: 5px;
+   border-top-right-radius: 5px;
+   -moz-border-radius-topleft: 5px;
+   -moz-border-radius-topright: 5px;
 }
 div.side-block-content {
    margin: 0;
    border: 1px solid teal;
    padding: 2px 2px;
+   border-bottom-left-radius: 5px;
+   border-bottom-right-radius: 5px;
+   -moz-border-radius-bottomleft: 5px;
+   -moz-border-radius-bottomright: 5px;
 }
 iframe {
    margin-bottom: 1em;
@@ -159,6 +167,8 @@ table {
    margin: 1em 1em;
    padding: 1em 1em 0;
    border: 1px solid black;
+   border-radius: 10px;
+   -moz-border-radius: 10px;
 }
 .bulletin h3 {
    background-image: url(../icons/asterisk_orange.png);
