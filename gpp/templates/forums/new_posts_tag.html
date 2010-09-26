@@ -1,11 +1,11 @@
-{% load forum_tags %}
+{% load core_tags %}
 <div>
 <h2>Latest Forum Posts</h2>
 <p>Join us in our <a href="{% url forums-index %}">forums</a> for some lively discussions. Here are the list of forum topics with new posts.</p>
 {% if topics %}
    <ul>
    {% for topic in topics %}
-   <li><a href="{{ topic.last_post.get_absolute_url }}">{{ topic.name }}</a> by {{ topic.last_post.user.username }} on {% forum_date topic.update_date user 0 %}</li>
+   <li><a href="{{ topic.last_post.get_absolute_url }}">{{ topic.name }}</a> by {{ topic.last_post.user.username }} {{ topic.update_date|elapsed }}</li>
    {% endfor %}
    </ul>
 {% else %}
