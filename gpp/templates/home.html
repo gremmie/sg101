@@ -14,13 +14,27 @@
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/slideshow.js"></script>
+<script type="text/javascript">
+   $(document).ready(function() {
+      $('#home-slideshow img:first').fadeIn(1000, function() {
+         $('#home-slideshow').cycle({
+            fx: 'fade',
+            timeout: 5000,
+            pause: 1,
+            delay: 1000
+         });
+      });
+   });
+</script>
+<style type="text/css">
+#home-slideshow img { display: none }
+</style>
 {% endblock %}
 {% block content %}
 <h2>Welcome to SurfGuitar101!</h2>
 <div class="span-9">
-   <div id="slideshow">
-   <img src="{{ MEDIA_URL }}slideshow/image-1.jpg" alt="Slideshow Image 1" class="active" />
+   <div id="home-slideshow">
+   <img src="{{ MEDIA_URL }}slideshow/image-1.jpg" alt="Slideshow Image 1" />
    <img src="{{ MEDIA_URL }}slideshow/image-2.jpg" alt="Slideshow Image 2" />
    <img src="{{ MEDIA_URL }}slideshow/image-3.jpg" alt="Slideshow Image 3" />
    <img src="{{ MEDIA_URL }}slideshow/image-4.jpg" alt="Slideshow Image 4" />
