@@ -4,15 +4,28 @@
 {% block content %}
 <h2>Search <img src="{{ MEDIA_URL }}icons/magnifier.png" alt="Search" /></h2>
 <form method="get" action=".">
-  <table>
-      {{ form.as_table }}
-      <tr>
-          <td>&nbsp;</td>
-          <td>
-              <input type="submit" value="Search">
-          </td>
-      </tr>
-  </table>
+<table>
+   <tr>
+      <td><input type="text" name="q" id="id_q" /></td>
+      <td><input type="submit" value="Search" /></td>
+   </tr>
+</table>
+<fieldset>
+<legend>Search in:</legend>
+<table>
+   <tr>
+   <td><input type="checkbox" name="models" value="forums.post" checked="checked" />Forum Posts</td>
+   <td><input type="checkbox" name="models" value="news.story" checked="checked" />News Stories</td>
+   <td><input type="checkbox" name="models" value="bio.userprofile" checked="checked" />User Profiles</td>
+   </tr>
+   <tr>
+   <td><input type="checkbox" name="models" value="weblinks.link" checked="checked" />Links</td>
+   <td><input type="checkbox" name="models" value="downloads.download" checked="checked" />Downloads</td>
+   <td><input type="checkbox" name="models" value="podcast.item" checked="checked" />Podcasts</td>
+   </tr>
+</table>
+</fieldset>
+
   {% if query %}
       <h3>Results</h3>
       {% if page.object_list %}
