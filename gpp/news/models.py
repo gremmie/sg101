@@ -36,6 +36,7 @@ class StoryBase(models.Model):
     allow_comments = models.BooleanField(default=True)
     tags = TagField()
     front_page_expiration = models.DateField(null=True, blank=True)
+    update_date = models.DateTimeField(db_index=True, blank=True)
 
     class Meta:
         abstract = True
@@ -46,7 +47,11 @@ class PendingStory(StoryBase):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.date_submitted = datetime.datetime.now()
+            if not self.date_submitted:
+                self.date_submitted = datetime.datetime.now()
+            self.update_date = self.date_submitted
+        else:
+            self.update_date = datetime.datetime.now()
 
         super(PendingStory, self).save(*args, **kwargs)
 
@@ -72,6 +77,15 @@ class Story(StoryBase):
         ordering = ('-date_submitted', )
         verbose_name = 'news story'
         verbose_name_plural = 'news stories'
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_submitted = datetime.datetime.now()
+            self.update_date = self.date_submitted
+        else:
+            self.update_date = datetime.datetime.now()
+
+        super(Story, self).save(*args, **kwargs)
 
     def can_comment_on(self):
         now = datetime.datetime.now()

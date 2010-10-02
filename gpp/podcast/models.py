@@ -1,6 +1,11 @@
-"""Models for the podcast application."""
+"""
+Models for the podcast application.
+
+"""
+import datetime
 
 from django.db import models
+
 
 EXPLICIT_CHOICES = (
         ('yes', 'Yes'),
@@ -42,10 +47,11 @@ class Item(models.Model):
     enclosure_length = models.IntegerField()
     enclosure_type = models.CharField(max_length=32)
     guid = models.CharField(max_length=255)
-    pubdate = models.DateTimeField()
+    pubdate = models.DateTimeField(db_index=True)
     duration = models.CharField(max_length=16)
     keywords = models.CharField(max_length=255)
     explicit = models.CharField(max_length=8, choices=EXPLICIT_CHOICES)
+    update_date = models.DateTimeField(db_index=True, blank=True)
 
     @models.permalink
     def get_absolute_url(self):
@@ -58,6 +64,15 @@ class Item(models.Model):
         ordering = ('-pubdate', )
         verbose_name = 'podcast'
         verbose_name_plural = 'podcasts'
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            if not self.pubdate:
+                self.pubdate = datetime.datetime.now()
+            self.update_date = self.pubdate
+        else:
+            self.update_date = datetime.datetime.now()
+        super(Item, self).save(*args, **kwargs)
 
     def search_title(self):
         return "%s: %s" % (self.title, self.subtitle)

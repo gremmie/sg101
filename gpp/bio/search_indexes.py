@@ -12,5 +12,8 @@ class UserProfileIndex(SearchIndex):
     def get_queryset(self):
         return UserProfile.objects.filter(user__is_active=True)
 
+    def get_updated_field(self):
+        return 'update_date'
+
 
 site.register(UserProfile, UserProfileIndex)

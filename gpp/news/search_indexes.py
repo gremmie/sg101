@@ -9,5 +9,8 @@ class StoryIndex(SearchIndex):
     author = CharField(model_attr='submitter')
     pub_date = DateTimeField(model_attr='date_submitted')
 
+    def get_updated_field(self):
+        return 'update_date'
+
 
 site.register(Story, StoryIndex)

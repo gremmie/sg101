@@ -5,3 +5,7 @@
 {{ object.interests }}
 {{ object.profile_text }}
 {{ object.signature }}
+{% for website in object.user.website_profiles.all %}
+{{ website.name }}
+{{ website.url }}
+{% endfor %}

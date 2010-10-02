@@ -6,7 +6,7 @@
 <form method="get" action=".">
 <table>
    <tr>
-      <td><input type="text" name="q" id="id_q" /></td>
+      <td><input type="text" name="q" id="id_q" size="48" /></td>
       <td><input type="submit" value="Search" /></td>
    </tr>
 </table>
@@ -27,7 +27,14 @@
 </fieldset>
 
   {% if query %}
-      <h3>Results</h3>
+  <h3>Results for &quot;{{ query }}&quot; page {{ page.number }} of {{ page.paginator.num_pages }}</h3>
+
+     {% if page.paginator.count %}
+     <p>
+     <strong>{{ page.paginator.count }} hit{{ page.paginator.count|pluralize }}</strong>
+     </p>
+     {% endif %}
+
       {% if page.object_list %}
       <dl>
       {% for result in page.object_list %}

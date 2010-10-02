@@ -56,8 +56,9 @@ class DownloadBase(models.Model):
     html = models.TextField(blank=True)
     file = models.FileField(upload_to=download_path)
     user = models.ForeignKey(User)
-    date_added = models.DateTimeField()
+    date_added = models.DateTimeField(db_index=True)
     ip_address = models.IPAddressField('IP Address')
+    update_date = models.DateTimeField(db_index=True, blank=True)
 
     class Meta:
         abstract = True
@@ -80,6 +81,10 @@ class PendingDownload(DownloadBase):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.date_added = datetime.datetime.now()
+            self.update_date = self.date_added
+        else:
+            self.update_date = datetime.datetime.now()
+
         self.html = site_markup(self.description)
         super(PendingDownload, self).save(*args, **kwargs)
 
@@ -103,6 +108,12 @@ class Download(DownloadBase):
         return ('downloads-details', [str(self.id)])
 
     def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_added = datetime.datetime.now()
+            self.update_date = self.date_added
+        else:
+            self.update_date = datetime.datetime.now()
+
         self.html = site_markup(self.description)
         super(Download, self).save(*args, **kwargs)
 

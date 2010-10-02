@@ -18,6 +18,7 @@ class PendingLinkAdmin(admin.ModelAdmin):
     list_display = ('title', 'url', 'user', 'category', 'date_added')
     raw_id_fields = ('user', )
     actions = ('approve_links', )
+    readonly_fields = ('update_date', )
 
     def approve_links(self, request, qs):
         for pending_link in qs:
@@ -42,6 +43,7 @@ class LinkAdmin(admin.ModelAdmin):
     ordering = ('-date_added', )
     search_fields = ('title', 'description', 'url', 'user__username')
     raw_id_fields = ('user', )
+    readonly_fields = ('update_date', )
     save_on_top = True
 
 

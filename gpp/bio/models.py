@@ -2,13 +2,14 @@
 Contains models for the bio application.
 I would have picked profile for this application, but that is already taken, apparently.
 """
-
+import datetime
 import os.path
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.cache import cache
+from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
 
@@ -90,6 +91,7 @@ class UserProfile(models.Model):
             choices=USER_STATUS_CHOICES)
     status_date = models.DateTimeField(auto_now_add=True)
     badges = models.ManyToManyField(Badge, through="BadgeOwnership")
+    update_date = models.DateTimeField(db_index=True, blank=True)
 
     def __unicode__(self):
         return self.user.username
@@ -98,6 +100,7 @@ class UserProfile(models.Model):
         ordering = ('user__username', )
 
     def save(self, *args, **kwargs):
+        update_date = datetime.datetime.now()
         sm = SiteMarkup()
         self.profile_html = sm.convert(self.profile_text)
         self.signature_html = sm.convert(self.signature)
@@ -134,8 +137,9 @@ class UserProfile(models.Model):
         return self.user.username
 
     def search_summary(self):
-        return u"\n".join((self.location, self.occupation, self.interests,
-            self.profile_text, self.signature))
+        text = render_to_string('search/indexes/bio/userprofile_text.txt',
+                {'object': self});
+        return text
 
 
 class UserProfileFlag(models.Model):

@@ -36,7 +36,8 @@ class LinkBase(models.Model):
     url = models.URLField(verify_exists=False, db_index=True)
     description = models.TextField(blank=True)
     user = models.ForeignKey(User)
-    date_added = models.DateField()
+    date_added = models.DateTimeField(db_index=True)
+    update_date = models.DateTimeField(db_index=True, blank=True)
 
     class Meta:
         abstract = True
@@ -56,6 +57,16 @@ class Link(LinkBase):
 
     def __unicode__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            if not self.date_added:
+                self.date_added = datetime.datetime.now()
+            self.update_date = self.date_added
+        else:
+            self.update_date = datetime.datetime.now()
+
+        super(Link, self).save(*args, **kwargs)
 
     @models.permalink
     def get_absolute_url(self):
@@ -81,6 +92,10 @@ class PendingLink(LinkBase):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.date_added = datetime.datetime.now()
+            self.update_date = self.date_added
+        else:
+            self.update_date = datetime.datetime.now()
+
         super(PendingLink, self).save(*args, **kwargs)
 
 

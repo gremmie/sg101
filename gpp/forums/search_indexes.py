@@ -14,5 +14,8 @@ class PostIndex(SearchIndex):
         return Post.objects.filter(
                 topic__forum__in=Forum.objects.public_forums())
 
+    def get_updated_field(self):
+        return 'update_date'
+
 
 site.register(Post, PostIndex)

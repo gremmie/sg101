@@ -9,5 +9,8 @@ class ItemIndex(SearchIndex):
     author = CharField(model_attr='author')
     pub_date = DateTimeField(model_attr='pubdate')
 
+    def get_updated_field(self):
+        return 'update_date'
+
 
 site.register(Item, ItemIndex)

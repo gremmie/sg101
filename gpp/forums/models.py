@@ -243,8 +243,8 @@ class Post(models.Model):
     """
     topic = models.ForeignKey(Topic, related_name='posts')
     user = models.ForeignKey(User, related_name='posts')
-    creation_date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(null=True)
+    creation_date = models.DateTimeField(db_index=True)
+    update_date = models.DateTimeField(db_index=True)
     body = models.TextField()
     html = models.TextField()
     user_ip = models.IPAddressField(blank=True, default='', null=True)
@@ -269,6 +269,10 @@ class Post(models.Model):
         return self.summary()
 
     def save(self, *args, **kwargs):
+        if not self.id:
+            self.creation_date = datetime.datetime.now()
+            self.update_date = self.creation_date
+
         self.html = site_markup(self.body)
         super(Post, self).save(*args, **kwargs)
 
@@ -279,7 +283,7 @@ class Post(models.Model):
             self.topic.delete()
 
     def has_been_edited(self):
-        return self.update_date is not None
+        return self.update_date > self.creation_date
 
     def touch(self):
         """Call this function to indicate the post has been edited."""

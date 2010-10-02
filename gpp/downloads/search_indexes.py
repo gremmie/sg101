@@ -13,5 +13,8 @@ class DownloadIndex(SearchIndex):
     def get_queryset(self):
         return Download.public_objects.all()
 
+    def get_updated_field(self):
+        return 'update_date'
+
 
 site.register(Download, DownloadIndex)

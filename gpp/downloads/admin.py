@@ -24,6 +24,7 @@ class PendingDownloadAdmin(admin.ModelAdmin):
     list_display = ('title', 'user', 'category', 'date_added', 'ip_address', 'size')
     ordering = ('date_added', )
     raw_id_fields = ('user', )
+    readonly_fields = ('update_date', )
 
     actions = ('approve_downloads', )
 
@@ -61,6 +62,7 @@ class DownloadAdmin(admin.ModelAdmin):
     ordering = ('-date_added', )
     search_fields = ('title', 'description', 'user__username')
     raw_id_fields = ('user', )
+    readonly_fields = ('update_date', )
     save_on_top = True
 
 

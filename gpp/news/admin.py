@@ -22,6 +22,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
     search_fields = ('title', 'short_text', 'long_text')
     date_hierarchy = 'date_submitted'
     actions = ('approve_story', )
+    readonly_fields = ('update_date', )
 
     def approve_story(self, request, qs):
         for pending_story in qs:
@@ -31,7 +32,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     category=pending_story.category,
                     short_text=pending_story.short_text,
                     long_text=pending_story.long_text,
-                    date_submitted=datetime.datetime.now(),
+                    date_submitted=pending_story.date_submitted,
                     allow_comments=pending_story.allow_comments,
                     tags=pending_story.tags,
                     front_page_expiration=pending_story.front_page_expiration)
@@ -49,6 +50,7 @@ class StoryAdmin(admin.ModelAdmin):
     list_filter = ('date_submitted', 'category')
     search_fields = ('title', 'short_text', 'long_text')
     date_hierarchy = 'date_submitted'
+    readonly_fields = ('update_date', )
 
     class Media:
         js = settings.GPP_THIRD_PARTY_JS['tiny_mce']

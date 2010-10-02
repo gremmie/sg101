@@ -21,7 +21,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'user__email')
     exclude = ('profile_html', 'signature_html')
     list_display = ('__unicode__', 'user_is_active', 'get_status_display', 'status_date')
-    readonly_fields = ('status', 'status_date')
+    readonly_fields = ('status', 'status_date', 'update_date')
     list_filter = ('status', )
     date_hierarchy = 'status_date'
     inlines = (BadgeOwnerInline, )
