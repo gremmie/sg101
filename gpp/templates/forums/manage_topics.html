@@ -24,6 +24,7 @@ $(document).ready(function() {
 });
 //]]>
 </script>
+{% include "forums/forum_query.js" %}
 {% endblock %}
 {% block content %}
 <h2>Forums: {{ page_title }}</h2>
@@ -31,6 +32,7 @@ $(document).ready(function() {
 <h3>
    <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ page_title }}
 </h3>
+{% include "forums/forum_query.html" %}
 <p>{{ description }}</p>
 {% include 'forums/pagination.html' %}
 <form id="topic_form" action="." method="post">{% csrf_token %}

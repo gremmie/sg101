@@ -14,7 +14,6 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
-from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
@@ -76,23 +75,10 @@ def attach_topic_page_ranges(topics):
 
 #######################################################################
 
-SPECIAL_QUERIES = {
-    'unread': 'forums-unread_topics',
-    'unanswered': 'forums-unanswered_topics',
-    'mine': 'forums-my_posts',
-    'favorites': 'forums-manage_favorites',
-    'subscriptions': 'forums-manage_subscriptions',
-}
-
 def index(request):
     """
     This view displays all the forums available, ordered in each category.
     """
-    # check for special forum queries
-    query = request.GET.get("query")
-    if query in SPECIAL_QUERIES:
-        return redirect(SPECIAL_QUERIES[query])
-
     public_forums = Forum.objects.public_forums()
     feeds = [{'name': 'All Forums', 'feed': FEED_BASE}]
 

@@ -6,20 +6,13 @@
 {% for feed in feeds %}
 <link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
 {% endfor %}
+{% include "forums/forum_query.js" %}
 {% endblock %}
 {% block title %}Forums{% endblock %}
 {% block content %}
 <h2>Forums <a href="/feeds/forums/"><img src="{{ MEDIA_URL }}icons/feed.png" alt="Forums Feed" title="Forums Feed" /></a></h2>
 
-<form action="." method="get" id="forum-query-form">
-   <select name="query">
-      <option value="unread">Show topics with unread posts</option>
-      <option value="mine">Show my posts</option>
-      <option value="unanswered">Show unanswered posts</option>
-      <option value="favorites">Show my favorite topics</option>
-      <option value="subscriptions">Show my subscribed topics</option>
-   </select><input type="submit" value="Go" />
-</form>
+{% include "forums/forum_query.html" %}
 
 <div class="forum-block">
 {% for iter in cats %}

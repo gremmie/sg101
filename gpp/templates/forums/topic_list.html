@@ -1,11 +1,15 @@
 {% extends 'base.html' %}
 {% load forum_tags %}
 {% block title %}Forums: {{ title }}{% endblock %}
+{% block custom_js %}
+{% include "forums/forum_query.js" %}
+{% endblock %}
 {% block content %}
 <h2>Forums: {{ title }}</h2>
 <h3>
 <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ title }}
 </h3>
+{% include "forums/forum_query.html" %}
 <div class="forum-block">
 {{ page_nav }}
 <table class="forum-topic-table">

@@ -1,0 +1,12 @@
+<form action="." method="get" id="forum-query-form">
+   <select id="forum-query-select">
+      <option value="{% url forums-unread_topics %}">Show topics with unread posts</option>
+      <option value="{% url forums-unanswered_topics %}">Show unanswered posts</option>
+      {% if user.is_authenticated %}
+      <option value="{% url forums-my_posts %}">Show my posts</option>
+      <option value="{% url forums-manage_favorites %}">Show my favorite topics</option>
+      <option value="{% url forums-manage_subscriptions %}">Show my subscribed topics</option>
+      {% endif %}
+   </select>
+   <button type="button" id="forum-query-button">Go</button>
+</form>
