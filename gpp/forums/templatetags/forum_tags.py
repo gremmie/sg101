@@ -74,7 +74,7 @@ def current_forum_time(user):
     else:
         fmt = TIME_FMT_12
 
-    return 'The current time is %s. All times shown are %s.' % (
+    return '<p>The current time is %s. All times shown are %s.</p>' % (
             curr_time.strftime(fmt), curr_time.strftime('%Z%z'))
 
 
