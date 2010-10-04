@@ -1,0 +1,10 @@
+<h2 class="forum-nav"><a href="{% url forums-index %}">SurfGuitar101 Forums</a> &raquo;
+{% for nav_item in nav_list %}
+   {% if not forloop.last %}
+      <a href="{{ nav_item.url }}">{{ nav_item.name }}</a> &raquo;
+   {% else %}
+      </h2><h3 class="forum-nav">{{ nav_item.name }}</h3>
+   {% endif %}
+{% empty %}
+   </h2>
+{% endfor %}
