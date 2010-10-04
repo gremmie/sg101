@@ -100,7 +100,7 @@ class UserProfile(models.Model):
         ordering = ('user__username', )
 
     def save(self, *args, **kwargs):
-        update_date = datetime.datetime.now()
+        self.update_date = datetime.datetime.now()
         sm = SiteMarkup()
         self.profile_html = sm.convert(self.profile_text)
         self.signature_html = sm.convert(self.signature)
