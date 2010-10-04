@@ -3,13 +3,7 @@
 {% block title %}Forums: {{ topic.name }}{% endblock %}
 {% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
-<h2>Forums: {{ topic.name }}</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
-   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
-</h3>
+{% forum_navigation topic %}
 
 <div class="forum-block">
 {% if topic.sticky %}

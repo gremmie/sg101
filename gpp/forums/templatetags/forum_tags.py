@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.models import User
 
+from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from core.models import Statistic
@@ -169,3 +170,33 @@ def topic_page_range(topic):
     return {
         'topic': topic,
     }
+
+
+@register.inclusion_tag('forums/navigation_tag.html')
+def forum_navigation(obj, subtitle=None):
+    """
+    Generates forum navigation links based upon the arguments passed.
+    If obj is:
+        * a string: Index >> String Text
+        * a forum:  Index >> Forum Name
+        * a topic:  Index >> Forum Name >> Topic Name
+
+    If the optional subtitle argument is passed, it is assumed to be
+    a string, and is added as one more "level" in the navigation.
+
+    """
+    nav_list = []
+
+    if isinstance(obj, str) or isinstance(obj, unicode):
+        nav_list.append(dict(name=obj, url=None))
+    elif isinstance(obj, Forum):
+        nav_list.append(dict(name=obj.name, url=obj.get_absolute_url()))
+    elif isinstance(obj, Topic):
+        forum = obj.forum
+        nav_list.append(dict(name=forum.name, url=forum.get_absolute_url()))
+        nav_list.append(dict(name=obj.name, url=obj.get_absolute_url()))
+
+    if subtitle:
+        nav_list.append(dict(name=subtitle, url=None))
+
+    return dict(nav_list=nav_list, MEDIA_URL=settings.MEDIA_URL)

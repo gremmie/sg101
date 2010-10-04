@@ -1,14 +1,9 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: Split Topic{% endblock %}
 {% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
-<h2>Forums: Split Topic {{ topic.name }}</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
-   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
-</h3>
+{% forum_navigation topic "Split Topic" %}
 
 <div class="forum-block">
    <p>

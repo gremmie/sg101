@@ -1,13 +1,8 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic{% endblock %}
 {% block content %}
-<h2>Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=topic.forum.slug %}">{{ topic.forum.name }}</a> &raquo;
-   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
-</h3>
+{% forum_navigation topic "Topic Subscriptions Updated" %}
 <p>
 {% if is_subscribed %}
 You are now subscribed to the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.

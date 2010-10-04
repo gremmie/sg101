@@ -5,10 +5,7 @@
 {% include "forums/forum_query.js" %}
 {% endblock %}
 {% block content %}
-<h2>Forums: {{ title }}</h2>
-<h3>
-<a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo; {{ title }}
-</h3>
+{% forum_navigation title %}
 {% include "forums/forum_query.html" %}
 <div class="forum-block">
 {{ page_nav }}

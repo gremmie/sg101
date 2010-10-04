@@ -1,13 +1,8 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: Move Topic{% endblock %}
 {% block content %}
-<h2>Forums: Move Topic</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a> &raquo;
-   <a href="{% url forums-topic_index id=topic.id %}">{{ topic.name }}</a>
-</h3>
+{% forum_navigation topic "Move Topic" %}
 
 <div class="forum-block">
 <form action="." method="post">{% csrf_token %}

@@ -5,12 +5,7 @@
 <script type="text/javascript" src="{{ MEDIA_URL }}js/forums_mod.js"></script>
 {% endblock %}
 {% block content %}
-<h2>Moderate Forum: {{ forum.name }}</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a>
-</h3>
+{% forum_navigation forum "Moderate Forum" %}
 
 <div class="forum-block">
 {{ page_nav }}

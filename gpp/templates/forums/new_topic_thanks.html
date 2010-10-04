@@ -1,16 +1,11 @@
 {% extends 'base.html' %}
+{% load forum_tags %}
 {% block title %}Forums: New Topic Created{% endblock %}
 {% block content %}
-<h2>Forums: {{ forum.name }} - New Topic Created</h2>
-
-<h3>
-   <a href="{% url forums-index %}">SurfGuitar101 Forum Index</a> &raquo;
-   <a href="{% url forums-forum_index slug=forum.slug %}">{{ forum.name }}</a>
-</h3>
+{% forum_navigation topic "New Topic Created" %}
 
 <p>
-New topic created successfully. 
-Click <a href="{{ topic.get_absolute_url }}">here</a> to view your new topic.
+You have successfully created a new topic called &quot;
+<a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>&quot;.
 </p>
-
 {% endblock %}
