@@ -7,6 +7,7 @@ from django.conf import settings
 from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
+from forums.attachments import AttachmentProcessor
 
 
 class NewPostForm(forms.Form):
@@ -25,6 +26,11 @@ class NewPostForm(forms.Form):
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
                 ('js/forums.js', ))
 
+    def __init__(self, *args, **kwargs):
+        super(NewPostForm, self).__init__(*args, **kwargs)
+        attachments = args[0].getlist('attachment') if len(args) else []
+        self.attach_proc = AttachmentProcessor(attachments)
+
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
         try:
@@ -40,6 +46,7 @@ class NewPostForm(forms.Form):
         post = Post(topic=self.topic, user=user, body=self.cleaned_data['body'],
                 user_ip=ip)
         post.save()
+        self.attach_proc.save_attachments(post)
         return post
 
 
@@ -76,6 +83,9 @@ class NewTopicForm(forms.Form):
             self.fields['locked'] = forms.BooleanField(required=False)
             self.has_mod_fields = True
 
+        attachments = args[0].getlist('attachment') if len(args) else []
+        self.attach_proc = AttachmentProcessor(attachments)
+
     def save(self, ip=None):
         """
         Creates the new Topic and first Post from the form data and supplied
@@ -93,6 +103,9 @@ class NewTopicForm(forms.Form):
                 body=self.cleaned_data['body'],
                 user_ip=ip)
         post.save()
+
+        self.attach_proc.save_attachments(post)
+
         return topic
 
 

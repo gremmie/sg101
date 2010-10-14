@@ -48,3 +48,7 @@ urlpatterns += patterns('forums.views.spam',
     url(r'^spammer/nailed/(\d+)/$', 'spammer_nailed', name='forums-spammer_nailed'),
     url(r'^stranger/(\d+)/$', 'stranger', name='forums-stranger'),
 )
+
+urlpatterns += patterns('forums.views.attachments',
+    url(r'^fetch_attachments/$', 'fetch_attachments', name='forums-fetch_attachments'),
+)

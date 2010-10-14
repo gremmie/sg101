@@ -38,6 +38,13 @@
          <p class="small quiet">Last edited: {{ post.update_date|date:"M d, Y H:i:s" }}</p>
          {% endif %}
       </div>
+      {% if post.attach_list %}
+      <div>
+         {% for item in post.attach_list %}
+         <div class="forum-attachment">{{ item.html|safe }}</div>
+         {% endfor %}
+      </div>
+      {% endif %}
       <div class="forum-post-info-tools">
       {% if can_reply %}
          <a href="{% url forums-new_post topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>

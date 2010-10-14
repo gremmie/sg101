@@ -8,7 +8,7 @@
 {% if can_post %}
 <div class="forum-block">
 <a name="forum-reply-form"></a>
-{% show_form "New Post" form "Submit Post" 0 MEDIA_URL %}
+{% show_form "New Post" form "Submit Post" 0 %}
 {% else %}
    {% if topic.locked %}
    <p>This topic is locked.</p>

@@ -5,5 +5,12 @@
 {{ form.as_p }}
 {% comment_dialogs %}
 <input type="submit" value="{{ submit_value }}" {% if is_ajax %}id="forums-reply-post"{% endif %} />
+
+<br />
+<br />
+<div id="attachment">
+{% if post_id %}<input type="hidden" name="post_id" value="{{ post_id }}" />{% endif %}
+</div>
+
 </fieldset>
 </form>

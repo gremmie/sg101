@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.contrib.auth.models import User, Group
 
 from core.markup import site_markup
+from oembed.models import Oembed
 
 
 class Category(models.Model):
@@ -248,6 +249,7 @@ class Post(models.Model):
     body = models.TextField()
     html = models.TextField()
     user_ip = models.IPAddressField(blank=True, default='', null=True)
+    attachments = models.ManyToManyField(Oembed, through='Attachment')
 
     class Meta:
         ordering = ('creation_date', )
@@ -365,3 +367,18 @@ class TopicLastVisit(models.Model):
     def touch(self):
         self.last_visit = datetime.datetime.now()
 
+
+class Attachment(models.Model):
+    """
+    This model is a "through" table for the M2M relationship between forum
+    posts and Oembed objects.
+    """
+    post = models.ForeignKey(Post)
+    embed = models.ForeignKey(Oembed)
+    order = models.IntegerField()
+
+    class Meta:
+        ordering = ('order', )
+
+    def __unicode__(self):
+        return u'Post %d, %s' % (self.post.pk, self.embed.title)

@@ -15,6 +15,10 @@ def delete_user_posts(user):
     """
     posts = Post.objects.filter(user=user).select_related()
 
+    # delete attachments
+    for post in posts:
+        post.attachments.clear()
+
     # build a set of topics and forums affected by the post deletions
 
     topics = set(post.topic for post in posts)

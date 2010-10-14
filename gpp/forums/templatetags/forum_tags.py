@@ -100,16 +100,25 @@ def forum_date(date, user, long_format=True):
 
 
 @register.inclusion_tag('forums/show_form.html')
-def show_form(legend_text, form, submit_value, is_ajax, media_url):
+def show_form(legend_text, form, submit_value, is_ajax, post=None):
     """
     This tag displays the common HTML for a forum form.
+    If post is not None, then we are editing an existing post. We must get the
+    post id into the template if the post has attachments. AJAX is used to
+    retrieve the attachments.
     """
+    post_id = None
+    if post is not None:
+        if post.attachments.count() > 0:
+            post_id = post.id
+
     return {
         'legend_text': legend_text,
         'form': form,
         'submit_value': submit_value,
         'is_ajax': is_ajax,
-        'MEDIA_URL': media_url,
+        'post_id': post_id,
+        'MEDIA_URL': settings.MEDIA_URL,
     }
 
 

@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     'membermap',
     'messages',
     'news',
+    'oembed',
     'podcast',
     'polls',
     'potd',

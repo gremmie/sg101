@@ -23,7 +23,7 @@ from django.db.models import F
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
-        ForumLastVisit
+        ForumLastVisit, Attachment
 from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
         SplitTopicForm
 from forums.unread import get_forum_unread_status, get_topic_unread_status, \
@@ -32,6 +32,7 @@ from forums.unread import get_forum_unread_status, get_topic_unread_status, \
 from bio.models import UserProfile
 import antispam
 import antispam.utils
+from forums.attachments import AttachmentProcessor
 
 #######################################################################
 
@@ -184,6 +185,16 @@ def topic_index(request, id):
 
     for post in page.object_list:
         post.user_profile = user_profiles[post.user.id]
+        post.attach_list = []
+
+    # Attach any attachments
+    post_ids = [post.pk for post in page.object_list]
+    attachments = Attachment.objects.filter(post__in=post_ids).select_related(
+            'embed').order_by('order')
+
+    post_dict = dict((post.pk, post) for post in page.object_list)
+    for item in attachments:
+        post_dict[item.post.id].attach_list.append(item.embed)
 
     last_page = page_num == paginator.num_pages
 
@@ -283,8 +294,10 @@ def quick_reply_ajax(request):
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         post.unread = True
         post.user_profile = request.user.get_profile()
+        post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic)
+
         return render_to_response('forums/display_post.html', {
             'post': post,
             'can_moderate': _can_moderate(form.topic.forum, request.user),
@@ -359,6 +372,11 @@ def edit_post(request, id):
             post = form.save(commit=False)
             post.touch()
             post.save()
+
+            # Save any attachments
+            attach_proc = AttachmentProcessor(request.POST.getlist('attachment'))
+            attach_proc.save_attachments(post)
+
             return HttpResponseRedirect(post.get_absolute_url())
     else:
         form = PostForm(instance=post)
@@ -439,6 +457,9 @@ def _delete_post(post):
         forum.last_post_pre_delete()
         forum.save()
 
+    # delete any attachments
+    post.attachments.clear()
+
     # Should be safe to delete the post now:
     post.delete()
 
@@ -458,6 +479,11 @@ def _delete_topic(topic):
     # delete subscriptions to this topic
     topic.subscribers.clear()
     topic.bookmarkers.clear()
+
+    # delete all attachments
+    posts = Post.objects.filter(topic=topic)
+    for post in posts:
+        post.attachments.clear()
 
     # It should be safe to just delete the topic now. This will
     # automatically delete all posts in the topic.
@@ -484,6 +510,11 @@ def new_post(request, topic_id):
                 post.user = request.user
                 post.user_ip = request.META.get("REMOTE_ADDR", "")
                 post.save()
+
+                # Save any attachments
+                attach_proc = AttachmentProcessor(request.POST.getlist('attachment'))
+                attach_proc.save_attachments(post)
+
                 _bump_post_count(request.user)
                 _update_last_visit(request.user, topic)
                 return HttpResponseRedirect(post.get_absolute_url())
