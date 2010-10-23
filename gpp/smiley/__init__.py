@@ -22,6 +22,9 @@ class SmilifyHtml(object):
         Converts and returns the supplied text with the HTML version of the
         smileys.
         """
+        if not value:
+            return u''
+
         if not autoescape or isinstance(value, SafeData):
             esc = lambda x: x
         else:
@@ -49,6 +52,9 @@ class SmilifyMarkdown(object):
         Returns a string copy of the input s that has the smiley codes replaced
         with Markdown for smiley images.
         """
+        if not s:
+            return u''
+
         for regex, repl in self.regexes:
             s = regex.sub(repl, s)
         return s

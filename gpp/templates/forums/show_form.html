@@ -1,5 +1,5 @@
 {% load core_tags %}
-<form action="." method="post">{% csrf_token %}
+<form action="." method="post" id="forums_post_form">{% csrf_token %}
 <fieldset>
 <legend>{{ legend_text }}</legend>
 {{ form.as_p }}
@@ -8,9 +8,10 @@
 
 <br />
 <br />
-<div id="attachment">
-{% if post_id %}<input type="hidden" name="post_id" value="{{ post_id }}" />{% endif %}
-</div>
+<fieldset>
+<legend>Video Attachments</legend>
+<div id="attachment"></div>
+</fieldset>
 
 </fieldset>
 </form>

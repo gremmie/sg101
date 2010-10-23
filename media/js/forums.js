@@ -3,10 +3,6 @@ $(document).ready(function() {
    var postButton = $('#forums-reply-post');
    postButton.click(function () {
       var text = $.trim(postText.val());
-      if (text.length == 0) {
-         alert('Please enter some text.');
-         return false;
-      }
       $(this).attr('disabled', 'disabled').val('Posting reply...');
 
       var attachments = new Array()
@@ -102,15 +98,42 @@ $(document).ready(function() {
       $('#attach-another').remove();
    }
 
+   function processEmbeds(data, textStatus) 
+   {
+      vidDiv.find('img').remove();
+      $.each(data, function(index, value) {
+         var html = '<div id="video-' + index + '">' + value.html +
+            '<span class="link">' +
+            '<img src="/media/icons/television_delete.png" alt="Remove" /> ' +
+            '<a href="#">Remove</a></span>' +
+            '<input type="hidden" name="attachment" value="' + value.id + '" />';
+            '</div>';
+         vidDiv.append(html);
+         $('#video-' + index + ' a').click(function() {
+            $('#video-' + index).remove();
+            relabelAttachLink();
+            return false;
+         });
+      });
+      vid = data.length;
+      $('#video-' + (vid-1)).after('<a id="attach-another" href="#">Attach another video</a>');
+      $('#attach-another').click(function() {
+         addVideo();
+         relabelAttachLink();
+         return false;
+      });
+   }
+
    function initAttachments()
    {
       clearAttachments();
 
-      var post_input = $('#attachment input');
+      var post_input = $('#id_post_id');
+      var attachments = $("#forums_post_form input:hidden[name='attachment']");
       if (post_input.length == 1)
       {
          post_id = post_input.val();
-         post_input.replaceWith('<img src="/media/icons/ajax_busy.gif" alt="Busy" />');
+         vidDiv.prepend('<img src="/media/icons/ajax_busy.gif" alt="Busy" />');
          $.ajax({
             url: '/forums/fetch_attachments/', 
             type: 'GET',
@@ -118,31 +141,33 @@ $(document).ready(function() {
                pid : post_id
             },
             dataType: 'json',
-            success: function (data, textStatus) {
-               $('#attachment img').remove();
-               $.each(data, function(index, value) {
-                  var html = '<div id="video-' + index + '">' + value.html +
-                     '<span class="link">' +
-                     '<img src="/media/icons/television_delete.png" alt="Remove" /> ' +
-                     '<a href="#">Remove</a></span>' +
-                     '<input type="hidden" name="attachment" value="' + value.id + '" />';
-                     '</div>';
-                  vidDiv.append(html);
-                  $('#video-' + index + ' a').click(function() {
-                     $('#video-' + index).remove();
-                     relabelAttachLink();
-                     return false;
-                  });
-               });
-               vid = data.length;
-               $('#video-' + (vid-1)).after('<a id="attach-another" href="#">Attach another video</a>');
-               $('#attach-another').click(function() {
-                  addVideo();
-                  relabelAttachLink();
-                  return false;
-               });
-            },
+            success: processEmbeds,
             error: function (xhr, textStatus, ex) {
+               vidDiv.find('img').remove();
+               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+                  xhr.responseText);
+            }
+         });
+      }
+      else if (attachments.length > 0)
+      {
+         vidDiv.prepend('<img src="/media/icons/ajax_busy.gif" alt="Busy" />');
+         var embeds = new Array();
+         attachments.each(function(index) {
+            embeds[index] = $(this).val();
+         });
+         attachments.remove();
+         $.ajax({
+            url: '/oembed/fetch_saved/', 
+            type: 'GET',
+            data: {
+               embeds: embeds
+            },
+            traditional: true,
+            dataType: 'json',
+            success: processEmbeds,
+            error: function (xhr, textStatus, ex) {
+               vidDiv.find('img').remove();
                alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
                   xhr.responseText);
             }
@@ -214,6 +239,8 @@ $(document).ready(function() {
       var vidText = $('#' + id + ' input');
 
       $('#' + id + ' button').click(function() {
+         var button = $(this);
+         button.attr('disabled', 'disabled');
          $.ajax({
             url: '/oembed/fetch/', 
             type: 'POST',
@@ -239,6 +266,7 @@ $(document).ready(function() {
             error: function (xhr, textStatus, ex) {
                alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
                   xhr.responseText);
+               button.removeAttr('disabled');
             }
          });
       });

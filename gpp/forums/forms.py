@@ -12,7 +12,8 @@ from forums.attachments import AttachmentProcessor
 
 class NewPostForm(forms.Form):
     """Form for creating a new post."""
-    body = forms.CharField(label='', 
+    body = forms.CharField(label='',
+            required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     topic_id = forms.IntegerField(widget=forms.HiddenInput)
     topic = None
@@ -22,7 +23,7 @@ class NewPostForm(forms.Form):
             'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
                 settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
                 ('js/forums.js', ))
 
@@ -31,13 +32,19 @@ class NewPostForm(forms.Form):
         attachments = args[0].getlist('attachment') if len(args) else []
         self.attach_proc = AttachmentProcessor(attachments)
 
+    def clean_body(self):
+        data = self.cleaned_data['body']
+        if not data and not self.attach_proc.has_attachments():
+            raise forms.ValidationError("This field is required.")
+        return data
+
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
         try:
             self.topic = Topic.objects.select_related().get(pk=id)
         except Topic.DoesNotExist:
             raise forms.ValidationError('invalid topic')
-        return id 
+        return id
 
     def save(self, user, ip=None):
         """
@@ -58,7 +65,7 @@ class NewTopicForm(forms.Form):
     """
     name = forms.CharField(label='Subject', max_length=255,
             widget=forms.TextInput(attrs={'size': 64}))
-    body = forms.CharField(label='', 
+    body = forms.CharField(label='', required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     user = None
     forum = None
@@ -69,7 +76,7 @@ class NewTopicForm(forms.Form):
             'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
                 settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
                 ('js/forums.js', ))
 
@@ -85,6 +92,23 @@ class NewTopicForm(forms.Form):
 
         attachments = args[0].getlist('attachment') if len(args) else []
         self.attach_proc = AttachmentProcessor(attachments)
+
+        # If this form is being POSTed, and the user is trying to add 
+        # attachments, create hidden fields to list the Oembed ids. In
+        # case the form isn't valid, the client-side javascript will know
+        # which Oembed media to ask for when the form is displayed with
+        # errors.
+        if self.attach_proc.has_attachments():
+            pks = self.attach_proc.get_ids()
+            self.fields['attachment'] = forms.MultipleChoiceField(label='',
+                    widget=forms.MultipleHiddenInput(),
+                    choices=[(v, v) for v in pks])
+
+    def clean_body(self):
+        data = self.cleaned_data['body']
+        if not data and not self.attach_proc.has_attachments():
+            raise forms.ValidationError("This field is required.")
+        return data
 
     def save(self, ip=None):
         """
@@ -113,7 +137,8 @@ class PostForm(forms.ModelForm):
     """
     Form for editing an existing post or a new, non-quick post.
     """
-    body = forms.CharField(label='', 
+    body = forms.CharField(label='',
+            required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     class Meta:
@@ -125,20 +150,42 @@ class PostForm(forms.ModelForm):
             'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
                 settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
                 ('js/forums.js', ))
+
+    def __init__(self, *args, **kwargs):
+        super(PostForm, self).__init__(*args, **kwargs)
+
+        attachments = args[0].getlist('attachment') if len(args) else []
+        self.attach_proc = AttachmentProcessor(attachments)
+        
+        # If this form is being used to edit an existing post, and that post
+        # has attachments, create a hidden post_id field. The client-side
+        # AJAX will use this as a cue to retrieve the HTML for the embedded
+        # media.
+        if 'instance' in kwargs:
+            post = kwargs['instance']
+            if post.attachments.count():
+                self.fields['post_id'] = forms.CharField(label='',
+                        widget=forms.HiddenInput(attrs={'value': post.id}))
+
+    def clean_body(self):
+        data = self.cleaned_data['body']
+        if not data and not self.attach_proc.has_attachments():
+            raise forms.ValidationError('This field is required.')
+        return data
 
 
 class MoveTopicForm(forms.Form):
     """
     Form for a moderator to move a topic to a forum.
     """
-    forums = forms.ModelChoiceField(label='Move to forum', 
+    forums = forms.ModelChoiceField(label='Move to forum',
           queryset=Forum.objects.none())
 
     def __init__(self, user, *args, **kwargs):
-        hide_label = kwargs.pop('hide_label', False) 
+        hide_label = kwargs.pop('hide_label', False)
         required = kwargs.pop('required', True)
         super(MoveTopicForm, self).__init__(*args, **kwargs)
         self.fields['forums'].queryset = \
@@ -154,7 +201,7 @@ class SplitTopicForm(forms.Form):
     """
     name = forms.CharField(label='New topic title', max_length=255,
             widget=forms.TextInput(attrs={'size': 64}))
-    forums = forms.ModelChoiceField(label='Forum for new topic', 
+    forums = forms.ModelChoiceField(label='Forum for new topic',
           queryset=Forum.objects.none())
     post_ids = []
     split_at = False

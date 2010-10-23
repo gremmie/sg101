@@ -27,7 +27,7 @@ def fetch_attachments(request):
         post = Post.objects.get(pk=post_id)
     except Post.DoesNotExist:
         return HttpResponseNotFound("That post doesn't exist.")
-    
+
     embeds = post.attachments.all().select_related('embed')
     data = [{'id': embed.id, 'html': embed.html} for embed in embeds]
 

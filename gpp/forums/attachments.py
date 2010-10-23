@@ -17,7 +17,7 @@ class AttachmentProcessor(object):
         This class is constructed with a list of Oembed ids. We retrieve the
         actual Oembed objects associated with these keys for use in subsequent
         operations.
-        
+
         """
         # ensure all ids are integers
         self.pks = []
@@ -43,3 +43,17 @@ class AttachmentProcessor(object):
         for n, pk in enumerate(self.pks):
             attachment = Attachment(post=post, embed=self.embeds[pk], order=n)
             attachment.save()
+
+    def has_attachments(self):
+        """
+        Return true if we have valid pending attachments.
+
+        """
+        return len(self.embeds) > 0
+
+    def get_ids(self):
+        """
+        Return the list of Oembed ids.
+
+        """
+        return self.pks

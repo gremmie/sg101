@@ -68,7 +68,7 @@ def attach_topic_page_ranges(topics):
     """
     for topic in topics:
         if topic.post_count > POSTS_PER_PAGE:
-            pp = DiggPaginator(range(topic.post_count), POSTS_PER_PAGE, 
+            pp = DiggPaginator(range(topic.post_count), POSTS_PER_PAGE,
                     body=2, tail=3, margin=1)
             topic.page_range = pp.page(1).page_range
         else:
@@ -142,7 +142,7 @@ def forum_index(request, slug):
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
     can_moderate = _can_moderate(forum, request.user)
-    
+
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
         'feed': feed,
@@ -252,7 +252,7 @@ def new_topic(request, slug):
                                             kwargs={'tid': topic.pk}))
     else:
         form = NewTopicForm(request.user, forum)
-    
+
     return render_to_response('forums/new_topic.html', {
         'forum': forum,
         'form': form,
@@ -305,7 +305,7 @@ def quick_reply_ajax(request):
             },
             context_instance=RequestContext(request))
 
-    return HttpResponseBadRequest("Invalid post.");
+    return HttpResponseBadRequest("Oops, did you forget some text?");
 
 
 def goto_post(request, post_id):
@@ -374,8 +374,7 @@ def edit_post(request, id):
             post.save()
 
             # Save any attachments
-            attach_proc = AttachmentProcessor(request.POST.getlist('attachment'))
-            attach_proc.save_attachments(post)
+            form.attach_proc.save_attachments(post)
 
             return HttpResponseRedirect(post.get_absolute_url())
     else:
@@ -512,8 +511,7 @@ def new_post(request, topic_id):
                 post.save()
 
                 # Save any attachments
-                attach_proc = AttachmentProcessor(request.POST.getlist('attachment'))
-                attach_proc.save_attachments(post)
+                form.attach_proc.save_attachments(post)
 
                 _bump_post_count(request.user)
                 _update_last_visit(request.user, topic)
@@ -651,7 +649,7 @@ def mod_forum(request, slug):
                 if form.is_valid():
                     _bulk_move(topic_ids, forum, form.cleaned_data['forums'])
                     return HttpResponseRedirect(url)
-    
+
     if form is None:
         form = MoveTopicForm(request.user, hide_label=True)
 
@@ -803,7 +801,7 @@ def post_ip_info(request, post_id):
 
 
 def _user_posts(request, target_user, req_user, page_title):
-    """Displays a list of posts made by the target user. 
+    """Displays a list of posts made by the target user.
     req_user is the user trying to view the posts. Only the forums
     req_user can see are searched.
     """
@@ -981,7 +979,7 @@ def _split_topic(topic, post_ids, new_forum, new_name):
         for post in posts:
             post.topic = new_topic
             post.save()
-        
+
         topic.post_count_update()
         topic.save()
         new_topic.post_count_update()
