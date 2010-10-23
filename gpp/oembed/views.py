@@ -62,7 +62,7 @@ def fetch_media(request):
             return HttpResponse(json.dumps(data),
                     content_type='application/json')
 
-    return HttpBadRequest("Sorry, we couldn't find that video.")
+    return HttpResponseBadRequest("Sorry, we couldn't find that video.")
 
 
 def fetch_saved_media(request):

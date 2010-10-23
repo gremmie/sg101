@@ -1,0 +1,12 @@
+[
+    {
+        "pk": 1, 
+        "model": "oembed.provider", 
+        "fields": {
+            "api_endpoint": "http://www.youtube.com/oembed", 
+            "name": "YouTube", 
+            "url_regex": "^http://www\\.youtube\\.com/watch\\?v=\\S+$", 
+            "format": 0
+        }
+    }
+]
