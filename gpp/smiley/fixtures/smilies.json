@@ -1,5 +1,25 @@
 [
     {
+        "pk": 61, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_iagree.gif", 
+            "code": ":agree:", 
+            "title": "Agree"
+        }
+    }, 
+    {
+        "pk": 57, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_angel_1.gif", 
+            "code": ":angel:", 
+            "title": "Angel"
+        }
+    }, 
+    {
         "pk": 22, 
         "model": "smiley.smiley", 
         "fields": {
@@ -7,6 +27,16 @@
             "image": "smiley/images/upset.gif", 
             "code": ":argh:", 
             "title": "Argh"
+        }
+    }, 
+    {
+        "pk": 42, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_arrow.gif", 
+            "code": ":arrow:", 
+            "title": "Arrow"
         }
     }, 
     {
@@ -30,6 +60,36 @@
         }
     }, 
     {
+        "pk": 55, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_blah.gif", 
+            "code": ":blah:", 
+            "title": "Blah Blah"
+        }
+    }, 
+    {
+        "pk": 52, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_beer.gif", 
+            "code": ":cheers:", 
+            "title": "Cheers"
+        }
+    }, 
+    {
+        "pk": 28, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_confused.gif", 
+            "code": ":?", 
+            "title": "Confused"
+        }
+    }, 
+    {
         "pk": 8, 
         "model": "smiley.smiley", 
         "fields": {
@@ -50,6 +110,16 @@
         }
     }, 
     {
+        "pk": 29, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_cool.gif", 
+            "code": "8)", 
+            "title": "Cool"
+        }
+    }, 
+    {
         "pk": 9, 
         "model": "smiley.smiley", 
         "fields": {
@@ -57,6 +127,16 @@
             "image": "smiley/images/cry.gif", 
             "code": ":-(", 
             "title": "Cry"
+        }
+    }, 
+    {
+        "pk": 34, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_cry_1.gif", 
+            "code": ":cry:", 
+            "title": "Crying"
         }
     }, 
     {
@@ -70,6 +150,46 @@
         }
     }, 
     {
+        "pk": 77, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_tumbleweed.gif", 
+            "code": ":tumbleweed:", 
+            "title": "Dead Thread"
+        }
+    }, 
+    {
+        "pk": 60, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_drool.gif", 
+            "code": ":drool:", 
+            "title": "Drool"
+        }
+    }, 
+    {
+        "pk": 47, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_augh.gif", 
+            "code": ":bonk:", 
+            "title": "Duh"
+        }
+    }, 
+    {
+        "pk": 33, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_redface.gif", 
+            "code": ":oops:", 
+            "title": "Embarassed"
+        }
+    }, 
+    {
         "pk": 11, 
         "model": "smiley.smiley", 
         "fields": {
@@ -77,6 +197,156 @@
             "image": "smiley/images/embarrassed.gif", 
             "code": ":-#", 
             "title": "Embarrassed"
+        }
+    }, 
+    {
+        "pk": 35, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_evil.gif", 
+            "code": ":evil:", 
+            "title": "Evil"
+        }
+    }, 
+    {
+        "pk": 39, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_exclaim.gif", 
+            "code": ":!:", 
+            "title": "Exclamation"
+        }
+    }, 
+    {
+        "pk": 83, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_facepalm1.gif", 
+            "code": ":facepalm:", 
+            "title": "Face Palm"
+        }
+    }, 
+    {
+        "pk": 59, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_fight.gif", 
+            "code": ":fight:", 
+            "title": "Fight"
+        }
+    }, 
+    {
+        "pk": 63, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_groovy.gif", 
+            "code": ":groovy:", 
+            "title": "Groovy"
+        }
+    }, 
+    {
+        "pk": 73, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_guitar.gif", 
+            "code": ":guitar:", 
+            "title": "Guitar"
+        }
+    }, 
+    {
+        "pk": 80, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/headbang_1.gif", 
+            "code": ":headbang:", 
+            "title": "Headbang"
+        }
+    }, 
+    {
+        "pk": 69, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_help.gif", 
+            "code": ":help:", 
+            "title": "Help"
+        }
+    }, 
+    {
+        "pk": 71, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_hmm.gif", 
+            "code": ":hmmm:", 
+            "title": "Hmmm"
+        }
+    }, 
+    {
+        "pk": 41, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_idea.gif", 
+            "code": ":idea:", 
+            "title": "Idea"
+        }
+    }, 
+    {
+        "pk": 62, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_money.gif", 
+            "code": ":$$:", 
+            "title": "Ka-Ching!!!"
+        }
+    }, 
+    {
+        "pk": 72, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_huglove.gif", 
+            "code": ":kiss:", 
+            "title": "Kiss"
+        }
+    }, 
+    {
+        "pk": 45, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_lame.gif", 
+            "code": ":lame:", 
+            "title": "Lame"
+        }
+    }, 
+    {
+        "pk": 30, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_lol.gif", 
+            "code": ":lol:", 
+            "title": "Laughing"
+        }
+    }, 
+    {
+        "pk": 54, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_lmao.gif", 
+            "code": ":lmao:", 
+            "title": "LMAO"
         }
     }, 
     {
@@ -100,6 +370,46 @@
         }
     }, 
     {
+        "pk": 31, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_mad.gif", 
+            "code": ":x", 
+            "title": "Mad"
+        }
+    }, 
+    {
+        "pk": 78, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_monkey.gif", 
+            "code": ":monkey:", 
+            "title": "Monkey"
+        }
+    }, 
+    {
+        "pk": 44, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_mrgreen.gif", 
+            "code": ":mrgreen:", 
+            "title": "Mr. Green"
+        }
+    }, 
+    {
+        "pk": 43, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_neutral.gif", 
+            "code": ":neutral:", 
+            "title": "Neutral"
+        }
+    }, 
+    {
         "pk": 3, 
         "model": "smiley.smiley", 
         "fields": {
@@ -120,6 +430,156 @@
         }
     }, 
     {
+        "pk": 53, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_offtopic.gif", 
+            "code": ":ot:", 
+            "title": "Off Topic"
+        }
+    }, 
+    {
+        "pk": 46, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_oops.gif", 
+            "code": ":omg:", 
+            "title": "OMG"
+        }
+    }, 
+    {
+        "pk": 81, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_oyvey.gif", 
+            "code": ":oyvey:", 
+            "title": "Oy Vey"
+        }
+    }, 
+    {
+        "pk": 75, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_paranoid.gif", 
+            "code": ":paranoid:", 
+            "title": "Paranoid"
+        }
+    }, 
+    {
+        "pk": 84, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_facepalm2.gif", 
+            "code": ":facepalm2:", 
+            "title": "Picard Face Palm"
+        }
+    }, 
+    {
+        "pk": 58, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_puke.gif", 
+            "code": ":puke:", 
+            "title": "Puke"
+        }
+    }, 
+    {
+        "pk": 40, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_question.gif", 
+            "code": ":?:", 
+            "title": "Question"
+        }
+    }, 
+    {
+        "pk": 32, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_razz.gif", 
+            "code": ":P", 
+            "title": "Razz"
+        }
+    }, 
+    {
+        "pk": 85, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_rimshot.gif", 
+            "code": ":rimshot:", 
+            "title": "Rimshot"
+        }
+    }, 
+    {
+        "pk": 49, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_rock.gif", 
+            "code": ":rock:", 
+            "title": "Rock"
+        }
+    }, 
+    {
+        "pk": 37, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_rolleyes.gif", 
+            "code": ":roll:", 
+            "title": "Rolling Eyes"
+        }
+    }, 
+    {
+        "pk": 51, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_rotfl.gif", 
+            "code": ":rotfl:", 
+            "title": "ROTFL"
+        }
+    }, 
+    {
+        "pk": 74, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_rtfm.gif", 
+            "code": ":rtfm:", 
+            "title": "RTFM"
+        }
+    }, 
+    {
+        "pk": 25, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_sad.gif", 
+            "code": ":(", 
+            "title": "Sad"
+        }
+    }, 
+    {
+        "pk": 67, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_sg101.gif", 
+            "code": ":sg101:", 
+            "title": "SG101!"
+        }
+    }, 
+    {
         "pk": 1, 
         "model": "smiley.smiley", 
         "fields": {
@@ -127,6 +587,16 @@
             "image": "smiley/images/bigeek.gif", 
             "code": ":shock:", 
             "title": "Shock"
+        }
+    }, 
+    {
+        "pk": 27, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_eek.gif", 
+            "code": "8O", 
+            "title": "Shocked"
         }
     }, 
     {
@@ -140,6 +610,26 @@
         }
     }, 
     {
+        "pk": 68, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_sleep.gif", 
+            "code": ":zzz:", 
+            "title": "Sleeping"
+        }
+    }, 
+    {
+        "pk": 24, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_smile.gif", 
+            "code": ":)", 
+            "title": "Smile"
+        }
+    }, 
+    {
         "pk": 20, 
         "model": "smiley.smiley", 
         "fields": {
@@ -150,6 +640,96 @@
         }
     }, 
     {
+        "pk": 70, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_sorry.gif", 
+            "code": ":sorry:", 
+            "title": "Sorry"
+        }
+    }, 
+    {
+        "pk": 56, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_stir.gif", 
+            "code": ":stir:", 
+            "title": "Stir the Pot"
+        }
+    }, 
+    {
+        "pk": 66, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_hitsfan.gif", 
+            "code": ":hits-fan:", 
+            "title": "Stuff Hits the Fan"
+        }
+    }, 
+    {
+        "pk": 79, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_suicide.gif", 
+            "code": ":suicide:", 
+            "title": "Suicide"
+        }
+    }, 
+    {
+        "pk": 26, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_surprised.gif", 
+            "code": ":o", 
+            "title": "Surprised"
+        }
+    }, 
+    {
+        "pk": 76, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_hijack.gif", 
+            "code": ":hijack:", 
+            "title": "Thread Hijack"
+        }
+    }, 
+    {
+        "pk": 65, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_thumbsdown.gif", 
+            "code": ":thumbs-down:", 
+            "title": "Thumbs Down"
+        }
+    }, 
+    {
+        "pk": 64, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_thumbsup.gif", 
+            "code": ":thumbs-up:", 
+            "title": "Thumbs Up"
+        }
+    }, 
+    {
+        "pk": 36, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_twisted.gif", 
+            "code": ":twisted:", 
+            "title": "Twisted Evil"
+        }
+    }, 
+    {
         "pk": 21, 
         "model": "smiley.smiley", 
         "fields": {
@@ -157,6 +737,26 @@
             "image": "smiley/images/uhoh.gif", 
             "code": ":uh-oh:", 
             "title": "Uh-Oh"
+        }
+    }, 
+    {
+        "pk": 23, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_biggrin.gif", 
+            "code": ":D", 
+            "title": "Very Happy"
+        }
+    }, 
+    {
+        "pk": 50, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_twak.gif", 
+            "code": ":whack:", 
+            "title": "Whack"
         }
     }, 
     {
@@ -177,6 +777,36 @@
             "image": "smiley/images/smilewinkgrin.gif", 
             "code": ";-)", 
             "title": "Wink"
+        }
+    }, 
+    {
+        "pk": 38, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_wink.gif", 
+            "code": ":wink:", 
+            "title": "Wink"
+        }
+    }, 
+    {
+        "pk": 48, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_worship.gif", 
+            "code": ":worship:", 
+            "title": "Worship"
+        }
+    }, 
+    {
+        "pk": 82, 
+        "model": "smiley.smiley", 
+        "fields": {
+            "is_extra": true, 
+            "image": "smiley/images/icon_wtf.gif", 
+            "code": ":wtf:", 
+            "title": "WTF?"
         }
     }, 
     {

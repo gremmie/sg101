@@ -7,5 +7,6 @@ from smiley.models import Smiley
 
 class SmileyAdmin(admin.ModelAdmin):
     list_display = ('title', 'code', 'html', 'is_extra')
+    list_filter = ('is_extra', )
 
 admin.site.register(Smiley, SmileyAdmin)
