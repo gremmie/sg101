@@ -12,11 +12,8 @@ from django.contrib.auth.models import User
 
 from news.models import Category, Story
 from legacy.phpbb import unescape
+import legacy.data
 
-KNOWN_USERNAME_CHANGES = {
-    'cavefishbutchdelux': 'butchdelux',
-    'Findicator1': 'WaveOhhh',
-}
 
 class Command(LabelCommand):
     args = '<filename filename ...>'
@@ -114,7 +111,8 @@ class Command(LabelCommand):
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             try:
-                user = User.objects.get(username=KNOWN_USERNAME_CHANGES[username])
+                user = User.objects.get(
+                        username=legacy.data.KNOWN_USERNAME_CHANGES[username])
             except KeyError:
                 raise User.DoesNotExist
 

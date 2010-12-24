@@ -120,7 +120,11 @@ class LinkElement(ElementBase):
 
     """
     def markdown(self):
-        url = self.attrs['href']
+        try:
+            url = self.attrs['href']
+        except KeyError:
+            return self.data if self.data else u''
+
         text = self.data if self.data else url
         return u'[%s](%s)' % (text, url)
 
@@ -133,7 +137,10 @@ class ImageElement(ElementBase):
 
     """
     def markdown(self):
-        url = self.attrs['src']
+        try:
+            url = self.attrs['src']
+        except KeyError:
+            return u' (missing image) '
         return u'![image](%s)' % url
 
 
@@ -261,7 +268,12 @@ class MarkdownWriter(HTMLParser):
         self.elem_stack.append(tag)
 
     def _pop_elem(self):
-        element = self.elem_stack.pop()
+        try:
+            element = self.elem_stack.pop()
+        except IndexError:
+            # pop from empty list => bad HTML input; ignore it
+            return
+
         if isinstance(element, ListElement):
             self.list_nesting -= 1
         if len(self.elem_stack):
