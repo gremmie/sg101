@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     'forums',
     'gcalendar',
     'irc',
+    'legacy',
     'mailer',
     'membermap',
     'messages',
