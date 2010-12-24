@@ -89,7 +89,7 @@ class Command(LabelCommand):
                     for row in self.reader:
                         self.process_row(row)
                         num_rows += 1
-                        if num_rows % 20 == 0:
+                        if self.show_progress and num_rows % 20 == 0:
                             sys.stdout.write('.')
                             sys.stdout.flush()
                 except csv.Error, e:
