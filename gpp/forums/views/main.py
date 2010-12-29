@@ -472,7 +472,7 @@ def _delete_topic(topic):
     post counts as that doesn't seem to be worth the effort.
     """
     if topic.forum.last_post and topic.forum.last_post.topic == topic:
-        topic.forum.last_post_pre_delete()
+        topic.forum.last_post_pre_delete(deleting_topic=True)
         topic.forum.save()
 
     # delete subscriptions to this topic

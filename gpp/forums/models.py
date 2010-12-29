@@ -132,15 +132,24 @@ class Forum(models.Model):
         self.topic_count_update()
         self.post_count_update()
 
-    def last_post_pre_delete(self):
+    def last_post_pre_delete(self, deleting_topic=False):
         """
         Call this function prior to deleting the last post in the forum.
         A new last post will be found, if one exists.
         This is to avoid the Django cascading delete issue.
+        If deleting_topic is True, then the whole topic the last post is
+        part of is being deleted, so we can't pick a new last post from that
+        topic.
         """
         try:
-            self.last_post = \
-                Post.objects.filter(topic__forum=self).exclude(pk=self.last_post.pk).latest()
+            qs = Post.objects.filter(topic__forum=self)
+            if deleting_topic:
+                qs = qs.exclude(topic=self.last_post.topic)
+            else:
+                qs = qs.exclude(pk=self.last_post.pk)
+
+            self.last_post = qs.latest()
+
         except Post.DoesNotExist:
             self.last_post = None
 
@@ -363,7 +372,7 @@ class TopicLastVisit(models.Model):
         if self.id is None:
             self.touch()
         super(TopicLastVisit, self).save(*args, **kwargs)
-        
+
     def touch(self):
         self.last_visit = datetime.datetime.now()
 
