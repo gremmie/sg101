@@ -86,11 +86,11 @@ class Command(LabelCommand):
             return
 
         story = Story(id=int(row['sid']),
-                title=unescape(row['title']),
+                title=unescape(row['title'].decode('latin-1')),
                 submitter=submitter,
                 category=self.topics[int(row['topic'])],
-                short_text=row['hometext'],
-                long_text=row['bodytext'],
+                short_text=row['hometext'].decode('latin-1'),
+                long_text=row['bodytext'].decode('latin-1'),
                 date_submitted=datetime.strptime(row['time'], "%Y-%m-%d %H:%M:%S"),
                 allow_comments=True)
 

@@ -1,0 +1,2 @@
+#!/bin/bash
+python manage.py loaddata ./forums/fixtures/private.json ./forums/fixtures/forums.json ./news/fixtures/news_categories.json ./podcast/fixtures/channels.json ./core/fixtures/flatpages.json ./smiley/fixtures/smilies.json ./downloads/fixtures/downloads_extensions.json ./downloads/fixtures/downloads_categories.json ./bio/fixtures/badges.json ./oembed/fixtures/providers.json ./weblinks/fixtures/weblinks_categories.json ./accounts/fixtures/accounts.json

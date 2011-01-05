@@ -1,5 +1,13 @@
 [
     {
+        "pk": 2, 
+        "model": "auth.group", 
+        "fields": {
+            "name": "Forum Moderators", 
+            "permissions": []
+        }
+    },
+    {
         "pk": 1, 
         "model": "forums.category", 
         "fields": {
@@ -47,7 +55,9 @@
             "description": "For general discussion about this site only, including news and rules. Start here. Anything relating to surf music should go to the Surf Music General Discussion forum, below.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 0, 
             "last_post": null, 
             "slug": "surfguitar101-website", 
@@ -62,7 +72,9 @@
             "description": "Main surf music discussion forum. Insert glissando sound here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 0, 
             "last_post": null, 
             "slug": "surf-music", 
@@ -77,7 +89,9 @@
             "description": "For sale and trading of surf music related items only.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 0, 
             "last_post": null, 
             "slug": "for-sale-trade", 
@@ -92,7 +106,9 @@
             "description": "General off-topic chit-chat. Grab a cool drink and hop in. New members please introduce yourselves here. This forum is dedicated to the memory of Rip Thrillby and Spanky Twangler.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 0, 
             "last_post": null, 
             "slug": "shallow-end", 
@@ -107,7 +123,9 @@
             "description": "Need someone to play with? Starting a band? Need a gig? Post here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 1, 
             "last_post": null, 
             "slug": "musicians-gigs-wanted", 
@@ -122,7 +140,9 @@
             "description": "Please post show announcements here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 1, 
             "last_post": null, 
             "slug": "gigs", 
@@ -137,7 +157,9 @@
             "description": "Got an idea for the site? Something not working? Post here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 1, 
             "last_post": null, 
             "slug": "suggestion-box", 
@@ -152,7 +174,9 @@
             "description": "Playing, performing, and writing surf music. All instruments welcome.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 2, 
             "last_post": null, 
             "slug": "surf-musician", 
@@ -167,7 +191,9 @@
             "description": "Feedback, suggestions, playlists, and discussions about the SurfGuitar101 podcast.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 2, 
             "last_post": null, 
             "slug": "sg101-podcast", 
@@ -182,7 +208,9 @@
             "description": "For questions and discussions about instruments, amplifiers, and yes, outboard reverb units!", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 3, 
             "last_post": null, 
             "slug": "gear", 
@@ -197,7 +225,9 @@
             "description": "For discussion of recording techniques.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 4, 
             "last_post": null, 
             "slug": "recording-corner", 
@@ -212,7 +242,9 @@
             "description": "Got a link to a surf or surf-related video? Post it here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 5, 
             "last_post": null, 
             "slug": "surf-videos", 
@@ -227,11 +259,30 @@
             "description": "Please post your reviews of surf music releases here.", 
             "post_count": 0, 
             "topic_count": 0, 
-            "moderators": [], 
+            "moderators": [
+                2
+            ], 
             "position": 6, 
             "last_post": null, 
             "slug": "music-reviews", 
             "name": "Music Reviews"
+        }
+    },
+    {
+        "pk": 16, 
+        "model": "forums.forum", 
+        "fields": {
+            "category": 2, 
+            "description": "This forum contains some classic and important threads from our history, preserved here for historical reasons! These threads are still live, so please keep posting to them.", 
+            "post_count": 0, 
+            "topic_count": 0, 
+            "moderators": [
+                2
+            ], 
+            "position": 7, 
+            "last_post": null, 
+            "slug": "best-sg101", 
+            "name": "Best-Of SG101"
         }
     }
 ]

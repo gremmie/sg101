@@ -118,7 +118,7 @@ class Command(LabelCommand):
         self.md_writer.reset()
 
         if not isinstance(s, unicode):
-            s = s.decode('utf-8', 'replace')
+            s = s.decode('latin-1', 'replace')
 
         self.md_writer.feed(s)
         return self.md_writer.markdown()

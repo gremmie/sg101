@@ -140,9 +140,9 @@ class Command(LabelCommand):
         u.save()
 
         p = u.get_profile()
-        p.location = row['user_from']
-        p.occupation = row['user_occ']
-        p.interests = row['user_interests']
+        p.location = row['user_from'].decode('latin-1')
+        p.occupation = row['user_occ'].decode('latin-1')
+        p.interests = row['user_interests'].decode('latin-1')
         p.profile_text = u''
         p.hide_email = True if row['user_viewemail'] != '1' else False
         p.signature = self.to_markdown(row['user_sig']) if row['user_sig'] else u''

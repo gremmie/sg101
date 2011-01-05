@@ -22,7 +22,7 @@ class Command(LabelCommand):
         """
         self.cats = {}
         try:
-            self.user = User.objects.get(pk=1)
+            self.default_user = User.objects.get(pk=2)
         except User.DoesNotExist:
             raise CommandError("Need a default user with pk=1")
 
@@ -55,6 +55,17 @@ class Command(LabelCommand):
                 self.cats[cat_id] = cat
         return self.cats[cat_id]
 
+    def get_user(self, username):
+        """
+        Return the user object for the given username.
+        If the user cannot be found, self.default_user is returned.
+
+        """
+        try:
+            return User.objects.get(username=username)
+        except User.DoesNotExist:
+            return self.default_user
+
     def process_row(self, row):
         """
         Process one row from the CSV file: create an object for the row
@@ -62,10 +73,10 @@ class Command(LabelCommand):
 
         """
         link = Link(category=self.get_category(row),
-            title=row['title'],
-            url=row['url'],
-            description=row['description'],
-            user=self.user,
+            title=row['title'].decode('latin-1'),
+            url=row['url'].decode('latin-1'),
+            description=row['description'].decode('latin-1'),
+            user=self.get_user(row['submitter']),
             date_added=datetime.datetime.strptime(row['date'], "%Y-%m-%d %H:%M:%S"),
             hits=int(row['hits']),
             is_public=True)

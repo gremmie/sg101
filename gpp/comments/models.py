@@ -1,6 +1,8 @@
 """
 Models for the comments application.
 """
+import datetime
+
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -34,9 +36,9 @@ class Comment(models.Model):
     user = models.ForeignKey(User)
     comment = models.TextField(max_length=COMMENT_MAX_LENGTH)
     html = models.TextField(blank=True)
-    creation_date = models.DateTimeField(auto_now_add=True)
+    creation_date = models.DateTimeField()
     ip_address = models.IPAddressField('IP Address')
-    is_public = models.BooleanField(default=True, 
+    is_public = models.BooleanField(default=True,
             help_text='Uncheck this field to make the comment invisible.')
     is_removed = models.BooleanField(default=False,
             help_text='Check this field to replace the comment with a ' \
@@ -52,6 +54,9 @@ class Comment(models.Model):
         return u'%s: %s...' % (self.user.username, self.comment[:50])
 
     def save(self, *args, **kwargs):
+        if not self.id:
+            self.creation_date = datetime.datetime.now()
+
         self.html = site_markup(self.comment)
         super(Comment, self).save(*args, **kwargs)
 

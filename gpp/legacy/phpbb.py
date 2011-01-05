@@ -48,7 +48,7 @@ def unescape(text):
     return re.sub("&#?\w+;", fixup, text)
 
 
-def unphpbb(s):
+def unphpbb(s, encoding='latin-1'):
     """Converts BBCode from phpBB database data into 'pure' BBCode.
 
     phpBB doesn't store plain BBCode in its database. The BBCode tags have
@@ -56,9 +56,12 @@ def unphpbb(s):
     This function removes the uid stuff and undoes the entity'ification and
     returns the result as a unicode string.
 
+    If the input 's' is not already unicode, it will be decoded using the
+    supplied encoding.
+
     """
     if not isinstance(s, unicode):
-        s = s.decode('utf-8', 'replace')
+        s = s.decode(encoding, 'replace')
     for start, end in BBCODE_RES:
         s = re.sub(start, r'\1', s, re.MULTILINE)
         s = re.sub(end, r'\1]', s, re.MULTILINE)
