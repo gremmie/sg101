@@ -364,8 +364,13 @@ def edit_post(request, id):
     if not can_edit:
         return HttpResponseForbidden("You don't have permission to edit that post.")
 
+    topic_name = None
+    first_post = Post.objects.filter(topic=post.topic).order_by('creation_date')[0]
+    if first_post.id == post.id:
+        topic_name = post.topic.name
+
     if request.method == "POST":
-        form = PostForm(request.POST, instance=post)
+        form = PostForm(request.POST, instance=post, topic_name=topic_name)
         if form.is_valid():
             if antispam.utils.spam_check(request, form.cleaned_data['body']):
                 return HttpResponseRedirect(reverse('antispam-suspended'))
@@ -373,12 +378,16 @@ def edit_post(request, id):
             post.touch()
             post.save()
 
+            # if we are editing a first post, save the parent topic as well
+            if topic_name:
+                post.topic.save()
+
             # Save any attachments
             form.attach_proc.save_attachments(post)
 
             return HttpResponseRedirect(post.get_absolute_url())
     else:
-        form = PostForm(instance=post)
+        form = PostForm(instance=post, topic_name=topic_name)
 
     post.user_profile = request.user.get_profile()
 

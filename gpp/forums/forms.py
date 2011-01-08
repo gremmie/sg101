@@ -155,11 +155,18 @@ class PostForm(forms.ModelForm):
                 ('js/forums.js', ))
 
     def __init__(self, *args, **kwargs):
+        topic_name = kwargs.pop('topic_name', None)
         super(PostForm, self).__init__(*args, **kwargs)
+
+        if topic_name is not None:  # this is a "first post"
+            self.fields.insert(0, 'name', forms.CharField(label='Subject',
+                    max_length=255,
+                    widget=forms.TextInput(attrs={'size': 64})))
+            self.initial['name'] = topic_name
 
         attachments = args[0].getlist('attachment') if len(args) else []
         self.attach_proc = AttachmentProcessor(attachments)
-        
+
         # If this form is being used to edit an existing post, and that post
         # has attachments, create a hidden post_id field. The client-side
         # AJAX will use this as a cue to retrieve the HTML for the embedded
@@ -175,6 +182,17 @@ class PostForm(forms.ModelForm):
         if not data and not self.attach_proc.has_attachments():
             raise forms.ValidationError('This field is required.')
         return data
+
+    def save(self, *args, **kwargs):
+        commit = kwargs.get('commit', False)
+        post = super(PostForm, self).save(*args, **kwargs)
+
+        # Are we saving a "first post"?
+        if 'name' in self.cleaned_data:
+            post.topic.name = self.cleaned_data['name']
+            if commit:
+                post.topic.save()
+        return post
 
 
 class MoveTopicForm(forms.Form):
