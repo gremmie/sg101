@@ -1,8 +1,10 @@
+{% load core_tags %}
 <h2>New Links</h2>
 {% if links %}
 <ol>
    {% for link in links %}
-   <li><a href="{{ link.get_absolute_url }}">{{ link.title }}</a></li>
+   <li><a href="{{ link.get_absolute_url }}">{{ link.title }}</a> -
+   <span class="small">{{ link.date_added|elapsed }}</span></li>
    {% endfor %}
 </ol>
 {% else %}

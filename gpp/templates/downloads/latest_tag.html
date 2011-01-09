@@ -1,8 +1,10 @@
+{% load core_tags %}
 <h2>New Downloads</h2>
 {% if downloads %}
 <ol>
    {% for dl in downloads %}
-   <li><a href="{{ dl.get_absolute_url }}">{{ dl.title }}</a></li>
+   <li><a href="{{ dl.get_absolute_url }}">{{ dl.title }}</a> -
+   <span class="small">{{ dl.date_added|elapsed }}</span></li>
    {% endfor %}
 </ol>
 {% else %}
