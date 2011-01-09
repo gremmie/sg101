@@ -1,8 +1,21 @@
 $(document).ready(function() {
 
    var numShouts = $('#shoutbox-shout-container > p').size(); 
+   var sbBox = $('#shoutbox-shout-container');
+
+   if (numShouts < 2)
+   {
+      sbBox.append('<p>Welcome to SurfGuitar101.com!</p>');
+      ++numShouts;
+   }
+   if (numShouts < 2)
+   {
+      sbBox.append('<p>((((( More Reverb )))))</p>');
+      ++numShouts;
+   }
+
    var sbCycleOpts = null;
-   var sbCycle = $('#shoutbox-shout-container').cycle({
+   var sbCycle = sbBox.cycle({
       fx: 'scrollUp',
       timeout: 5000,
       pause: 1,
@@ -16,7 +29,7 @@ $(document).ready(function() {
    function addShout(shout) {
       ++numShouts;
       sbCycleOpts.addSlide(shout);
-      $('#shoutbox-shout-container').cycle(numShouts - 1);
+      sbBox.cycle(numShouts - 1);
    }
 
    var submit = $('#shoutbox-submit');
