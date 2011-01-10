@@ -3,10 +3,14 @@ Dear {{ msg.receiver.username }},
 You have just received a new private message at {{ site.name }}. The message
 details are as follows:
 
+-----
 From: {{ msg.sender.username }}
 Subject: {{ msg.subject }}
 
-You may read this message by visiting the following link:
+{{ msg.message }}
+-----
+
+You may reply to this message by visiting the following link:
 
 http://{{ site.domain }}{{ msg.get_absolute_url }}
 
@@ -22,3 +26,4 @@ please update your private message options at this link:
 
 http://{{ site.domain }}{{ options_url }}
 
+This is an automated email, please do not reply to this message.
