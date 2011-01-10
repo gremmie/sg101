@@ -389,7 +389,7 @@ def edit_post(request, id):
     else:
         form = PostForm(instance=post, topic_name=topic_name)
 
-    post.user_profile = request.user.get_profile()
+    post.user_profile = post.user.get_profile()
 
     return render_to_response('forums/edit_post.html', {
         'forum': post.topic.forum,
