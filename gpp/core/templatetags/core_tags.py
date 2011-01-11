@@ -54,7 +54,7 @@ def whos_online():
     info['num_guests'] = num_guests
     info['total'] = num_users + num_guests
 
-    cache.set('whos_online', info, 300)
+    cache.set('whos_online', info, 60)
     return info
 
 
