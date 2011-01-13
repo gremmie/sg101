@@ -1,4 +1,6 @@
 """This module handles the subscriptions of users to forum topics."""
+import datetime
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.models import Site
@@ -12,18 +14,48 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
 
-from forums.models import Topic
+from forums.models import Topic, TopicLastVisit, Subscription
 from core.functions import send_mail
 from core.paginator import DiggPaginator
 
 
+# This constant is the minimum amount of time a user will be
+# notified of new posts in a topic. Currently it is set to 1 day.
+# Thus a user will be notified at most once per day of new posts.
+TOPIC_NOTIFY_DELAY = datetime.timedelta(days=1)
+
+
 def notify_topic_subscribers(post):
-    """The argument post is a newly created post. Send out an email
-    notification to all subscribers of the post's parent Topic."""
+    """
+    The argument post is a newly created post. Send out an email
+    notification to all subscribers of the post's parent Topic.
+    The emails are throttled such that unless the user visits the topic,
+    only 1 email will be sent per TOPIC_NOTIFY_DELAY period.
+    Visiting the topic will reset this delay.
+
+    """
+    #TODO: consider moving this function of the HTTP request/response cycle.
 
     topic = post.topic
-    recipients = topic.subscribers.exclude(
-            id=post.user.id).values_list('email', flat=True)
+    subscriptions = Subscription.objects.filter(topic=post.topic).exclude(
+            user=post.user).select_related()
+
+    if not subscriptions:
+        return
+
+    subscriber_ids = [sub.user.id for sub in subscriptions]
+    tlvs = dict(TopicLastVisit.objects.filter(topic=topic,
+            user__in=subscriber_ids).values_list('user', 'last_visit'))
+
+    recipients = []
+    for sub in subscriptions:
+        if (sub.notify_date is None or
+            post.creation_date - sub.notify_date > TOPIC_NOTIFY_DELAY or
+            tlvs.get(sub.user.id, datetime.datetime.min) > sub.notify_date):
+
+            recipients.append(sub.user.email)
+            sub.notify_date = post.creation_date
+            sub.save()
 
     if recipients:
         site = Site.objects.get_current()
@@ -48,7 +80,8 @@ def subscribe_topic(request, topic_id):
     """Subscribe the user to the requested topic."""
     topic = get_object_or_404(Topic.objects.select_related(), id=topic_id)
     if topic.forum.category.can_access(request.user):
-        topic.subscribers.add(request.user)
+        sub = Subscription(topic=topic, user=request.user)
+        sub.save()
         return HttpResponseRedirect(
             reverse("forums-subscription_status", args=[topic.id]))
     raise Http404   # TODO return HttpResponseForbidden instead
@@ -59,7 +92,12 @@ def subscribe_topic(request, topic_id):
 def unsubscribe_topic(request, topic_id):
     """Unsubscribe the user to the requested topic."""
     topic = get_object_or_404(Topic, id=topic_id)
-    topic.subscribers.remove(request.user)
+    try:
+        sub = Subscription.objects.get(topic=topic, user=request.user)
+    except Subscriptions.DoesNotExist:
+        pass
+    else:
+        sub.delete()
     return HttpResponseRedirect(
         reverse("forums-subscription_status", args=[topic.id]))
 
