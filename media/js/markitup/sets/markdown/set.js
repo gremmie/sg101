@@ -26,8 +26,8 @@ mySettings = {
 			return markItUp.line+'. ';
 		}},
 		{separator:'---------------' },
-		{name:'Picture', key:'P', replaceWith:'![[![Alternative text]!]]([![Url:!:http://]!] "[![Title]!]")'},
-		{name:'Link', key:'L', openWith:'[', closeWith:']([![Url:!:http://]!] "[![Title]!]")', placeHolder:'Your text to link here...' },
+		{name:'Picture', key:'P', replaceWith:'![image]([![Url:!:http://]!])'},
+		{name:'Link', key:'L', openWith:'[', closeWith:']([![Url:!:http://]!])', placeHolder:'Your text to link here...' },
 		{separator:'---------------'},	
 		{name:'Quotes', openWith:'> '},
 		{name:'Code Block / Code', openWith:'(!(\t|!|`)!)', closeWith:'(!(`)!)'},
