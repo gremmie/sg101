@@ -1,5 +1,5 @@
 """
-This file contains routines for implementing the "has unread" feature. 
+This file contains routines for implementing the "has unread" feature.
 Forums, topics, and posts are displayed with a visual indication if they have
 been read or not.
 """
@@ -10,7 +10,7 @@ from django.db.models import Q
 from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
 
 
-THRESHOLD = datetime.timedelta(days=7)
+THRESHOLD = datetime.timedelta(days=14)
 
 #######################################################################
 
@@ -25,7 +25,7 @@ def get_forum_unread_status(qs, user):
 
     # retrieve ForumLastVisit records in one SQL query
     forum_ids = [forum.id for forum in qs]
-    flvs = ForumLastVisit.objects.filter(user=user, 
+    flvs = ForumLastVisit.objects.filter(user=user,
             forum__in=forum_ids).select_related()
     flvs = dict([(flv.forum.id, flv) for flv in flvs])
 
@@ -74,7 +74,7 @@ def get_forum_unread_status(qs, user):
                 TopicLastVisit.objects.filter(user=user, topic__forum=forum,
                         last_visit__lt=min_date).delete()
 
-            topics = Topic.objects.filter(forum=forum, 
+            topics = Topic.objects.filter(forum=forum,
                     creation_date__gt=flv.begin_date)
             tracked_topics = TopicLastVisit.objects.filter(user=user,
                     topic__forum=forum, last_visit__gt=flv.begin_date)

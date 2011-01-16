@@ -8,6 +8,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import FlaggedPost
+from forums.models import ForumLastVisit
 from forums.models import TopicLastVisit
 import bio.badges
 
@@ -64,6 +65,11 @@ class FlaggedPostAdmin(admin.ModelAdmin):
     accept_flags.short_description = "Accept selected flagged posts"
 
 
+class ForumLastVisitAdmin(admin.ModelAdmin):
+    raw_id_fields = ('user', 'forum')
+    list_display = ('user', 'forum', 'begin_date', 'end_date')
+
+
 class TopicLastVisitAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', 'topic')
     list_display = ('user', 'topic', 'last_visit')
@@ -74,4 +80,5 @@ admin.site.register(Forum, ForumAdmin)
 admin.site.register(Topic, TopicAdmin)
 admin.site.register(Post, PostAdmin)
 admin.site.register(FlaggedPost, FlaggedPostAdmin)
+admin.site.register(ForumLastVisit, ForumLastVisitAdmin)
 admin.site.register(TopicLastVisit, TopicLastVisitAdmin)
