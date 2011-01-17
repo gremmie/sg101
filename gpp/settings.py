@@ -178,10 +178,10 @@ EMAIL_PORT = local_settings.EMAIL_PORT
 # Caching
 #######################################################################
 if local_settings.USE_CACHE:
-    CACHE_BACKEND = local_settings.CACHE_BACKEND
+    CACHES = local_settings.CACHES
+    CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
     CACHE_MIDDLEWARE_SECONDS = local_settings.CACHE_MIDDLEWARE_SECONDS
     CACHE_MIDDLEWARE_KEY_PREFIX = local_settings.CACHE_MIDDLEWARE_KEY_PREFIX
-    CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
 
 #######################################################################
 # Sessions
