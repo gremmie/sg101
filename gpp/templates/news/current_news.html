@@ -1,8 +1,9 @@
+{% load url from future %}
 {% if stories %}
 <h2>Current News Stories</h2>
 {% for story in stories %}
    {% include 'news/story_summary.html' %}
 {% endfor %}
 <hr />
-<p>For more news stories, check out our <a href="{% url news-index_page %}">news archive</a>.</p>
+<p>For more news stories, check out our <a href="{% url 'news-index_page' %}">news archive</a>.</p>
 {% endif %}

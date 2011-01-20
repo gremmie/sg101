@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load forum_tags %}
 {% block title %}Moderate Forum: {{ forum.name }}{% endblock %}
 {% block custom_js %}
@@ -28,7 +29,7 @@
             class="forums-topic-icon" />{% endif %}
          <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
          <td class="forum-index_replies">{{ topic.reply_count }}</td>
-         <td class="forum-index_author"><a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
+         <td class="forum-index_author"><a href="{% url 'bio-view_profile' username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a></td>
          <td class="forum-index_last_post">
             {% last_post_info topic.last_post %}
          </td>

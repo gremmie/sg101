@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load comment_tags %}
 {% load script_tags %}
 {% block title %}Photo Of The Day{% endblock %}
@@ -23,7 +24,7 @@
 <p class="caption">{{ potd.caption }}</p>
 <p class="details">
 Submitted by 
-<a href="{% url bio-view_profile username=potd.user.username %}">{{ potd.user.username }}</a>
+<a href="{% url 'bio-view_profile' username=potd.user.username %}">{{ potd.user.username }}</a>
 on {{ potd.date_added|date:"d F Y" }}.<br />
 This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
 </p>
@@ -43,7 +44,7 @@ short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar10
 <br />
 {% else %}
 <p>Comments are allowed only on today's photo of the day. If you'd like to share your thoughts on this photo 
-with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>
+with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
 {% endif %}
 {% else %}
 <p>We're sorry, there doesn't seem to be a photo of the day right now.</p>

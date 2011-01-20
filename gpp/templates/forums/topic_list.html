@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load forum_tags %}
 {% block title %}Forums: {{ title }}{% endblock %}
 {% block custom_js %}
@@ -32,7 +33,7 @@
             {% endif %}
          </td>
          <td class="col-2">
-            <a href="{% url bio-view_profile username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a>
+            <a href="{% url 'bio-view_profile' username=topic.user.username %}" title="View profile for {{ topic.user.username }}">{{ topic.user.username }}</a>
          </td>
          <td class="col-3">
             {{ topic.reply_count }}

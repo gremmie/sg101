@@ -1,10 +1,11 @@
+{% load url from future %}
 <div id="whos-online">
 There {{ total|pluralize:"is,are"}} {{ total }} user{{ total|pluralize }} online: {{ num_users }} registered user{{ num_users|pluralize }} and {{ num_guests }} guest{{ num_guests|pluralize }}.
 {% if num_users %}
 Registered users:
 <ul class="inline-list">
 {% for user in users %}
-<li><a href="{% url bio-view_profile username=user %}">{{ user }}</a></li>
+<li><a href="{% url 'bio-view_profile' username=user %}">{{ user }}</a></li>
 {% endfor %}
 </ul>
 {% endif %}

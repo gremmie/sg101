@@ -1,4 +1,5 @@
 {% extends 'weblinks/base.html' %}
+{% load url from future %}
 {% block title %}Web Links: Add Link{% endblock %}
 {% block weblinks_content %}
    <h3>Add Link</h3>
@@ -7,7 +8,7 @@
    <table>
       {{ add_form.as_table }}
       <tr><td>&nbsp;</td><td><input type="submit" value="Add Link" />
-         &nbsp;<a href="{% url weblinks-main %}">Cancel</a>
+         &nbsp;<a href="{% url 'weblinks-main' %}">Cancel</a>
          </td></tr>
    </table>
    </form>

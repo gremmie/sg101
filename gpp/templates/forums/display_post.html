@@ -1,10 +1,11 @@
+{% load url from future %}
 {% load avatar_tags %}
 {% load forum_tags %}
 <tr class="forum-post {% cycle 'odd' 'even' %}" id="post-{{ post.id }}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
-      <a href="{% url bio-view_profile username=post.user.username %}" title="View Profile for {{ post.user.username }}">{{ post.user.username }}</a><br />
-      <a href="{% url bio-view_profile username=post.user.username %}">{% avatar post.user %}</a>
+      <a href="{% url 'bio-view_profile' username=post.user.username %}" title="View Profile for {{ post.user.username }}">{{ post.user.username }}</a><br />
+      <a href="{% url 'bio-view_profile' username=post.user.username %}">{% avatar post.user %}</a>
       Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
       Posts: {{ post.user_profile.forum_post_count }}<br />
       {% if post.user_profile.location %}
@@ -15,7 +16,7 @@
       {% endfor %}
       {% if user.is_authenticated %}
       <p>
-      <a href="{% url messages-compose_to post.user.username %}">
+      <a href="{% url 'messages-compose_to' post.user.username %}">
       <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message to {{ post.user.username }}" /></a>
       {% if not post.user_profile.hide_email %}<a href="mailto:{{ post.user.email }}">
          <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email to {{ post.user.username}}" /></a>{% endif %}
@@ -27,7 +28,7 @@
       {% if post.unread %}<img src="{{ MEDIA_URL }}icons/new.png" alt="New" title="New" />{% endif %}
       <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
          Posted on {% forum_date post.creation_date user %}
-         {% if can_moderate %}from IP: <a href="{% url forums-post_ip_info post.id %}">{{ post.user_ip }}</a>{% endif %}
+         {% if can_moderate %}from IP: <a href="{% url 'forums-post_ip_info' post.id %}">{{ post.user_ip }}</a>{% endif %}
       </div>
       <div class="forum-post-body">
          {{ post.html|safe }}
@@ -47,7 +48,7 @@
       {% endif %}
       <div class="forum-post-info-tools">
       {% if can_reply %}
-         <a href="{% url forums-new_post topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
+         <a href="{% url 'forums-new_post' topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
       {% endif %}
       {% post_edit_button post user can_moderate MEDIA_URL %}
       <a href="#" class="post-flag" id="fp-{{ post.id }}" 
@@ -59,9 +60,9 @@
          {% if post.user != user and post.user_profile.is_stranger %}
          <br />
          <span class="quiet">Stranger options:</span>
-         <a href="{% url forums-stranger post.id %}" title="This stranger seems legitimate">
+         <a href="{% url 'forums-stranger' post.id %}" title="This stranger seems legitimate">
             <img src="{{ MEDIA_URL }}icons/tick.png" alt="Acquaintance" /></a>
-         <a href="{% url forums-spammer post.id %}" title="This is spam">
+         <a href="{% url 'forums-spammer' post.id %}" title="This is spam">
             <img src="{{ MEDIA_URL }}icons/exclamation.png" alt="Spammer" /></a>
          {% endif %}
       {% endif %}

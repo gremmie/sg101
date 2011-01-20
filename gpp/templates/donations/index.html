@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Donations{% endblock %}
 {% block content %}
 <h2>Donations</h2>
@@ -11,7 +12,7 @@ and hosting costs.
 <p>
 We are currently using Paypal to receive donations. You don't have to be a Paypal member to donate;
 major credit cards are also accepted. If you really don't do Paypal, please 
-<a href="{% url contact-form %}">contact me</a> and we can work something else out.
+<a href="{% url 'contact-form' %}">contact me</a> and we can work something else out.
 </p>
 <p>Thank you for donating to SurfGuitar101.com!</p>
 <div class="span-9 append-1">
@@ -33,7 +34,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
          {{ anonymous }}
       {% else %}
          {% if donation.user %}
-            <a href="{% url bio-view_profile donation.user.username %}">{{ donation.user.username }}</a>
+            <a href="{% url 'bio-view_profile' donation.user.username %}">{{ donation.user.username }}</a>
          {% else %}
             {{ donation.donor }}
          {% endif %}
@@ -71,7 +72,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
          <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
          <label for="name_yes">Yes, list me as {{ user.username }}</label></li>
    {% else %}
-   <p>You are not currently logged in. Please <a href="{% url accounts-login %}">log in</a>
+   <p>You are not currently logged in. Please <a href="{% url 'accounts-login' %}">log in</a>
    if you would like your site username listed with your donation. Otherwise you can have your 
    actual name (from Paypal) listed, or you can be listed as {{ anonymous }}.</p>
       <ul class="icon-list">
@@ -84,14 +85,14 @@ major credit cards are also accepted. If you really don't do Paypal, please
    <input type="hidden" name="cmd" value="_donations" />
    <input type="hidden" name="business" value="{{ business }}" />
    <input type="hidden" name="charset" value="utf-8" />
-   <input type="hidden" name="return" value="http://{{ domain }}{% url donations-thanks %}" />
+   <input type="hidden" name="return" value="http://{{ domain }}{% url 'donations-thanks' %}" />
    <input type="hidden" name="currency_code" value="USD" />
    <input type="hidden" name="item_name" value="{{ item_name }}" />
    <input type="hidden" name="rm" value="1" />
    <input type="hidden" name="no_note" value="0" />
    <input type="hidden" name="cn" value="Do you have any comments for {{ domain }}?" />
    <input type="hidden" name="no_shipping" value="1" />
-   <input type="hidden" name="cancel_return" value="http://{{ domain }}{% url donations-index %}" />
+   <input type="hidden" name="cancel_return" value="http://{{ domain }}{% url 'donations-index' %}" />
 
 
    <p><input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif" name="I1" 

@@ -1,20 +1,21 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block custom_head %}
-<link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url feeds-news %}" />
+<link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url 'feeds-news' %}" />
 {% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/news.css" />
 {% block news_css %}{% endblock %}
 {% endblock %}
 {% block content %}
-<h2>SurfGuitar101 News &amp; Articles <a href="{% url feeds-news %}"><img src="{{ MEDIA_URL }}icons/feed.png" alt="News Feed" title="News Feed" /></a></h2>
+<h2>SurfGuitar101 News &amp; Articles <a href="{% url 'feeds-news' %}"><img src="{{ MEDIA_URL }}icons/feed.png" alt="News Feed" title="News Feed" /></a></h2>
 
 <ul class="app-menu">
-<li><a href="{% url news-index_page %}">News Main</a></li>
-<li><a href="{% url news-archive_index %}">Archive</a></li>
-<li><a href="{% url news-category_index %}">Categories</a></li>
-<li><a href="{% url news-tag_index %}">Tags</a></li>
-<li><a href="{% url news-submit %}">Submit News</a></li>
+<li><a href="{% url 'news-index_page' %}">News Main</a></li>
+<li><a href="{% url 'news-archive_index' %}">Archive</a></li>
+<li><a href="{% url 'news-category_index' %}">Categories</a></li>
+<li><a href="{% url 'news-tag_index' %}">Tags</a></li>
+<li><a href="{% url 'news-submit' %}">Submit News</a></li>
 </ul>
 {% block news_content %}
 {% endblock %}

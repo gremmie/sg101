@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load forum_tags %}
 {% block title %}Forums: Favorite Topics{% endblock %}
 {% block content %}
@@ -6,14 +7,14 @@
 <p>
 {% if is_favorite %}
 The forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a> has been added to your 
-<a href="{% url forums-manage_favorites %}">favorites</a>.
+<a href="{% url 'forums-manage_favorites' %}">favorites</a>.
 {% else %}
 The forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a> has been removed from your
-<a href="{% url forums-manage_favorites %}">favorites</a>.
+<a href="{% url 'forums-manage_favorites' %}">favorites</a>.
 {% endif %}
 </p>
 <p>
 To manage all your forum topic favorites, please visit your 
-<a href="{% url forums-manage_favorites %}">favorites page</a>.
+<a href="{% url 'forums-manage_favorites' %}">favorites page</a>.
 </p>
 {% endblock %}

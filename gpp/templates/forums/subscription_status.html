@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load forum_tags %}
 {% block title %}Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic{% endblock %}
 {% block content %}
@@ -14,6 +15,6 @@ You will no longer receive emails when new replies are posted.
 </p>
 <p>
 To manage all your forum topic subscriptions, please visit your 
-<a href="{% url forums-manage_subscriptions %}">subscriptions page</a>.
+<a href="{% url 'forums-manage_subscriptions' %}">subscriptions page</a>.
 </p>
 {% endblock %}

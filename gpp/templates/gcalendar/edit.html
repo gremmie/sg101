@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Edit Calendar Events{% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="{{ MEDIA_URL }}js/gcalendar_edit.js"></script>
 {% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; Edit Events</div>
+<div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; Edit Events</div>
 <h2>Edit Calendar Events</h2>
 {% if events %}
 <p>You have the following events on our calendar. Click on the event title to edit it, or click the
@@ -16,7 +17,7 @@ keep our calendar up to date!
 <ul>
 {% for event in events %}
 <li>{{ event.start_date|date:"M d, Y"}} &bull;
-<a href="{% url gcalendar-edit_event event.id %}" title="Edit Event">{{ event.what }}</a>
+<a href="{% url 'gcalendar-edit_event' event.id %}" title="Edit Event">{{ event.what }}</a>
 <a class="gcal-del" id="gcal-{{ event.id }}" href="#"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete Event" title="Delete Event" /></a>
 </li>
 {% endfor %}

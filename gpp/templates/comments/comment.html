@@ -1,8 +1,9 @@
+{% load url from future %}
 {% load avatar_tags %}
 <div class="comment" id="c{{ comment.id }}">
 <div class="comment-list">{{ forloop.counter }}.</div>
 <div class="comment-avatar">
-<a href="{% url bio-view_profile username=comment.user.username%}">{% avatar comment.user %}</a>
+<a href="{% url 'bio-view_profile' username=comment.user.username%}">{% avatar comment.user %}</a>
 </div>
 {% if comment.is_removed %}
 <div class="comment-text-removed"><p><em>This comment has been removed.</em></p></div>
@@ -10,7 +11,7 @@
 <div class="comment-text">{{ comment.html|safe }}</div>
 {% endif %}
 <div class="comment-details">
-<a href="{% url bio-view_profile username=comment.user.username%}" 
+<a href="{% url 'bio-view_profile' username=comment.user.username%}" 
     title="View profile for {{ comment.user.username }}">{{ comment.user.username }}</a> |
 {{ comment.creation_date|date:"d-M-Y H:i:s" }}
 {% if not comment.is_removed %}

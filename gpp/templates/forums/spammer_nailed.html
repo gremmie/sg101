@@ -1,16 +1,17 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Spammer Nailed: {{ spammer.username }}{% endblock %}
 {% block content %}
 <h2>Spammer Nailed: {{ spammer.username }}</h2>
 <p>
 {% if success %}
-The user <a href="{% url bio-view_profile username=spammer.username %}">{{ spammer.username }}</a>
+The user <a href="{% url 'bio-view_profile' username=spammer.username %}">{{ spammer.username }}</a>
 has had his/her account deactivated for spamming.
 All forum posts and comments this user has made have been deleted. The site admin has been
 notified of this action. Thanks for helping to keep our site spam-free!
 {% else %}
 Whoops, something went wrong deactivating the account of
-<a href="{% url bio-view_profile username=spammer.username %}">{{ spammer.username }}</a>. 
+<a href="{% url 'bio-view_profile' username=spammer.username %}">{{ spammer.username }}</a>. 
 Or, possibly some time has passed and the account was reinstated. If you have any questions, contact
 the site admin.
 {% endif %}

@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Event Calendar Changes Received{% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; Edit Events</div>
+<div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; Edit Events</div>
 <h2>Event Calendar Changes Received</h2>
 <p>We've received the changes to your calendar event. Your changes will be reviewed by the staff,
 and should appear on the calendar shortly. You may be contacted if we have any questions.</p>
-<p><a href="{% url gcalendar-index %}">&laquo; Back to the Event Calendar</a></p>
+<p><a href="{% url 'gcalendar-index' %}">&laquo; Back to the Event Calendar</a></p>
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends 'news/base.html' %}
+{% load url from future %}
 {% block title %}News: Submit News{% endblock %}
 {% if add_form %}
    {% block custom_js %}
@@ -13,7 +14,7 @@
       <table>
          {{ add_form.as_table }}
          <tr><td>&nbsp;</td><td><input type="submit" value="Submit" />
-         &nbsp;<a href="{% url news-index_page %}">Cancel</a></td></tr>
+         &nbsp;<a href="{% url 'news-index_page' %}">Cancel</a></td></tr>
       </table>
    </form>
 {% else %}

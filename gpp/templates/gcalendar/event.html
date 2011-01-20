@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load core_tags %}
 {% block title %}{{ title }}{% endblock %}
 {% block custom_js %}
 {{ form.media }}
 {% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url gcalendar-index %}">Calendar</a> &raquo; {{ title }}</div>
+<div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; {{ title }}</div>
 <h2>{{ title }}</h2>
 <p>Use this form to add or change an event on our calendar. Please note the following:</p>
 <ul>
@@ -42,5 +43,5 @@
 <tr><td>&nbsp;</td><td>{% comment_dialogs %}<input type="submit" name="submit_button" value="Submit" /></td></tr>
 </table>
 </form>
-<p><a href="{% url gcalendar-index %}">&laquo; Back to the Event Calendar</a></p>
+<p><a href="{% url 'gcalendar-index' %}">&laquo; Back to the Event Calendar</a></p>
 {% endblock %}

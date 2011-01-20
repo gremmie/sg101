@@ -1,13 +1,14 @@
+{% load url from future %}
 <dt>
 <h4><a href="{{ link.url }}">{{ link.title }}</a></h4>
 </dt>
 <dd>
 <p>{{ link.description }}</p>
-<form action="{% url weblinks-visit link.id %}" method="post">{% csrf_token %}
+<form action="{% url 'weblinks-visit' link.id %}" method="post">{% csrf_token %}
 <table class="link-stats">
    <tr>
-      <th>Added by:</th><td><a href="{% url bio-view_profile link.user.username %}">{{ link.user.username }}</a></td>
-      <th>Category:</th><td><a href="{% url weblinks-view_links slug=link.category.slug sort='date' %}">{{ link.category.title }}</a></td>
+      <th>Added by:</th><td><a href="{% url 'bio-view_profile' link.user.username %}">{{ link.user.username }}</a></td>
+      <th>Category:</th><td><a href="{% url 'weblinks-view_links' slug=link.category.slug sort='date' %}">{{ link.category.title }}</a></td>
    </tr>
    <tr>
       <th>Date Added:</th><td>{{ link.date_added|date:"M d, Y" }}</td>

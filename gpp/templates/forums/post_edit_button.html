@@ -1,3 +1,4 @@
+{% load url from future %}
 {% if show_button %}
-<a href="{% url forums-edit_post id=post.id %}"><img src="{{ MEDIA_URL }}icons/page_edit.png" alt="Edit post" title="Edit post" /></a>
+<a href="{% url 'forums-edit_post' id=post.id %}"><img src="{{ MEDIA_URL }}icons/page_edit.png" alt="Edit post" title="Edit post" /></a>
 {% endif %}

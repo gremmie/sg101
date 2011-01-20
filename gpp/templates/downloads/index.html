@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load downloads_tags %}
 {% block title %}Downloads{% endblock %}
 {% block custom_css %}
@@ -13,7 +14,7 @@
 <dl>
 {% for category in categories %}
 <dt>
-<a href="{% url downloads-category slug=category.slug sort="title" %}">{{ category.title }}</a>
+<a href="{% url 'downloads-category' slug=category.slug sort="title" %}">{{ category.title }}</a>
 ({{ category.count }})
 </dt>
 <dd><p>{{ category.description }}</p></dd>

@@ -1,4 +1,5 @@
 {% extends 'news/base.html' %}
+{% load url from future %}
 {% load tagging_tags %}
 {% load comment_tags %}
 {% load script_tags %}
@@ -19,7 +20,7 @@
 </div>
 <hr />
 <div class="news-content">
-   <a href="{% url news-category slug=story.category.slug %}">
+   <a href="{% url 'news-category' slug=story.category.slug %}">
    <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 
       class="news-icon" /></a>
    {{ story.short_text|safe }}
@@ -27,11 +28,11 @@
    <br clear="all" />
    <hr />
    <p>
-   Category: <a href="{% url news-category slug=story.category.slug %}">{{ story.category.title }}</a>
+   Category: <a href="{% url 'news-category' slug=story.category.slug %}">{{ story.category.title }}</a>
    <a href="{{ story.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png"
       alt="Story Permalink" title="Story Permalink" /></a>
 {% if user.is_authenticated %}
-   <a href="{% url news.views.email_story story.id %}"><img src="{{ MEDIA_URL }}icons/email_go.png"
+   <a href="{% url 'news.views.email_story' story.id %}"><img src="{{ MEDIA_URL }}icons/email_go.png"
       alt="Send this story to a friend" title="Send this story to a friend" /></a>
 {% endif %}
    </p>
@@ -41,7 +42,7 @@
       <img src="{{ MEDIA_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
       <ul>
          {% for tag in story_tags %}
-            <li><a href="{% url news-tag_page tag_name=tag.name %}">{{ tag.name }}</a></li>
+            <li><a href="{% url 'news-tag_page' tag_name=tag.name %}">{{ tag.name }}</a></li>
          {% endfor %}
       </ul>
    </div>
@@ -56,6 +57,6 @@
 {% render_comment_form for story %}
 {% else %}
 <p>Comments are closed for this story. If you'd like to share your thoughts on this story 
-with the site staff, you can <a href="{% url contact-form %}">contact us directly</a>.</p>
+with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
 {% endif %}
 {% endblock %}

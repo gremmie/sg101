@@ -1,4 +1,5 @@
 {% extends 'news/base.html' %}
+{% load url from future %}
 {% block title %}News Archive{% endblock %}
 {% block archive-class %}class="active"{% endblock %}
 {% block news_content %}
@@ -10,7 +11,7 @@ This is our news archive. Click on a link to view the list of stories we publish
 {% if dates %}
 <ul>
 {% for date in dates %}
-   <li><a href="{% url news-archive_page year=date.year month=date.month %}">
+   <li><a href="{% url 'news-archive_page' year=date.year month=date.month %}">
       {{ date|date:"F, Y" }}</a></li>
 {% endfor %}
 </ul>

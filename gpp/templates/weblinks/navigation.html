@@ -1,16 +1,17 @@
+{% load url from future %}
 <div class="app-logo">
 <img src="{{ MEDIA_URL }}icons/weblinks-logo.jpg" alt="Links Logo" title="Links" />
 </div>
 <ul class="app-menu">
-<li><a href="{% url weblinks-main %}">Categories</a></li>
-<li><a href="{% url weblinks-new_links %}">New</a></li>
-<li><a href="{% url weblinks-popular_links %}">Popular</a></li>
+<li><a href="{% url 'weblinks-main' %}">Categories</a></li>
+<li><a href="{% url 'weblinks-new_links' %}">New</a></li>
+<li><a href="{% url 'weblinks-popular_links' %}">Popular</a></li>
 {% if user.is_authenticated %}
-<li><a href="{% url weblinks-add_link %}">Add Link</a></li>
+<li><a href="{% url 'weblinks-add_link' %}">Add Link</a></li>
 {% endif %}
 </ul>
 <center>
-   <form action="{% url weblinks-random_link %}" method="post">{% csrf_token %}
+   <form action="{% url 'weblinks-random_link' %}" method="post">{% csrf_token %}
       <input type="submit" value="Visit a Random Link" />
    </form>
 </center>

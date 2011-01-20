@@ -1,4 +1,5 @@
 {% extends 'bio/base.html' %}
+{% load url from future %}
 {% load avatar_tags %}
 {% block title %}Change My Avatar{% endblock %}
 {% block content %}
@@ -18,6 +19,6 @@
    <form enctype="multipart/form-data" method="POST" action=".">{% csrf_token %}
       {{ form.as_p }}
       <input type="submit" value="Update Avatar" />
-      &nbsp;<a href="{% url bio-me %}">Cancel</a>
+      &nbsp;<a href="{% url 'bio-me' %}">Cancel</a>
    </form>
 {% endblock %}

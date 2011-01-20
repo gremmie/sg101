@@ -1,4 +1,5 @@
 {% extends 'weblinks/base.html' %}
+{% load url from future %}
 {% block title %}Web Links: {{ category.title }}{% endblock %}
 {% block weblinks_css %}
 <link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
@@ -12,11 +13,11 @@
 
 {% if page.object_list %}
 <ul class="tab-nav">
-   <li><a href="{% url weblinks-view_links slug=category.slug sort="title" %}"
+   <li><a href="{% url 'weblinks-view_links' slug=category.slug sort="title" %}"
       {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
-   <li><a href="{% url weblinks-view_links slug=category.slug sort="date" %}"
+   <li><a href="{% url 'weblinks-view_links' slug=category.slug sort="date" %}"
       {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
-   <li><a href="{% url weblinks-view_links slug=category.slug sort="hits" %}"
+   <li><a href="{% url 'weblinks-view_links' slug=category.slug sort="hits" %}"
       {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
 </ul>
 

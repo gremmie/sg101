@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Thanks For The Donation{% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url donations-index %}">Donations</a> &raquo; Thanks</div>
+<div class="breadcrumbs"><a href="{% url 'donations-index' %}">Donations</a> &raquo; Thanks</div>
 <h2>Thank-You For The Donation!</h2>
 <p>Thank-you for your donation to <strong>SurfGuitar101.com</strong>, it is greatly appreciated!</p>
 {% endblock %}

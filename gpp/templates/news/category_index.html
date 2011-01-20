@@ -1,4 +1,5 @@
 {% extends 'news/base.html' %}
+{% load url from future %}
 {% block title %}News: Categories{% endblock %}
 {% block categories-class %}class="active"{% endblock %}
 {% block news_content %}
@@ -7,12 +8,12 @@
 This page shows the list of news categories for the site. Under each category we show the 
 latest ten stories. To see all the stories in a category, click the icon for that category.
 Each story is also <strong>tagged</strong> with a set of tags. You may also wish to 
-<a href="{% url news-tag_index %}">view our stories by their tags</a>.
+<a href="{% url 'news-tag_index' %}">view our stories by their tags</a>.
 </p>
 
 {% for category, story_set in cat_list %}
    <h3>{{ category.title }}</h3>
-   <p><a href="{% url news-category slug=category.slug %}">
+   <p><a href="{% url 'news-category' slug=category.slug %}">
       <img src="{{ category.icon.url }}" alt="{{ category.title }}" title="{{ category.title }}" />
       </a>
    </p>

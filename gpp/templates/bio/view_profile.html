@@ -1,4 +1,5 @@
 {% extends 'bio/base.html' %}
+{% load url from future %}
 {% load avatar_tags %}
 {% load elsewhere_tags %}
 {% load core_tags %}
@@ -25,8 +26,8 @@
    {% if this_is_me %}
    <p>{% avatar subject %}
    <ul>
-      <li><a href="{% url forums-manage_favorites %}">My favorite forum topics</a></li>
-      <li><a href="{% url forums-manage_subscriptions %}">My forum topic subscriptions</a></li>
+      <li><a href="{% url 'forums-manage_favorites' %}">My favorite forum topics</a></li>
+      <li><a href="{% url 'forums-manage_subscriptions' %}">My forum topic subscriptions</a></li>
    </ul>
    </p>
    {% else %}
@@ -78,21 +79,21 @@
 </div>
 {% if this_is_me %}
 <ul class="icon-list">
-   <li><a href="{% url bio-edit_profile %}"><img src="{{ MEDIA_URL }}icons/application_edit.png" alt="Edit Profile" /></a>
-   <a href="{% url bio-edit_profile %}">Edit Profile</a></li>
-   <li><a href="{% url bio-change_avatar %}"><img src="{{ MEDIA_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
-      <a href="{% url bio-change_avatar %}">Change Avatar</a></li>
-   <li><a href="{% url bio-edit_elsewhere %}"><img src="{{ MEDIA_URL }}icons/link_edit.png" alt="Edit Links" /></a>
-   <a href="{% url bio-edit_elsewhere %}">Edit Elsewhere Links</a></li>
-   <li><a href="{% url django.contrib.auth.views.password_change %}"><img src="{{ MEDIA_URL }}icons/key.png" alt="Change Password" /></a>
-      <a href="{% url django.contrib.auth.views.password_change %}">Change Password</a></li>
+   <li><a href="{% url 'bio-edit_profile' %}"><img src="{{ MEDIA_URL }}icons/application_edit.png" alt="Edit Profile" /></a>
+   <a href="{% url 'bio-edit_profile' %}">Edit Profile</a></li>
+   <li><a href="{% url 'bio-change_avatar' %}"><img src="{{ MEDIA_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
+      <a href="{% url 'bio-change_avatar' %}">Change Avatar</a></li>
+   <li><a href="{% url 'bio-edit_elsewhere' %}"><img src="{{ MEDIA_URL }}icons/link_edit.png" alt="Edit Links" /></a>
+   <a href="{% url 'bio-edit_elsewhere' %}">Edit Elsewhere Links</a></li>
+   <li><a href="{% url 'django.contrib.auth.views.password_change' %}"><img src="{{ MEDIA_URL }}icons/key.png" alt="Change Password" /></a>
+      <a href="{% url 'django.contrib.auth.views.password_change' %}">Change Password</a></li>
 </ul>
 {% else %}
 {% if user.is_authenticated %}
 <ul class="icon-list">
-   <li><a href="{% url messages-compose_to subject.username %}"><img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url messages-compose_to subject.username %}">Send a private message to {{ subject.username }}</a></li>
-   <li><a href="{% url forums-posts_for_user username=subject.username %}"><img src="{{ MEDIA_URL }}icons/comments.png"
-      alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url forums-posts_for_user username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
+   <li><a href="{% url 'messages-compose_to' subject.username %}"><img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url 'messages-compose_to' subject.username %}">Send a private message to {{ subject.username }}</a></li>
+   <li><a href="{% url 'forums-posts_for_user' username=subject.username %}"><img src="{{ MEDIA_URL }}icons/comments.png"
+      alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url 'forums-posts_for_user' username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
    <li><img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" />
       <a href="#" class="profile-flag" id="fp-{{ profile.id }}">Report this profile</a></li>
 </ul>

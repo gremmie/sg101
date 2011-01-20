@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% block title %}Shout Not Found{% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url shoutbox-history %}">Shoutbox History</a> &raquo; Shout Not Found</div>
+<div class="breadcrumbs"><a href="{% url 'shoutbox-history' %}">Shoutbox History</a> &raquo; Shout Not Found</div>
 <h2>Shout Not Found</h2>
 <p>We're sorry, it looks like that shout no longer exists.</p>
 {% endblock %}

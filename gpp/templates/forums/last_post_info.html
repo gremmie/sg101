@@ -1,8 +1,9 @@
+{% load url from future %}
 {% load forum_tags %}
 {% if post %}
 <a href="{{ post.get_absolute_url }}" title="Goto last post"><img src="{{ MEDIA_URL }}icons/note_go.png" alt="Goto last post" /></a>
 <a href="{{ post.get_absolute_url }}" title="Goto last post">{% forum_date post.creation_date user %}</a><br />
-<a href="{% url bio-view_profile username=post.user.username %}" title="View profile for {{ post.user.username }}">{{ post.user.username }}</a>
+<a href="{% url 'bio-view_profile' username=post.user.username %}" title="View profile for {{ post.user.username }}">{{ post.user.username }}</a>
 {% else %}
 <i>No posts</i>
 {% endif %}

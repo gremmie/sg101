@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load downloads_tags %}
 {% block title %}Downloads: {{ category.title }}{% endblock %}
 {% block custom_css %}
@@ -16,13 +17,13 @@
 
 {% if page.object_list %}
 <ul class="tab-nav">
-   <li><a href="{% url downloads-category slug=category.slug sort="title" %}"
+   <li><a href="{% url 'downloads-category' slug=category.slug sort="title" %}"
       {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
-   <li><a href="{% url downloads-category slug=category.slug sort="date" %}"
+   <li><a href="{% url 'downloads-category' slug=category.slug sort="date" %}"
       {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
-   <li><a href="{% url downloads-category slug=category.slug sort="rating" %}"
+   <li><a href="{% url 'downloads-category' slug=category.slug sort="rating" %}"
       {% ifequal s "rating" %}class="active"{% endifequal %}>Rating</a></li>
-   <li><a href="{% url downloads-category slug=category.slug sort="hits" %}"
+   <li><a href="{% url 'downloads-category' slug=category.slug sort="hits" %}"
       {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
 </ul>
 

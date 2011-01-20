@@ -1,3 +1,4 @@
+{% load url from future %}
 {% if poll %}
 <div>
    <h2>Latest Poll</h2>
@@ -7,7 +8,7 @@
          <li>{{ choice.choice }}</li>
       {% endfor %}
    </ul>
-   <p>Go <a href="{% url polls-detail poll_id=poll.id %}">see the results and vote</a>
-   or check out <a href="{% url polls-main %}">more polls</a>.</p>
+   <p>Go <a href="{% url 'polls-detail' poll_id=poll.id %}">see the results and vote</a>
+   or check out <a href="{% url 'polls-main' %}">more polls</a>.</p>
 </div>
 {% endif %}

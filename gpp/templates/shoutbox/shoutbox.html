@@ -1,4 +1,5 @@
 {% extends 'side_block.html' %}
+{% load url from future %}
 {% load core_tags %}
 {% block block_title %}Shoutbox{% endblock %}
 {% block block_content %}
@@ -13,7 +14,7 @@
 </div>
 <center>
    <button type="button" id="shoutbox-prev" title="Previous">&laquo;</button>
-   <a href="{% url shoutbox-history %}">Shout History</a>
+   <a href="{% url 'shoutbox-history' %}">Shout History</a>
    <button type="button" id="shoutbox-next" title="Next">&raquo;</button>
 </center>
 {% if user.is_authenticated %}
@@ -30,8 +31,8 @@
 </center>
 {% else %}
 <p>
-Please <a href="{% url accounts-login %}">login</a> or
-<a href="{% url accounts-register %}">register</a> to shout.
+Please <a href="{% url 'accounts-login' %}">login</a> or
+<a href="{% url 'accounts-register' %}">register</a> to shout.
 </p>
 {% endif %}
 {% endblock %}
