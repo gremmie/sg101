@@ -1,5 +1,6 @@
 """urls for the Messages application"""
 from django.conf.urls.defaults import *
+from django.views.generic import RedirectView
 
 urlpatterns = patterns('messages.views',
     url(r'^inbox/$', 'inbox', name='messages-inbox'),
@@ -16,7 +17,7 @@ urlpatterns = patterns('messages.views',
     url(r'^options/$', 'options', name='messages-options'),
 )
 
-urlpatterns += patterns('django.views.generic.simple',
-    (r'^$', 'redirect_to', {'url': 'inbox/'}),
+urlpatterns += patterns('',
+    (r'^$', RedirectView.as_view(url='inbox/')),
 )
 
