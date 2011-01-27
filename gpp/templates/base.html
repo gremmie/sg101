@@ -15,25 +15,25 @@
 <meta name="robots" content="all" />
 <meta name="Author" content="Brian Neal" />
 <meta name="copyright" content="&copy; 2009 Brian Neal" />
-<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/screen.css" type="text/css" media="screen, projection" />
-<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/print.css" type="text/css" media="print" /> 
+<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/screen.css" type="text/css" media="screen, projection" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/print.css" type="text/css" media="print" /> 
 <!--[if lt IE 8]>
-<link rel="stylesheet" href="{{ MEDIA_URL }}css/blueprint/ie.css" type="text/css" media="screen, projection" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/ie.css" type="text/css" media="screen, projection" />
 <![endif]-->
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/base.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/shoutbox.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/base.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/shoutbox.css" />
 {% script_tags "jquery" %}
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.cycle.all.min.js"></script>
-<script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox.js"></script>
-<!-- <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ MEDIA_URL }}images/favicon.ico" /> -->
+<script type="text/javascript" src="{{ STATIC_URL }}js/jquery.cycle.all.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox.js"></script>
+<!-- <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ STATIC_URL }}images/favicon.ico" /> -->
 </head>
 <body>
 <div id="page" class="container">
 <div id="header" class="span-24">
-   <p><a href="/" title="SG101 Home"><img src="{{ MEDIA_URL }}themes/kds/sgLogo.png" alt="SurfGuitar101.com Logo" width="446" height="103" /></a></p>
+   <p><a href="/" title="SG101 Home"><img src="{{ STATIC_URL }}themes/kds/sgLogo.png" alt="SurfGuitar101.com Logo" width="446" height="103" /></a></p>
 </div>
 <div id="header-nav" class="span-24">
    <ul>

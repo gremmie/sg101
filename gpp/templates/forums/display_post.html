@@ -17,16 +17,16 @@
       {% if user.is_authenticated %}
       <p>
       <a href="{% url 'messages-compose_to' post.user.username %}">
-      <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send Private Message to {{ post.user.username }}" /></a>
+      <img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send Private Message to {{ post.user.username }}" /></a>
       {% if not post.user_profile.hide_email %}<a href="mailto:{{ post.user.email }}">
-         <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email to {{ post.user.username}}" /></a>{% endif %}
+         <img src="{{ STATIC_URL }}icons/email.png" alt="Email" title="Send Email to {{ post.user.username}}" /></a>{% endif %}
       </p>
       {% endif %}
    </td>
    <td class="forum-post-body">
       <div class="forum-post-info quiet{% if post.user_profile.is_stranger %} stranger{% endif %}">
-      {% if post.unread %}<img src="{{ MEDIA_URL }}icons/new.png" alt="New" title="New" />{% endif %}
-      <a href="{{ post.get_absolute_url }}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
+      {% if post.unread %}<img src="{{ STATIC_URL }}icons/new.png" alt="New" title="New" />{% endif %}
+      <a href="{{ post.get_absolute_url }}"><img src="{{ STATIC_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
          Posted on {% forum_date post.creation_date user %}
          {% if can_moderate %}from IP: <a href="{% url 'forums-post_ip_info' post.id %}">{{ post.user_ip }}</a>{% endif %}
       </div>
@@ -48,22 +48,22 @@
       {% endif %}
       <div class="forum-post-info-tools">
       {% if can_reply %}
-         <a href="{% url 'forums-new_post' topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ MEDIA_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
+         <a href="{% url 'forums-new_post' topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ STATIC_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
       {% endif %}
-      {% post_edit_button post user can_moderate MEDIA_URL %}
+      {% post_edit_button post user can_moderate %}
       <a href="#" class="post-flag" id="fp-{{ post.id }}" 
          title="Flag this post as spam, abuse, or a violation of site rules.">
-         <img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag" /></a>
+         <img src="{{ STATIC_URL }}icons/flag_red.png" alt="Flag" /></a>
       {% if can_moderate %}
       <a href="#" class="post-delete" id="dp-{{ post.id }}"
-         title="Delete this post"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete post" /></a>
+         title="Delete this post"><img src="{{ STATIC_URL }}icons/cross.png" alt="Delete post" /></a>
          {% if post.user != user and post.user_profile.is_stranger %}
          <br />
          <span class="quiet">Stranger options:</span>
          <a href="{% url 'forums-stranger' post.id %}" title="This stranger seems legitimate">
-            <img src="{{ MEDIA_URL }}icons/tick.png" alt="Acquaintance" /></a>
+            <img src="{{ STATIC_URL }}icons/tick.png" alt="Acquaintance" /></a>
          <a href="{% url 'forums-spammer' post.id %}" title="This is spam">
-            <img src="{{ MEDIA_URL }}icons/exclamation.png" alt="Spammer" /></a>
+            <img src="{{ STATIC_URL }}icons/exclamation.png" alt="Spammer" /></a>
          {% endif %}
       {% endif %}
       </div>

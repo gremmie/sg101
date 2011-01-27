@@ -55,6 +55,11 @@ MEDIA_URL = local_settings.MEDIA_URL
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = local_settings.ADMIN_MEDIA_PREFIX
 
+# Staticfiles settings:
+STATICFILES_DIRS = local_settings.STATICFILES_DIRS
+STATIC_ROOT = local_settings.STATIC_ROOT
+STATIC_URL = local_settings.STATIC_URL
+
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = local_settings.SECRET_KEY
 
@@ -111,6 +116,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.debug",
     "django.core.context_processors.request",
     "django.core.context_processors.media",
+    "django.core.context_processors.static",
     "django.contrib.messages.context_processors.messages",
 )
 
@@ -125,6 +131,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.sites',
+    'django.contrib.staticfiles',
     'elsewhere',
     'tagging',
     'haystack',

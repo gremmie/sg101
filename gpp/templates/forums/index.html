@@ -10,7 +10,7 @@
 {% endblock %}
 {% block title %}Forums{% endblock %}
 {% block content %}
-<h2>Forums <a href="/feeds/forums/"><img src="{{ MEDIA_URL }}icons/feed.png" alt="Forums Feed" title="Forums Feed" /></a></h2>
+<h2>Forums <a href="/feeds/forums/"><img src="{{ STATIC_URL }}icons/feed.png" alt="Forums Feed" title="Forums Feed" /></a></h2>
 
 {% include "forums/forum_query.html" %}
 
@@ -31,7 +31,7 @@
             <tr class="{% cycle 'odd' 'even' %}">
                <td>
                   {% if forum.has_unread %}
-                  <img src="{{ MEDIA_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" />
+                  <img src="{{ STATIC_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" />
                   {% endif %}
                   <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
                   <p>{{ forum.description }}</p>

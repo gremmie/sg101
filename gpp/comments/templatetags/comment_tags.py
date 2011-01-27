@@ -8,6 +8,7 @@ We support the following template tags:
     {% render_comment_list [object] %}
 """
 from django import template
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib.contenttypes.models import ContentType
 
@@ -32,7 +33,7 @@ class GetCommentCountNode(template.Node):
 @register.tag
 def get_comment_count(parser, token):
     """
-    Gets the comment count for the specified object and makes it available in the 
+    Gets the comment count for the specified object and makes it available in the
     template context under the variable name specified.
     Syntax:
         {% get_comment_count for [object] as [varname] %}
@@ -66,7 +67,7 @@ class GetCommentListNode(template.Node):
 @register.tag
 def get_comment_list(parser, token):
     """
-    Gets a list of comments for the specified object and makes it available in the 
+    Gets a list of comments for the specified object and makes it available in the
     template context under the variable name specified.
     Syntax:
         {% get_comment_list for [object] as [varname] %}
@@ -99,7 +100,7 @@ class GetCommentFormNode(template.Node):
 @register.tag
 def get_comment_form(parser, token):
     """
-    Gets the comment form for an object and makes it available in the 
+    Gets the comment form for an object and makes it available in the
     template context under the variable name specified.
     Syntax:
         {% get_comment_form for [object] as [varname] %}
@@ -136,7 +137,7 @@ class RenderCommentFormNode(template.Node):
 @register.tag
 def render_comment_form(parser, token):
     """
-    Renders a comment form for the specified object using the template 
+    Renders a comment form for the specified object using the template
     comments/comment_form.html.
     Syntax:
         {% render_comment_form for [object] %}
@@ -152,8 +153,8 @@ def render_comment_form(parser, token):
     return RenderCommentFormNode(obj)
 
 
-@register.inclusion_tag('comments/comment_list.html', takes_context=True)
-def render_comment_list(context, object):
+@register.inclusion_tag('comments/comment_list.html')
+def render_comment_list(object):
     """
     Renders the comments for the specified object using the template
     comments/comment_list.html.
@@ -161,7 +162,8 @@ def render_comment_list(context, object):
         {% render_comment_list [object] %}
     """
     qs = Comment.objects.for_object(object).select_related('user')
-    return {'comments': qs,
-          'MEDIA_URL': context['MEDIA_URL'],
-          }
+    return {
+        'comments': qs,
+        'STATIC_URL': settings.STATIC_URL,
+    }
 

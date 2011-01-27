@@ -1,7 +1,7 @@
 {% extends 'news/base.html' %}
 {% block title %}News: {{ title }}{% endblock %}
 {% block news_css %}
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
 {% block news_content %}
 <h3>{{ title }}</h3>

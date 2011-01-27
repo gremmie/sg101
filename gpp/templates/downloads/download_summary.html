@@ -2,12 +2,12 @@
 {% load downloads_tags %}
 {% block title %}{{ title }}{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/downloads.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/downloads.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/downloads/rating.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/rating.js"></script>
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>

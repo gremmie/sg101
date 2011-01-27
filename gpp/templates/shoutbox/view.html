@@ -2,12 +2,12 @@
 {% load avatar_tags %}
 {% load script_tags %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/shoutbox_app.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/shoutbox_app.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
 {% block custom_js %}
 {% script_tags "jquery-jeditable" %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/shoutbox_app.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox_app.js"></script>
 {% endblock %}
 {% block title %}Shout History{% endblock %}
 {% block content %}

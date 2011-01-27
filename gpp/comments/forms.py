@@ -12,7 +12,7 @@ COMMENT_MAX_LENGTH = getattr(settings, 'COMMENT_MAX_LENGTH', 3000)
 
 class CommentForm(forms.Form):
     comment = forms.CharField(label='',
-            min_length=1, 
+            min_length=1,
             max_length=COMMENT_MAX_LENGTH,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     content_type = forms.CharField(widget=forms.HiddenInput)
@@ -69,6 +69,6 @@ class CommentForm(forms.Form):
             'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
                 settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
         }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] + 
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
                 ('js/comments.js', ))

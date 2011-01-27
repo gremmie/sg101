@@ -30,7 +30,7 @@ class SendStoryForm(forms.Form):
 
    def email(self):
       return self.cleaned_data['friend_email']
-      
+
    def name(self):
       return self.cleaned_data['friend_name']
 

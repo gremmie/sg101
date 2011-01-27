@@ -20,7 +20,7 @@ class ComposeForm(forms.Form):
    """
    This form is used to compose private messages.
    """
-   receiver = forms.CharField(label='To', 
+   receiver = forms.CharField(label='To',
          max_length=30,
          widget=AutoCompleteUserInput())
    subject = forms.CharField(max_length=120, widget=forms.TextInput(attrs={'size': 52}))

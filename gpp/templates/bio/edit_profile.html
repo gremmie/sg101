@@ -13,7 +13,7 @@
 <table>
    <tr>
       <td>
-         <a href="{% url 'bio-change_avatar' %}"><img src="{{ MEDIA_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
+         <a href="{% url 'bio-change_avatar' %}"><img src="{{ STATIC_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
          <a href="{% url 'bio-change_avatar' %}">Change Avatar</a></td>
       <td>{% avatar user %}</td>
    </tr>
@@ -21,7 +21,7 @@
    {{ profile_form.as_table }}
    <tr>
       <td>
-         <a href="{% url 'bio-edit_elsewhere' %}"><img src="{{ MEDIA_URL }}icons/link_edit.png" alt="Edit Links" /></a>
+         <a href="{% url 'bio-edit_elsewhere' %}"><img src="{{ STATIC_URL }}icons/link_edit.png" alt="Edit Links" /></a>
          <a href="{% url 'bio-edit_elsewhere' %}">Edit Elsewhere Links</a></td>
       <td>{% elsewhere_links user %}</td>
    </tr>

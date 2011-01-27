@@ -1,7 +1,8 @@
 """
-Template tags for the shoutbox application. 
+Template tags for the shoutbox application.
 """
 from django import template
+
 from shoutbox.models import Shout
 
 register = template.Library()
@@ -12,5 +13,5 @@ def shoutbox(context):
    return {
       'shouts': shouts,
       'user': context['user'],
-      'MEDIA_URL': context['MEDIA_URL'],
+      'STATIC_URL': context['STATIC_URL'],
    }

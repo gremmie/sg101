@@ -8,10 +8,10 @@
 
 <div class="forum-block">
 {% if topic.sticky %}
-<img src="{{ MEDIA_URL }}/icons/asterisk_orange.png" alt="Sticky" title="Sticky" />
+<img src="{{ STATIC_URL }}icons/asterisk_orange.png" alt="Sticky" title="Sticky" />
 {% endif %}
 {% if topic.locked %}
-<img src="{{ MEDIA_URL }}/icons/lock.png" alt="Lock" title="This topic is locked" />
+<img src="{{ STATIC_URL }}icons/lock.png" alt="Lock" title="This topic is locked" />
 {% endif %}
 {% if can_reply %}
 {% if topic.locked or topic.sticky %}&bull;{% endif %}
@@ -41,9 +41,9 @@
    <form action="{% url 'forums-mod_topic_delete' topic.id %}" method="post">{% csrf_token %}
       <input type="submit" value="Delete Topic" id="forum-mod-del-topic" />
    </form>
-   <a href="{% url 'forums-mod_topic_move' topic.id %}"><img src="{{ MEDIA_URL }}icons/application_go.png" alt="Move Topic" title="Move Topic" /></a>
+   <a href="{% url 'forums-mod_topic_move' topic.id %}"><img src="{{ STATIC_URL }}icons/application_go.png" alt="Move Topic" title="Move Topic" /></a>
    <a href="{% url 'forums-mod_topic_move' topic.id %}">Move this topic</a>
-   <a href="{% url 'forums-mod_topic_split' topic.id %}"><img src="{{ MEDIA_URL }}icons/arrow_branch.png" alt="Split Topic" title="Split Topic" /></a>
+   <a href="{% url 'forums-mod_topic_split' topic.id %}"><img src="{{ STATIC_URL }}icons/arrow_branch.png" alt="Split Topic" title="Split Topic" /></a>
    <a href="{% url 'forums-mod_topic_split' topic.id %}">Split this topic</a>
 </div>
 {% endif %}
@@ -59,11 +59,11 @@
    <legend>Favorite Options</legend>
    <p>
    {% if is_favorite %}
-      <img src="{{ MEDIA_URL }}icons/delete.png" alt="Favorite" />
+      <img src="{{ STATIC_URL }}icons/delete.png" alt="Favorite" />
       You currently have saved this topic in your list of favorites.
       <input type="submit" value="Remove from favorites" />
    {% else %}
-      <img src="{{ MEDIA_URL }}icons/add.png" alt="Favorite" />
+      <img src="{{ STATIC_URL }}icons/add.png" alt="Favorite" />
       Would you like to save this topic to your favorites list?
       <input type="submit" value="Save to favorites" />
    {% endif %}
@@ -80,11 +80,11 @@
    <legend>Subscription Options</legend>
    <p>
    {% if is_subscribed %}
-      <img src="{{ MEDIA_URL }}icons/email_delete.png" alt="Email" />
+      <img src="{{ STATIC_URL }}icons/email_delete.png" alt="Email" />
       You are currently subscribed to this topic and will receive an email when new replies are posted.
       <input type="submit" value="Unsubscribe Me" />
    {% else %}
-      <img src="{{ MEDIA_URL }}icons/email_add.png" alt="Email" />
+      <img src="{{ STATIC_URL }}icons/email_add.png" alt="Email" />
       Would you like to receive an email when someone replies to this topic?
       <input type="submit" value="Subscribe via Email" />
    {% endif %}

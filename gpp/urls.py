@@ -56,6 +56,6 @@ urlpatterns += patterns('haystack.views',
 
 
 if settings.DEBUG:
-   urlpatterns += patterns('',
-      (r'^media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
+   urlpatterns += patterns('django.contrib.staticfiles.views',
+      (r'^media/(?P<path>.*)$', 'serve', {'document_root': settings.MEDIA_ROOT}),
    )

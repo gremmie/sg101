@@ -3,8 +3,8 @@
 {% load avatar_tags %}
 {% block title %}Member List{% endblock %}
 {% block bio_css %}
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/tab-nav.css" />
-<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
 {% block content %}
 <h2>Member List</h2>
@@ -41,9 +41,9 @@ user profiles.
    <td>{{ u.date_joined|date:"M. d, Y" }}</td>
    <td>
       {% ifnotequal user u %}<a href="{% url 'messages-compose_to' u.username %}">
-         <img src="{{ MEDIA_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
+         <img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
       {% if not u.user_profile.hide_email %}<a href="mailto:{{ u.email }}">
-         <img src="{{ MEDIA_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}
+         <img src="{{ STATIC_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}
    </td>
 </tr>
 {% endfor %}

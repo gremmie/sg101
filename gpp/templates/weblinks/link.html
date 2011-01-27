@@ -14,7 +14,7 @@
       <th>Date Added:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
       <th>Hits:</th><td>{{ link.hits }}</td>
       <td>
-         <a href="#" class="weblinks-broken" id="link-{{ link.id }}"><img src="{{ MEDIA_URL }}icons/link_break.png" alt="Broken Link" title="Report this link as broken" /></a>
+         <a href="#" class="weblinks-broken" id="link-{{ link.id }}"><img src="{{ STATIC_URL }}icons/link_break.png" alt="Broken Link" title="Report this link as broken" /></a>
       </td>
    </tr>
    <tr><td><input type="submit" value="Visit Site" /></td></tr>

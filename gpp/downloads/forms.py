@@ -12,9 +12,9 @@ from downloads.models import AllowedExtension
 
 class AddDownloadForm(forms.ModelForm):
     """Form to allow adding downloads."""
-    title = forms.CharField(required=True, 
+    title = forms.CharField(required=True,
             widget=forms.TextInput(attrs={'size': 64, 'maxlength': 64}))
-    description = forms.CharField(required=False, 
+    description = forms.CharField(required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     def clean_file(self):
@@ -28,7 +28,7 @@ class AddDownloadForm(forms.ModelForm):
     class Meta:
         model = PendingDownload
         fields = ('title', 'category', 'description', 'file')
-        
+
     class Media:
         css = {
             'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +

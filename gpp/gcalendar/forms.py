@@ -69,7 +69,7 @@ class EventEntryForm(forms.ModelForm):
     end_time = forms.TimeField(required=False, widget=forms.Select(choices=TIME_CHOICES))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     where = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 60}))
-    description = forms.CharField(required=False, 
+    description = forms.CharField(required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
 
     DATE_FORMAT = '%m/%d/%Y'    # must match the jQuery UI datepicker config

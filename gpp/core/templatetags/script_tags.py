@@ -14,16 +14,14 @@ def script_tags(libraries):
             for path in settings.GPP_THIRD_PARTY_CSS[library]:
                 prefix = ''
                 if not path.startswith('http'):
-                    prefix = settings.MEDIA_URL
+                    prefix = settings.STATIC_URL
                 s += '<link rel="stylesheet" href="%s%s" type="text/css" />' % (prefix, path)
 
         if library in settings.GPP_THIRD_PARTY_JS:
             for path in settings.GPP_THIRD_PARTY_JS[library]:
                 prefix = ''
                 if not path.startswith('http'):
-                    prefix = settings.MEDIA_URL
+                    prefix = settings.STATIC_URL
                 s += '<script type="text/javascript" src="%s%s"></script>' % (prefix, path)
 
     return s
-
-# vim: ts=4 sw=4

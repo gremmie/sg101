@@ -2,7 +2,7 @@
 {% load url from future %}
 {% block title %}Messages: Outbox{% endblock %}
 {% block custom_js %}
-   <script type="text/javascript" src="{{ MEDIA_URL }}js/messages/box.js"></script>
+   <script type="text/javascript" src="{{ STATIC_URL }}js/box.js"></script>
 {% endblock %}
 {% block outbox-class %}class="active"{% endblock %}
 {% block messages_content %}

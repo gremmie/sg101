@@ -39,7 +39,7 @@ SERVER_TZ = timezone(settings.TIME_ZONE)
 def last_post_info(context, post):
     return {
         'post': post,
-        'MEDIA_URL': context['MEDIA_URL'],
+        'STATIC_URL': context['STATIC_URL'],
         'user': context['user'],
     }
 
@@ -50,12 +50,12 @@ def forum_page_navigation(page):
 
 
 @register.inclusion_tag('forums/post_edit_button.html')
-def post_edit_button(post, user, can_moderate, media_url):
+def post_edit_button(post, user, can_moderate):
     show_button = post.user.id == user.id or can_moderate
     return {
         'post': post,
         'show_button': show_button,
-        'MEDIA_URL': media_url,
+        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -109,7 +109,7 @@ def show_form(legend_text, form, submit_value, is_ajax):
         'form': form,
         'submit_value': submit_value,
         'is_ajax': is_ajax,
-        'MEDIA_URL': settings.MEDIA_URL,
+        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -160,7 +160,7 @@ def topic_icons(topic):
     """Displays the "unread", "sticky", and "locked" icons for a given topic."""
     return {
         'topic': topic,
-        'MEDIA_URL': settings.MEDIA_URL,
+        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -199,4 +199,4 @@ def forum_navigation(obj, subtitle=None):
     if subtitle:
         nav_list.append(dict(name=subtitle, url=None))
 
-    return dict(nav_list=nav_list, MEDIA_URL=settings.MEDIA_URL)
+    return dict(nav_list=nav_list, STATIC_URL=settings.STATIC_URL)

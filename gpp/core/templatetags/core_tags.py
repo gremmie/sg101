@@ -15,8 +15,8 @@ from core.models import UserLastVisit, AnonLastVisit
 register = template.Library()
 
 ICON_PARAMS = {
-    True: (settings.MEDIA_URL + 'icons/accept.png', 'Yes'),
-    False: (settings.MEDIA_URL + 'icons/delete.png', 'No'),
+    True: (settings.STATIC_URL + 'icons/accept.png', 'Yes'),
+    False: (settings.STATIC_URL + 'icons/delete.png', 'No'),
 }
 
 @register.simple_tag
@@ -28,7 +28,7 @@ def bool_icon(flag):
 
 @register.inclusion_tag('core/comment_dialogs.html')
 def comment_dialogs():
-    return {'MEDIA_URL': settings.MEDIA_URL}
+    return {'STATIC_URL': settings.STATIC_URL}
 
 
 @register.inclusion_tag('core/whos_online_tag.html')

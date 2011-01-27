@@ -10,11 +10,11 @@
 </div>
 <br />
 <span class="date">{{ shout.shout_date|date:"D M d Y H:i:s" }}</span><br />
-<a href="{% url 'shoutbox-view' shout.id %}"><img src="{{ MEDIA_URL }}icons/link.png" alt="Permalink" title="Permalink" /></a>
-<a href="#" class="shout-flag" id="shout-flag-{{ shout.id }}"><img src="{{ MEDIA_URL }}icons/flag_red.png" alt="Flag"
+<a href="{% url 'shoutbox-view' shout.id %}"><img src="{{ STATIC_URL }}icons/link.png" alt="Permalink" title="Permalink" /></a>
+<a href="#" class="shout-flag" id="shout-flag-{{ shout.id }}"><img src="{{ STATIC_URL }}icons/flag_red.png" alt="Flag"
    title="Flag this shout as offensive" /></a>
 {% ifequal user.id shout.user.id %}
-<a href="#" class="shout-del" id="shout-del-{{ shout.id }}"><img src="{{ MEDIA_URL }}icons/cross.png" alt="Delete" title="Delete this shout" /></a>
+<a href="#" class="shout-del" id="shout-del-{{ shout.id }}"><img src="{{ STATIC_URL }}icons/cross.png" alt="Delete" title="Delete this shout" /></a>
 {% endifequal %}
 </td>
 </tr>
