@@ -129,17 +129,6 @@ def new_posts(context):
     topics = Topic.objects.filter(forum__in=public_forums).select_related(
                     'user', 'last_post').order_by('-update_date')[:10]
 
-    # 1:
-    #public_cats = list(Category.objects.filter(groups__isnull=True).values_list('id', flat=True))
-    #topics = Topic.objects.filter(
-    #        forum__category__in=public_cats).select_related(
-    #                'user', 'last_post').order_by('-update_date')[:10]
-
-    # 0:
-    #topics = Topic.objects.filter(
-    #        forum__category__groups__isnull=True).select_related(
-    #                'user', 'last_post').order_by('-update_date')[:10]
-
     return {
         'topics': topics,
         'user': context['user'],
