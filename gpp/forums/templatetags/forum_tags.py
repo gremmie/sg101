@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
+from forums.models import Category
 from core.models import Statistic
 
 
@@ -119,9 +120,25 @@ def new_posts(context):
     This tag displays the topics that have the newest posts.
     Only the "public" forums are displayed.
     """
-    topics = Topic.objects.filter(
-            forum__category__groups__isnull=True).select_related(
+    public_forums = cache.get('public_forum_ids')
+    if public_forums is None:
+        public_forums = list(Forum.objects.filter(
+            category__groups__isnull=True).values_list('id', flat=True))
+        cache.set('public_forum_ids', public_forums, 10 * 60)
+
+    topics = Topic.objects.filter(forum__in=public_forums).select_related(
                     'user', 'last_post').order_by('-update_date')[:10]
+
+    # 1:
+    #public_cats = list(Category.objects.filter(groups__isnull=True).values_list('id', flat=True))
+    #topics = Topic.objects.filter(
+    #        forum__category__in=public_cats).select_related(
+    #                'user', 'last_post').order_by('-update_date')[:10]
+
+    # 0:
+    #topics = Topic.objects.filter(
+    #        forum__category__groups__isnull=True).select_related(
+    #                'user', 'last_post').order_by('-update_date')[:10]
 
     return {
         'topics': topics,
