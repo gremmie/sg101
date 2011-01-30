@@ -47,7 +47,7 @@ def register_thanks(request):
 def register_confirm(request, username, key):
     if request.user.is_authenticated():
         return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
-    
+
     # purge expired users
 
     PendingUser.objects.purge_expired()
@@ -56,14 +56,14 @@ def register_confirm(request, username, key):
     try:
         pending_user = PendingUser.objects.get(username = username)
     except PendingUser.DoesNotExist:
-        logging.error('Accounts register_confirm [%s]: user does not exist: %s' % (ip, username))
+        logging.error('Accounts register_confirm [%s]: user does not exist: %s', ip, username)
         return render_to_response('accounts/register_failure.html', {
             'username': username,
             },
             context_instance = RequestContext(request))
 
     if pending_user.key != key:
-        logging.error('Accounts register_confirm [%s]: key error: %s' % (ip, username))
+        logging.error('Accounts register_confirm [%s]: key error: %s', ip, username)
         return render_to_response('accounts/register_failure.html', {
             'username': username,
             },
@@ -85,7 +85,7 @@ def register_confirm(request, username, key):
     new_user.save()
     pending_user.delete()
 
-    logging.info('Accounts register_confirm [%s]: success: %s' % (ip, username))
+    logging.info('Accounts register_confirm [%s]: success: %s', ip, username)
     return render_to_response('accounts/register_success.html', {
         'username': username,
         },

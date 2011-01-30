@@ -91,7 +91,7 @@ def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
     try:
         forum = Forum.objects.get(slug=forum_slug)
     except Forum.DoesNotExist:
-        logging.error('could not create_topic for forum_slug=%s' % forum_slug)
+        logging.error('could not create_topic for forum_slug=%s', forum_slug)
         raise
 
     topic = Topic(forum=forum,

@@ -24,13 +24,13 @@ class RegisterForm(forms.Form):
     email = forms.EmailField()
     password1 = forms.CharField(label = "Password", widget = forms.PasswordInput)
     password2 = forms.CharField(label = "Password confirmation", widget = forms.PasswordInput)
-    agree_age = forms.BooleanField(required=True, 
+    agree_age = forms.BooleanField(required=True,
         label='I certify that I am over the age of 13',
         error_messages={
             'required': 'Sorry, but you must be over the age of 13 to ' \
                     'register at our site.',
             })
-    agree_tos = forms.BooleanField(required=True, 
+    agree_tos = forms.BooleanField(required=True,
        label='I agree to the Terms of Service',
         error_messages={
             'required': 'You have not agreed to our Terms of Service.',
@@ -96,7 +96,7 @@ class RegisterForm(forms.Form):
         site = Site.objects.get_current()
         admin_email = settings.ADMINS[0][1]
 
-        activation_link = 'http://%s%s' % (site.domain, reverse('accounts.views.register_confirm', 
+        activation_link = 'http://%s%s' % (site.domain, reverse('accounts.views.register_confirm',
                 kwargs = {'username' : pending_user.username, 'key' : pending_user.key}))
 
         msg = render_to_string('accounts/registration_email.txt',
@@ -112,11 +112,11 @@ class RegisterForm(forms.Form):
         subject = 'Registration Confirmation for ' + site.name
         send_mail(subject, msg, admin_email, [self.cleaned_data['email']],
                 expedite=True)
-        logging.info('Accounts/registration conf. email sent to %s for user %s; IP = %s' % \
-                (self.cleaned_data['email'], pending_user.username, self.ip))
+        logging.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
+                self.cleaned_data['email'], pending_user.username, self.ip)
 
         return pending_user
 
     def _validation_error(self, msg, param=None):
-        logging.error('Accounts/registration [%s]: %s (%s)' % (self.ip, msg, param))
+        logging.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
         raise forms.ValidationError(msg)

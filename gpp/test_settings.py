@@ -11,3 +11,7 @@ DATABASES = {
         'NAME': 'dev.db',
     },
 }
+
+# For unit-testing the Donations module w/o using the Paypal sandbox
+DONATIONS_DEBUG_VERIFY_RESPONSE = 'VERIFIED'
+DONATIONS_BUSINESS_DEBUG = 'brian@surfguitar101.com'

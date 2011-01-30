@@ -3,7 +3,6 @@
 import os
 import platform
 from decimal import Decimal
-import logging
 
 import local_settings
 
@@ -251,11 +250,7 @@ MAILER_ENQUEUE_MAIL = True
 # Configure Logging
 #######################################################################
 
-logging.basicConfig(
-        filename=os.path.join(project_path, 'logs', 'gpp.log'),
-        filemode='a',
-        format='%(asctime)s %(levelname)s %(message)s',
-        level=local_settings.LOG_LEVEL)
+LOGGING = local_settings.LOGGING
 
 #######################################################################
 # Django Debug Toolbar 

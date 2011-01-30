@@ -4,6 +4,7 @@ Views for the donations application.
 import urllib2
 import decimal
 import datetime
+import logging
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -35,6 +36,26 @@ def paypal_params():
     return form_action, business
 
 
+def verify_request(params):
+    """
+    Send the parameters back to Paypal and return the response string.
+    """
+    # If we are doing localhost-type unit tests, just return whatever
+    # the test wants us to...
+    if hasattr(settings, 'DONATIONS_DEBUG_VERIFY_RESPONSE'):
+        return settings.DONATIONS_DEBUG_VERIFY_RESPONSE
+
+    req = urllib2.Request(paypal_params()[0], params)
+    req.add_header("Content-type", "application/x-www-form-urlencoded")
+    try:
+        response = urllib2.urlopen(req)
+    except URLError, e:
+        logging.exception('IPN: exception verifying IPN: %s', e)
+        return None
+
+    return response.read()
+
+
 def index(request):
     gross, net, donations = Donation.objects.monthly_stats()
     current_site = Site.objects.get_current()
@@ -63,28 +84,23 @@ def ipn(request):
     This function is the IPN listener and handles the IPN POST from Paypal.
     The algorithm here roughly follows the outline described in chapter 2
     of Paypal's IPNGuide.pdf "Implementing an IPN Listener".
-    """
-    import logging
 
+    """
     # Log some info about this IPN event
     ip = request.META.get('REMOTE_ADDR', '?')
     parameters = request.POST.copy()
-    logging.info('IPN from %s; post data: %s' % (ip, parameters.urlencode()))
+    logging.info('IPN from %s; post data: %s', ip, parameters.urlencode())
 
     # Now we follow the instructions in chapter 2 of the Paypal IPNGuide.pdf.
     # Create a request that contains exactly the same IPN variables and values in
     # the same order, preceded with cmd=_notify-validate
     parameters['cmd']='_notify-validate'
 
-    # Post the request back to Paypal (either to the sandbox or the real deal).
-    req = urllib2.Request(paypal_params()[0], parameters.urlencode())
-    req.add_header("Content-type", "application/x-www-form-urlencoded")
-    response = urllib2.urlopen(req)
-
-    # Wait for the response from Paypal, which should be either VERIFIED or INVALID.
-    status = response.read()
+    # Post the request back to Paypal (either to the sandbox or the real deal),
+    # and read the response:
+    status = verify_request(parameters.urlencode())
     if status != 'VERIFIED':
-        logging.warning('IPN: Payapl did not verify; status was %s' % status)
+        logging.warning('IPN: Payapl did not verify; status was %s', status)
         return HttpResponse()
 
     # Response was VERIFIED; act on this if it is a Completed donation, 
@@ -93,13 +109,13 @@ def ipn(request):
 
     payment_status = parameters.get('payment_status')
     if payment_status != 'Completed':
-        logging.info('IPN: payment_status is %s; we are done.' % payment_status)
+        logging.info('IPN: payment_status is %s; we are done.', payment_status)
         return HttpResponse()
 
     # Is this a donation to the site?
     item_number = parameters.get('item_number')
-    if item_number == settings.DONATIONS_ITEM_NUM or \
-       item_number == settings.DONATIONS_ITEM_ANON_NUM:
+    if (item_number == settings.DONATIONS_ITEM_NUM or
+        item_number == settings.DONATIONS_ITEM_ANON_NUM):
         process_donation(item_number, parameters)
     else:
         logging.info('IPN: not a donation; done.')
@@ -110,11 +126,10 @@ def ipn(request):
 def process_donation(item_number, params):
     """
     A few validity and duplicate checks are made on the donation params.
-    If everything is ok, construct a donation object from the parameters and 
+    If everything is ok, construct a donation object from the parameters and
     store it in the database.
-    """
-    import logging
 
+    """
     # Has this transaction been processed before?
     txn_id = params.get('txn_id')
     if txn_id is None:
@@ -132,15 +147,15 @@ def process_donation(item_number, params):
     # Is the email address ours?
     business = params.get('business')
     if business != paypal_params()[1]:
-        logging.warning('IPN: invalid business: %s' % business)
+        logging.warning('IPN: invalid business: %s', business)
         return
 
     # is this a payment received?
     txn_type = params.get('txn_type')
     if txn_type != 'web_accept':
-        logging.warning('IPN: invalid txn_type: %s' % txn_type)
+        logging.warning('IPN: invalid txn_type: %s', txn_type)
         return
-    
+
     # Looks like a donation, save it to the database.
     # Determine which user this came from, if any.
     # The username is stored in the custom field if the user was logged in when
@@ -179,7 +194,7 @@ def process_donation(item_number, params):
     try:
         payment_date = datetime.datetime.strptime(payment_date, PP_DATE_FMT)
     except ValueError:
-        logging.error('IPN: invalid payment_date "%s"' % params['payment_date'])
+        logging.error('IPN: invalid payment_date "%s"', params['payment_date'])
         return
 
     try:

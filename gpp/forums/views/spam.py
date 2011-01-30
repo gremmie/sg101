@@ -69,7 +69,7 @@ def spammer(request, post_id):
     if request.method == "POST" and can_moderate and can_deactivate:
         deactivate_spammer(poster)
 
-        email_admins(SPAMMER_NAILED_SUBJECT % poster.username, 
+        email_admins(SPAMMER_NAILED_SUBJECT % poster.username,
             SPAMMER_NAILED_MSG_BODY % (
                 request.user.username, poster.username))
 
@@ -78,8 +78,8 @@ def spammer(request, post_id):
             IP: %s
             Message:
             %s
-            """ % (request.user.username, poster.username, post.user_ip,
-                post.body)))
+            """),
+            request.user.username, poster.username, post.user_ip, post.body)
 
         return HttpResponseRedirect(reverse('forums-spammer_nailed', args=[
             poster.id]))
@@ -126,8 +126,8 @@ def stranger(request, post_id):
     if request.method == "POST" and can_moderate and can_promote:
         promote_stranger(poster)
 
-        logging.info("STRANGER PROMOTED: %s promoted %s." % (
-            request.user.username, poster.username))
+        logging.info("STRANGER PROMOTED: %s promoted %s.",
+            request.user.username, poster.username)
 
         return HttpResponseRedirect(post.get_absolute_url())
 

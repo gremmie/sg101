@@ -1,4 +1,5 @@
 """This module contains user profile badge-related functionality."""
+import logging
 
 from bio.models import Badge
 from bio.models import BadgeOwnership
@@ -14,11 +15,10 @@ def award_badge(badge_id, user):
     to the given user. If the user already has the badge,
     the badge count is incremented by one.
     """
-    import logging
     try:
         badge = Badge.objects.get(numeric_id=badge_id)
     except Badge.DoesNotExist:
-        logging.error("Can't award badge with numeric_id = %d" % badge_id)
+        logging.error("Can't award badge with numeric_id = %d", badge_id)
         return
 
     profile = user.get_profile()

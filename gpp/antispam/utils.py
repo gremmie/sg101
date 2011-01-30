@@ -61,7 +61,7 @@ def suspend_user(user):
     profile.status = STA_SUSPENDED
     profile.status_date = datetime.datetime.now()
     profile.save()
-    
+
 
 def _get_spam_phrases():
     """This function returns the current list of spam phrase strings.

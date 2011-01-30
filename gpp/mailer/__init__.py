@@ -1,6 +1,7 @@
 from socket import error as socket_error
 import smtplib
 import time
+import logging
 
 import django.core.mail
 
@@ -27,7 +28,6 @@ def send_queued_mail():
 
     sent, errors = 0, 0
 
-    import logging
     logging.debug("Sending queued mail...")
     start_time = time.time()
 
@@ -35,17 +35,17 @@ def send_queued_mail():
     for msg in msgs:
         try:
             django.core.mail.send_mail(
-                    msg.subject, 
-                    msg.body, 
-                    msg.from_address, 
+                    msg.subject,
+                    msg.body,
+                    msg.from_address,
                     [msg.to_address],
                     fail_silently=False)
         except (socket_error, smtplib.SMTPException), e:
             errors += 1
-            logging.error("Error sending queued mail: %s" % e)
+            logging.error("Error sending queued mail: %s", e)
         else:
-        	sent += 1
-        	msg.delete()
+            sent += 1
+            msg.delete()
 
     end_time = time.time()
     logging.debug("Sent queued mail: %d successful, %d error(s); elapsed time: %.2f" % (
