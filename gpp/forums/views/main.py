@@ -480,9 +480,10 @@ def _delete_topic(topic):
     Note that we don't bother adjusting all the users'
     post counts as that doesn't seem to be worth the effort.
     """
-    if topic.forum.last_post and topic.forum.last_post.topic == topic:
-        topic.forum.last_post_pre_delete(deleting_topic=True)
-        topic.forum.save()
+    parent_forum = topic.forum
+    if parent_forum.last_post and parent_forum.last_post.topic == topic:
+        parent_forum.last_post_pre_delete(deleting_topic=True)
+        parent_forum.save()
 
     # delete subscriptions to this topic
     topic.subscribers.clear()
@@ -493,9 +494,20 @@ def _delete_topic(topic):
     for post in posts:
         post.attachments.clear()
 
-    # It should be safe to just delete the topic now. This will
-    # automatically delete all posts in the topic.
+    # Null out the topic's last post so we don't have a foreign key pointing
+    # to a post when we delete posts.
+    topic.last_post = None
+    topic.save()
+
+    # delete all posts in bulk
+    posts.delete()
+
+    # It should be safe to just delete the topic now.
     topic.delete()
+
+    # Resync parent forum's post and topic counts
+    parent_forum.sync()
+    parent_forum.save()
 
 
 @login_required

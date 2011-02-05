@@ -83,7 +83,7 @@ if DEBUG:
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
-        #'debug_toolbar.middleware.DebugToolbarMiddleware',
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'gpp.core.middleware.InactiveUserMiddleware',
         'gpp.core.middleware.WhosOnline',
@@ -159,8 +159,8 @@ INSTALLED_APPS = [
     'smiley',
     'weblinks',
 ]
-#if DEBUG:
-#    INSTALLED_APPS.append('debug_toolbar')
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/profile/me/'
