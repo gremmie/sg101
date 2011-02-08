@@ -103,8 +103,7 @@ def convert_date(s):
     datetime object.
     """
     m = DATE_RE.match(s)
-    if m is None:
-        raise CommandError("Invalid date string: %s" % s)
+    assert m is not None
 
     parts = [int(part) for part in m.groups()]
     return datetime.datetime(year=parts[0], month=parts[1], day=parts[2],
