@@ -1,5 +1,5 @@
 """
-translate_old_posts.py - A management command to join the bbposts and 
+translate_old_posts.py - A management command to join the bbposts and
 bbposts_text tables together and output as a .csv file, suitable for use as an
 input to mysqlimport into the new database. This method bypasses the Django ORM
 as it was too slow given the number of old posts to import.
@@ -34,7 +34,7 @@ def convert_ip(s):
 
 class Command(NoArgsCommand):
     help = """\
-This command joins converts the SG101 1.0 posts to 2.0 format and outputs the
+This command joins the SG101 1.0 posts to 2.0 format and outputs the
 data as a .csv file suitable for importing into the new database scheme with
 the mysqlimport utility.
 """
