@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% block title %}Yahoo Group Archives: {{ thread.title }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
+{% endblock %}
+{% block content %}
+{% if thread.page == 1 %}
+<h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo; </h2>
+{% else %}
+<h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo;
+   <a href="{% url 'ygroup-thread_index' %}?page={{ thread.page }}">Page {{ thread.page }}</a> &raquo;</h2>
+{% endif %}
+<h3 class="forum-nav">{{ thread.title }}
+   <a href="{{ thread.get_absolute_url }}" rel="nofollow">
+      <img src="{{ STATIC_URL }}icons/link.png" alt="permalink" title="permalink" /></a>
+</h3>
+{% include "ygroup/pagination.html" %}
+<dl>
+   {% for post in page_obj.object_list %}
+   <dt><a name="p{{ post.id }}"></a>{{ post.poster }} - {{ post.creation_date|date:"d M Y H:i:s" }}
+   <a href="{{ post.get_absolute_url }}" rel="nofollow">
+      <img src="{{ STATIC_URL }}icons/link.png" alt="permalink" title="permalink" /></a></dt>
+   <dd>{{ post.msg|linebreaks }}</dd>
+   {% endfor %}
+</dl>
+{% include "ygroup/pagination.html" %}
+{% endblock %}

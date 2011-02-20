@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% block title %}Yahoo Group Archives: {{ post.title }}{% endblock %}
+{% block content %}
+<h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo; </h2>
+<h3 class="forum-nav">{{ post.title }}
+   <a href="{{ post.get_absolute_url }}" rel="nofollow">
+      <img src="{{ STATIC_URL }}icons/link.png" alt="permalink" title="permalink" /></a>
+</h3>
+<dl>
+   <dt>{{ post.poster }} - {{ post.creation_date|date:"d M Y H:i:s" }}</dt>
+   <dd>{{ post.msg|linebreaks }}</dd>
+</dl>
+<p><a href="{{ post.thread_url }}" rel="nofollow">See this post in context</a>.</p>
+{% endblock %}

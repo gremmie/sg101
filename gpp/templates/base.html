@@ -1,8 +1,8 @@
-{% load url from future %}
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+{% load url from future %}
 {% load shoutbox_tags %}
 {% load irc_tags %}
 {% load potd_tags %}
@@ -69,6 +69,7 @@
       <li><a href="{% url 'potd-view' %}">Photo of the Day</a></li>
       <li><a href="{% url 'weblinks-main' %}">Links</a></li>
       <li><a href="{% url 'haystack_search' %}">Search</a></li>
+      <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
    </ul>
    {% cache 300 potd_block %}
       {% photo_of_the_day %}

@@ -46,6 +46,7 @@ urlpatterns = patterns('',
    (r'^profile/', include('bio.urls')),
    (r'^shout/', include('shoutbox.urls')),
    (r'^smiley/', include('smiley.urls')),
+   (r'^ygroup/', include('ygroup.urls')),
 )
 
 # Haystack search views
