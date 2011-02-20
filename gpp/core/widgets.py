@@ -20,7 +20,7 @@ $(function() {
     var cacheSize = 0;
     $("#id_%s").autocomplete({
         delay: 400,
-        minLength: 2,
+        minLength: 1,
         source: function(request, response) {
             if (cache[request.term]) {
                response(cache[request.term]);
@@ -31,11 +31,11 @@ $(function() {
                 type: "GET",
                 data: {
                     q: request.term,
-                    limit: 10
+                    limit: 15
                 },
                 dataType: "json",
                 success: function(data, textStatus) {
-                    if (cacheSize >= 16) {
+                    if (cacheSize >= 32) {
                        cache = {};
                        cacheSize = 0;
                     }
