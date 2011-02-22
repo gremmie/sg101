@@ -127,8 +127,6 @@ def forum_index(request, slug):
         }
 
     topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
-    get_topic_unread_status(forum, topics, request.user)
-
     paginator = create_topic_paginator(topics)
     page_num = get_page_num(request)
     try:
@@ -136,6 +134,7 @@ def forum_index(request, slug):
     except InvalidPage:
         raise Http404
 
+    get_topic_unread_status(forum, page.object_list, request.user)
     attach_topic_page_ranges(page.object_list)
 
     # we do this for the template since it is rendered twice
@@ -166,7 +165,7 @@ def topic_index(request, id):
     topic.view_count = F('view_count') + 1
     topic.save(force_update=True)
 
-    posts = topic.posts.select_related()
+    posts = topic.posts.select_related(depth=1)
 
     paginator = create_post_paginator(posts)
     page_num = get_page_num(request)
