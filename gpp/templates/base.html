@@ -75,7 +75,9 @@
       {% photo_of_the_day %}
    {% endcache %}
    {% shoutbox %}
-   {% irc_status %}
+   {% cache 60 irc_block %}
+      {% irc_status %}
+   {% endcache %}
 </div>
 
 <div id="content-primary" class="span-19 last">

@@ -1,6 +1,7 @@
 """
 Views for the forums application.
 """
+import collections
 import datetime
 
 from django.contrib.auth.decorators import login_required
@@ -29,7 +30,7 @@ from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
 from forums.unread import get_forum_unread_status, get_topic_unread_status, \
         get_post_unread_status, get_unread_topics
 
-from bio.models import UserProfile
+from bio.models import UserProfile, BadgeOwnership
 import antispam
 import antispam.utils
 from forums.attachments import AttachmentProcessor
@@ -175,16 +176,27 @@ def topic_index(request, id):
         raise Http404
     get_post_unread_status(topic, page.object_list, request.user)
 
-    # Attach user profiles to each post to avoid using get_user_profile() in
-    # the template.
+    # Attach user profiles to each post's user to avoid using
+    # get_user_profile() in the template.
     users = set(post.user.id for post in page.object_list)
 
     profiles = UserProfile.objects.filter(user__id__in=users).select_related()
     user_profiles = dict((profile.user.id, profile) for profile in profiles)
 
     for post in page.object_list:
-        post.user_profile = user_profiles[post.user.id]
+        post.user.user_profile = user_profiles[post.user.id]
         post.attach_list = []
+
+    # Attach badge ownership info to the user profiles to avoid lots
+    # of database hits in the template:
+    bos_qs = BadgeOwnership.objects.filter(
+            profile__id__in=user_profiles.keys()).select_related()
+    bos = collections.defaultdict(list)
+    for bo in bos_qs:
+        bos[bo.profile.id].append(bo)
+
+    for pk, profile in user_profiles.iteritems():
+        profile.badge_ownership = bos[pk]
 
     # Attach any attachments
     post_ids = [post.pk for post in page.object_list]
@@ -292,7 +304,7 @@ def quick_reply_ajax(request):
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         post.unread = True
-        post.user_profile = request.user.get_profile()
+        post.user.user_profile = request.user.get_profile()
         post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic)
@@ -388,7 +400,7 @@ def edit_post(request, id):
     else:
         form = PostForm(instance=post, topic_name=topic_name)
 
-    post.user_profile = post.user.get_profile()
+    post.user.user_profile = post.user.get_profile()
 
     return render_to_response('forums/edit_post.html', {
         'forum': post.topic.forum,

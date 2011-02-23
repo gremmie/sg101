@@ -52,7 +52,7 @@ def member_list(request, type='user'):
     except InvalidPage:
         raise Http404
 
-    # Attach user profiles to each post to avoid using get_user_profile() in
+    # Attach user profiles to each user to avoid using get_user_profile() in
     # the template.
     users = set(user.id for user in the_page.object_list)
 
@@ -66,7 +66,7 @@ def member_list(request, type='user'):
         'page': the_page,
         'type': type,
         'num_members': num_members,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 #######################################################################

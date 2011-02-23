@@ -60,6 +60,24 @@ def post_edit_button(post, user, can_moderate):
     }
 
 
+def get_time_prefs(user):
+    """
+    Return the supplied user's time preferences in the form of a 2-tuple:
+        (use_24_time, time_zone_name)
+
+    These preferences are cached to reduce database hits.
+
+    """
+    cache_key = '%s_tz_prefs' % user.username
+    tz_prefs = cache.get(cache_key)
+    if tz_prefs is None:
+        profile = user.get_profile()
+        tz_prefs = profile.use_24_time, profile.time_zone
+        cache.set(cache_key, tz_prefs)
+
+    return tz_prefs
+
+
 @register.simple_tag
 def current_forum_time(user):
     """
@@ -69,10 +87,10 @@ def current_forum_time(user):
     curr_time = SERVER_TZ.localize(datetime.datetime.now())
 
     if user.is_authenticated():
-        profile = user.get_profile()
-        user_tz = timezone(profile.time_zone)
+        tz_prefs = get_time_prefs(user)
+        user_tz = timezone(tz_prefs[1])
         curr_time = curr_time.astimezone(user_tz)
-        fmt = TIME_FMT_24 if profile.use_24_time else TIME_FMT_12
+        fmt = TIME_FMT_24 if tz_prefs[0] else TIME_FMT_12
     else:
         fmt = TIME_FMT_12
 
@@ -90,10 +108,10 @@ def forum_date(date, user, long_format=True):
 
     date = SERVER_TZ.localize(date)
     if user.is_authenticated():
-        profile = user.get_profile()
-        user_tz = timezone(profile.time_zone)
+        tz_prefs = get_time_prefs(user)
+        user_tz = timezone(tz_prefs[1])
         date = date.astimezone(user_tz)
-        fmt = DATE_FMT_24 if profile.use_24_time else DATE_FMT_12
+        fmt = DATE_FMT_24 if tz_prefs[0] else DATE_FMT_12
     else:
         fmt = DATE_FMT_12
 

@@ -112,19 +112,7 @@ class UserProfile(models.Model):
         return ('bio-view_profile', (), {'username': self.user.username})
 
     def badge_ownership(self):
-        if hasattr(self, '_badges'):
-            return self._badges
-
-        cache_key = 'badges-%s' % self.user.username
-        self._badges = cache.get(cache_key)
-        if self._badges is not None:
-            return self._badges
-
-        self._badges = BadgeOwnership.objects.filter(profile=self).select_related(
-                "badge")
-
-        cache.set(cache_key, self._badges, 15 * 60)
-        return self._badges
+        return BadgeOwnership.objects.filter(profile=self).select_related('badge')
 
     def is_stranger(self):
         """Returns True if this user profile status is STA_STRANGER."""
