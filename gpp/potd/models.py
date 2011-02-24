@@ -45,7 +45,20 @@ class Photo(models.Model):
         return ('potd-archive', [str(self.id)])
 
     def save(self, *args, **kwargs):
+        if not self.pk:
+            self.generate_thumb()
 
+        super(Photo, self).save(*args, **kwargs)
+        Sequence.objects.insert_photo(self.pk)
+
+    def delete(self):
+        Sequence.objects.remove_photo(self.pk)
+        super(Photo, self).delete()
+
+    def can_comment_on(self):
+        return Current.objects.get_current_id() == self.id
+
+    def generate_thumb(self):
         if self.thumb:
             self.thumb.delete(save=False)
 
@@ -59,16 +72,6 @@ class Photo(models.Model):
         image.save(s, format)
         thumb_name = os.path.basename(self.photo.path)
         self.thumb.save(thumb_name, ContentFile(s.getvalue()), save=False)
-        
-        super(Photo, self).save(*args, **kwargs)
-        Sequence.objects.insert_photo(self.pk)
-
-    def delete(self):
-        Sequence.objects.remove_photo(self.pk)
-        super(Photo, self).delete()
-
-    def can_comment_on(self):
-        return Current.objects.get_current_id() == self.id
 
 
 class CurrentManager(models.Manager):
@@ -103,27 +106,25 @@ class SequenceManager(models.Manager):
     def insert_photo(self, photo_id):
         current = Current.objects.get_current_id()
         if current is not None:
-            try:
-                s = self.get(pk=1)
-                seq = [int(x) for x in s.seq.split(',')]
-                if photo_id not in seq:
-                    i = seq.index(current)
-                    seq.insert(i + 1, photo_id)
-                    s.seq = ','.join([str(x) for x in seq])
-                    s.save()
-            except:
-                pass
+            s = self.get(pk=1)
+            seq = [int(x) for x in s.seq.split(',')]
+            if photo_id not in seq:
+                i = seq.index(current)
+                seq.insert(i + 1, photo_id)
+                s.seq = ','.join([str(x) for x in seq])
+                s.save()
 
     def remove_photo(self, photo_id):
         try:
             s = self.get(pk=1)
+        except Sequence.DoesNotExist:
+            pass
+        else:
             seq = [int(x) for x in s.seq.split(',')]
             if photo_id in seq:
                 seq.remove(photo_id)
                 s.seq = ','.join([str(x) for x in seq])
                 s.save()
-        except:
-            pass
 
 
 class Sequence(models.Model):

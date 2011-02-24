@@ -9,15 +9,41 @@ from potd.models import Current
 from potd.models import Sequence
 
 
+IMG_TAG = '<img src="%s" alt="thumbnail" />'
+
+
 class PhotoAdmin(admin.ModelAdmin):
-    exclude = ('thumb', )
+    fields = ('photo', 'caption', 'description', 'user', 'potd_count')
     raw_id_fields = ('user', )
+    list_display = ('__unicode__', 'thumbnail')
+    actions = ('regen_thumbnail', )
 
     class Media:
         js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
+    def thumbnail(self, obj):
+        return IMG_TAG % obj.thumb.url
+    thumbnail.allow_tags = True
+
+    def regen_thumbnail(self, request, qs):
+        """
+        Regenerates the thumbnail for the selected photos.
+        """
+        for photo in qs:
+            photo.generate_thumb()
+            photo.save()
+
+    regen_thumbnail.short_description = "Regenerate thumbs for selected photos"
+
+
 class CurrentAdmin(admin.ModelAdmin):
+    list_display = ('__unicode__', 'thumbnail')
     raw_id_fields = ('potd', )
+
+    def thumbnail(self, obj):
+        return IMG_TAG % obj.potd.thumb.url
+    thumbnail.allow_tags = True
+
 
 admin.site.register(Photo, PhotoAdmin)
 admin.site.register(Current, CurrentAdmin)
