@@ -1,6 +1,7 @@
 """
 import_old_podcasts.py - For importing podcasts from SG101 1.0 as csv files.
 """
+from __future__ import with_statement
 import csv
 import datetime
 
