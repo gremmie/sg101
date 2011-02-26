@@ -62,7 +62,7 @@ class UploadAvatarForm(forms.Form):
         if f is not None:
             if f.size > settings.MAX_AVATAR_SIZE_BYTES:
                 raise forms.ValidationError("Please upload a file smaller than "
-                    "%s bytes." % settings.MAX_AVATAR_SIZE)
+                    "%s bytes." % settings.MAX_AVATAR_SIZE_BYTES)
             try:
                 self.image = parse_image(f)
             except IOError:
