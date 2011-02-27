@@ -71,6 +71,7 @@
       <li><a href="{% url 'haystack_search' %}">Search</a></li>
       <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
    </ul>
+   {% include 'core/social_block.html' %}
    {% cache 300 potd_block %}
       {% photo_of_the_day %}
    {% endcache %}
@@ -78,7 +79,6 @@
    {% cache 60 irc_block %}
       {% irc_status %}
    {% endcache %}
-   {% include 'core/social_block.html' %}
 </div>
 
 <div id="content-primary" class="span-19 last">
