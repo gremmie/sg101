@@ -5,6 +5,7 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
 {% block content %}
+<a name="top" class="intra"></a>
 {% if thread.page == 1 %}
 <h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo; </h2>
 {% else %}
@@ -21,7 +22,10 @@
    <dt><a name="p{{ post.id }}"></a>{{ post.poster }} - {{ post.creation_date|date:"d M Y H:i:s" }}
    <a href="{{ post.get_absolute_url }}" rel="nofollow">
       <img src="{{ STATIC_URL }}icons/link.png" alt="permalink" title="permalink" /></a></dt>
-   <dd>{{ post.msg|linebreaks }}</dd>
+   <dd>
+   {{ post.msg|linebreaks }}
+   <p><a href="#top" class="quiet" title="Goto top of page">Top</a></p>
+   </dd>
    {% endfor %}
 </dl>
 {% include "ygroup/pagination.html" %}

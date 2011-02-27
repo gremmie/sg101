@@ -47,6 +47,7 @@
       </div>
       {% endif %}
       <div class="forum-post-info-tools">
+      <a href="#top" class="quiet" title="Goto the top of the page">Top</a>
       {% if can_reply %}
          <a href="{% url 'forums-new_post' topic_id=post.topic.id %}?quote={{ post.id }}"><img src="{{ STATIC_URL }}icons/comment.png" alt="Reply with quote" title="Reply with quote" /></a>
       {% endif %}

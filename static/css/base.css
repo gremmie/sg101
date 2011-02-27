@@ -405,3 +405,6 @@ div.forum-attachment {
    margin-top: 3px;
    margin-bottom: 3px;
 }
+a.intra {
+ text-decoration: none;
+}
