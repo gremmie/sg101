@@ -408,3 +408,6 @@ div.forum-attachment {
 a.intra {
  text-decoration: none;
 }
+.post-author {
+   font-size: medium;
+}

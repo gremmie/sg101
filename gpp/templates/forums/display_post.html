@@ -4,12 +4,12 @@
 <tr class="forum-post {% cycle 'odd' 'even' %}" id="post-{{ post.id }}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
-      <a href="{% url 'bio-view_profile' username=post.user.username %}" title="View Profile for {{ post.user.username }}">{{ post.user.username }}</a><br />
-      <a href="{% url 'bio-view_profile' username=post.user.username %}">{% avatar post.user %}</a>
+      <a href="{% url 'bio-view_profile' username=post.user.username %}" title="View Profile for {{ post.user.username }}"><span class="post-author">{{ post.user.username }}</span></a><br />
+      <a href="{% url 'bio-view_profile' username=post.user.username %}">{% avatar post.user %}</a><br />
       Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
       Posts: {{ post.user.user_profile.forum_post_count }}<br />
       {% if post.user.user_profile.location %}
-      Location: {{ post.user.user_profile.location }}<br />
+         {{ post.user.user_profile.location }}<br />
       {% endif %}
       {% for bo in post.user.user_profile.badge_ownership %}
          <img src="{{ bo.badge.image.url }}" alt="{{ bo.badge_count_str }}" title="{{ bo.badge_count_str }}" />
