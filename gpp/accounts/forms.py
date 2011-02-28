@@ -17,13 +17,13 @@ from accounts.models import IllegalEmail
 
 class RegisterForm(forms.Form):
     """Form used to register with the website"""
-    username = forms.RegexField(max_length=30, regex = r'^\w+$',
+    username = forms.RegexField(max_length=30, regex=r'^\w+$',
         error_messages={
             'invalid': 'Your username must be 30 characters or less and ' \
                     'contain only letters, numbers and underscores.'})
     email = forms.EmailField()
-    password1 = forms.CharField(label = "Password", widget = forms.PasswordInput)
-    password2 = forms.CharField(label = "Password confirmation", widget = forms.PasswordInput)
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Password confirmation", widget=forms.PasswordInput)
     agree_age = forms.BooleanField(required=True,
         label='I certify that I am over the age of 13',
         error_messages={
@@ -40,6 +40,7 @@ class RegisterForm(forms.Form):
         error_messages={
             'required': 'You have not agreed to our Privacy Policy.',
             })
+    question1 = forms.CharField(label="What number appears in the site name?")
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -85,6 +86,20 @@ class RegisterForm(forms.Form):
         if len(password1) < 6:
             self._validation_error("Please choose a password of 6 characters or more.")
         return password2
+
+    def clean_question1(self):
+        answer = self.cleaned_data.get('question1')
+        success = False
+        if answer:
+            try:
+                val = int(answer)
+            except ValueError:
+                pass
+            else:
+                success = val == 101
+        if not success:
+            self._validation_error("Incorrect answer to our anti-spam question.", answer)
+        return answer
 
     def save(self):
         pending_user = PendingUser.objects.create_pending_user(self.cleaned_data['username'],
