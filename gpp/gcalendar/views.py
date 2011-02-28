@@ -18,7 +18,15 @@ from gcalendar.models import Event
 
 
 def index(request):
+    user = request.user
+    if user.is_authenticated():
+        profile = user.get_profile()
+        tz = profile.time_zone
+    else:
+        tz = 'US/Pacific'
+
     return render_to_response('gcalendar/index.html', {
+        'tz': tz,
         },
         context_instance = RequestContext(request))
 

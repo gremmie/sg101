@@ -3,11 +3,21 @@
 {% block title %}Event Calendar{% endblock %}
 {% block content %}
 <h2>SurfGuitar101 Event Calendar</h2>
-<p>All times are shown in the US/Central time zone. You can add any event on our calendar to your own 
+<p>Welcome to the SG101 event calendar. You can add any event on our calendar to your own 
 <a href="http://www.google.com/googlecalendar/overview.html">Google calendar</a>. If you do, the event
 will be displayed in your time zone, and you can have Google send you email or text message reminders for
 the events. Click on any event below to see more details or copy it to your calendar.</p>
-<iframe src="//www.google.com/calendar/embed?showTitle=0&amp;showTz=0&amp;height=540&amp;wkst=1&amp;bgcolor=%23DFDFDF&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;ctz=America%2FChicago" style=" border:solid 1px #777 " width="720" height="540" frameborder="0" scrolling="no"></iframe>
+{% if user.is_authenticated %}
+<p><strong>Please note:</strong> all times shown are in the <strong>{{ tz }}</strong>
+time zone, which is the time zone preference you have set in your
+<a href="{% url 'bio-me' %}">user profile</a>.
+</p>
+{% else %}
+<p><strong>Please note:</strong> all times shown are in the <strong>{{ tz }}</strong> time zone. Please
+<a href="{% url 'accounts-login' %}">login</a> to view the times based on the time zone set in your profile.</p>
+{% endif %}
+
+<iframe src="//www.google.com/calendar/embed?mode=AGENDA&amp;showTitle=0&amp;showTz=0&amp;height=540&amp;wkst=1&amp;bgcolor=%23DFDFDF&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;ctz={{ tz|urlencode:"" }}" style=" border:solid 1px #777 " width="720" height="540" frameborder="0" scrolling="no"></iframe>
 
 <ul>
 {% if user.is_authenticated %}
