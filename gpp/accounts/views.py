@@ -12,6 +12,7 @@ from django.conf import settings
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
+from accounts import create_new_user
 
 
 #######################################################################
@@ -69,23 +70,8 @@ def register_confirm(request, username, key):
             },
             context_instance = RequestContext(request))
 
-    new_user = User()
+    create_new_user(pending_user, ip)
 
-    new_user.username = pending_user.username
-    new_user.first_name = ''
-    new_user.last_name = ''
-    new_user.email = pending_user.email
-    new_user.password = pending_user.password     # already been hashed
-    new_user.is_staff = False
-    new_user.is_active = True
-    new_user.is_superuser = False
-    new_user.last_login = datetime.datetime.now()
-    new_user.date_joined = new_user.last_login
-
-    new_user.save()
-    pending_user.delete()
-
-    logging.info('Accounts register_confirm [%s]: success: %s', ip, username)
     return render_to_response('accounts/register_success.html', {
         'username': username,
         },

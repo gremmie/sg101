@@ -19,7 +19,7 @@ class RegisterForm(forms.Form):
     """Form used to register with the website"""
     username = forms.RegexField(max_length=30, regex=r'^\w+$',
         error_messages={
-            'invalid': 'Your username must be 30 characters or less and ' \
+            'invalid': 'Your username must be 30 characters or less and '
                     'contain only letters, numbers and underscores.'})
     email = forms.EmailField()
     password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
@@ -27,7 +27,7 @@ class RegisterForm(forms.Form):
     agree_age = forms.BooleanField(required=True,
         label='I certify that I am over the age of 13',
         error_messages={
-            'required': 'Sorry, but you must be over the age of 13 to ' \
+            'required': 'Sorry, but you must be over the age of 13 to '
                     'register at our site.',
             })
     agree_tos = forms.BooleanField(required=True,
@@ -41,6 +41,8 @@ class RegisterForm(forms.Form):
             'required': 'You have not agreed to our Privacy Policy.',
             })
     question1 = forms.CharField(label="What number appears in the site name?")
+    question2 = forms.CharField(label='', required=False,
+        widget=forms.TextInput(attrs={'style': 'display: none;'}))
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -99,6 +101,15 @@ class RegisterForm(forms.Form):
                 success = val == 101
         if not success:
             self._validation_error("Incorrect answer to our anti-spam question.", answer)
+        return answer
+
+    def clean_question2(self):
+        """
+        Honeypot field should be empty.
+        """
+        answer = self.cleaned_data.get('question2')
+        if answer:
+            self._validation_error('Wrong answer #2: %s' % answer)
         return answer
 
     def save(self):

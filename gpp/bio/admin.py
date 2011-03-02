@@ -5,6 +5,9 @@ import datetime
 
 from django.contrib import admin
 
+import django.contrib.auth.models
+import django.contrib.auth.admin
+
 import bio.models
 import bio.badges
 from comments.models import Comment
@@ -26,7 +29,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     date_hierarchy = 'status_date'
     inlines = (BadgeOwnerInline, )
     actions = (
-        'mark_active', 
+        'mark_active',
         'mark_resigned',
         'mark_removed',
         'mark_suspended',
@@ -40,8 +43,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     def mark_user_status(self, request, qs, status):
         """
-        Common code for the admin actions. Updates the status field in the 
-        profiles to 'status'. Updates the status_date.  Sets the is_active 
+        Common code for the admin actions. Updates the status field in the
+        profiles to 'status'. Updates the status_date.  Sets the is_active
         field to True if the status is STA_ACTIVE and False otherwise.
         """
         now = datetime.datetime.now()
@@ -120,14 +123,20 @@ class UserProfileFlagAdmin(admin.ModelAdmin):
     accept_flags.short_description = "Accept selected flagged profiles"
 
 
-
-
-
 class BadgeAdmin(admin.ModelAdmin):
     list_display = ('name', 'html', 'order', 'numeric_id', 'description')
     list_editable = ('order', 'numeric_id')
 
 
+# We like the User admin but would like a date hierarcy on date_joined.
+class UserAdmin(django.contrib.auth.admin.UserAdmin):
+    date_hierarchy = 'date_joined'
+
+
 admin.site.register(bio.models.UserProfile, UserProfileAdmin)
 admin.site.register(bio.models.UserProfileFlag, UserProfileFlagAdmin)
 admin.site.register(bio.models.Badge, BadgeAdmin)
+
+# Unregister existing ModelAdmin for User, then register ours
+admin.site.unregister(django.contrib.auth.models.User)
+admin.site.register(django.contrib.auth.models.User, UserAdmin)
