@@ -181,6 +181,7 @@ def topic_index(request, id):
     users = set(post.user.id for post in page.object_list)
 
     profiles = UserProfile.objects.filter(user__id__in=users).select_related()
+    profile_keys = [profile.id for profile in profiles]
     user_profiles = dict((profile.user.id, profile) for profile in profiles)
 
     for post in page.object_list:
@@ -190,13 +191,13 @@ def topic_index(request, id):
     # Attach badge ownership info to the user profiles to avoid lots
     # of database hits in the template:
     bos_qs = BadgeOwnership.objects.filter(
-            profile__id__in=user_profiles.keys()).select_related()
+            profile__id__in=profile_keys).select_related()
     bos = collections.defaultdict(list)
     for bo in bos_qs:
         bos[bo.profile.id].append(bo)
 
-    for pk, profile in user_profiles.iteritems():
-        profile.badge_ownership = bos[pk]
+    for user_id, profile in user_profiles.iteritems():
+        profile.badge_ownership = bos[profile.id]
 
     # Attach any attachments
     post_ids = [post.pk for post in page.object_list]
