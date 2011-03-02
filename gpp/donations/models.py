@@ -30,7 +30,8 @@ class DonationManager(models.Manager):
 
         qs = self.filter(payment_date__year=year,
                 payment_date__month=month,
-                test_ipn=settings.DONATIONS_DEBUG).select_related('user')
+                test_ipn=settings.DONATIONS_DEBUG).order_by(
+                        'payment_date').select_related('user')
 
         gross = decimal.Decimal()
         net = decimal.Decimal()
