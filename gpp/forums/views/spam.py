@@ -28,7 +28,8 @@ The admin/moderator user %s has just deactivated the account of %s for spam.
 
 def deactivate_spammer(user):
     """This function deactivate's the user, marks them as a spammer, then
-    deletes the user's comments and forum posts.
+    deletes the user's comments and forum posts. The spammer's profile is
+    cleared so any spam links won't show up anymore.
     """
     user.is_active = False
     user.save()
@@ -36,6 +37,11 @@ def deactivate_spammer(user):
     profile = user.get_profile()
     profile.status = bio.models.STA_SPAMMER
     profile.status_date = datetime.datetime.now()
+    profile.location = ''
+    profile.occupation = ''
+    profile.interests = ''
+    profile.profile_text = ''
+    profile.signature = ''
     profile.save()
 
     Comment.objects.filter(user=user).delete()

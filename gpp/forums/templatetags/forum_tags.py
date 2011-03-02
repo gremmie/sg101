@@ -167,7 +167,8 @@ def forum_stats():
     user_count = User.objects.all().count()
 
     if user_count > 0:
-        latest_user = User.objects.values_list('username', flat=True).order_by('-date_joined')[0]
+        latest_user = User.objects.filter(is_active=True).values_list(
+                'username', flat=True).order_by('-date_joined')[0]
     else:
         latest_user = None
 

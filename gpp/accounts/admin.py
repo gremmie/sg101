@@ -19,6 +19,8 @@ class PendingUserAdmin(admin.ModelAdmin):
        for pending_user in qs:
            create_new_user(pending_user, admin_activation=True)
 
+       self.message_user(request, "%s accounts activated" % qs.count())
+
    activate_account.short_description = "Activate accounts for selected users"
 
 

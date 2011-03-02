@@ -52,7 +52,7 @@ def delete_user_posts(user):
             else:
                 forum.last_post = None
             forum.save()
-    
+
     # Delete pending topics now because forums have just adjusted their
     # foreign keys into Post
     if pending_delete:
@@ -63,7 +63,7 @@ def delete_user_posts(user):
         for forum in forums:
             forum.topic_count = Topic.objects.filter(forum=forum).count()
             forum.save()
-            
+
     # All foreign keys are accounted for, we can now delete the posts in bulk.
     # Since some posts in our original queryset may have been deleted already,
     # run a new query (although it may be ok)

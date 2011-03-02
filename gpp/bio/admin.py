@@ -98,6 +98,12 @@ class UserProfileAdmin(admin.ModelAdmin):
         for profile in qs:
             Comment.objects.filter(user=profile.user).delete()
             delete_user_posts(profile.user)
+            profile.location = ''
+            profile.occupation = ''
+            profile.interests = ''
+            profile.profile_text = ''
+            profile.signature = ''
+            profile.save()
     mark_spammer.short_description = "Mark selected users as spammers"
 
     def mark_stranger(self, request, qs):
