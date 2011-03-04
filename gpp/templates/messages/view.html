@@ -5,8 +5,10 @@
 <h3>Viewing Message: {{ msg.subject }}</h3>
 <table class="message-header">
    <tr><th>Subject:</th><td>{{ msg.subject }}</td></tr>
-   <tr><th>From:</th><td>{{ msg.sender }}</td></tr>
-   <tr><th>To:</th><td>{{ msg.receiver }}</td></tr>
+   <tr><th>From:</th><td><a href="{% url 'bio-view_profile' username=msg.sender.username %}">
+            {{ msg.sender }}</a></td></tr>
+   <tr><th>To:</th><td><a href="{% url 'bio-view_profile' username=msg.receiver.username %}">
+            {{ msg.receiver }}</a></td></tr>
    <tr><th>Date Sent:</th><td>{{ msg.send_date|date:"F d, Y g:i:s A T" }}</td></tr>
    <tr><th>Date Received:</th>
       <td>{% if msg.unread %}<em>Unread</em>{% else %}{{ msg.read_date|date:"F d, Y g:i:s A T" }}{% endif %}</td></tr>
