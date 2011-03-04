@@ -19,7 +19,7 @@ class Markdown(object):
         # exists only in markdown v1.6.2rc-2 or above.
         self.unicode_support = getattr(_markdown, "version_info", None) >= (1, 7)
         self.md = _markdown.Markdown(safe_mode=safe_mode,
-                                extensions=['urlize', 'nl2br'])
+                                extensions=['urlize', 'nl2br', 'del'])
 
     def convert(self, s):
         if self.unicode_support:
