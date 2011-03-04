@@ -358,6 +358,11 @@ table.forum-topic-table .info {
 #forum-query-form {
    text-align:right;
 }
+#forum-jumpbox-form {
+   text-align:right;
+   margin-top:0.5em;
+   margin-bottom:0.5em;
+}
 #forums-post-list dt {
    margin-top: 0.5em;
    padding: 3px 0 3px 0;

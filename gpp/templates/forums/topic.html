@@ -2,7 +2,10 @@
 {% load url from future %}
 {% load forum_tags %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
-{% block custom_js %}{{ form.media }}{% endblock %}
+{% block custom_js %}
+   {{ form.media }}
+   {% include "forums/jump_box.js" %}
+{% endblock %}
 {% block content %}
 {% forum_navigation topic %}
 
@@ -30,6 +33,7 @@
 {% endfor %}
 </table>
 {{ page_nav }}
+{% include 'forums/jump_box.html' %}
 {% if can_moderate %}
 <div class="forum-mod-controls">
    <form action="{% url 'forums-mod_topic_stick' topic.id %}" method="post">{% csrf_token %}
