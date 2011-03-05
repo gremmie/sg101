@@ -1,7 +1,7 @@
-'''
+"""
 Models for the Polls application.
-'''
 
+"""
 import datetime
 from django.db import models
 from django.db.models import Q
@@ -30,7 +30,7 @@ class Poll(models.Model):
    start_date = models.DateTimeField(db_index=True,
          help_text='Date/time the poll will be eligible for voting.',)
    end_date = models.DateTimeField(blank=True, null=True, db_index=True,
-         help_text='Date/time the poll will be ineligible for voting. '\
+         help_text='Date/time the poll will be ineligible for voting. '
             'Leave blank for an open ended poll.')
    is_enabled = models.BooleanField(default=True, db_index=True,
          help_text='Check to allow the poll to be viewed on the site.')

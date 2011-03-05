@@ -8,6 +8,7 @@
 {% load potd_tags %}
 {% load messages_tags %}
 {% load script_tags %}
+{% load poll_tags %}
 {% load cache %}
 <head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
 <meta http-equiv="Content-Type" content="text/html" />
@@ -80,6 +81,7 @@
    {% cache 60 irc_block %}
       {% irc_status %}
    {% endcache %}
+   {% latest_poll_block %}
    {% include 'core/mp3comp_block.html' %}
 </div>
 

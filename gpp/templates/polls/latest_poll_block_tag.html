@@ -1,0 +1,15 @@
+{% extends 'side_block.html' %}
+{% load url from future %}
+{% block block_title %}Current Polls{% endblock %}
+{% block block_content %}
+{% if polls %}
+<ul>
+   {% for poll in polls %}
+   <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a></li>
+   {% endfor %}
+</ul>
+{% else %}
+<p class="centered">No polls at this time. Check out our
+<a href="{% url 'polls-main' %}">past polls</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,5 +1,5 @@
 """
-Template tags for the Polls application. 
+Template tags for the Polls application.
 """
 from django import template
 
@@ -15,4 +15,10 @@ def latest_poll():
     except IndexError:
         poll = None
 
-    return {'poll': poll }
+    return {'poll': poll}
+
+
+@register.inclusion_tag("polls/latest_poll_block_tag.html")
+def latest_poll_block():
+    polls = Poll.objects.get_current_polls()
+    return {'polls': polls}
