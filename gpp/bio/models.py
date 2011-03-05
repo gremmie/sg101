@@ -126,6 +126,18 @@ class UserProfile(models.Model):
     user_is_active.boolean = True
     user_is_active.short_description = "Is Active"
 
+    def reset_text_fields(self):
+        """
+        Reset profile text fields to empty defaults.
+        This function is useful when a spammer is identified.
+
+        """
+        self.location = ''
+        self.occupation = ''
+        self.interests = ''
+        self.profile_text = ''
+        self.signature = ''
+
     def search_title(self):
         full_name = self.user.get_full_name()
         if full_name:

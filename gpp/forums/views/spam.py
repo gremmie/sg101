@@ -37,11 +37,7 @@ def deactivate_spammer(user):
     profile = user.get_profile()
     profile.status = bio.models.STA_SPAMMER
     profile.status_date = datetime.datetime.now()
-    profile.location = ''
-    profile.occupation = ''
-    profile.interests = ''
-    profile.profile_text = ''
-    profile.signature = ''
+    profile.reset_text_fields()
     profile.save()
 
     Comment.objects.filter(user=user).delete()
