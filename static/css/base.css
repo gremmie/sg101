@@ -416,3 +416,6 @@ a.intra {
 .post-author {
    font-size: medium;
 }
+.centered {
+   text-align: center;
+}

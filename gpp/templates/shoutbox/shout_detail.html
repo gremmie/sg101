@@ -2,7 +2,7 @@
 {% load avatar_tags %}
 <tr>
 <th>
-<a href="{% url 'bio-view_profile' username=shout.user.username %}">{% avatar shout.user %}</a>
+<a href="{% url 'bio-view_profile' username=shout.user.username %}">{% avatar shout.user %}</a><br />
 <a href="{% url 'bio-view_profile' username=shout.user.username %}">{{ shout.user.username }}</a>
 </th>
 <td>
