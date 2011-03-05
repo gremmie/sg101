@@ -81,7 +81,9 @@
    {% cache 60 irc_block %}
       {% irc_status %}
    {% endcache %}
-   {% latest_poll_block %}
+   {% cache 3600 poll_block %}
+      {% latest_poll_block %}
+   {% endcache %}
    {% include 'core/mp3comp_block.html' %}
 </div>
 
