@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 import django.utils.simplejson as json
+from django.conf import settings
 
 from oembed.models import Provider
 from oembed.models import Oembed
@@ -41,7 +42,10 @@ def fetch_media(request):
     for provider in providers:
         if re.match(provider.url_regex, url):
             try:
-                data = get_oembed(provider.api_endpoint, url)
+                data = get_oembed(provider.api_endpoint,
+                        url,
+                        maxwidth=settings.OEMBED_MAXWIDTH,
+                        maxheight=settings.OEMBED_MAXHEIGHT)
             except IOError, e:
                 return HttpResponseBadRequest(
                     "Sorry, we could not retrieve your video (%s)" % e)

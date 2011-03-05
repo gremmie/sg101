@@ -31,7 +31,7 @@ def get_oembed(api_endpoint, url, format='json', **opts):
     api_url = "%s?%s" % (api_endpoint, urllib.urlencode(opts))
 
     headers = {
-        'User-Agent': USER_AGENT, 
+        'User-Agent': USER_AGENT,
         'Accept-Encoding': 'gzip',
     }
     request = urllib2.Request(api_url, headers=headers)
@@ -43,15 +43,15 @@ def get_oembed(api_endpoint, url, format='json', **opts):
     f.close()
 
     if headers.get('content-encoding') == 'gzip':
-        with gzip.GzipFile(fileobj=StringIO(result)) as f:
-            result = f.read()
+        f = gzip.GzipFile(fileobj=StringIO(result))
+        result = f.read()
+        f.close()
 
     return json.loads(result)
 
 if __name__ == "__main__":
     try:
         print get_oembed("http://www.youtube.com/oembed",
-                #"http://www.youtube.com/watch?v=7_IMzJldOf4")
-                "http://www.youtube.com/watch?v=99999999999")
+                "http://www.youtube.com/watch?v=7_IMzJldOf4")
     except urllib2.HTTPError, e:
         print e

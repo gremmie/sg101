@@ -247,6 +247,10 @@ DONATIONS_ITEM_ANON_NUM = '501'     # donation listed as anonymous
 
 MAILER_ENQUEUE_MAIL = True
 
+# Oembed settings
+OEMBED_MAXWIDTH = 480
+OEMBED_MAXHEIGHT = 295
+
 #######################################################################
 # Configure Logging
 #######################################################################
