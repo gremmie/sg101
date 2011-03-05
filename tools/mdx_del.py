@@ -6,7 +6,7 @@ The Markdown syntax is --this is deleted text--.
 import markdown
 
 
-DEL_RE = r'(--)(.*?)--'
+DEL_RE = r'(---)(.*?)---'
 
 class DelExtension(markdown.Extension):
 

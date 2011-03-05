@@ -20,7 +20,7 @@ mySettings = {
 	markupSet: [
 		{name:'Bold', key:'B', openWith:'**', closeWith:'**'},
 		{name:'Italic', key:'I', openWith:'_', closeWith:'_'},
-		{name:'Strike', key:'S', openWith:'--', closeWith:'--'},
+		{name:'Strike', key:'S', openWith:'---', closeWith:'---'},
 		{separator:'---------------' },
 		{name:'Bulleted List', openWith:'- ' },
 		{name:'Numeric List', openWith:function(markItUp) {
