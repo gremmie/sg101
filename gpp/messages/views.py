@@ -1,6 +1,8 @@
 """Views for the messages application"""
 
+import collections
 import datetime
+
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponseRedirect
@@ -25,6 +27,8 @@ BOX_MAP = {
     'trash': 'messages-trash',
 }
 
+MSG_DELETED, MSG_TRASHED, MSG_ERROR = range(3)
+
 
 def box_redirect(request):
     """
@@ -48,7 +52,7 @@ def inbox(request):
     msgs = Message.objects.inbox(request.user)
     return render_to_response('messages/inbox.html', {
         'msgs': msgs,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 
@@ -58,7 +62,7 @@ def outbox(request):
     msgs = Message.objects.outbox(request.user)
     return render_to_response('messages/outbox.html', {
         'msgs': msgs,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 
@@ -68,7 +72,7 @@ def trash(request):
     msgs = Message.objects.trash(request.user)
     return render_to_response('messages/trash.html', {
         'msgs': msgs,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 
@@ -92,7 +96,7 @@ def view(request, msg_id):
         'box': box,
         'msg': msg,
         'is_deleted': msg.is_deleted(request.user),
-        }, 
+        },
         context_instance = RequestContext(request))
 
 
@@ -130,7 +134,7 @@ def reply(request, msg_id):
 
     return render_to_response('messages/compose.html', {
         'compose_form': compose_form,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 
@@ -159,8 +163,47 @@ def compose(request, receiver=None):
 
     return render_to_response('messages/compose.html', {
         'compose_form': compose_form,
-        }, 
+        },
         context_instance = RequestContext(request))
+
+
+def _delete_message(user, msg):
+    """
+    Deletes a given message. The user must be either the sender or
+    receiver for this to succeed.
+    If both parties have deleted the message, it is deleted from the
+    database. If only one party has deleted the message, the message
+    is just sent to the trash.
+
+    Returns MSG_DELETED, MSG_TRASHED, or MSG_ERROR to indicate what
+    action was performed.
+
+    """
+    if msg.sender == user:
+        if (msg.receiver_delete_date is not None or
+                msg.read_date is None):
+            # Both parties deleted the message or receiver hasn't read it yet,
+            # we can delete it now
+            msg.delete()
+            return MSG_DELETED
+        else:
+            # receiver still has it in inbox
+            msg.sender_delete_date = datetime.datetime.now()
+            msg.save()
+            return MSG_TRASHED
+
+    elif msg.receiver == user:
+        if msg.sender_delete_date is not None:
+            # both parties deleted the message, we can delete it now
+            msg.delete()
+            return MSG_DELETED
+        else:
+            # sender still has it in the outbox
+            msg.receiver_delete_date = datetime.datetime.now()
+            msg.save()
+            return MSG_TRASHED
+
+    return MSG_ERROR
 
 
 @login_required
@@ -171,14 +214,13 @@ def delete(request, msg_id):
     receiver for this to succeed.
     """
     msg = get_object_or_404(Message, pk=msg_id)
-    if msg.sender == request.user:
-        msg.sender_delete_date = datetime.datetime.now()
-    elif msg.receiver == request.user:
-        msg.receiver_delete_date = datetime.datetime.now()
+    result = _delete_message(request.user, msg)
+    if result == MSG_DELETED:
+        messages.success(request, 'Message deleted.')
+    elif result == MSG_TRASHED:
+        messages.success(request, 'Message sent to trash.')
     else:
-        raise Http404
-    msg.save()
-    messages.success(request, 'Message sent to trash.')
+        messages.error(request, 'Error deleting message.')
 
     return box_redirect(request)
 
@@ -196,16 +238,20 @@ def delete_bulk(request):
             delete_ids = [int(id) for id in delete_ids]
         except ValueError:
             raise Http404
-        msgs = Message.objects.filter(id__in = delete_ids)
-        now = datetime.datetime.now()
+
+        msgs = Message.objects.filter(id__in=delete_ids)
+
+        counts = collections.defaultdict(int)
         for msg in msgs:
-            if msg.sender == request.user:
-                msg.sender_delete_date = now
-                msg.save()
-            elif msg.receiver == request.user:
-                msg.receiver_delete_date = now
-                msg.save()
-        messages.success(request, 'Messages sent to the trash.')
+            result = _delete_message(request.user, msg)
+            counts[result] += 1
+
+        if counts[MSG_DELETED]:
+            messages.success(request, 'Messages deleted: %d' % counts[MSG_DELETED])
+        if counts[MSG_TRASHED]:
+            messages.success(request, 'Messages sent to trash: %d' % counts[MSG_TRASHED])
+        if counts[MSG_ERROR]:
+            messages.error(request, 'Message errors: %d' % counts[MSG_ERROR])
 
     return box_redirect(request)
 
@@ -282,6 +328,6 @@ def options(request):
 
     return render_to_response('messages/options.html', {
         'form': form,
-        }, 
+        },
         context_instance = RequestContext(request))
 
