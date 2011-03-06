@@ -4,7 +4,9 @@ Forums, topics, and posts are displayed with a visual indication if they have
 been read or not.
 """
 import datetime
+import logging
 
+from django.db import IntegrityError
 from django.db.models import Q
 
 from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
@@ -44,7 +46,14 @@ def get_forum_unread_status(qs, user):
             flv = ForumLastVisit(user=user, forum=forum)
             flv.begin_date = now
             flv.end_date = now
-            flv.save()
+
+            # There is a race condition and sometimes another thread
+            # saves a record before we do; just log this if it happens.
+            try:
+                flv.save()
+            except IntegrityError:
+                logging.exception('get_forum_unread_status')
+
             forum.has_unread = False
             continue
 
@@ -127,7 +136,14 @@ def get_topic_unread_status(forum, topics, user):
         flv = ForumLastVisit(user=user, forum=forum)
         flv.begin_date = now
         flv.end_date = now
-        flv.save()
+
+        # There is a race condition and sometimes another thread
+        # saves a record before we do; just log this if it happens.
+        try:
+            flv.save()
+        except IntegrityError:
+            logging.exception('get_topic_unread_status')
+
         for topic in topics:
             topic.has_unread = False
         return

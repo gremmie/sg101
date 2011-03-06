@@ -1,6 +1,8 @@
 """Common middleware for the entire project."""
 import datetime
+import logging
 
+from django.db import IntegrityError
 from django.contrib.auth import logout
 from django.conf import settings
 
@@ -73,7 +75,13 @@ class WhosOnline(object):
                             alv = AnonLastVisit(ip=ip)
 
                         alv.last_visit = datetime.datetime.now()
-                        alv.save()
+
+                        # There is a race condition and sometimes another thread
+                        # saves a record before we do; just log this if it happens.
+                        try:
+                            alv.save()
+                        except IntegrityError:
+                            logging.exception('WhosOnline.process_response')
 
                         # set a cookie to expire in 10 minutes or so
                         response.set_cookie(ONLINE_COOKIE, '1', max_age=ONLINE_TIMEOUT)
