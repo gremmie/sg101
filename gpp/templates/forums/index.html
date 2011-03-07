@@ -31,7 +31,7 @@
             <tr class="{% cycle 'odd' 'even' %}">
                <td>
                   {% if forum.has_unread %}
-                  <img src="{{ STATIC_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" />
+                  <a href="{{ forum.get_absolute_url }}"><img src="{{ STATIC_URL }}icons/new.png" alt="New Posts" title="New Posts" class="forums-topic-icon" /></a>
                   {% endif %}
                   <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
                   <p>{{ forum.description }}</p>

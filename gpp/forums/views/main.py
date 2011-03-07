@@ -242,6 +242,32 @@ def topic_index(request, id):
         context_instance=RequestContext(request))
 
 
+def topic_unread(request, id):
+    """
+    This view redirects to the first post the user hasn't read, if we can
+    figure that out. Otherwise we redirect to the topic.
+
+    """
+    topic_url = reverse('forums-topic_index', kwargs={'id': id})
+
+    if request.user.is_authenticated():
+        try:
+            tlv = TopicLastVisit.objects.get(user=request.user, topic=id)
+        except TopicLastVisit.DoesNotExist:
+            return HttpResponseRedirect(topic_url)
+
+        posts = Post.objects.filter(topic=id, creation_date__gt=tlv.last_visit)
+        if posts:
+            return _goto_post(posts[0])
+        else:
+            # just go to the last post in the topic
+            topic = get_object_or_404(Topic.objects.select_related('last_post'), pk=id)
+            return _goto_post(topic.last_post)
+
+    # user isn't authenticated, just go to the topic
+    return HttpResponseRedirect(topic_url)
+
+
 @login_required
 def new_topic(request, slug):
     """
@@ -320,6 +346,19 @@ def quick_reply_ajax(request):
     return HttpResponseBadRequest("Oops, did you forget some text?");
 
 
+def _goto_post(post):
+    """
+    Calculate what page the given post is on in its parent topic, then
+    return a redirect to it.
+
+    """
+    count = post.topic.posts.filter(creation_date__lt=post.creation_date).count()
+    page = count / POSTS_PER_PAGE + 1
+    url = (reverse('forums-topic_index', kwargs={'id': post.topic.id}) +
+        '?page=%s#p%s' % (page, post.id))
+    return HttpResponseRedirect(url)
+
+
 def goto_post(request, post_id):
     """
     This function calculates what page a given post is on, then redirects
@@ -327,11 +366,7 @@ def goto_post(request, post_id):
     Post objects.
     """
     post = get_object_or_404(Post.objects.select_related(), pk=post_id)
-    count = post.topic.posts.filter(creation_date__lt=post.creation_date).count()
-    page = count / POSTS_PER_PAGE + 1
-    url = reverse('forums-topic_index', kwargs={'id': post.topic.id}) + \
-        '?page=%s#p%s' % (page, post.id)
-    return HttpResponseRedirect(url)
+    return _goto_post(post)
 
 
 @require_POST
@@ -768,6 +803,7 @@ def unread_topics(request):
         'title': 'Topics With Unread Posts',
         'page': page,
         'page_nav': page_nav,
+        'unread': True,
         },
         context_instance=RequestContext(request))
 
@@ -796,6 +832,7 @@ def unanswered_topics(request):
         'title': 'Unanswered Topics',
         'page': page,
         'page_nav': page_nav,
+        'unread': False,
         },
         context_instance=RequestContext(request))
 

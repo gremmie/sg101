@@ -27,7 +27,7 @@
          </td>
          <td class="col-1">
             {% topic_icons topic %}
-            <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4>
+            <h4>{% if unread %}<a href="{% url 'forums-topic_unread' id=topic.id %}">{% else %}<a href="{{ topic.get_absolute_url }}">{% endif %}{{ topic.name }}</a></h4>
             {% if topic.page_range %}
                {% topic_page_range topic %}
             {% endif %}
