@@ -29,7 +29,8 @@
 
 <table class="forum-topic" id="forum-topic">
 {% for post in page.object_list %}
-{% include 'forums/display_post.html' %}
+   <!-- {% cycle 'odd' 'even' as rowcolors %} -->
+   {% include 'forums/display_post.html' %}
 {% endfor %}
 </table>
 {{ page_nav }}
