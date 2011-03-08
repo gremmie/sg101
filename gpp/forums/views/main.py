@@ -251,17 +251,25 @@ def topic_unread(request, id):
     topic_url = reverse('forums-topic_index', kwargs={'id': id})
 
     if request.user.is_authenticated():
+        topic = get_object_or_404(Topic.objects.select_related(depth=1), pk=id)
         try:
-            tlv = TopicLastVisit.objects.get(user=request.user, topic=id)
+            tlv = TopicLastVisit.objects.get(user=request.user, topic=topic)
         except TopicLastVisit.DoesNotExist:
-            return HttpResponseRedirect(topic_url)
+            try:
+                flv = ForumLastVisit.objects.get(user=request.user,
+                        forum=topic.forum)
+            except ForumLastVisit.DoesNotExist:
+                return HttpResponseRedirect(topic_url)
+            else:
+                last_visit = flv.begin_date
+        else:
+            last_visit = tlv.last_visit
 
-        posts = Post.objects.filter(topic=id, creation_date__gt=tlv.last_visit)
+        posts = Post.objects.filter(topic=topic, creation_date__gt=last_visit)
         if posts:
             return _goto_post(posts[0])
         else:
             # just go to the last post in the topic
-            topic = get_object_or_404(Topic.objects.select_related('last_post'), pk=id)
             return _goto_post(topic.last_post)
 
     # user isn't authenticated, just go to the topic
