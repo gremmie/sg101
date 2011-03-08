@@ -420,3 +420,10 @@ a.intra {
    text-align: center;
 }
 .success {background:#99ff99;color:#264409;border-color:#339933;}
+
+tr.forum-post.even td {
+ background-color: #E0F2F6;
+}
+tr.forum-post.odd td {
+ background-color: #EDF7F6;
+}
