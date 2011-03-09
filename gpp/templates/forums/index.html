@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load url from future %}
 {% load cache %}
 {% load forum_tags %}
 {% load core_tags %}
@@ -44,6 +45,10 @@
       </tbody>
    </table>
 {% endfor %}
+<form action="{% url 'forums-catchup_all' %}" method="post">{% csrf_token %}
+   <input type="submit" value="Mark All Forums Read" />
+</form>
+<br />
 {% cache 900 forum-stats-block %}
 {% forum_stats %}
 {% endcache %}

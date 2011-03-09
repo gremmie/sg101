@@ -5,6 +5,7 @@ from django.conf.urls.defaults import *
 
 urlpatterns = patterns('forums.views.main',
     url(r'^$', 'index', name='forums-index'),
+    url(r'^catchup/$', 'catchup_all', name='forums-catchup_all'),
     url(r'^new-topic-success/(?P<tid>\d+)$', 'new_topic_thanks', name='forums-new_topic_thanks'),
     url(r'^topic/(?P<id>\d+)/$', 'topic_index', name='forums-topic_index'),
     url(r'^topic/(?P<id>\d+)/unread/$', 'topic_unread', name='forums-topic_unread'),
