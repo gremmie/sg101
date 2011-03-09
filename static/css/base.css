@@ -427,3 +427,6 @@ tr.forum-post.even td {
 tr.forum-post.odd td {
  background-color: #EDF7F6;
 }
+.solid-background {
+ background-color: #EDF7F6;
+}
