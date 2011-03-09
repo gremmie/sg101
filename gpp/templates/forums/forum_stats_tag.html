@@ -1,6 +1,7 @@
 {% load url from future %}
+{% load humanize %}
 <div id="forum-stats">
-Our <strong>{{ user_count }}</strong> users have posted a total of <strong>{{ post_count }}</strong> posts.<br />
+Our <strong>{{ user_count|intcomma }}</strong> users have posted a total of <strong>{{ post_count|intcomma }}</strong> posts.<br />
 The newest registered user is <a href="{% url 'bio-view_profile' username=latest_user %}">{{ latest_user }}</a>.
 {% if stats %}
 <br />
