@@ -22,8 +22,11 @@ $(document).ready(function() {
          dataType: 'html',
          success: function (data, textStatus) {
             postText.val('');
-            $('#forum-topic tr:last').after(data);
             var lastTr = $('#forum-topic tr:last');
+            var newClass = lastTr.hasClass('odd') ? 'even' : 'odd';
+            lastTr.after(data);
+            lastTr = $('#forum-topic tr:last');
+            lastTr.addClass(newClass);
             lastTr.hide();
             lastTr.fadeIn(3000);
             postButton.removeAttr('disabled').val('Submit Reply');
