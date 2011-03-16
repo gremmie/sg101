@@ -54,6 +54,14 @@
    {% endfor %}
    </tbody>
 </table>
+
+{% if unread and page.object_list %}
+<form action="{% url 'forums-catchup_all' %}" method="post">{% csrf_token %}
+   <input type="submit" value="Mark All Forums Read" />
+</form>
+<br />
+
+{% endif %}
 {{ page_nav }}
 </div>
 {% endblock %}

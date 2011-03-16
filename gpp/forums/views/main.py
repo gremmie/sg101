@@ -744,27 +744,14 @@ def catchup_all(request):
     """
     This view marks all forums as being read.
     """
-    forums = Forum.objects.forums_for_user(request.user)
-    forum_dict = dict((forum.id, forum) for forum in forums)
-    forum_ids = forum_dict.keys()
+    forum_ids = Forum.objects.forum_ids_for_user(request.user)
 
     tlvs = TopicLastVisit.objects.filter(user=request.user,
             topic__forum__id__in=forum_ids).delete()
 
-    flvs = ForumLastVisit.objects.filter(user=request.user,
-            forum__id__in=forum_ids).select_related('forum')
-
-    flv_dict = dict((flv.forum.id, flv) for flv in flvs)
-
     now = datetime.datetime.now()
-    for forum in forums:
-        flv = flv_dict.get(forum.id)
-        if flv is None:
-            flv = ForumLastVisit(user=request.user, forum=forum)
-
-        flv.begin_date = now
-        flv.end_date = now
-        flv.save()
+    ForumLastVisit.objects.filter(user=request.user,
+            forum__in=forum_ids).update(begin_date=now, end_date=now)
 
     return HttpResponseRedirect(reverse('forums-index'))
 
