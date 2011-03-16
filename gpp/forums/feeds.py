@@ -12,7 +12,7 @@ from core.functions import copyright_str
 class ForumsFeed(Feed):
     """The Feed class for a specific forum"""
 
-    ttl = '720'
+    ttl = '60'
     author_name = 'Brian Neal'
     author_email = 'admin@surfguitar101.com'
 
@@ -59,7 +59,7 @@ class ForumsFeed(Feed):
                     topic__forum__in=Forum.objects.public_forums())
         else:
             items = Post.objects.filter(topic__forum__id=obj.id)
-        return items.order_by('-creation_date').select_related()[:10]
+        return items.order_by('-creation_date').select_related()[:30]
 
     def item_title(self, item):
         return item.topic.name
