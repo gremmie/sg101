@@ -47,10 +47,9 @@ def manage_favorites(request):
             for topic in user.favorite_topics.filter(id__in=delete_ids):
                 user.favorite_topics.remove(topic)
 
-        page_num = request.POST.get('page', 1)
-    else:
-        page_num = request.GET.get('page', 1)
+        return HttpResponseRedirect(reverse("forums-manage_favorites"))
 
+    page_num = request.GET.get('page', 1)
     topics = user.favorite_topics.select_related().order_by('-update_date')
     paginator = DiggPaginator(topics, 20, body=5, tail=2, margin=3, padding=2)
     try:

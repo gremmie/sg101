@@ -94,7 +94,7 @@ def unsubscribe_topic(request, topic_id):
     topic = get_object_or_404(Topic, id=topic_id)
     try:
         sub = Subscription.objects.get(topic=topic, user=request.user)
-    except Subscriptions.DoesNotExist:
+    except Subscription.DoesNotExist:
         pass
     else:
         sub.delete()
@@ -121,20 +121,19 @@ def manage_subscriptions(request):
     user = request.user
     if request.method == "POST":
         if request.POST.get('delete_all'):
-            user.subscriptions.clear()
+            Subscription.objects.filter(user=user).delete()
         else:
             delete_ids = request.POST.getlist('delete_ids')
             try:
                 delete_ids = [int(id) for id in delete_ids]
             except ValueError:
                 raise Http404
-            for topic in user.subscriptions.filter(id__in=delete_ids):
-                user.subscriptions.remove(topic)
 
-        page_num = request.POST.get('page', 1)
-    else:
-        page_num = request.GET.get('page', 1)
+            Subscription.objects.filter(user=user, topic__in=delete_ids).delete()
 
+        return HttpResponseRedirect(reverse("forums-manage_subscriptions"))
+
+    page_num = request.GET.get('page', 1)
     topics = user.subscriptions.select_related().order_by('-update_date')
     paginator = DiggPaginator(topics, 20, body=5, tail=2, margin=3, padding=2)
     try:
