@@ -183,7 +183,7 @@ class Topic(models.Model):
     sticky = models.BooleanField(blank=True, default=False)
     locked = models.BooleanField(blank=True, default=False)
     subscribers = models.ManyToManyField(User, related_name='subscriptions',
-            verbose_name='subscribers', blank=True, through='Subscription')
+            verbose_name='subscribers', blank=True)
     bookmarkers = models.ManyToManyField(User, related_name='favorite_topics',
             verbose_name='bookmarkers', blank=True)
 
@@ -392,12 +392,3 @@ class Attachment(models.Model):
     def __unicode__(self):
         return u'Post %d, %s' % (self.post.pk, self.embed.title)
 
-
-class Subscription(models.Model):
-    """
-    This model is a "through" table for the M2M relationshiop between forum
-    topics and users (subscribers).
-    """
-    topic = models.ForeignKey(Topic)
-    user = models.ForeignKey(User)
-    notify_date = models.DateTimeField(null=True)
