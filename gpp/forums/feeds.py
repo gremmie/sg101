@@ -60,22 +60,21 @@ class ForumsFeed(Feed):
             # items = Post.objects.filter(
             #         topic__forum__in=Forum.objects.public_forums())
             #
-            # The where clause in the generated SQL looked like this:
-            #   WHERE `forums_topic`.`forum_id` IN ( ... )
-            # This was terrible for performance. This does much better:
-            #   WHERE `forums_topic`.`id` IN ( ... )
-            #
-            # So we use Django's .extra() to force the above.
+            # For some reason, MySQL wasn't using an index when "in" was used.
+            # So let's do this the hard way as a work-around:
 
             public_forum_ids = Forum.objects.public_forum_ids()
-            ids = ','.join(str(pub) for pub in public_forum_ids)
+            posts = []
+            for forum_id in public_forum_ids:
+                posts.extend(list(Post.objects.filter(
+                    topic__forum__id=forum_id).order_by('-creation_date').select_related(depth=2)[:30]))
 
-            items = Post.objects.extra(
-                where=['forums_topic.id in (%s)' % ids])
+            posts.sort(key=lambda x: x.creation_date, reverse=True)
+            return posts[:30]
 
         else:
-            items = Post.objects.filter(topic__forum__id=obj.id)
-        return items.order_by('-creation_date').select_related(depth=2)[:30]
+            return Post.objects.filter(topic__forum__id=obj.id).order_by(
+                    '-creation_date').select_related(depth=2)[:30]
 
     def item_title(self, item):
         return item.topic.name
