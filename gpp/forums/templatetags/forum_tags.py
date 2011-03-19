@@ -138,14 +138,9 @@ def new_posts(context):
     This tag displays the topics that have the newest posts.
     Only the "public" forums are displayed.
     """
-    public_forums = cache.get('public_forum_ids')
-    if public_forums is None:
-        public_forums = list(Forum.objects.filter(
-            category__groups__isnull=True).values_list('id', flat=True))
-        cache.set('public_forum_ids', public_forums, 10 * 60)
-
-    topics = Topic.objects.filter(forum__in=public_forums).select_related(
-                    'user', 'last_post').order_by('-update_date')[:10]
+    public_forum_ids = Forum.objects.public_forum_ids()
+    topics = Topic.objects.filter(forum__in=public_forum_ids).select_related(
+                'last_post', 'last_post__user').order_by('-update_date')[:10]
 
     return {
         'topics': topics,

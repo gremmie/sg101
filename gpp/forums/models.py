@@ -6,6 +6,7 @@ import datetime
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
+from django.core.cache import cache
 
 from core.markup import site_markup
 from oembed.models import Oembed
@@ -70,6 +71,18 @@ class ForumManager(models.Manager):
     def public_forums(self):
         """Returns a queryset containing the public forums."""
         return self.filter(category__groups__isnull=True)
+
+    def public_forum_ids(self):
+        """
+        Returns a list of ids for the public forums; the list is cached for
+        performance.
+        """
+        public_forums = cache.get('public_forum_ids')
+        if public_forums is None:
+            public_forums = list(self.filter(
+                category__groups__isnull=True).values_list('id', flat=True))
+            cache.set('public_forum_ids', public_forums, 3600)
+        return public_forums
 
     def _for_user(self, user):
         """Common code for the xxx_for_user() methods."""

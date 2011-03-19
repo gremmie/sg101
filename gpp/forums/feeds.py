@@ -20,7 +20,7 @@ class ForumsFeed(Feed):
         # only return public forums
         if forum_slug:
             forum = get_object_or_404(Forum, slug=forum_slug)
-            if forum.category.groups.count() > 0:
+            if forum.id not in Forum.objects.public_forum_ids():
                 raise ObjectDoesNotExist
             return forum
 
@@ -55,11 +55,27 @@ class ForumsFeed(Feed):
     def items(self, obj):
         if obj is None:
             # return a combined feed of public forum threads
-            items = Post.objects.filter(
-                    topic__forum__in=Forum.objects.public_forums())
+            #
+            # This didn't work real well on InnoDb:
+            # items = Post.objects.filter(
+            #         topic__forum__in=Forum.objects.public_forums())
+            #
+            # The where clause in the generated SQL looked like this:
+            #   WHERE `forums_topic`.`forum_id` IN ( ... )
+            # This was terrible for performance. This does much better:
+            #   WHERE `forums_topic`.`id` IN ( ... )
+            #
+            # So we use Django's .extra() to force the above.
+
+            public_forum_ids = Forum.objects.public_forum_ids()
+            ids = ','.join(str(pub) for pub in public_forum_ids)
+
+            items = Post.objects.extra(
+                where=['forums_topic.id in (%s)' % ids])
+
         else:
             items = Post.objects.filter(topic__forum__id=obj.id)
-        return items.order_by('-creation_date').select_related()[:30]
+        return items.order_by('-creation_date').select_related(depth=2)[:30]
 
     def item_title(self, item):
         return item.topic.name
