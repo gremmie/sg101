@@ -41,8 +41,8 @@ class EventAdmin(admin.ModelAdmin):
         Ratchets the selected events forward to the approved state.
         Ignores events that aren't in the proper state.
         """
+        count = 0
         for event in qs:
-            count = 0
             if event.status in self.pending_states:
                 event.status = self.pending_states[event.status]
                 event.save()
