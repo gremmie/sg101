@@ -106,3 +106,25 @@ def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
             body=post_body,
             user_ip=ip)
     post.save()
+
+
+def auto_favorite(post):
+    """
+    Given a newly created post, perform an auto-favorite action if the post
+    creator has that option set in their profile.
+
+    """
+    profile = post.user.get_profile()
+    if profile.auto_favorite:
+        post.topic.bookmarkers.add(post.user)
+
+
+def auto_subscribe(post):
+    """
+    Given a newly created post, perform an auto-subscribe action if the post
+    creator has that option set in their profile.
+
+    """
+    profile = post.user.get_profile()
+    if profile.auto_subscribe:
+        post.topic.subscribers.add(post.user)

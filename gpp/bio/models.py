@@ -92,6 +92,8 @@ class UserProfile(models.Model):
     status_date = models.DateTimeField(auto_now_add=True)
     badges = models.ManyToManyField(Badge, through="BadgeOwnership")
     update_date = models.DateTimeField(db_index=True, blank=True)
+    auto_favorite = models.BooleanField(default=False)
+    auto_subscribe = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.user.username

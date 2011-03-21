@@ -6,6 +6,7 @@ from django.db.models.signals import post_delete
 
 from forums.models import Forum, Topic, Post
 from forums.views.subscriptions import notify_topic_subscribers
+from forums.tools import auto_favorite, auto_subscribe
 
 
 def on_topic_save(sender, **kwargs):
@@ -35,6 +36,10 @@ def on_post_save(sender, **kwargs):
 
         # send out any email notifications
         notify_topic_subscribers(post)
+
+        # perform any auto-favorite and auto-subscribe actions for the new post
+        auto_favorite(post)
+        auto_subscribe(post)
 
 
 def on_post_delete(sender, **kwargs):

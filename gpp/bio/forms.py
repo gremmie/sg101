@@ -32,15 +32,19 @@ class EditUserProfileForm(forms.ModelForm):
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     use_24_time = forms.BooleanField(label='Show times in 24-hour mode', required=False)
     profile_text = forms.CharField(required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp'}))
+        widget=forms.Textarea(attrs={'class': 'markItUp'}))
     signature = forms.CharField(required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp'}))
+        widget=forms.Textarea(attrs={'class': 'markItUp'}))
+    auto_favorite = forms.BooleanField(
+        label='Automatically favorite every forum topic I create or reply to', required=False)
+    auto_subscribe = forms.BooleanField(
+        label='Automatically subscribe to every forum topic I create or reply to', required=False)
 
     class Meta:
         model = UserProfile
         fields = ('location', 'birthday', 'occupation', 'interests',
             'profile_text', 'hide_email', 'signature', 'time_zone',
-            'use_24_time', )
+            'use_24_time', 'auto_favorite', 'auto_subscribe')
 
     class Media:
         css = {
