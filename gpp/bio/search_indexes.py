@@ -1,11 +1,12 @@
 """Haystack search index for the bio application."""
 from haystack.indexes import *
 from haystack import site
+from queued_search.indexes import QueuedSearchIndex
 
 from bio.models import UserProfile
 
 
-class UserProfileIndex(SearchIndex):
+class UserProfileIndex(QueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
 

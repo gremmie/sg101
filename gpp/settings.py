@@ -134,6 +134,7 @@ INSTALLED_APPS = [
     'elsewhere',
     'tagging',
     'haystack',
+    'queued_search',
     'accounts',
     'antispam',
     'bio',
@@ -263,6 +264,13 @@ LOGGING = local_settings.LOGGING
 
 if DEBUG:
     DEBUG_TOOLBAR_CONFIG = local_settings.DEBUG_TOOLBAR_CONFIG
+
+#######################################################################
+# Asynchronous settings (queues, queued_search, redis, celery, etc)
+#######################################################################
+QUEUE_BACKEND = 'redisd'
+QUEUE_REDIS_CONNECTION = 'localhost:6379'
+QUEUE_REDIS_DB = 0
 
 #######################################################################
 # URL's of 3rd party Javascript and CSS files.

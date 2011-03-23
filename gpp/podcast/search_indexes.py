@@ -1,10 +1,12 @@
 """Haystack search index for the news application."""
 from haystack.indexes import *
 from haystack import site
+from queued_search.indexes import QueuedSearchIndex
+
 from podcast.models import Item
 
 
-class ItemIndex(SearchIndex):
+class ItemIndex(QueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='author')
     pub_date = DateTimeField(model_attr='pubdate')
