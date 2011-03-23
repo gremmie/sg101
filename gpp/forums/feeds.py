@@ -67,14 +67,15 @@ class ForumsFeed(Feed):
             posts = []
             for forum_id in public_forum_ids:
                 posts.extend(list(Post.objects.filter(
-                    topic__forum__id=forum_id).order_by('-creation_date').select_related(depth=2)[:30]))
+                    topic__forum=forum_id).order_by('-creation_date').select_related(
+                        'topic', 'user', 'topic__forum')[:30]))
 
             posts.sort(key=lambda x: x.creation_date, reverse=True)
             return posts[:30]
 
         else:
             return Post.objects.filter(topic__forum__id=obj.id).order_by(
-                    '-creation_date').select_related(depth=2)[:30]
+                '-creation_date').select_related('topic', 'user', 'topic__forum')[:30]
 
     def item_title(self, item):
         return item.topic.name
