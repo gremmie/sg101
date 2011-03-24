@@ -4,8 +4,7 @@ from django.contrib.syndication.views import Feed
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 
-from forums.models import Forum
-from forums.models import Post
+from forums.models import Forum, Topic, Post
 from core.functions import copyright_str
 
 
@@ -55,27 +54,24 @@ class ForumsFeed(Feed):
     def items(self, obj):
         if obj is None:
             # return a combined feed of public forum threads
-            #
-            # This didn't work real well on InnoDb:
-            # items = Post.objects.filter(
-            #         topic__forum__in=Forum.objects.public_forums())
-            #
-            # For some reason, MySQL wasn't using an index when "in" was used.
-            # So let's do this the hard way as a work-around:
 
-            public_forum_ids = Forum.objects.public_forum_ids()
-            posts = []
-            for forum_id in public_forum_ids:
-                posts.extend(list(Post.objects.filter(
-                    topic__forum=forum_id).order_by('-creation_date').select_related(
-                        'topic', 'user', 'topic__forum')[:30]))
+            # This was tricky to do without suffering a large performance
+            # impact. Because the number of forums is small, MySQL did not
+            # try to use an index and ended up searching all the topics for
+            # candidate posts. We work around this first getting a small list
+            # of candidate topics, and then searching them. This is more
+            # queries but a *lot* more time efficient.
 
-            posts.sort(key=lambda x: x.creation_date, reverse=True)
-            return posts[:30]
+            forum_ids = Forum.objects.public_forum_ids()
+            topic_ids = list(Topic.objects.filter(forum__in=forum_ids).order_by(
+                    '-update_date').values_list('id', flat=True)[:30])
+            items = Post.objects.filter(topic__in=topic_ids)
 
         else:
-            return Post.objects.filter(topic__forum__id=obj.id).order_by(
-                '-creation_date').select_related('topic', 'user', 'topic__forum')[:30]
+            items = Post.objects.filter(topic__forum=obj)
+
+        return items.order_by('-creation_date').select_related('topic', 'user',
+                'topic__forum')[:30]
 
     def item_title(self, item):
         return item.topic.name

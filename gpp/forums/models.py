@@ -202,7 +202,7 @@ class Topic(models.Model):
 
     # denormalized fields to reduce database hits
     post_count = models.IntegerField(blank=True, default=0)
-    update_date = models.DateTimeField()
+    update_date = models.DateTimeField(db_index=True)
     last_post = models.OneToOneField('Post', blank=True, null=True,
         related_name='parent_topic')
 
