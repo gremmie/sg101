@@ -29,7 +29,7 @@
 
 <table class="forum-topic" id="forum-topic">
 {% for post in page.object_list %}
-   <!-- {% cycle 'odd' 'even' as rowcolors %} -->
+   {% cycle 'odd' 'even' as rowcolors silent %}
    {% include 'forums/display_post.html' %}
 {% endfor %}
 </table>
