@@ -58,7 +58,7 @@ class ForumsFeed(Feed):
             # This was tricky to do without suffering a large performance
             # impact. Because the number of forums is small, MySQL did not
             # try to use an index and ended up searching all the topics for
-            # candidate posts. We work around this first getting a small list
+            # candidate posts. We work around this by first getting a small list
             # of candidate topics, and then searching them. This is more
             # queries but a *lot* more time efficient.
 
