@@ -7,9 +7,9 @@ This is a heads up that {{ poster }} replied to a forum topic you have
 subscribed to:
 
 ---
-RE: {{ topic_name }}
+RE: {{ topic_name|safe }}
 
-{{ message }}
+{{ message|safe }}
 ---
 
 To view this post on the site, please visit:

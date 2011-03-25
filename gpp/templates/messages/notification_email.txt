@@ -5,9 +5,9 @@ details are as follows:
 
 -----
 From: {{ msg.sender.username }}
-Subject: {{ msg.subject }}
+Subject: {{ msg.subject|safe }}
 
-{{ msg.message }}
+{{ msg.message|safe }}
 -----
 
 You may reply to this message by visiting the following link:
