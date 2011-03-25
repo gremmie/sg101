@@ -13,6 +13,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import Category
+from forums.stats import retrieve_stats
 from core.models import Statistic
 
 
@@ -158,14 +159,7 @@ def forum_stats():
     except Statistic.DoesNotExist:
         stats = None
 
-    post_count = Post.objects.all().count()
-    user_count = User.objects.all().count()
-
-    if user_count > 0:
-        latest_user = User.objects.filter(is_active=True).values_list(
-                'username', flat=True).order_by('-date_joined')[0]
-    else:
-        latest_user = None
+    post_count, user_count, latest_user = retrieve_stats()
 
     return {
         'stats': stats,
