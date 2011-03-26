@@ -31,7 +31,7 @@ class CommentManager(models.Manager):
 class Comment(models.Model):
     """My own version of a Comment class that can attach comments to any other model."""
     content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()
+    object_id = models.PositiveIntegerField(db_index=True)
     content_object = generic.GenericForeignKey('content_type', 'object_id')
     user = models.ForeignKey(User)
     comment = models.TextField(max_length=COMMENT_MAX_LENGTH)

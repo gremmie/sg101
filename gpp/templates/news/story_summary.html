@@ -1,7 +1,6 @@
 {% load url from future %}
 {% load tagging_tags %}
 {% load comment_tags %}
-{% get_comment_count for story as comment_count %}
 <div class="news-story-container solid-background">
 {% if on_home %}
 <h3><a href="{{ story.get_absolute_url }}">{{ story.title }}</a></h3>
@@ -27,19 +26,18 @@
 <p>
 Category: <a href="{% url 'news-category' slug=story.category.slug %}">{{ story.category.title }}</a>
 <img src="{{ STATIC_URL }}icons/comments.png" alt="Comments" title="Comments" />
-<a href="{{ story.get_absolute_url }}">{{ comment_count }} comment{{ comment_count|pluralize }}</a>
+<a href="{{ story.get_absolute_url }}">{{ story.comment_count }} comment{{ story.comment_count|pluralize }}</a>
 <a href="{{ story.get_absolute_url }}"><img src="{{ STATIC_URL }}icons/link.png" alt="Permalink" title="Permalink" /></a>
 {% if user.is_authenticated %}
 <a href="{% url 'news.views.email_story' story.id %}"><img src="{{ STATIC_URL }}icons/email_go.png"
    alt="Send this story to a friend" title="Send this story to a friend" /></a>
 {% endif %}
 </p>
-{% tags_for_object story as story_tags %}
-{% if story_tags %}
+{% if story.tag_list %}
 <div class="news-tags">
    <img src="{{ STATIC_URL }}icons/tag_blue.png" alt="Tags" title="Tags" /> Tags:
    <ul>
-      {% for tag in story_tags %}
+      {% for tag in story.tag_list %}
          <li><a href="{% url 'news-tag_page' tag_name=tag %}">{{ tag }}</a></li>
       {% endfor %}
    </ul>

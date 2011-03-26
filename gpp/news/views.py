@@ -28,198 +28,214 @@ from news.models import PendingStory
 from news.models import Story
 from news.forms import AddNewsForm
 from news.forms import SendStoryForm
+from news.utils import attach_extra_attrs
 
-NEWS_PER_PAGE = 5
+
+NEWS_PER_PAGE = 10
 
 #######################################################################
 
 def create_paginator(stories):
-   return DiggPaginator(stories, NEWS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
+    return DiggPaginator(stories, NEWS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
 
 #######################################################################
 
 def index(request):
-   stories = Story.objects.all().select_related()
-   paginator = create_paginator(stories)
+    # Defer the tags field because we are going to get all the
+    # tags out in 1 query later...
+    stories = Story.objects.all().defer('tags').select_related()
+    paginator = create_paginator(stories)
 
-   page = get_page(request.GET)
-   try:
-      the_page = paginator.page(page)
-   except InvalidPage:
-      raise Http404
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
 
-   return render_to_response('news/index.html', {
-      'title': 'Main Index',
-      'page': the_page,
-      }, 
-      context_instance = RequestContext(request))
+    # Go get the tags and comment counts for all these stories in bulk rather
+    # than one at a time in the template; this saves database queries
+    attach_extra_attrs(the_page.object_list)
+
+    return render_to_response('news/index.html', {
+        'title': 'Main Index',
+        'page': the_page,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def archive_index(request):
-   dates = Story.objects.dates('date_submitted', 'month', order='DESC')
-   return render_to_response('news/archive_index.html', {
-      'title': 'News Archive',
-      'dates': dates, 
-      }, 
-      context_instance = RequestContext(request))
+    dates = Story.objects.dates('date_submitted', 'month', order='DESC')
+    return render_to_response('news/archive_index.html', {
+        'title': 'News Archive',
+        'dates': dates,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def archive(request, year, month):
-   stories = Story.objects.filter(date_submitted__year=year, date_submitted__month=month)
-   paginator = create_paginator(stories)
-   page = get_page(request.GET)
-   try:
-      the_page = paginator.page(page)
-   except InvalidPage:
-      raise Http404
+    stories = Story.objects.defer('tags').filter(date_submitted__year=year,
+            date_submitted__month=month).select_related()
+    paginator = create_paginator(stories)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
 
-   month_name = datetime.date(int(year), int(month), 1).strftime('%B')
+    attach_extra_attrs(the_page.object_list)
 
-   return render_to_response('news/index.html', {
-      'title': 'Archive for %s, %s' % (month_name, year),
-      'page': the_page,
-      }, 
-      context_instance = RequestContext(request))
+    month_name = datetime.date(int(year), int(month), 1).strftime('%B')
+
+    return render_to_response('news/index.html', {
+        'title': 'Archive for %s, %s' % (month_name, year),
+        'page': the_page,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def category_index(request):
-   categories = Category.objects.all().select_related()
-   cat_list = []
-   for cat in categories:
-      cat_list.append((cat, cat.story_set.defer('tags')[:10]))
+    categories = Category.objects.all().select_related()
+    cat_list = []
+    for cat in categories:
+        cat_list.append((cat, cat.story_set.defer('tags')[:10]))
 
-   return render_to_response('news/category_index.html', {
-      'cat_list': cat_list, 
-      }, 
-      context_instance = RequestContext(request))
+    return render_to_response('news/category_index.html', {
+        'cat_list': cat_list,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def category(request, slug):
-   category = get_object_or_404(Category, slug=slug)
-   stories = Story.objects.filter(category=category)
-   paginator = create_paginator(stories)
-   page = get_page(request.GET)
-   try:
-      the_page = paginator.page(page)
-   except InvalidPage:
-      raise Http404
+    category = get_object_or_404(Category, slug=slug)
+    stories = Story.objects.defer('tags').filter(category=category).select_related()
+    paginator = create_paginator(stories)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
 
-   return render_to_response('news/index.html', {
-      'title': 'Category: ' + category.title,
-      'page': the_page,
-      }, 
-      context_instance = RequestContext(request))
+    attach_extra_attrs(the_page.object_list)
+
+    return render_to_response('news/index.html', {
+        'title': 'Category: ' + category.title,
+        'page': the_page,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def story(request, story_id):
-   story = get_object_or_404(Story, pk=story_id)
-   return render_to_response('news/story.html', {
-      'story': story,
-      },
-      context_instance=RequestContext(request))
+    story = get_object_or_404(Story, pk=story_id)
+    return render_to_response('news/story.html', {
+        'story': story,
+        },
+        context_instance=RequestContext(request))
 
 #######################################################################
 
 @login_required
 def submit(request):
-   if request.method == "POST":
-      add_form = AddNewsForm(request.POST)
-      if add_form.is_valid():
-         pending_story = add_form.save(commit=False)
-         pending_story.submitter = request.user
-         pending_story.short_text = clean_html(pending_story.short_text)
-         pending_story.long_text = clean_html(pending_story.long_text)
-         pending_story.save()
-         return HttpResponseRedirect(reverse('news.views.submit_thanks'))
-   else:
-      add_form = AddNewsForm()
+    if request.method == "POST":
+        add_form = AddNewsForm(request.POST)
+        if add_form.is_valid():
+            pending_story = add_form.save(commit=False)
+            pending_story.submitter = request.user
+            pending_story.short_text = clean_html(pending_story.short_text)
+            pending_story.long_text = clean_html(pending_story.long_text)
+            pending_story.save()
+            return HttpResponseRedirect(reverse('news.views.submit_thanks'))
+    else:
+        add_form = AddNewsForm()
 
-   return render_to_response('news/submit_news.html', {
-      'add_form': add_form,
-      },
-      context_instance = RequestContext(request))
+    return render_to_response('news/submit_news.html', {
+        'add_form': add_form,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 @login_required
 def submit_thanks(request):
-   return render_to_response('news/submit_news.html', {
-      },
-      context_instance = RequestContext(request))
+    return render_to_response('news/submit_news.html', {
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def tags(request):
-   tags = Tag.objects.cloud_for_model(Story)
-   return render_to_response('news/tag_index.html', {
-      'tags': tags,
-      },
-      context_instance = RequestContext(request))
+    tags = Tag.objects.cloud_for_model(Story)
+    return render_to_response('news/tag_index.html', {
+        'tags': tags,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 def tag(request, tag_name):
-   tag = get_object_or_404(Tag, name=tag_name)
-   stories = TaggedItem.objects.get_by_model(Story.objects.all().select_related(), tag)
-   paginator = create_paginator(stories)
-   page = get_page(request.GET)
-   try:
-      the_page = paginator.page(page)
-   except InvalidPage:
-      raise Http404
+    tag = get_object_or_404(Tag, name=tag_name)
+    stories = TaggedItem.objects.get_by_model(
+            Story.objects.defer('tags').select_related(), tag)
+    paginator = create_paginator(stories)
+    page = get_page(request.GET)
+    try:
+        the_page = paginator.page(page)
+    except InvalidPage:
+        raise Http404
 
-   return render_to_response('news/index.html', {
-      'title': 'Stories with tag: "%s"' % tag_name,
-      'page': the_page,
-      }, 
-      context_instance=RequestContext(request))
+    attach_extra_attrs(the_page.object_list)
+
+    return render_to_response('news/index.html', {
+        'title': 'Stories with tag: "%s"' % tag_name,
+        'page': the_page,
+        },
+        context_instance=RequestContext(request))
 
 #######################################################################
 
 @login_required
 def email_story(request, story_id):
-   story = get_object_or_404(Story, pk=story_id)
-   if request.method == 'POST':
-      send_form = SendStoryForm(request.POST)
-      if send_form.is_valid():
-         to_name = send_form.name()
-         to_email = send_form.email()
-         from_name = get_full_name(request.user)
-         from_email = request.user.email
-         site = Site.objects.get_current()
+    story = get_object_or_404(Story, pk=story_id)
+    if request.method == 'POST':
+        send_form = SendStoryForm(request.POST)
+        if send_form.is_valid():
+            to_name = send_form.name()
+            to_email = send_form.email()
+            from_name = get_full_name(request.user)
+            from_email = request.user.email
+            site = Site.objects.get_current()
 
-         msg = render_to_string('news/send_story_email.txt',
-               {
-                  'to_name': to_name,
-                  'sender_name': from_name,
-                  'site_name' : site.name,
-                  'site_url' : site.domain,
-                  'story_title': story.title,
-                  'story_link': story.get_absolute_url(),
-               })
+            msg = render_to_string('news/send_story_email.txt',
+                    {
+                        'to_name': to_name,
+                        'sender_name': from_name,
+                        'site_name' : site.name,
+                        'site_url' : site.domain,
+                        'story_title': story.title,
+                        'story_link': story.get_absolute_url(),
+                    })
 
-         subject = 'Interesting Story at ' + site.name
-         send_mail(subject, msg, from_email, [to_email])
-         return HttpResponseRedirect(reverse('news.views.email_thanks'))
-   else:
-      send_form = SendStoryForm()
+            subject = 'Interesting Story at ' + site.name
+            send_mail(subject, msg, from_email, [to_email])
+            return HttpResponseRedirect(reverse('news.views.email_thanks'))
+    else:
+        send_form = SendStoryForm()
 
-   return render_to_response('news/send_story.html', {
-      'send_form': send_form,
-      'story': story,
-      },
-      context_instance = RequestContext(request))
+    return render_to_response('news/send_story.html', {
+        'send_form': send_form,
+        'story': story,
+        },
+        context_instance = RequestContext(request))
 
 #######################################################################
 
 @login_required
 def email_thanks(request):
-   return render_to_response('news/send_story.html', {
-      },
-      context_instance = RequestContext(request))
+    return render_to_response('news/send_story.html', {
+        },
+        context_instance = RequestContext(request))
 

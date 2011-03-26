@@ -7,6 +7,7 @@ from django import template
 from django.conf import settings
 
 from news.models import Story
+from news.utils import attach_extra_attrs
 
 
 register = template.Library()
@@ -14,8 +15,13 @@ register = template.Library()
 
 @register.inclusion_tag('news/current_news.html')
 def current_news():
-    stories = Story.objects.exclude(
+    # Defer the tags field because we are going to get all the
+    # tags out in 1 query later...
+    stories = Story.objects.defer('tags').exclude(
             front_page_expiration__lt=datetime.date.today())[:10]
+
+    attach_extra_attrs(stories)
+
     return {
         'stories': stories,
         'STATIC_URL': settings.STATIC_URL,
