@@ -66,12 +66,23 @@
         }
     }, 
     {
+        "pk": 10, 
+        "model": "bio.badge", 
+        "fields": {
+            "numeric_id": 6, 
+            "image": "badges/camera.png", 
+            "order": 6, 
+            "name": "POTD Pin", 
+            "description": "For submitting a photo of the day."
+        }
+    }, 
+    {
         "pk": 1, 
         "model": "bio.badge", 
         "fields": {
             "numeric_id": 100, 
             "image": "badges/award_star_bronze_1.png", 
-            "order": 6, 
+            "order": 7, 
             "name": "Bronze Star", 
             "description": "For service to the site and community."
         }
@@ -82,7 +93,7 @@
         "fields": {
             "numeric_id": 101, 
             "image": "badges/award_star_silver_2.png", 
-            "order": 7, 
+            "order": 8, 
             "name": "Silver Star", 
             "description": "For distinguished and dedicated service to the site and community."
         }
@@ -93,7 +104,7 @@
         "fields": {
             "numeric_id": 102, 
             "image": "badges/award_star_gold_3.png", 
-            "order": 8, 
+            "order": 9, 
             "name": "Gold Star", 
             "description": "For exceptional and meritorious service to the site and community."
         }

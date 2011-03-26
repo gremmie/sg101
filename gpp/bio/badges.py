@@ -7,7 +7,7 @@ from bio.models import BadgeOwnership
 
 # Numeric ID's for badges that are awarded for user actions:
 (CONTRIBUTOR_PIN, CALENDAR_PIN, NEWS_PIN, LINK_PIN, DOWNLOAD_PIN,
-        SECURITY_PIN) = range(6)
+        SECURITY_PIN, POTD_PIN) = range(7)
 
 
 def award_badge(badge_id, user):
@@ -33,3 +33,5 @@ def award_badge(badge_id, user):
         # Already have this badge
         bo.count += 1
     bo.save()
+
+    logging.info('Awarded %s with the badge: %s', user.username, badge.name)
