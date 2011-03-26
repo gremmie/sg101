@@ -33,6 +33,10 @@ class PendingLinkAdmin(admin.ModelAdmin):
             link.save()
             pending_link.delete()
 
+        count = len(qs)
+        msg = "1 link" if count == 1 else "%d links" % count
+        self.message_user(request, "%s approved." % msg)
+
     approve_links.short_description = "Approve selected links"
 
 

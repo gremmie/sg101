@@ -56,7 +56,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             profile.status_date = now
             profile.save()
 
-        count = qs.count()
+        count = len(qs)
         msg = "1 user" if count == 1 else "%d users" % count
         self.message_user(request, "%s successfully marked as %s." % (msg,
             bio.models.USER_STATUS_CHOICES[status][1]))

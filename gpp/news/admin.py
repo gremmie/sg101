@@ -40,6 +40,10 @@ class PendingStoryAdmin(admin.ModelAdmin):
             story.save()
             pending_story.delete()
 
+        count = len(qs)
+        msg = "1 story" if count == 1 else "%d stories" % count
+        self.message_user(request, "%s approved." % msg)
+
     approve_story.short_description = "Approve selected pending stories"
 
     class Media:
