@@ -25,9 +25,16 @@
 <fieldset>
 <legend>Add a Social Network</legend>
     {{ sn_form.as_p }}
-    <p>For MySpace, you must enter your 
-    <a href="http://faq.myspace.com/app/answers/detail/a_id/278" target="_blank">Myspace Friend ID</a>
-    in the <i>Username</i> box.</p>
+    <p>
+    For Facebook, you must enter your profile ID in the <em>Username</em> box. Visit your
+    Facebook profile. Look at your browser's URL (address) bar. If you see a link of the form 
+    http://www.facebook.com/profile.php?id=<strong>1234567890</strong>, you want that number after the 
+    <strong>id=</strong> part. If you don't see a link like that, hover your mouse over your
+    profile picture, and a link of the above form should appear in your browser's status bar
+    (usually at the bottom). You can right-click on your photo and choose "copy link address" 
+    (the exact message will vary by browser) to copy the link. Then paste into the 
+    <em>Username</em> box, then delete everything but the long number.
+    </p>
     <p><input type="submit" name="sn-form" value="Add Social Network" class="button" /></p>
 </fieldset>
 </form>
