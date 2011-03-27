@@ -11,10 +11,12 @@ from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseNotFound
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.views.decorators.http import require_POST
+import django.utils.simplejson as json
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins
@@ -47,7 +49,7 @@ def index(request):
 # Maps URL component to database field name for the Download table:
 
 DOWNLOAD_FIELD_MAP = {
-   'title': 'title', 
+   'title': 'title',
    'date': '-date_added',
    'rating': '-average_score',
    'hits': '-hits'
@@ -76,8 +78,8 @@ def category(request, slug, sort='title'):
     return render_to_response('downloads/download_list.html', {
         's' : sort,
         'category' : cat,
-        'page' : the_page, 
-        }, 
+        'page' : the_page,
+        },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -98,7 +100,7 @@ def new(request):
     return render_to_response('downloads/download_summary.html', {
         'page': the_page,
         'title': 'Newest Downloads',
-        }, 
+        },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -119,7 +121,7 @@ def popular(request):
     return render_to_response('downloads/download_summary.html', {
         'page': the_page,
         'title': 'Popular Downloads',
-        }, 
+        },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -139,25 +141,8 @@ def rating(request):
     return render_to_response('downloads/download_summary.html', {
         'page': the_page,
         'title': 'Highest Rated Downloads',
-        }, 
+        },
         context_instance = RequestContext(request))
-
-#######################################################################
-
-@login_required
-@require_POST
-def download(request, id):
-    download = Download.public_objects.get(pk=id)
-    if download is None:
-        raise Http404
-    return _redirect_download(download)
-
-#######################################################################
-
-def _redirect_download(download):
-    download.hits += 1
-    download.save()
-    return HttpResponseRedirect(download.file.url)
 
 #######################################################################
 
@@ -168,20 +153,8 @@ def details(request, id):
         raise Http404
     return render_to_response('downloads/download_detail.html', {
         'download' : download,
-        }, 
+        },
         context_instance = RequestContext(request))
-
-#######################################################################
-
-@login_required
-@require_POST
-def random_download(request):
-    ids = Download.public_objects.values_list('id', flat=True)
-    if not ids:
-        raise Http404
-    id = random.choice(ids)
-    download = Download.objects.get(pk=id)
-    return _redirect_download(download)
 
 #######################################################################
 
@@ -225,7 +198,7 @@ def rate_download(request):
         rating = request.POST.get('rating', None)
         if id is None or rating is None:
             return HttpResponseBadRequest('Missing id or rating.')
-        
+
         try:
             rating = int(rating)
         except ValueError:
@@ -250,3 +223,29 @@ def rate_download(request):
             return HttpResponse('-1')
 
     return HttpResponseForbidden('You must be logged in to rate a download.')
+
+#######################################################################
+
+@require_POST
+def request_download(request):
+    """
+    This function is called by AJAX to request a download. We update the hit
+    count and then return a JSON object of the form:
+        { id: download-id, 'url': link-to-download }
+
+    """
+    if request.user.is_authenticated():
+        dl_id = request.POST.get('id')
+        if dl_id:
+            try:
+                dl = Download.public_objects.get(pk=dl_id)
+            except Download.DoesNotExist:
+                return HttpResponseNotFound("Download not found")
+
+            dl.hits += 1
+            dl.save()
+
+            s = json.dumps({'id': dl_id, 'url': dl.file.url})
+            return HttpResponse(s, content_type='application/json')
+
+    return HttpResponseForbidden('An error occurred.')

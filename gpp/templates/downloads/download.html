@@ -6,7 +6,6 @@
 </dt>
 <dd>
 {{ download.html|safe }}
-<form action="{% url 'downloads-download' download.id %}" method="post">{% csrf_token %}
 <table>
 <tr>
     <th>Added By:</th>
@@ -23,7 +22,6 @@
     <th><img src="{{ STATIC_URL }}icons/comments.png" alt="Comments" title="Comments" />
        <a href="{% url 'downloads-details' download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
 </tr>
-<tr><td><input type="submit" value="Download Now" /></td></tr>
 </table>
-</form>
+<div id="link-{{ download.id }}"><button type="button" class="dl-button" id="dl-{{ download.id }}">Download</button></div>
 </dd>

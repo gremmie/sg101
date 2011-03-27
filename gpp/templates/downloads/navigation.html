@@ -9,8 +9,4 @@
     <li><a href="{% url 'downloads-rating' %}">Highest Rated</a></li>
     <li><a href="{% url 'downloads-add' %}">Add</a></li>
 </ul>
-<center>
-   <form action="{% url 'downloads-random' %}" method="post">{% csrf_token %}
-      <input type="submit" title="Download a file at random" value="Surprise Me!" />
-   </form>
-</center>
+<br />
