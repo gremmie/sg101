@@ -21,7 +21,7 @@
 <itunes:image href="{{ channel.image.url }}" />
 <itunes:category text="{{ channel.category }}" />
 <itunes:explicit>{{ channel.explicit }}</itunes:explicit>
-{% for item in channel.item_set.all %}
+{% for item in channel.items %}
 <item>
 <title>{{ item.title }}</title>
 <itunes:author>{{ item.author }}</itunes:author>
