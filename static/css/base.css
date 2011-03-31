@@ -430,3 +430,6 @@ tr.forum-post.odd td {
 .solid-background {
  background-color: #EDF7F6;
 }
+div.news-story-container {
+   padding: 0.5em;
+}
