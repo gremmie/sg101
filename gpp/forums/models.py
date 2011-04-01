@@ -190,7 +190,7 @@ class Topic(models.Model):
     """
     forum = models.ForeignKey(Forum, related_name='topics')
     name = models.CharField(max_length=255)
-    creation_date = models.DateTimeField(auto_now_add=True)
+    creation_date = models.DateTimeField(db_index=True)
     user = models.ForeignKey(User)
     view_count = models.IntegerField(blank=True, default=0)
     sticky = models.BooleanField(blank=True, default=False)
@@ -371,7 +371,7 @@ class TopicLastVisit(models.Model):
     """
     user = models.ForeignKey(User)
     topic = models.ForeignKey(Topic)
-    last_visit = models.DateTimeField()
+    last_visit = models.DateTimeField(db_index=True)
 
     class Meta:
         unique_together = ('user', 'topic')

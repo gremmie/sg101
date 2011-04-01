@@ -101,15 +101,15 @@ def get_forum_unread_status(qs, user):
                 if topic.id in tracked_dict:
                     if topic.update_date > tracked_dict[topic.id].last_visit:
                         forum.has_unread = True
-                        continue
+                        break
                 else:
                     forum.has_unread = True
-                    continue
-
-            # If we made it through the above loop without continuing, then
-            # we are all caught up.
-            forum.catchup(user, flv)
-            forum.has_unread = False
+                    break
+            else:
+                # If we made it through the above loop without breaking out,
+                # then we are all caught up.
+                forum.catchup(user, flv)
+                forum.has_unread = False
 
 #######################################################################
 
