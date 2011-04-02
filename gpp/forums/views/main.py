@@ -863,6 +863,47 @@ def unanswered_topics(request):
         context_instance=RequestContext(request))
 
 
+def active_topics(request, num):
+    """Displays the last num topics that have been posted to."""
+
+    # sanity check num
+    num = min(50, max(10, int(num)))
+
+    public_forum_ids = Forum.objects.public_forum_ids()
+
+    # MySQL didn't do this query very well unfortunately...
+    #topics = Topic.objects.filter(forum__in=public_forum_ids).select_related(
+    #            'forum', 'user', 'last_post', 'last_post__user').order_by(
+    #            '-update_date')[:num]
+    topic_ids = list(Topic.objects.filter(forum__in=public_forum_ids).order_by(
+            '-update_date').values_list('id', flat=True)[:num])
+    topics = Topic.objects.filter(id__in=topic_ids).select_related(
+                'forum', 'user', 'last_post', 'last_post__user').order_by(
+                '-update_date')[:num]
+
+    paginator = create_topic_paginator(topics)
+    page_num = get_page_num(request)
+    try:
+        page = paginator.page(page_num)
+    except InvalidPage:
+        raise Http404
+
+    attach_topic_page_ranges(page.object_list)
+
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
+    title = 'Last %d Active Topics' % num
+
+    return render_to_response('forums/topic_list.html', {
+        'title': title,
+        'page': page,
+        'page_nav': page_nav,
+        'unread': False,
+        },
+        context_instance=RequestContext(request))
+
+
 @login_required
 def my_posts(request):
     """Displays a list of posts the requesting user made."""

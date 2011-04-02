@@ -1,7 +1,10 @@
 {% load url from future %}
 <form action="." method="get" id="forum-query-form">
    <select id="forum-query-select">
+      {% if user.is_authenticated %}
       <option value="{% url 'forums-unread_topics' %}">Show topics with unread posts</option>
+      {% endif %}
+      <option value="{% url 'forums-active_topics' 30 %}">Show active topics</option>
       <option value="{% url 'forums-unanswered_topics' %}">Show unanswered topics</option>
       {% if user.is_authenticated %}
       <option value="{% url 'forums-my_posts' %}">Show my posts</option>
