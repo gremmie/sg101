@@ -7,7 +7,6 @@ import datetime
 import logging
 
 from django.db import IntegrityError
-from django.db.models import Q
 
 from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
 
@@ -85,8 +84,10 @@ def get_forum_unread_status(qs, user):
 
             topics = Topic.objects.filter(forum=forum,
                     creation_date__gt=flv.begin_date)
-            tracked_topics = TopicLastVisit.objects.filter(user=user,
-                    topic__forum=forum, last_visit__gt=flv.begin_date)
+            tracked_topics = TopicLastVisit.objects.filter(
+                    user=user,
+                    topic__forum=forum,
+                    last_visit__gt=flv.begin_date).select_related('topic')
 
             # If the number of topics created since our window was started 
             # is greater than the tracked topic records, then there are new
@@ -95,7 +96,7 @@ def get_forum_unread_status(qs, user):
                 forum.has_unread = True
                 continue
 
-            tracked_dict = dict([(t.id, t) for t in tracked_topics])
+            tracked_dict = dict((t.topic.id, t) for t in tracked_topics)
 
             for topic in topics:
                 if topic.id in tracked_dict:
