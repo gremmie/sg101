@@ -13,6 +13,22 @@ registering for your account here:</p>
    <li>You must agree to our <a href="/policy/tos/" target="_blank">Terms of Service</a>.</li>
    <li>You must agree to our <a href="/policy/privacy/" target="_blank">Privacy Policy</a>.</li>
 </ul>
+<br />
+<div class="notice">
+<p><img src="{{ STATIC_URL }}icons/exclamation.png" alt="Notice">
+Please be aware that Hotmail is current refusing email from SurfGuitar101.com. Thus Hotmail
+users probably will not receive the confirmation email. If you have another email address you
+can register from, please use it instead. Gmail, Yahoo, and MSN mail are all known to work.
+</p>
+<p>If you must use a Hotmail account to register:</p>
+<ol>
+   <li>Register using the form below</li>
+   <li>Send an email to <em>admin at surfguitar101 dot com</em> from your Hotmail account and ask us to manually activate your account.
+   </li>
+</ol>
+<p>We apologize for any inconvenience, but please send all complaints to Hotmail.</p>
+</div>
+<br />
 <form action="." method="post">{% csrf_token %}
 <table>
    {{ form.as_table }}
