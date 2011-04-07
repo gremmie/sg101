@@ -158,8 +158,8 @@ class VoteRecord(models.Model):
 
     def __unicode__(self):
         return u"%s voted on '%s' on %s" % (
-                self.user.username, 
-                self.download.title, 
+                self.user.username,
+                self.download.title,
                 self.vote_date.strftime('%b %d, %Y %H:%M:%S'))
 
     class Meta:

@@ -25,7 +25,7 @@ class Command(LabelCommand):
         try:
             self.default_user = User.objects.get(pk=2)
         except User.DoesNotExist:
-            raise CommandError("Need a default user with pk=1")
+            raise CommandError("Need a default user with pk=2")
 
         try:
             with open(filename, "rb") as f:
