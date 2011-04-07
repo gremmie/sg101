@@ -57,7 +57,8 @@ class DownloadAdmin(admin.ModelAdmin):
     exclude = ('html', )
     list_display = ('title', 'user', 'category', 'date_added', 'ip_address',
                'hits', 'average_score', 'size', 'is_public')
-    list_filter = ('date_added', 'is_public', 'category', 'user', 'ip_address')
+    list_filter = ('date_added', 'is_public', 'category')
+    list_editable = ('is_public', )
     date_hierarchy = 'date_added'
     ordering = ('-date_added', )
     search_fields = ('title', 'description', 'user__username')
