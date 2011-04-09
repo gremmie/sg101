@@ -259,6 +259,12 @@ class Topic(models.Model):
         except Post.DoesNotExist:
             self.last_post = None
 
+    def search_title(self):
+        return u"%s by %s" % (self.name, self.user.username)
+
+    def search_summary(self):
+        return u''
+
 
 class Post(models.Model):
     """
