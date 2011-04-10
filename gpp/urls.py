@@ -3,10 +3,11 @@ from django.conf import settings
 from django.contrib import admin
 from django.views.decorators.cache import cache_page
 
-from haystack.views import SearchView, search_view_factory
+from haystack.views import search_view_factory
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
+from custom_search import ModelSearchView, CustomModelSearchForm
 
 
 admin.autodiscover()
@@ -51,7 +52,9 @@ urlpatterns = patterns('',
 
 # Haystack search views
 urlpatterns += patterns('haystack.views',
-    url(r'^search/$', search_view_factory(view_class=SearchView, load_all=True),
+    url(r'^search/$',
+        search_view_factory(view_class=ModelSearchView,
+            form_class=CustomModelSearchForm, load_all=True),
         name='haystack_search'),
 )
 

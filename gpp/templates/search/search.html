@@ -5,7 +5,7 @@
 <script type="text/javascript">
 //<![CDATA[
 $(document).ready(function() {
-      chkboxes = $('#search-form input[type="checkbox"]');
+      var chkboxes = $('#search-form input[type="checkbox"]');
       $('#chk_all').click(function() {
          chkboxes.each(function(index) {
             $(this).attr('checked', true);
@@ -18,6 +18,7 @@ $(document).ready(function() {
          });
          return false;
       });
+      $('#search-form ul').addClass('no-bullet-inline-block');
 });
 //]]>
 </script>
@@ -25,39 +26,10 @@ $(document).ready(function() {
 {% block content %}
 <h2>Search <img src="{{ STATIC_URL }}icons/magnifier.png" alt="Search" /></h2>
 <form id="search-form" method="get" action=".">
-<table>
-   <tr>
-      <td><input type="text" name="q" id="id_q" size="48" class="text" /></td>
-      <td><input type="submit" value="Search" /></td>
-   </tr>
-</table>
+{{ form.q }} <input type="submit" value="Search" />
 <fieldset>
 <legend>Search in:</legend>
-<table>
-   <tr>
-      <td><input id="chk-forums-topics" type="checkbox" name="models" value="forums.topic" checked="checked" />
-         <label for="chk-forums-topics" class="pointer">Forum Topics</label></td>
-
-      <td><input id="chk-forums-post" type="checkbox" name="models" value="forums.post" checked="checked" />
-         <label for="chk-forums-post" class="pointer">Forum Posts</label></td>
-      <td><input id="chk-news" type="checkbox" name="models" value="news.story" checked="checked" />
-         <label for="chk-news" class="pointer">News Stories</label></td>
-   </tr>
-   <tr>
-      <td><input id="chk-profiles" type="checkbox" name="models" value="bio.userprofile" checked="checked" />
-         <label for="chk-profiles" class="pointer">User Profiles</label></td>
-      <td><input id="chk-links" type="checkbox" name="models" value="weblinks.link" checked="checked" />
-         <label for="chk-links" class="pointer">Links</label></td>
-      <td><input id="chk-dls" type="checkbox" name="models" value="downloads.download" checked="checked" />
-         <label for="chk-dls" class="pointer">Downloads</label></td>
-   </tr>
-   <tr>
-      <td><input id="chk-podcasts" type="checkbox" name="models" value="podcast.item" checked="checked" />
-         <label for="chk-podcasts" class="pointer">Podcasts</label></td>
-      <td colspan="2"><input id="chk-ygroup" type="checkbox" name="models" value="ygroup.post" checked="checked" />
-         <label for="chk-ygroup" class="pointer">Yahoo Group Archives</label></td>
-   </tr>
-</table>
+{{ form.models }}
 <p><a href="#" id="chk_all">Check all</a> | <a href="#" id="chk_none">Check none</a></p>
 </fieldset>
 </form>
@@ -88,9 +60,9 @@ $(document).ready(function() {
 
       {% if page.has_previous or page.has_next %}
           <div>
-              {% if page.has_previous %}<a href="?q={{ query }}&amp;page={{ page.previous_page_number }}">{% endif %}&laquo; Previous{% if page.has_previous %}</a>{% endif %}
+              {% if page.has_previous %}<a href="?{{ search_params }}&amp;page={{ page.previous_page_number }}">{% endif %}&laquo; Previous{% if page.has_previous %}</a>{% endif %}
               |
-              {% if page.has_next %}<a href="?q={{ query }}&amp;page={{ page.next_page_number }}">{% endif %}Next &raquo;{% if page.has_next %}</a>{% endif %}
+              {% if page.has_next %}<a href="?{{ search_params }}&amp;page={{ page.next_page_number }}">{% endif %}Next &raquo;{% if page.has_next %}</a>{% endif %}
           </div>
       {% endif %}
   {% else %}

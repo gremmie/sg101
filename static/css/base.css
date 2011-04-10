@@ -433,3 +433,10 @@ tr.forum-post.odd td {
 div.news-story-container {
    padding: 0.5em;
 }
+
+ul.no-bullet-inline-block {
+ list-style: none;
+}
+ul.no-bullet-inline-block li {
+ display: inline-block;
+}
