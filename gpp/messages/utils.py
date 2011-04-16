@@ -26,4 +26,4 @@ def quote_message(who, date, message):
    lines = wrap(message, 55).split('\n')
    for i, line in enumerate(lines):
       lines[i] = '> ' + line
-   return header + '\n'.join(lines)
+   return header + '\n'.join(lines) + '\n\n'

@@ -1000,7 +1000,7 @@ def _quote_message(who, message):
     lines = wrap(message, 55).split('\n')
     for i, line in enumerate(lines):
         lines[i] = '> ' + line
-    return header + '\n'.join(lines)
+    return header + '\n'.join(lines) + '\n\n'
 
 
 def _move_topic(topic, old_forum, new_forum):
