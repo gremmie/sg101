@@ -17,6 +17,10 @@ def send_mail(subject, message, from_email, recipient_list,
     Use this function to send email from the site. It will obey debug settings and
     log all emails. The expedite flag, when True, will bypass the mail queue.
     """
+    recipient_list = [dest for dest in recipient_list if dest]
+    if not recipient_list:
+        logging.warning("Empty recipient_list in send_mail")
+        return
 
     if settings.MAILER_ENQUEUE_MAIL and not expedite:
         mailer.enqueue_mail(subject, message, from_email, recipient_list)
