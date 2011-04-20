@@ -83,7 +83,7 @@ def get_forum_unread_status(qs, user):
                         last_visit__lt=min_date).delete()
 
             topics = Topic.objects.filter(forum=forum,
-                    creation_date__gt=flv.begin_date)
+                    update_date__gt=flv.begin_date)
             tracked_topics = TopicLastVisit.objects.filter(
                     user=user,
                     topic__forum=forum,
