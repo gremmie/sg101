@@ -85,9 +85,9 @@
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
    {% endcache %}
-   {# cache 3600 birthday_block #}
+   {% cache 3600 birthday_block %}
       {% birthday_block %}
-   {# endcache #}
+   {% endcache %}
    {% include 'core/mp3comp_block.html' %}
 </div>
 
