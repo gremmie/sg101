@@ -1,0 +1,16 @@
+{% extends 'side_block.html' %}
+{% load url from future %}
+{% load humanize %}
+{% block block_title %}{{ today|date:"F" }} Birthdays{% endblock %}
+{% block block_content %}
+{% if profiles %}
+   <div class="centeredImage"><img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" /></div>
+   <ul>
+   {% for profile in profiles %}
+      <li>{{ profile.birthday.day|ordinal }} &ndash; <a href="{% url 'bio-view_profile' username=profile.user.username %}">{{ profile.user.username }}</a></li>
+   {% endfor %}
+   </ul>
+{% else %}
+   <p>No birthdays this month.</p>
+{% endif %}
+{% endblock %}

@@ -10,6 +10,7 @@ from django.core.cache import cache
 import repoze.timeago
 
 from core.models import UserLastVisit, AnonLastVisit
+from bio.models import UserProfile
 
 
 register = template.Library()
@@ -78,3 +79,20 @@ def elapsed(timestamp):
     """
     return repoze.timeago.get_elapsed(timestamp)
 elapsed.is_safe = True
+
+
+@register.inclusion_tag('core/birthday_block.html')
+def birthday_block():
+    """
+    A template tag to display all the users who have birthdays this month.
+    """
+    today = datetime.date.today()
+    profiles = list(UserProfile.objects.filter(birthday__month=today.month).select_related(
+            'user'))
+    profiles.sort(key=lambda p: p.birthday.day)
+
+    return {
+        'STATIC_URL': settings.STATIC_URL,
+        'profiles': profiles,
+        'today': today,
+    }

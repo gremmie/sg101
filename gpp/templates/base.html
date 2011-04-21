@@ -9,6 +9,7 @@
 {% load messages_tags %}
 {% load script_tags %}
 {% load poll_tags %}
+{% load core_tags %}
 {% load cache %}
 <head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
 <meta http-equiv="Content-Type" content="text/html" />
@@ -84,6 +85,9 @@
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
    {% endcache %}
+   {# cache 3600 birthday_block #}
+      {% birthday_block %}
+   {# endcache #}
    {% include 'core/mp3comp_block.html' %}
 </div>
 
