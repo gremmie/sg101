@@ -6,9 +6,8 @@ from django.db import IntegrityError
 from django.contrib.auth import logout
 from django.conf import settings
 
-from core.models import UserLastVisit
-from core.models import AnonLastVisit
 from core.functions import get_ip
+from core.whos_online import report_user, report_visitor
 
 
 class InactiveUserMiddleware(object):
@@ -26,7 +25,8 @@ class InactiveUserMiddleware(object):
 
 
 ONLINE_COOKIE = 'sg101_online'  # online cookie name
-ONLINE_TIMEOUT = 10 * 60        # online cookie lifetime in seconds
+ONLINE_TIMEOUT = 5 * 60         # online cookie lifetime in seconds
+
 
 class WhosOnline(object):
     """
@@ -50,40 +50,23 @@ class WhosOnline(object):
 
         if request.user.is_authenticated():
             if request.COOKIES.get(ONLINE_COOKIE) is None:
-                # update the last seen timestamp
-                try:
-                    ulv = UserLastVisit.objects.get(user=request.user)
-                except UserLastVisit.DoesNotExist:
-                    ulv = UserLastVisit(user=request.user)
+                # report that we've seen the user
+                report_user(request.user.username)
 
-                ulv.last_visit = datetime.datetime.now()
-                ulv.save()
-
-                # set a cookie to expire in 10 minutes or so
+                # set a cookie to expire
                 response.set_cookie(ONLINE_COOKIE, '1', max_age=ONLINE_TIMEOUT)
         else:
             if request.COOKIES.get(settings.CSRF_COOKIE_NAME) is not None:
                 # We have a non-authenticated user that has cookies enabled. This
                 # means we can track them.
                 if request.COOKIES.get(ONLINE_COOKIE) is None:
-                    # update the timestamp for this anonymous visitor
+                    # see if we can get the IP address
                     ip = get_ip(request)
                     if ip:
-                        try:
-                            alv = AnonLastVisit.objects.get(ip=ip)
-                        except AnonLastVisit.DoesNotExist:
-                            alv = AnonLastVisit(ip=ip)
+                        # report that we've seen this visitor
+                        report_visitor(ip)
 
-                        alv.last_visit = datetime.datetime.now()
-
-                        # There is a race condition and sometimes another thread
-                        # saves a record before we do; just log this if it happens.
-                        try:
-                            alv.save()
-                        except IntegrityError:
-                            logging.exception('WhosOnline.process_response')
-
-                        # set a cookie to expire in 10 minutes or so
+                        # set a cookie to expire
                         response.set_cookie(ONLINE_COOKIE, '1', max_age=ONLINE_TIMEOUT)
 
         return response

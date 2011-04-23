@@ -9,7 +9,7 @@ from django.core.cache import cache
 
 import repoze.timeago
 
-from core.models import UserLastVisit, AnonLastVisit
+from core.whos_online import get_users_online, get_visitors_online
 from bio.models import UserProfile
 
 
@@ -37,26 +37,15 @@ def whos_online():
     """
     Displays a list of who is online.
     """
-    info = cache.get('whos_online')
-    if info:
-        return info
+    users = get_users_online()
+    visitors = get_visitors_online()
 
-    now = datetime.datetime.now()
-    cutoff = now - datetime.timedelta(minutes=10, seconds=5)
-
-    info = {}
-    users = UserLastVisit.objects.filter(
-            last_visit__gte=cutoff).values_list('user__username', flat=True)
-    num_users = len(users)
-    info['num_users'] = num_users
-    info['users'] = sorted(users)
-
-    num_guests = AnonLastVisit.objects.filter(last_visit__gte=cutoff).count()
-    info['num_guests'] = num_guests
-    info['total'] = num_users + num_guests
-
-    cache.set('whos_online', info, 60)
-    return info
+    return {
+        'num_users': len(users),
+        'users': sorted(users),
+        'num_guests': len(visitors),
+        'total': len(users) + len(visitors),
+    }
 
 
 # A somewhat ugly hack until we decide if we should be using UTC time

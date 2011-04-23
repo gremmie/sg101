@@ -7,7 +7,8 @@ import datetime
 
 from django.core.management.base import NoArgsCommand
 
-from core.models import UserLastVisit, AnonLastVisit, Statistic
+from core.models import Statistic
+from core.whos_online import get_users_online, get_visitors_online, tick
 
 
 class Command(NoArgsCommand):
@@ -16,10 +17,9 @@ class Command(NoArgsCommand):
     def handle_noargs(self, **options):
 
         now = datetime.datetime.now()
-        cut_off = now - datetime.timedelta(minutes=15)
 
-        users = UserLastVisit.objects.filter(last_visit__gte=cut_off).count()
-        guests = AnonLastVisit.objects.filter(last_visit__gte=cut_off).count()
+        users = len(get_users_online())
+        guests = len(get_visitors_online())
 
         updated = False
         try:
@@ -42,3 +42,6 @@ class Command(NoArgsCommand):
 
         if updated:
             stat.save()
+
+        # "tick" the who's online data collector
+        tick()
