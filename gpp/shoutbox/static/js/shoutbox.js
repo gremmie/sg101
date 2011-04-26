@@ -23,6 +23,12 @@ $(document).ready(function() {
        }
    });
 
+   $("html").bind("ajaxStart", function() {
+      $(this).addClass('busy');
+   }).bind("ajaxStop", function() {
+      $(this).removeClass('busy');
+   });
+
    var numShouts = $('#shoutbox-shout-container > p').size(); 
    var sbBox = $('#shoutbox-shout-container');
 

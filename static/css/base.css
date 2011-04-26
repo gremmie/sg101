@@ -443,3 +443,6 @@ ul.no-bullet-inline-block li {
 .middle {
    vertical-align: middle;
 }
+html.busy, html.busy * {
+  cursor: wait !important;
+}
