@@ -14,17 +14,17 @@ class MessageManager(models.Manager):
 
     def inbox(self, user):
         return self.filter(receiver=user,
-            receiver_delete_date__isnull=True)
+            receiver_delete_date__isnull=True).select_related('sender')
 
     def outbox(self, user):
         return self.filter(sender=user,
-            sender_delete_date__isnull=True)
+            sender_delete_date__isnull=True).select_related('receiver')
 
     def trash(self, user):
         return self.filter(
             Q(sender=user, sender_delete_date__isnull=False) |
             Q(receiver=user, receiver_delete_date__isnull=False)
-        )
+        ).select_related()
 
     def unread_count(self, user):
         return self.filter(receiver=user, read_date__isnull=True).count()

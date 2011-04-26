@@ -1,0 +1,43 @@
+{% load url from future %}
+{% if messages %}
+<ul class="user-messages">
+   {% for msg in messages %}
+      <li{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</li>
+   {% endfor %}
+</ul>
+{% endif %}
+{% if msgs.object_list %}
+   <form action="." onsubmit="return bulkMsgAction(this, 'undelete');">
+   <table class="messages">
+   <tr>
+      <th>From</th>
+      <th>To</th>
+      <th>Subject</th>
+      <th>Date</th>
+      <th><input type="checkbox" onclick="tabMasterCheckClick(this, 'trash_ids');" /></th>
+   </tr>
+   {% for msg in msgs.object_list %}
+   <tr>
+      <td><a href="{% url 'bio.views.view_profile' msg.sender.username %}">
+         {{ msg.sender.username }}</a></td>
+      <td><a href="{% url 'bio.views.view_profile' msg.receiver.username %}">
+         {{ msg.receiver.username }}</a></td>
+      <td>
+         <a href="#" onclick="msgShow(this, {{ msg.id }}); return false;"
+            class="{% if msg.unread %}unread {% endif %}{% if msg.replied_to %}replied_to{% endif %}">{{ msg.subject }}</a>
+         </td>
+      <td>{{ msg.send_date|date:"M j, Y g:i:s A T" }}</td>
+      <td><input type="checkbox" name="trash_ids" value="{{ msg.id }}" /></td>
+   </tr>
+   {% endfor %}
+   <tr><td colspan="5"><input type="submit" value="Undelete Checked Messages" /></td></tr>
+   </table>
+   </form>
+   {% include "messages/pagination.html" %}
+   <ul>
+      <li>Messages in <strong>bold</strong> are unread.</li>
+      <li>Messages in <em>italics</em> have been replied to.</li>
+   </ul>
+{% else %}
+   <p><em>Your Trash is empty.</em></p>
+{% endif %}

@@ -1,0 +1,15 @@
+<div class="pagination">
+<span class="step-links">
+{% if msgs.has_previous %}
+  <a href="{{ url }}?page={{ msgs.previous_page_number }}" onclick="return ajaxPageFetch(this);">&laquo; Previous</a>
+{% endif %}
+
+<span class="current">
+   Page {{ msgs.number }} of {{ msgs.paginator.num_pages }}.
+</span>
+
+{% if msgs.has_next %}
+   <a href="{{ url }}?page={{ msgs.next_page_number }}" onclick="return ajaxPageFetch(this);">Next &raquo;</a>
+{% endif %}
+ </span>
+</div>

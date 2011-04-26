@@ -11,7 +11,8 @@ table.messages {
    border: 1px solid black;
    border-spacing: 0px;
    border-collapse: collapse;
-   margin-left: 1em;
+   margin: 1em auto;
+   width: 96%;
 }
 
 table.messages th {
@@ -63,4 +64,13 @@ div.message-hr {
 }
 form.messages-button {
    display: inline;
+}
+.unread {
+   font-weight: bold;
+}
+.replied_to {
+   font-style: italic;
+}
+.pagination {
+   text-align: right;
 }

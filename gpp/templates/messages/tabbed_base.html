@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% load script_tags %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css" />
+{% endblock %}
+{% block custom_js %}
+{% script_tags 'jquery-ui' %}
+<script type="text/javascript">
+//<![CDATA[
+   var initialTab = {{ tab }};
+   var username = "{{ request.user.username }}";
+//]]>
+</script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/tabbed_messages.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Your Private Messages (Beta)</h2>
+<p>
+This is an experimental version of the SG101 private message system. Don't worry, if this
+isn't working for you, you can always go back to the
+<a href="{% url 'messages-inbox' %}">current system</a>. Please leave any feedback on this
+change in forums. Thanks!
+</p>
+
+<div id="tabs">
+   <ul>
+      <li><a href="{% url 'messages-beta_inbox' %}">Inbox</a></li>
+      <li><a href="{% url 'messages-beta_compose' %}">Compose</a></li>
+      <li><a href="{% url 'messages-beta_outbox' %}">Outbox</a></li>
+      <li><a href="{% url 'messages-beta_trash' %}">Trash</a></li>
+      <li><a href="{% url 'messages-beta_options' %}">Options</a></li>
+   </ul>
+</div>
+
+<div id="msgDialog"></div>
+{% endblock %}

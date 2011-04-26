@@ -278,13 +278,13 @@ QUEUE_REDIS_DB = 0
 # should also be used by developers when creating form media classes.
 GPP_THIRD_PARTY_JS = {
     'jquery': (
-        'http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js',
+        'http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js',
     ),
     'jquery-jeditable': (
         'js/jquery.jeditable.mini.js',
     ),
     'jquery-ui': (
-        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.5/jquery-ui.min.js',
+        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/jquery-ui.min.js',
     ),
     'markitup': (
         'js/markitup/jquery.markitup.pack.js',
@@ -297,7 +297,7 @@ GPP_THIRD_PARTY_JS = {
 }
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': (
-        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.5/themes/redmond/jquery-ui.css',
+        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/themes/redmond/jquery-ui.css',
     ),
     'markitup': (
         'js/markitup/skins/markitup/style.css',

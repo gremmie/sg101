@@ -2,6 +2,7 @@
 from django.conf.urls.defaults import *
 from django.views.generic import RedirectView
 
+
 urlpatterns = patterns('messages.views',
     url(r'^inbox/$', 'inbox', name='messages-inbox'),
     url(r'^outbox/$', 'outbox', name='messages-outbox'),
@@ -21,3 +22,35 @@ urlpatterns += patterns('',
     (r'^$', RedirectView.as_view(url='inbox/')),
 )
 
+urlpatterns += patterns('messages.views2',
+    url(r'^beta/$',
+        'index',
+        name='messages-beta_index'),
+    url(r'^beta/(inbox|compose|outbox|trash|options)/$',
+        'index',
+        name='messages-beta_index_named'),
+    url(r'^beta/inbox-tab/$',
+        'inbox',
+        name='messages-beta_inbox'),
+    url(r'^beta/outbox-tab/$',
+        'outbox',
+        name='messages-beta_outbox'),
+    url(r'^beta/trash-tab/$',
+        'trash',
+        name='messages-beta_trash'),
+    url(r'^beta/message/$',
+        'message',
+        name='messages-beta_message'),
+    url(r'^beta/options-tab/$',
+        'options',
+        name='messages-beta_options'),
+    url(r'^beta/compose-tab/$',
+        'compose',
+        name='messages-beta_compose'),
+    url(r'^beta/compose-tab/([\w.@+-]{1,30})/$',
+        'compose',
+        name='messages-beta_compose_to'),
+    url(r'^beta/bulk/$',
+        'bulk',
+        name='messages-beta_bulk'),
+)
