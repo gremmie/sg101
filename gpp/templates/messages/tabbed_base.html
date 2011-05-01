@@ -10,6 +10,11 @@
 //<![CDATA[
    var initialTab = {{ tab }};
    var username = "{{ request.user.username }}";
+{% if receiver %}
+   var receiver = "{{ receiver }}";
+{% else %}
+   var receiver = "";
+{% endif %}
 //]]>
 </script>
 <script type="text/javascript" src="{{ STATIC_URL }}js/tabbed_messages.js"></script>

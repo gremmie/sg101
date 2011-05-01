@@ -5,6 +5,7 @@ Views for the messages application.
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, InvalidPage
 from django.core.urlresolvers import reverse
@@ -49,6 +50,22 @@ def index(request, tab=None):
     tab_index = TAB_INDICES[tab] if tab else 0
     return render(request, 'messages/tabbed_base.html', {
         'tab': tab_index,
+        })
+
+
+@login_required
+def compose_to(request, receiver):
+    """
+    This function displays the base tabbed private messages view,
+    and configures it to display the compose PM tab for the given
+    receiver.
+
+    """
+    user = get_object_or_404(User, username=receiver)
+    tab_index = TAB_INDICES['compose']
+    return render(request, 'messages/tabbed_base.html', {
+        'tab': tab_index,
+        'receiver': receiver,
         })
 
 
