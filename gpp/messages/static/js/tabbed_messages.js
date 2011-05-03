@@ -55,13 +55,36 @@ var msgCache = {};
 var doReply = false;
 var selectedTab = 0;
 
+function updateUnreadMsgText(n)
+{
+   var txt = '';
+   if (n == 1) {
+      txt = "1 New Message";
+   }
+   else if (n > 1) {
+      txt = n + " New Messages";
+   }
+   else {
+      txt = "Private Messages";
+   }
+   $('#unread_msg_text').html(txt);
+}
+
 function showMsg(link, id) {
    $msgDialog.msgId = id;  // create a msgId attribute on the dialog
    var msg = msgCache[id];
 
    // mark as read if necessary
-   if (username == msg.receiver) {
+   var $link = $(link);
+
+   if (username == msg.receiver && $link.hasClass('unread')) {
       $(link).removeClass('unread');
+
+      // decrement count of unread messages in base template
+      if (unreadMsgCount > 0)
+      {
+         updateUnreadMsgText(--unreadMsgCount);
+      }
    }
 
    $msgDialog.html(msg.content);
@@ -76,7 +99,7 @@ function msgShow(link, id) {
       return;
    }
    $.ajax({
-      url: '/messages/beta/message/',
+      url: '/messages/message/',
       type: 'POST',
       data: {
          msg_id : id
@@ -95,7 +118,7 @@ function msgShow(link, id) {
 
 function submitOptions(form) {
    $.ajax({
-      url: '/messages/beta/options-tab/',
+      url: '/messages/options-tab/',
       type: 'POST',
       data: $(form).serialize(),
       dataType: 'html',
@@ -112,7 +135,7 @@ function submitOptions(form) {
 
 function messageSubmit(form) {
    $.ajax({
-      url: '/messages/beta/compose-tab/',
+      url: '/messages/compose-tab/',
       type: 'POST',
       data: $(form).serialize(),
       dataType: 'html',
@@ -137,7 +160,7 @@ function tabMasterCheckClick(box, name) {
 function bulkMsgAction(form, action) {
    if (confirm("Really " + action + " checked messages?")) {
       $.ajax({
-         url: '/messages/beta/bulk/',
+         url: '/messages/bulk/',
          type: 'POST',
          data: $(form).serialize(),
          dataType: 'text',

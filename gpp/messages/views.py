@@ -1,333 +1,306 @@
-"""Views for the messages application"""
+"""
+Views for the messages application.
 
-import collections
+"""
 import datetime
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
-from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator, EmptyPage, InvalidPage
 from django.core.urlresolvers import reverse
-from django.http import Http404
-from django.views.decorators.http import require_POST
+from django.http import HttpResponse
+from django.http import HttpResponseForbidden
+from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+import django.utils.simplejson as json
 
-from messages.models import Message
-from messages.models import Options
-from messages.forms import ComposeForm
-from messages.forms import OptionsForm
-from messages.utils import reply_subject
-from messages.utils import quote_message
+from messages.models import Message, Options
+from messages.forms import OptionsForm, ComposeForm
+from messages.utils import reply_subject, quote_message
 
 
-BOX_MAP = {
-    'inbox': 'messages-inbox',
-    'outbox': 'messages-outbox',
-    'trash': 'messages-trash',
+MSGS_PER_PAGE = 20
+
+TAB_INDICES = {
+    'inbox': 0,
+    'compose': 1,
+    'outbox': 2,
+    'trash': 3,
+    'options': 4,
 }
 
-MSG_DELETED, MSG_TRASHED, MSG_ERROR = range(3)
 
-
-def box_redirect(request):
-    """
-    Determines which box to redirect to by looking for a GET or
-    POST parameter.
-    """
-    if request.method == 'GET':
-        box = request.GET.get('box', 'inbox')
-    else:
-        box = request.POST.get('box', 'inbox')
-    if BOX_MAP.has_key(box):
-        url = reverse(BOX_MAP[box])
-    else:
-        url = reverse(BOX_MAP['inbox'])
-    return HttpResponseRedirect(url)
+def _get_page(request):
+    try:
+        n = int(request.GET.get('page', '1'))
+    except ValueError:
+        n = 1
+    return n
 
 
 @login_required
+def index(request, tab=None):
+    """
+    This function displays the base tabbed private messages view.
+
+    """
+    tab_index = TAB_INDICES[tab] if tab else 0
+    return render(request, 'messages/tabbed_base.html', {
+        'tab': tab_index,
+        'unread_count': Message.objects.unread_count(request.user),
+        })
+
+
+@login_required
+def compose_to(request, receiver):
+    """
+    This function displays the base tabbed private messages view,
+    and configures it to display the compose PM tab for the given
+    receiver.
+
+    """
+    user = get_object_or_404(User, username=receiver)
+    tab_index = TAB_INDICES['compose']
+    return render(request, 'messages/tabbed_base.html', {
+        'tab': tab_index,
+        'receiver': receiver,
+        'unread_count': Message.objects.unread_count(request.user),
+        })
+
+
 def inbox(request):
-    """Displays the inbox for the user making the request."""
-    msgs = Message.objects.inbox(request.user)
-    return render_to_response('messages/inbox.html', {
+    """
+    Returns the inbox for the user.
+
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+
+    msg_list = Message.objects.inbox(request.user)
+    paginator = Paginator(msg_list, MSGS_PER_PAGE)
+    try:
+        msgs = paginator.page(_get_page(request))
+    except EmptyPage, InvalidPage:
+        msgs = paginator.page(paginator.num_pages)
+
+    return render(request, 'messages/inbox_tab.html', {
         'msgs': msgs,
-        },
-        context_instance = RequestContext(request))
+        'url': reverse('messages-inbox'),
+        })
 
 
-@login_required
 def outbox(request):
-    """Displays the outbox for the user making the request."""
-    msgs = Message.objects.outbox(request.user)
-    return render_to_response('messages/outbox.html', {
+    """
+    Returns the outbox for the user.
+
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+
+    msg_list = Message.objects.outbox(request.user)
+    paginator = Paginator(msg_list, MSGS_PER_PAGE)
+    try:
+        msgs = paginator.page(_get_page(request))
+    except EmptyPage, InvalidPage:
+        msgs = paginator.page(paginator.num_pages)
+
+    return render(request, 'messages/outbox_tab.html', {
         'msgs': msgs,
-        },
-        context_instance = RequestContext(request))
+        'url': reverse('messages-outbox'),
+        })
 
 
-@login_required
 def trash(request):
-    """Displays the trash for the user making the request."""
-    msgs = Message.objects.trash(request.user)
-    return render_to_response('messages/trash.html', {
+    """
+    Returns the trash for the user.
+
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+
+    msg_list = Message.objects.trash(request.user)
+    paginator = Paginator(msg_list, MSGS_PER_PAGE)
+    try:
+        msgs = paginator.page(_get_page(request))
+    except EmptyPage, InvalidPage:
+        msgs = paginator.page(paginator.num_pages)
+
+    return render(request, 'messages/trash_tab.html', {
         'msgs': msgs,
-        },
-        context_instance = RequestContext(request))
+        'url': reverse('messages-trash'),
+        })
 
 
-@login_required
-def view(request, msg_id):
+def message(request):
     """
-    View a given message. Only the sender or receiver can see
-    the message.
+    This view function retrieves a message and returns it as a JSON object.
+
     """
-    msg = get_object_or_404(Message, pk=msg_id)
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    msg_id = request.POST.get('msg_id')
+    msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
     if msg.sender != request.user and msg.receiver != request.user:
-        raise Http404
+        return HttpResponseForbidden()
 
     if msg.receiver == request.user and msg.read_date is None:
         msg.read_date = datetime.datetime.now()
         msg.save()
 
-    box = request.GET.get('box', None)
+    msg_dict = dict(subject=msg.subject,
+                    sender=msg.sender.username,
+                    receiver=msg.receiver.username,
+                    content=msg.html,
+                    re_subject=reply_subject(msg.subject),
+                    re_content=quote_message(msg.sender.username, msg.send_date,
+                                             msg.message))
 
-    return render_to_response('messages/view.html', {
-        'box': box,
-        'msg': msg,
-        'is_deleted': msg.is_deleted(request.user),
-        },
-        context_instance = RequestContext(request))
+    result = json.dumps(msg_dict, ensure_ascii=False)
+    return HttpResponse(result, content_type='application/json')
 
 
-@login_required
-def reply(request, msg_id):
+def options(request):
     """
-    Process or prepare the compose form in order to reply
-    to a given message.
+    This view handles the displaying and changing of private message options.
+
     """
-    msg = get_object_or_404(Message, pk=msg_id)
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
 
     if request.method == "POST":
-        if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return box_redirect(request)
-        compose_form = ComposeForm(request.user, request.POST)
-        if compose_form.is_valid():
-            compose_form.save(sender=request.user, parent_msg=msg)
-            messages.success(request, 'Reply sent.')
-            return box_redirect(request)
+        options = Options.objects.for_user(request.user)
+        form = OptionsForm(request.POST, instance=options, prefix='opts')
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Options saved.')
     else:
-        if msg.receiver == request.user:
-            receiver_name = msg.sender.username
-        else:
-            # replying to message in outbox
-            receiver_name = msg.receiver.username
+        options = Options.objects.for_user(request.user)
+        form = OptionsForm(instance=options, prefix='opts')
 
-        form_data = {
-            'receiver': receiver_name,
-            'subject': reply_subject(msg.subject),
-            'message': quote_message(msg.sender, msg.send_date, msg.message),
-            'box': request.GET.get('box', 'inbox'),
-        }
-
-        compose_form = ComposeForm(request.user, initial=form_data)
-
-    return render_to_response('messages/compose.html', {
-        'compose_form': compose_form,
-        },
-        context_instance = RequestContext(request))
+    return render(request, 'messages/options_tab.html', {
+        'form': form,
+        })
 
 
-@login_required
 def compose(request, receiver=None):
     """
-    Process or prepare the compose form in order to create
-    a new message.
+    Process or prepare the compose form to create a new private message.
+
     """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+
     if request.method == "POST":
-        if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return HttpResponseRedirect(reverse('messages-inbox'))
         compose_form = ComposeForm(request.user, request.POST)
         if compose_form.is_valid():
             compose_form.save(sender=request.user)
             messages.success(request, 'Message sent.')
-            return HttpResponseRedirect(reverse('messages-inbox'))
+            return HttpResponseRedirect(reverse('messages-index_named', args=['compose']))
     else:
         if receiver is not None:
-            form_data = {
-                'receiver': receiver,
-            }
+            form_data = {'receiver': receiver}
             compose_form = ComposeForm(request.user, initial=form_data)
         else:
             compose_form = ComposeForm(request.user)
 
-    return render_to_response('messages/compose.html', {
+    return render(request, 'messages/compose_tab.html', {
         'compose_form': compose_form,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
-def _delete_message(user, msg):
+def _only_integers(slist):
     """
-    Deletes a given message. The user must be either the sender or
-    receiver for this to succeed.
-    If both parties have deleted the message, it is deleted from the
-    database. If only one party has deleted the message, the message
-    is just sent to the trash.
-
-    Returns MSG_DELETED, MSG_TRASHED, or MSG_ERROR to indicate what
-    action was performed.
+    Accepts a list of strings. Returns a list of integers consisting of only
+    those elements from the original list that could be converted to integers
 
     """
-    if msg.sender == user:
-        if (msg.receiver_delete_date is not None or
-                msg.read_date is None):
-            # Both parties deleted the message or receiver hasn't read it yet,
-            # we can delete it now
-            msg.delete()
-            return MSG_DELETED
-        else:
-            # receiver still has it in inbox
-            msg.sender_delete_date = datetime.datetime.now()
-            msg.save()
-            return MSG_TRASHED
-
-    elif msg.receiver == user:
-        if msg.sender_delete_date is not None:
-            # both parties deleted the message, we can delete it now
-            msg.delete()
-            return MSG_DELETED
-        else:
-            # sender still has it in the outbox
-            msg.receiver_delete_date = datetime.datetime.now()
-            msg.save()
-            return MSG_TRASHED
-
-    return MSG_ERROR
-
-
-@login_required
-@require_POST
-def delete(request, msg_id):
-    """
-    Deletes a given message. The user must be either the sender or
-    receiver for this to succeed.
-    """
-    msg = get_object_or_404(Message, pk=msg_id)
-    result = _delete_message(request.user, msg)
-    if result == MSG_DELETED:
-        messages.success(request, 'Message deleted.')
-    elif result == MSG_TRASHED:
-        messages.success(request, 'Message sent to trash.')
-    else:
-        messages.error(request, 'Error deleting message.')
-
-    return box_redirect(request)
-
-
-@login_required
-def delete_bulk(request):
-    """
-    Deletes messages in bulk. The message ID's to be deleted are expected
-    to be in the delete POST array. The user must be either the sender
-    or receiver for this to succeed.
-    """
-    if request.method == "POST":
-        delete_ids = request.POST.getlist('delete_ids')
+    result = []
+    for s in slist:
         try:
-            delete_ids = [int(id) for id in delete_ids]
+            n = int(s)
         except ValueError:
-            raise Http404
-
-        msgs = Message.objects.filter(id__in=delete_ids)
-
-        counts = collections.defaultdict(int)
-        for msg in msgs:
-            result = _delete_message(request.user, msg)
-            counts[result] += 1
-
-        if counts[MSG_DELETED]:
-            messages.success(request, 'Messages deleted: %d' % counts[MSG_DELETED])
-        if counts[MSG_TRASHED]:
-            messages.success(request, 'Messages sent to trash: %d' % counts[MSG_TRASHED])
-        if counts[MSG_ERROR]:
-            messages.error(request, 'Message errors: %d' % counts[MSG_ERROR])
-
-    return box_redirect(request)
+            pass
+        else:
+            result.append(n)
+    return result
 
 
-@login_required
-@require_POST
-def undelete(request, msg_id):
+def _delete_msgs(user, msg_ids):
     """
-    Undeletes a given message. The user must be either the sender or
-    receiver for this to succeed.
-    """
-    msg = get_object_or_404(Message, pk=msg_id)
-    if msg.sender == request.user:
-        msg.sender_delete_date = None
-    elif msg.receiver == request.user:
-        msg.receiver_delete_date = None
-    else:
-        raise Http404
-    msg.save()
-    messages.success(request, 'Message retrieved from the trash.')
+    Deletes the messages given by the list of msg_ids. For this to succeed, the
+    user has to be either the sender or receiver on each message.
 
-    return box_redirect(request)
-
-
-@login_required
-def undelete_bulk(request):
     """
-    Undeletes messages in bulk. The message ID's to be deleted are expected
-    to be in the delete POST array. The user must be either the sender
-    or receiver for this to succeed.
-    """
-    if request.method == "POST":
-        undelete_ids = request.POST.getlist('undelete_ids')
-        try:
-            undelete_ids = [int(id) for id in undelete_ids]
-        except ValueError:
-            raise Http404
-        msgs = Message.objects.filter(id__in = undelete_ids)
-        for msg in msgs:
-            if msg.sender == request.user:
-                msg.sender_delete_date = None
+    msg_ids = _only_integers(msg_ids)
+    msgs = Message.objects.filter(id__in=msg_ids)
+
+    for msg in msgs:
+        if msg.sender == user:
+            if (msg.receiver_delete_date is not None or
+                    msg.read_date is None):
+                # Both parties deleted the message or receiver hasn't read it
+                # yet, we can delete it now
+                msg.delete()
+            else:
+                # receiver still has it in inbox
+                msg.sender_delete_date = datetime.datetime.now()
                 msg.save()
-            elif msg.receiver == request.user:
-                msg.receiver_delete_date = None
+
+        elif msg.receiver == user:
+            if msg.sender_delete_date is not None:
+                # both parties deleted the message, we can delete it now
+                msg.delete()
+            else:
+                # sender still has it in the outbox
+                msg.receiver_delete_date = datetime.datetime.now()
                 msg.save()
-        messages.success(request, 'Messages retrieved from the trash.')
-
-    return box_redirect(request)
 
 
-@login_required
-def options(request):
+def _undelete_msgs(user, msg_ids):
     """
-    View to display/change user options.
+    Attempts to "undelete" the messages given by the msg_ids list.
+    This will only succeed if the user is either the sender or receiver.
+
     """
-    if request.method == "POST":
-        if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return HttpResponseRedirect(reverse('messages-inbox'))
-        options = Options.objects.for_user(request.user)
-        form = OptionsForm(request.POST, instance=options)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Options saved.')
-            return HttpResponseRedirect(reverse('messages-inbox'))
-    else:
-        try:
-            options = Options.objects.for_user(request.user)
-        except:
-            options = Options()
-            options.user = request.user
-            options.save()
+    msg_ids = _only_integers(msg_ids)
+    msgs = Message.objects.filter(id__in=msg_ids)
+    for msg in msgs:
+        if msg.sender == user:
+            msg.sender_delete_date = None
+            msg.save()
+        elif msg.receiver == user:
+            msg.receiver_delete_date = None
+            msg.save()
 
-        form = OptionsForm(instance=options)
 
-    return render_to_response('messages/options.html', {
-        'form': form,
-        },
-        context_instance = RequestContext(request))
+def bulk(request):
+    """
+    This view processes messages in bulk. Arrays of message ids are expected in
+    the POST query dict: inbox_ids and outbox_ids will be deleted; trash_ids will
+    be undeleted.
 
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden()
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    delete_ids = []
+    if 'inbox_ids' in request.POST:
+        delete_ids.extend(request.POST.getlist('inbox_ids'))
+    if 'outbox_ids' in request.POST:
+        delete_ids.extend(request.POST.getlist('outbox_ids'))
+
+    if len(delete_ids):
+        _delete_msgs(request.user, delete_ids)
+
+    if 'trash_ids' in request.POST:
+        _undelete_msgs(request.user, request.POST.getlist('trash_ids'))
+
+    return HttpResponse('');
