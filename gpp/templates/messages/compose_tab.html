@@ -9,7 +9,7 @@
    {% endfor %}
 </ul>
 {% endif %}
-<form action="{% url 'messages-compose' %}" method="post">{% csrf_token %}
+<form action="{% url 'messages-compose' %}" method="post" id="msg_compose_form">{% csrf_token %}
 <table>
 {{ compose_form.as_table }}
 <tr>

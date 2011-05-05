@@ -39,11 +39,12 @@ class ComposeForm(forms.Form):
          self.rcvr_user = User.objects.get(username=receiver)
       except User.DoesNotExist:
          raise forms.ValidationError("That username does not exist.")
-      if self.user.username.lower() == receiver.lower():
+      if self.user == self.rcvr_user:
          raise forms.ValidationError("You can't send a message to yourself.")
       return receiver
 
-   def save(self, sender, parent_msg=None):
+   def save(self, parent_msg=None):
+      sender = self.user
       receiver = self.rcvr_user
       subject = self.cleaned_data['subject']
       message = self.cleaned_data['message']

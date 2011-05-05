@@ -18,6 +18,8 @@ $(document).ready(function() {
             $('#id_receiver').val(msg.sender);
             $('#id_subject').val(msg.re_subject);
             $('#id_message').val(msg.re_content);
+            $('#msg_compose_form').append('<input type="hidden" name="reply_to" value="' +
+               $msgDialog.msgId + '" />');
          }
       },
       ajaxOptions: {
@@ -140,7 +142,7 @@ function messageSubmit(form) {
       data: $(form).serialize(),
       dataType: 'html',
       success: function (data, textStatus) {
-         $('#ui-tabs-1').html(data);
+         $(selectedTab.panel).html(data);
       },
       error: function (xhr, textStatus, ex) {
          alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 

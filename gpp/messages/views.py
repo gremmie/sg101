@@ -198,8 +198,19 @@ def compose(request, receiver=None):
 
     if request.method == "POST":
         compose_form = ComposeForm(request.user, request.POST)
+
+        # Is this a reply to another message?
+        parent_msg_id = request.POST.get('reply_to')
+        if parent_msg_id:
+            parent_msg = get_object_or_404(Message, id=parent_msg_id)
+            if (request.user != parent_msg.receiver and
+                request.user != parent_msg.sender):
+                return HttpResponseForbidden()
+        else:
+            parent_msg = None
+
         if compose_form.is_valid():
-            compose_form.save(sender=request.user)
+            compose_form.save(parent_msg=parent_msg)
             messages.success(request, 'Message sent.')
             return HttpResponseRedirect(reverse('messages-index_named', args=['compose']))
     else:
