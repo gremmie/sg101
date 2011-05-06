@@ -5,7 +5,7 @@
    {% if not forloop.last %}
       <a href="{{ nav_item.url }}">{{ nav_item.name }}</a> &raquo;
    {% else %}
-      </h2><h3 class="forum-nav">{{ nav_item.name }}</h3>
+   </h2><h3 class="forum-nav">{% if nav_item.url %}<a href="{{ nav_item.url }}" title="Permalink"><img src="{{ STATIC_URL }}icons/link.png" alt="Permalink" /></a>{% endif %} {{ nav_item.name }}</h3>
    {% endif %}
 {% empty %}
    </h2>
