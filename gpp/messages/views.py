@@ -212,7 +212,7 @@ def compose(request, receiver=None):
         if compose_form.is_valid():
             compose_form.save(parent_msg=parent_msg)
             messages.success(request, 'Message sent.')
-            return HttpResponseRedirect(reverse('messages-index_named', args=['compose']))
+            compose_form = ComposeForm(request.user)
     else:
         if receiver is not None:
             form_data = {'receiver': receiver}
