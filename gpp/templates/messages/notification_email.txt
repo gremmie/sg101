@@ -1,3 +1,4 @@
+{% load url from future %}
 Dear {{ msg.receiver.username }},
 
 You have just received a new private message at {{ site.name }}. The message
@@ -12,7 +13,7 @@ Subject: {{ msg.subject|safe }}
 
 You may reply to this message by visiting the following link:
 
-http://{{ site.domain }}{{ msg.get_absolute_url }}
+http://{{ site.domain }}{% url 'messages-index' %}
 
 Thanks,
 
