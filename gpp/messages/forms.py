@@ -14,6 +14,7 @@ from core.functions import get_full_name
 from core.widgets import AutoCompleteUserInput
 from messages.models import Message
 from messages.models import Options
+from messages import MSG_BOX_LIMIT
 
 
 # Maximum size of a private message in characters
@@ -52,6 +53,21 @@ class ComposeForm(forms.Form):
         if len(msg) > MESSAGE_MAX:
             raise forms.ValidationError("Your message is too long. Please trim some text.")
         return msg
+
+    def clean(self):
+        # Can we send a message? Is our outbox full?
+
+        count = Message.objects.outbox(self.user).count()
+        if count >= MSG_BOX_LIMIT:
+            raise forms.ValidationError("Your outbox is full. Please delete some messages.")
+
+        # Is the receiver's inbox full?
+        count = Message.objects.inbox(self.rcvr_user).count()
+        if count >= MSG_BOX_LIMIT:
+            raise forms.ValidationError(
+                "Sorry, %s's inbox is full. This message cannot be sent." % self.rcvr_user.username)
+
+        return self.cleaned_data
 
     def save(self, parent_msg=None):
         sender = self.user

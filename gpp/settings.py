@@ -4,6 +4,8 @@ import os
 import platform
 from decimal import Decimal
 
+from django.contrib.messages import constants as message_constants
+
 import local_settings
 
 project_path = os.path.abspath(os.path.split(__file__)[0])
@@ -175,6 +177,13 @@ DEFAULT_FROM_EMAIL = ADMINS[0][1]
 # Messages
 #######################################################################
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+MESSAGE_TAGS = {
+    message_constants.DEBUG: 'notice',
+    message_constants.INFO: 'info',
+    message_constants.SUCCESS: 'success',
+    message_constants.WARNING: 'alert',
+    message_constants.ERROR: 'error',
+}
 
 #######################################################################
 # Email

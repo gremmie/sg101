@@ -6,7 +6,7 @@ import datetime
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.contrib import messages
+from django.contrib import messages as django_messages
 from django.core.paginator import Paginator, EmptyPage, InvalidPage
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
@@ -20,10 +20,12 @@ import django.utils.simplejson as json
 from messages.models import Message, Options
 from messages.forms import OptionsForm, ComposeForm
 from messages.utils import reply_subject, quote_message
+from messages import MSG_BOX_LIMIT
 
 
-MSGS_PER_PAGE = 20
+MSGS_PER_PAGE = 20      # message pagination value
 
+# This must match the jQuery UI tab control
 TAB_INDICES = {
     'inbox': 0,
     'compose': 1,
@@ -39,6 +41,17 @@ def _get_page(request):
     except ValueError:
         n = 1
     return n
+
+
+def _quota_check(box_name, count, request):
+    """
+    Checks the message box count against MSG_BOX_LIMIT.
+    Emits a message to the user if the quota is exceeded.
+    
+    """
+    if count >= MSG_BOX_LIMIT:
+        django_messages.warning(request,
+            "Your %s is full. Please delete some messages." % box_name)
 
 
 @login_required
@@ -80,6 +93,8 @@ def inbox(request):
         return HttpResponseForbidden()
 
     msg_list = Message.objects.inbox(request.user)
+    _quota_check('inbox', msg_list.count(), request)
+
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
         msgs = paginator.page(_get_page(request))
@@ -101,6 +116,8 @@ def outbox(request):
         return HttpResponseForbidden()
 
     msg_list = Message.objects.outbox(request.user)
+    _quota_check('outbox', msg_list.count(), request)
+
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
         msgs = paginator.page(_get_page(request))
@@ -178,7 +195,7 @@ def options(request):
         form = OptionsForm(request.POST, instance=options, prefix='opts')
         if form.is_valid():
             form.save()
-            messages.success(request, 'Options saved.')
+            django_messages.success(request, 'Options saved.')
     else:
         options = Options.objects.for_user(request.user)
         form = OptionsForm(instance=options, prefix='opts')
@@ -211,7 +228,7 @@ def compose(request, receiver=None):
 
         if compose_form.is_valid():
             compose_form.save(parent_msg=parent_msg)
-            messages.success(request, 'Message sent.')
+            django_messages.success(request, 'Message sent.')
             compose_form = ComposeForm(request.user)
     else:
         if receiver is not None:
@@ -219,6 +236,8 @@ def compose(request, receiver=None):
             compose_form = ComposeForm(request.user, initial=form_data)
         else:
             compose_form = ComposeForm(request.user)
+
+        _quota_check('outbox', Message.objects.outbox(request.user).count(), request)
 
     return render(request, 'messages/compose_tab.html', {
         'compose_form': compose_form,
