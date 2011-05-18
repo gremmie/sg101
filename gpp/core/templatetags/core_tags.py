@@ -2,6 +2,7 @@
 Miscellaneous/utility template tags.
 """
 import datetime
+import urllib
 
 from django import template
 from django.conf import settings
@@ -85,3 +86,41 @@ def birthday_block():
         'profiles': profiles,
         'today': today,
     }
+
+
+class EncodeParamsNode(template.Node):
+    """
+    This is the Node class for the encode_params template tag.
+    This template tag retrieves the named parameters from the supplied
+    querydict and returns them as a urlencoded string.
+
+    """
+    def __init__(self, querydict, args):
+        self.querydict = template.Variable(querydict)
+        self.args = args
+
+    def render(self, context):
+        querydict = self.querydict.resolve(context)
+        params = []
+        for arg in self.args:
+            params.extend([(arg, value) for value in querydict.getlist(arg)])
+
+        return urllib.urlencode(params)
+
+
+@register.tag
+def encode_params(parser, token):
+    """
+    This is the compilation function for the encore_params template tag.
+    This template tag retrieves the named parameters from the supplied
+    querydict and returns them as a urlencoded string.
+
+    """
+    bits = token.split_contents()
+    if len(bits) < 3:
+        raise template.TemplateSyntaxError("%s takes at least 2 arguments: "
+                                "querydict arg1 [arg2 arg3 ... argN]" % bits[0])
+
+    querydict = bits[1]
+    args = [arg[1:-1] for arg in bits[2:]]
+    return EncodeParamsNode(querydict, args)

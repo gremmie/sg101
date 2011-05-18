@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load highlight %}
+{% load core_tags %}
 {% block title %}Search{% endblock %}
 {% block custom_js %}
 <script type="text/javascript">
@@ -61,9 +62,9 @@ $(document).ready(function() {
 
       {% if page.has_previous or page.has_next %}
           <div>
-              {% if page.has_previous %}<a href="?{{ search_params }}&amp;page={{ page.previous_page_number }}">{% endif %}&laquo; Previous{% if page.has_previous %}</a>{% endif %}
+              {% if page.has_previous %}<a href="?{% encode_params request.GET 'q' 'models' %}&amp;page={{ page.previous_page_number }}">{% endif %}&laquo; Previous{% if page.has_previous %}</a>{% endif %}
               |
-              {% if page.has_next %}<a href="?{{ search_params }}&amp;page={{ page.next_page_number }}">{% endif %}Next &raquo;{% if page.has_next %}</a>{% endif %}
+              {% if page.has_next %}<a href="?{% encode_params request.GET 'q' 'models' %}&amp;page={{ page.next_page_number }}">{% endif %}Next &raquo;{% if page.has_next %}</a>{% endif %}
           </div>
       {% endif %}
   {% else %}

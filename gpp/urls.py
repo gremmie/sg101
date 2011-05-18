@@ -7,7 +7,7 @@ from haystack.views import search_view_factory
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
-from custom_search import ModelSearchView, CustomModelSearchForm
+from custom_search import CustomModelSearchForm
 
 
 admin.autodiscover()
@@ -53,8 +53,7 @@ urlpatterns = patterns('',
 # Haystack search views
 urlpatterns += patterns('haystack.views',
     url(r'^search/$',
-        search_view_factory(view_class=ModelSearchView,
-            form_class=CustomModelSearchForm, load_all=True),
+        search_view_factory(form_class=CustomModelSearchForm, load_all=True),
         name='haystack_search'),
 )
 
