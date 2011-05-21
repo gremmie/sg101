@@ -68,12 +68,16 @@ class Poll(models.Model):
 
         return (total_votes, choices)
 
-    def total_votes(self):
+    def _total_votes(self):
         """
         Returns the number of votes cast in this poll to date.
 
         """
-        return sum(choice.votes for choice in self.choice_set.all())
+        if not hasattr(self, '_total_votes_cache'):
+            self._total_votes_cache = sum(choice.votes for choice in
+                                            self.choice_set.all())
+        return self._total_votes_cache
+    total_votes = property(_total_votes)
 
     def is_open(self):
         now = datetime.datetime.now()

@@ -8,6 +8,7 @@
    <ul>
    {% for poll in current_polls %}
       <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a> &bull; 
+      {{ poll.total_votes }} vote{{ poll.total_votes|pluralize }} &bull;
       {% get_comment_count for poll as comment_count %}
       {{ comment_count }} comment{{ comment_count|pluralize }} &bull;
       {{ poll.start_date|date:"M d, Y" }}
@@ -25,6 +26,7 @@
    <ul>
    {% for poll in old_polls %}
       <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a> &bull; 
+      {{ poll.total_votes }} vote{{ poll.total_votes|pluralize }} &bull;
       {% get_comment_count for poll as comment_count %}
       {{ comment_count }} comment{{ comment_count|pluralize }} &bull;
       {{ poll.start_date|date:"M d, Y" }} -

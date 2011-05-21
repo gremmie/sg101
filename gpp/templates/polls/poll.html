@@ -15,7 +15,8 @@
 {% endif %}
 {% get_comment_count for poll as comment_count %}
 <p>
-This poll has <a href="{% url 'polls.views.poll_results' poll.id %}">{{ comment_count }} comment{{ comment_count|pluralize }}</a>.
+This poll has {{ poll.total_votes }} vote{{ poll.total_votes|pluralize }} and 
+<a href="{% url 'polls.views.poll_results' poll.id %}">{{ comment_count }} comment{{ comment_count|pluralize }}</a>.
 {% if poll.is_open %}
 Voting for this poll started on {{ poll.start_date|date:"F d, Y" }}. 
    {% if poll.end_date %}
