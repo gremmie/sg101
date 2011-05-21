@@ -15,7 +15,7 @@
 {% endblock %}
 {% block content %}
 <h2>Polls</h2>
-<h3>{{ poll.question }}</h3>
+<h3>Results for: {{ poll.question }}</h3>
 <dl class="poll-result">
 {% for choice in choices %}
    <dt>{{ choice.choice }} - {{ choice.pct|floatformat }}% ({{ choice.votes }} vote{{ choice.votes|pluralize }})</dt>
@@ -26,12 +26,17 @@
 {% endfor %}
 </dl>
 <p><strong>{{ total_votes }} total vote{{ total_votes|pluralize }}.</strong></p>
+
+{% if user_choice %}
+<p>You voted for &quot;{{ user_choice.choice }}&quot;.</p>
+{% endif %}
+
 <p class="poll-nav">
 <a href="{{ poll.get_absolute_url }}">Poll Details</a>
 {% if poll.is_open and user.is_authenticated %}
-| <a href="{% url 'polls.views.poll_vote' poll_id=poll.id %}">Vote</a> 
+| <a href="{% url 'polls-vote' poll_id=poll.id %}">Vote</a> 
 {% endif %}
-| <a href="{% url 'polls.views.poll_index' %}">Poll Index</a>
+| <a href="{% url 'polls-main' %}">All Polls</a>
 </p>
 
 {% get_comment_count for poll as comment_count %}

@@ -10,6 +10,9 @@
    <li>{{ choice.choice }}</li>
 {% endfor %}
 </ul>
+{% if user_choice %}
+<p>You voted for &quot;{{ user_choice.choice }}&quot;.</p>
+{% endif %}
 {% get_comment_count for poll as comment_count %}
 <p>
 This poll has <a href="{% url 'polls.views.poll_results' poll.id %}">{{ comment_count }} comment{{ comment_count|pluralize }}</a>.
@@ -23,10 +26,10 @@ This poll ran from {{ poll.start_date|date:"F d, Y" }} to {{ poll.end_date|date:
 {% endif %}
 </p>
 <p class="poll-nav">
-<a href="{% url 'polls.views.poll_results' poll.id %}">View Results &amp; Comments</a> 
+<a href="{% url 'polls-results' poll.id %}">View Results &amp; Comments</a> 
 {% if poll.is_open and user.is_authenticated %}
-| <a href="{% url 'polls.views.poll_vote' poll_id=poll.id %}">Vote</a>
+| <a href="{% url 'polls-vote' poll_id=poll.id %}">Vote</a>
 {% endif %}
-| <a href="{% url 'polls.views.poll_index' %}">Poll Index</a>
+| <a href="{% url 'polls-main' %}">All Polls</a>
 </p>
 {% endblock %}
