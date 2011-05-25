@@ -47,7 +47,7 @@ def _quota_check(box_name, count, request):
     """
     Checks the message box count against MSG_BOX_LIMIT.
     Emits a message to the user if the quota is exceeded.
-    
+
     """
     if count >= MSG_BOX_LIMIT:
         django_messages.warning(request,
