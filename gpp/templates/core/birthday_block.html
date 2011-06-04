@@ -3,10 +3,17 @@
 {% load humanize %}
 {% block block_title %}<img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {{ today|date:"F" }} Birthdays <img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {% endblock %}
 {% block block_content %}
-{% if profiles %}
+{% if birthdays %}
    <ul>
-   {% for profile in profiles %}
-      <li>{{ profile.birthday.day|ordinal }} &ndash; <a href="{% url 'bio-view_profile' username=profile.user.username %}">{{ profile.user.username }}</a></li>
+   {% for bday in birthdays %}
+      <li>
+         {% if bday.day == today.day %}<strong>{% endif %}
+         {{ bday.day|ordinal }} &ndash;
+         {% for profile in bday.profiles %}
+         <a href="{% url 'bio-view_profile' username=profile.user.username %}">{{ profile.user.username }}</a>{% if not forloop.last %}, {% endif %}
+         {% endfor %}
+         {% if bday.day == today.day %}</strong>{% endif %}
+      </li>
    {% endfor %}
    </ul>
 {% else %}

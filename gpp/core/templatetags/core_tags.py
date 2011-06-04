@@ -1,6 +1,7 @@
 """
 Miscellaneous/utility template tags.
 """
+import collections
 import datetime
 import urllib
 
@@ -71,6 +72,20 @@ def elapsed(timestamp):
 elapsed.is_safe = True
 
 
+class Birthday(object):
+    """
+    A simple named tuple-type class for birthdays.
+    This class was created to make things easier in the template.
+    
+    """
+    day = None
+    profiles = []
+
+    def __init__(self, day, profiles=None):
+        self.day = day
+        self.profiles = profiles if profiles else []
+
+
 @register.inclusion_tag('core/birthday_block.html')
 def birthday_block():
     """
@@ -79,11 +94,17 @@ def birthday_block():
     today = datetime.date.today()
     profiles = list(UserProfile.objects.filter(birthday__month=today.month).select_related(
             'user'))
-    profiles.sort(key=lambda p: p.birthday.day)
+
+    days = collections.defaultdict(list)
+    for profile in profiles:
+        days[profile.birthday.day].append(profile)
+
+    birthdays = [Birthday(day, profiles) for day, profiles in days.iteritems()]
+    birthdays.sort(key=lambda b: b.day)
 
     return {
         'STATIC_URL': settings.STATIC_URL,
-        'profiles': profiles,
+        'birthdays': birthdays,
         'today': today,
     }
 
