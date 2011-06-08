@@ -184,9 +184,11 @@ def topic_index(request, id):
     profile_keys = [profile.id for profile in profiles]
     user_profiles = dict((profile.user.id, profile) for profile in profiles)
 
+    last_post_on_page = None
     for post in page.object_list:
         post.user.user_profile = user_profiles[post.user.id]
         post.attach_list = []
+        last_post_on_page = post
 
     # Attach badge ownership info to the user profiles to avoid lots
     # of database hits in the template:
@@ -210,8 +212,12 @@ def topic_index(request, id):
 
     last_page = page_num == paginator.num_pages
 
-    if request.user.is_authenticated() and last_page:
-        _update_last_visit(request.user, topic)
+    if request.user.is_authenticated():
+        if last_page or last_post_on_page is None:
+            visit_time = datetime.datetime.now()
+        else:
+            visit_time = last_post_on_page.creation_date
+        _update_last_visit(request.user, topic, visit_time)
 
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
@@ -342,7 +348,6 @@ def quick_reply_ajax(request):
         post.user.user_profile = request.user.get_profile()
         post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
-        _update_last_visit(request.user, form.topic)
 
         return render_to_response('forums/display_post.html', {
             'post': post,
@@ -590,7 +595,6 @@ def new_post(request, topic_id):
                 form.attach_proc.save_attachments(post)
 
                 _bump_post_count(request.user)
-                _update_last_visit(request.user, topic)
                 return HttpResponseRedirect(post.get_absolute_url())
         else:
             quote_id = request.GET.get('quote')
@@ -1065,7 +1069,7 @@ def _bulk_move(topic_ids, old_forum, new_forum):
             _move_topic(topic, old_forum, new_forum)
 
 
-def _update_last_visit(user, topic):
+def _update_last_visit(user, topic, visit_time):
     """
     Does the bookkeeping for the last visit status for the user to the
     topic/forum.
@@ -1084,10 +1088,11 @@ def _update_last_visit(user, topic):
         try:
             tlv = TopicLastVisit.objects.get(user=user, topic=topic)
         except TopicLastVisit.DoesNotExist:
-            tlv = TopicLastVisit(user=user, topic=topic)
+            tlv = TopicLastVisit(user=user, topic=topic, last_visit=datetime.datetime.min)
 
-        tlv.touch()
-        tlv.save()
+        if visit_time > tlv.last_visit:
+            tlv.last_visit = visit_time
+            tlv.save()
 
 
 def _split_topic_at(topic, post_id, new_forum, new_name):
