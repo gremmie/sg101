@@ -348,6 +348,7 @@ def quick_reply_ajax(request):
         post.user.user_profile = request.user.get_profile()
         post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
+        _update_last_visit(request.user, form.topic, datetime.datetime.now())
 
         return render_to_response('forums/display_post.html', {
             'post': post,
@@ -595,6 +596,7 @@ def new_post(request, topic_id):
                 form.attach_proc.save_attachments(post)
 
                 _bump_post_count(request.user)
+                _update_last_visit(request.user, topic, datetime.datetime.now())
                 return HttpResponseRedirect(post.get_absolute_url())
         else:
             quote_id = request.GET.get('quote')
