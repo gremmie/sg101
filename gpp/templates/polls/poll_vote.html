@@ -24,9 +24,8 @@
    </form>
 {% endif %}
 <p class="poll-nav">
-<a href="{{ poll.get_absolute_url }}">Poll Details</a>
-| <a href="{% url 'polls-results' poll.id %}">View Results</a>
-| <a href="{% url 'polls-main' %}">All Polls</a>
+<a href="{{ poll.get_absolute_url }}">View results</a>
+| <a href="{% url 'polls-main' %}">All polls</a>
 </p>
 <p>This poll was published on {{ poll.start_date|date:"F d, Y" }}.</p>
 {% endblock %}

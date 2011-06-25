@@ -8,7 +8,7 @@
          <li>{{ choice.choice }}</li>
       {% endfor %}
    </ul>
-   <p>Go <a href="{% url 'polls-detail' poll_id=poll.id %}">see the results and vote</a>
+   <p>Go <a href="{{ poll.get_absolute_url }}">see the results and vote</a>
    or check out <a href="{% url 'polls-main' %}">more polls</a>.</p>
 </div>
 {% endif %}
