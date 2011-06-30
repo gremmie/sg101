@@ -62,7 +62,7 @@ def get_access_token(request):
     URL and then upgrade it to an access token. We then return the access token.
 
     """
-    logger.info("get_access_token started; retrieving saved request_token...")
+    logger.info("get_access_token called as '%s'", request.get_full_path())
 
     saved_token = request.session.get(REQ_TOKEN_SESSION_KEY)
     if saved_token is None:
