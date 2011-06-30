@@ -49,7 +49,7 @@ def fetch_auth(request, scopes, callback_url):
     logger.info("received token")
     request.session[REQ_TOKEN_SESSION_KEY] = request_token
 
-    auth_url = request_token.generate_authorization_url(google_apps_domain=None)
+    auth_url = request_token.generate_authorization_url()
     logger.info("generated auth url '%s'", str(auth_url))
 
     return str(auth_url)
