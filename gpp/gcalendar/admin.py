@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.defaults import *
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
@@ -119,7 +120,9 @@ class EventAdmin(admin.ModelAdmin):
         authorize it.
 
         """
-        callback_url = reverse('admin:gcalendar-get_access_token')
+        site = Site.objects.get_current()
+        callback_url = 'http://%s%s' % (site.domain,
+                reverse('admin:gcalendar-get_access_token'))
         try:
             auth_url = oauth.fetch_auth(request, SCOPES, callback_url)
         except gdata.client.Error, e:
