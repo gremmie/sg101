@@ -33,7 +33,7 @@ def fetch_auth(request, scopes, callback_url):
     This function only supports RSA-SHA1 authentication. Settings in the Django
     settings module determine the consumer key and path to the RSA private key.
     """
-    logger.info("fetch_auth started...")
+    logger.info("fetch_auth started; callback url='%s'", callback_url)
     client = CalendarResourceClient(None, source=USER_AGENT)
 
     with open(settings.GOOGLE_OAUTH_PRIVATE_KEY_PATH, 'r') as f:
