@@ -2,6 +2,8 @@
 This file contains the automatic admin site definitions for the gcalendar application.
 
 """
+import datetime
+
 from django.conf import settings
 from django.conf.urls.defaults import *
 from django.contrib import admin
