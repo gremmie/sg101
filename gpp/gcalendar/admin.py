@@ -15,7 +15,7 @@ from django.template import RequestContext
 
 import gdata.client
 
-from gcalendar.models import Event
+from gcalendar.models import Event, AccessToken
 from gcalendar.forms import PasswordForm
 from gcalendar.calendar import Calendar
 from gcalendar.calendar import CalendarError
@@ -134,7 +134,7 @@ class EventAdmin(admin.ModelAdmin):
     def get_access_token(self, request):
         """
         This view is called by Google after the user has authorized us access to
-        their data. We call into the oauth module to upgrade the oauth token to 
+        their data. We call into the oauth module to upgrade the oauth token to
         an access token. We then save the access token in the database and
         redirect back to our admin Google sync view.
 
@@ -144,10 +144,17 @@ class EventAdmin(admin.ModelAdmin):
         except gdata.client.Error, e:
             messages.error(request, str(e))
         else:
-            # TODO: save access token
-            pass
+            try:
+                token = AccessToken.objects.get(id=1)
+            except AccessToken.DoesNotExist:
+                token = AccessToken()
+
+            token.token = gdata.gauth.TokenToBlob(access_token)
+            token.auth_date = datetime.datetime.now()
+            token.save()
 
         return HttpResponseRedirect(reverse('admin:gcalendar-google_sync'))
 
 
 admin.site.register(Event, EventAdmin)
+admin.site.register(AccessToken)

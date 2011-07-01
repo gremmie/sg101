@@ -1,5 +1,6 @@
 """
 Models for the gcalendar application.
+
 """
 from django.db import models
 from django.db.models import Q
@@ -18,8 +19,8 @@ class PendingEventManager(models.Manager):
         """Returns a queryset of events that have been approved to update
         the Google calendar."""
         return super(PendingEventManager, self).get_query_set().filter(
-                Q(status=Event.NEW_APRV) | \
-                Q(status=Event.EDIT_APRV) | \
+                Q(status=Event.NEW_APRV) |
+                Q(status=Event.EDIT_APRV) |
                 Q(status=Event.DEL_APRV)
             )
 
@@ -98,9 +99,23 @@ class Event(models.Model):
 
             forums.tools.create_topic(
                 forum_slug=GIG_FORUM_SLUG,
-                user=self.user, 
+                user=self.user,
                 topic_name=topic_name,
                 post_body=post_body)
 
             self.create_forum_thread = False
             self.save()
+
+
+class AccessToken(models.Model):
+    """
+    This model represents serialized OAuth access tokens for reading and
+    updating the Google Calendar.
+
+    """
+    auth_date = models.DateTimeField()
+    token = models.TextField()
+
+    def __unicode__(self):
+        return u'Access token created on ' + unicode(self.auth_date)
+
