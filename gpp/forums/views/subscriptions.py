@@ -13,6 +13,7 @@ from django.template import RequestContext
 from django.views.decorators.http import require_POST
 
 from forums.models import Topic
+import forums.permissions as perms
 from core.functions import send_mail
 from core.paginator import DiggPaginator
 
@@ -50,7 +51,7 @@ def notify_topic_subscribers(post):
 def subscribe_topic(request, topic_id):
     """Subscribe the user to the requested topic."""
     topic = get_object_or_404(Topic.objects.select_related(), id=topic_id)
-    if topic.forum.category.can_access(request.user):
+    if perms.can_access(topic.forum.category, request.user):
         topic.subscribers.add(request.user)
         return HttpResponseRedirect(
             reverse("forums-subscription_status", args=[topic.id]))

@@ -13,6 +13,7 @@ from django.http import Http404
 
 from core.paginator import DiggPaginator
 from forums.models import Topic
+import forums.permissions as perms
 
 
 @login_required
@@ -23,11 +24,11 @@ def favorite_topic(request, topic_id):
     user.
     """
     topic = get_object_or_404(Topic.objects.select_related(), id=topic_id)
-    if topic.forum.category.can_access(request.user):
+    if perms.can_access(topic.forum.category, request.user):
         topic.bookmarkers.add(request.user)
         return HttpResponseRedirect(
             reverse("forums-favorites_status", args=[topic.id]))
-    raise Http404   # TODO return HttpResponseForbidden instead
+    return HttpResponseForbidden()
 
 
 @login_required

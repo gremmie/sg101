@@ -30,24 +30,6 @@ class Category(models.Model):
     def __unicode__(self):
         return self.name
 
-    def can_access(self, user):
-        """
-        Checks to see if the given user has permission to access
-        this category.
-        If this category has no groups assigned to it, return true.
-        Else, return true if the user belongs to a group that has been
-        assigned to this category, and false otherwise.
-        """
-        if self.groups.count() == 0:
-            return True
-        if user.is_authenticated():
-            return self.groups.filter(user__pk=user.id).count() > 0
-        return False
-
-    def is_public(self):
-        """Returns true if this is a public category, viewable by all."""
-        return self.groups.count() == 0
-
 
 class ForumManager(models.Manager):
     """

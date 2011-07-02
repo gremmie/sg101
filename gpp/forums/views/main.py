@@ -21,19 +21,21 @@ from django.views.decorators.http import require_POST
 from django.utils.text import wrap
 from django.db.models import F
 
-from core.paginator import DiggPaginator
-from core.functions import email_admins
-from forums.models import Forum, Topic, Post, FlaggedPost, TopicLastVisit, \
-        ForumLastVisit, Attachment
-from forums.forms import NewTopicForm, NewPostForm, PostForm, MoveTopicForm, \
-        SplitTopicForm
-from forums.unread import get_forum_unread_status, get_topic_unread_status, \
-        get_post_unread_status, get_unread_topics
-
-from bio.models import UserProfile, BadgeOwnership
 import antispam
 import antispam.utils
+from bio.models import UserProfile, BadgeOwnership
+from core.paginator import DiggPaginator
+from core.functions import email_admins
+
+from forums.models import (Forum, Topic, Post, FlaggedPost, TopicLastVisit,
+        ForumLastVisit, Attachment)
+from forums.forms import (NewTopicForm, NewPostForm, PostForm, MoveTopicForm,
+        SplitTopicForm)
+from forums.unread import (get_forum_unread_status, get_topic_unread_status,
+        get_post_unread_status, get_unread_topics)
+
 from forums.attachments import AttachmentProcessor
+import forums.permissions as perms
 
 #######################################################################
 
@@ -117,7 +119,7 @@ def forum_index(request, slug):
     """
     forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
 
-    if not forum.category.can_access(request.user):
+    if not perms.can_access(forum.category, request.user):
         return HttpResponseForbidden()
 
     feed = None
@@ -141,7 +143,7 @@ def forum_index(request, slug):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    can_moderate = _can_moderate(forum, request.user)
+    can_moderate = perms.can_moderate(forum, request.user)
 
     return render_to_response('forums/forum_index.html', {
         'forum': forum,
@@ -160,7 +162,7 @@ def topic_index(request, id):
     topic = get_object_or_404(Topic.objects.select_related(
         'forum', 'forum__category', 'last_post'), pk=id)
 
-    if not topic.forum.category.can_access(request.user):
+    if not perms.can_access(topic.forum.category, request.user):
         return HttpResponseForbidden()
 
     topic.view_count = F('view_count') + 1
@@ -222,7 +224,7 @@ def topic_index(request, id):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    can_moderate = _can_moderate(topic.forum, request.user)
+    can_moderate = perms.can_moderate(topic.forum, request.user)
 
     can_reply = request.user.is_authenticated() and (
         not topic.locked or can_moderate)
@@ -289,7 +291,7 @@ def new_topic(request, slug):
     """
     forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
 
-    if not forum.category.can_access(request.user):
+    if not perms.can_access(forum.category, request.user):
         return HttpResponseForbidden()
 
     if request.method == 'POST':
@@ -338,7 +340,7 @@ def quick_reply_ajax(request):
 
     form = NewPostForm(request.POST)
     if form.is_valid():
-        if not _can_post_in_topic(form.topic, request.user):
+        if not perms.can_post(form.topic, request.user):
             return HttpResponseForbidden("You don't have permission to post in this topic.")
         if antispam.utils.spam_check(request, form.cleaned_data['body']):
             return HttpResponseForbidden(antispam.BUSTED_MESSAGE)
@@ -352,7 +354,7 @@ def quick_reply_ajax(request):
 
         return render_to_response('forums/display_post.html', {
             'post': post,
-            'can_moderate': _can_moderate(form.topic.forum, request.user),
+            'can_moderate': perms.can_moderate(form.topic.forum, request.user),
             'can_reply': True,
             },
             context_instance=RequestContext(request))
@@ -419,7 +421,7 @@ def edit_post(request, id):
     """
     post = get_object_or_404(Post.objects.select_related(), pk=id)
 
-    can_moderate = _can_moderate(post.topic.forum, request.user)
+    can_moderate = perms.can_moderate(post.topic.forum, request.user)
     can_edit = can_moderate or request.user == post.user
 
     if not can_edit:
@@ -578,7 +580,7 @@ def new_post(request, topic_id):
     to a topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=topic_id)
-    can_post = _can_post_in_topic(topic, request.user)
+    can_post = perms.can_post(topic, request.user)
 
     if can_post:
         if request.method == 'POST':
@@ -625,7 +627,7 @@ def mod_topic_stick(request, id):
     This view function is for moderators to toggle the sticky status of a topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=id)
-    if _can_moderate(topic.forum, request.user):
+    if perms.can_moderate(topic.forum, request.user):
         topic.sticky = not topic.sticky
         topic.save()
         return HttpResponseRedirect(topic.get_absolute_url())
@@ -639,7 +641,7 @@ def mod_topic_lock(request, id):
     This view function is for moderators to toggle the locked status of a topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=id)
-    if _can_moderate(topic.forum, request.user):
+    if perms.can_moderate(topic.forum, request.user):
         topic.locked = not topic.locked
         topic.save()
         return HttpResponseRedirect(topic.get_absolute_url())
@@ -653,7 +655,7 @@ def mod_topic_delete(request, id):
     This view function is for moderators to delete an entire topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=id)
-    if _can_moderate(topic.forum, request.user):
+    if perms.can_moderate(topic.forum, request.user):
         forum_url = topic.forum.get_absolute_url()
         _delete_topic(topic)
         return HttpResponseRedirect(forum_url)
@@ -667,7 +669,7 @@ def mod_topic_move(request, id):
     This view function is for moderators to move a topic to a different forum.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=id)
-    if not _can_moderate(topic.forum, request.user):
+    if not perms.can_moderate(topic.forum, request.user):
         return HttpResponseForbidden()
 
     if request.method == 'POST':
@@ -696,7 +698,7 @@ def mod_forum(request, slug):
     stickying and unstickying, moving, and deleting topics.
     """
     forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
-    if not _can_moderate(forum, request.user):
+    if not perms.can_moderate(forum, request.user):
         return HttpResponseForbidden()
 
     topics = forum.topics.select_related('user', 'last_post', 'last_post__user')
@@ -770,7 +772,7 @@ def forum_catchup(request, slug):
     """
     forum = get_object_or_404(Forum.objects.select_related(), slug=slug)
 
-    if not forum.category.can_access(request.user):
+    if not perms.can_access(forum.category, request.user):
         return HttpResponseForbidden()
 
     forum.catchup(request.user)
@@ -783,7 +785,7 @@ def mod_topic_split(request, id):
     This view function allows moderators to split posts off to a new topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=id)
-    if not _can_moderate(topic.forum, request.user):
+    if not perms.can_moderate(topic.forum, request.user):
         return HttpResponseRedirect(topic.get_absolute_url())
 
     if request.method == "POST":
@@ -930,7 +932,7 @@ def post_ip_info(request, post_id):
     """Displays information about the IP address the post was made from."""
     post = get_object_or_404(Post.objects.select_related(), pk=post_id)
 
-    if not _can_moderate(post.topic.forum, request.user):
+    if not perms.can_moderate(post.topic.forum, request.user):
         return HttpResponseForbidden("You don't have permission for this post.")
 
     ip_users = sorted(set(Post.objects.filter(
@@ -969,23 +971,6 @@ def _user_posts(request, target_user, req_user, page_title):
         'page_nav': page_nav,
         },
         context_instance=RequestContext(request))
-
-
-def _can_moderate(forum, user):
-    """
-    Determines if a user has permission to moderate a given forum.
-    """
-    return user.is_authenticated() and (
-            user.is_superuser or user in forum.moderators.all())
-
-
-def _can_post_in_topic(topic, user):
-    """
-    This function returns true if the given user can post in the given topic
-    and false otherwise.
-    """
-    return (not topic.locked and topic.forum.category.can_access(user)) or \
-            (user.is_superuser or user in topic.forum.moderators.all())
 
 
 def _bump_post_count(user):
