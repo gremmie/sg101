@@ -12,15 +12,13 @@ from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template import RequestContext
 
 import gdata.client
 
 from gcalendar.models import Event, AccessToken
-from gcalendar.forms import PasswordForm
-from gcalendar.calendar import Calendar
-from gcalendar.calendar import CalendarError
+from gcalendar.calendar import Calendar, CalendarError
 from gcalendar import oauth
 
 import bio.badges
@@ -83,38 +81,39 @@ class EventAdmin(admin.ModelAdmin):
     approve_events.short_description = "Approve selected events"
 
     def google_sync(self, request):
-        """View to synchronize approved event changes with Google calendar."""
+        """
+        View to synchronize approved event changes with Google calendar.
+
+        """
+        # Get pending events
         events = Event.pending_events.all()
+
+        # Attempt to get saved access token to the Google calendar
+        access_token = AccessToken.objects.get_token().access_token()
+
         messages = []
         err_msg = ''
         if request.method == 'POST':
-            form = PasswordForm(request.POST)
-            if form.is_valid():
+            if access_token:
                 try:
-                    cal = Calendar(settings.GCAL_EMAIL,
-                            form.cleaned_data['password'],
-                            settings.GCAL_CALENDAR_ID)
+                    cal = Calendar(source=oauth.USER_AGENT,
+                            calendar_id=settings.GCAL_CALENDAR_ID,
+                            access_token=access_token)
                     cal.sync_events(events)
                 except CalendarError, e:
                     err_msg = e.msg
                     events = Event.pending_events.all()
-                    form = PasswordForm()
                 else:
                     messages.append('All events processed successfully.')
                     events = Event.objects.none()
-                    form = PasswordForm()
 
-        else:
-            form = PasswordForm()
-
-        return render_to_response('gcalendar/google_sync.html', {
+        return render(request, 'gcalendar/google_sync.html', {
             'current_app': self.admin_site.name,
+            'access_token': access_token,
             'messages': messages,
             'err_msg': err_msg,
             'events': events,
-            'form': form,
-            },
-            context_instance=RequestContext(request))
+            })
 
     def fetch_auth(self, request):
         """
@@ -146,13 +145,8 @@ class EventAdmin(admin.ModelAdmin):
         except gdata.client.Error, e:
             messages.error(request, str(e))
         else:
-            try:
-                token = AccessToken.objects.get(id=1)
-            except AccessToken.DoesNotExist:
-                token = AccessToken()
-
-            token.token = gdata.gauth.TokenToBlob(access_token)
-            token.auth_date = datetime.datetime.now()
+            token = AccessToken.objects.get_token()
+            token.update(access_token)
             token.save()
 
         return HttpResponseRedirect(reverse('admin:gcalendar-google_sync'))

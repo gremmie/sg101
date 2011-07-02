@@ -1,19 +1,16 @@
 """
 This file contains the calendar class wich abstracts the Google gdata API for working with
 Google Calendars.
+
 """
 import datetime
 import pytz
 
 from django.utils.tzinfo import FixedOffset
-from gdata.calendar.service import CalendarService
-from gdata.calendar import CalendarEventFeed
-from gdata.calendar import CalendarEventEntry
-from gdata.calendar import Who
-from gdata.calendar import Where
-from gdata.calendar import When
-from gdata.service import BadAuthentication
-import atom
+from gdata.calendar.client import CalendarClient
+from gdata.calendar.data import (CalendarEventEntry, CalendarEventFeed,
+        CalendarWhere, When, EventWho)
+import atom.data
 
 from gcalendar.models import Event
 
@@ -31,19 +28,12 @@ class Calendar(object):
     DATE_TIME_FMT = DATE_FMT + 'T%H:%M:%S'
     DATE_TIME_TZ_FMT = DATE_TIME_FMT + '.000Z'
 
-    def __init__(self, email, password, calendar_id='default'): 
-        self.client = CalendarService()
-        self.client.email = email
-        self.client.password = password
-        self.client.source = 'Google-Calendar_Python_GCalendar'
-        self.insert_feed = '/calendar/feeds/%s/private/full' % calendar_id
+    def __init__(self, source=None, calendar_id='default', access_token=None):
+        self.client = CalendarClient(source=source, auth_token=access_token)
+
+        self.insert_feed = ('https://www.google.com/calendar/feeds/'
+            '%s/private/full' % calendar_id)
         self.batch_feed = '%s/batch' % self.insert_feed
-        try:
-            self.client.ProgrammaticLogin()
-        except BadAuthentication:
-            raise CalendarError('Incorrect password')
-        except Exception, e:
-            raise CalendarError(str(e))
 
     def sync_events(self, qs):
         request_feed = CalendarEventFeed()
@@ -71,17 +61,23 @@ class Calendar(object):
             code = int(entry.batch_status.code)
 
             error = False
-            if qs[i].status == Event.NEW_APRV or qs[i].status == Event.EDIT_APRV:
-                if (code == 201 and qs[i].status == Event.NEW_APRV) or (
-                       code == 200 and qs[i].status == Event.EDIT_APRV):
-                    qs[i].google_id = entry.id.text
-                    qs[i].google_url = entry.GetHtmlLink().href
+            if qs[i].status == Event.NEW_APRV:
+                if code == 201:
                     qs[i].status = Event.ON_CAL
+                    qs[i].google_id = entry.GetEditLink().href
+                    qs[i].google_url = entry.GetHtmlLink().href
                     qs[i].save()
-                    if code == 201:
-                        qs[i].notify_on_calendar()
+                    qs[i].notify_on_calendar()
                 else:
                     error = True
+
+            elif qs[i].status == Event.EDIT_APRV:
+                if code == 200:
+                    qs[i].status = Event.ON_CAL
+                    qs[i].save()
+                else:
+                    error = True
+
             elif qs[i].status == Event.DEL_APRV:
                 if code == 200:
                     qs[i].delete()
@@ -97,7 +93,7 @@ class Calendar(object):
 
     def _retrieve_event(self, model):
         try:
-            event = self.client.GetCalendarEventEntry(model.google_id)
+            event = self.client.GetEventEntry(model.google_id)
         except Exception, e:
             raise CalendarError('Could not retrieve event from Google: %s, %s' \
                     % (model.what, e))
@@ -105,10 +101,10 @@ class Calendar(object):
 
     def _populate_event(self, model, event):
         """Populates a gdata event from an Event model object."""
-        event.title = atom.Title(text=model.what)
-        event.content = atom.Content(text=model.html)
-        event.where = [Where(value_string=model.where)]
-        event.who = [Who(name=model.user.username, email=model.user.email)]
+        event.title = atom.data.Title(text=model.what)
+        event.content = atom.data.Content(text=model.html)
+        event.where = [CalendarWhere(value=model.where)]
+        event.who = [EventWho(email=model.user.email)]
 
         if model.all_day:
             start_time = self._make_time(model.start_date)
@@ -120,9 +116,9 @@ class Calendar(object):
             start_time = self._make_time(model.start_date, model.start_time, model.time_zone)
             end_time = self._make_time(model.end_date, model.end_time, model.time_zone)
 
-        event.when = [When(start_time=start_time, end_time=end_time)]
+        event.when = [When(start=start_time, end=end_time)]
         return event
-    
+
     def _make_time(self, date, time=None, tz_name=None):
         """
         Returns the gdata formatted date/time string given a date, optional time,

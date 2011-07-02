@@ -1,4 +1,6 @@
 {% extends 'admin/base_site.html' %}
+{% load url from future %}
+{% load core_tags %}
 {% block title %}Sync Events w/Google Calendar{% endblock %}
 {% block breadcrumbs %}
 <div class="breadcrumbs">
@@ -14,9 +16,11 @@
    <li>{{ err_msg }}</li>
 </ul>
 {% endif %}
+
+<p>Access token status: {% bool_icon access_token %} &mdash; <a href="{% url 'admin:gcalendar-fetch_auth' %}">Request new access token</a></p>
+
 {% if events %}
-<p>To synchronize the following approved events with the Google calendar, please enter the password for the
-account and click submit.</p>
+<p>The following pending events have been approved and are ready to be synchronized with the Google calendar.</p>
 <ol>
 {% for event in events %}
 {% if not event.on_calendar %}
@@ -25,10 +29,12 @@ account and click submit.</p>
 {% endif %}
 {% endfor %}
 </ol>
+
+{% if access_token %}
 <form action="." method="POST">{% csrf_token %}
-   {{ form.as_p }}
-   <p><input type="submit" name="submit" value="Submit" /></p>
+   <p><input type="submit" name="synchronize" value="Synchronize Events" /></p>
 </form>
+{% endif %}
 {% else %}
 <p>No events to synchronize at this time.</p>
 {% endif %}

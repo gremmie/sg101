@@ -80,3 +80,20 @@ def get_access_token(request):
 
     logger.info("upgraded to access token...")
     return access_token
+
+
+def serialize_token(token):
+    """
+    This function turns a token into a string and returns it.
+
+    """
+    return gdata.gauth.TokenToBlob(token)
+
+
+def deserialize_token(s):
+    """
+    This function turns a string into a token returns it. The string must have
+    previously been created with serialize_token().
+
+    """
+    return gdata.gauth.TokenFromBlob(s)

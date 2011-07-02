@@ -155,7 +155,3 @@ class EventEntryForm(forms.ModelForm):
             raise forms.ValidationError("Invalid timezone.")
         return tz
 
-
-class PasswordForm(forms.Form):
-    password = forms.CharField(widget=forms.PasswordInput())
-

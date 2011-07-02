@@ -262,12 +262,9 @@ OEMBED_MAXWIDTH = 480
 OEMBED_MAXHEIGHT = 295
 
 # GCalendar settings
-
-GCAL_EMAIL = 'bgneal@gmail.com'
 GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
 # Google OAuth settings
-
 GOOGLE_OAUTH_CONSUMER_KEY = local_settings.GOOGLE_OAUTH_CONSUMER_KEY
 GOOGLE_OAUTH_PRIVATE_KEY_PATH = local_settings.GOOGLE_OAUTH_PRIVATE_KEY_PATH
 

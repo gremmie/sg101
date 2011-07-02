@@ -2,12 +2,15 @@
 Models for the gcalendar application.
 
 """
+import datetime
+
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
 
 from core.markup import site_markup
 import forums.tools
+from gcalendar.oauth import serialize_token, deserialize_token
 
 
 GIG_FORUM_SLUG = "gigs"
@@ -107,6 +110,22 @@ class Event(models.Model):
             self.save()
 
 
+class AccessTokenManager(models.Manager):
+    """
+    A manager for the AccessToken table. Only one access token is saved in the
+    database. This manager provides a convenience method to either return that
+    access token or a brand new one.
+
+    """
+    def get_token(self):
+        try:
+            token = self.get(pk=1)
+        except AccessToken.DoesNotExist:
+            token = AccessToken()
+
+        return token
+
+
 class AccessToken(models.Model):
     """
     This model represents serialized OAuth access tokens for reading and
@@ -116,6 +135,26 @@ class AccessToken(models.Model):
     auth_date = models.DateTimeField()
     token = models.TextField()
 
+    objects = AccessTokenManager()
+
     def __unicode__(self):
         return u'Access token created on ' + unicode(self.auth_date)
 
+    def update(self, access_token, auth_date=None):
+        """
+        This function updates the AccessToken object with the input parameters:
+            access_token - an access token from Google's OAuth dance
+            auth_date - a datetime or None. If None, now() is used.
+
+        """
+        self.auth_date = auth_date if auth_date else datetime.datetime.now()
+        self.token = serialize_token(access_token)
+
+    def access_token(self):
+        """
+        This function returns a Google OAuth access token by deserializing the
+        token field from the database.
+        If the token attribute is empty, None is returned.
+
+        """
+        return deserialize_token(self.token) if self.token else None
