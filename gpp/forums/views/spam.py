@@ -17,6 +17,7 @@ from django.contrib.auth.models import User
 from comments.models import Comment
 from forums.models import Post
 from forums.tools import delete_user_posts
+import forums.permissions as perms
 import bio.models
 from core.functions import email_admins
 
@@ -62,9 +63,7 @@ def spammer(request, post_id):
     poster = post.user
     poster_profile = poster.get_profile()
 
-    can_moderate = request.user.is_superuser or (
-            request.user in post.topic.forum.moderators.all())
-
+    can_moderate = perms.can_moderate(post.topic.forum, request.user)
     can_deactivate = (poster_profile.status == bio.models.STA_STRANGER and not
             poster.is_superuser)
 
@@ -120,9 +119,7 @@ def stranger(request, post_id):
     poster = post.user
     poster_profile = poster.get_profile()
 
-    can_moderate = request.user.is_superuser or (
-            request.user in post.topic.forum.moderators.all())
-
+    can_moderate = perms.can_moderate(post.topic.forum, request.user)
     can_promote = poster_profile.status == bio.models.STA_STRANGER
 
     if request.method == "POST" and can_moderate and can_promote:

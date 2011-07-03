@@ -479,10 +479,7 @@ def delete_post(request):
 
     post = get_object_or_404(Post.objects.select_related(), pk=id)
 
-    can_delete = request.user.is_superuser or \
-            request.user in post.topic.forum.moderators.all()
-
-    if not can_delete:
+    if not perms.can_moderate(post.topic.forum, request.user):
         return HttpResponseForbidden("You don't have permission to delete that post.")
 
     delete_single_post(post)

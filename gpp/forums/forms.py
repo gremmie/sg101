@@ -8,6 +8,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.attachments import AttachmentProcessor
+import forums.permissions as perms
 
 
 class NewPostForm(forms.Form):
@@ -85,7 +86,7 @@ class NewTopicForm(forms.Form):
         self.user = user
         self.forum = forum
 
-        if user.is_superuser or user in forum.moderators.all():
+        if perms.can_moderate(forum, user):
             self.fields['sticky'] = forms.BooleanField(required=False)
             self.fields['locked'] = forms.BooleanField(required=False)
             self.has_mod_fields = True
