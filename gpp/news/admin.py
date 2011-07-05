@@ -36,7 +36,8 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     date_submitted=pending_story.date_submitted,
                     allow_comments=pending_story.allow_comments,
                     tags=pending_story.tags,
-                    front_page_expiration=pending_story.front_page_expiration)
+                    front_page_expiration=pending_story.front_page_expiration,
+                    priority=pending_story.priority)
             story.save()
             pending_story.delete()
 

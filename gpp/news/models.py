@@ -37,6 +37,7 @@ class StoryBase(models.Model):
     tags = TagField()
     front_page_expiration = models.DateField(null=True, blank=True)
     update_date = models.DateTimeField(db_index=True, blank=True)
+    priority = models.IntegerField(db_index=True, default=0, blank=True)
 
     class Meta:
         abstract = True
