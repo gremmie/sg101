@@ -55,17 +55,24 @@ class ComposeForm(forms.Form):
         return msg
 
     def clean(self):
-        # Can we send a message? Is our outbox full?
+        rcvr = self.cleaned_data.get('receiver')
+        subject = self.cleaned_data.get('subject')
+        message = self.cleaned_data.get('message')
 
-        count = Message.objects.outbox(self.user).count()
-        if count >= MSG_BOX_LIMIT:
-            raise forms.ValidationError("Your outbox is full. Please delete some messages.")
+        if rcvr and subject and message:
+            # Can we send a message? Is our outbox full?
 
-        # Is the receiver's inbox full?
-        count = Message.objects.inbox(self.rcvr_user).count()
-        if count >= MSG_BOX_LIMIT:
-            raise forms.ValidationError(
-                "Sorry, %s's inbox is full. This message cannot be sent." % self.rcvr_user.username)
+            count = Message.objects.outbox(self.user).count()
+            if count >= MSG_BOX_LIMIT:
+                raise forms.ValidationError(
+                        "Your outbox is full. Please delete some messages.")
+
+            # Is the receiver's inbox full?
+            count = Message.objects.inbox(self.rcvr_user).count()
+            if count >= MSG_BOX_LIMIT:
+                raise forms.ValidationError(
+                    "Sorry, %s's inbox is full. This message cannot be sent." %
+                    self.rcvr_user.username)
 
         return self.cleaned_data
 
