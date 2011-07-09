@@ -116,7 +116,7 @@ class SearchUsersForm(forms.Form):
         js = settings.GPP_THIRD_PARTY_JS['jquery-ui']
 
     def clean_username(self):
-      username = self.cleaned_data['username']
+      username = self.cleaned_data['username'].strip()
       try:
          User.objects.get(username=username, is_active=True)
       except User.DoesNotExist:
