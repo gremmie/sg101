@@ -24,7 +24,7 @@
 <ol>
 {% for event in events %}
 {% if not event.on_calendar %}
-<li><a href="../../{{ event.id }}">{{ event.start_date|date:"M d, Y" }} - {{ event.what }}</a>
+<li><a href="../{{ event.id }}">{{ event.start_date|date:"M d, Y" }} - {{ event.what }}</a>
 &bull; Submitted by {{ event.user.username }} &bull; <strong>{{ event.get_status_display }}</strong></li>
 {% endif %}
 {% endfor %}
