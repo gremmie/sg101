@@ -51,8 +51,9 @@ class PostAdmin(admin.ModelAdmin):
 
 
 class FlaggedPostAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'flag_date', 'get_post_url')
-    actions = ('accept_flags', )
+    list_display = ['__unicode__', 'flag_date', 'get_post_url']
+    actions = ['accept_flags']
+    raw_id_fields = ['post', 'user', ]
 
     def accept_flags(self, request, qs):
         """This admin action awards a security pin to the user who reported
