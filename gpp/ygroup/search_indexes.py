@@ -4,12 +4,12 @@ Haystack search index for the Yahoo Group archives application.
 """
 from haystack.indexes import *
 from haystack import site
-from queued_search.indexes import QueuedSearchIndex
+from custom_search import CondQueuedSearchIndex
 
 from ygroup.models import Post
 
 
-class PostIndex(QueuedSearchIndex):
+class PostIndex(CondQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     pub_date = DateTimeField(model_attr='creation_date')
 

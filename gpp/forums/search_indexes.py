@@ -1,12 +1,12 @@
 """Haystack search index for the weblinks application."""
 from haystack.indexes import *
 from haystack import site
-from queued_search.indexes import QueuedSearchIndex
+from custom_search import CondQueuedSearchIndex
 
 from forums.models import Forum, Topic, Post
 
 
-class TopicIndex(QueuedSearchIndex):
+class TopicIndex(CondQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='creation_date')
@@ -17,8 +17,11 @@ class TopicIndex(QueuedSearchIndex):
     def get_updated_field(self):
         return 'update_date'
 
+    def can_index(self, instance):
+        return instance.forum.id in Forum.objects.public_forum_ids()
 
-class PostIndex(QueuedSearchIndex):
+
+class PostIndex(CondQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='creation_date')
@@ -29,6 +32,9 @@ class PostIndex(QueuedSearchIndex):
 
     def get_updated_field(self):
         return 'update_date'
+
+    def can_index(self, instance):
+        return instance.topic.forum.id in Forum.objects.public_forum_ids()
 
 
 site.register(Topic, TopicIndex)

@@ -1,12 +1,12 @@
 """Haystack search index for the bio application."""
 from haystack.indexes import *
 from haystack import site
-from queued_search.indexes import QueuedSearchIndex
+from custom_search import CondQueuedSearchIndex
 
 from bio.models import UserProfile
 
 
-class UserProfileIndex(QueuedSearchIndex):
+class UserProfileIndex(CondQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
 
@@ -15,6 +15,9 @@ class UserProfileIndex(QueuedSearchIndex):
 
     def get_updated_field(self):
         return 'update_date'
+
+    def can_index(self, instance):
+        return instance.user.is_active
 
 
 site.register(UserProfile, UserProfileIndex)
