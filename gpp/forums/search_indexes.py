@@ -24,6 +24,9 @@ class TopicIndex(CondQueuedSearchIndex):
     def _teardown_save(self, model):
         topic_content_update.disconnect(self.enqueue_save)
 
+    def enqueue_save(self, sender, **kwargs):
+        return self.enqueue('update', sender)
+
     def can_index(self, instance):
         return instance.forum.id in Forum.objects.public_forum_ids()
 
@@ -45,6 +48,9 @@ class PostIndex(CondQueuedSearchIndex):
 
     def _teardown_save(self, model):
         post_content_update.disconnect(self.enqueue_save)
+
+    def enqueue_save(self, sender, **kwargs):
+        return self.enqueue('update', sender)
 
     def can_index(self, instance):
         return instance.topic.forum.id in Forum.objects.public_forum_ids()

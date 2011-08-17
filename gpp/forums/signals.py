@@ -74,18 +74,16 @@ post_delete.connect(on_post_delete, sender=Post, dispatch_uid='forums.signals')
 # This signal is sent when a topic has had its textual content (title) changed.
 # The provided arguments are: 
 #   sender - the topic model instance 
-#   instance - the topic model instance
 #   created - True if the topic is new, False if updated
 
-topic_content_update = django.dispatch.Signal(providing_args=['action'])
+topic_content_update = django.dispatch.Signal(providing_args=['created'])
 
 # This signal is sent when a post has had its textual content (body) changed.
 # The provided arguments are: 
 #   sender - the post model instance 
-#   instance - the topic model instance
 #   created - True if the post is new, False if updated
 
-post_content_update = django.dispatch.Signal(providing_args=['action'])
+post_content_update = django.dispatch.Signal(providing_args=['created'])
 
 
 def notify_new_topic(topic):
@@ -93,7 +91,7 @@ def notify_new_topic(topic):
     Sends the topic_content_update signal for a new topic instance.
 
     """
-    topic_content_update.send_robust(topic, instance=topic, created=True)
+    topic_content_update.send_robust(topic, created=True)
 
 
 def notify_updated_topic(topic):
@@ -101,7 +99,7 @@ def notify_updated_topic(topic):
     Sends the topic_content_update signal for an updated topic instance.
 
     """
-    topic_content_update.send_robust(topic, instance=topic, created=False)
+    topic_content_update.send_robust(topic, created=False)
 
 
 def notify_new_post(post):
@@ -109,7 +107,7 @@ def notify_new_post(post):
     Sends the post_content_update signal for a new post instance.
 
     """
-    post_content_update.send_robust(post, instance=post, created=True)
+    post_content_update.send_robust(post, created=True)
 
 
 def notify_updated_post(post):
@@ -117,4 +115,4 @@ def notify_updated_post(post):
     Sends the post_content_update signal for an updated post instance.
 
     """
-    post_content_update.send_robust(post, instance=post, created=False)
+    post_content_update.send_robust(post, created=False)
