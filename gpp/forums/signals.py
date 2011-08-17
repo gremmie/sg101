@@ -1,8 +1,10 @@
 """
-Signal handlers for the forums application.
+Signal handlers & signals for the forums application.
+
 """
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
+import django.dispatch
 
 from forums.models import Forum, Topic, Post
 from forums.views.subscriptions import notify_topic_subscribers
@@ -65,3 +67,54 @@ post_delete.connect(on_topic_delete, sender=Topic, dispatch_uid='forums.signals'
 
 post_save.connect(on_post_save, sender=Post, dispatch_uid='forums.signals')
 post_delete.connect(on_post_delete, sender=Post, dispatch_uid='forums.signals')
+
+
+# Signals for the forums application.
+#
+# This signal is sent when a topic has had its textual content (title) changed.
+# The provided arguments are: 
+#   sender - the topic model instance 
+#   instance - the topic model instance
+#   created - True if the topic is new, False if updated
+
+topic_content_update = django.dispatch.Signal(providing_args=['action'])
+
+# This signal is sent when a post has had its textual content (body) changed.
+# The provided arguments are: 
+#   sender - the post model instance 
+#   instance - the topic model instance
+#   created - True if the post is new, False if updated
+
+post_content_update = django.dispatch.Signal(providing_args=['action'])
+
+
+def notify_new_topic(topic):
+    """
+    Sends the topic_content_update signal for a new topic instance.
+
+    """
+    topic_content_update.send_robust(topic, instance=topic, created=True)
+
+
+def notify_updated_topic(topic):
+    """
+    Sends the topic_content_update signal for an updated topic instance.
+
+    """
+    topic_content_update.send_robust(topic, instance=topic, created=False)
+
+
+def notify_new_post(post):
+    """
+    Sends the post_content_update signal for a new post instance.
+
+    """
+    post_content_update.send_robust(post, instance=post, created=True)
+
+
+def notify_updated_post(post):
+    """
+    Sends the post_content_update signal for an updated post instance.
+
+    """
+    post_content_update.send_robust(post, instance=post, created=False)

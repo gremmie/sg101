@@ -7,7 +7,7 @@ from haystack.views import search_view_factory
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
-from custom_search import CustomModelSearchForm
+from custom_search.forms import CustomModelSearchForm
 
 
 admin.autodiscover()

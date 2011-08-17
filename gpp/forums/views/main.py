@@ -36,6 +36,8 @@ from forums.unread import (get_forum_unread_status, get_topic_unread_status,
 
 from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
+from forums.signals import (notify_new_topic, notify_updated_topic,
+        notify_new_post, notify_updated_post)
 
 #######################################################################
 
@@ -440,10 +442,12 @@ def edit_post(request, id):
             post = form.save(commit=False)
             post.touch()
             post.save()
+            notify_updated_post(post)
 
             # if we are editing a first post, save the parent topic as well
             if topic_name:
                 post.topic.save()
+                notify_updated_topic(post.topic)
 
             # Save any attachments
             form.attach_proc.save_attachments(post)
@@ -590,6 +594,7 @@ def new_post(request, topic_id):
                 post.user = request.user
                 post.user_ip = request.META.get("REMOTE_ADDR", "")
                 post.save()
+                notify_new_post(post)
 
                 # Save any attachments
                 form.attach_proc.save_attachments(post)
@@ -1102,6 +1107,7 @@ def _split_topic(topic, post_ids, new_forum, new_name):
     if len(posts) > 0:
         new_topic = Topic(forum=new_forum, name=new_name, user=posts[0].user)
         new_topic.save()
+        notify_new_topic(new_topic)
         for post in posts:
             post.topic = new_topic
             post.save()

@@ -1,7 +1,7 @@
 """Haystack search index for the bio application."""
 from haystack.indexes import *
 from haystack import site
-from custom_search import CondQueuedSearchIndex
+from custom_search.indexes import CondQueuedSearchIndex
 
 from bio.models import UserProfile
 

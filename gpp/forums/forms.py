@@ -1,5 +1,6 @@
 """
 Forms for the forums application.
+
 """
 from django import forms
 from django.conf import settings
@@ -9,6 +10,7 @@ from forums.models import Topic
 from forums.models import Post
 from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
+from forums.signals import notify_new_topic, notify_new_post
 
 
 class NewPostForm(forms.Form):
@@ -55,6 +57,7 @@ class NewPostForm(forms.Form):
                 user_ip=ip)
         post.save()
         self.attach_proc.save_attachments(post)
+        notify_new_post(post)
         return post
 
 
@@ -130,6 +133,9 @@ class NewTopicForm(forms.Form):
         post.save()
 
         self.attach_proc.save_attachments(post)
+
+        notify_new_topic(topic)
+        notify_new_post(post)
 
         return topic
 
