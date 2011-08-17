@@ -1,8 +1,10 @@
 """
-Signal handler(s) for the bio application.
+Signal handlers & signals for the bio application.
+
 """
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
+import django.dispatch
 
 import bio.badges
 from bio.models import UserProfile
@@ -91,3 +93,19 @@ post_save.connect(on_link_save, sender=Link, dispatch_uid='bio.signals')
 post_save.connect(on_download_save, sender=Download, dispatch_uid='bio.signals')
 post_save.connect(on_story_save, sender=Story, dispatch_uid='bio.signals')
 post_save.connect(on_photo_save, sender=Photo, dispatch_uid='bio.signals')
+
+# Signals for the bio application
+#
+# This signal is sent whenever a profile has had its textual content updated.
+# The provided arguments to the receiver function are:
+#   - sender - the profile model instance
+
+profile_content_update = django.dispatch.Signal(providing_args=[])
+
+
+def notify_profile_content_update(profile):
+    """
+    Convenience function to send the profile content update signal.
+
+    """
+    profile_content_update.send_robust(profile)

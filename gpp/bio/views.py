@@ -1,7 +1,7 @@
 """
 Views for the bio application.
-"""
 
+"""
 from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext
@@ -27,6 +27,7 @@ from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
+from bio.signals import notify_profile_content_update
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 from core.functions import get_page
@@ -78,12 +79,12 @@ def my_profile(request):
             profile=profile).select_related("badge")
 
     return render_to_response('bio/view_profile.html', {
-        'subject': request.user, 
-        'profile': profile, 
+        'subject': request.user,
+        'profile': profile,
         'hide_email': False,
         'this_is_me': True,
         'badge_collection': badge_collection,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -100,14 +101,14 @@ def view_profile(request, username):
 
     badge_collection = BadgeOwnership.objects.filter(
             profile=profile).select_related("badge")
-    
+
     return render_to_response('bio/view_profile.html', {
-        'subject': user, 
-        'profile': profile, 
+        'subject': user,
+        'profile': profile,
         'hide_email': hide_email,
         'this_is_me': False,
         'badge_collection': badge_collection,
-        }, 
+        },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -125,6 +126,7 @@ def edit_profile(request):
             profile = profile_form.save(commit=False)
             profile.user = request.user
             profile.save()
+            notify_profile_content_update(profile)
             return HttpResponseRedirect(reverse('bio.views.my_profile'))
     else:
         profile = request.user.get_profile()
@@ -134,7 +136,7 @@ def edit_profile(request):
     return render_to_response('bio/edit_profile.html', {
         'user_form': user_form,
         'profile_form': profile_form,
-         }, 
+         },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -168,7 +170,7 @@ def change_avatar(request):
 
     return render_to_response('bio/avatar.html', {
         'form': form,
-         }, 
+         },
         context_instance = RequestContext(request))
 
 #######################################################################
@@ -228,18 +230,25 @@ def edit_elsewhere(request):
                 profile = form.save(commit=False)
                 profile.user = request.user
                 profile.save()
+                notify_profile_content_update(request.user.get_profile())
                 return HttpResponseRedirect(request.path)
 
         # Delete forms
         elif new_data.get('delete-sn-form') or new_data.get('delete-im-form') or new_data.get('delete-w-form'):
             delete_id = request.POST['delete_id']
 
+            update_occurred = True
             if new_data.get('delete-sn-form'):
                 request.user.social_network_profiles.get(id=delete_id).delete()
             elif new_data.get('delete-im-form'):
                 request.user.instant_messenger_profiles.get(id=delete_id).delete()
             elif new_data.get('delete-w-form'):
                 request.user.website_profiles.get(id=delete_id).delete()
+            else:
+                update_occurred = False
+
+            if update_occurred:
+                notify_profile_content_update(request.user.get_profile())
 
             return HttpResponseRedirect(request.path)
 
@@ -254,10 +263,10 @@ def edit_elsewhere(request):
         w_form = WebsiteForm()
 
     return render_to_response('bio/edit_elsewhere.html', {
-        'sn_form': sn_form, 
-        'im_form': im_form, 
+        'sn_form': sn_form,
+        'im_form': im_form,
         'w_form': w_form,
-        }, 
+        },
         context_instance=RequestContext(request))
 
 #######################################################################
@@ -268,13 +277,13 @@ def member_search(request):
         form = SearchUsersForm(request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
-            return HttpResponseRedirect(reverse("bio-view_profile", 
+            return HttpResponseRedirect(reverse("bio-view_profile",
                 kwargs={'username': username}))
     else:
         form = SearchUsersForm()
 
     return render_to_response('bio/member_search.html', {
         'form': form,
-        }, 
+        },
         context_instance=RequestContext(request))
 

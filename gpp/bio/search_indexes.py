@@ -4,6 +4,7 @@ from haystack import site
 from custom_search.indexes import CondQueuedSearchIndex
 
 from bio.models import UserProfile
+from bio.signals import profile_content_update
 
 
 class UserProfileIndex(CondQueuedSearchIndex):
@@ -15,6 +16,15 @@ class UserProfileIndex(CondQueuedSearchIndex):
 
     def get_updated_field(self):
         return 'update_date'
+
+    def _setup_save(self, model):
+        profile_content_update.connect(self.enqueue_save)
+
+    def _teardown_save(self, model):
+        profile_content_update.disconnect(self.enqueue_save)
+
+    def enqueue_save(self, sender, **kwargs):
+        return self.enqueue('update', sender)
 
     def can_index(self, instance):
         return instance.user.is_active
