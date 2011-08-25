@@ -13,10 +13,12 @@ from django.conf import settings
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
 from accounts import create_new_user
+from antispam.decorators import rate_limit
 
 
 #######################################################################
 
+@rate_limit(count=10, interval=datetime.timedelta(minutes=1))
 def register(request):
     if request.user.is_authenticated():
         return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)

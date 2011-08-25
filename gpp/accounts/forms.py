@@ -13,6 +13,7 @@ from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
+from antispam.rate_limit import block_ip
 
 
 class RegisterForm(forms.Form):
@@ -109,6 +110,7 @@ class RegisterForm(forms.Form):
         """
         answer = self.cleaned_data.get('question2')
         if answer:
+            block_ip(self.ip)
             self._validation_error('Wrong answer #2: %s' % answer)
         return answer
 
