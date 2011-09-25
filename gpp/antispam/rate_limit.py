@@ -17,6 +17,9 @@ PORT = getattr(settings, 'RATE_LIMIT_REDIS_PORT', 6379)
 DB = getattr(settings, 'RATE_LIMIT_REDIS_DB', 0)
 
 
+# This exception is thrown upon any Redis error. This insulates client code from
+# knowing that we are using Redis and will allow us to use something else in the
+# future.
 class RateLimiterUnavailable(Exception):
     pass
 
@@ -62,7 +65,12 @@ def block_ip(ip, count=1000000, interval=datetime.timedelta(weeks=2)):
     key = _make_key(ip)
     conn = _get_connection()
 
-    conn.setex(key, count, _to_seconds(interval))
+    try:
+        conn.setex(key, count, _to_seconds(interval))
+    except redis.RedisError, e:
+        logger.error("rate limit (block_ip): %s" % e)
+        raise RateLimiterUnavailable
+
     logger.info("Rate limiter blocked IP %s; %d / %s", ip, count, interval)
 
 
@@ -84,7 +92,12 @@ class RateLimiter(object):
         Return True if the IP is blocked, and false otherwise.
 
         """
-        val = self.conn.get(self.key)
+        try:
+            val = self.conn.get(self.key)
+        except redis.RedisError, e:
+            logger.error("RateLimiter (is_blocked): %s" % e)
+            raise RateLimiterUnavailable
+
         try:
             val = int(val) if val else 0
         except ValueError:
@@ -105,19 +118,23 @@ class RateLimiter(object):
         parameter.
 
         """
-        val = self.conn.incr(self.key)
+        try:
+            val = self.conn.incr(self.key)
 
-        # Set expire time, if necessary.
-        # If this is the first time, set it according to interval.
-        # If the set_point has just been exceeded, set it according to lockout.
-        if val == 1:
-            self.conn.expire(self.key, _to_seconds(self.interval))
-        elif val == self.set_point:
-            self.conn.expire(self.key, _to_seconds(self.lockout))
+            # Set expire time, if necessary.
+            # If this is the first time, set it according to interval.
+            # If the set_point has just been exceeded, set it according to lockout.
+            if val == 1:
+                self.conn.expire(self.key, _to_seconds(self.interval))
+            elif val == self.set_point:
+                self.conn.expire(self.key, _to_seconds(self.lockout))
 
-        tripped = val >= self.set_point
+            tripped = val >= self.set_point
 
-        if tripped:
-            logger.info("Rate limiter tripped for %s; counter = %d", self.ip, val)
+            if tripped:
+                logger.info("Rate limiter tripped for %s; counter = %d", self.ip, val)
+            return tripped
 
-        return tripped
+        except redis.RedisError, e:
+            logger.error("RateLimiter (incr): %s" % e)
+            raise RateLimiterUnavailable
