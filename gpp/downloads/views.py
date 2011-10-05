@@ -3,7 +3,7 @@ Views for the downloads application.
 """
 import random
 
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
@@ -57,10 +57,8 @@ DOWNLOAD_FIELD_MAP = {
 
 @login_required
 def category(request, slug, sort='title'):
-    try:
-        cat = Category.objects.get(slug=slug)
-    except Category.DoesNotExist:
-        raise Http404
+
+    cat = get_object_or_404(Category, slug=slug)
 
     if sort not in DOWNLOAD_FIELD_MAP:
         sort = 'title'
@@ -148,9 +146,7 @@ def rating(request):
 
 @login_required
 def details(request, id):
-    download = Download.public_objects.get(pk=id)
-    if download is None:
-        raise Http404
+    download = get_object_or_404(Download.public_objects, pk=id)
     return render_to_response('downloads/download_detail.html', {
         'download' : download,
         },
@@ -207,10 +203,7 @@ def rate_download(request):
         # rating will be from 0-4
         rating = min(5, max(1, rating))
 
-        try:
-            download = Download.public_objects.get(pk=id)
-        except Download.DoesNotExist:
-            return HttpResponseBadRequest('Invalid download id.')
+        download = get_object_or_404(Download.public_objects, pk=id)
 
         # prevent multiple votes from the same user
         vote_record, created = VoteRecord.objects.get_or_create(
