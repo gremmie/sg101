@@ -32,6 +32,9 @@ $(document).ready(function() {
    $msgDialog = $('#msgDialog').dialog({
       autoOpen: false,
       width: 460,
+      height: 'auto',
+      maxHeight: false,
+      resizable: false,
       buttons: [
          { 
             text: "Reply", 
@@ -89,7 +92,8 @@ function showMsg(link, id) {
       }
    }
 
-   $msgDialog.html(msg.content);
+   var s = '<div style="max-height:450px;overflow:auto">' + msg.content + '</div>';
+   $msgDialog.html(s);
    var title = 'PM From ' + msg.sender + ' To ' + msg.receiver + '<br /> ' + msg.subject;
    $msgDialog.dialog('option', 'title', title);
    $msgDialog.dialog('open');
