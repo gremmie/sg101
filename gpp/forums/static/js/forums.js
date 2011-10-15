@@ -287,4 +287,11 @@ $(document).ready(function() {
    }
 
    initAttachments();
+
+   $('div.forum-post-body img').fadeIn('fast', function() {
+         var pic = $(this);
+         if (pic.width() > 720) {
+            pic.css('width', '720px');
+         }
+   });
 });
