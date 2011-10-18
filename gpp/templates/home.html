@@ -6,6 +6,7 @@
 {% load downloads_tags %}
 {% load poll_tags %}
 {% load forum_tags %}
+{% load script_tags %}
 {% load cache %}
 {% block title %}Home{% endblock %}
 {% block custom_head %}
@@ -30,6 +31,7 @@
 <style type="text/css">
 #home-slideshow img { display: none }
 </style>
+{% script_tags "social" %}
 {% endblock %}
 {% block content %}
 <h2>Welcome to SurfGuitar101!</h2>

@@ -289,35 +289,45 @@ QUEUE_REDIS_CONNECTION = 'localhost:6379'
 QUEUE_REDIS_DB = 0
 
 #######################################################################
+# Open Graph Protocol related settings
+#######################################################################
+OGP_DEFAULT_IMAGE = 'http://surfguitar101.com/media/podcast/podcast_logo.jpg'
+OGP_FB_ID = '100001558124013'
+
+#######################################################################
 # URL's of 3rd party Javascript and CSS files.
 # These dictionaries are used by core/templatetags/script_tags, and
 # should also be used by developers when creating form media classes.
 GPP_THIRD_PARTY_JS = {
-    'jquery': (
+    'jquery': [
         'http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js',
-    ),
-    'jquery-jeditable': (
+    ],
+    'jquery-jeditable': [
         'js/jquery.jeditable.mini.js',
-    ),
-    'jquery-ui': (
+    ],
+    'jquery-ui': [
         'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/jquery-ui.min.js',
-    ),
-    'markitup': (
+    ],
+    'markitup': [
         'js/markitup/jquery.markitup.pack.js',
         'js/markitup/sets/markdown/set.js',
-    ),
-    'tiny_mce': (
+    ],
+    'tiny_mce': [
         'js/tiny_mce/tiny_mce.js',
         'js/tiny_mce_init_std.js',
-    ),
+    ],
+    'social': [
+        'http://platform.twitter.com/widgets.js',
+        'https://apis.google.com/js/plusone.js',
+    ],
 }
 GPP_THIRD_PARTY_CSS = {
-    'jquery-ui': (
+    'jquery-ui': [
         'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/themes/redmond/jquery-ui.css',
-    ),
-    'markitup': (
+    ],
+    'markitup': [
         'js/markitup/skins/markitup/style.css',
         'js/markitup/sets/markdown/style.css',
-    ),
+    ],
 }
 

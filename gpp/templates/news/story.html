@@ -3,7 +3,11 @@
 {% load tagging_tags %}
 {% load comment_tags %}
 {% load script_tags %}
+{% load core_tags %}
 {% block title %}News: {{ story.title }}{% endblock %}
+{% block custom_meta %}
+{% open_graph_meta_tags story %}
+{% endblock %}
 {% block news_css %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/comments.css" />
 {% endblock %}
@@ -12,6 +16,7 @@
 {% script_tags "markitup jquery-ui" %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
 {% endif %}
+{% script_tags "social" %}
 {% endblock %}
 {% block news_content %}
 <div class="solid-background">
@@ -48,6 +53,7 @@
       </ul>
    </div>
    {% endif %}
+   {% social_sharing story.title story.get_absolute_url %}
 </div>
 {% get_comment_count for story as comment_count %}
 <p>This story has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>

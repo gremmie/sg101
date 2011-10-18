@@ -28,7 +28,7 @@ class NewPostForm(forms.Form):
         }
         js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ('js/forums.js', ))
+                ['js/forums.js'])
 
     def __init__(self, *args, **kwargs):
         super(NewPostForm, self).__init__(*args, **kwargs)
@@ -82,7 +82,7 @@ class NewTopicForm(forms.Form):
         }
         js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ('js/forums.js', ))
+                ['js/forums.js'])
 
     def __init__(self, user, forum, *args, **kwargs):
         super(NewTopicForm, self).__init__(*args, **kwargs)
@@ -159,7 +159,7 @@ class PostForm(forms.ModelForm):
         }
         js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ('js/forums.js', ))
+                ['js/forums.js'])
 
     def __init__(self, *args, **kwargs):
         topic_name = kwargs.pop('topic_name', None)

@@ -98,3 +98,16 @@ class Story(StoryBase):
 
     def search_summary(self):
         return u"\n".join((self.short_text, self.long_text))
+
+    def ogp_tags(self):
+        """
+        Returns a dict of Open Graph Protocol meta tags.
+
+        """
+        return {
+            'og:title': self.title,
+            'og:type': 'article',
+            'og:url': self.get_absolute_url(),
+            'og:image': self.category.icon.url,
+            'og:description': self.title,
+        }

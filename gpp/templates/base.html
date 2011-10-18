@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+   xmlns:og="http://ogp.me/ns#"
+   xmlns:fb="https://www.facebook.com/2008/fbml"
+   xml:lang="en" lang="en">
 {% load url from future %}
 {% load shoutbox_tags %}
 {% load irc_tags %}
@@ -17,6 +20,7 @@
 <meta name="robots" content="all" />
 <meta name="Author" content="Brian Neal" />
 <meta name="copyright" content="&copy; 2006 - 2011 Brian Neal" />
+{% block custom_meta %}{% endblock %}
 <link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/screen.css" type="text/css" media="screen, projection" />
 <link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/print.css" type="text/css" media="print" /> 
 <!--[if lt IE 8]>

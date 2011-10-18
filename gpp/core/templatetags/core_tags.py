@@ -8,6 +8,7 @@ import urllib
 from django import template
 from django.conf import settings
 from django.core.cache import cache
+from django.contrib.sites.models import Site
 
 import repoze.timeago
 
@@ -48,6 +49,39 @@ def whos_online():
         'num_guests': len(visitors),
         'total': len(users) + len(visitors),
     }
+
+
+@register.inclusion_tag('core/social_sharing_tag.html')
+def social_sharing(title, url):
+    """
+    Displays social media sharing buttons.
+
+    """
+    if url.startswith('/'):
+        url = 'http://%s%s' % (Site.objects.get_current().domain, url)
+
+    return {
+        'title': title,
+        'url': url,
+    }
+
+
+@register.inclusion_tag('core/open_graph_meta_tag.html')
+def open_graph_meta_tags(item):
+    """
+    Generates Open Graph meta tags by interrogating the given item.
+
+    """
+    site = Site.objects.get_current()
+
+    props = item.ogp_tags()
+    props['og:site_name'] = site.name
+    props['fb:admins'] = settings.OGP_FB_ID
+
+    if 'og:image' not in props:
+        props['og:image'] = settings.OGP_DEFAULT_IMAGE
+
+    return {'props': props}
 
 
 # A somewhat ugly hack until we decide if we should be using UTC time

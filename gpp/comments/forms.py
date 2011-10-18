@@ -71,4 +71,4 @@ class CommentForm(forms.Form):
         }
         js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
                 settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ('js/comments.js', ))
+                ['js/comments.js'])

@@ -48,12 +48,12 @@ class EditUserProfileForm(forms.ModelForm):
 
     class Media:
         css = {
-            'all': settings.GPP_THIRD_PARTY_CSS['markitup'] + \
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui']
+            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+                settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
         }
-        js = settings.GPP_THIRD_PARTY_JS['markitup'] + \
-            settings.GPP_THIRD_PARTY_JS['jquery-ui'] + \
-            ('js/bio.js', 'js/timezone.js')
+        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
+            settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+            ['js/bio.js', 'js/timezone.js'])
 
 
 class UploadAvatarForm(forms.Form):
