@@ -66,6 +66,18 @@ def social_sharing(title, url):
     }
 
 
+def _fully_qualify(url, domain):
+    """
+    Returns a "fully qualified" URL by checking the given url.
+    If the url starts with '/' then http://domain is pre-pended
+    onto it. Otherwise the original URL is returned.
+
+    """
+    if url.startswith('/'):
+        url = "http://%s%s" % (domain, url)
+    return url
+
+
 @register.inclusion_tag('core/open_graph_meta_tag.html')
 def open_graph_meta_tags(item):
     """
@@ -80,6 +92,12 @@ def open_graph_meta_tags(item):
 
     if 'og:image' not in props:
         props['og:image'] = settings.OGP_DEFAULT_IMAGE
+
+    if 'og:url' in props:
+        props['og:url'] = _fully_qualify(props['og:url'], site.domain)
+
+    if 'og:image' in props:
+        props['og:image'] = _fully_qualify(props['og:image'], site.domain)
 
     return {'props': props}
 
