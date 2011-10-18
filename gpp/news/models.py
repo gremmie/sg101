@@ -38,6 +38,7 @@ class StoryBase(models.Model):
     front_page_expiration = models.DateField(null=True, blank=True)
     update_date = models.DateTimeField(db_index=True, blank=True)
     priority = models.IntegerField(db_index=True, default=0, blank=True)
+    meta_description = models.TextField(blank=True)
 
     class Meta:
         abstract = True
@@ -104,10 +105,16 @@ class Story(StoryBase):
         Returns a dict of Open Graph Protocol meta tags.
 
         """
+        desc = self.meta_description.strip()
+        if not desc:
+            desc = 'News article submitted by %s on %s.' % (
+                    self.submitter.username,
+                    self.date_submitted.strftime('%B %d, %Y'))
+
         return {
             'og:title': self.title,
             'og:type': 'article',
             'og:url': self.get_absolute_url(),
             'og:image': self.category.icon.url,
-            'og:description': self.title,
+            'og:description': desc,
         }

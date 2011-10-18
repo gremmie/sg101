@@ -37,7 +37,8 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     allow_comments=pending_story.allow_comments,
                     tags=pending_story.tags,
                     front_page_expiration=pending_story.front_page_expiration,
-                    priority=pending_story.priority)
+                    priority=pending_story.priority,
+                    meta_description=pending_story.meta_description)
             story.save()
             pending_story.delete()
 
@@ -48,7 +49,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
     approve_story.short_description = "Approve selected pending stories"
 
     class Media:
-        js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
+        js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 class StoryAdmin(admin.ModelAdmin):
@@ -60,7 +61,7 @@ class StoryAdmin(admin.ModelAdmin):
     raw_id_fields = ('submitter', )
 
     class Media:
-        js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
+        js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 admin.site.register(Category, CategoryAdmin)

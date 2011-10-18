@@ -1,5 +1,6 @@
 tinyMCE.init({
-   mode : "textareas",
+   mode : "specific_textareas",
+   editor_deselector: "mceNoEditor",
    theme : "advanced",
    convert_urls: false,
    theme_advanced_toolbar_location : "top",
