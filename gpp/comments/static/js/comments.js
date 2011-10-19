@@ -63,4 +63,11 @@ $(document).ready(function() {
         }
         return false;
     });
+
+   $('.comment-text img').fadeIn('fast', function() {
+         var pic = $(this);
+         if (pic.width() > 720) {
+            pic.css('width', '720px');
+         }
+   });
 });
