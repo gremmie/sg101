@@ -1,10 +1,16 @@
 {% extends 'podcast/base.html' %}
 {% load url from future %}
+{% load script_tags %}
+{% load core_tags %}
 {% block title %}Podcast: {{ podcast.title }}{% endblock %}
+{% block custom_meta %}
+{% open_graph_meta_tags podcast %}
+{% endblock %}
 {% block custom_css %}
 <link type="text/css" href="{{ STATIC_URL }}js/jplayer/skins/blue.monday/jplayer.blue.monday.css" rel="stylesheet" />
 {% endblock %}
 {% block custom_js %}
+{% script_tags "social" %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/jplayer/jquery.jplayer.min.js"></script>
 
 <script type="text/javascript">
@@ -74,4 +80,5 @@
    </li>
    {% endif %}
 </ul>
+{% social_sharing podcast.search_title podcast.get_absolute_url %}
 {% endblock %}

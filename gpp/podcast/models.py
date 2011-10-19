@@ -79,3 +79,20 @@ class Item(models.Model):
 
     def search_summary(self):
         return u"\n".join((self.subtitle, self.summary, self.keywords))
+
+    def ogp_tags(self):
+        """
+        Returns a dict of Open Graph Protocol meta tags.
+
+        """
+        title = "%s: %s; %s" % (self.channel.title, self.title, self.subtitle)
+        return {
+            'og:title': title,
+            'og:type': 'article',
+            'og:url': self.get_absolute_url(),
+            'og:description': self.subtitle,
+            'og:audio': self.enclosure_url,
+            'og:audio:title': title,
+            'og:audio:artist': 'Various',
+            'og:audio:type': self.enclosure_type,
+        }
