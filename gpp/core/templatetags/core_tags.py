@@ -57,8 +57,8 @@ def social_sharing(title, url):
     Displays social media sharing buttons.
 
     """
-    if url.startswith('/'):
-        url = 'http://%s%s' % (Site.objects.get_current().domain, url)
+    site = Site.objects.get_current()
+    url = _fully_qualify(url, site.domain)
 
     return {
         'title': title,

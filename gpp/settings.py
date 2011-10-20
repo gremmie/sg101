@@ -316,11 +316,8 @@ GPP_THIRD_PARTY_JS = {
         'js/tiny_mce/tiny_mce.js',
         'js/tiny_mce_init_std.js',
     ],
-    'social': [
-        'http://platform.twitter.com/widgets.js',
-        'https://apis.google.com/js/plusone.js',
-    ],
 }
+
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': [
         'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.12/themes/redmond/jquery-ui.css',

@@ -16,8 +16,8 @@
 {% script_tags "markitup jquery-ui" %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
 {% endif %}
-{% script_tags "social" %}
 {% endblock %}
+{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block news_content %}
 <div class="solid-background">
 <h3>{{ story.title }}</h3>
@@ -68,3 +68,4 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 {% endif %}
 </div>
 {% endblock %}
+{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}

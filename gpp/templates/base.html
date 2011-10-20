@@ -36,7 +36,7 @@
 <script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox.js"></script>
 <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ STATIC_URL }}favicon.ico" />
 </head>
-<body>
+<body>{% block begin_body %}{% endblock %}
 <div id="page" class="container">
 <div id="header" class="span-24">
    <p><a href="/" title="SG101 Home"><img src="{{ STATIC_URL }}themes/kds/sgLogo.png" alt="SurfGuitar101.com Logo" width="446" height="103" /></a></p>
@@ -120,6 +120,6 @@
    music alive.</p>
 </div>
 
-</div>
+</div>{% block end_body %}{% endblock %}
 </body>
 </html>
