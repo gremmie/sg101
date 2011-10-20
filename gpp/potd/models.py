@@ -73,6 +73,20 @@ class Photo(models.Model):
         thumb_name = os.path.basename(self.photo.path)
         self.thumb.save(thumb_name, ContentFile(s.getvalue()), save=False)
 
+    def ogp_tags(self):
+        """
+        Returns a dict of Open Graph Protocol meta tags.
+
+        """
+        desc = "Photo of the day: %s." % self.caption
+        return {
+            'og:title': self.caption,
+            'og:type': 'article',
+            'og:url': self.get_absolute_url(),
+            'og:image': self.photo.url,
+            'og:description': desc,
+        }
+
 
 class CurrentManager(models.Manager):
     def get_current_photo(self):

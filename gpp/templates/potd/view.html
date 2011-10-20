@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load core_tags %}
 {% load comment_tags %}
 {% load script_tags %}
 {% block title %}Photo Of The Day{% endblock %}
+{% block custom_meta %}
+{% open_graph_meta_tags potd %}
+{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/potd.css" />
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/comments.css" />
@@ -11,6 +15,7 @@
 {% script_tags "markitup jquery-ui" %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
 {% endblock %}
+{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block content %}
 {% if is_current %}
 <h2>Photo Of The Day</h2>
@@ -28,11 +33,12 @@ Submitted by
 on {{ potd.date_added|date:"d F Y" }}.<br />
 This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
 </p>
-<p class="description">{{ potd.description|safe }}</p>
+<div class="description">{{ potd.description|safe }}</div>
 <p class="details">
 If you would like us to feature your photo, send it along with your username, a title, and 
 short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar101.com</a>.
 </p>
+{% social_sharing potd.caption potd.get_absolute_url %}
 {% get_comment_count for potd as comment_count %}
 <p>This photo has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
 <hr />
@@ -50,3 +56,4 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 <p>We're sorry, there doesn't seem to be a photo of the day right now.</p>
 {% endif %}
 {% endblock %}
+{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}
