@@ -1,7 +1,7 @@
 """
 Forms for the news application.
-"""
 
+"""
 from django import forms
 from django.conf import settings
 
@@ -12,12 +12,14 @@ from news.models import Category
 class AddNewsForm(forms.ModelForm):
    """Form for a user to submit a news story to the admins for review."""
    title = forms.CharField(widget=forms.TextInput(attrs={'size': 52}))
-   short_text = forms.CharField(widget=forms.Textarea(attrs={'rows': 20, 'cols': 80}))
-   long_text = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 20, 'cols': 80}))
+   short_text = forms.CharField(
+           label="Article text",
+           widget=forms.Textarea(
+               attrs={'rows': 60, 'cols': 80, 'style': 'height:500px'}))
 
    class Meta:
       model = PendingStory
-      fields = ('title', 'category', 'short_text', 'long_text')
+      fields = ['title', 'category', 'short_text']
 
    class Media:
       js = settings.GPP_THIRD_PARTY_JS['tiny_mce']

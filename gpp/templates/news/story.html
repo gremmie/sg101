@@ -1,6 +1,7 @@
 {% extends 'news/base.html' %}
 {% load url from future %}
 {% load tagging_tags %}
+{% load bio_tags %}
 {% load comment_tags %}
 {% load script_tags %}
 {% load core_tags %}
@@ -22,7 +23,7 @@
 <div class="solid-background">
 <h3>{{ story.title }}</h3>
 <div class="news-details">
-   Submitted by {{ story.submitter.username }} on {{ story.date_submitted|date:"F d, Y" }}.
+   Submitted by {% profile_link story.submitter.username %} on {{ story.date_submitted|date:"F d, Y" }}.
 </div>
 <hr />
 <div class="news-content">
