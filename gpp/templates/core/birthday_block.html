@@ -1,5 +1,6 @@
 {% extends 'side_block.html' %}
 {% load url from future %}
+{% load bio_tags %}
 {% load humanize %}
 {% block block_title %}<img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {{ today|date:"F" }} Birthdays <img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {% endblock %}
 {% block block_content %}
@@ -10,7 +11,7 @@
          {% if bday.day == today.day %}<strong>{% endif %}
          {{ bday.day|ordinal }} &ndash;
          {% for profile in bday.profiles %}
-         <a href="{% url 'bio-view_profile' username=profile.user.username %}">{{ profile.user.username }}</a>{% if not forloop.last %}, {% endif %}
+         {% profile_link profile.user.username %}{% if not forloop.last %}, {% endif %}
          {% endfor %}
          {% if bday.day == today.day %}</strong>{% endif %}
       </li>

@@ -1,11 +1,11 @@
 {% extends 'bio/base.html' %}
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 {% block title %}Change My Avatar{% endblock %}
 {% block content %}
 <h2>Change My Avatar</h2>
    <p>This is your current avatar:</p>
-   <p>{% avatar user %}</p>
+   <p>{% avatar user 0 %}</p>
    <p>
    To change your avatar, upload a file using the form, below. You may leave the
    form blank to reset your avatar to the default.

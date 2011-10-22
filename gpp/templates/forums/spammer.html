@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load bio_tags %}
 {% block title %}Deactivate Spammer: {{ post.user.username }}{% endblock %}
 {% block content %}
 <h2>Deactivate Spammer: {{ post.user.username }}</h2>
 
 {% if can_moderate and can_deactivate %}
 <p>Please confirm that you wish to mark the user
-<a href="{% url 'bio-view_profile' username=post.user.username %}">{{ post.user.username }}</a> as a
+{% profile_link post.user.username %} as a
 spammer based on <a href="{% url 'forums-goto_post' post.id %}">this post</a>. 
 If you confirm, the user's account will be deactivated, and all posts and comments
 left by the user will be deleted.</p>

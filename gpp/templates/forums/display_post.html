@@ -1,11 +1,11 @@
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 {% load forum_tags %}
 <tr class="forum-post {{ rowcolors }}" id="post-{{ post.id }}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
-      <a href="{% url 'bio-view_profile' username=post.user.username %}" title="View Profile for {{ post.user.username }}"><span class="post-author">{{ post.user.username }}</span></a><br />
-      <a href="{% url 'bio-view_profile' username=post.user.username %}">{% avatar post.user %}</a><br />
+      <span class="post-author">{% profile_link post.user.username %}</span><br />
+      {% avatar post.user %}<br />
       Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
       Posts: {{ post.user.user_profile.forum_post_count }}<br />
       {% if post.user.user_profile.location %}

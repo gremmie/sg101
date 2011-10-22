@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load bio_tags %}
 {% block title %}Donations{% endblock %}
 {% block content %}
 <h2>Donations</h2>
@@ -34,7 +35,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
          {{ anonymous }}
       {% else %}
          {% if donation.user %}
-            <a href="{% url 'bio-view_profile' donation.user.username %}">{{ donation.user.username }}</a>
+            {% profile_link donation.user.username %}
          {% else %}
             {{ donation.donor }}
          {% endif %}

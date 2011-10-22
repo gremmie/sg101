@@ -1,0 +1,2 @@
+{% load url from future %}
+<a href="{% url 'bio-view_profile' username=username %}" title="View profile for {{ username }}">{{ username }}</a>{{ trailing_text }}

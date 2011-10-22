@@ -1,6 +1,6 @@
 {% extends 'bio/base.html' %}
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 {% load elsewhere_tags %}
 {% block title %}Edit Profile{% endblock %}
 {% block custom_js %}
@@ -15,7 +15,7 @@
       <td>
          <a href="{% url 'bio-change_avatar' %}"><img src="{{ STATIC_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
          <a href="{% url 'bio-change_avatar' %}">Change Avatar</a></td>
-      <td>{% avatar user %}</td>
+      <td>{% avatar user 0 %}</td>
    </tr>
    {{ user_form.as_table }}
    {{ profile_form.as_table }}

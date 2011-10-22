@@ -1,6 +1,6 @@
 {% extends 'bio/base.html' %}
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 {% block title %}Member List{% endblock %}
 {% block bio_css %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
@@ -34,8 +34,8 @@ user profiles.
 </tr>
 {% for u in page.object_list %}
 <tr class="{% cycle 'even' 'odd' %}">
-   <td><a href="{% url 'bio-view_profile' username=u.username %}">{% avatar u %}</a></td>
-   <td><a href="{% url 'bio-view_profile' username=u.username %}" title="View profile for {{ u.username }}">{{ u.username }}</a></td>
+   <td>{% avatar u %}</td>
+   <td>{% profile_link u.username %}</td>
    <td>{{ u.get_full_name }}</td>
    <td>{{ u.user_profile.location }}</td>
    <td>{{ u.date_joined|date:"M. d, Y" }}</td>

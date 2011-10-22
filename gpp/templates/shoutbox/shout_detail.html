@@ -1,9 +1,9 @@
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 <tr>
 <th>
-<a href="{% url 'bio-view_profile' username=shout.user.username %}">{% avatar shout.user %}</a><br />
-<a href="{% url 'bio-view_profile' username=shout.user.username %}">{{ shout.user.username }}</a>
+{% avatar shout.user %}<br />
+{% profile_link shout.user.username %}
 </th>
 <td>
 <div {% ifequal user.id shout.user.id %}class="edit" id="shout-{{ shout.id }}"{% endifequal %}>{{ shout.html|safe }}</div>

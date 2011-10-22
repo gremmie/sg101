@@ -1,5 +1,5 @@
 {% load url from future %}
 {% load markup %}
 {% load smiley_tags %}
-{% load avatar_tags %}
-{% avatar user "left" %}<a href="{% url 'bio-view_profile' username=user.username %}">{{ user.username }}</a>:<br />{{ msg|safe }}
+{% load bio_tags %}
+{% avatar user 0 "left" %}{% profile_link user.username %}:<br />{{ msg|safe }}

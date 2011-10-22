@@ -1,8 +1,9 @@
 {% load url from future %}
+{% load bio_tags %}
 {% load humanize %}
 <div id="forum-stats">
 Our <strong>{{ user_count|intcomma }}</strong> users have posted a total of <strong>{{ post_count|intcomma }}</strong> posts.<br />
-The newest registered user is <a href="{% url 'bio-view_profile' username=latest_user %}">{{ latest_user }}</a>.
+Our newest registered user is {% profile_link latest_user '.' %}
 {% if stats %}
 <br />
 The most users ever online was <strong>{{ stats.max_users }}</strong> on {{ stats.max_users_date|date:"P l, N d, Y" }}.

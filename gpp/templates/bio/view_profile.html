@@ -1,6 +1,6 @@
 {% extends 'bio/base.html' %}
 {% load url from future %}
-{% load avatar_tags %}
+{% load bio_tags %}
 {% load elsewhere_tags %}
 {% load core_tags %}
 {% load forum_tags %}
@@ -24,7 +24,7 @@
    </ul>
    {% endif %}
    {% if this_is_me %}
-   <p>{% avatar subject %}
+   <p>{% avatar subject 0 %}
    <ul>
       <li><a href="{% url 'forums-my_posts' %}">My forum posts</a></li>
       <li><a href="{% url 'forums-manage_favorites' %}">My favorite forum topics</a></li>
@@ -32,7 +32,7 @@
    </ul>
    </p>
    {% else %}
-   <p>{% avatar subject %}</p>
+   <p>{% avatar subject 0 %}</p>
    {% endif %}
 <table id="bio_profile">
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>

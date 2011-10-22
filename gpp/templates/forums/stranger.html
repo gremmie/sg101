@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load bio_tags %}
 {% block title %}Promote Stranger: {{ post.user.username }}{% endblock %}
 {% block content %}
 <h2>Promote Stranger: {{ post.user.username }}</h2>
@@ -12,7 +13,7 @@ these checks (which are somewhat expensive for the webserver) will no longer be 
 and moderators won't be able to deactivate them on the spot. You may wish to wait until the user 
 has posted at least 10 times before making your decision.</p>
 <p>Please confirm that you wish to promote the new user
-<a href="{% url 'bio-view_profile' username=post.user.username %}">{{ post.user.username }}</a> from
+{% profile_link post.user.username %} from
 <em>stranger</em> status based on <a href="{% url 'forums-goto_post' post.id %}">this post</a>. 
 </p>
 <form action="." method="post">{% csrf_token %}

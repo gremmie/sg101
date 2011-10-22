@@ -1,5 +1,6 @@
 {% load url from future %}
 {% load comment_tags %}
+{% load bio_tags %}
 {% get_comment_count for download as comment_count %}
 <dt>
 {{ download.title }}
@@ -9,7 +10,7 @@
 <table>
 <tr>
     <th>Added By:</th>
-        <td><a href="{% url 'bio-view_profile' download.user.username %}">{{ download.user.username }}</a></td>
+        <td>{% profile_link download.user.username %}</td>
     <th>Date:</th><td>{{ download.date_added|date:"M d, Y" }}</td>
     <th>Size:</th><td>{{ download.size }}</td>
 </tr>

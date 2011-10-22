@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load bio_tags %}
 {% load core_tags %}
 {% load comment_tags %}
 {% load script_tags %}
@@ -29,8 +30,7 @@
 <p class="caption">{{ potd.caption }}</p>
 <p class="details">
 Submitted by 
-<a href="{% url 'bio-view_profile' username=potd.user.username %}">{{ potd.user.username }}</a>
-on {{ potd.date_added|date:"d F Y" }}.<br />
+{% profile_link potd.user.username %} on {{ potd.date_added|date:"d F Y" }}.<br />
 This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
 </p>
 <div class="description">{{ potd.description|safe }}</div>
