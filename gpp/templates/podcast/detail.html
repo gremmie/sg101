@@ -18,6 +18,7 @@
     $(document).ready(function(){
       $("#jquery_jplayer_1").jPlayer({
         ready: function () {
+          $.jPlayer.timeFormat.showHour = true;
           $(this).jPlayer("setMedia", jplayer_media);
         },
         swfPath: "{{ STATIC_URL }}js/jplayer",
