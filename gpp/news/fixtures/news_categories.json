@@ -3,7 +3,7 @@
         "pk": 2, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_articles.jpg", 
+            "icon": "news/categories/Articles.png", 
             "slug": "articles", 
             "title": "Articles"
         }
@@ -12,7 +12,7 @@
         "pk": 3, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_bands.jpg", 
+            "icon": "news/categories/Bands.png", 
             "slug": "bands", 
             "title": "Bands"
         }
@@ -21,7 +21,7 @@
         "pk": 11, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/video.gif", 
+            "icon": "news/categories/Featured_Video.png", 
             "slug": "featured-videos", 
             "title": "Featured Videos"
         }
@@ -30,7 +30,7 @@
         "pk": 4, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_gear.jpg", 
+            "icon": "news/categories/Gear.png", 
             "slug": "gear", 
             "title": "Gear"
         }
@@ -39,7 +39,7 @@
         "pk": 5, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_interviews.jpg", 
+            "icon": "news/categories/Interviews.png", 
             "slug": "interviews", 
             "title": "Interviews"
         }
@@ -48,7 +48,7 @@
         "pk": 6, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_reviews.jpg", 
+            "icon": "news/categories/Reviews.png", 
             "slug": "reviews", 
             "title": "Reviews"
         }
@@ -57,7 +57,7 @@
         "pk": 7, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_showannoun.jpg", 
+            "icon": "news/categories/Show_Announcements.png", 
             "slug": "show-announcements", 
             "title": "Show Announcements"
         }
@@ -66,7 +66,7 @@
         "pk": 8, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_showreport.jpg", 
+            "icon": "news/categories/Show_Reports.png", 
             "slug": "show-reports", 
             "title": "Show Reports"
         }
@@ -75,7 +75,7 @@
         "pk": 1, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_sitenews.jpg", 
+            "icon": "news/categories/Site_News.png", 
             "slug": "site-news", 
             "title": "Site News"
         }
@@ -84,7 +84,7 @@
         "pk": 9, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_surfscene.jpg", 
+            "icon": "news/categories/Surf_Scene_News.png", 
             "slug": "surf-scene-news", 
             "title": "Surf Scene News"
         }
@@ -93,7 +93,7 @@
         "pk": 10, 
         "model": "news.category", 
         "fields": {
-            "icon": "news/categories/nch_tab.jpg", 
+            "icon": "news/categories/Guitar_Tabs.png", 
             "slug": "tablature", 
             "title": "Tablature"
         }
