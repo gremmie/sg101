@@ -18,13 +18,18 @@ from antispam.rate_limit import block_ip
 
 class RegisterForm(forms.Form):
     """Form used to register with the website"""
-    username = forms.RegexField(max_length=30, regex=r'^\w+$',
-        error_messages={
-            'invalid': 'Your username must be 30 characters or less and '
-                    'contain only letters, numbers and underscores.'})
-    email = forms.EmailField()
-    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
-    password2 = forms.CharField(label="Password confirmation", widget=forms.PasswordInput)
+    username = forms.RegexField(
+            max_length=30,
+            regex=r'^\w+$',
+            error_messages={'invalid': ('Your username must be 30 characters or'
+                ' less and contain only letters, numbers and underscores.')},
+            widget=forms.TextInput(attrs={'class': 'text'}),
+            )
+    email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'text'}))
+    password1 = forms.CharField(label="Password",
+            widget=forms.PasswordInput(attrs={'class': 'text'}))
+    password2 = forms.CharField(label="Password confirmation",
+            widget=forms.PasswordInput(attrs={'class': 'text'}))
     agree_age = forms.BooleanField(required=True,
         label='I certify that I am over the age of 13',
         error_messages={
@@ -41,7 +46,8 @@ class RegisterForm(forms.Form):
         error_messages={
             'required': 'You have not agreed to our Privacy Policy.',
             })
-    question1 = forms.CharField(label="What number appears in the site name?")
+    question1 = forms.CharField(label="What number appears in the site name?",
+        widget=forms.TextInput(attrs={'class': 'text'}))
     question2 = forms.CharField(label='', required=False,
         widget=forms.TextInput(attrs={'style': 'display: none;'}))
 
