@@ -32,7 +32,7 @@ def offline_handler(environ, start_response):
 
 
 if not OFFLINE:
-   os.environ['DJANGO_SETTINGS_MODULE'] = 'gpp.settings'
+   os.environ['DJANGO_SETTINGS_MODULE'] = 'gpp.settings.production'
    import django.core.handlers.wsgi
    application = django.core.handlers.wsgi.WSGIHandler()
 else:

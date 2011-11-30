@@ -1,42 +1,38 @@
-# Django settings for gpp project.
+# Base Django settings for the gpp project.
 
 import os
-import platform
 from decimal import Decimal
 
+import django.utils.simplejson as json
 from django.contrib.messages import constants as message_constants
 
-import local_settings
+PROJECT_PATH = os.path.abspath(os.path.join(os.path.split(__file__)[0], '..'))
 
-project_path = os.path.abspath(os.path.split(__file__)[0])
-
-DEBUG = local_settings.DEBUG
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     ('Brian Neal', 'admin@surfguitar101.com'),
 )
 
-AUTH_PROFILE_MODULE = 'bio.userprofile'
-
 MANAGERS = ADMINS
 
-DATABASES = local_settings.DATABASES
+AUTH_PROFILE_MODULE = 'bio.userprofile'
 
-INTERNAL_IPS = local_settings.INTERNAL_IPS
+INTERNAL_IPS = ['127.0.0.1']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = local_settings.TIME_ZONE
+TIME_ZONE = 'America/Chicago'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
 
-SITE_ID = local_settings.SITE_ID
+SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
@@ -44,64 +40,46 @@ USE_I18N = False
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = local_settings.MEDIA_ROOT
+MEDIA_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'media'))
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = local_settings.MEDIA_URL
+MEDIA_URL = '/media/'
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
 # Examples: "http://foo.com/media/", "/media/".
-ADMIN_MEDIA_PREFIX = local_settings.ADMIN_MEDIA_PREFIX
+ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Staticfiles settings:
-STATICFILES_DIRS = local_settings.STATICFILES_DIRS
-STATIC_ROOT = local_settings.STATIC_ROOT
-STATIC_URL = local_settings.STATIC_URL
+STATICFILES_DIRS = [
+    os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static')),
+]
+STATIC_ROOT = '/tmp/test_static_root'
+STATIC_URL = '/static/'
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = local_settings.SECRET_KEY
+SECRETS = json.load(open(os.path.join(PROJECT_PATH, 'settings', 'secrets.json')))
+SECRET_KEY = SECRETS['SECRET_KEY']
 
 # List of Loader classes that know how to import templates from various sources.
 
-if DEBUG:
-    TEMPLATE_LOADERS = (
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    )
-else:
-    TEMPLATE_LOADERS = (
-        ('django.template.loaders.cached.Loader', (
-            'django.template.loaders.filesystem.Loader',
-            'django.template.loaders.app_directories.Loader',
-        )),
-    )
+TEMPLATE_LOADERS = (
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader',
+)
 
-if DEBUG:
-    MIDDLEWARE_CLASSES = (
-        'django.middleware.common.CommonMiddleware',
-        'django.middleware.csrf.CsrfViewMiddleware',
-        'django.contrib.sessions.middleware.SessionMiddleware',
-        'django.contrib.messages.middleware.MessageMiddleware',
-        'debug_toolbar.middleware.DebugToolbarMiddleware',
-        'django.contrib.auth.middleware.AuthenticationMiddleware',
-        'gpp.core.middleware.InactiveUserMiddleware',
-        'gpp.core.middleware.WhosOnline',
-        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
-    )
-else:
-    MIDDLEWARE_CLASSES = (
-        'django.middleware.common.CommonMiddleware',
-        'django.middleware.csrf.CsrfViewMiddleware',
-        'django.contrib.sessions.middleware.SessionMiddleware',
-        'django.contrib.messages.middleware.MessageMiddleware',
-        'django.contrib.auth.middleware.AuthenticationMiddleware',
-        'gpp.core.middleware.InactiveUserMiddleware',
-        'gpp.core.middleware.WhosOnline',
-        'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
-    )
+MIDDLEWARE_CLASSES = [
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'gpp.core.middleware.InactiveUserMiddleware',
+    'gpp.core.middleware.WhosOnline',
+    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+]
 
 ROOT_URLCONF = 'gpp.urls'
 
@@ -109,7 +87,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    os.path.join(project_path, 'templates'),
+    os.path.join(PROJECT_PATH, 'templates'),
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -163,8 +141,6 @@ INSTALLED_APPS = [
     'weblinks',
     'ygroup',
 ]
-if DEBUG:
-    INSTALLED_APPS.append('debug_toolbar')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/profile/me/'
@@ -188,17 +164,8 @@ MESSAGE_TAGS = {
 #######################################################################
 # Email
 #######################################################################
-EMAIL_HOST = local_settings.EMAIL_HOST
-EMAIL_PORT = local_settings.EMAIL_PORT
-
-#######################################################################
-# Caching
-#######################################################################
-if local_settings.USE_CACHE:
-    CACHES = local_settings.CACHES
-    CACHE_MIDDLEWARE_ANONYMOUS_ONLY = local_settings.CACHE_MIDDLEWARE_ANONYMOUS_ONLY
-    CACHE_MIDDLEWARE_SECONDS = local_settings.CACHE_MIDDLEWARE_SECONDS
-    CACHE_MIDDLEWARE_KEY_PREFIX = local_settings.CACHE_MIDDLEWARE_KEY_PREFIX
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
 
 #######################################################################
 # Sessions
@@ -223,14 +190,14 @@ MAX_TAG_LENGTH = 50
 #######################################################################
 HAYSTACK_SITECONF = 'gpp.search_sites'
 HAYSTACK_SEARCH_ENGINE = 'xapian'
-HAYSTACK_XAPIAN_PATH = os.path.join(project_path, 'xapian_index')
+HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
 
 
 #######################################################################
 # GPP Specific Settings
 #######################################################################
 GPP_LOG_LEVEL = 0
-GPP_SEND_EMAIL = local_settings.GPP_SEND_EMAIL  # see MAILER_ENQUEUE_MAIL
+GPP_SEND_EMAIL = False
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
@@ -238,10 +205,10 @@ MAX_AVATAR_SIZE_PIXELS = 100
 AVATAR_DEFAULT_URL = MEDIA_URL + AVATAR_DIR + '/default.png'
 
 # Donations application settings:
-DONATIONS_DEBUG = local_settings.DONATIONS_DEBUG
+DONATIONS_DEBUG = False
 DONATIONS_ITEM_NAME = 'Donation for SurfGuitar101.com'
 DONATIONS_BUSINESS = 'brian@surfguitar101.com'
-DONATIONS_BUSINESS_DEBUG = local_settings.DONATIONS_BUSINESS_DEBUG
+DONATIONS_BUSINESS_DEBUG = 'bgneal_1246137628_biz@gmail.com'
 DONATIONS_GOAL = Decimal('100.00')  # monthly goal
 DONATIONS_ANON_NAME = u'Anonymous'
 DONATIONS_ITEM_NUM = '500'          # donation w/name listed
@@ -265,21 +232,8 @@ OEMBED_MAXHEIGHT = 295
 GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
 # Google OAuth settings
-GOOGLE_OAUTH_CONSUMER_KEY = local_settings.GOOGLE_OAUTH_CONSUMER_KEY
-GOOGLE_OAUTH_PRIVATE_KEY_PATH = local_settings.GOOGLE_OAUTH_PRIVATE_KEY_PATH
-
-#######################################################################
-# Configure Logging
-#######################################################################
-
-LOGGING = local_settings.LOGGING
-
-#######################################################################
-# Django Debug Toolbar 
-#######################################################################
-
-if DEBUG:
-    DEBUG_TOOLBAR_CONFIG = local_settings.DEBUG_TOOLBAR_CONFIG
+GOOGLE_OAUTH_CONSUMER_KEY = 'surfguitar101.com'
+GOOGLE_OAUTH_PRIVATE_KEY_PATH = '/home/brian/google/myrsakey.pem'
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
