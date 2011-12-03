@@ -3,6 +3,7 @@ from django.conf.urls.defaults import *
 from django.conf import settings
 
 urlpatterns = patterns('accounts.views',
+    url(r'^login/ajax/$', 'login_ajax', name='accounts-login_ajax'),
     url(r'^register/$', 'register', name='accounts-register'),
     (r'^register/thanks/$', 'register_thanks'),
     (r'^register/confirm/(?P<username>[\w.@+-]{1,30})/(?P<key>[a-zA-Z0-9]{20})/$', 'register_confirm'),

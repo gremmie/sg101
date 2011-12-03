@@ -1,0 +1,14 @@
+{% load url from future %}
+{% load messages_tags %}
+<ul>
+   {% if user.is_authenticated %}
+   <li>Welcome, <a href="{% url 'bio-me' %}">{{ user.username }}</a></li>
+   <li><a href="{% url 'forums-index' %}">Forums</a></li>
+   <li>{% unread_messages user %}</li>
+   <li><a href="{% url 'haystack_search' %}">Search</a></li>
+   <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
+   {% else %}
+   <li><a id="login-link" href="{% url 'accounts-login' %}">Login</a></li>
+   <li><a href="{% url 'accounts-register' %}">Register</a></li>
+   {% endif %}
+</ul> 

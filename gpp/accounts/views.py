@@ -1,14 +1,20 @@
-"""views for the accounts application"""
+"""
+Views for the accounts application.
 
+"""
 import datetime
 import logging
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.loader import render_to_string
 from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login
+from django.utils import simplejson
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
@@ -78,3 +84,33 @@ def register_confirm(request, username, key):
         'username': username,
         },
         context_instance = RequestContext(request))
+
+#######################################################################
+
+@rate_limit(count=10, interval=datetime.timedelta(minutes=1))
+def login_ajax(request):
+    """
+    This view function handles a login via AJAX.
+
+    """
+    if not request.is_ajax():
+        return HttpResponseRedirect(reverse('accounts-login'))
+
+    response = {
+        'success': False,
+        'error': '',
+        'navbar_html': ''
+    }
+
+    if request.method == "POST":
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            response['success'] = True
+            response['navbar_html'] = render_to_string('navbar.html',
+                    {'user': request.user}, RequestContext(request))
+        else:
+            response['error'] = 'Invalid username or password'
+
+    return HttpResponse(simplejson.dumps(response),
+            content_type='application/json')

@@ -1,0 +1,17 @@
+{% load url from future %}
+<div id="login-dialog" title="SurfGuitar101 Login">
+   <p id="login-error" class="error"></p>
+   <form>
+      <fieldset>
+         <label for="id_username">Username:</label>
+         <input id="id_username" type="text" name="username" maxlength="30" class="text" /><br />
+         <label for="id_password">Password:</label>
+         <input type="password" name="password" id="id_password" class="text" />
+      </fieldset>
+   </form>
+<ul>
+<li>Forgot your password? You can reset it <a href="{% url 'accounts-password_reset' %}">here</a>.</li>
+<li>Don't have an account? Why don't you <a href="{% url 'accounts-register' %}">register</a>?</li>
+<li>Having problems? Please <a href="{% url 'contact-form' %}">contact us</a>.</li>
+</ul>
+</div>

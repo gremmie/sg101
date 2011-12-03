@@ -1,0 +1,54 @@
+$(function() {
+   var loginError = $('#login-error');
+   var loginDialog = $('#login-dialog').dialog({
+      autoOpen: false,
+      height: 355,
+      width: 380,
+      modal: true,
+      buttons: {
+         "Login": function() {
+            loginError.text('').hide();
+            $.ajax({
+               url: '/accounts/login/ajax/',
+               type: 'POST',
+               data: {
+                  username: $('#id_username').val(),
+                  password: $('#id_password').val()
+               },
+               dataType: 'json',
+               success: function(data, textStatus) {
+                  if (data.success) {
+                     loginDialog.dialog("close");
+                     if (window.location.pathname == "/accounts/logout/") {
+                        window.location.replace("/");
+                     }
+                     else {
+                        $('#header-nav').html(data.navbar_html);
+                     }
+                  }
+                  else {
+                     loginError.text(data.error).show();
+                  }
+               },
+               error: function (xhr, textStatus, ex) {
+                  if (xhr.status == 403) {
+                     loginDialog.dialog("close");
+                     alert("Oops, we are detecting some strange behavior and are blocking this action. If you feel this is an error, please feel free to contact us. Thank you.");
+                  }
+                  else {
+                     loginError.text('Oops, an error occurred. If this problem persists, please contact us.').show();
+                  }
+               }
+            });
+         },
+         "Cancel": function() {
+            loginDialog.dialog("close");
+         }
+      }
+   });
+   $('#login-link').click(function() {
+      loginError.text('').hide();
+      loginDialog.dialog("open");
+      return false;
+   });
+});
