@@ -6,6 +6,7 @@ from datetime import timedelta
 from functools import wraps
 
 from django.shortcuts import render
+from django.utils import simplejson
 
 from antispam.rate_limit import RateLimiter, RateLimiterUnavailable
 
@@ -31,14 +32,26 @@ def rate_limit(count=10, interval=timedelta(minutes=1),
             response = fn(request, *args, **kwargs)
 
             if request.method == 'POST':
-                success = (response and response.has_header('location') and
-                        response.status_code == 302)
-                try:
-                    if not success and rate_limiter.incr():
-                        return render(request, 'antispam/blocked.html', status=403)
 
-                except RateLimiterUnavailable:
-                    pass
+                # Figure out if the view succeeded; if it is a non-ajax view,
+                # then success means a redirect is about to occur. If it is
+                # an ajax view, we have to decode the json response.
+                success = False
+                if not request.is_ajax():
+                    success = (response and response.has_header('location') and
+                            response.status_code == 302)
+                elif response:
+                    json_resp = simplejson.loads(response.content)
+                    success = json_resp['success']
+
+                if not success:
+                    try:
+                        blocked = rate_limiter.incr()
+                    except RateLimiterUnavailable:
+                        blocked = False
+
+                    if blocked:
+                        return render(request, 'antispam/blocked.html', status=403)
 
             return response
 
