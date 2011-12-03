@@ -44,6 +44,13 @@ $(function() {
          "Cancel": function() {
             loginDialog.dialog("close");
          }
+      },
+      focus: function() {
+         $(':input', this).keyup(function(event) {
+            if (event.keyCode == 13) {
+                $('.ui-dialog-buttonpane button:first').click();
+            }
+         });
       }
    });
    $('#login-link').click(function() {
