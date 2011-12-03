@@ -2,7 +2,7 @@ $(function() {
    var loginError = $('#login-error');
    var loginDialog = $('#login-dialog').dialog({
       autoOpen: false,
-      height: 355,
+      height: 375,
       width: 380,
       modal: true,
       buttons: {
