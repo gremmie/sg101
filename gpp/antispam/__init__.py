@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.auth import views as auth_views
 
 from antispam.decorators import rate_limit
@@ -8,4 +10,4 @@ BUSTED_MESSAGE = ("Your post has tripped our spam filter. Your account has "
         "then we apologize; your account will be restored shortly.")
 
 # Install rate limiting on auth login
-auth_views.login = rate_limit()(auth_views.login)
+auth_views.login = rate_limit(lockout=datetime.timedelta(minutes=2))(auth_views.login)

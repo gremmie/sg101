@@ -87,7 +87,8 @@ def register_confirm(request, username, key):
 
 #######################################################################
 
-@rate_limit(count=10, interval=datetime.timedelta(minutes=1))
+@rate_limit(count=10, interval=datetime.timedelta(minutes=1),
+        lockout=datetime.timedelta(minutes=2))
 def login_ajax(request):
     """
     This view function handles a login via AJAX.
