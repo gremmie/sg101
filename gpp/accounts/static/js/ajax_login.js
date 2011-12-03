@@ -1,5 +1,7 @@
 $(function() {
    var loginError = $('#login-error');
+   var userBox = $('#id_username');
+   var passBox = $('#id_password');
    var loginDialog = $('#login-dialog').dialog({
       autoOpen: false,
       height: 375,
@@ -12,8 +14,8 @@ $(function() {
                url: '/accounts/login/ajax/',
                type: 'POST',
                data: {
-                  username: $('#id_username').val(),
-                  password: $('#id_password').val()
+                  username: userBox.val(),
+                  password: passBox.val()
                },
                dataType: 'json',
                success: function(data, textStatus) {
@@ -28,12 +30,16 @@ $(function() {
                   }
                   else {
                      loginError.text(data.error).show();
+                     userBox.val('');
+                     passBox.val('');
+                     userBox.focus();
                   }
                },
                error: function (xhr, textStatus, ex) {
                   if (xhr.status == 403) {
                      loginDialog.dialog("close");
                      alert("Oops, we are detecting some strange behavior and are blocking this action. If you feel this is an error, please feel free to contact us. Thank you.");
+                     window.location.href = "/";
                   }
                   else {
                      loginError.text('Oops, an error occurred. If this problem persists, please contact us.').show();
