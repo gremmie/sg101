@@ -36,6 +36,7 @@
 <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ STATIC_URL }}favicon.ico" />
 {% if not user.is_authenticated %}
 {% script_tags "jquery-ui" %}
+<script type="text/javascript">var csrf_token = "{{ csrf_token }}";</script>
 <script type="text/javascript" src="{{ STATIC_URL }}js/ajax_login.js"></script>
 {% endif %}
 </head>

@@ -15,7 +15,8 @@ $(function() {
                type: 'POST',
                data: {
                   username: userBox.val(),
-                  password: passBox.val()
+                  password: passBox.val(),
+                  csrfmiddlewaretoken: csrf_token
                },
                dataType: 'json',
                success: function(data, textStatus) {
