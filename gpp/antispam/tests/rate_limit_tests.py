@@ -2,18 +2,18 @@
 Tests for the rate limiting function in the antispam application.
 
 """
-import redis
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 
 from antispam.rate_limit import _make_key
+from core.services import get_redis_connection
 
 
 class RateLimitTestCase(TestCase):
     KEY = _make_key('127.0.0.1')
 
     def setUp(self):
-        self.conn = redis.Redis(host='localhost', port=6379, db=0)
+        self.conn = get_redis_connection()
         self.conn.delete(self.KEY)
 
     def tearDown(self):

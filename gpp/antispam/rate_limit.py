@@ -8,13 +8,10 @@ import logging
 import redis
 from django.conf import settings
 
+from core.services import get_redis_connection
+
 
 logger = logging.getLogger(__name__)
-
-# Redis connection and database settings
-HOST = getattr(settings, 'RATE_LIMIT_REDIS_HOST', 'localhost')
-PORT = getattr(settings, 'RATE_LIMIT_REDIS_PORT', 6379)
-DB = getattr(settings, 'RATE_LIMIT_REDIS_DB', 0)
 
 
 # This exception is thrown upon any Redis error. This insulates client code from
@@ -37,7 +34,7 @@ def _get_connection():
     Create and return a Redis connection. Returns None on failure.
     """
     try:
-        conn = redis.Redis(host=HOST, port=PORT, db=DB)
+        conn = get_redis_connection()
     except redis.RedisError, e:
         logger.error("rate limit: %s" % e)
         raise RateLimiterUnavailable

@@ -4,20 +4,16 @@ authenticated users ("users") and non-authenticated visitors ("visitors").
 """
 import logging
 
-from django.conf import settings
 import redis
+
+from core.services import get_redis_connection
+
 
 # Users and visitors each have 2 sets that we store in a Redis database:
 # a current set and an old set. Whenever a user or visitor is seen, the
 # current set is updated. At some interval, the current set is renamed
 # to the old set, thus destroying it. At any given time, the union of the
 # current and old sets is the "who's online" set.
-
-# Redis connection and database settings
-
-HOST = getattr(settings, 'WHOS_ONLINE_REDIS_HOST', 'localhost')
-PORT = getattr(settings, 'WHOS_ONLINE_REDIS_PORT', 6379)
-DB = getattr(settings, 'WHOS_ONLINE_REDIS_DB', 0)
 
 # Redis key names:
 USER_CURRENT_KEY = "wo_user_current"
@@ -39,7 +35,7 @@ def _get_connection():
     Create and return a Redis connection. Returns None on failure.
     """
     try:
-        conn = redis.Redis(host=HOST, port=PORT, db=DB)
+        conn = get_redis_connection()
         return conn
     except redis.RedisError, e:
         logger.error(e)

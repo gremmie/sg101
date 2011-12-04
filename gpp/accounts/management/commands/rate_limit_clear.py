@@ -9,6 +9,9 @@ import re
 from django.core.management.base import BaseCommand
 import redis
 
+from core.services import get_redis_connection
+
+
 IP_RE = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
 
 
@@ -21,7 +24,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         try:
-            con = redis.Redis()
+            con = get_redis_connection()
 
             # get all rate-limit keys
             keys = con.keys('rate-limit-*')
