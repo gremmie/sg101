@@ -1,0 +1,20 @@
+Django==1.3.1
+-e git+https://github.com/waylan/Python-Markdown.git@067d88bc41c7924c9087b724ff5247235243ce6b#egg=Markdown-dev
+MySQL-python==1.2.3
+django-debug-toolbar==0.8.5
+-e git+https://github.com/leah/django-elsewhere.git@d8353f90c5cda6c42a5f8345f98992db8f685421#egg=django_elsewhere-dev
+-e git+https://github.com/toastdriven/django-haystack.git@53512d286e12bc5881dbb35fa1020321b669c4cf#egg=django_haystack-dev
+django-tagging==0.3.1
+gdata==2.0.15
+html5lib==0.90
+pytz==2011n
+-e git+https://github.com/toastdriven/queued_search.git@daca1074d1ab870b1845bd32f31f0502d768707e#egg=queued_search-dev
+queues==0.6.1
+-e git+https://github.com/andymccurdy/redis-py.git@368cccd29559ec0915ec5f4739504a55bed2a644#egg=redis-dev
+repoze.timeago==0.5
+-e git+https://github.com/notanumber/xapian-haystack.git@144c4e6225caaaba67dc6251dbed189560519058#egg=xapian_haystack-dev
+#
+# There were two packages that I punted on and hacked into my virtualenv by symlinking to the global
+# Python 2.6 site-packages (actually dist-packages):
+# PIL
+# xapian
