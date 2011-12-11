@@ -5,6 +5,8 @@ from decimal import Decimal
 
 import django.utils.simplejson as json
 from django.contrib.messages import constants as message_constants
+import djcelery
+
 
 PROJECT_PATH = os.path.abspath(os.path.join(os.path.split(__file__)[0], '..'))
 
@@ -111,10 +113,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.staticfiles',
+    'djcelery',
     'elsewhere',
-    'tagging',
     'haystack',
     'queued_search',
+    'tagging',
     'accounts',
     'antispam',
     'bio',
@@ -166,6 +169,7 @@ MESSAGE_TAGS = {
 #######################################################################
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 #######################################################################
 # Sessions
@@ -194,10 +198,28 @@ HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
 
 
 #######################################################################
+# Celery integration & settings
+#######################################################################
+BROKER_URL = 'redis://localhost:6379/1'
+BROKER_POOL_LIMIT = 10
+
+CELERY_IGNORE_RESULT = False
+CELERY_RESULT_BACKEND = 'redis'
+CELERY_REDIS_HOST = 'localhost'
+CELERY_REDIS_PORT = 6379
+CELERY_REDIS_DB = 1
+
+CELERY_DISABLE_RATE_LIMITS = True
+CELERY_SEND_TASK_ERROR_EMAILS = True
+
+djcelery.setup_loader()
+
+#######################################################################
 # GPP Specific Settings
 #######################################################################
 GPP_LOG_LEVEL = 0
-GPP_SEND_EMAIL = False
+GPP_SEND_EMAIL = True
+MAILER_ENQUEUE_MAIL = True
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
@@ -213,16 +235,6 @@ DONATIONS_GOAL = Decimal('100.00')  # monthly goal
 DONATIONS_ANON_NAME = u'Anonymous'
 DONATIONS_ITEM_NUM = '500'          # donation w/name listed
 DONATIONS_ITEM_ANON_NUM = '501'     # donation listed as anonymous
-
-# If MAILER_ENQUEUE_MAIL is True, all emails will be stored in the
-# mailer application's mail queue (database table). It is then expected
-# that a daemon or cron job will actually send the mail out. If
-# MAILER_ENQUEUE_MAIL is False, then email will only be sent if
-# the setting GPP_SEND_EMAIL (above) is True. In any event, emails
-# will be logged via the Python logger if the Python logger filter
-# DEBUG is active.
-
-MAILER_ENQUEUE_MAIL = True
 
 # Oembed settings
 OEMBED_MAXWIDTH = 480
