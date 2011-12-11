@@ -1,14 +1,18 @@
 import os
 import sys
+import site
+
 
 OFFLINE = False
 
-sys.path.append('/home/var/django-sites/sg101')
-sys.path.append('/home/var/django-sites/sg101/3rdparty')
-sys.path.append('/home/var/django-sites/sg101/sg101-trunk')
-sys.path.append('/home/var/django-sites/sg101/sg101-trunk/gpp')
+site.addsitedir('/home/var/django-sites/virtualenvs/sg101/lib/python2.5/site-packages')
 
-os.environ['PYTHON_EGG_CACHE'] = '/home/var/django-sites/sg101/eggs/'
+sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101')
+sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101/gpp')
+sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101/tools')
+
+os.environ['PYTHON_EGG_CACHE'] = '/home/var/django-sites/virtualenvs/sg101/eggs'
+os.environ['CELERY_LOADER'] = 'django'
 
 
 def offline_handler(environ, start_response):
