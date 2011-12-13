@@ -203,7 +203,7 @@ HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
 BROKER_URL = 'redis://localhost:6379/1'
 BROKER_POOL_LIMIT = 10
 
-CELERY_IGNORE_RESULT = False
+CELERY_IGNORE_RESULT = True
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_REDIS_HOST = 'localhost'
 CELERY_REDIS_PORT = 6379
@@ -217,7 +217,6 @@ djcelery.setup_loader()
 #######################################################################
 # GPP Specific Settings
 #######################################################################
-GPP_LOG_LEVEL = 0
 GPP_SEND_EMAIL = True
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
@@ -244,7 +243,7 @@ GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
 # Google OAuth settings
 GOOGLE_OAUTH_CONSUMER_KEY = 'surfguitar101.com'
-GOOGLE_OAUTH_PRIVATE_KEY_PATH = '/home/brian/google/myrsakey.pem'
+GOOGLE_OAUTH_PRIVATE_KEY_PATH = SECRETS['GOOGLE_KEY_PATH']
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
