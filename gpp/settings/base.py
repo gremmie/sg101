@@ -219,7 +219,6 @@ djcelery.setup_loader()
 #######################################################################
 GPP_LOG_LEVEL = 0
 GPP_SEND_EMAIL = True
-MAILER_ENQUEUE_MAIL = True
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024

@@ -3,33 +3,34 @@ import datetime
 import re
 import logging
 
-import django.core.mail
 from django.contrib.sites.models import Site
 from django.conf import settings
 
-import mailer
+import core.tasks
 
 
-def send_mail(subject, message, from_email, recipient_list,
-        fail_silently=False, auth_user=None, auth_password=None,
-        expedite=False):
-    """The main gpp send email function.
-    Use this function to send email from the site. It will obey debug settings and
-    log all emails. The expedite flag, when True, will bypass the mail queue.
+def send_mail(subject, message, from_email, recipient_list, **kwargs):
     """
+    The main send email function. Use this function to send email from the
+    site. All applications should use this function instead of calling
+    Django's directly.
+    If settings.GPP_SEND_EMAIL is true, the email will be sent to a Celery task
+    to actually send the email. Otherwise it is dropped. In any event, the
+    email will be logged at the DEBUG level.
+
+    """
+    # Guard against empty email addresses
     recipient_list = [dest for dest in recipient_list if dest]
     if not recipient_list:
         logging.warning("Empty recipient_list in send_mail")
         return
 
-    if settings.MAILER_ENQUEUE_MAIL and not expedite:
-        mailer.enqueue_mail(subject, message, from_email, recipient_list)
-    elif settings.GPP_SEND_EMAIL:
-        django.core.mail.send_mail(subject, message, from_email, recipient_list,
-                fail_silently, auth_user, auth_password)
-
     logging.debug('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s',
         from_email, str(recipient_list), subject, message)
+
+    if settings.GPP_SEND_EMAIL:
+        core.tasks.send_mail.delay(subject, message, from_email, recipient_list,
+                **kwargs)
 
 
 def email_admins(subject, message):
