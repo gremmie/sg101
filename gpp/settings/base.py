@@ -6,6 +6,7 @@ from decimal import Decimal
 import django.utils.simplejson as json
 from django.contrib.messages import constants as message_constants
 import djcelery
+from celery.schedules import crontab
 
 
 PROJECT_PATH = os.path.abspath(os.path.join(os.path.split(__file__)[0], '..'))
@@ -213,6 +214,13 @@ CELERY_DISABLE_RATE_LIMITS = True
 CELERY_SEND_TASK_ERROR_EMAILS = True
 
 djcelery.setup_loader()
+
+CELERYBEAT_SCHEDULE = {
+    "potd": {
+        "task": "potd.tasks.pick_potd",
+        "schedule": crontab(minute=0, hour=0),
+    }
+}
 
 #######################################################################
 # GPP Specific Settings

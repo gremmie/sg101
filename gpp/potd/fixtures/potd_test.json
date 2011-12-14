@@ -1,0 +1,73 @@
+[
+    {
+        "pk": 1, 
+        "model": "auth.user", 
+        "fields": {
+            "username": "Anonymous", 
+            "first_name": "", 
+            "last_name": "", 
+            "is_active": false, 
+            "is_superuser": false, 
+            "is_staff": false, 
+            "last_login": "1969-12-31 18:00:00", 
+            "groups": [], 
+            "user_permissions": [], 
+            "password": "!", 
+            "email": "", 
+            "date_joined": "2000-11-10 00:00:00"
+        }
+    },
+    {
+        "pk": 3, 
+        "model": "potd.photo", 
+        "fields": {
+            "description": "<p>The Deadbeats and Daikaiju after a gig at&nbsp;the&nbsp;924 Gilman club in Berkeley, California.</p>", 
+            "photo": "potd/2011/02/28/deadbeats-daikaiju.jpg", 
+            "potd_count": 6, 
+            "caption": "Daikaiju VS The Deadbeats", 
+            "user": 1, 
+            "date_added": "2011-02-28", 
+            "thumb": "potd/2011/02/28/thumbs/deadbeats-daikaiju.jpg"
+        }
+    }, 
+    {
+        "pk": 2, 
+        "model": "potd.photo", 
+        "fields": {
+            "description": "<p>The Kilaueas live on May the 29th, 2010 in Osnabr&uuml;ck, Germany. Playin` my new old 1964 sonic blue Jaguar. Tom is playing his 1972 Mustang bass. Matze is playing my Fender Custom from 1966/69. Twang cheers to everybody!</p>\r\n<p>-Ralf Kilauea.</p>", 
+            "photo": "potd/2011/02/27/kilaueas.jpg", 
+            "potd_count": 5, 
+            "caption": "The Kilaueas Live in Germany", 
+            "user": 1, 
+            "date_added": "2011-02-27", 
+            "thumb": "potd/2011/02/27/thumbs/kilaueas.jpg"
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "potd.photo", 
+        "fields": {
+            "description": "<p>Here is a photo of Dave Wronski of Slacktone at the Tiki Caliente show in Palm Springs, CA June 6, 2010. It was 110 degrees that day.</p>", 
+            "photo": "potd/2011/02/26/wronski.jpg", 
+            "potd_count": 6, 
+            "caption": "Dave Wronski - 110 In The Shade", 
+            "user": 1, 
+            "date_added": "2011-02-26", 
+            "thumb": "potd/2011/02/26/thumbs/wronski.jpg"
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "potd.current", 
+        "fields": {
+            "potd": 1
+        }
+    }, 
+    {
+        "pk": 1, 
+        "model": "potd.sequence", 
+        "fields": {
+            "seq": "1,2,3"
+        }
+    }
+]

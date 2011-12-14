@@ -1,5 +1,6 @@
 """
 Models for the Photo Of The Day (POTD) application.
+
 """
 import os
 from PIL import ImageFile
@@ -89,7 +90,15 @@ class Photo(models.Model):
 
 
 class CurrentManager(models.Manager):
+    """
+    Manager for the Current model.
+
+    """
     def get_current_photo(self):
+        """
+        Retrieves the current photo object from the current record.
+
+        """
         try:
             c = self.get(pk=1)
             return c.potd
@@ -97,6 +106,10 @@ class CurrentManager(models.Manager):
             return None
 
     def get_current_id(self):
+        """
+        Returns the ID of the current POTD from the current record.
+
+        """
         potd = self.get_current_photo()
         if potd is not None:
             return potd.pk
@@ -117,7 +130,16 @@ class Current(models.Model):
 
 
 class SequenceManager(models.Manager):
+    """
+    Manager for the Sequence model.
+
+    """
     def insert_photo(self, photo_id):
+        """
+        Inserts the given photo_id just after the current photo so it
+        will appear as tomorrow's POTD.
+
+        """
         current = Current.objects.get_current_id()
         if current is not None:
             s = self.get(pk=1)
@@ -129,6 +151,10 @@ class SequenceManager(models.Manager):
                 s.save()
 
     def remove_photo(self, photo_id):
+        """
+        Removes a given photo id from the sequence of photos.
+
+        """
         try:
             s = self.get(pk=1)
         except Sequence.DoesNotExist:
