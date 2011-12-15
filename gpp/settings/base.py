@@ -219,7 +219,11 @@ CELERYBEAT_SCHEDULE = {
     "potd": {
         "task": "potd.tasks.pick_potd",
         "schedule": crontab(minute=0, hour=0),
-    }
+    },
+    "cleanup": {
+        "task": "core.tasks.cleanup",
+        "schedule": crontab(minute=0, hour=1),
+    },
 }
 
 #######################################################################
