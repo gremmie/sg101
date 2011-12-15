@@ -4,8 +4,6 @@ Celery tasks for the core application.
 """
 from celery.task import task
 import django.core.mail
-from django.core.management.commands.cleanup import Command as CleanupCommand
-from forums.management.commands.forum_cleanup import Command as ForumCleanup
 
 
 @task
@@ -33,6 +31,8 @@ def cleanup():
     A task to perform site-wide cleanup actions.
 
     """
+    from django.core.management.commands.cleanup import Command as CleanupCommand
+    from forums.management.commands.forum_cleanup import Command as ForumCleanup
     # Execute Django's cleanup command (deletes old sessions).
 
     command = CleanupCommand()
