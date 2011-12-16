@@ -31,8 +31,13 @@ def cleanup():
     A task to perform site-wide cleanup actions.
 
     """
+    # These imports, when placed at the top of the module, caused all kinds of
+    # import problems when running on the production server (Python 2.5 and
+    # mod_wsgi). Moving them here worked around that problem.
+
     from django.core.management.commands.cleanup import Command as CleanupCommand
     from forums.management.commands.forum_cleanup import Command as ForumCleanup
+
     # Execute Django's cleanup command (deletes old sessions).
 
     command = CleanupCommand()

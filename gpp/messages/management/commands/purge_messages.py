@@ -1,5 +1,5 @@
 """
-purge_messages is a custom manage.py command for the messages application. 
+purge_messages is a custom manage.py command for the messages application.
 It is intended to be called from a cron job to purge messages that have been
 deleted by both sender and receiver.
 """
@@ -16,5 +16,3 @@ class Command(NoArgsCommand):
         Message.objects.filter(sender_delete_date__isnull=False,
                 receiver_delete_date__isnull=False).delete()
 
-
-# vim: ts=4 sw=4
