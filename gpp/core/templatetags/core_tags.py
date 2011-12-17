@@ -53,11 +53,13 @@ def whos_online():
 
     """
     users = get_users_online()
+    users.sort(key=str.lower)
+
     visitors = get_visitors_online()
 
     return {
         'num_users': len(users),
-        'users': sorted(users),
+        'users': users,
         'num_guests': len(visitors),
         'total': len(users) + len(visitors),
     }
