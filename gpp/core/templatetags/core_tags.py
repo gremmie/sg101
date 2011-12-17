@@ -13,7 +13,7 @@ from django.contrib.sites.models import Site
 
 import repoze.timeago
 
-from core.whos_online import get_users_online, get_visitors_online
+from core.whos_online import get_users_online, get_visitors_online, get_stats
 from bio.models import UserProfile
 
 
@@ -36,10 +36,21 @@ def comment_dialogs():
     return {'STATIC_URL': settings.STATIC_URL}
 
 
+@register.inclusion_tag('core/max_users_tag.html')
+def max_users():
+    """
+    Displays max users online information.
+
+    """
+    return {
+        'stats': get_stats(),
+    }
+
 @register.inclusion_tag('core/whos_online_tag.html')
 def whos_online():
     """
     Displays a list of who is online.
+
     """
     users = get_users_online()
     visitors = get_visitors_online()

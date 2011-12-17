@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load url from future %}
+{% load accounts_tags %}
 {% load cache %}
 {% load forum_tags %}
 {% load core_tags %}
@@ -49,8 +50,12 @@
    <input type="submit" value="Mark All Forums Read" />
 </form>
 <br />
+{% user_stats %}
 {% cache 900 forum-stats-block %}
-{% forum_stats %}
+   {% forum_stats %}
+{% endcache %}
+{% cache 900 max-users-block %}
+   {% max_users %}
 {% endcache %}
 {% whos_online %}
 <p>{% current_forum_time user %}</p>

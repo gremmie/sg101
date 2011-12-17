@@ -14,7 +14,6 @@ from forums.models import Topic
 from forums.models import Post
 from forums.models import Category
 from forums.stats import retrieve_stats
-from core.whos_online import get_stats as get_core_stats
 
 
 register = template.Library()
@@ -154,13 +153,10 @@ def forum_stats():
     """
     Displays forum statistics.
     """
-    post_count, user_count, latest_user = retrieve_stats()
+    post_count = retrieve_stats()
 
     return {
-        'stats': get_core_stats(),
         'post_count': post_count,
-        'user_count': user_count,
-        'latest_user': latest_user,
     }
 
 

@@ -3,31 +3,22 @@ This module is responsible for managing various forum statistics.
 
 """
 from django.core.cache import cache
-from django.contrib.auth.models import User
 
 from forums.models import Post
 
 
-CACHE_KEY = 'forums-stats'
+CACHE_KEY = 'forums-stats-2'
 CACHE_TIMEOUT = 4 * 60 * 60         # seconds
 
 
 def calc_stats():
     """
     This function is responsible for computing the forum statistics.
-    A tuple is returned: (forums post count, active user count, latest username)
+    The forums post count is returned.
 
     """
     post_count = Post.objects.all().count()
-    user_count = User.objects.all().count()
-
-    if user_count > 0:
-        latest_user = User.objects.filter(is_active=True).values_list(
-                'username', flat=True).order_by('-date_joined')[0]
-    else:
-        latest_user = None
-
-    return post_count, user_count, latest_user
+    return post_count
 
 
 def update_stats():

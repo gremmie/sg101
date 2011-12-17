@@ -1,0 +1,16 @@
+{% load url from future %}
+{% load bio_tags %}
+{% load humanize %}
+<div id="accounts-stats">
+{% if num_users %}
+Our site has <strong>{{ num_users|intcomma }}</strong> members.
+{% endif %} 
+{% if new_users %}
+Please welcome our newest members:
+<ul class="inline-list">
+{% for user in new_users %}
+   <li>{% profile_link user %}</li>
+{% endfor %}
+</ul>
+{% endif %}
+</div>
