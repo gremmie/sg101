@@ -1,5 +1,6 @@
 """
 Miscellaneous/utility template tags.
+
 """
 import collections
 import datetime
@@ -128,7 +129,7 @@ class Birthday(object):
     """
     A simple named tuple-type class for birthdays.
     This class was created to make things easier in the template.
-    
+
     """
     day = None
     profiles = []
@@ -184,7 +185,7 @@ class EncodeParamsNode(template.Node):
 @register.tag
 def encode_params(parser, token):
     """
-    This is the compilation function for the encore_params template tag.
+    This is the compilation function for the encode_params template tag.
     This template tag retrieves the named parameters from the supplied
     querydict and returns them as a urlencoded string.
 

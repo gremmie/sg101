@@ -18,4 +18,4 @@ def get_redis_connection(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
     Create and return a Redis connection using the supplied parameters.
 
     """
-    return redis.Redis(host=host, port=port, db=db)
+    return redis.StrictRedis(host=host, port=port, db=db)

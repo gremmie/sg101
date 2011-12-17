@@ -5,6 +5,8 @@ Celery tasks for the core application.
 from celery.task import task
 import django.core.mail
 
+import core.whos_online
+
 
 @task
 def add(x, y):
@@ -47,3 +49,13 @@ def cleanup():
 
     command = ForumCleanup()
     command.execute()
+
+
+@task
+def max_users():
+    """
+    Run the periodic task to calculate the who's online max users/visitors
+    statistics.
+
+    """
+    core.whos_online.max_users()

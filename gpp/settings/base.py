@@ -224,10 +224,14 @@ CELERYBEAT_SCHEDULE = {
         "task": "core.tasks.cleanup",
         "schedule": crontab(minute=0, hour=1),
     },
-    "purge messages": {
+    "purge_messages": {
         "task": "messages.tasks.purge_messages",
         "schedule": crontab(minute=30, hour=1, day_of_week='sunday'),
-    }
+    },
+    "max_users": {
+        "task": "core.tasks.max_users",
+        "schedule": crontab(minute='*/15'),
+    },
 }
 
 #######################################################################

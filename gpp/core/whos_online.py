@@ -2,27 +2,28 @@
 This module keeps track of who is online. We maintain records for both
 authenticated users ("users") and non-authenticated visitors ("visitors").
 """
+import datetime
 import logging
+import time
 
 import redis
 
 from core.services import get_redis_connection
+from core.models import Statistic
 
 
-# Users and visitors each have 2 sets that we store in a Redis database:
-# a current set and an old set. Whenever a user or visitor is seen, the
-# current set is updated. At some interval, the current set is renamed
-# to the old set, thus destroying it. At any given time, the union of the
-# current and old sets is the "who's online" set.
+# Users and visitors each have a sorted set in a Redis database. When a user or
+# visitor is seen, the respective set is updated with the score of the current
+# time. Periodically we remove elements by score (time) to stale out members.
 
 # Redis key names:
-USER_CURRENT_KEY = "wo_user_current"
-USER_OLD_KEY = "wo_user_old"
-USER_KEYS = [USER_CURRENT_KEY, USER_OLD_KEY]
+USER_SET_KEY = "whos_online:users"
+VISITOR_SET_KEY = "whos_online:visitors"
 
-VISITOR_CURRENT_KEY = "wo_visitor_current"
-VISITOR_OLD_KEY = "wo_visitor_old"
-VISITOR_KEYS = [VISITOR_CURRENT_KEY, VISITOR_OLD_KEY]
+CORE_STATS_KEY = "core:stats"
+
+# the period over which we collect who's online stats:
+MAX_AGE = datetime.timedelta(minutes=15)
 
 
 # Logging: we don't want a Redis malfunction to bring down the site. So we
@@ -43,87 +44,196 @@ def _get_connection():
     return None
 
 
-def report_user(username):
+def to_timestamp(dt):
     """
-    Call this function when a user has been seen. The username will be added to
-    the current set.
+    Turn the supplied datetime object into a UNIX timestamp integer.
+
+    """
+    return int(time.mktime(dt.timetuple()))
+
+
+def _zadd(key, member):
+    """
+    Adds the member to the given set key, using the current time as the score.
+
     """
     conn = _get_connection()
     if conn:
+        ts = to_timestamp(datetime.datetime.now())
         try:
-            conn.sadd(USER_CURRENT_KEY, username)
+            conn.zadd(key, ts, member)
         except redis.RedisError, e:
             logger.error(e)
+
+
+def _zrangebyscore(key):
+    """
+    Performs a zrangebyscore operation on the set given by key.
+    The minimum score will be a timestap equal to the current time
+    minus MAX_AGE. The maximum score will be a timestap equal to the
+    current time.
+
+    """
+    conn = _get_connection()
+    if conn:
+        now = datetime.datetime.now()
+        min = to_timestamp(now - MAX_AGE)
+        max = to_timestamp(now)
+        try:
+            return conn.zrangebyscore(key, min, max)
+        except redis.RedisError, e:
+            logger.error(e)
+
+    return []
+
+
+def report_user(username):
+    """
+    Call this function when a user has been seen. The username will be added to
+    the set of users online.
+
+    """
+    _zadd(USER_SET_KEY, username)
 
 
 def report_visitor(ip):
     """
     Call this function when a visitor has been seen. The IP address will be
-    added the current set.
+    added to the set of visitors online.
+
     """
-    conn = _get_connection()
-    if conn:
-        try:
-            conn.sadd(VISITOR_CURRENT_KEY, ip)
-        except redis.RedisError, e:
-            logger.error(e)
+    _zadd(VISITOR_SET_KEY, ip)
 
 
 def get_users_online():
     """
-    Returns a set of user names which is the union of the current and old
+    Returns a list of user names from the user set.
     sets.
     """
-    conn = _get_connection()
-    if conn:
-        try:
-            # Note that keys that do not exist are considered empty sets
-            return conn.sunion(USER_KEYS)
-        except redis.RedisError, e:
-            logger.error(e)
-
-    return set()
+    return _zrangebyscore(USER_SET_KEY)
 
 
 def get_visitors_online():
     """
-    Returns a set of visitor IP addresses which is the union of the current
-    and old sets.
+    Returns a list of visitor IP addresses from the visitor set.
     """
-    conn = _get_connection()
-    if conn:
-        try:
-            # Note that keys that do not exist are considered empty sets
-            return conn.sunion(VISITOR_KEYS)
-        except redis.RedisError, e:
-            logger.error(e)
-
-    return set()
+    return _zrangebyscore(VISITOR_SET_KEY)
 
 
-def _tick_set(conn, current, old):
+def _tick(conn):
     """
-    This function renames the set named "current" to "old".
+    Call this function to "age out" the sets by removing old users/visitors.
+    It then returns a tuple of the form:
+        (zcard users, zcard visitors)
+
     """
-    # An exception may be raised if the current key doesn't exist; if that
-    # happens we have to delete the old set because no one is online.
+    cutoff = to_timestamp(datetime.datetime.now() - MAX_AGE)
+
     try:
-        conn.rename(current, old)
-    except redis.ResponseError:
-        try:
-            del conn[old]
-        except redis.RedisError, e:
-            logger.error(e)
+        pipeline = conn.pipeline(transaction=False)
+        pipeline.zremrangebyscore(USER_SET_KEY, 0, cutoff)
+        pipeline.zremrangebyscore(VISITOR_SET_KEY, 0, cutoff)
+        pipeline.zcard(USER_SET_KEY)
+        pipeline.zcard(VISITOR_SET_KEY)
+        result = pipeline.execute()
     except redis.RedisError, e:
         logger.error(e)
+        return 0, 0
+
+    return result[2], result[3]
 
 
-def tick():
+def max_users():
     """
-    Call this function to "age out" the old sets by renaming the current sets
-    to the old.
+    Run this function periodically to clean out the sets and to compute our max
+    users and max visitors statistics.
+
     """
     conn = _get_connection()
+    if not conn:
+        return
+
+    num_users, num_visitors = _tick(conn)
+    now = datetime.datetime.now()
+
+    stats = get_stats(conn)
+    update = False
+
+    if stats is None:
+        stats = Statistic(id=1,
+                max_users=num_users,
+                max_users_date=now,
+                max_anon_users=num_visitors,
+                max_anon_users_date=now)
+        update = True
+    else:
+        if num_users > stats.max_users:
+            stats.max_users = num_users
+            stats.max_users_date = now
+            update = True
+
+        if num_visitors > stats.max_anon_users:
+            stats.max_anon_users = num_visitors
+            stats.max_anon_users_date = now
+            update = True
+
+    if update:
+        _save_stats_to_redis(conn, stats)
+        stats.save()
+
+
+def get_stats(conn=None):
+    """
+    This function retrieves the who's online max user stats out of Redis. If
+    the keys do not exist in Redis, we fall back to the database. If the stats
+    are not available, None is returned.
+    Note that if we can find stats data, it will be returned as a Statistic
+    object.
+
+    """
+    if conn is None:
+        conn = _get_connection()
+
+    stats = None
     if conn:
-        _tick_set(conn, USER_CURRENT_KEY, USER_OLD_KEY)
-        _tick_set(conn, VISITOR_CURRENT_KEY, VISITOR_OLD_KEY)
+        try:
+            stats = conn.hgetall(CORE_STATS_KEY)
+        except redis.RedisError, e:
+            logger.error(e)
+
+        if stats:
+            return Statistic(
+                id=1,
+                max_users=stats['max_users'],
+                max_users_date=datetime.datetime.fromtimestamp(
+                    float(stats['max_users_date'])),
+                max_anon_users=stats['max_anon_users'],
+                max_anon_users_date=datetime.datetime.fromtimestamp(
+                    float(stats['max_anon_users_date'])))
+
+    try:
+        stats = Statistic.objects.get(pk=1)
+    except Statistic.DoesNotExist:
+        return None
+    else:
+        _save_stats_to_redis(conn, stats)
+        return stats
+
+
+def _save_stats_to_redis(conn, stats):
+    """
+    Saves the statistics to Redis. A TTL is put on the key to prevent Redis and
+    the database from becoming out of sync.
+
+    """
+    fields = dict(
+        max_users=stats.max_users,
+        max_users_date=to_timestamp(stats.max_users_date),
+        max_anon_users=stats.max_anon_users,
+        max_anon_users_date=to_timestamp(stats.max_anon_users_date))
+
+    try:
+        conn.hmset(CORE_STATS_KEY, fields)
+        conn.expire(CORE_STATS_KEY, 4 * 60 * 60)
+    except redis.RedisError, e:
+        logger.error(e)
