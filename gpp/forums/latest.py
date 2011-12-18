@@ -16,6 +16,7 @@ import time
 
 from django.dispatch import receiver
 from django.utils import simplejson
+import redis
 
 from forums.signals import post_content_update, topic_content_update
 from forums.models import Forum, Topic, Post
@@ -71,10 +72,10 @@ def process_new_post(post_id):
     public_forums = Forum.objects.public_forum_ids()
 
     if post.topic.forum.id in public_forums:
-        redis = get_redis_connection()
-        _update_post_feeds(redis, post)
-        _update_post_count(redis, public_forums)
-        _update_latest_topics(redis, post)
+        conn = get_redis_connection()
+        _update_post_feeds(conn, post)
+        _update_post_count(conn, public_forums)
+        _update_latest_topics(conn, post)
 
     # send out any email notifications
     notify_topic_subscribers(post, defer=False)
@@ -84,7 +85,7 @@ def process_new_post(post_id):
     auto_subscribe(post)
 
 
-def _update_post_feeds(redis, post):
+def _update_post_feeds(conn, post):
     """
     Updates the forum feeds we keep in Redis so that our RSS feeds are quick.
 
@@ -104,7 +105,7 @@ def _update_post_feeds(redis, post):
 
     # store in Redis
 
-    pipeline = redis.pipeline()
+    pipeline = conn.pipeline()
 
     key = 'forums:latest:%d' % post.topic.forum.id
 
@@ -122,21 +123,21 @@ def _update_post_feeds(redis, post):
     pipeline.execute()
 
 
-def _update_post_count(redis, public_forums):
+def _update_post_count(conn, public_forums):
     """
     Updates the post count we cache in Redis. Doing a COUNT(*) on the post table
     can be expensive in MySQL InnoDB.
 
     """
-    result = redis.incr(POST_COUNT_KEY)
+    result = conn.incr(POST_COUNT_KEY)
     if result == 1:
         # it is likely redis got trashed, so re-compute the correct value
 
         count = Post.objects.filter(topic__forum__in=public_forums).count()
-        redis.set(POST_COUNT_KEY, count)
+        conn.set(POST_COUNT_KEY, count)
 
 
-def _update_latest_topics(redis, post):
+def _update_latest_topics(conn, post):
     """
     Updates the "latest topics with new posts" list we cache in Redis for speed.
     There is a template tag and forum view that uses this information.
@@ -155,7 +156,7 @@ def _update_latest_topics(redis, post):
     json = simplejson.dumps(topic_content)
     key = UPDATED_TOPIC_KEY % topic_id
 
-    pipeline = redis.pipeline()
+    pipeline = conn.pipeline()
     pipeline.set(key, json)
     pipeline.zadd(UPDATED_TOPICS_SET_KEY, topic_score, topic_id)
     pipeline.zcard(UPDATED_TOPICS_SET_KEY)
@@ -168,13 +169,13 @@ def _update_latest_topics(redis, post):
         # get the IDs of the topics we need to delete first
         start = 0
         stop = num_to_del - 1   # Redis indices are inclusive
-        old_ids = redis.zrange(UPDATED_TOPICS_SET_KEY, start, stop)
+        old_ids = conn.zrange(UPDATED_TOPICS_SET_KEY, start, stop)
 
         keys = [UPDATED_TOPIC_KEY % n for n in old_ids]
-        redis.delete(*keys)
+        conn.delete(*keys)
 
         # now delete the oldest num_to_del topics
-        redis.zremrangebyrank(UPDATED_TOPICS_SET_KEY, start, stop)
+        conn.zremrangebyrank(UPDATED_TOPICS_SET_KEY, start, stop)
 
 
 def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
@@ -192,8 +193,8 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
     if num_posts == 0:
         return []
 
-    redis = get_redis_connection()
-    raw_posts = redis.lrange(key, 0, num_posts - 1)
+    conn = get_redis_connection()
+    raw_posts = conn.lrange(key, 0, num_posts - 1)
 
     posts = []
     for raw_post in raw_posts:
@@ -244,14 +245,14 @@ def process_new_topic(topic_id):
         return
 
     # update the topic count statistic
-    redis = get_redis_connection()
+    conn = get_redis_connection()
 
-    result = redis.incr(TOPIC_COUNT_KEY)
+    result = conn.incr(TOPIC_COUNT_KEY)
     if result == 1:
         # it is likely redis got trashed, so re-compute the correct value
 
         count = Topic.objects.filter(forum__in=public_forums).count()
-        redis.set(TOPIC_COUNT_KEY, count)
+        conn.set(TOPIC_COUNT_KEY, count)
 
 
 def get_stats():
@@ -262,8 +263,8 @@ def get_stats():
 
     """
     try:
-        redis = get_redis_connection()
-        result = redis.mget(TOPIC_COUNT_KEY, POST_COUNT_KEY)
+        conn = get_redis_connection()
+        result = conn.mget(TOPIC_COUNT_KEY, POST_COUNT_KEY)
     except redis.RedisError, e:
         logger.error(e)
         return (None, None)
@@ -281,8 +282,8 @@ def get_latest_topic_ids(num):
 
     """
     try:
-        redis = get_redis_connection()
-        result = redis.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
+        conn = get_redis_connection()
+        result = conn.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
     except redis.RedisError, e:
         logger.error(e)
         return []
@@ -297,11 +298,11 @@ def get_latest_topics(num):
 
     """
     try:
-        redis = get_redis_connection()
-        result = redis.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
+        conn = get_redis_connection()
+        result = conn.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
 
         topic_keys = [UPDATED_TOPIC_KEY % n for n in result]
-        json_list = redis.mget(topic_keys)
+        json_list = conn.mget(topic_keys)
 
     except redis.RedisError, e:
         logger.error(e)
@@ -328,8 +329,8 @@ def notify_topic_delete(topic):
 
     """
     try:
-        redis = get_redis_connection()
-        pipeline = redis.pipeline()
+        conn = get_redis_connection()
+        pipeline = conn.pipeline()
         pipeline.zrem(UPDATED_TOPICS_SET_KEY, topic.id)
         pipeline.delete(UPDATED_TOPIC_KEY % topic.id)
         pipeline.execute()
