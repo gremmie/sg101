@@ -13,7 +13,7 @@ from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.models import Category
-from forums.stats import retrieve_stats
+from forums.latest import get_stats, get_latest_topics
 
 
 register = template.Library()
@@ -132,19 +132,14 @@ def show_form(legend_text, form, submit_value, is_ajax):
     }
 
 
-@register.inclusion_tag('forums/new_posts_tag.html', takes_context=True)
-def new_posts(context):
+@register.inclusion_tag('forums/new_posts_tag.html')
+def new_posts():
     """
     This tag displays the topics that have the newest posts.
     Only the "public" forums are displayed.
     """
-    public_forum_ids = Forum.objects.public_forum_ids()
-    topics = Topic.objects.filter(forum__in=public_forum_ids).select_related(
-                'last_post', 'last_post__user').order_by('-update_date')[:10]
-
     return {
-        'topics': topics,
-        'user': context['user'],
+        'topics': get_latest_topics(20),
     }
 
 
@@ -153,9 +148,10 @@ def forum_stats():
     """
     Displays forum statistics.
     """
-    post_count = retrieve_stats()
+    topic_count, post_count = get_stats()
 
     return {
+        'topic_count': topic_count,
         'post_count': post_count,
     }
 

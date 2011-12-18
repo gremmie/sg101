@@ -51,7 +51,7 @@
 </form>
 <br />
 {% user_stats %}
-{% cache 900 forum-stats-block %}
+{% cache 300 forum-stats-block %}
    {% forum_stats %}
 {% endcache %}
 {% cache 900 max-users-block %}

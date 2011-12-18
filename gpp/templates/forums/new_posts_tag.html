@@ -6,7 +6,7 @@
 {% if topics %}
    <ul>
    {% for topic in topics %}
-   <li><a href="{{ topic.last_post.get_absolute_url }}">{{ topic.name }}</a> by {{ topic.last_post.user.username }} {{ topic.update_date|elapsed }}</li>
+      <li><a href="{{ topic.url }}">{{ topic.title }}</a> by {{ topic.author }} {{ topic.date|elapsed }}</li>
    {% endfor %}
    </ul>
 {% else %}

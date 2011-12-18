@@ -7,8 +7,6 @@ from django.db.models.signals import post_delete
 import django.dispatch
 
 from forums.models import Forum, Topic, Post
-from forums.views.subscriptions import notify_topic_subscribers
-from forums.tools import auto_favorite, auto_subscribe
 
 
 def on_topic_save(sender, **kwargs):
@@ -22,6 +20,7 @@ def on_topic_delete(sender, **kwargs):
     topic = kwargs['instance']
     topic.forum.topic_count_update()
     topic.forum.save()
+    forums.latest.notify_topic_delete(topic)
 
 
 def on_post_save(sender, **kwargs):
@@ -35,13 +34,6 @@ def on_post_save(sender, **kwargs):
         # update the forum
         post.topic.forum.post_count_update()
         post.topic.forum.save()
-
-        # send out any email notifications
-        notify_topic_subscribers(post)
-
-        # perform any auto-favorite and auto-subscribe actions for the new post
-        auto_favorite(post)
-        auto_subscribe(post)
 
 
 def on_post_delete(sender, **kwargs):
@@ -116,3 +108,7 @@ def notify_updated_post(post):
 
     """
     post_content_update.send_robust(post, created=False)
+
+
+# Avoid circular imports
+import forums.latest

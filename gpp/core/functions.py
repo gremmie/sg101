@@ -5,17 +5,18 @@ import logging
 
 from django.contrib.sites.models import Site
 from django.conf import settings
+import django.core.mail
 
 import core.tasks
 
 
-def send_mail(subject, message, from_email, recipient_list, **kwargs):
+def send_mail(subject, message, from_email, recipient_list, defer=True, **kwargs):
     """
     The main send email function. Use this function to send email from the
     site. All applications should use this function instead of calling
     Django's directly.
-    If settings.GPP_SEND_EMAIL is true, the email will be sent to a Celery task
-    to actually send the email. Otherwise it is dropped. In any event, the
+    If defer is True, the email will be sent to a Celery task to actually send
+    the email. Otherwise it is sent on the caller's thread. In any event, the
     email will be logged at the DEBUG level.
 
     """
@@ -28,8 +29,11 @@ def send_mail(subject, message, from_email, recipient_list, **kwargs):
     logging.debug('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s',
         from_email, str(recipient_list), subject, message)
 
-    if settings.GPP_SEND_EMAIL:
+    if defer:
         core.tasks.send_mail.delay(subject, message, from_email, recipient_list,
+                **kwargs)
+    else:
+        django.core.mail.send_mail(subject, message, from_email, recipient_list,
                 **kwargs)
 
 

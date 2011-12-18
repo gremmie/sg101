@@ -38,6 +38,7 @@ from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
 from forums.signals import (notify_new_topic, notify_updated_topic,
         notify_new_post, notify_updated_post)
+from forums.latest import get_latest_topic_ids
 
 #######################################################################
 
@@ -879,17 +880,21 @@ def active_topics(request, num):
     # sanity check num
     num = min(50, max(10, int(num)))
 
-    public_forum_ids = Forum.objects.public_forum_ids()
-
     # MySQL didn't do this query very well unfortunately...
+    #
+    #public_forum_ids = Forum.objects.public_forum_ids()
     #topics = Topic.objects.filter(forum__in=public_forum_ids).select_related(
     #            'forum', 'user', 'last_post', 'last_post__user').order_by(
     #            '-update_date')[:num]
-    topic_ids = list(Topic.objects.filter(forum__in=public_forum_ids).order_by(
-            '-update_date').values_list('id', flat=True)[:num])
+
+    # Save 1 query by using forums.latest to give us a list of the most recent
+    # topics; forums.latest doesn't save enough info to give us everything we
+    # need so we hit the database for the rest.
+
+    topic_ids = get_latest_topic_ids(num)
     topics = Topic.objects.filter(id__in=topic_ids).select_related(
                 'forum', 'user', 'last_post', 'last_post__user').order_by(
-                '-update_date')[:num]
+                '-update_date')
 
     paginator = create_topic_paginator(topics)
     page_num = get_page_num(request)

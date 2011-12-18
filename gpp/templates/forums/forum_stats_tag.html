@@ -1,5 +1,7 @@
 {% load url from future %}
 {% load humanize %}
 <div id="forum-stats">
-Our users have posted a total of <strong>{{ post_count|intcomma }}</strong> posts.
+{% if topic_count and post_count %}
+Our users have posted a total of <strong>{{ post_count|intcomma }}</strong> posts in <strong>{{ topic_count|intcomma }}</strong> topics.
+{% endif %}
 </div>

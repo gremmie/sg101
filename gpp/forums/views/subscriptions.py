@@ -18,13 +18,14 @@ from core.functions import send_mail
 from core.paginator import DiggPaginator
 
 
-def notify_topic_subscribers(post):
+def notify_topic_subscribers(post, defer=True):
     """
     The argument post is a newly created post. Send out an email
     notification to all subscribers of the post's parent Topic.
-    """
-    #TODO: consider moving this function of the HTTP request/response cycle.
 
+    The defer flag is passed to core.functions.send_mail. If True, the mail is
+    sent on a Celery task. If False, the mail is sent on the caller's thread.
+    """
     topic = post.topic
     recipients = topic.subscribers.exclude(id=post.user.id).values_list(
             'email', flat=True)
@@ -43,7 +44,8 @@ def notify_topic_subscribers(post):
                 'unsubscribe_url': unsubscribe_url,
                 })
         for recipient in recipients:
-            send_mail(subject, msg, settings.DEFAULT_FROM_EMAIL, [recipient])
+            send_mail(subject, msg, settings.DEFAULT_FROM_EMAIL, [recipient],
+                    defer=defer)
 
 
 @login_required

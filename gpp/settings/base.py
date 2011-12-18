@@ -199,6 +199,13 @@ HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
 
 
 #######################################################################
+# Redis integration & settings
+#######################################################################
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_DB = 0
+
+#######################################################################
 # Celery integration & settings
 #######################################################################
 BROKER_URL = 'redis://localhost:6379/1'
@@ -237,7 +244,6 @@ CELERYBEAT_SCHEDULE = {
 #######################################################################
 # GPP Specific Settings
 #######################################################################
-GPP_SEND_EMAIL = True
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
