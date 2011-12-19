@@ -302,7 +302,7 @@ def get_latest_topics(num):
         result = conn.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
 
         topic_keys = [UPDATED_TOPIC_KEY % n for n in result]
-        json_list = conn.mget(topic_keys)
+        json_list = conn.mget(topic_keys) if topic_keys else []
 
     except redis.RedisError, e:
         logger.error(e)
