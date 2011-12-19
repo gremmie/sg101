@@ -133,7 +133,6 @@ INSTALLED_APPS = [
     'gcalendar',
     'irc',
     'legacy',
-    'mailer',
     'membermap',
     'messages',
     'news',
