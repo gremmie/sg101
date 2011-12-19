@@ -126,6 +126,7 @@ INSTALLED_APPS = [
     'comments',
     'contact',
     'core',
+    'custom_search',
     'donations',
     'downloads',
     'forums',
@@ -238,6 +239,10 @@ CELERYBEAT_SCHEDULE = {
     "max_users": {
         "task": "core.tasks.max_users",
         "schedule": crontab(minute='*/15'),
+    },
+    "search_queue": {
+        "task": "custom_search.tasks.process_search_queue_task",
+        "schedule": crontab(minute='*/20'),
     },
 }
 
