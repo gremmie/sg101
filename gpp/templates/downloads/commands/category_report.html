@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <title>Download Report: {{ category.title }}</title>
+   </head>
+   <body>
+      <h1>Download Report: {{ category.title }}</h1>
+      {% for dl in downloads %}
+         <h2>{{ dl.title }}</h2>
+         <p><em>Uploaded by {{ dl.user.username }}.</em></p>
+         <div>{{ dl.html|safe }}</div>
+      {% endfor %}
+   </body>
+</html>

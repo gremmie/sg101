@@ -1,0 +1,5 @@
+#!/bin/bash
+
+{% for dl in downloads %}
+wget -O {{ dl.dest_filename }} {{ dl.full_url }}
+{% endfor %}
