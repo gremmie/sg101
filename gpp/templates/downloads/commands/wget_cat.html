@@ -1,5 +1,5 @@
 #!/bin/bash
 
 {% for dl in downloads %}
-wget -O {{ dl.dest_filename }} {{ dl.full_url }}
+wget -O {{ dl.dest_filename }} http://{{ domain }}{{ MEDIA_URL }}{{ dl.file.name|urlencode }}
 {% endfor %}

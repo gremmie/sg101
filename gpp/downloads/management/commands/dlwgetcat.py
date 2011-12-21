@@ -34,8 +34,6 @@ class Command(LabelCommand):
         downloads = Download.public_objects.filter(category=category).order_by(
                 'title').select_related()
 
-        current_site = Site.objects.get_current()
-
         # Create new destination names for the files since the uploaders often
         # give the files terrible names. The new names will be slugified
         # versions of the titles, with the same extension.
@@ -44,12 +42,10 @@ class Command(LabelCommand):
             ext = os.path.splitext(dl.file.name)[1]
             dl.dest_filename = slugify(dl.title) + ext
 
-            # build a full URL to the download
-            dl.full_url = 'http://%s%s%s' % (current_site.domain,
-                    settings.MEDIA_URL, dl.file.name)
-
         output = render_to_string('downloads/commands/wget_cat.html', {
             'downloads': downloads,
+            'domain': Site.objects.get_current().domain,
+            'MEDIA_URL': settings.MEDIA_URL,
             })
 
         # encode it ourselves since it can fail if you try to redirect output to

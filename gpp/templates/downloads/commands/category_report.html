@@ -7,7 +7,7 @@
       <h1>Download Report: {{ category.title }}</h1>
       {% for dl in downloads %}
          <h2>{{ dl.title }}</h2>
-         <p><em>Uploaded by {{ dl.user.username }}.</em></p>
+         <p><small><em>Uploaded by {{ dl.user.username }}.</em></small></p>
          <div>{{ dl.html|safe }}</div>
       {% endfor %}
    </body>
