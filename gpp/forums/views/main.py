@@ -287,6 +287,19 @@ def topic_unread(request, id):
     return HttpResponseRedirect(topic_url)
 
 
+def topic_latest(request, id):
+    """
+    This view shows the latest (last) post in a given topic.
+
+    """
+    topic = get_object_or_404(Topic.objects.select_related(depth=1), pk=id)
+
+    if topic.last_post:
+        return _goto_post(topic.last_post)
+
+    raise Http404
+
+
 @login_required
 def new_topic(request, slug):
     """

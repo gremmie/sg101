@@ -151,7 +151,7 @@ def _update_latest_topics(conn, post):
         'title': post.topic.name,
         'author': post.user.username,
         'date': topic_score,
-        'url': post.get_absolute_url()
+        'url': post.topic.get_latest_post_url()
     }
     json = simplejson.dumps(topic_content)
     key = UPDATED_TOPIC_KEY % topic_id

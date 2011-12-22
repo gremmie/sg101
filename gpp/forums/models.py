@@ -198,6 +198,10 @@ class Topic(models.Model):
     def get_absolute_url(self):
         return ('forums-topic_index', [self.pk])
 
+    @models.permalink
+    def get_latest_post_url(self):
+        return ('forums-topic_latest', [self.pk])
+
     def post_count_update(self):
         """
         Call this function to notify the topic instance that its post count
