@@ -50,11 +50,6 @@ class Photo(models.Model):
             self.generate_thumb()
 
         super(Photo, self).save(*args, **kwargs)
-        Sequence.objects.insert_photo(self.pk)
-
-    def delete(self):
-        Sequence.objects.remove_photo(self.pk)
-        super(Photo, self).delete()
 
     def can_comment_on(self):
         return Current.objects.get_current_id() == self.id
@@ -178,4 +173,3 @@ class Sequence(models.Model):
 
     class Meta:
         verbose_name_plural = 'Sequence'
-
