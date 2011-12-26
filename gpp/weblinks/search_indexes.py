@@ -11,7 +11,7 @@ class LinkIndex(CondQueuedSearchIndex):
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='date_added')
 
-    def get_queryset(self):
+    def index_queryset(self):
         return Link.public_objects.all()
 
     def get_updated_field(self):

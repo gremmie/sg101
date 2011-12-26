@@ -12,7 +12,7 @@ class TopicIndex(CondQueuedSearchIndex):
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='creation_date')
 
-    def get_queryset(self):
+    def index_queryset(self):
         return Topic.objects.filter(forum__in=Forum.objects.public_forum_ids())
 
     def get_updated_field(self):
@@ -36,7 +36,7 @@ class PostIndex(CondQueuedSearchIndex):
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='creation_date')
 
-    def get_queryset(self):
+    def index_queryset(self):
         return Post.objects.filter(
                 topic__forum__in=Forum.objects.public_forum_ids())
 

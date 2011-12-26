@@ -11,7 +11,7 @@ class UserProfileIndex(CondQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
 
-    def get_queryset(self):
+    def index_queryset(self):
         return UserProfile.objects.filter(user__is_active=True)
 
     def get_updated_field(self):
