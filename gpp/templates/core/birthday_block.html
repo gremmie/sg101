@@ -5,13 +5,13 @@
 {% block block_title %}<img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {{ today|date:"F" }} Birthdays <img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {% endblock %}
 {% block block_content %}
 {% if birthdays %}
-   <ul>
+   <ul class="no-bullet">
    {% for bday in birthdays %}
       <li>
          {% if bday.day == today.day %}<strong>{% endif %}
          {{ bday.day|ordinal }} &ndash;
          {% for profile in bday.profiles %}
-         {% profile_link profile.user.username %}{% if not forloop.last %}, {% endif %}
+         <a href="{% url 'bio-view_profile' profile.user.username %}" title="View profile for {{ profile.user.username }}">{{ profile.user.username }}</a>{% if not forloop.last %}, {% endif %}
          {% endfor %}
          {% if bday.day == today.day %}</strong>{% endif %}
       </li>

@@ -434,6 +434,10 @@ div.news-story-container {
    padding: 0.5em;
 }
 
+ul.no-bullet {
+ list-style: none;
+ padding-left: 0.5em;
+}
 ul.no-bullet-inline-block {
  list-style: none;
 }
