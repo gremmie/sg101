@@ -29,6 +29,8 @@ class Command(LabelCommand):
     option_list = LabelCommand.option_list + (
         optparse.make_option("-p", "--progress", action="store_true",
             help="Output a . after every 20 items to show progress"),
+        optparse.make_option("--fix-mode", action="store_true",
+            help="Only create comments if they don't exist already"),
     )
     md_writer = MarkdownWriter()
 
@@ -39,6 +41,7 @@ class Command(LabelCommand):
 
         """
         self.show_progress = options.get('progress')
+        self.fix_mode = options.get('fix_mode')
         self.users = {}
 
         try:
@@ -67,6 +70,16 @@ class Command(LabelCommand):
         the row and save it in the database.
 
         """
+        comment_id = int(row['cid']) + ID_OFFSET
+
+        if self.fix_mode:
+            try:
+                c = Comment.objects.get(pk=comment_id)
+            except Comment.DoesNotExist:
+                pass
+            else:
+                return
+
         try:
             user = self._get_user(row['username'].decode('latin-1'))
         except User.DoesNotExist:
@@ -83,7 +96,7 @@ class Command(LabelCommand):
             return
 
         comment = Comment(
-            id=int(row['cid']) + ID_OFFSET,
+            id=comment_id,
             content_type=ContentType.objects.get_for_model(photo),
             object_id=photo.id,
             user=user,
