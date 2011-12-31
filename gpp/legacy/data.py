@@ -23,5 +23,9 @@ KNOWN_USERNAME_CHANGES = {
     'retroactivegammarays': 'Retroactive_Taj',
     'mrrebel': 'Eddie_Bertrand',
     'doublecoil': 'Showman',
+    'tsunami_tom': 'TomH',
+    'davidj': 'davidphantomatic',
+    'svd': 'Bilge_Rat',
+    'dave_ledude': 'DaveF',
 }
 
