@@ -13,10 +13,11 @@ IMG_TAG = '<img src="%s" alt="thumbnail" />'
 
 
 class PhotoAdmin(admin.ModelAdmin):
-    fields = ('photo', 'caption', 'description', 'user', 'potd_count')
-    raw_id_fields = ('user', )
-    list_display = ('__unicode__', 'thumbnail')
-    actions = ('regen_thumbnail', )
+    fields = ['photo', 'caption', 'description', 'user', 'potd_count']
+    raw_id_fields = ['user']
+    list_display = ['__unicode__', 'thumbnail']
+    actions = ['regen_thumbnail']
+    search_fields = ['caption', 'description']
 
     class Media:
         js = settings.GPP_THIRD_PARTY_JS['tiny_mce']

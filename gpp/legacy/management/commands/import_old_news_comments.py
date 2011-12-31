@@ -105,9 +105,10 @@ class Command(LabelCommand):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
+            old_name = username.lower()
             try:
                 user = User.objects.get(
-                        username=legacy.data.KNOWN_USERNAME_CHANGES[username])
+                        username=legacy.data.KNOWN_USERNAME_CHANGES[old_name])
             except KeyError:
                 raise User.DoesNotExist
 

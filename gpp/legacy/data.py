@@ -10,8 +10,18 @@ Misc data for the legacy management commands.
 
 KNOWN_USERNAME_CHANGES = {
     'cavefishbutchdelux': 'butchdelux',
-    'Findicator1': 'WaveOhhh',
-    'Tikimania': 'Tikitena',
+    'findicator1': 'WaveOhhh',
+    'tikimania': 'Tikitena',
     'sandyfeet': 'RickRhoades',
+    'crumb': 'crumble',
+    'allenbridgewater': 'Outerwave_Allen',
+    'reddtyde': 'Redd_Tyde',
+    'fendershowman63': 'Abe',
+    'hearteater': 'JoshHeartless',
+    'surfdaddy': 'zzero',
+    'frisbie': 'zzero',
+    'retroactivegammarays': 'Retroactive_Taj',
+    'mrrebel': 'Eddie_Bertrand',
+    'doublecoil': 'Showman',
 }
 

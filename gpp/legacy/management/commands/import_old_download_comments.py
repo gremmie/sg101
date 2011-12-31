@@ -59,9 +59,10 @@ class Command(LabelCommand):
         try:
             user = User.objects.get(username=row['ratinguser'])
         except User.DoesNotExist:
+            old_name = row['ratinguser'].lower()
             try:
                 user = User.objects.get(
-                    username=legacy.data.KNOWN_USERNAME_CHANGES[row['ratinguser']])
+                    username=legacy.data.KNOWN_USERNAME_CHANGES[old_name])
             except (User.DoesNotExist, KeyError):
                 return
 

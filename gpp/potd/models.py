@@ -2,6 +2,7 @@
 Models for the Photo Of The Day (POTD) application.
 
 """
+import datetime
 import os
 from PIL import ImageFile
 from PIL import Image
@@ -32,7 +33,7 @@ class Photo(models.Model):
     caption = models.CharField(max_length=128)
     description = models.TextField()
     user = models.ForeignKey(User)
-    date_added = models.DateField(auto_now_add=True)
+    date_added = models.DateField()
     potd_count = models.IntegerField(default=0)
 
     class Meta:
@@ -48,6 +49,7 @@ class Photo(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.generate_thumb()
+            self.date_added = datetime.datetime.now()
 
         super(Photo, self).save(*args, **kwargs)
 
@@ -169,7 +171,7 @@ class Sequence(models.Model):
     objects = SequenceManager()
 
     def __unicode__(self):
-        return self.seq
+        return u'POTD Sequence %d' % self.id
 
     class Meta:
         verbose_name_plural = 'Sequence'
