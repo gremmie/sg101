@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% load bio_tags %}
+{% load core_tags %}
+{% block custom_meta %}
+{% open_graph_meta_tags contest %}
+{% endblock %}
+{% block title %}Contests: {{ contest.title }}{% endblock %}
+{% block custom_js %}
+<script type="text/javascript">
+   var contest_id = {{ contest.id }};
+</script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/contests/contests.js"></script>
+{% endblock %}
+
+{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
+{% block content %}
+<h2><a href="{% url 'contests-index' %}">Contests</a></h2>
+<h3><a href="{% url 'contests-contest' slug=contest.slug %}">{{ contest.title }}</a></h3>
+<div>
+   {{ contest.description|safe }}
+</div>
+
+<h4>Contest Dates</h4>
+<p>
+{% if contest.is_active %}
+This contest began on {{ contest.creation_date|date:"F d, Y" }} and ends on
+{{ contest.end_date|date:"F d, Y" }}.
+{% else %}
+This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
+{{ contest.end_date|date:"F d, Y" }}.
+{% endif %}
+</p>
+
+<h4>Contest Entry</h4>
+<p id="contest-entry">
+{% if contest.can_enter and user.is_authenticated %}
+   {% if user in contest.contestants.all %}
+      You are currently entered into this contest.<br />
+      <button id="contest-button">Withdraw from this contest</button>
+   {% else %}
+      You are not participating in this contest.<br />
+      <button id="contest-button">Please enter me into this contest!</button>
+   {% endif %}
+{% else %}
+   {% if contest.can_enter %}
+      Please <a href="{% url 'accounts-login' %}?next={{ contest.get_absolute_url }}">login</a>
+      to enter this contest.
+   {% else %}
+      Sorry, we are no longer accepting entries to this contest.
+   {% endif %}
+{% endif %}
+</p>
+
+<h4>Contest Winner</h4>
+<p>
+{% if contest.winner %}
+The winner of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }}, is 
+{% profile_link contest.winner.username %}. Congratulations to <strong>{{ contest.winner.username }}</strong>!
+{% else %}
+A contest winner will be determined sometime on or after {{ contest.end_date|date:"l, F d, Y" }}.
+Please check back later.
+{% endif %}
+</p>
+<hr />
+{% social_sharing contest.title contest.get_absolute_url %}
+{% endblock %}
+{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}

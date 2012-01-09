@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     'bulletins',
     'comments',
     'contact',
+    'contests',
     'core',
     'custom_search',
     'donations',

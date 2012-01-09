@@ -1,0 +1,46 @@
+"""
+Views for the contests application.
+
+"""
+from django.http import (HttpResponse, HttpResponseForbidden,
+        HttpResponseBadRequest)
+from django.shortcuts import get_object_or_404
+from django.utils import simplejson
+from django.views.decorators.http import require_POST
+
+from contests.models import Contest
+
+
+@require_POST
+def enter(request):
+    """
+    This view is an AJAX view that is used to enter or withdraw a user from a
+    given contest. This function toggles the user's entered state in the
+    contest.
+
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden("Please login first")
+
+    contest_id = request.POST.get('contest_id')
+    if not contest_id:
+        return HttpResponseBadRequest("Missing contest_id")
+
+    contest = get_object_or_404(Contest, pk=contest_id)
+    if not contest.can_enter():
+        return HttpResponseForbidden("Contest is over")
+
+    # Toggle the user's state in the contest
+
+    result = {}
+    if request.user in contest.contestants.all():
+        contest.contestants.remove(request.user)
+        result['entered'] = False
+        result['msg'] = 'You have been withdrawn from this contest.'
+    else:
+        contest.contestants.add(request.user)
+        result['entered'] = True
+        result['msg'] = 'You have been entered into this contest!'
+
+    json = simplejson.dumps(result)
+    return HttpResponse(json, content_type='application/json')
