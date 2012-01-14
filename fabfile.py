@@ -6,11 +6,11 @@ PROJ_DIR = WC_DIR + '/gpp'
 
 def update():
     """
-    Runs svn update.
+    Runs hg pull -U to pull changes and update to them.
 
     """
     with cd(PROJ_DIR):
-        run('svn up')
+        run('hg pull -U')
 
 
 def collectstatic():
