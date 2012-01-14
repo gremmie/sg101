@@ -6,11 +6,11 @@ PROJ_DIR = WC_DIR + '/gpp'
 
 def update():
     """
-    Runs hg pull -U to pull changes and update to them.
+    Runs hg pull --update to pull changes and update to them.
 
     """
     with cd(PROJ_DIR):
-        run('hg pull -U')
+        run('hg pull --update')
 
 
 def collectstatic():
