@@ -5,3 +5,13 @@ syntax: glob
 secrets.json
 *.db
 *.mp3
+static_serve
+media/avatars/users
+media/downloads
+media/potd
+media/badges
+media/podcast
+media/smiley
+gpp/celerybeat-schedule
+gpp/xapian_index
+
