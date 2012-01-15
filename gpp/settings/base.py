@@ -294,6 +294,10 @@ QUEUE_REDIS_DB = 0
 #######################################################################
 OGP_DEFAULT_IMAGE = 'http://surfguitar101.com/media/podcast/podcast_logo.jpg'
 OGP_FB_ID = '100001558124013'
+OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
+    ' instrumental surf music. We have forums, podcasts, surf music news, an'
+    ' event calendar, and much more! The surf is always up at'
+    ' SurfGuitar101.com!')
 
 #######################################################################
 # URL's of 3rd party Javascript and CSS files.

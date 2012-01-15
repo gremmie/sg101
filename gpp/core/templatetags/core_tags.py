@@ -93,14 +93,24 @@ def _fully_qualify(url, domain):
 
 
 @register.inclusion_tag('core/open_graph_meta_tag.html')
-def open_graph_meta_tags(item):
+def open_graph_meta_tags(item=None):
     """
     Generates Open Graph meta tags by interrogating the given item.
+    To generate tags for the home page, set item to None.
 
     """
     site = Site.objects.get_current()
 
-    props = item.ogp_tags()
+    if item:
+        props = item.ogp_tags()
+    else:
+        props = {
+            'og:title': site.name,
+            'og:type': 'website',
+            'og:url': 'http://%s' % site.domain,
+            'og:description': settings.OGP_SITE_DESCRIPTION,
+        }
+
     props['og:site_name'] = site.name
     props['fb:admins'] = settings.OGP_FB_ID
 

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load url from future %}
 {% load bulletin_tags %}
+{% load core_tags %}
 {% load news_tags %}
 {% load weblinks_tags %}
 {% load downloads_tags %}
@@ -9,6 +10,7 @@
 {% load script_tags %}
 {% load cache %}
 {% block title %}Home{% endblock %}
+{% block custom_meta %}{% open_graph_meta_tags %}{% endblock %}
 {% block custom_head %}
 <link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url 'feeds-news' %}" />
 {% endblock %}
