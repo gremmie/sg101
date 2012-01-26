@@ -281,10 +281,10 @@ class Post(models.Model):
         return ('forums-goto_post', [self.pk])
 
     def summary(self):
-        LIMIT = 50
-        if len(self.body) < LIMIT:
+        limit = 65
+        if len(self.body) < limit:
             return self.body
-        return self.body[:LIMIT] + '...'
+        return self.body[:limit] + '...'
 
     def __unicode__(self):
         return self.summary()

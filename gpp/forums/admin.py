@@ -40,7 +40,7 @@ class TopicAdmin(admin.ModelAdmin):
 
 
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('topic', 'user', 'creation_date', 'update_date', 'summary')
+    list_display = ('user', 'creation_date', 'update_date', 'user_ip', 'summary')
     raw_id_fields = ('topic', 'user', )
     exclude = ('html', )
     search_fields = ('body', )
@@ -48,6 +48,9 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ('creation_date', 'update_date', )
     ordering = ('-creation_date', )
     save_on_top = True
+
+    def queryset(self, request):
+        return Post.objects.select_related('user')
 
 
 class FlaggedPostAdmin(admin.ModelAdmin):
