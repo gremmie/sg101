@@ -30,10 +30,6 @@ if DEBUG:
             'INTERCEPT_REDIRECTS': True,
         }
 
-# Path to elsewhere application static images
-STATICFILES_DIRS.append(('elsewhere',
-    '/home/brian/coding/python/django/3rdparty/elsewhere/img'))
-
 # Logging configuration
 
 LOGGING = {

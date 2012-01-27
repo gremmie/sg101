@@ -15,10 +15,6 @@ DATABASES = {
     },
 }
 
-# Path to elsewhere application static images
-STATICFILES_DIRS.append(('elsewhere',
-    '/home/var/django-sites/virtualenvs/sg101/src/django-elsewhere/elsewhere/img'))
-
 STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
 
 # Used cached template loader
