@@ -2,7 +2,7 @@ Django==1.3.1
 -e git://github.com/waylan/Python-Markdown.git@067d88bc41c7924c9087b724ff5247235243ce6b#egg=Markdown-dev
 MySQL-python==1.2.3
 django-debug-toolbar==0.8.5
--e git://github.com/leah/django-elsewhere.git@d8353f90c5cda6c42a5f8345f98992db8f685421#egg=django_elsewhere-dev
+-e git+https://github.com/gremmie/django-elsewhere.git@af738d50efb143a86673a2edf258bb93706682c8#egg=django_elsewhere-dev
 django-haystack==1.2.6
 django-tagging==0.3.1
 gdata==2.0.15
@@ -32,3 +32,4 @@ python-ts3==0.1
 # PIL
 # xapian
 #
+## The following requirements were added by pip --freeze:
