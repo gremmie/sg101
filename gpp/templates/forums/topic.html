@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 {% load url from future %}
 {% load forum_tags %}
+{% load core_tags %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
+{% block custom_meta %}
+   {% open_graph_meta_tags topic %}
+{% endblock %}
 {% block custom_js %}
    {{ form.media }}
    {% include "forums/jump_box.js" %}

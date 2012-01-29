@@ -256,6 +256,22 @@ class Topic(models.Model):
     def search_summary(self):
         return u''
 
+    def ogp_tags(self):
+        """
+        Returns a dict of Open Graph Protocol meta tags.
+
+        """
+        desc = 'Forum topic created by %s on %s.' % (
+            self.user.username,
+            self.creation_date.strftime('%B %d, %Y'))
+
+        return {
+            'og:title': self.name,
+            'og:type': 'article',
+            'og:url': self.get_absolute_url(),
+            'og:description': desc,
+        }
+
 
 class Post(models.Model):
     """
