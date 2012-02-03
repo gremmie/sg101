@@ -61,11 +61,12 @@ class Badge(models.Model):
     html.allow_tags = True
 
 
-def avatar_file_path_for_user(username, filename):
-    return os.path.join(settings.AVATAR_DIR, 'users', username, filename)
-
 def avatar_file_path(instance, filename):
-    return avatar_file_path_for_user(instance.user.username, filename)
+    ext = os.path.splitext(filename)[1]
+    if not ext:
+        ext = '.jpg'
+    avatar_name = instance.user.username + ext
+    return os.path.join(settings.AVATAR_DIR, 'users', avatar_name)
 
 
 class UserProfile(models.Model):
