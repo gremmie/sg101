@@ -10,6 +10,9 @@ from forums.models import Post
 from forums.models import FlaggedPost
 from forums.models import ForumLastVisit
 from forums.models import TopicLastVisit
+from forums.signals import (notify_new_topic, notify_updated_topic,
+        notify_new_post, notify_updated_post)
+
 import bio.badges
 
 
@@ -38,6 +41,15 @@ class TopicAdmin(admin.ModelAdmin):
     list_filter = ('creation_date', 'update_date', )
     save_on_top = True
 
+    # override save_model() to update the search index 
+    def save_model(self, request, obj, form, change):
+        obj.save()
+
+        if change:
+            notify_updated_topic(obj)
+        else:
+            notify_new_topic(obj)
+
 
 class PostAdmin(admin.ModelAdmin):
     list_display = ('user', 'creation_date', 'update_date', 'user_ip', 'summary')
@@ -51,6 +63,15 @@ class PostAdmin(admin.ModelAdmin):
 
     def queryset(self, request):
         return Post.objects.select_related('user')
+
+    # override save_model() to update the search index 
+    def save_model(self, request, obj, form, change):
+        obj.save()
+
+        if change:
+            notify_updated_post(obj)
+        else:
+            notify_new_post(obj)
 
 
 class FlaggedPostAdmin(admin.ModelAdmin):

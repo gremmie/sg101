@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
+from django.http import HttpResponseServerError
 from django.http import Http404
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
@@ -126,7 +127,6 @@ def edit_profile(request):
             profile = profile_form.save(commit=False)
             profile.user = request.user
             profile.save()
-            notify_profile_content_update(profile)
             return HttpResponseRedirect(reverse('bio.views.my_profile'))
     else:
         profile = request.user.get_profile()
@@ -230,7 +230,6 @@ def edit_elsewhere(request):
                 profile = form.save(commit=False)
                 profile.user = request.user
                 profile.save()
-                notify_profile_content_update(request.user.get_profile())
                 return HttpResponseRedirect(request.path)
 
         # Delete forms

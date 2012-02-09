@@ -60,7 +60,7 @@ def suspend_user(user):
     profile = user.get_profile()
     profile.status = STA_SUSPENDED
     profile.status_date = datetime.datetime.now()
-    profile.save()
+    profile.save(content_update=False)
 
 
 def _get_spam_phrases():

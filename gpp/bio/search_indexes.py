@@ -26,8 +26,5 @@ class UserProfileIndex(CondQueuedSearchIndex):
     def enqueue_save(self, sender, **kwargs):
         return self.enqueue('update', sender)
 
-    def can_index(self, instance):
-        return instance.user.is_active
-
 
 site.register(UserProfile, UserProfileIndex)

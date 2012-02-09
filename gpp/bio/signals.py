@@ -6,8 +6,6 @@ from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 import django.dispatch
 
-import bio.badges
-from bio.models import UserProfile
 from donations.models import Donation
 from weblinks.models import Link
 from downloads.models import Download
@@ -25,7 +23,7 @@ def on_user_save(sender, **kwargs):
     created = kwargs['created']
     if created:
         user = kwargs['instance']
-        profile = bio.models.UserProfile()
+        profile = UserProfile()
         profile.user = user
         profile.save()
 
@@ -109,3 +107,8 @@ def notify_profile_content_update(profile):
 
     """
     profile_content_update.send_robust(profile)
+
+
+# To avoid circular imports
+import bio.badges
+from bio.models import UserProfile

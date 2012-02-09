@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
 
+
 # These are the secondary user status enumeration values. 
 (STA_ACTIVE,        # User is a full member in good standing.
  STA_RESIGNED,      # User has voluntarily asked to be removed.
@@ -103,12 +104,29 @@ class UserProfile(models.Model):
         ordering = ('user__username', )
 
     def save(self, *args, **kwargs):
-        self.update_date = datetime.datetime.now()
-        sm = SiteMarkup()
-        self.profile_html = sm.convert(self.profile_text)
-        self.signature_html = sm.convert(self.signature)
+        """
+        Custom profile save() function.
+        If content_update is True (default), then it is assumed that major
+        fields are being updated and that the profile_content_update signal
+        should be signalled. When content_update is False, the update_date is
+        not updated, expensive markup conversions are not performed, and the
+        signal is not signalled. This is useful for updating the
+        forum_post_count, for example.
+
+        """
+        content_update = kwargs.pop('content_update', True)
+
+        if content_update:
+            self.update_date = datetime.datetime.now()
+            sm = SiteMarkup()
+            self.profile_html = sm.convert(self.profile_text)
+            self.signature_html = sm.convert(self.signature)
+            cache.delete('avatar_' + self.user.username)
+
         super(UserProfile, self).save(*args, **kwargs)
-        cache.delete('avatar_' + self.user.username)
+
+        if content_update:
+            notify_profile_content_update(self)
 
     @models.permalink
     def get_absolute_url(self):
@@ -193,3 +211,6 @@ class BadgeOwnership(models.Model):
         if self.count == 1:
             return u"1 %s" % self.badge.name
         return u"%d %ss" % (self.count, self.badge.name)
+
+# Put down here to avoid a circular import
+from bio.signals import notify_profile_content_update

@@ -8,7 +8,6 @@ import textwrap
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -52,7 +51,7 @@ def promote_stranger(user):
     if user.is_active and profile.status == bio.models.STA_STRANGER:
         profile.status = bio.models.STA_ACTIVE
         profile.status_date = datetime.datetime.now()
-        profile.save()
+        profile.save(content_update=False)
 
 
 @login_required

@@ -34,7 +34,6 @@ from forums.forms import (NewTopicForm, NewPostForm, PostForm, MoveTopicForm,
 from forums.unread import (get_forum_unread_status, get_topic_unread_status,
         get_post_unread_status, get_unread_topics)
 
-from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
 from forums.signals import (notify_new_topic, notify_updated_topic,
         notify_new_post, notify_updated_post)
@@ -527,7 +526,7 @@ def _delete_post(post):
     profile = post.user.get_profile()
     if profile.forum_post_count > 0:
         profile.forum_post_count -= 1
-        profile.save()
+        profile.save(content_update=False)
 
     # If this post is the last_post in a topic, we need to update
     # both the topic and parent forum's last post fields. If we don't
@@ -999,7 +998,7 @@ def _bump_post_count(user):
     """
     profile = user.get_profile()
     profile.forum_post_count += 1
-    profile.save()
+    profile.save(content_update=False)
 
 
 def _quote_message(who, message):

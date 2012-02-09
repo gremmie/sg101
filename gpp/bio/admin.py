@@ -54,7 +54,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             profile.user.save()
             profile.status = status
             profile.status_date = now
-            profile.save()
+            profile.save(content_update=False)
 
         count = len(qs)
         msg = "1 user" if count == 1 else "%d users" % count
