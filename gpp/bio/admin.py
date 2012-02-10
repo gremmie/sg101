@@ -10,8 +10,7 @@ import django.contrib.auth.admin
 
 import bio.models
 import bio.badges
-from comments.models import Comment
-from forums.tools import delete_user_posts
+from antispam.utils import deactivate_spammer
 
 
 class BadgeOwnerInline(admin.TabularInline):
@@ -91,15 +90,16 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     def mark_spammer(self, request, qs):
         """
-        Marks users as inactive. Updates their profile status to STA_SPAMMER.
-        Deletes all their comments and forum posts.
+        Calls deactivate_spammer() on each user in the profile queryset.
+
         """
-        self.mark_user_status(request, qs, bio.models.STA_SPAMMER)
+        count = qs.count()
         for profile in qs:
-            Comment.objects.filter(user=profile.user).delete()
-            delete_user_posts(profile.user)
-            profile.reset_text_fields()
-            profile.save()
+            deactivate_spammer(profile.user)
+
+        self.message_user(request,
+                "%s profile(s) successfully marked as spammers." % count)
+
     mark_spammer.short_description = "Mark selected users as spammers"
 
     def mark_stranger(self, request, qs):
@@ -111,18 +111,25 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 class UserProfileFlagAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'flag_date', 'get_profile_url')
-    actions = ('accept_flags', )
+    list_display = ['__unicode__', 'flag_date', 'get_profile_url']
+    actions = ['accept_flags']
+    raw_id_fields = ['user', 'profile']
 
     def accept_flags(self, request, qs):
-        """This action awards a security pin to the user that reported the
-        profile and then deletes the flag.
         """
+        This action awards a security pin to the user that reported the
+        profile, deletes the flags, then deactivates the spammers.
+        """
+        count = qs.count()
         for flag in qs:
+            deactivate_spammer(flag.profile.user)
             bio.badges.award_badge(bio.badges.SECURITY_PIN, flag.user)
             flag.delete()
 
-    accept_flags.short_description = "Accept selected flagged profiles"
+        self.message_user(request,
+                "%s profile(s) successfully marked as spammers." % count)
+
+    accept_flags.short_description = "Mark selected profiles as spammers"
 
 
 class BadgeAdmin(admin.ModelAdmin):

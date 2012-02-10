@@ -8,7 +8,9 @@ from django.core.cache import cache
 from antispam import SPAM_PHRASE_KEY
 from antispam.models import SpamPhrase
 from core.functions import email_admins
-from bio.models import STA_SUSPENDED
+from bio.models import STA_SUSPENDED, STA_SPAMMER
+from comments.models import Comment
+from forums.tools import delete_user_posts
 
 
 def contains_spam(s):
@@ -61,11 +63,36 @@ def suspend_user(user):
     profile.status = STA_SUSPENDED
     profile.status_date = datetime.datetime.now()
     profile.save(content_update=False)
+    logging.info("User suspended: %s", user.username)
+
+
+def deactivate_spammer(user):
+    """
+    This function deactivate's the user, marks them as a spammer, then
+    deletes the user's comments and forum posts. The spammer's profile is
+    cleared so any spam links won't show up anymore.
+
+    """
+    user.is_active = False
+    user.save()
+
+    profile = user.get_profile()
+    profile.status = STA_SPAMMER
+    profile.status_date = datetime.datetime.now()
+    profile.reset_text_fields()
+    profile.save()
+
+    Comment.objects.filter(user=user).delete()
+    delete_user_posts(user)
+
+    logging.info("User deactivated for spam: %s", user.username)
 
 
 def _get_spam_phrases():
-    """This function returns the current list of spam phrase strings.
+    """
+    This function returns the current list of spam phrase strings.
     The strings are cached to avoid hitting the database.
+
     """
     phrases = cache.get(SPAM_PHRASE_KEY)
     if phrases:

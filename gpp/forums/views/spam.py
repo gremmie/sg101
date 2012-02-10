@@ -13,35 +13,17 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib.auth.models import User
 
-from comments.models import Comment
 from forums.models import Post
-from forums.tools import delete_user_posts
 import forums.permissions as perms
 import bio.models
 from core.functions import email_admins
+from antispam.utils import deactivate_spammer
 
 
 SPAMMER_NAILED_SUBJECT = "Spammer Nailed: %s"
 SPAMMER_NAILED_MSG_BODY = """
 The admin/moderator user %s has just deactivated the account of %s for spam.
 """
-
-def deactivate_spammer(user):
-    """This function deactivate's the user, marks them as a spammer, then
-    deletes the user's comments and forum posts. The spammer's profile is
-    cleared so any spam links won't show up anymore.
-    """
-    user.is_active = False
-    user.save()
-
-    profile = user.get_profile()
-    profile.status = bio.models.STA_SPAMMER
-    profile.status_date = datetime.datetime.now()
-    profile.reset_text_fields()
-    profile.save()
-
-    Comment.objects.filter(user=user).delete()
-    delete_user_posts(user)
 
 
 def promote_stranger(user):
