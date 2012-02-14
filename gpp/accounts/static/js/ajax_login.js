@@ -1,7 +1,7 @@
 $(function() {
    var loginError = $('#login-error');
-   var userBox = $('#id_username');
-   var passBox = $('#id_password');
+   var userBox = $('#ajax-login-username');
+   var passBox = $('#ajax-login-password');
    var loginDialog = $('#login-dialog').dialog({
       autoOpen: false,
       height: 375,
