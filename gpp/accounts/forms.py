@@ -58,13 +58,13 @@ class RegisterForm(forms.Form):
     def clean_username(self):
         username = self.cleaned_data['username']
         try:
-            User.objects.get(username = username)
+            User.objects.get(username=username)
         except User.DoesNotExist:
             try:
-                PendingUser.objects.get(username = username)
+                PendingUser.objects.get(username=username)
             except PendingUser.DoesNotExist:
                 try:
-                    IllegalUsername.objects.get(username = username)
+                    IllegalUsername.objects.get(username=username)
                 except IllegalUsername.DoesNotExist:
                     return username
                 self._validation_error("That username is not allowed.", username)
@@ -73,19 +73,16 @@ class RegisterForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data['email']
-        try:
-            User.objects.get(email = email)
-        except User.DoesNotExist:
-            try:
-                PendingUser.objects.get(email = email)
-            except PendingUser.DoesNotExist:
-                try:
-                    IllegalEmail.objects.get(email = email)
-                except IllegalEmail.DoesNotExist:
-                    return email
-                self._validation_error("That email address is not allowed.", email)
+
+        if User.objects.filter(email=email).count():
+            self._validation_error("A user with that email address already exists.", email)
+        elif PendingUser.objects.filter(email=email).count():
             self._validation_error("A pending user with that email address already exists.", email)
-        self._validation_error("A user with that email address already exists.", email)
+        elif IllegalEmail.objects.filter(email=email).count():
+            self._validation_error("That email address is not allowed.", email)
+        
+        # email is ok
+        return email
 
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1", "")

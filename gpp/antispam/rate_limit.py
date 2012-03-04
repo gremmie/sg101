@@ -6,7 +6,6 @@ import datetime
 import logging
 
 import redis
-from django.conf import settings
 
 from core.services import get_redis_connection
 
@@ -69,6 +68,22 @@ def block_ip(ip, count=1000000, interval=datetime.timedelta(weeks=2)):
         raise RateLimiterUnavailable
 
     logger.info("Rate limiter blocked IP %s; %d / %s", ip, count, interval)
+
+
+def unblock_ip(ip):
+    """
+    This function removes the block for the given IP address.
+
+    """
+    key = _make_key(ip)
+    conn = _get_connection()
+    try:
+        conn.delete(key)
+    except redis.RedisError, e:
+        logger.error("rate limit (unblock_ip): %s" % e)
+        raise RateLimiterUnavailable
+
+    logger.info("Rate limiter unblocked IP %s", ip)
 
 
 class RateLimiter(object):
