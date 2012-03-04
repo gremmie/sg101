@@ -10,7 +10,6 @@ from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 
 from core.functions import send_mail
-from core.functions import get_full_name
 from core.widgets import AutoCompleteUserInput
 from messages.models import Message
 from messages.models import Options

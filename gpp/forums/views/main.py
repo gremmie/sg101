@@ -18,14 +18,13 @@ from django.shortcuts import render_to_response
 from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
-from django.utils.text import wrap
 from django.db.models import F
 
 import antispam
 import antispam.utils
 from bio.models import UserProfile, BadgeOwnership
 from core.paginator import DiggPaginator
-from core.functions import email_admins
+from core.functions import email_admins, quote_message
 
 from forums.models import (Forum, Topic, Post, FlaggedPost, TopicLastVisit,
         ForumLastVisit, Attachment)
@@ -620,7 +619,7 @@ def new_post(request, topic_id):
             if quote_id:
                 quote_post = get_object_or_404(Post.objects.select_related(),
                         pk=quote_id)
-                form = PostForm(initial={'body': _quote_message(quote_post.user.username,
+                form = PostForm(initial={'body': quote_message(quote_post.user.username,
                     quote_post.body)})
             else:
                 form = PostForm()
@@ -999,18 +998,6 @@ def _bump_post_count(user):
     profile = user.get_profile()
     profile.forum_post_count += 1
     profile.save(content_update=False)
-
-
-def _quote_message(who, message):
-    """
-    Builds a message reply by quoting the existing message in a
-    typical email-like fashion. The quoting is compatible with Markdown.
-    """
-    header = '*%s wrote:*\n\n' % (who, )
-    lines = wrap(message, 55).split('\n')
-    for i, line in enumerate(lines):
-        lines[i] = '> ' + line
-    return header + '\n'.join(lines) + '\n\n'
 
 
 def _move_topic(topic, old_forum, new_forum):

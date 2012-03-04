@@ -12,15 +12,15 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotAllowed
-from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 import django.utils.simplejson as json
 
 from messages.models import Message, Options
 from messages.forms import OptionsForm, ComposeForm
-from messages.utils import reply_subject, quote_message
+from messages.utils import reply_subject
 from messages import MSG_BOX_LIMIT
+from core.functions import quote_message
 
 
 MSGS_PER_PAGE = 20      # message pagination value
@@ -98,7 +98,7 @@ def inbox(request):
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
         msgs = paginator.page(_get_page(request))
-    except EmptyPage, InvalidPage:
+    except (EmptyPage, InvalidPage):
         msgs = paginator.page(paginator.num_pages)
 
     return render(request, 'messages/inbox_tab.html', {
@@ -121,7 +121,7 @@ def outbox(request):
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
         msgs = paginator.page(_get_page(request))
-    except EmptyPage, InvalidPage:
+    except (EmptyPage, InvalidPage):
         msgs = paginator.page(paginator.num_pages)
 
     return render(request, 'messages/outbox_tab.html', {
@@ -142,7 +142,7 @@ def trash(request):
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
         msgs = paginator.page(_get_page(request))
-    except EmptyPage, InvalidPage:
+    except (EmptyPage, InvalidPage):
         msgs = paginator.page(paginator.num_pages)
 
     return render(request, 'messages/trash_tab.html', {
@@ -175,8 +175,7 @@ def message(request):
                     receiver=msg.receiver.username,
                     content=msg.html,
                     re_subject=reply_subject(msg.subject),
-                    re_content=quote_message(msg.sender.username, msg.send_date,
-                                             msg.message))
+                    re_content=quote_message(msg.sender.username, msg.message))
 
     result = json.dumps(msg_dict, ensure_ascii=False)
     return HttpResponse(result, content_type='application/json')

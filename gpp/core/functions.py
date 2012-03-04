@@ -103,3 +103,15 @@ def get_page(qdict):
     except ValueError:
         n = 1
     return n
+
+
+def quote_message(who, message):
+    """
+    Builds a message reply by quoting the existing message in a
+    typical email-like fashion. The quoting is compatible with Markdown.
+    """
+    msg = "> %s" % message.replace('\n', '\n> ')
+    if msg.endswith('\n> '):
+        msg = msg[:-2]
+
+    return "*%s wrote:*\n\n%s\n\n" % (who, msg)
