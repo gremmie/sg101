@@ -87,7 +87,7 @@ class Contest(models.Model):
         """
         return {
             'og:title': self.title,
-            'og:type': 'game',
+            'og:type': 'article',
             'og:url': self.get_absolute_url(),
             'og:description': self.meta_description,
         }

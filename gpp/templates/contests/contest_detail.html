@@ -33,9 +33,10 @@ This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
 {% endif %}
 </p>
 
+{% if contest.can_enter %}
 <h4>Contest Entry</h4>
 <p id="contest-entry">
-{% if contest.can_enter and user.is_authenticated %}
+{% if user.is_authenticated %}
    {% if user in contest.contestants.all %}
       You are currently entered into this contest.<br />
       <button id="contest-button">Withdraw from this contest</button>
@@ -44,20 +45,17 @@ This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
       <button id="contest-button">Please enter me into this contest!</button>
    {% endif %}
 {% else %}
-   {% if contest.can_enter %}
-      Please <a href="{% url 'accounts-login' %}?next={{ contest.get_absolute_url }}">login</a>
-      to enter this contest.
-   {% else %}
-      Sorry, we are no longer accepting entries to this contest.
-   {% endif %}
+   Please <a href="{% url 'accounts-login' %}?next={{ contest.get_absolute_url }}">login</a>
+   to enter this contest.
 {% endif %}
 </p>
+{% endif %}
 
 <h4>Contest Winner</h4>
 <p>
 {% if contest.winner %}
 The winner of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }}, is 
-{% profile_link contest.winner.username %}. Congratulations to <strong>{{ contest.winner.username }}</strong>!
+{% profile_link contest.winner.username '.' %} Congratulations to <strong>{{ contest.winner.username }}</strong>!
 {% else %}
 A contest winner will be determined sometime on or after {{ contest.end_date|date:"l, F d, Y" }}.
 Please check back later.

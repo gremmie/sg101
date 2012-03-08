@@ -12,7 +12,7 @@ urlpatterns = patterns('',
    url(r'^$',
        ListView.as_view(
            context_object_name='contests',
-           queryset=Contest.public_objects.all()),
+           queryset=Contest.public_objects.select_related('winner')),
        name='contests-index'),
 
    url(r'^enter/$',
