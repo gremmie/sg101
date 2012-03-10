@@ -48,10 +48,14 @@ def _quota_check(box_name, count, request):
     Checks the message box count against MSG_BOX_LIMIT.
     Emits a message to the user if the quota is exceeded.
 
+    Returns the percent used as an integer between 0-100.
+
     """
     if count >= MSG_BOX_LIMIT:
         django_messages.warning(request,
             "Your %s is full. Please delete some messages." % box_name)
+
+    return 100 * count / MSG_BOX_LIMIT
 
 
 @login_required
@@ -93,7 +97,8 @@ def inbox(request):
         return HttpResponseForbidden()
 
     msg_list = Message.objects.inbox(request.user)
-    _quota_check('inbox', msg_list.count(), request)
+    msg_count = msg_list.count()
+    pct_used = _quota_check('inbox', msg_count, request)
 
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
@@ -104,6 +109,7 @@ def inbox(request):
     return render(request, 'messages/inbox_tab.html', {
         'msgs': msgs,
         'url': reverse('messages-inbox'),
+        'pct_used': pct_used,
         })
 
 
@@ -116,7 +122,8 @@ def outbox(request):
         return HttpResponseForbidden()
 
     msg_list = Message.objects.outbox(request.user)
-    _quota_check('outbox', msg_list.count(), request)
+    msg_count = msg_list.count()
+    pct_used = _quota_check('outbox', msg_count, request)
 
     paginator = Paginator(msg_list, MSGS_PER_PAGE)
     try:
@@ -127,6 +134,7 @@ def outbox(request):
     return render(request, 'messages/outbox_tab.html', {
         'msgs': msgs,
         'url': reverse('messages-outbox'),
+        'pct_used': pct_used,
         })
 
 
