@@ -53,7 +53,7 @@ def banner_url(slug):
     if urls:
         try:
             conn.rpush(key, *urls)
-        except redis.RedisError:
+        except redis.RedisError, e:
             logger.error("banner_url: '%s' on rpush", e)
             pass
 

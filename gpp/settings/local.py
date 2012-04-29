@@ -9,7 +9,7 @@ DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'gremmies_portal',
+        'NAME': SECRETS['DB_NAME'],
         'USER': SECRETS['DB_USER'],
         'PASSWORD': SECRETS['DB_PASSWORD'],
     },
