@@ -43,6 +43,11 @@ LOGGING = {
             'format': '%(asctime)s %(levelname)s %(message)s'
         },
     },
+    'filters': {
+         'require_debug_false': {
+             '()': 'django.utils.log.RequireDebugFalse'
+         },
+     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
@@ -62,6 +67,7 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler',
             'level': 'ERROR',
             'formatter': 'simple',
+            'filters': ['require_debug_false'],
         },
     },
     'loggers': {
