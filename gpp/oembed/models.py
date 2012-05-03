@@ -17,8 +17,7 @@ class Provider(models.Model):
     )
 
     name = models.CharField(max_length=128)
-    api_endpoint = models.URLField(max_length=255, verify_exists=False,
-            verbose_name='API endpoint')
+    api_endpoint = models.URLField(max_length=255, verbose_name='API endpoint')
     url_regex = models.CharField(max_length=255, verbose_name='URL regex')
     format = models.IntegerField(choices=FORMAT_CHOICES)
 
@@ -39,7 +38,7 @@ class Oembed(models.Model):
         (RICH, "rich"),
     )
 
-    url = models.URLField(max_length=255, verify_exists=False, db_index=True)
+    url = models.URLField(max_length=255, db_index=True)
     type = models.IntegerField(choices=MEDIA_TYPE_CHOICES)
     title = models.CharField(max_length=255, blank=True, default='')
     width = models.IntegerField()

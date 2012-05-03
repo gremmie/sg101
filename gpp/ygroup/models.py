@@ -34,7 +34,7 @@ class Post(models.Model):
     msg = models.TextField()
 
     # precomputed URL to this post in the parent thread for efficiency
-    thread_url = models.URLField(verify_exists=False, blank=True)
+    thread_url = models.URLField(blank=True)
 
     class Meta:
         ordering = ('creation_date', )

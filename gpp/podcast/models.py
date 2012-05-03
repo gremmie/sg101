@@ -18,7 +18,7 @@ class Channel(models.Model):
     """Model to represent the Channel properties"""
 
     title = models.CharField(max_length=255)
-    link = models.URLField(verify_exists=False)
+    link = models.URLField()
     language = models.CharField(max_length=16)
     copyright = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255)
@@ -42,8 +42,8 @@ class Item(models.Model):
     author = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255)
     summary = models.TextField()
-    enclosure_url = models.URLField(verify_exists=False)
-    alt_enclosure_url = models.URLField(verify_exists=False, blank=True)
+    enclosure_url = models.URLField()
+    alt_enclosure_url = models.URLField(blank=True)
     enclosure_length = models.IntegerField()
     enclosure_type = models.CharField(max_length=32)
     guid = models.CharField(max_length=255)

@@ -57,8 +57,7 @@ class Event(models.Model):
     html = models.TextField(blank=True)
     date_submitted = models.DateTimeField(auto_now_add=True)
     google_id = models.CharField(max_length=255, blank=True)
-    google_url = models.URLField(verify_exists=False, max_length=255,
-            blank=True)
+    google_url = models.URLField(max_length=255, blank=True)
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=NEW,
             db_index=True)
     create_forum_thread = models.BooleanField(default=False)

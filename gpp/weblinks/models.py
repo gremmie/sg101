@@ -33,7 +33,7 @@ class LinkBase(models.Model):
     """Abstract model to aggregate common fields of a web link."""
     category = models.ForeignKey(Category)
     title = models.CharField(max_length=128)
-    url = models.URLField(verify_exists=False, db_index=True)
+    url = models.URLField(db_index=True)
     description = models.TextField(blank=True)
     user = models.ForeignKey(User)
     date_added = models.DateTimeField(db_index=True)
