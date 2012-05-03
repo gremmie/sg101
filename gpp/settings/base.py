@@ -50,11 +50,6 @@ MEDIA_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'media'))
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
 MEDIA_URL = '/media/'
 
-# URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
-# trailing slash.
-# Examples: "http://foo.com/media/", "/media/".
-ADMIN_MEDIA_PREFIX = '/static/admin/'
-
 # Staticfiles settings:
 STATICFILES_DIRS = [
     os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static')),
