@@ -1,5 +1,5 @@
 """urls for the Messages application"""
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('messages.views',
     url(r'^$',

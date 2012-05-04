@@ -1,7 +1,7 @@
 """
 URLs for the comments application.
 """
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('comments.views',
     url(r'^flag/$', 'flag_comment', name='comments-flag'),

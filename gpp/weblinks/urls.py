@@ -1,5 +1,5 @@
 """urls for the weblinks application"""
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('weblinks.views',
    url(r'^$', 'link_index', name='weblinks-main'),

@@ -1,7 +1,7 @@
 """
 URLs for the member map application.
 """
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('membermap.views',
     url(r'^$', 'index', name='membermap-index'),

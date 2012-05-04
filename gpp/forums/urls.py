@@ -1,7 +1,7 @@
 """
 URLs for the forums application.
 """
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('forums.views.main',
     url(r'^$', 'index', name='forums-index'),

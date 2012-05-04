@@ -2,10 +2,10 @@
 urls.py - URLs for the ygroup application.
 
 """
-from django.conf.urls.defaults import *
-from django.views.generic import ListView, DetailView
+from django.conf.urls import patterns, url
+from django.views.generic import DetailView
 
-from ygroup.models import Thread, Post
+from ygroup.models import Post
 from ygroup.views import ThreadIndexView, ThreadView
 
 

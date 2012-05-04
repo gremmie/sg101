@@ -1,7 +1,7 @@
 """
 URLs for the gcalendar application.
 """
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('gcalendar.views',
     url(r'^$', 'index', name='gcalendar-index'),
@@ -12,4 +12,3 @@ urlpatterns = patterns('gcalendar.views',
     url(r'^thanks/add/$', 'add_thanks', name='gcalendar-add_thanks'),
     url(r'^thanks/change/$', 'edit_thanks', name='gcalendar-edit_thanks'),
 )
-# vim: ts=4 sw=4

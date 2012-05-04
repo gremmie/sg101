@@ -2,7 +2,7 @@
 urls for the podcast application
 
 """
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 from django.views.decorators.cache import cache_page
 
 from podcast.views import feed

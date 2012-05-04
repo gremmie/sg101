@@ -1,5 +1,5 @@
 """urls for the News application"""
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('news.views',
     url(r'^date/$', 'index', name='news-index_page'),

@@ -1,5 +1,5 @@
 """urls for the polls application"""
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('polls.views',
     url(r'^$', 'poll_index', name='polls-main'),

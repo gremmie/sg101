@@ -2,7 +2,7 @@
 Urls for the Shoutbox application.
 """
 
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('shoutbox.views',
     url(r'^delete/$', 'delete', name='shoutbox-delete'),

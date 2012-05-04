@@ -1,5 +1,5 @@
 """urls for the bio application"""
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url
 
 urlpatterns = patterns('bio.views',
     url(r'^members/(?P<type>user|date)/$',
