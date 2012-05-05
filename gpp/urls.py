@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, url, include
+from django.conf.urls.static import static
 from django.conf import settings
 from django.contrib import admin
 from django.views.decorators.cache import cache_page
@@ -65,8 +66,5 @@ urlpatterns += patterns('haystack.views',
         name='haystack_search'),
 )
 
-
-if settings.DEBUG:
-   urlpatterns += patterns('',
-      (r'^media/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
-   )
+# For serving media files in development only:
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
