@@ -13,6 +13,5 @@ media/downloads
 media/podcast
 media/potd
 media/smiley
-gpp/celerybeat-schedule
-gpp/xapian_index
-
+celerybeat-schedule
+sg101/xapian_index

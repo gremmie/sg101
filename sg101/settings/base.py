@@ -1,4 +1,4 @@
-# Base Django settings for the gpp project.
+# Base Django settings for the SG101 website.
 
 import os
 from decimal import Decimal
@@ -75,12 +75,12 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'gpp.core.middleware.InactiveUserMiddleware',
-    'gpp.core.middleware.WhosOnline',
+    'core.middleware.InactiveUserMiddleware',
+    'core.middleware.WhosOnline',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
-ROOT_URLCONF = 'gpp.urls'
+ROOT_URLCONF = 'sg101.urls'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
@@ -192,7 +192,7 @@ MAX_TAG_LENGTH = 50
 #######################################################################
 # Haystack Search Settings
 #######################################################################
-HAYSTACK_SITECONF = 'gpp.search_sites'
+HAYSTACK_SITECONF = 'sg101.search_sites'
 HAYSTACK_SEARCH_ENGINE = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
 
@@ -245,7 +245,7 @@ CELERYBEAT_SCHEDULE = {
 }
 
 #######################################################################
-# GPP Specific Settings
+# sg101 Specific Settings
 #######################################################################
 GPP_NO_REPLY_EMAIL = 'no_reply'
 AVATAR_DIR = 'avatars'

@@ -2,7 +2,7 @@
 Settings to use when running tests. Uses sqlite for speed.
 
 """
-from settings.base import *
+from sg101.settings.base import *
 
 # Use a different database in Redis for tests
 REDIS_DB = 14

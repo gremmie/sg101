@@ -8,7 +8,6 @@ OFFLINE = False
 site.addsitedir('/home/var/django-sites/virtualenvs/sg101/lib/python2.5/site-packages')
 
 sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101')
-sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101/gpp')
 sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101/tools')
 
 os.environ['PYTHON_EGG_CACHE'] = '/home/var/django-sites/virtualenvs/sg101/eggs'
@@ -36,7 +35,7 @@ def offline_handler(environ, start_response):
 
 
 if not OFFLINE:
-   os.environ['DJANGO_SETTINGS_MODULE'] = 'gpp.settings.production'
+   os.environ['DJANGO_SETTINGS_MODULE'] = 'sg101.settings.production'
    import django.core.handlers.wsgi
    application = django.core.handlers.wsgi.WSGIHandler()
 else:

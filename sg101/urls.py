@@ -14,7 +14,7 @@ from custom_search.forms import CustomModelSearchForm
 admin.autodiscover()
 
 urlpatterns = patterns('',
-   url(r'^$', 'views.home', name='home'),
+   url(r'^$', 'sg101.views.home', name='home'),
    (r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
    url(r'^admin/password_reset/$', 'django.contrib.auth.views.password_reset', name='admin_password_reset'),

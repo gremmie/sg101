@@ -1,46 +1,34 @@
 """
-Production Django settings.
+Local Django settings.
 
 """
-from settings.base import *
+from sg101.settings.base import *
 
-DEBUG = False
+DEBUG = True
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'gremmies_portal',
+        'NAME': SECRETS['DB_NAME'],
         'USER': SECRETS['DB_USER'],
         'PASSWORD': SECRETS['DB_PASSWORD'],
     },
 }
 
-STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
-
-# Used cached template loader
-TEMPLATE_LOADERS = [
-    ('django.template.loaders.cached.Loader', (
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    )),
-]
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
-        'TIMEOUT': 600,
-    },
-}
-CACHE_MIDDLEWARE_ANONYMOUS_ONLY = True
-CACHE_MIDDLEWARE_SECONDS = 600
-CACHE_MIDDLEWARE_KEY_PREFIX = ''
-
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 25
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-DONATIONS_DEBUG = False
+# Django Debug Toolbar support
+if DEBUG:
+    try:
+        import debug_toolbar
+    except ImportError:
+        pass
+    else:
+        i = MIDDLEWARE_CLASSES.index('django.middleware.common.CommonMiddleware')
+        MIDDLEWARE_CLASSES.insert(i + 1,
+                'debug_toolbar.middleware.DebugToolbarMiddleware')
+        INSTALLED_APPS.append('debug_toolbar')
+        DEBUG_TOOLBAR_CONFIG = {
+            'INTERCEPT_REDIRECTS': True,
+        }
 
 # Logging configuration
 
@@ -88,14 +76,9 @@ LOGGING = {
             'propagate': False,
             'handlers': ['file'],
         },
-        'django.request':{
-            'level': 'ERROR',
-            'propagate': True,
-            'handlers': ['mail_admins'],
-        },
     },
     'root': {
-        'level': 'INFO',
+        'level': 'DEBUG',
         'handlers': ['file'],
     },
 }
