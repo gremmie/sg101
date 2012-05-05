@@ -101,7 +101,7 @@ class DonationsTest(TestCase):
             self.assertEqual(d.mc_fee, Decimal('3.20'))
             self.assertEqual(d.mc_gross, Decimal('100.00'))
             self.assertEqual(d.memo, '')
-            self.assertEqual(d.payer_status, 'verified')
+            self.assertEqual(d.payer_status, 'unverified')
             self.assertEqual(d.payment_date,
                     datetime.datetime(2011, 1, 16, 5, 40, 33))
 
