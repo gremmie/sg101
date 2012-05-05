@@ -62,7 +62,7 @@ def block_ip(ip, count=1000000, interval=datetime.timedelta(weeks=2)):
     conn = _get_connection()
 
     try:
-        conn.setex(key, count, _to_seconds(interval))
+        conn.setex(key, time=_to_seconds(interval), value=count)
     except redis.RedisError, e:
         logger.error("rate limit (block_ip): %s" % e)
         raise RateLimiterUnavailable
