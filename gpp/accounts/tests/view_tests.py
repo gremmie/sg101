@@ -6,7 +6,8 @@ import datetime
 
 from django.test import TestCase
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User, check_password
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import check_password
 
 from antispam.rate_limit import unblock_ip
 from accounts.models import PendingUser
