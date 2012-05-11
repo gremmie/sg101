@@ -31,6 +31,7 @@ argparse==1.2.1
 distribute==0.6.24
 pycrypto==2.5
 ssh==1.7.13
+docutils==0.9
 #
 # There were two packages that I punted on and hacked into my virtualenv by symlinking to the global
 # site-packages
