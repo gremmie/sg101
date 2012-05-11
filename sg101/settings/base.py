@@ -322,7 +322,7 @@ OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
 #   $ python manage.py make_flatpage all
 #
 GPP_FLATPAGES = {
-    #'about.rst': ('/flatpage_test/', None),
+    'about.rst': ('/about/', None),
 }
 
 #######################################################################

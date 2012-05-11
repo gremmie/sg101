@@ -1,0 +1,48 @@
+SurfGuitar101.com is the premier place on the web for friends and fans of the
+world-wide phenomenon known as surf music. Surf music was created in the early
+1960's in Southern California by such bands as The Belairs, Dick Dale & His
+Deltones, and The Chantays, and popularized further by bands like The Ventures,
+The Astronauts, The Pyramids, & The Lively Ones. Surf music was all but
+forgotten when The Beatles and the British Invasion landed in America in the mid
+to late 1960's. In the late 70's and early 1980's a revival began when bands
+like Jon & The Nightriders, The Surf Raiders, and The Halibuts heard the call of
+the surf and reintroduced it to hungry audiences. This revival continues today
+and has spread world-wide. Today you can find surf bands not only in California,
+but all across America, Europe, Australia, Central and South America, and Japan.
+
+Join us in our forums to discuss this great form of popular music. Discover
+great bands old and new. Check out our podcasts as we highlight the classic surf
+bands and the bands of today. Meet new friends and learn about the next surf
+show in your town. Exchange tips on playing and performing surf music and even
+starting your own band!
+
+Thanks for being part of the greatest online community dedicated to surf music!
+
+A Short History of SurfGuitar101.com
+====================================
+
+This site started as a Yahoo Group in late October, 2001. There were several
+other surf music Yahoo groups at the time, so we started our focus on the
+musician aspect of playing surf music (hence the "guitar 101"). After a short
+time we dropped that angle and fully embraced all aspects of surf music.
+
+After seeing The Surf Coasters (Japan) on their first US tour in the summer of
+2004, we needed a place to host our many photos and videos. The domain name
+surfguitar101.com was registered, and a simple static website was created to
+host media files as a supplement to the Yahoo group. 
+
+Cramped by the confines of the Yahoo Group, in February of 2006 we launched an
+interactive version of the website, complete with our now famous forums. This
+format was kept until February, 2011 when the website software was rewritten and
+a new look was designed.
+
+The SG101 community held its first annual convention weekend in 2008 in Southern
+California, a tradition that continues today. Ever year our members get together
+for a surf music packed weekend, and each year has been bigger and better than
+the last. In 2010, Germany's The Space Rangers and Italy's (via Antigua) Wadadli
+Riders were the first non-US bands to play at the convention. Fans of surf music
+get to see, hear, and mingle with musicians from the original 60's bands as well
+as the up and coming bands of today.
+
+| *Surf's Up!*
+| *— Brian Neal*
