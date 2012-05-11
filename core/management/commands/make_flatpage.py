@@ -3,6 +3,7 @@
 A management command to update flatpage objects from restructured text files.
 
 """
+from __future__ import with_statement
 import os.path
 
 import docutils.core
