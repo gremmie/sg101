@@ -26,10 +26,10 @@ python-dateutil==1.5
 python-memcached==1.48
 wsgiref==0.1.2
 python-ts3==0.1
+docutils==0.9
 #
 # There were two packages that I punted on and hacked into my virtualenv by symlinking to the global
 # site-packages
 # PIL
 # xapian
 #
-## The following requirements were added by pip --freeze:
