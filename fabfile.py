@@ -2,7 +2,7 @@ from fabric.api import cd, run
 
 PYTHON = '/home/var/django-sites/virtualenvs/sg101/bin/python'
 WC_DIR = '/home/var/django-sites/virtualenvs/sg101/sg101'
-PROJ_DIR = WC_DIR + '/gpp'
+PROJ_DIR = WC_DIR + '/sg101'
 
 def update():
     """
