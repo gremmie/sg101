@@ -3,18 +3,25 @@ from django.conf.urls.static import static
 from django.conf import settings
 from django.contrib import admin
 from django.views.decorators.cache import cache_page
+from django.views.generic import TemplateView
 
 from haystack.views import search_view_factory
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
 from custom_search.forms import CustomModelSearchForm
+from core.views import FixedView
 
 
 admin.autodiscover()
 
 urlpatterns = patterns('',
-   url(r'^$', 'sg101.views.home', name='home'),
+   url(r'^$',
+       TemplateView.as_view(template_name='home.html'),
+       name='home'),
+   url(r'^about/$',
+       FixedView.as_view(title='About', content_template='fixed/about.html'),
+       name='about'),
    (r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
    url(r'^admin/password_reset/$', 'django.contrib.auth.views.password_reset', name='admin_password_reset'),

@@ -297,35 +297,6 @@ OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
     ' SurfGuitar101.com!')
 
 #######################################################################
-# Homegrown flatpage system configuration
-#######################################################################
-#
-# GPP_FLATPAGES is a dictionary where each key is a filename that is
-# used as input to generate HTML that is inserted into an existing
-# django.contrib.flatpages model. The value part of each entry is a
-# 2-tuple with the following members, in order:
-#
-# * 'url' - The url of the flatpage model to update. This object must
-#   already exist.
-#
-# * 'template' - The template to be used to generate the flatpage;
-#   The processed text will be passed to the template in the context
-#   variable {{ content }}. If template is None, no template will
-#   be used; the generated text will be inserted directly into the
-#   flatpage object.
-#
-# The custom management command make_flatpage is used to run the
-# flatpage generation process. E.g.
-#
-#   $ python manage.py make_flatpage about.rst privacy.rst 
-#           or
-#   $ python manage.py make_flatpage all
-#
-GPP_FLATPAGES = {
-    'about.rst': ('/about/', None),
-}
-
-#######################################################################
 # URL's of 3rd party Javascript and CSS files.
 # These dictionaries are used by core/templatetags/script_tags, and
 # should also be used by developers when creating form media classes.

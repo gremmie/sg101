@@ -5,9 +5,9 @@ used by multiple applications.
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
-from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
+from django.views.generic import TemplateView
 import django.utils.simplejson as json
 
 
@@ -36,3 +36,20 @@ def ajax_users(request):
     users = User.objects.filter(is_active=True, 
             username__istartswith=q).values_list('username', flat=True)[:limit]
     return HttpResponse(json.dumps(list(users)), content_type='application/json')
+
+
+class FixedView(TemplateView):
+    """
+    For displaying our "fixed" views generated with the custom command
+    make_fixed_page.
+
+    """
+    template_name = 'fixed/base.html'
+    title = ''
+    content_template = ''
+
+    def get_context_data(self, **kwargs):
+        context = super(FixedView, self).get_context_data(**kwargs)
+        context['title'] = self.title
+        context['content_template'] = self.content_template
+        return context

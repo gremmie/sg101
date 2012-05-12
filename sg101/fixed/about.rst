@@ -1,3 +1,6 @@
+About SurfGuitar101.com
+=======================
+
 SurfGuitar101.com is the premier place on the web for friends and fans of the
 world-wide phenomenon known as surf music. Surf music was created in the early
 1960's in Southern California by such bands as The Belairs, Dick Dale & His
@@ -19,7 +22,7 @@ starting your own band!
 Thanks for being part of the greatest online community dedicated to surf music!
 
 A Short History of SurfGuitar101.com
-====================================
+------------------------------------
 
 This site started as a Yahoo Group in late October, 2001. There were several
 other surf music Yahoo groups at the time, so we started our focus on the
