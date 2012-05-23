@@ -1,0 +1,8 @@
+{{ post.html|safe }}
+<hr />
+<p>Video attachments:</p>
+<ol>
+{% for embed in embeds %}
+   <li><a href="{{ embed.url }}">{{ embed.title }}</a></li>
+{% endfor %}
+</ol>

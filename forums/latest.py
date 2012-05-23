@@ -16,10 +16,11 @@ import time
 
 from django.dispatch import receiver
 from django.utils import simplejson
+from django.template.loader import render_to_string
 import redis
 
 from forums.signals import post_content_update, topic_content_update
-from forums.models import Forum, Topic, Post
+from forums.models import Forum, Topic, Post, Attachment
 from forums.views.subscriptions import notify_topic_subscribers
 from forums.tools import auto_favorite, auto_subscribe
 from core.services import get_redis_connection
@@ -90,11 +91,24 @@ def _update_post_feeds(conn, post):
     Updates the forum feeds we keep in Redis so that our RSS feeds are quick.
 
     """
+    # get any attachments for the post
+
+    attachments = Attachment.objects.filter(post=post).select_related(
+            'embed').order_by('order')
+    embeds = [item.embed for item in attachments]
+    if len(embeds) == 0:
+        content = post.html
+    else:
+        content = render_to_string('forums/post_rss.html', {
+            'post': post,
+            'embeds': embeds,
+        })
+
     # serialize post attributes
     post_content = {
         'id': post.id,
         'title': post.topic.name,
-        'content': post.html,
+        'content': content,
         'author': post.user.username,
         'pubdate': int(time.mktime(post.creation_date.timetuple())),
         'forum_name': post.topic.forum.name,
