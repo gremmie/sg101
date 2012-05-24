@@ -5,7 +5,7 @@ now this entails deleting old forum and topic last visit records.
 """
 import datetime
 
-from django.core.management.base import NoArgsCommand, CommandError
+from django.core.management.base import NoArgsCommand
 
 from forums.models import ForumLastVisit, TopicLastVisit
 import forums.unread
