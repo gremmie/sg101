@@ -327,7 +327,8 @@ class Post(models.Model):
         self.update_date = datetime.datetime.now()
 
     def search_title(self):
-        return u"%s by %s" % (self.topic.name, self.user.username)
+        return u"%s by %s (%s)" % (self.topic.name, self.user.username,
+                self.creation_date.strftime('%d-%b-%Y'))
 
     def search_summary(self):
         return self.body
