@@ -247,11 +247,12 @@ class Topic(models.Model):
 
     def search_title(self):
         if self.post_count == 1:
-            post_text = "(1 post)"
+            post_text = "1 post"
         else:
-            post_text = "(%d posts)" % self.post_count
+            post_text = "%d posts" % self.post_count
 
-        return u"%s by %s; %s" % (self.name, self.user.username, post_text)
+        return u"%s by %s; %s (%s)" % (self.name, self.user.username, post_text,
+                self.creation_date.strftime('%d-%b-%Y'))
 
     def search_summary(self):
         return u''
