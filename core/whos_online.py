@@ -204,10 +204,10 @@ def get_stats(conn=None):
         if stats:
             return Statistic(
                 id=1,
-                max_users=stats['max_users'],
+                max_users=int(stats['max_users']),
                 max_users_date=datetime.datetime.fromtimestamp(
                     float(stats['max_users_date'])),
-                max_anon_users=stats['max_anon_users'],
+                max_anon_users=int(stats['max_anon_users']),
                 max_anon_users_date=datetime.datetime.fromtimestamp(
                     float(stats['max_anon_users_date'])))
 

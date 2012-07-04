@@ -1,10 +1,7 @@
 """
 This file contains the core Models used in gpp
 """
-import datetime
-
 from django.db import models
-from django.contrib.auth.models import User
 
 
 class Statistic(models.Model):
