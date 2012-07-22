@@ -20,5 +20,5 @@ tinyMCE.init({
       theme_advanced_buttons3 : "sub,sup,|,image,insertdate,inserttime,|,tablecontrols,|,hr,advhr,visualaid,|,charmap,emotions,|,print",
       theme_advanced_buttons4 : "pastetext,pasteword,selectall"
    },
-   valid_styles : { '*' : 'font-weight,text-decoration'}
+   valid_styles : { '*' : 'font-style,font-weight,text-decoration'}
 });
