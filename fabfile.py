@@ -1,8 +1,7 @@
 from fabric.api import cd, run
 
 PYTHON = '/home/var/django-sites/virtualenvs/sg101/bin/python'
-WC_DIR = '/home/var/django-sites/virtualenvs/sg101/sg101'
-PROJ_DIR = WC_DIR + '/sg101'
+PROJ_DIR = '/home/var/django-sites/virtualenvs/sg101/sg101'
 
 def update():
     """
@@ -19,7 +18,7 @@ def collectstatic():
 
     """
     cmd = ('%s manage.py collectstatic '
-        '--settings=settings.production --noinput') % PYTHON
+        '--settings=sg101.settings.production --noinput') % PYTHON
 
     with cd(PROJ_DIR):
         run(cmd)
