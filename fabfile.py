@@ -30,4 +30,4 @@ def touch():
 
     """
     with cd(PROJ_DIR):
-        run('touch apache/sg101.wsgi')
+        run('touch ./sg101/apache/sg101.wsgi')
