@@ -5,6 +5,7 @@ from django import template
 from django.conf import settings
 from django.core.cache import cache
 
+import bio.models
 from bio.models import UserProfile
 
 
@@ -80,3 +81,17 @@ def profile_link(username, trailing_text=''):
 
     """
     return {'username': username, 'trailing_text': trailing_text }
+
+
+@register.simple_tag
+def profile_status(profile):
+    """Returns a string to indicate member status for use on the view profile
+    page.
+
+    """
+    if (profile.status == bio.models.STA_ACTIVE or
+        profile.status == bio.models.STA_STRANGER):
+        return u''
+    else:
+        return u'(%s)' % profile.get_status_display()
+

@@ -38,7 +38,7 @@
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>
    <tr><th>Date Joined</th><td>{{ subject.date_joined|date:"F d, Y" }}</td></tr>
    <tr><th>Last Login</th><td>{% forum_date subject.last_login user %}</td></tr>
-   <tr><th>Active Member</th><td>{% bool_icon subject.is_active %}</td></tr>
+   <tr><th>Active Member</th><td>{% bool_icon subject.is_active %} {% profile_status profile %}</td></tr>
    <tr><th>Staff Member</th><td>{% bool_icon subject.is_staff %}</td></tr>
    {% if profile.location %}
    <tr><th>Location</th><td>{{ profile.location }}</td></tr>
