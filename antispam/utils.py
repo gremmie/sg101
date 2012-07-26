@@ -80,7 +80,8 @@ def deactivate_spammer(user):
     profile.status = STA_SPAMMER
     profile.status_date = datetime.datetime.now()
     profile.reset_text_fields()
-    profile.avatar.delete(save=False)
+    if profile.avatar:
+        profile.avatar.delete(save=False)
     profile.save()
 
     Comment.objects.filter(user=user).delete()
