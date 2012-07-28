@@ -11,6 +11,9 @@
       {% if post.user.user_profile.location %}
          {{ post.user.user_profile.location }}<br />
       {% endif %}
+      {% if post.user.user_profile.country %}
+         {% flag_icon post.user.user_profile.country 'small' %}<br />
+      {% endif %}
       {% for bo in post.user.user_profile.badge_ownership %}
          <img src="{{ bo.badge.image.url }}" alt="{{ bo.badge_count_str }}" title="{{ bo.badge_count_str }}" />
       {% endfor %}

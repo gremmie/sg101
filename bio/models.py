@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
+import bio.flags
 
 
 # These are the secondary user status enumeration values. 
@@ -75,6 +76,9 @@ class UserProfile(models.Model):
 
     user = models.ForeignKey(User, unique=True)
     location = models.CharField(max_length=128, blank=True)
+    country = models.CharField(max_length=2, blank=True, default='',
+            choices=bio.flags.FLAG_CHOICES,
+            help_text='Optional')
     birthday = models.DateField(blank=True, null=True,
             help_text='Optional; the year is not shown to others')
     occupation = models.CharField(max_length=128, blank=True)

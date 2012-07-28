@@ -43,6 +43,9 @@
    {% if profile.location %}
    <tr><th>Location</th><td>{{ profile.location }}</td></tr>
    {% endif %}
+   {% if profile.country %}
+   <tr><th>Country</th><td>{% flag_icon profile.country 'large' %}</td></tr>
+   {% endif %}
    {% if profile.occupation %}
    <tr><th>Occupation</th><td>{{ profile.occupation }}</td></tr>
    {% endif %}

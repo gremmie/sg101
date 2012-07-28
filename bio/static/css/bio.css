@@ -36,3 +36,13 @@ div.members-list td {
 div.members-list tr.odd {
    background-color: #ddd;
 }
+
+div.flag { 
+   float:left;
+   text-size: small;
+   font-weight: bold;
+}
+div.flag img { 
+   vertical-align: middle;
+   margin-bottom: 3px;
+}

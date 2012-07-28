@@ -8,6 +8,7 @@ data.
 import argparse
 import json
 import os.path
+import sys
 from xml.etree.ElementTree import ElementTree
 
 
@@ -34,7 +35,7 @@ def main():
         # see if we have an icon for this country
 
         if not os.path.exists(os.path.join(icon_dir, '%s.png' % code)):
-            print "Could not find icon for %s (%s)" % (name, code)
+            sys.stderr.write("Could not find icon for %s (%s)\n" % (name, code))
         else:
             country_data[code] = name
 

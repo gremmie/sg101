@@ -5,6 +5,7 @@ from django import template
 from django.conf import settings
 from django.core.cache import cache
 
+import bio.flags
 import bio.models
 from bio.models import UserProfile
 
@@ -95,3 +96,22 @@ def profile_status(profile):
     else:
         return u'(%s)' % profile.get_status_display()
 
+
+@register.inclusion_tag('bio/flag_icon.html')
+def flag_icon(code, size='small'):
+    """Renders a flag icon for the requested ISO-3166-1 alpha 2
+    code.
+
+    """
+    try:
+        name = bio.flags.FLAG_DATA[code]
+    except KeyError:
+        code = 'zz'
+        name = ''
+
+    return {
+        'code': code,
+        'name': name,
+        'size': size,
+        'STATIC_URL': settings.STATIC_URL,
+    }

@@ -26,9 +26,9 @@ class EditUserForm(forms.ModelForm):
 
 class EditUserProfileForm(forms.ModelForm):
     """Form for editing the fields of the UserProfile model."""
-    location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
-    occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
-    interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size' : 64 }))
+    location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
+    occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
+    interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     use_24_time = forms.BooleanField(label='Show times in 24-hour mode', required=False)
     profile_text = forms.CharField(required=False,
@@ -42,7 +42,7 @@ class EditUserProfileForm(forms.ModelForm):
 
     class Meta:
         model = UserProfile
-        fields = ('location', 'birthday', 'occupation', 'interests',
+        fields = ('location', 'country', 'birthday', 'occupation', 'interests',
             'profile_text', 'hide_email', 'signature', 'time_zone',
             'use_24_time', 'auto_favorite', 'auto_subscribe')
 

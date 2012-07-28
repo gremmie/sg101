@@ -5,7 +5,6 @@ Various useful widgets for the GPP application.
 from django import forms
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
-from django.conf import settings
 
 
 class AutoCompleteUserInput(forms.TextInput):

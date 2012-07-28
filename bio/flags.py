@@ -1,0 +1,32 @@
+"""
+This module contains country flag data & functions.
+
+"""
+from __future__ import with_statement
+import os.path
+import locale
+import logging
+
+import django.utils.simplejson as json
+
+
+# Read flag data from external JSON file:
+
+FLAG_DATA = {}
+
+datafile = os.path.join(os.path.split(__file__)[0], 'flag_data.json')
+
+try:
+    with open(datafile, 'r') as fp:
+        FLAG_DATA = json.load(fp, encoding='utf-8')
+except IOError:
+    FLAG_DATA = {}
+    logging.error("Could not load flag_data.json")
+
+# Build a choices list for use with Django models, etc.
+# The locale is set in order to sort the place names correctly:
+
+locale.setlocale(locale.LC_ALL, '')
+
+FLAG_CHOICES = sorted(FLAG_DATA.items(),
+        cmp=lambda lhs, rhs: locale.strcoll(lhs[1], rhs[1]))
