@@ -1,10 +1,12 @@
 {% load url from future %}
 {% load bio_tags %}
+{% load cache %}
 {% load humanize %}
 <div id="accounts-stats">
 {% if num_users %}
-Our site has <strong>{{ num_users|intcomma }}</strong> members.
+Our site has <strong>{{ num_users|intcomma }}</strong> members from around the world:
 {% endif %} 
+{% cache 360 member_flags_tag %}{% member_flags %}{% endcache %}
 {% if new_users %}
 Please welcome our newest members:
 <ul class="inline-list">

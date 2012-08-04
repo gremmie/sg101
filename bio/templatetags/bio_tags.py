@@ -4,6 +4,7 @@ Template tags for the bio application.
 from django import template
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import Count
 
 import bio.flags
 import bio.models
@@ -113,5 +114,21 @@ def flag_icon(code, size='small'):
         'code': code,
         'name': name,
         'size': size,
+        'STATIC_URL': settings.STATIC_URL,
+    }
+
+
+@register.inclusion_tag('bio/member_flags_tag.html')
+def member_flags():
+    """Displays a list of member flags."""
+
+    flag_data = UserProfile.objects.exclude(country='').values('country').\
+            annotate(count=Count('country')).order_by('country')
+
+    for rec in flag_data:
+        rec['name'] = bio.flags.FLAG_DATA[rec['country']]
+
+    return {
+        'flag_data': flag_data,
         'STATIC_URL': settings.STATIC_URL,
     }
