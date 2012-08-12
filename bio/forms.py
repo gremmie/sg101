@@ -11,6 +11,8 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 
+import pytz
+
 from bio.models import UserProfile
 from core.widgets import AutoCompleteUserInput
 from core.image import parse_image, downscale_image_square
@@ -54,6 +56,21 @@ class EditUserProfileForm(forms.ModelForm):
         js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
             settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
             ['js/bio.js', 'js/timezone.js'])
+
+    def clean_time_zone(self):
+        """Ensure the timezone is valid and will work with pytz.
+        
+        A blank (empty) value is allowed.
+        """
+
+        tz = self.cleaned_data['time_zone'].strip()
+        if tz:
+            try:
+                pytz.timezone(tz)
+            except pytz.UnknownTimeZoneError:
+                raise forms.ValidationError('Invalid timezone')
+
+        return tz
 
 
 class UploadAvatarForm(forms.Form):
