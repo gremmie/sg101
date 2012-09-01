@@ -275,9 +275,9 @@ GOOGLE_OAUTH_CONSUMER_KEY = 'surfguitar101.com'
 GOOGLE_OAUTH_PRIVATE_KEY_PATH = SECRETS['GOOGLE_KEY_PATH']
 
 # Phantom Brigade TeamSpeak3 settings
-PB_TS3_IP = '206.123.95.194'
+PB_TS3_IP = '208.77.144.55'
 PB_TS3_PORT = 10011
-PB_TS3_VID = 6113
+PB_TS3_VID = 17
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
