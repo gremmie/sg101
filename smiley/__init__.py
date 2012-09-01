@@ -1,8 +1,7 @@
 """
 Smiley classes and functions.
-"""
-import re
 
+"""
 from django.utils.safestring import SafeData
 from django.utils.html import conditional_escape
 

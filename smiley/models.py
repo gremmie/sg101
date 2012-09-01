@@ -5,6 +5,7 @@ import re
 
 from django.db import models
 from django.core.cache import cache
+from django.contrib.sites.models import Site
 
 CACHE_TIMEOUT = 60 * 60      # seconds
 
@@ -75,14 +76,16 @@ class Smiley(models.Model):
     def html(self):
         """Returns a HTML img tag representation of the smiley."""
         if self.image:
-            return (u'<img src="%s" alt="%s" title="%s" />' %
-                    (self.get_absolute_url(), self.title, self.title))
+            site = Site.objects.get_current()
+            return (u'<img src="http://%s%s" alt="%s" title="%s" />' %
+                    (site.domain, self.get_absolute_url(), self.title, self.title))
         return u''
     html.allow_tags = True
 
     def markdown(self):
         """Returns a markdown representation of the smiley."""
         if self.image:
-            return (u'![%s](%s "%s")' % 
-                    (self.title, self.get_absolute_url(), self.title))
+            site = Site.objects.get_current()
+            return (u'![%s](http://%s%s "%s")' % 
+                    (self.title, site.domain, self.get_absolute_url(), self.title))
         return u''
