@@ -4,7 +4,7 @@
 {% load humanize %}
 <div id="accounts-stats">
 {% if num_users %}
-Our site has <strong>{{ num_users|intcomma }}</strong> members from around the world:
+Our site has <strong>{{ num_users|intcomma }}</strong> members from <a href="{% url 'membermap-index' %}">around the world</a>:
 {% endif %} 
 {% cache 360 member_flags_tag %}{% member_flags %}{% endcache %}
 {% if new_users %}
