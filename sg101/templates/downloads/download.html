@@ -3,7 +3,7 @@
 {% load bio_tags %}
 {% get_comment_count for download as comment_count %}
 <dt>
-{{ download.title }}
+<a href="{{ download.get_absolute_url }}">{{ download.title }}</a>
 </dt>
 <dd>
 {{ download.html|safe }}
@@ -21,7 +21,7 @@
 <tr>
     <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
     <th><img src="{{ STATIC_URL }}icons/comments.png" alt="Comments" title="Comments" />
-       <a href="{% url 'downloads-details' download.id %}">Comments</a>:</th><td>{{ comment_count }}</td>
+       <a href="{{ download.get_absolute_url }}">Comments</a>:</th><td>{{ comment_count }}</td>
 </tr>
 </table>
 <div id="link-{{ download.id }}"><button type="button" class="dl-button" id="dl-{{ download.id }}">Download</button></div>
