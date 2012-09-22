@@ -26,10 +26,11 @@ var mmapUser = {
 <div id="member_map_main">
     {% if user.is_authenticated %}
     <div id="member_map_top">
-        Members on the map: <span id="member_map_count">0</span> &bull; Recent updates:
-        <select id="member_map_recent"><option value="0" selected="selected">(select)</option></select>
-        &bull; All Members:
-        <select id="member_map_members"><option value="0" selected="selected">(select)</option></select>
+       <ul>
+          <li>Members on the map: <span id="member_map_count">0</span></li>
+          <li>Recent updates: <select id="member_map_recent"><option value="0" selected="selected">(select)</option></select></li>
+          <li>All Members: <select id="member_map_members"><option value="0" selected="selected">(select)</option></select></li>
+       </ul>
     </div>
     {% endif %}
     <div id="member_map_map">
