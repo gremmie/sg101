@@ -8,6 +8,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.conf import settings
 
 from donations.models import Donation
 import bio.badges
@@ -27,7 +28,7 @@ TEST_POST_DATA_2 = """\
 mc_gross=100.00&protection_eligibility=Ineligible&payer_id=FAKEPAYERID02&tax=0.00&payment_date=05:40:33 Jan 16, 2011 PST&payment_status=Completed&charset=windows-1252&first_name=John&option_selection1=No&mc_fee=3.20&notify_version=3.0&custom=test_user&payer_status=unverified&business=brian@surfguitar101.com&quantity=1&verify_sign=AIkKNFAKE-DATA-NOT-REALpqCSxA-E7Tm4rMGlUpNy6ym0.exBzfiyI&payer_email=test_user@example.com&option_name1=List your name?&txn_id=TESTTXNIDK548343A&payment_type=instant&last_name=Doe&receiver_email=brian@surfguitar101.com&payment_fee=3.20&receiver_id=FAKERECEIVERU&txn_type=web_accept&item_name=Donation for www.surfguitar101.com&mc_currency=USD&item_number=501&residence_country=US&handling_amount=0.00&transaction_subject=test_user&payment_gross=100.00&shipping=0.00"""
 
 
-class DonationsTest(TestCase):
+class DonationsIpnTestCase(TestCase):
     fixtures = ['badges']
 
     def test_ipn_post_1(self):
@@ -108,3 +109,39 @@ class DonationsTest(TestCase):
             # user should not have got a badge for donating
             p = user.get_profile()
             self.assertEqual(p.badges.count(), 0)
+
+
+class DonationsManagerTestCase(TestCase):
+    fixtures = ['donations_test']
+
+    def test_monthly_goal_pct(self):
+
+        self.assertEqual(settings.DONATIONS_GOAL, Decimal('100.00'))
+        pct = Donation.objects.monthly_goal_pct(year=2012, month=9)
+        self.assertEqual(pct, 23)
+
+    def test_monthly_goal_pct2(self):
+
+        # Ensure we get 0 when there are no records
+
+        Donation.objects.all().delete()
+        pct = Donation.objects.monthly_goal_pct(year=2012, month=9)
+        self.assertEqual(pct, 0)
+
+    def test_monthly_stats(self):
+
+        gross, net, donations = Donation.objects.monthly_stats(year=2012, month=9)
+        self.assertEqual(gross, Decimal('25.00'))
+        self.assertEqual(net, Decimal('23.47'))
+        self.assertEqual(len(donations), 2)
+
+    def test_monthly_stats2(self):
+
+        # Ensure we get 0 when there are no records
+
+        Donation.objects.all().delete()
+
+        gross, net, donations = Donation.objects.monthly_stats(year=2012, month=9)
+        self.assertEqual(gross, Decimal('0.00'))
+        self.assertEqual(net, Decimal('0.00'))
+        self.assertEqual(len(donations), 0)

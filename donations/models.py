@@ -7,9 +7,12 @@ import decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.db.models import Sum
 
 
 class DonationManager(models.Manager):
+    """Manager for the Donations model."""
+
     def monthly_stats(self, year=None, month=None):
         """
         Returns a tuple of items for the given month in the given
@@ -42,6 +45,36 @@ class DonationManager(models.Manager):
             donations.append(donation)
 
         return gross, net, donations
+
+    def monthly_goal_pct(self, year=None, month=None, limit=True):
+        """Returns progress towards the given monthly goal as an integer
+        percent.
+
+        If year is None, the current year is used.
+        If month is None, the current month is used.
+        If limit is True, the return value is limited to 100.
+
+        """
+        today = datetime.datetime.today()
+        if year is None:
+            year = today.year
+        if month is None:
+            month = today.month
+
+        r = self.filter(payment_date__year=year, payment_date__month=month).aggregate(
+                Sum('mc_gross'), Sum('mc_fee'))
+
+        gross, fee = r['mc_gross__sum'], r['mc_fee__sum']
+
+        if gross is not None and fee is not None:
+            pct = int((gross - fee) / settings.DONATIONS_GOAL * 100)
+        else:
+            pct = 0
+
+        if limit:
+            pct = min(pct, 100)
+
+        return pct
 
 
 class Donation(models.Model):
