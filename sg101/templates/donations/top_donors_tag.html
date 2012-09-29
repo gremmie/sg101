@@ -1,0 +1,10 @@
+{% load bio_tags %}
+{% if top_donors %}
+<ol>
+   {% for donor in top_donors %}
+   <li>{% profile_link donor.username %}</li>
+   {% endfor %}
+</ol>
+{% else %}
+<p>No donation data available at this time.</p>
+{% endif %}

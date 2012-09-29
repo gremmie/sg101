@@ -76,6 +76,21 @@ class DonationManager(models.Manager):
 
         return pct
 
+    def top_donors(self, n=10):
+        """Returns a list of the top n donors as user objects that have a
+        total_donations field annotation.
+
+        The data is taken from non anonymous donations from logged in users.
+
+        """
+        qs = User.objects.filter(donation__isnull=False,
+                                 donation__is_anonymous=False) \
+                .distinct() \
+                .annotate(total_donations=Sum('donation__mc_gross')) \
+                .order_by('-total_donations')[:n]
+
+        return qs
+
 
 class Donation(models.Model):
     """Model to represent a donation to the website."""
