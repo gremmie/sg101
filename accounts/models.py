@@ -44,12 +44,12 @@ class PendingUserManager(models.Manager):
       temp_user = User()
       temp_user.set_password(password)
 
-      now = datetime.datetime.now() 
-      pending_user = self.model(None, 
-            username, 
-            email, 
-            temp_user.password, 
-            now, 
+      now = datetime.datetime.now()
+      pending_user = self.model(None,
+            username,
+            email,
+            temp_user.password,
+            now,
             self._make_key())
 
       pending_user.save()
@@ -77,11 +77,11 @@ class PendingUserManager(models.Manager):
 class PendingUser(models.Model):
    """model for holding users while they go through the email registration cycle"""
 
-   username = models.CharField(max_length=30, db_index=True)
+   username = models.CharField(max_length=30, db_index=True, unique=True)
    email = models.EmailField()
    password = models.CharField(max_length=128)
    date_joined = models.DateTimeField(default=datetime.datetime.now, db_index=True)
-   key = models.CharField(max_length=20, editable=True)
+   key = models.CharField(max_length=20)
 
    objects = PendingUserManager()
 
