@@ -76,8 +76,9 @@ $(document).ready(function() {
         <li>Your search terms are automatically <em>and-ed</em> together.</li>
         <li>To search forum thread titles, check <em>Forum Topics</em>.</li>
         <li>To search forum thread post bodies, check <em>Forum Posts</em>.</li>
-        <li>Our search engine currently has problems with punctuation in search queries. For example, it is better to search for
-         <em>FRV</em> than <em>FRV-1</em>.</li>
+        <li>Our search engine removes punctuation when building its index. Thus, for example, a search query of
+         <em>FRV-1</em> will not produce any results. Instead, it is better to search for <em>FRV 1</em> or even
+         just <em>FRV</em>.</li>
          <li>Most content is searchable by author. For example, to find all forum threads by the user <em>SurferDood101</em>
          where the title contains <em>Gnarly</em>, your search term would be <em>SurferDood101 Gnarly</em>.</li>
      </ul>
