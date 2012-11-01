@@ -68,6 +68,19 @@ $(document).ready(function() {
           </div>
       {% endif %}
   {% else %}
-      {# Show some example queries to run, maybe query syntax, something else? #}
+  <div>
+     <p>Thank you for using the SG101 search engine! Here are some searching tips that may help you find what you are looking for.</p>
+     <ul>
+        <li>To perform a search, type your search query in the text box and check which areas of the site you wish to search.</li>
+        <li>You can search multiple areas of the site at the same time by checking more than one box.</li>
+        <li>Your search terms are automatically <em>and-ed</em> together.</li>
+        <li>To search forum thread titles, check <em>Forum Topics</em>.</li>
+        <li>To search forum thread post bodies, check <em>Forum Posts</em>.</li>
+        <li>Our search engine currently has problems with punctuation in search queries. For example, it is better to search for
+         <em>FRV</em> than <em>FRV-1</em>.</li>
+         <li>Most content is searchable by author. For example, to find all forum threads by the user <em>SurferDood101</em>
+         where the title contains <em>Gnarly</em>, your search term would be <em>SurferDood101 Gnarly</em>.</li>
+     </ul>
+  </div>
   {% endif %}
 {% endblock %}
