@@ -79,13 +79,22 @@ def deactivate_spammer(user):
     profile = user.get_profile()
     profile.status = STA_SPAMMER
     profile.status_date = datetime.datetime.now()
-    profile.reset_text_fields()
+    profile.reset()
     if profile.avatar:
         profile.avatar.delete(save=False)
     profile.save()
 
+    # delete comments & forum posts
     Comment.objects.filter(user=user).delete()
     delete_user_posts(user)
+
+    # delete elsewhere links
+    user.social_network_profiles.all().delete()
+    user.instant_messenger_profiles.all().delete()
+    user.website_profiles.all().delete()
+
+    # delete shouts
+    user.shout_set.all().delete()
 
     logging.info("User deactivated for spam: %s", user.username)
 
