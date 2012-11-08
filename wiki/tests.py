@@ -1,0 +1,91 @@
+"""
+Tests for the wiki integration application.
+
+"""
+import hashlib
+import datetime
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.test.client import RequestFactory
+from django.http import HttpResponse
+from django.conf import settings
+
+from core.services import get_redis_connection
+from wiki.middleware import WikiMiddleware, SESSION_KEY
+
+
+class MiddleWareTestCase(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user('test_user', 'test@example.com',
+                'password')
+        self.conn = get_redis_connection()
+        self.mw = WikiMiddleware()
+
+    def tearDown(self):
+        self.conn.delete(settings.WIKI_REDIS_SET)
+
+    def test_middleware(self):
+
+        request = self.factory.get('/contact/')
+        request.session = {}
+        request.user = self.user
+        response = HttpResponse()
+
+        request.session['wiki_set_cookie'] = True
+        response = self.mw.process_response(request, response)
+
+        self.assertIsNone(request.session.get('wiki_set_cookie'))
+
+        cookie = response.cookies.get(settings.WIKI_COOKIE_NAME)
+        cookie_val = ''
+        self.assertIsNotNone(cookie)
+        if cookie:
+            self.assertEqual(cookie['domain'], settings.WIKI_COOKIE_DOMAIN)
+            self.assertEqual(cookie['path'], '/')
+            self.assertEqual(cookie['max-age'], settings.WIKI_COOKIE_AGE)
+
+            cookie_val = cookie.value
+            try:
+                user, email, key = cookie_val.split('#')
+            except KeyError:
+                self.fail('invalid cookie value')
+            else:
+                self.assertEqual(user, self.user.username)
+                self.assertEqual(email, self.user.email)
+                self.assertEqual(len(key), 64)
+
+        self.assertEqual(self.conn.zcard(settings.WIKI_REDIS_SET), 1)
+
+        h = hashlib.sha256()
+        h.update(cookie_val)
+        member = h.hexdigest()
+
+        score = self.conn.zscore(settings.WIKI_REDIS_SET, member)
+        now = datetime.datetime.utcnow()
+        session_start = datetime.datetime.fromtimestamp(score)
+        self.assertLess(now - session_start, datetime.timedelta(seconds=2))
+
+        session_key = request.session.get(SESSION_KEY)
+        self.assertTrue(session_key and session_key == member)
+
+        # test the destroy session logic
+
+        request.session['wiki_delete_cookie'] = True
+        response = self.mw.process_response(request, response)
+
+        self.assertIsNone(request.session.get('wiki_delete_cookie'))
+
+        cookie = response.cookies.get(settings.WIKI_COOKIE_NAME)
+        self.assertIsNotNone(cookie)
+        if cookie:
+            self.assertEqual(cookie.value, '')
+            self.assertEqual(cookie['domain'], settings.WIKI_COOKIE_DOMAIN)
+            self.assertEqual(cookie['path'], '/')
+            self.assertEqual(cookie['max-age'], 0)
+            self.assertEqual(cookie['expires'], 'Thu, 01-Jan-1970 00:00:00 GMT')
+
+        self.assertEqual(self.conn.zcard(settings.WIKI_REDIS_SET), 0)
+        self.assertIsNone(request.session.get(SESSION_KEY))

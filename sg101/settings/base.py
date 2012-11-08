@@ -77,6 +77,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',
+    'wiki.middleware.WikiMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
@@ -142,6 +143,7 @@ INSTALLED_APPS = [
     'shoutbox',
     'smiley',
     'weblinks',
+    'wiki',
     'ygroup',
 ]
 
@@ -278,6 +280,12 @@ GOOGLE_OAUTH_PRIVATE_KEY_PATH = SECRETS['GOOGLE_KEY_PATH']
 PB_TS3_IP = '208.77.144.55'
 PB_TS3_PORT = 10011
 PB_TS3_VID = 17
+
+# MoinMoin Wiki integration settings
+WIKI_COOKIE_NAME = 'sg101_wiki'
+WIKI_COOKIE_DOMAIN = '.surfguitar101.com'
+WIKI_COOKIE_AGE = SESSION_COOKIE_AGE
+WIKI_REDIS_SET = 'wiki_cookie_keys'
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
