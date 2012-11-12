@@ -15,6 +15,8 @@ DATABASES = {
     },
 }
 
+WIKI_COOKIE_DOMAIN = None
+
 # Django Debug Toolbar support
 if DEBUG:
     try:
