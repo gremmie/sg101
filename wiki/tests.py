@@ -12,7 +12,8 @@ from django.http import HttpResponse
 from django.conf import settings
 
 from core.services import get_redis_connection
-from wiki.middleware import WikiMiddleware, SESSION_KEY
+from wiki.middleware import WikiMiddleware
+from wiki.constants import SESSION_SET_FLAG, SESSION_SET_MEMBER
 
 
 class MiddleWareTestCase(TestCase):
@@ -34,7 +35,7 @@ class MiddleWareTestCase(TestCase):
         request.user = self.user
         response = HttpResponse()
 
-        request.session['wiki_set_cookie'] = True
+        request.session[SESSION_SET_FLAG] = True
         response = self.mw.process_response(request, response)
 
         self.assertIsNone(request.session.get('wiki_set_cookie'))
@@ -50,7 +51,7 @@ class MiddleWareTestCase(TestCase):
             cookie_val = cookie.value
             try:
                 user, email, key = cookie_val.split('#')
-            except KeyError:
+            except ValueError:
                 self.fail('invalid cookie value')
             else:
                 self.assertEqual(user, self.user.username)
@@ -68,15 +69,13 @@ class MiddleWareTestCase(TestCase):
         session_start = datetime.datetime.fromtimestamp(score)
         self.assertLess(now - session_start, datetime.timedelta(seconds=2))
 
-        session_key = request.session.get(SESSION_KEY)
-        self.assertTrue(session_key and session_key == member)
+        session_member = request.session.get(SESSION_SET_MEMBER)
+        self.assertTrue(session_member and session_member == member)
 
         # test the destroy session logic
 
-        request.session['wiki_delete_cookie'] = True
+        request.wiki_delete_cookie = member
         response = self.mw.process_response(request, response)
-
-        self.assertIsNone(request.session.get('wiki_delete_cookie'))
 
         cookie = response.cookies.get(settings.WIKI_COOKIE_NAME)
         self.assertIsNotNone(cookie)
@@ -88,4 +87,3 @@ class MiddleWareTestCase(TestCase):
             self.assertEqual(cookie['expires'], 'Thu, 01-Jan-1970 00:00:00 GMT')
 
         self.assertEqual(self.conn.zcard(settings.WIKI_REDIS_SET), 0)
-        self.assertIsNone(request.session.get(SESSION_KEY))

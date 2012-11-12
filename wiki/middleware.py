@@ -12,9 +12,9 @@ from django.conf import settings
 import redis
 
 from core.services import get_redis_connection
+from wiki.constants import SESSION_SET_FLAG, SESSION_SET_MEMBER
 
 
-SESSION_KEY = 'wiki_redis_key'
 logger = logging.getLogger(__name__)
 
 
@@ -68,32 +68,25 @@ def create_wiki_session(request, response):
 
     # Store the set member name in the session so we can delete it when the
     # user logs out:
-    request.session[SESSION_KEY] = name
+    request.session[SESSION_SET_MEMBER] = name
 
 
-def destroy_wiki_session(request, response):
+def destroy_wiki_session(set_member, response):
     """Destroys the session for the external wiki application.
 
     Delete the external cookie.
-    Deletes the key from the Redis set as this entry is no longer valid.
+    Deletes the member from the Redis set as this entry is no longer valid.
 
     """
     response.delete_cookie(settings.WIKI_COOKIE_NAME,
                            domain=settings.WIKI_COOKIE_DOMAIN)
 
-    try:
-        key = request.session[SESSION_KEY]
-    except KeyError:
-        # Hmmm, perhaps user logged in before this application was installed.
-        return
-
-    conn = get_redis_connection()
-    try:
-        conn.zrem(settings.WIKI_REDIS_SET, key)
-    except redis.RedisError:
-        logger.error("Error deleting wiki cookie key")
-
-    del request.session[SESSION_KEY]
+    if set_member:
+        conn = get_redis_connection()
+        try:
+            conn.zrem(settings.WIKI_REDIS_SET, set_member)
+        except redis.RedisError:
+            logger.error("Error deleting wiki cookie set member")
 
 
 class WikiMiddleware(object):
@@ -107,14 +100,13 @@ class WikiMiddleware(object):
 
     def process_response(self, request, response):
 
-        if request.session.get('wiki_set_cookie', False):
-            del request.session['wiki_set_cookie']
+        if request.session.get(SESSION_SET_FLAG, False):
+            del request.session[SESSION_SET_FLAG]
 
             create_wiki_session(request, response)
 
-        elif request.session.get('wiki_delete_cookie', False):
-            del request.session['wiki_delete_cookie']
+        elif hasattr(request, 'wiki_delete_cookie'):
 
-            destroy_wiki_session(request, response)
+            destroy_wiki_session(request.wiki_delete_cookie, response)
 
         return response

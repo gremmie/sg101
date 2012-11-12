@@ -244,6 +244,10 @@ CELERYBEAT_SCHEDULE = {
         "task": "custom_search.tasks.process_search_queue_task",
         "schedule": crontab(minute='*/20'),
     },
+    "expire_wiki_cookies": {
+        "task": "wiki.tasks.expire_cookies",
+        "schedule": crontab(minute=0, hour=2),
+    },
 }
 
 #######################################################################
