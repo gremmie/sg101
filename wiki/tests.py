@@ -13,7 +13,7 @@ from django.conf import settings
 
 from core.services import get_redis_connection
 from wiki.middleware import WikiMiddleware
-from wiki.constants import SESSION_SET_FLAG, SESSION_SET_MEMBER
+from wiki.constants import SESSION_SET_MEMBER
 
 
 class MiddleWareTestCase(TestCase):
@@ -28,17 +28,19 @@ class MiddleWareTestCase(TestCase):
     def tearDown(self):
         self.conn.delete(settings.WIKI_REDIS_SET)
 
-    def test_middleware(self):
-
+    def create_request(self):
         request = self.factory.get('/contact/')
         request.session = {}
         request.user = self.user
+        return request
+
+    def test_middleware(self):
+
+        request = self.create_request()
         response = HttpResponse()
 
-        request.session[SESSION_SET_FLAG] = True
+        request.wiki_set_cookie = True
         response = self.mw.process_response(request, response)
-
-        self.assertIsNone(request.session.get('wiki_set_cookie'))
 
         cookie = response.cookies.get(settings.WIKI_COOKIE_NAME)
         cookie_val = ''
@@ -74,6 +76,7 @@ class MiddleWareTestCase(TestCase):
 
         # test the destroy session logic
 
+        request = self.create_request()
         request.wiki_delete_cookie = member
         response = self.mw.process_response(request, response)
 

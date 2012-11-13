@@ -12,7 +12,7 @@ from django.conf import settings
 import redis
 
 from core.services import get_redis_connection
-from wiki.constants import SESSION_SET_FLAG, SESSION_SET_MEMBER
+from wiki.constants import SESSION_SET_MEMBER
 
 
 logger = logging.getLogger(__name__)
@@ -100,13 +100,9 @@ class WikiMiddleware(object):
 
     def process_response(self, request, response):
 
-        if request.session.get(SESSION_SET_FLAG, False):
-            del request.session[SESSION_SET_FLAG]
-
+        if hasattr(request, 'wiki_set_cookie'):
             create_wiki_session(request, response)
-
         elif hasattr(request, 'wiki_delete_cookie'):
-
             destroy_wiki_session(request.wiki_delete_cookie, response)
 
         return response
