@@ -34,11 +34,12 @@ def logout_callback(sender, request, user, **kwargs):
     object so that the response middleware can delete the wiki's cookie.
 
     """
-    logger.info('User logout: %s', user.username)
+    if user:
+        logger.info('User logout: %s', user.username)
 
-    # Remember what Redis set member to delete by adding an attribute to the
-    # request object:
-    request.wiki_delete_cookie = request.session.get(SESSION_SET_MEMBER)
+        # Remember what Redis set member to delete by adding an attribute to the
+        # request object:
+        request.wiki_delete_cookie = request.session.get(SESSION_SET_MEMBER)
 
 
 user_logged_in.connect(login_callback, dispatch_uid='wiki.signals.login')
