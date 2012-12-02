@@ -91,7 +91,7 @@ def destroy_wiki_session(set_member, response):
 
 class WikiMiddleware(object):
     """
-    Check for flags set in the session to determine when to set or delete an
+    Check for flags on the request object to determine when to set or delete an
     external cookie for the wiki application. When creating a cookie, also
     set an entry in Redis that the wiki application can validate to prevent
     spoofing.
