@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>SurfGuitar101 Store</h2>
+
+{% block status_msg %}{% endblock %}
+
+<h3>SG101 Stickers & Buttons</h3>
+<fieldset><legend>Donate Now and Receive SG101 Stickers and/or Buttons!</legend>
+<p>
+Help support your favorite surf music website by making a donation! In
+return you can receive really boss stickers &amp; buttons designed by <a href="http://www.kustomrama.com/index.php?title=Fred_Lammers">Fred Lammers</a>!
+</p>
+<p>
+<img title="New SG101 Sticker" src="{{ STATIC_URL }}store/stickers_buttons.jpg" alt="SG101 Swag" />
+</p>
+<ul>
+   <li>The stickers are 5.5 x 3 inches</li>
+   <li>The buttons are 1.25 inches across</li>
+</ul>
+<p>Please use the form below to make your donation. Donations are handled by Paypal. If you don't have a Paypal account, don't worry, you can also pay with a major credit card.</p>
+
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+<input type="hidden" name="cmd" value="_s-xclick">
+<input type="hidden" name="hosted_button_id" value="8Q8EJD5PMT3XU">
+<table>
+<tr><td><input type="hidden" name="on0" value="Pick your gift:">Pick your gift:</td></tr><tr><td><select name="os0">
+	<option value="3 Stickers">3 Stickers $5.00 USD</option>
+	<option value="5 Buttons">5 Buttons $5.00 USD</option>
+	<option value="5 Stickers + 5 Buttons">5 Stickers + 5 Buttons $10.00 USD</option>
+</select> </td></tr>
+</table>
+<input type="hidden" name="currency_code" value="USD">
+<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+<img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+</form>
+
+<p>
+<strong>Please note:</strong> Using the above form is the only way to donate
+<strong>and</strong> get some stickers or buttons. If you donate via our
+<a href="http://surfguitar101.com/donations/">other form</a>, I'll assume you
+don't want swag.
+</p>
+<p><strong>Thank you so much for supporting SurfGuitar101.com! Your donations are always greatly appreciated!</strong></p>
+<p>P.S. Please support Fred Lammers for creating this design for us by checking out his <a href="http://www.zazzle.com/fredbossartwork">store</a>.</p>
+</fieldset>
+
+<hr />
+
+<h3>Editor's Choice: Recommended Surf Music Items</h3>
+<p>
+The following items are <strong>not affiliated with SurfGuitar101.com in any
+way</strong>. However the staff at SurfGuitar101 strongly recommends them to
+all surf music fans. Check them out and tell them SG101 sent you!
+</p>
+
+<h4>Pounding Surf</h4>
+<p>
+The <a href="http://www.surfdrums.com/home.html">Pounding Surf</a> is an
+amazing DVD with <strong>two complete features</strong>: <strong>A Drummer's
+Guide to Surf Music</strong>, a colorful history of the surf music genre which
+features great live performances and interviews with key figures, hosted by
+surf guitar pioneer <a href="http://pjmoto.com">Paul Johnson</a> from the
+Belairs. The second part is <strong>The Art of Surf Drumming</strong>, which is
+an instructional video for drummers with tips and lessons from four great
+drummers! 
+</p>
+<p>
+As Paul Johnson says: <em>&ldquo;Please be assured: this package is NOT just for
+drummers — it’s for everyone who loves good music! What started out as just
+a simple idea for a “surf drum instruction video” has ended up as a much
+larger concept...&rdquo;</em>
+</p>
+<p>Watch the trailer now:</p>
+
+<iframe width="480" height="360" src="http://www.youtube-nocookie.com/embed/MddiCnbtc1E?rel=0" frameborder="0" allowfullscreen></iframe>
+
+<p>
+Order now at the <a href="http://www.surfdrums.com/home.html">Pounding Surf website</a>.
+</p>
+
+<hr />
+
+<h4>The Illustrated Dicography of Surf Music 1961-1965</h4>
+<p>
+John Blair, the lead guitar player for legendary surf revival band <strong>Jon
+&amp; The Nightriders</strong>, has put together the definitive guide to the
+hundreds of singles and albums from surf music's golden era of 1961-165. Now in
+its fourth edition, this book features more information, an expanded index, and
+color photos. Foreword by Dick Dale, the King of the Surf Guitar himself!
+</p>
+<p><img src="{{ STATIC_URL }}store/blairs_book.jpg" /></p>
+<p>Order now at <a href="http://johnblair.us">John Blair's website</a>.</p>
+
+<hr />
+
+<h4>Reverb Junkies</h4>
+<p>
+<a href="http://reverbjunkiesfilm.com/">Reverb Junkies</a> is a high-energy feature
+film documenting the current surf music scene in southern California.
+</p>
+<p>
+<a href="http://reverbjunkiesfilm.com/">Reverb Junkies</a> takes you inside this
+little known sub-genre of Rock and Roll. This documentary introduces you to some 
+of the people playing the fastest, hottest instrumental music around and to the
+rabid fans of all ages who are driven to keep the music alive.
+</p>
+<p><em>Editor's note: Some of the people featured in this film are also members
+of SurfGuitar101.com!</em></p>
+<p>View the trailer here:</p>
+
+<iframe width="560" height="315" src="http://www.youtube-nocookie.com/embed/8l72mQbx5zk?rel=0" frameborder="0" allowfullscreen></iframe>
+
+<p>
+Order now from the <a href="http://reverbjunkiesfilm.com/">Reverb Junkies website</a>!
+</p>
+
+<hr />
+
+{% endblock %}
