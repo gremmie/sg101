@@ -39,11 +39,9 @@
 <h2>Welcome to SurfGuitar101!</h2>
 <div class="span-9">
    <div id="home-slideshow">
-   <img src="{{ STATIC_URL }}slideshow/image-1.jpg" alt="Slideshow Image 1" />
-   <img src="{{ STATIC_URL }}slideshow/image-2.jpg" alt="Slideshow Image 2" />
-   <img src="{{ STATIC_URL }}slideshow/image-3.jpg" alt="Slideshow Image 3" />
-   <img src="{{ STATIC_URL }}slideshow/image-4.jpg" alt="Slideshow Image 4" />
-   <img src="{{ STATIC_URL }}slideshow/image-5.jpg" alt="Slideshow Image 5" />
+   {% cache 600 home_slideshow %}
+      {% slideshow_images %}
+   {% endcache %}
    </div>
 </div>
 <div class="span-10 last">

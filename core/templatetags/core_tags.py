@@ -4,6 +4,9 @@ Miscellaneous/utility template tags.
 """
 import collections
 import datetime
+import glob
+import os
+import random
 import urllib
 
 from django import template
@@ -220,3 +223,18 @@ def encode_params(parser, token):
     querydict = bits[1]
     args = [arg[1:-1] for arg in bits[2:]]
     return EncodeParamsNode(querydict, args)
+
+
+@register.inclusion_tag('core/slideshow.html')
+def slideshow_images():
+    """Randomly choose images from a pool for a slideshow."""
+
+    slides_dir = os.path.join(settings.STATIC_ROOT, 'slideshow', '*')
+    slides = [os.path.basename(s) for s in glob.glob(slides_dir)]
+    if len(slides) >= 5:
+        slides = random.sample(slides, 5)
+    slides = ['%sslideshow/%s' % (settings.STATIC_URL, s) for s in slides]
+
+    return {
+        'slides': slides,
+    }
