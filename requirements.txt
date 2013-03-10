@@ -1,4 +1,4 @@
-Django==1.4.1
+Django==1.4.5
 -e git://github.com/waylan/Python-Markdown.git@067d88bc41c7924c9087b724ff5247235243ce6b#egg=Markdown-dev
 MySQL-python==1.2.3
 django-debug-toolbar==0.8.5

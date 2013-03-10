@@ -6,6 +6,8 @@ from sg101.settings.base import *
 
 DEBUG = False
 
+ALLOWED_HOSTS = ['.surfguitar101.com']
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
