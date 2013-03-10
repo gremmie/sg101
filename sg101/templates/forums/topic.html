@@ -2,11 +2,13 @@
 {% load url from future %}
 {% load forum_tags %}
 {% load core_tags %}
+{% load script_tags %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
 {% block custom_meta %}
    {% open_graph_meta_tags topic %}
 {% endblock %}
 {% block custom_js %}
+   {% script_tags 'imagesloaded' %}
    {{ form.media }}
    {% include "forums/jump_box.js" %}
 {% endblock %}

@@ -313,6 +313,9 @@ OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
 # These dictionaries are used by core/templatetags/script_tags, and
 # should also be used by developers when creating form media classes.
 GPP_THIRD_PARTY_JS = {
+    'imagesloaded': [
+        'js/jquery.imagesloaded.min.js',
+    ],
     'jquery': [
         'http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js',
     ],
