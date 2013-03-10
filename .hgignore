@@ -12,6 +12,7 @@ media/banners
 media/downloads
 media/podcast
 media/potd
+media/slideshow
 media/smiley
 celerybeat-schedule
 sg101/xapian_index

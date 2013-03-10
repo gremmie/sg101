@@ -229,11 +229,11 @@ def encode_params(parser, token):
 def slideshow_images():
     """Randomly choose images from a pool for a slideshow."""
 
-    slides_dir = os.path.join(settings.STATIC_ROOT, 'slideshow', '*')
+    slides_dir = os.path.join(settings.MEDIA_ROOT, 'slideshow', '*')
     slides = [os.path.basename(s) for s in glob.glob(slides_dir)]
     if len(slides) >= 5:
         slides = random.sample(slides, 5)
-    slides = ['%sslideshow/%s' % (settings.STATIC_URL, s) for s in slides]
+    slides = ['%sslideshow/%s' % (settings.MEDIA_URL, s) for s in slides]
 
     return {
         'slides': slides,
