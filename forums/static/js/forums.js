@@ -287,14 +287,4 @@ $(document).ready(function() {
    }
 
    initAttachments();
-
-   $('div.forum-post-body img').imagesLoaded(function($images, $proper, $broken) {
-      $proper.each(function(index) {
-         var $pic = $(this);
-         if ($pic.width() > 660) {
-            $pic.css('width', '660px');
-            $pic.wrap($('<a/>').attr('href', $pic.attr('src')).attr('title', 'Click to view full size'));
-         }
-      });
-   });
 });
