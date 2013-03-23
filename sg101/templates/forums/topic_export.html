@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset=utf-8>
+   <title>{{ topic.name }} - SG101 topic #{{ topic.id }}</title>
+</head>
+<body>
+   <h1>{{ topic.name }}</h1>
+   {% for post in posts %}
+      <div>
+         <p><strong>{{ post.user.username }}:</strong></p>
+         <div>{{ post.html|safe }}</div>
+      </div>
+   {% endfor %}
+</body>
+</html>
