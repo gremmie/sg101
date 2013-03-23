@@ -42,17 +42,17 @@ def ts3_query(request):
         return HttpResponseServerError()
 
     response = svr.send_command('serverinfo')
-    if response.response['msg'] != 'ok':
+    if response.response.get('msg') != 'ok':
         return HttpResponseServerError()
     svr_info = response.data[0]
 
     response = svr.send_command('channellist')
-    if response.response['msg'] != 'ok':
+    if response.response.get('msg') != 'ok':
         return HttpResponseServerError()
     channel_list = response.data
 
     response = svr.send_command('clientlist')
-    if response.response['msg'] != 'ok':
+    if response.response.get('msg') != 'ok':
         return HttpResponseServerError()
     client_list = response.data
 
