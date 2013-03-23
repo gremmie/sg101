@@ -5,6 +5,7 @@ A management command to export a forum topic by rendering it through a given
 template.
 
 """
+from __future__ import with_statement
 from optparse import make_option
 import re
 
