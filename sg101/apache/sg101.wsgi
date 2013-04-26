@@ -5,12 +5,12 @@ import site
 
 OFFLINE = False
 
-site.addsitedir('/home/var/django-sites/virtualenvs/sg101/lib/python2.5/site-packages')
+site.addsitedir('/svr/django-sites/sg101/lib/python2.7/site-packages')
 
-sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101')
-sys.path.append('/home/var/django-sites/virtualenvs/sg101/sg101/tools')
+sys.path.append('/svr/django-sites/sg101/sg101')
+sys.path.append('/svr/django-sites/sg101/sg101/tools')
 
-os.environ['PYTHON_EGG_CACHE'] = '/home/var/django-sites/virtualenvs/sg101/eggs'
+os.environ['PYTHON_EGG_CACHE'] = '/svr/django-sites/sg101/eggs'
 os.environ['CELERY_LOADER'] = 'django'
 
 
@@ -24,7 +24,7 @@ def offline_handler(environ, start_response):
         response = open(offline_file).read()
     else:
         response_headers = [('Content-type','text/plain')]
-        response = 'SG101 website maintenance in progress; please check back soon.'
+        response = 'SurfGuitar101.com website maintenance in progress; please check back soon.'
  
     if environ['REQUEST_METHOD'] == 'GET':
         status = '503 Service Unavailable'
