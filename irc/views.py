@@ -1,12 +1,10 @@
-"""views for the IRC application"""
+"""Views for the IRC application"""
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 
-from irc.models import IrcChannel
+from irc.channel import get_users
+
 
 def view(request):
-   nicks = IrcChannel.objects.all()
-   return render_to_response('irc/view.html',
-         {'nicks': nicks},
-         context_instance = RequestContext(request))
+   nicks = get_users()
+   return render(request, 'irc/view.html', {'nicks': nicks})
