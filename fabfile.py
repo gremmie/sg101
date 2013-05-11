@@ -1,7 +1,7 @@
 from fabric.api import cd, run
 
-PYTHON = '/home/var/django-sites/virtualenvs/sg101/bin/python'
-PROJ_DIR = '/home/var/django-sites/virtualenvs/sg101/sg101'
+PYTHON = '/svr/django-sites/sg101/bin/python'
+PROJ_DIR = '/svr/django-sites/sg101/sg101'
 
 def update():
     """
