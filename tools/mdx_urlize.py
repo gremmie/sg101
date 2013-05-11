@@ -1,7 +1,4 @@
-"""
-Taken from: https://github.com/r0wb0t/markdown-urlize
-
-A more liberal autolinker
+"""A more liberal autolinker
 
 Inspired by Django's urlize function.
 
@@ -64,9 +61,9 @@ class UrlizePattern(markdown.inlinepatterns.Pattern):
             else:
                 url = 'http://' + url
     
-        el = markdown.etree.Element("a")
+        el = markdown.util.etree.Element("a")
         el.set('href', url)
-        el.text = markdown.AtomicString(text)
+        el.text = markdown.util.AtomicString(text)
         return el
 
 class UrlizeExtension(markdown.Extension):
