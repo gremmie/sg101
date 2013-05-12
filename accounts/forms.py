@@ -80,7 +80,7 @@ class RegisterForm(forms.Form):
             self._validation_error("A pending user with that email address already exists.", email)
         elif IllegalEmail.objects.filter(email=email).count():
             self._validation_error("That email address is not allowed.", email)
-        
+
         # email is ok
         return email
 
@@ -141,7 +141,8 @@ class RegisterForm(forms.Form):
                 })
 
         subject = 'Registration Confirmation for ' + site.name
-        send_mail(subject, msg, admin_email, [self.cleaned_data['email']])
+        send_mail(subject, msg, admin_email, [self.cleaned_data['email']],
+                defer=False)
         logging.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
                 self.cleaned_data['email'], pending_user.username, self.ip)
 
@@ -150,3 +151,32 @@ class RegisterForm(forms.Form):
     def _validation_error(self, msg, param=None):
         logging.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
         raise forms.ValidationError(msg)
+
+
+class ForgotUsernameForm(forms.Form):
+    """Form used to recover lost username"""
+    email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'text'}))
+
+    def save(self):
+        """Email the username associated with the email address to the user."""
+        email = self.cleaned_data['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # nothing to do; we don't tell the user as this gives away info
+            # about our database
+            return
+
+        site = Site.objects.get_current()
+        admin_email = settings.ADMINS[0][1]
+
+        subject = 'Forgotten username for %s' % site.name
+        msg = render_to_string('accounts/forgot_user_email.txt', {
+            'user': user,
+            'site': site,
+            'admin_email': admin_email,
+            })
+        send_mail(subject, msg, admin_email, [email], defer=False)
+
+        logging.info('Forgotten username email sent to {} <{}>'.format(
+            user.username, email))

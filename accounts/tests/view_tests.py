@@ -6,6 +6,7 @@ import datetime
 
 from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import check_password
 
@@ -252,3 +253,44 @@ class RegistrationTest(TestCase):
         self.assertTrue(datetime.datetime.now() - pending.date_joined <
                 datetime.timedelta(minutes=1))
         self.assertTrue(check_password('my_password', pending.password))
+
+
+class ForgotUsernameTest(TestCase):
+
+    def setUp(self):
+        u = User.objects.create_user('existing_user', 'existing_user@example.com', 'pw')
+        u.save()
+
+    def test_get_query_view(self):
+        """Test a simple get of the username query view"""
+        response = self.client.get(reverse('accounts-username_query'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_username_sent_view(self):
+        """Test a simple get of the username sent view"""
+        response = self.client.get(reverse('accounts-username_sent'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_invalid_email(self):
+        """Test form submittal of unknown email address."""
+        response = self.client.post(reverse('accounts-username_query'), {
+            'email': 'bad_address@example.com',
+            },
+            follow=True)
+
+        self.assertRedirects(response, reverse('accounts-username_sent'))
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_valid_email(self):
+        """Test form submittal of valid email address."""
+        response = self.client.post(reverse('accounts-username_query'), {
+            'email': 'existing_user@example.com',
+            },
+            follow=True)
+
+        self.assertRedirects(response, reverse('accounts-username_sent'))
+
+        self.assertEqual(len(mail.outbox), 1)
+        if len(mail.outbox):
+            self.assertTrue(mail.outbox[0].subject.startswith('Forgotten username'))

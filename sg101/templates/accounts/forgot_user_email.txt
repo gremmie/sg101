@@ -1,0 +1,14 @@
+Hello,
+
+{{ site.name }} received a request to recover a forgotten username for the
+email address {{ user.email }}.
+
+The requested username is {{ user.username }}.
+
+If you did not request this information, simply ignore this email. If you have
+questions, please contact {{ admin_email }}.
+
+Regards,
+
+The staff at {{ site.name }}
+http://{{ site.domain }}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Forgotten Username{% endblock %}
+{% block content %}
+<h2>Forgotten Username</h2>
+<p>
+Forget your username? No problem. Please enter the email address you used to
+register with the site below and we'll send your username to you.
+</p>
+<form action="." method="post">{% csrf_token %}
+   {{ form.as_p }}
+   <p><input type="submit" value="Submit" /></p>
+</form>
+{% endblock %}

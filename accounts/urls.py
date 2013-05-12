@@ -1,6 +1,7 @@
 """urls for the accounts application"""
 from django.conf.urls import patterns, url
 from django.conf import settings
+from django.views.generic import TemplateView
 
 urlpatterns = patterns('accounts.views',
     url(r'^login/ajax/$', 'login_ajax', name='accounts-login_ajax'),
@@ -43,5 +44,11 @@ urlpatterns += patterns('',
         'django.contrib.auth.views.password_reset_complete',
         kwargs={'template_name': 'accounts/password_reset_complete.html'},
         name='accounts-password_reset_success'),
+    url(r'^username/query/$',
+        'accounts.views.username_query',
+        name='accounts-username_query'),
+    url(r'^username/sent/$',
+        TemplateView.as_view(template_name='accounts/username_sent.html'),
+        name='accounts-username_sent'),
 )
 
