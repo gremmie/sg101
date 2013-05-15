@@ -64,7 +64,10 @@ class DownloadBase(models.Model):
         abstract = True
 
     def size(self):
-        return filesizeformat(self.file.size)
+        try:
+            return filesizeformat(self.file.size)
+        except OSError:
+            return '?'
 
 
 class PendingDownload(DownloadBase):
