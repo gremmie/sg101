@@ -2,15 +2,32 @@
 This file contains the automatic admin site definitions for the downloads models.
 """
 import datetime
+import os.path
 
 from django.contrib import admin
-from django.conf import settings
 
 from downloads.models import PendingDownload
 from downloads.models import Download
 from downloads.models import Category
 from downloads.models import AllowedExtension
 from downloads.models import VoteRecord
+# TODO: In Django 1.5 this will be available in django.utils.text:
+from django.template.defaultfilters import slugify
+
+
+def rename_download(dl):
+    """Rename the download's file to a slugified version of the title."""
+
+    head, tail = os.path.split(dl.file.name)
+    ext = os.path.splitext(tail)[1]
+    slug_name = slugify(dl.title) + ext
+    new_name = os.path.join(head, slug_name)
+
+    head, tail = os.path.split(dl.file.path)
+    new_path = os.path.join(head, slug_name)
+
+    os.rename(dl.file.path, new_path)
+    dl.file.name = new_name
 
 
 class CategoryAdmin(admin.ModelAdmin):
@@ -30,6 +47,7 @@ class PendingDownloadAdmin(admin.ModelAdmin):
 
     def approve_downloads(self, request, qs):
         for pending_dl in qs:
+            # make a new Download from the existing PendingDownload
             dl = Download(
                     title=pending_dl.title,
                     category=pending_dl.category,
@@ -43,6 +61,7 @@ class PendingDownloadAdmin(admin.ModelAdmin):
                     average_score=0.0,
                     total_votes=0,
                     is_public=True)
+            rename_download(dl)
             dl.save()
 
             # If we don't do this, the actual file will be deleted when
