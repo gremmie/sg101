@@ -19,22 +19,23 @@ class BadgeOwnerInline(admin.TabularInline):
 
 
 class UserProfileAdmin(admin.ModelAdmin):
-    search_fields = ('user__username', 'user__first_name', 'user__last_name',
-            'user__email')
-    exclude = ('profile_html', 'signature_html')
-    list_display = ('__unicode__', 'user_is_active', 'get_status_display', 'status_date')
-    readonly_fields = ('status', 'status_date', 'update_date')
-    list_filter = ('status', )
+    search_fields = ['user__username', 'user__first_name', 'user__last_name',
+            'user__email']
+    exclude = ['profile_html', 'signature_html']
+    list_display = ['__unicode__', 'user_is_active', 'get_status_display', 'status_date']
+    readonly_fields = ['status', 'status_date', 'update_date']
+    list_filter = ['status', ]
     date_hierarchy = 'status_date'
-    inlines = (BadgeOwnerInline, )
-    actions = (
+    inlines = [BadgeOwnerInline, ]
+    actions = [
         'mark_active',
         'mark_resigned',
         'mark_removed',
         'mark_suspended',
         'mark_spammer',
         'mark_stranger',
-    )
+        'unsubscribe_forums',
+    ]
 
     def get_status_display(self, obj):
         return obj.get_status_display()
@@ -108,6 +109,15 @@ class UserProfileAdmin(admin.ModelAdmin):
         """
         self.mark_user_status(request, qs, bio.models.STA_STRANGER)
     mark_stranger.short_description = "Mark selected users as strangers"
+
+    def unsubscribe_forums(self, request, qs):
+        """Delete users forum topic subscriptions."""
+        for profile in qs:
+            profile.user.subscriptions.clear()
+
+        self.message_user(request, "%s subscription(s) deleted." % qs.count())
+
+    unsubscribe_forums.short_description = "Delete users' forum subscriptions"
 
 
 class UserProfileFlagAdmin(admin.ModelAdmin):
