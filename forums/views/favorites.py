@@ -11,6 +11,7 @@ from django.http import HttpResponseRedirect
 from django.http import HttpResponseForbidden
 from django.http import Http404
 
+from django.core.paginator import InvalidPage
 from core.paginator import DiggPaginator
 from forums.models import Topic
 import forums.permissions as perms
