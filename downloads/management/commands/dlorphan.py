@@ -27,17 +27,12 @@ class Command(NoArgsCommand):
         orphans = set()
         missing_pending = []
         missing_dls = []
-        empty_dirs = []
 
         dls_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
         # find the set of all files in the downloads area
         for root, dirs, files in os.walk(dls_dir, followlinks=True):
             for name in files:
                 orphans.add(unicode(os.path.join(root, name), 'utf-8'))
-
-            # check for empty directories
-            if not len(dirs) and not len(files):
-                empty_dirs.append(root)
 
         # examine the pending downloads:
         for dl in PendingDownload.objects.iterator():
@@ -53,31 +48,36 @@ class Command(NoArgsCommand):
             except KeyError:
                 missing_dls.append(dl)
 
-        if orphans:
-            print "Orphan files:"
+        if orphans and delete:
+            for path in orphans:
+                self.stdout.write("Deleting: {}\n".format(path))
+                os.remove(path)
+        elif orphans:
+            self.stdout.write("Orphan files:\n")
             for orphan in orphans:
-                print orphan
-
-        if empty_dirs:
-            print "Empty directories:"
-            for d in empty_dirs:
-                print d
+                self.stdout.write("{}\n".format(orphan))
 
         if missing_pending:
-            print "PendingDownloads with missing files:"
+            self.stdout.write("PendingDownloads with missing files:\n")
             for dl in missing_pending:
-                print dl
+                self.stdout.write("{}\n".format(dl))
 
         if missing_dls:
-            print "Downloads with missing files:"
+            self.stdout.write("Downloads with missing files:\n")
             for dl in missing_dls:
-                print dl
+                self.stdout.write("{}\n".format(dl))
 
-        if delete:
-            for path in orphans:
-                print "Deleting: {}".format(path)
-                os.remove(path)
+        empty_dirs = []
+        # check for empty directories after deletions
+        for root, dirs, files in os.walk(dls_dir, followlinks=True):
+            if not len(dirs) and not len(files):
+                empty_dirs.append(root)
 
+        if empty_dirs and delete:
             for path in empty_dirs:
-                print "Deleting: {}".format(path)
+                self.stdout.write("Deleting empty dir: {}\n".format(path))
                 os.removedirs(path)
+        elif empty_dirs:
+            self.stdout.write("Empty directories:\n")
+            for d in empty_dirs:
+                self.stdout.write("{}\n".format(d))
