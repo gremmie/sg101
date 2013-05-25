@@ -1,8 +1,6 @@
 """
 This file contains the automatic admin site definitions for the News models.
 """
-import datetime
-
 from django.contrib import admin
 from django.conf import settings
 
@@ -10,20 +8,22 @@ from news.models import PendingStory
 from news.models import Story
 from news.models import Category
 
+import ftfy
+
 
 class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ("title", )}
-    list_display = ('title', 'slug')
+    list_display = ['title', 'slug']
 
 
 class PendingStoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'date_submitted', 'submitter')
-    list_filter = ('date_submitted', )
-    search_fields = ('title', 'short_text', 'long_text')
+    list_display = ['title', 'date_submitted', 'submitter']
+    list_filter = ['date_submitted']
+    search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
-    actions = ('approve_story', )
-    readonly_fields = ('update_date', )
-    raw_id_fields = ('submitter', )
+    actions = ['approve_story']
+    readonly_fields = ['update_date']
+    raw_id_fields = ['submitter']
 
     def approve_story(self, request, qs):
         for pending_story in qs:
@@ -53,12 +53,26 @@ class PendingStoryAdmin(admin.ModelAdmin):
 
 
 class StoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'date_submitted', 'submitter', 'category')
-    list_filter = ('date_submitted', 'category')
-    search_fields = ('title', 'short_text', 'long_text')
+    list_display = ['title', 'date_submitted', 'submitter', 'category']
+    list_filter = ['date_submitted', 'category']
+    search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
-    readonly_fields = ('update_date', )
-    raw_id_fields = ('submitter', )
+    readonly_fields = ['update_date']
+    raw_id_fields = ['submitter']
+    actions = ['fix_text']
+
+    def fix_text(self, request, qs):
+        for story in qs:
+            story.title = ftfy.fix_text(story.title)
+            story.short_text = ftfy.fix_text(story.short_text)
+            story.long_text = ftfy.fix_text(story.long_text)
+            story.save()
+
+        count = len(qs)
+        msg = "1 story" if count == 1 else "%d stories" % count
+        self.message_user(request, "Text fixed on {}".format(msg))
+
+    fix_text.short_description = "Fix text on selected stories"
 
     class Media:
         js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']
