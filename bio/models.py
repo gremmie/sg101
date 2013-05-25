@@ -64,10 +64,14 @@ class Badge(models.Model):
 
 
 def avatar_file_path(instance, filename):
+    # The avatar's name is the username plus the current time plus the file
+    # extension. The time is used to bust browser caches.
+    # Get extension, if it exists:
     ext = os.path.splitext(filename)[1]
     if not ext:
         ext = '.jpg'
-    avatar_name = instance.user.username + ext
+    avatar_name = "{}{}{}".format(instance.user.username,
+            datetime.datetime.utcnow().strftime('%S%f'), ext)
     return os.path.join(settings.AVATAR_DIR, 'users', avatar_name)
 
 
