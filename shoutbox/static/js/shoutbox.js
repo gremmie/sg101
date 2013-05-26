@@ -23,6 +23,15 @@ $(document).ready(function() {
        }
    });
 
+   // social bookmarking pop-up support
+   $('.social-sharing').delegate('a', 'click', function(e) {
+      if ($(window).width() > 700)
+      {
+         e.preventDefault();
+         window.open(this.href,'share-this','height=300,width=500,status=no,toolbar=no');
+      }
+   });
+
    $("html").bind("ajaxStart", function() {
       $(this).addClass('busy');
    }).bind("ajaxStop", function() {

@@ -28,7 +28,6 @@
 //]]>
 </script>
 {% endblock %}
-{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block podcast-content %}
 <div class="breadcrumbs">
    <a href="{% url 'podcast.views.index' %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
@@ -94,4 +93,3 @@
 </ul>
 {% social_sharing podcast.search_title podcast.get_absolute_url %}
 {% endblock %}
-{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}

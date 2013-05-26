@@ -1,13 +1,13 @@
 <div class="social-sharing">
 <ul class="no-bullet-inline-block">
-<li style="vertical-align:top">
-<a href="https://twitter.com/share" class="twitter-share-button" data-text="{{ title }}" data-url="{{ url }}" data-count="horizontal" data-via="surfguitar101">Tweet</a>
+<li style="vertical-align:top; margin-right:1.5em">
+<a href="https://twitter.com/intent/tweet?text={{ title|urlencode }}&amp;url={{ url|urlencode }}&amp;via=SurfGuitar101"><img src="{{ STATIC_URL }}icons/button-twitter.png" alt="Tweet"/></a>
+</li>
+<li style="vertical-align:top; margin-right:1.5em">
+<a href="https://plus.google.com/share?url={{ url|urlencode }}"><img src="{{ STATIC_URL }}icons/button-googleplus.png" alt="Share on Google Plus"/></a>
 </li>
 <li style="vertical-align:top">
-<div class="g-plusone" data-size="medium" data-href="{{ url }}"></div>
-</li>
-<li style="vertical-align:top">
-<div class="fb-like" data-href="{{ url }}" data-send="true" data-layout="button_count" data-width="450" data-show-faces="false"></div>
+<a href="https://www.facebook.com/sharer/sharer.php?u={{ url|urlencode }}"><img src="{{ STATIC_URL }}icons/button-facebook.png" alt="Share on Facebook"/></a>
 </li>
 </ul>
 </div>

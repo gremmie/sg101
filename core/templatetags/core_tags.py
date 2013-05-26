@@ -79,6 +79,7 @@ def social_sharing(title, url):
     return {
         'title': title,
         'url': url,
+        'STATIC_URL': settings.STATIC_URL,
     }
 
 

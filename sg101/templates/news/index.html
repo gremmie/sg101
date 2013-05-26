@@ -4,7 +4,6 @@
 {% block news_css %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
 {% endblock %}
-{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block news_content %}
 <h3>{{ title }}</h3>
 
@@ -20,4 +19,3 @@
 {% endif %}
 
 {% endblock %}
-{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}

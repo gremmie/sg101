@@ -13,7 +13,6 @@
 <script type="text/javascript" src="{{ STATIC_URL }}js/contests/contests.js"></script>
 {% endblock %}
 
-{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block content %}
 <h2><a href="{% url 'contests-index' %}">Contests</a></h2>
 <h3><a href="{% url 'contests-contest' slug=contest.slug %}">{{ contest.title }}</a></h3>
@@ -64,4 +63,3 @@ Please check back later.
 <hr />
 {% social_sharing contest.title contest.get_absolute_url %}
 {% endblock %}
-{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}

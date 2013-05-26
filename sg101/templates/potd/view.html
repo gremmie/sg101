@@ -16,7 +16,6 @@
 {% script_tags "markitup jquery-ui" %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
 {% endblock %}
-{% block begin_body %}{% include 'core/social_sharing_begin.html' %}{% endblock %}
 {% block content %}
 {% if is_current %}
 <h2>Photo Of The Day</h2>
@@ -56,4 +55,3 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 <p>We're sorry, there doesn't seem to be a photo of the day right now.</p>
 {% endif %}
 {% endblock %}
-{% block end_body %}{% include 'core/social_sharing_end.html' %}{% endblock %}
