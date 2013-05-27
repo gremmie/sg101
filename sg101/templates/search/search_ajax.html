@@ -1,0 +1,23 @@
+{% load core_tags %}
+<div id="quick-search-results">
+<fieldset><legend>Quick search results</legend>
+{% if page.object_list %}
+<ul>
+   {% for result in page.object_list %}
+      <li><a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a></li>
+   {% endfor %}
+</ul>
+
+   {% if page.paginator.num_pages > 1 %}
+   <p>
+   First page of results shown. There are {{ page.paginator.num_pages }} pages of results total.
+   For more results, visit the
+   <a href="/search/?{% encode_params request.GET 'q' 'models' %}">search page</a>.
+   </p>
+   {% endif %}
+   <p><input type="button" id="hide-search-results" value="Hide" /></p>
+{% else %}
+   <p>No results found for <em>{{ query }}</em>.</p>
+</fieldset>
+</div>
+{% endif %}

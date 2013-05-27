@@ -2,7 +2,29 @@
 <form action="." method="post" id="forums_post_form">{% csrf_token %}
 <fieldset>
 <legend>{{ legend_text }}</legend>
+
+{% if legend_text == "New Topic" %}
+
+<p><label for="id_name">{{ form.name.label }}:</label> {{ form.name.errors }}{{ form.name }}
+<input type="button" id="search_topics" value="Quick Search" title="Search for similar topics" />
+<div id="topic_search_results">
+</div>
+<div id="topic-search-results">
+<img id="search-busy-icon" src="{{ STATIC_URL }}icons/ajax_busy.gif" alt="Please wait" style="display:none;"/>
+</div>
+</p>
+<p>{{ form.body.errors }}{{ form.body }}</p>
+{% if form.sticky %}
+<p><label for="id_sticky">{{ form.sticky.label }}:</label> {{ form.sticky.errors }}{{ form.sticky }}</p>
+{% endif %}
+{% if form.locked %}
+<p><label for="id_locked">{{ form.locked.label }}:</label> {{ form.locked.errors }}{{ form.locked }}</p>
+{% endif %}
+
+{% else %}
 {{ form.as_p }}
+{% endif %}
+
 {% comment_dialogs %}
 <input type="submit" value="{{ submit_value }}" {% if is_ajax %}id="forums-reply-post"{% endif %} />
 

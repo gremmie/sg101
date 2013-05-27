@@ -91,6 +91,10 @@ urlpatterns += patterns('haystack.views',
     url(r'^search/$',
         search_view_factory(form_class=CustomModelSearchForm, load_all=True),
         name='haystack_search'),
+    url(r'^search/ajax/$',
+        search_view_factory(template='search/search_ajax.html',
+                            form_class=CustomModelSearchForm, load_all=True),
+        name='haystack_search_ajax'),
 )
 
 # For serving media files in development only:

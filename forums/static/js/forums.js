@@ -2,7 +2,6 @@ $(document).ready(function() {
    var postText = $('#id_body');
    var postButton = $('#forums-reply-post');
    postButton.click(function () {
-      var text = $.trim(postText.val());
       $(this).attr('disabled', 'disabled').val('Posting reply...');
 
       var attachments = new Array()
@@ -11,7 +10,7 @@ $(document).ready(function() {
       });
 
       $.ajax({
-         url: '/forums/quick-reply/', 
+         url: '/forums/quick-reply/',
          type: 'POST',
          data: {
             body : postText.val(),
@@ -33,7 +32,7 @@ $(document).ready(function() {
             initAttachments();
          },
          error: function (xhr, textStatus, ex) {
-            alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+            alert('Oops, an error occurred. ' + xhr.statusText + ' - ' +
                xhr.responseText);
             postButton.removeAttr('disabled').val('Submit Reply');
             initAttachments();
@@ -52,7 +51,7 @@ $(document).ready(function() {
              $.ajax({
                url: '/forums/flag-post/',
                type: 'POST',
-               data: {id: id}, 
+               data: {id: id},
                dataType: 'text',
                success: function (response, textStatus) {
                   alert(response);
@@ -73,7 +72,7 @@ $(document).ready(function() {
              $.ajax({
                url: '/forums/delete-post/',
                type: 'POST',
-               data: {id: id}, 
+               data: {id: id},
                dataType: 'text',
                success: function (response, textStatus) {
                   alert(response);
@@ -101,7 +100,7 @@ $(document).ready(function() {
       $('#attach-another').remove();
    }
 
-   function processEmbeds(data, textStatus) 
+   function processEmbeds(data, textStatus)
    {
       vidDiv.find('img').remove();
       $.each(data, function(index, value) {
@@ -138,7 +137,7 @@ $(document).ready(function() {
          post_id = post_input.val();
          vidDiv.prepend('<img src="/static/icons/ajax_busy.gif" alt="Busy" />');
          $.ajax({
-            url: '/forums/fetch_attachments/', 
+            url: '/forums/fetch_attachments/',
             type: 'GET',
             data: {
                pid : post_id
@@ -147,7 +146,7 @@ $(document).ready(function() {
             success: processEmbeds,
             error: function (xhr, textStatus, ex) {
                vidDiv.find('img').remove();
-               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' +
                   xhr.responseText);
             }
          });
@@ -161,7 +160,7 @@ $(document).ready(function() {
          });
          attachments.remove();
          $.ajax({
-            url: '/oembed/fetch_saved/', 
+            url: '/oembed/fetch_saved/',
             type: 'GET',
             data: {
                embeds: embeds
@@ -171,7 +170,7 @@ $(document).ready(function() {
             success: processEmbeds,
             error: function (xhr, textStatus, ex) {
                vidDiv.find('img').remove();
-               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' +
                   xhr.responseText);
             }
          });
@@ -245,7 +244,7 @@ $(document).ready(function() {
          var button = $(this);
          button.attr('disabled', 'disabled');
          $.ajax({
-            url: '/oembed/fetch/', 
+            url: '/oembed/fetch/',
             type: 'POST',
             data: {
                q : vidText.val()
@@ -267,7 +266,7 @@ $(document).ready(function() {
                });
             },
             error: function (xhr, textStatus, ex) {
-               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
+               alert('Oops, an error occurred. ' + xhr.statusText + ' - ' +
                   xhr.responseText);
                button.removeAttr('disabled');
             }
@@ -287,4 +286,43 @@ $(document).ready(function() {
    }
 
    initAttachments();
+
+   var topicTitle = $('#id_name');
+   var topicSearchButton = $('#search_topics');
+   var searchBusy = $('#search-busy-icon');
+   topicSearchButton.click(function () {
+      var text = $.trim(topicTitle.val());
+      if (!text) return;
+
+      $(this).attr('disabled', 'disabled');
+      $('#quick-search-results').remove();
+      searchBusy.toggle();
+
+      $.ajax({
+         url: '/search/ajax/',
+         type: 'GET',
+         data: {
+            q : text,
+            models : 'forums.topic'
+         },
+         traditional: true,
+         dataType: 'html',
+         success: function (data, textStatus) {
+            topicSearchButton.removeAttr('disabled');
+            searchBusy.hide();
+            searchBusy.after(data);
+            $('#hide-search-results').click(function() {
+               var results = $('#quick-search-results');
+               results.fadeOut(1500, function() { results.remove(); });
+            });
+         },
+         error: function (xhr, textStatus, ex) {
+            topicSearchButton.removeAttr('disabled');
+            searchBusy.hide();
+            alert('Oops, an error occurred. ' + xhr.statusText + ' - ' +
+               xhr.responseText);
+         }
+         });
+      return false;
+   });
 });

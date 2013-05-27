@@ -68,7 +68,7 @@ class NewTopicForm(forms.Form):
     locked.
     """
     name = forms.CharField(label='Subject', max_length=255,
-            widget=forms.TextInput(attrs={'size': 64}))
+            widget=forms.TextInput(attrs={'style': 'width:70%'}))
     body = forms.CharField(label='', required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     user = None
