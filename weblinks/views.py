@@ -1,8 +1,7 @@
 """
 Views for the weblinks application.
-"""
 
-import datetime
+"""
 import random
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -13,7 +12,6 @@ from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.core.urlresolvers import reverse
-from django.db.models import Q
 from django.http import Http404
 from django.views.decorators.http import require_POST
 
@@ -38,7 +36,7 @@ def link_index(request):
    categories = Category.objects.all()
    total_links = Link.public_objects.all().count()
    return render_to_response('weblinks/index.html', {
-      'categories': categories, 
+      'categories': categories,
       'total_links': total_links,
       },
       context_instance = RequestContext(request))
@@ -55,7 +53,7 @@ def new_links(request):
       raise Http404
 
    return render_to_response('weblinks/link_summary.html', {
-      'page': the_page, 
+      'page': the_page,
       'title': 'Newest Links',
       },
       context_instance = RequestContext(request))
@@ -71,7 +69,7 @@ def popular_links(request):
    except InvalidPage:
       raise Http404
    return render_to_response('weblinks/link_summary.html', {
-      'page': the_page, 
+      'page': the_page,
       'title': 'Popular Links',
       },
       context_instance = RequestContext(request))
@@ -112,7 +110,7 @@ def add_thanks(request):
 # Maps URL component to database field name for the links table:
 
 LINK_FIELD_MAP = {
-   'title': 'title', 
+   'title': 'title',
    'date': '-date_added',
    'hits': '-hits'
 }
@@ -140,8 +138,8 @@ def view_links(request, slug, sort='title'):
    return render_to_response('weblinks/view_links.html', {
       's' : sort,
       'category' : cat,
-      'page' : the_page, 
-      }, 
+      'page' : the_page,
+      },
       context_instance = RequestContext(request))
 
 #######################################################################
@@ -185,8 +183,8 @@ def report_link(request, link_id):
         return HttpResponseBadRequest("That link doesn't exist.")
 
     FlaggedLink.objects.create(link, request.user)
-    return HttpResponse("The link was reported. A moderator will review the " \
-            "link shortly. Thanks for helping to improve the content on " \
+    return HttpResponse("The link was reported. A moderator will review the "
+            "link shortly. Thanks for helping to improve the content on "
             "this site.")
 
 #######################################################################
@@ -194,6 +192,6 @@ def report_link(request, link_id):
 def link_detail(request, id):
     link = get_object_or_404(Link, pk=id)
     return render_to_response('weblinks/link_detail.html', {
-        'link': link, 
+        'link': link,
         },
         context_instance = RequestContext(request))

@@ -111,7 +111,7 @@ class FlaggedLink(models.Model):
     link = models.ForeignKey(Link)
     user = models.ForeignKey(User)
     date_flagged = models.DateField(auto_now_add = True)
-    approved = models.BooleanField(default = False, 
+    approved = models.BooleanField(default = False,
         help_text = 'Check this and save to remove the referenced link from the database')
 
     objects = FlaggedLinkManager()

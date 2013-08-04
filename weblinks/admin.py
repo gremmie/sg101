@@ -9,16 +9,16 @@ from weblinks.models import FlaggedLink
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'slug', 'description', 'count')
-    prepopulated_fields = {'slug': ('title', )}
-    readonly_fields = ('count', )
+    list_display = ['title', 'slug', 'description', 'count']
+    prepopulated_fields = {'slug': ['title', ]}
+    readonly_fields = ['count']
 
 
 class PendingLinkAdmin(admin.ModelAdmin):
-    list_display = ('title', 'url', 'user', 'category', 'date_added')
-    raw_id_fields = ('user', )
-    actions = ('approve_links', )
-    readonly_fields = ('update_date', )
+    list_display = ['title', 'url', 'user', 'category', 'date_added']
+    raw_id_fields = ['user']
+    actions = ['approve_links']
+    readonly_fields = ['update_date']
 
     def approve_links(self, request, qs):
         for pending_link in qs:
@@ -41,20 +41,35 @@ class PendingLinkAdmin(admin.ModelAdmin):
 
 
 class LinkAdmin(admin.ModelAdmin):
-    list_display = ('title', 'url', 'category', 'date_added', 'hits', 'is_public')
-    list_filter = ('date_added', 'is_public', 'category')
+    list_display = ['title', 'url', 'category', 'date_added', 'hits', 'is_public']
+    list_filter = ['date_added', 'is_public', 'category']
     date_hierarchy = 'date_added'
-    ordering = ('-date_added', )
-    search_fields = ('title', 'description', 'url', 'user__username')
-    raw_id_fields = ('user', )
-    readonly_fields = ('update_date', )
+    ordering = ['-date_added']
+    search_fields = ['title', 'description', 'url', 'user__username']
+    raw_id_fields = ['user']
+    readonly_fields = ['update_date']
     save_on_top = True
 
 
 class FlaggedLinkAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'url', 'get_link_url', 'user', 'date_flagged')
+    list_display = ['__unicode__', 'url', 'get_link_url', 'user', 'date_flagged']
     date_hierarchy = 'date_flagged'
-    raw_id_fields = ('user', )
+    raw_id_fields = ['user']
+
+    actions = ['hide_links']
+
+    def hide_links(self, request, qs):
+        for flagged_link in qs:
+            flagged_link.link.is_public = False
+            flagged_link.link.save()
+
+        count = len(qs)
+        qs.delete()
+        msg = "1 link" if count == 1 else "%d links" % count
+        self.message_user(request, "%s hidden." % msg)
+
+    hide_links.short_description = "Accept flags & hide links"
+
 
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(PendingLink, PendingLinkAdmin)
