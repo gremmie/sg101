@@ -1,5 +1,7 @@
 syntax: glob
 *.log
+*.log.?
+*.log.?.gz
 *.pyc
 *.swp
 secrets.json
