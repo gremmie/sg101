@@ -1,12 +1,12 @@
 """Haystack search index for the downloads application."""
-from haystack.indexes import *
+from haystack.indexes import CharField, DateTimeField
 from haystack import site
-from custom_search.indexes import CondQueuedSearchIndex
+from custom_search.indexes import PublicQueuedSearchIndex
 
 from downloads.models import Download
 
 
-class DownloadIndex(CondQueuedSearchIndex):
+class DownloadIndex(PublicQueuedSearchIndex):
     text = CharField(document=True, use_template=True)
     author = CharField(model_attr='user')
     pub_date = DateTimeField(model_attr='date_added')
@@ -16,8 +16,5 @@ class DownloadIndex(CondQueuedSearchIndex):
 
     def get_updated_field(self):
         return 'update_date'
-
-    def can_index(self, instance):
-        return instance.is_public
 
 site.register(Download, DownloadIndex)
