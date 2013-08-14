@@ -6,6 +6,7 @@ from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 
 from haystack.views import search_view_factory
+from haystack.query import SearchQuerySet
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
@@ -87,13 +88,20 @@ urlpatterns = patterns('',
 )
 
 # Haystack search views
+
+sqs = SearchQuerySet().order_by('-pub_date')
+
 urlpatterns += patterns('haystack.views',
     url(r'^search/$',
-        search_view_factory(form_class=CustomModelSearchForm, load_all=True),
+        search_view_factory(form_class=CustomModelSearchForm,
+                            searchqueryset=sqs,
+                            load_all=True),
         name='haystack_search'),
     url(r'^search/ajax/$',
         search_view_factory(template='search/search_ajax.html',
-                            form_class=CustomModelSearchForm, load_all=True),
+                            form_class=CustomModelSearchForm,
+                            searchqueryset=sqs,
+                            load_all=True),
         name='haystack_search_ajax'),
 )
 
