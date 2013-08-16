@@ -3,10 +3,10 @@ This module contains decorators for the antispam application.
 
 """
 from datetime import timedelta
+import json
 from functools import wraps
 
 from django.shortcuts import render
-from django.utils import simplejson
 
 from antispam.rate_limit import RateLimiter, RateLimiterUnavailable
 
@@ -41,7 +41,7 @@ def rate_limit(count=10, interval=timedelta(minutes=1),
                     success = (response and response.has_header('location') and
                             response.status_code == 302)
                 elif response:
-                    json_resp = simplejson.loads(response.content)
+                    json_resp = json.loads(response.content)
                     success = json_resp['success']
 
                 if not success:

@@ -51,11 +51,11 @@ response cycle.
 # while with MySQL InnoDb.
 #
 import datetime
+import json
 import logging
 import time
 
 from django.dispatch import receiver
-from django.utils import simplejson
 from django.template.loader import render_to_string
 import redis
 
@@ -237,11 +237,11 @@ def _update_latest_topics(conn, post):
         'date': topic_score,
         'url': post.topic.get_latest_post_url()
     }
-    json = simplejson.dumps(topic_content)
+    topic_json = json.dumps(topic_content)
     key = UPDATED_TOPIC_KEY % topic_id
 
     pipeline = conn.pipeline()
-    pipeline.set(key, json)
+    pipeline.set(key, topic_json)
     pipeline.zadd(UPDATED_TOPICS_SET_KEY, topic_score, topic_id)
     pipeline.zcard(UPDATED_TOPICS_SET_KEY)
     results = pipeline.execute()
@@ -288,7 +288,7 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
 
     posts = []
     for raw_post in raw_posts:
-        post = simplejson.loads(raw_post)
+        post = json.loads(raw_post)
 
         # fix up the pubdate; turn it back into a datetime object
         post['pubdate'] = datetime.datetime.fromtimestamp(post['pubdate'])
@@ -350,20 +350,20 @@ def process_updated_topic(topic_id):
     """
     conn = get_redis_connection()
     key = UPDATED_TOPIC_KEY % topic_id
-    json = conn.get(key)
-    if json is not None:
+    topic_json = conn.get(key)
+    if topic_json is not None:
         try:
             topic = Topic.objects.get(pk=topic_id)
         except Topic.DoesNotExist:
             logger.warning("topic %d does not exist", topic_id)
             return
 
-        topic_dict = simplejson.loads(json)
+        topic_dict = json.loads(topic_json)
 
         if topic.name != topic_dict['title']:
             topic_dict['title'] = topic.name
-            json = simplejson.dumps(topic_dict)
-            conn.set(key, json)
+            topic_json = json.dumps(topic_dict)
+            conn.set(key, topic_json)
 
 
 def get_stats():
@@ -421,7 +421,7 @@ def get_latest_topics(num):
 
     topics = []
     for s in json_list:
-        item = simplejson.loads(s)
+        item = json.loads(s)
         item['date'] = datetime.datetime.fromtimestamp(item['date'])
         topics.append(item)
 
@@ -477,7 +477,7 @@ def _serialize_post(post):
         'url': post.get_absolute_url()
     }
 
-    return simplejson.dumps(post_content)
+    return json.dumps(post_content)
 
 
 # Down here to avoid a circular import

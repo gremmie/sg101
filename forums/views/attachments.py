@@ -1,11 +1,13 @@
 """
 This module contains views for working with post attachments.
+
 """
+import json
+
 from django.http import HttpResponse
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
-import django.utils.simplejson as json
 
 from forums.models import Post
 

@@ -9,10 +9,11 @@ of SG101.
 Current we provide a TeamSpeak 3 status view for the PhantomBrigade.us website.
 
 """
+import json
+
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponse, HttpResponseServerError
-from django.utils import simplejson
 import ts3
 
 
@@ -94,8 +95,8 @@ def ts3_query(request):
             channel['children'].append(node)
 
     tree = [channels[0]]
-    json = simplejson.dumps(tree)
+    status = json.dumps(tree)
 
-    cache.set(CACHE_KEY, json, CACHE_TIMEOUT)
+    cache.set(CACHE_KEY, status, CACHE_TIMEOUT)
 
-    return HttpResponse(json, content_type='application/json')
+    return HttpResponse(status, content_type='application/json')

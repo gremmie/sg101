@@ -2,10 +2,11 @@
 Views for the contests application.
 
 """
+import json
+
 from django.http import (HttpResponse, HttpResponseForbidden,
         HttpResponseBadRequest)
 from django.shortcuts import get_object_or_404
-from django.utils import simplejson
 from django.views.decorators.http import require_POST
 
 from contests.models import Contest
@@ -42,5 +43,5 @@ def enter(request):
         result['entered'] = True
         result['msg'] = 'You have been entered into this contest!'
 
-    json = simplejson.dumps(result)
-    return HttpResponse(json, content_type='application/json')
+    json_result = json.dumps(result)
+    return HttpResponse(json_result, content_type='application/json')

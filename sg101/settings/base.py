@@ -1,9 +1,9 @@
 # Base Django settings for the SG101 website.
 
+import json
 import os
 from decimal import Decimal
 
-import django.utils.simplejson as json
 from django.contrib.messages import constants as message_constants
 import djcelery
 from celery.schedules import crontab

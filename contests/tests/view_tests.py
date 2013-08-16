@@ -3,10 +3,11 @@ View tests for the contests application.
 
 """
 import datetime
+import json
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.utils import simplejson
 
 from contests.models import Contest
 
@@ -81,8 +82,8 @@ class ContestEntryTestCase(TestCase):
                 HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, 200)
 
-        json = simplejson.loads(response.content)
-        self.assertTrue(json['entered'])
+        c = json.loads(response.content)
+        self.assertTrue(c['entered'])
 
         contest = Contest.objects.get(pk=self.contest_id)
         self.assertTrue(self.user in contest.contestants.all())
@@ -92,8 +93,8 @@ class ContestEntryTestCase(TestCase):
                 HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, 200)
 
-        json = simplejson.loads(response.content)
-        self.failIf(json['entered'])
+        c = json.loads(response.content)
+        self.failIf(c['entered'])
 
         contest = Contest.objects.get(pk=self.contest_id)
         self.failIf(self.user in contest.contestants.all())

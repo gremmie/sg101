@@ -2,13 +2,13 @@
 Views for the podcast application.
 
 """
+import json
 import os.path
 from urlparse import urlparse
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.shortcuts import get_object_or_404
-import django.utils.simplejson as json
 
 from podcast.models import Channel
 from podcast.models import Item

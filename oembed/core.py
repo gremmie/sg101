@@ -1,7 +1,8 @@
 """
 This module contains core functionality for the oembed application.
+
 """
-from __future__ import with_statement
+import json
 import urllib
 import urllib2
 import gzip
@@ -10,7 +11,6 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-import django.utils.simplejson as json
 
 
 USER_AGENT = 'gremmies python oembed'

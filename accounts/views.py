@@ -3,6 +3,7 @@ Views for the accounts application.
 
 """
 import datetime
+import json
 import logging
 
 from django.shortcuts import render
@@ -13,7 +14,6 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
-from django.utils import simplejson
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm, ForgotUsernameForm
@@ -105,8 +105,7 @@ def login_ajax(request):
         else:
             response['error'] = 'Invalid username or password'
 
-    return HttpResponse(simplejson.dumps(response),
-            content_type='application/json')
+    return HttpResponse(json.dumps(response), content_type='application/json')
 
 #######################################################################
 

@@ -3,6 +3,7 @@ Views for the messages application.
 
 """
 import datetime
+import json
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -14,7 +15,6 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-import django.utils.simplejson as json
 
 from messages.models import Message, Options
 from messages.forms import OptionsForm, ComposeForm

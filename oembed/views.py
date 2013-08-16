@@ -1,13 +1,13 @@
 """
 Views for the oembed application.
+
 """
+import json
 import re
-import urllib2
 
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
-import django.utils.simplejson as json
 from django.conf import settings
 
 from oembed.models import Provider

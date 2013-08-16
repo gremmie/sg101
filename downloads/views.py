@@ -1,7 +1,7 @@
 """
 Views for the downloads application.
 """
-import random
+import json
 
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
@@ -14,9 +14,7 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
-from django.db.models import Q
 from django.views.decorators.http import require_POST
-import django.utils.simplejson as json
 
 from core.paginator import DiggPaginator
 from core.functions import email_admins

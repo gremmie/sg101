@@ -2,12 +2,10 @@
 This module contains country flag data & functions.
 
 """
-from __future__ import with_statement
+import json
 import os.path
 import locale
 import logging
-
-import django.utils.simplejson as json
 
 
 # Read flag data from external JSON file:

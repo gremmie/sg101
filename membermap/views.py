@@ -1,6 +1,9 @@
 """
 Views for the membermap application.
+
 """
+import json
+
 from django.shortcuts import render_to_response
 from django.template.loader import render_to_string
 from django.template import RequestContext
@@ -8,7 +11,6 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.views.decorators.http import require_POST
-import django.utils.simplejson as json
 from django.core.cache import cache
 
 from membermap.models import MapEntry
