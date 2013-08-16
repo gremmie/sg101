@@ -48,7 +48,7 @@ class Command(LabelCommand):
         except Topic.DoesNotExist:
             raise CommandError('topic ID does not exist')
 
-        posts = topic.posts.select_related(depth=1)
+        posts = topic.posts.select_related('user')
 
         try:
             content = render_to_string(template_name, {'topic': topic, 'posts':

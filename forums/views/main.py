@@ -1,5 +1,6 @@
 """
 Views for the forums application.
+
 """
 import collections
 import datetime
@@ -169,7 +170,7 @@ def topic_index(request, id):
     topic.view_count = F('view_count') + 1
     topic.save(force_update=True)
 
-    posts = topic.posts.select_related(depth=1)
+    posts = topic.posts.select_related('user')
 
     paginator = create_post_paginator(posts)
     page_num = get_page_num(request)
@@ -260,7 +261,7 @@ def topic_unread(request, id):
     topic_url = reverse('forums-topic_index', kwargs={'id': id})
 
     if request.user.is_authenticated():
-        topic = get_object_or_404(Topic.objects.select_related(depth=1), pk=id)
+        topic = get_object_or_404(Topic.objects.select_related('forum', 'user'), pk=id)
         try:
             tlv = TopicLastVisit.objects.get(user=request.user, topic=topic)
         except TopicLastVisit.DoesNotExist:
@@ -290,7 +291,7 @@ def topic_latest(request, id):
     This view shows the latest (last) post in a given topic.
 
     """
-    topic = get_object_or_404(Topic.objects.select_related(depth=1), pk=id)
+    topic = get_object_or_404(Topic.objects.select_related('forum', 'user'), pk=id)
 
     if topic.last_post:
         return _goto_post(topic.last_post)
