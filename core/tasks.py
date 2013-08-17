@@ -37,17 +37,17 @@ def cleanup():
     # import problems when running on the production server (Python 2.5 and
     # mod_wsgi). Moving them here worked around that problem.
 
-    from django.core.management.commands.cleanup import Command as CleanupCommand
-    from forums.management.commands.forum_cleanup import Command as ForumCleanup
+    from django.contrib.sessions.management.commands import clearsessions
+    from forums.management.commands import forum_cleanup
 
-    # Execute Django's cleanup command (deletes old sessions).
+    # Cleanup old sessions
 
-    command = CleanupCommand()
+    command = clearsessions.Command()
     command.execute()
 
     # Execute our forum cleanup command to delete old last visit records.
 
-    command = ForumCleanup()
+    command = forum_cleanup.Command()
     command.execute()
 
 
