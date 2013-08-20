@@ -1,2 +1,1 @@
-{% load url from future %}
 {% if profile_link %}<a href="{% url 'bio-view_profile' username=username %}" title="View profile for {{ username }}">{% endif %}<img src="{{ url }}" alt="avatar" title="{{ title }}" class="avatar" {% if style %}style="{{ style }}"{% endif %} />{% if profile_link %}</a>{% endif %}

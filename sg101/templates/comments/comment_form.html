@@ -1,4 +1,3 @@
-{% load url from future %}
 {% load core_tags %}
 {% if user.is_authenticated %}
 <form action="{% url 'comments-post' %}" method="post" id="comment-form">{% csrf_token %}
