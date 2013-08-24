@@ -17,7 +17,7 @@ from downloads.models import Category, Download
 class Command(LabelCommand):
     help = ("Produce on standard output a bash script that wgets all the files"
             " in a category. The files are downloaded with a slugified name.")
-    
+
     args = "category-slug"
 
     def handle_label(self, slug, **options):
@@ -50,4 +50,4 @@ class Command(LabelCommand):
 
         # encode it ourselves since it can fail if you try to redirect output to
         # a file and any of the content is not ASCII...
-        print output.encode('utf-8')
+        self.stdout.write(output.encode('utf-8'))

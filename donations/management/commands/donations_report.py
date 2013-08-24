@@ -32,9 +32,9 @@ class Command(LabelCommand):
 
         max_month = 12 if year != today.year else today.month
 
-        print ROW_FMT % ('Month', 'Gross', 'Net')
+        self.stdout.write(ROW_FMT % ('Month', 'Gross', 'Net'))
         sep = ROW_FMT % ('-' * 10, '-' * 7, '-' * 7)
-        print sep
+        self.stdout.write(sep)
 
         total_gross = decimal.Decimal()
         total_net = decimal.Decimal()
@@ -54,10 +54,10 @@ class Command(LabelCommand):
 
             d = datetime.date(year=year, month=month, day=1)
 
-            print ROW_FMT % (d.strftime('%b %Y'), gross, net)
+            self.stdout.write(ROW_FMT % (d.strftime('%b %Y'), gross, net))
 
             total_gross += gross
             total_net += net
 
-        print sep
-        print ROW_FMT % ('Total:', total_gross, total_net)
+        self.stdout.write(sep)
+        self.stdout.write(ROW_FMT % ('Total:', total_gross, total_net))

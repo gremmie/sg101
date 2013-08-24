@@ -11,13 +11,6 @@ from django.template.loader import render_to_string
 from downloads.models import Category, Download
 
 
-def print_titles(dls):
-    """Print out the download titles"""
-
-    for dl in dls:
-        print dl.title.encode('utf-8')
-
-
 class Command(LabelCommand):
     help = "Produce on standard output a report of all downloads in a category."
     args = "category-slug"
@@ -44,7 +37,7 @@ class Command(LabelCommand):
                 'title').select_related()
 
         if options.get('titles_only'):
-            print_titles(downloads)
+            self.print_titles(downloads)
             return
 
         report = render_to_string('downloads/commands/category_report.html', {
@@ -54,5 +47,12 @@ class Command(LabelCommand):
 
         # encode it ourselves since it can fail if you try to redirect output to
         # a file and any of the content is not ASCII...
-        print report.encode('utf-8')
+        self.stdout.write(report.encode('utf-8'))
+
+    def print_titles(self, dls):
+        """Print out the download titles"""
+
+        for dl in dls:
+            self.stdout.write(dl.title.encode('utf-8'))
+
 
