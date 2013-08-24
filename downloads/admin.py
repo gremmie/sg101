@@ -11,8 +11,7 @@ from downloads.models import Download
 from downloads.models import Category
 from downloads.models import AllowedExtension
 from downloads.models import VoteRecord
-# TODO: In Django 1.5 this will be available in django.utils.text:
-from django.template.defaultfilters import slugify
+from django.utils.text import slugify
 
 
 def rename_download(dl):

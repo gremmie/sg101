@@ -7,7 +7,7 @@ import os.path
 
 from django.core.management.base import LabelCommand, CommandError
 from django.template.loader import render_to_string
-from django.template.defaultfilters import slugify
+from django.utils.text import slugify
 from django.contrib.sites.models import Site
 from django.conf import settings
 
