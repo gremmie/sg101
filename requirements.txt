@@ -1,4 +1,4 @@
-Django==1.4.5
+Django==1.5.2
 Markdown==2.3.1
 MySQL-python==1.2.4
 -e git+https://github.com/gremmie/django-elsewhere.git@1203bd331aba4c5d4e702cc4e64d807310f2b591#egg=django_elsewhere-dev
@@ -31,4 +31,3 @@ ftfy==2.0.1
 # symlinking to the global site-packages:
 # PIL
 # xapian
-#
