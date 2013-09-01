@@ -2,7 +2,6 @@
 This module contains decorators for the antispam application.
 
 """
-import json
 from functools import wraps
 import logging
 
@@ -19,16 +18,10 @@ def log_auth_failures(auth_type):
 
             if request.method == 'POST':
 
-                # Figure out if the view succeeded; if it is a non-ajax view,
-                # then success means a redirect is about to occur. If it is
-                # an ajax view, we have to decode the json response.
-                success = False
-                if not request.is_ajax():
-                    success = (response and response.has_header('location') and
-                            response.status_code == 302)
-                elif response:
-                    json_resp = json.loads(response.content)
-                    success = json_resp['success']
+                # Figure out if the view succeeded; success means a redirect is
+                # about to occur.
+                success = (response and response.has_header('location') and
+                        response.status_code == 302)
 
                 if not success:
                     username = request.POST.get('username')

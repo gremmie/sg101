@@ -7,7 +7,13 @@
    <li><a href="{% url 'haystack_search' %}">Search</a></li>
    <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
    {% else %}
-   <li><a id="login-link" href="{% url 'accounts-login' %}">Login</a></li>
+   <li>
+   {% if request.path != "/accounts/logout/" %}
+      <a id="login-link" href="{% url 'accounts-login' %}?next={{ request.path }}">Login</a>
+   {% else %}
+      <a id="login-link" href="{% url 'accounts-login' %}">Login</a>
+   {% endif %}
+   </li>
    <li><a href="{% url 'accounts-register' %}">Register</a></li>
    {% endif %}
 </ul> 

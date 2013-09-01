@@ -2,17 +2,12 @@
 Views for the accounts application.
 
 """
-import json
 import logging
 
 from django.shortcuts import render
-from django.template import RequestContext
-from django.template.loader import render_to_string
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.conf import settings
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth import login
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm, ForgotUsernameForm
@@ -77,35 +72,6 @@ def register_confirm(request, username, key):
     return render(request,
             'accounts/register_success.html',
             {'username': username})
-
-#######################################################################
-
-@log_auth_failures('Login')
-def login_ajax(request):
-    """
-    This view function handles a login via AJAX.
-
-    """
-    if not request.is_ajax():
-        return HttpResponseRedirect(reverse('accounts-login'))
-
-    response = {
-        'success': False,
-        'error': '',
-        'navbar_html': ''
-    }
-
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            login(request, form.get_user())
-            response['success'] = True
-            response['navbar_html'] = render_to_string('navbar.html',
-                    {'user': request.user}, RequestContext(request))
-        else:
-            response['error'] = 'Invalid username or password'
-
-    return HttpResponse(json.dumps(response), content_type='application/json')
 
 #######################################################################
 

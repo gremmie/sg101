@@ -34,11 +34,6 @@
 <script type="text/javascript" src="{{ STATIC_URL }}js/jquery.cycle.all.min.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox.js"></script>
 <link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ STATIC_URL }}favicon.ico" />
-{% if not user.is_authenticated %}
-{% script_tags "jquery-ui" %}
-<script type="text/javascript">var csrf_token = "{{ csrf_token }}";</script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/ajax_login.js"></script>
-{% endif %}
 </head>
 <body>{% block begin_body %}{% endblock %}
 <div id="page" class="container">
@@ -122,9 +117,6 @@
 </div>
 
 </div>
-{% if not user.is_authenticated %}
-   {% include "accounts/ajax_login_form.html" %}
-{% endif %}
 {% block end_body %}{% endblock %}
 </body>
 </html>
