@@ -10,7 +10,6 @@ from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import check_password
 
-from antispam.rate_limit import unblock_ip
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
@@ -34,9 +33,6 @@ class RegistrationTest(TestCase):
 
         IllegalUsername.objects.create(username='illegalusername')
         IllegalEmail.objects.create(email='illegal@example.com')
-
-    def tearDown(self):
-        unblock_ip('127.0.0.1')
 
     def test_get_view(self):
         """
@@ -223,7 +219,7 @@ class RegistrationTest(TestCase):
             'question2': 'non blank',
             })
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
     def test_success(self):
         """

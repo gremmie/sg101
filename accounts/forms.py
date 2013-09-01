@@ -13,7 +13,9 @@ from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
-from antispam.rate_limit import block_ip
+
+
+logger = logging.getLogger('auth')
 
 
 class RegisterForm(forms.Form):
@@ -113,8 +115,8 @@ class RegisterForm(forms.Form):
         """
         answer = self.cleaned_data.get('question2')
         if answer:
-            block_ip(self.ip)
-            self._validation_error('Wrong answer #2: %s' % answer)
+            logger.critical('Accounts/registration: Honeypot filled [%s]', self.ip)
+            self._validation_error('Wrong answer #2', answer)
         return answer
 
     def save(self):
@@ -143,13 +145,13 @@ class RegisterForm(forms.Form):
         subject = 'Registration Confirmation for ' + site.name
         send_mail(subject, msg, admin_email, [self.cleaned_data['email']],
                 defer=False)
-        logging.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
+        logger.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
                 self.cleaned_data['email'], pending_user.username, self.ip)
 
         return pending_user
 
     def _validation_error(self, msg, param=None):
-        logging.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
+        logger.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
         raise forms.ValidationError(msg)
 
 
@@ -178,5 +180,5 @@ class ForgotUsernameForm(forms.Form):
             })
         send_mail(subject, msg, admin_email, [email], defer=False)
 
-        logging.info('Forgotten username email sent to {} <{}>'.format(
+        logger.info('Forgotten username email sent to {} <{}>'.format(
             user.username, email))

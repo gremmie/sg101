@@ -2,7 +2,6 @@
 Views for the accounts application.
 
 """
-import datetime
 import json
 import logging
 
@@ -18,12 +17,14 @@ from django.contrib.auth import login
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm, ForgotUsernameForm
 from accounts import create_new_user
-from antispam.decorators import rate_limit
+from antispam.decorators import log_auth_failures
 
+
+logger = logging.getLogger('auth')
 
 #######################################################################
 
-@rate_limit(count=10, interval=datetime.timedelta(minutes=1))
+@log_auth_failures('Register')
 def register(request):
     if request.user.is_authenticated():
         return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
@@ -60,13 +61,13 @@ def register_confirm(request, username, key):
     try:
         pending_user = PendingUser.objects.get(username = username)
     except PendingUser.DoesNotExist:
-        logging.error('Accounts register_confirm [%s]: user does not exist: %s', ip, username)
+        logger.error('Accounts register_confirm [%s]: user does not exist: %s', ip, username)
         return render(request,
                   'accounts/register_failure.html',
                   {'username': username})
 
     if pending_user.key != key:
-        logging.error('Accounts register_confirm [%s]: key error: %s', ip, username)
+        logger.error('Accounts register_confirm [%s]: key error: %s', ip, username)
         return render(request,
                 'accounts/register_failure.html',
                 {'username': username})
@@ -79,8 +80,7 @@ def register_confirm(request, username, key):
 
 #######################################################################
 
-@rate_limit(count=10, interval=datetime.timedelta(minutes=1),
-        lockout=datetime.timedelta(minutes=2))
+@log_auth_failures
 def login_ajax(request):
     """
     This view function handles a login via AJAX.

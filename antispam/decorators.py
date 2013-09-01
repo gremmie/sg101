@@ -2,32 +2,18 @@
 This module contains decorators for the antispam application.
 
 """
-from datetime import timedelta
 import json
 from functools import wraps
-
-from django.shortcuts import render
-
-from antispam.rate_limit import RateLimiter, RateLimiterUnavailable
+import logging
 
 
-def rate_limit(count=10, interval=timedelta(minutes=1),
-        lockout=timedelta(hours=8)):
+def log_auth_failures(auth_type):
 
     def decorator(fn):
+        logger = logging.getLogger('auth')
 
         @wraps(fn)
         def wrapped(request, *args, **kwargs):
-
-            ip = request.META.get('REMOTE_ADDR')
-            try:
-                rate_limiter = RateLimiter(ip, count, interval, lockout)
-                if rate_limiter.is_blocked():
-                    return render(request, 'antispam/blocked.html', status=403)
-
-            except RateLimiterUnavailable:
-                # just call the function and return the result
-                return fn(request, *args, **kwargs)
 
             response = fn(request, *args, **kwargs)
 
@@ -45,13 +31,12 @@ def rate_limit(count=10, interval=timedelta(minutes=1),
                     success = json_resp['success']
 
                 if not success:
-                    try:
-                        blocked = rate_limiter.incr()
-                    except RateLimiterUnavailable:
-                        blocked = False
-
-                    if blocked:
-                        return render(request, 'antispam/blocked.html', status=403)
+                    username = request.POST.get('username')
+                    username = username if username else '(None)'
+                    logger.error("%s failure from [%s] for %s",
+                            auth_type,
+                            request.META.get('REMOTE_ADDR', '?'),
+                            username)
 
             return response
 

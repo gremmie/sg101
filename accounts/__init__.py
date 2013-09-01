@@ -4,6 +4,9 @@ import logging
 from django.contrib.auth.models import User
 
 
+logger = logging.getLogger('auth')
+
+
 def create_new_user(pending_user, ip=None, admin_activation=False):
     """
     This function contains the code to create a new user from a
@@ -34,4 +37,4 @@ def create_new_user(pending_user, ip=None, admin_activation=False):
         msg = 'Accounts registration confirmed by USER for %s from %s' % (
                 new_user.username, ip)
 
-    logging.info(msg)
+    logger.info(msg)

@@ -65,6 +65,15 @@ LOGGING = {
             'maxBytes': 100 * 1024,
             'backupCount': 10,
         },
+        'auth': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'filename': os.path.join(PROJECT_PATH, 'logs', 'auth.log'),
+            'mode': 'a',
+            'maxBytes': 2 * 1024 * 1024,
+            'backupCount': 5,
+        },
         'mail_admins': {
             'class': 'django.utils.log.AdminEmailHandler',
             'level': 'ERROR',
@@ -73,10 +82,15 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django':{
+        'django': {
             'level': 'WARNING',
             'propagate': False,
             'handlers': ['file'],
+        },
+        'auth': {
+            'level': 'DEBUG',
+            'propagate': False,
+            'handlers': ['auth'],
         },
     },
     'root': {
