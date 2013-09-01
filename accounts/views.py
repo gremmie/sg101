@@ -80,7 +80,7 @@ def register_confirm(request, username, key):
 
 #######################################################################
 
-@log_auth_failures
+@log_auth_failures('Login')
 def login_ajax(request):
     """
     This view function handles a login via AJAX.
