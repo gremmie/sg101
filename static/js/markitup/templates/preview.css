@@ -3,3 +3,4 @@ body {
 	background-color:#EFEFEF;
 	font:70% Verdana, Arial, Helvetica, sans-serif;
 }
+blockquote {margin:1.5em;color:#666;font-style:italic;}

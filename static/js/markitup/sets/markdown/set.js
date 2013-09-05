@@ -10,6 +10,7 @@
 // -------------------------------------------------------------------
 // Feel free to add more tags
 // -------------------------------------------------------------------
+// Modified by Brian Neal for SurfGuitar101
 mySettings = {
 	previewParserPath: '/comments/markdown/',
 	previewParserVar: 'data',
@@ -22,16 +23,16 @@ mySettings = {
 		{name:'Italic', key:'I', openWith:'_', closeWith:'_'},
 		{name:'Strike', key:'S', openWith:'---', closeWith:'---'},
 		{separator:'---------------' },
-		{name:'Bulleted List', openWith:'- ' },
+		{name:'Bulleted List', openWith:'- ', multiline:true},
 		{name:'Numeric List', openWith:function(markItUp) {
 			return markItUp.line+'. ';
-		}},
+		}, multiline:true},
 		{separator:'---------------' },
 		{name:'Picture', key:'P', replaceWith:'![image]([![Url:!:http://]!])'},
 		{name:'Link', key:'L', openWith:'[', closeWith:']([![Url:!:http://]!])', placeHolder:'Your text to link here...' },
-		{separator:'---------------'},	
-		{name:'Quotes', openWith:'> '},
-		{name:'Code Block / Code', openWith:'(!(\t|!|`)!)', closeWith:'(!(`)!)'},
+		{separator:'---------------'},
+		{name:'Quotes', openWith:'> ', multiline:true},
+		{name:'Code Block / Code', openWith:'(!(\t|!|`)!)', closeWith:'(!(`)!)', multiline:true},
 		{separator:'---------------'},
         {name:'Smilies', className:'smilies', dropMenu: [
             {name:'Argh', replaceWith:' :argh: ', className:'col1-1' },

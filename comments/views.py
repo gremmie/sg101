@@ -1,10 +1,10 @@
 """
 Views for the comments application.
+
 """
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.http import HttpResponseRedirect
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.db.models import get_model
@@ -71,7 +71,7 @@ def post_comment(request):
 
     comment = form.get_comment_object(request.user, request.META.get("REMOTE_ADDR", None))
 
-    # Check for spam 
+    # Check for spam
 
     if antispam.utils.spam_check(request, comment.comment):
         return HttpResponseForbidden(antispam.BUSTED_MESSAGE)
@@ -83,7 +83,7 @@ def post_comment(request):
         'comment': comment,
         },
         context_instance = RequestContext(request))
-    
+
 
 @require_POST
 def flag_comment(request):
@@ -118,7 +118,7 @@ def markdown_preview(request):
     """
     This function should be the target of an AJAX POST. It takes the 'data' parameter
     from the POST parameters and returns a rendered HTML page from the data, which
-    is assumed to be in markdown format. The HTML page is suitable for the preview 
+    is assumed to be in markdown format. The HTML page is suitable for the preview
     function for a javascript editor such as markItUp.
     """
     if not request.user.is_authenticated():

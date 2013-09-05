@@ -1,4 +1,16 @@
 $(document).ready(function() {
+
+   // allow HTML in title for 1.10
+   $.widget("ui.dialog", $.extend({}, $.ui.dialog.prototype, {
+       _title: function(title) {
+           if (!this.options.title ) {
+               title.html("&#160;");
+           } else {
+               title.html(this.options.title);
+           }
+       }
+   }));
+
    $tabs = $('#tabs').tabs({
       selected: initialTab,
       select: function(event, ui) {
@@ -94,7 +106,7 @@ function showMsg(link, id) {
 
    var s = '<div style="max-height:450px;overflow:auto">' + msg.content + '</div>';
    $msgDialog.html(s);
-   var title = 'PM From ' + msg.sender + ' To ' + msg.receiver + '<br /> ' + msg.subject;
+   var title = 'PM From ' + msg.sender + ' To ' + msg.receiver + '<br />' + msg.subject;
    $msgDialog.dialog('option', 'title', title);
    $msgDialog.dialog('open');
 }
