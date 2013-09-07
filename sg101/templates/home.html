@@ -14,10 +14,10 @@
 <link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url 'feeds-news' %}" />
 {% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/news.css" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/news.css" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript">
+<script>
    $(document).ready(function() {
       $('#home-slideshow img:first').fadeIn(1000, function() {
          $('#home-slideshow').cycle({
@@ -49,7 +49,7 @@
 <p>Since February 26, 2006, SurfGuitar101.com has been the premier home on the web for friends and fans of the world-wide phenomenon known as surf music! Created in Southern California in the early 1960's, surf music is very much alive today and has spread around the globe. Join us in our forums to discuss surf music, past and present. Meet new friends and discover new bands. Want to play surf music? We have lots of forums devoted to playing, performing, and writing surf music. We have lots of discussions on gear: guitars, amps, and drums. Check out our podcasts and hear some really great tunes! Finally, we feature news and articles on the surf scene, and you'll always know where you can catch some live surf music!
 </p>
 </div>
-<br clear="all" />
+<br class="clear" />
 {% cache 3600 home_bulletins %}
    {% current_bulletins %}
 {% endcache %}

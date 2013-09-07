@@ -66,6 +66,6 @@
 {% if can_moderate %}
 <p><a href="{% url 'forums-mod_forum' slug=forum.slug %}">Moderate this forum</a></p>
 {% endif %}
-{% current_forum_time user %}
+<p>{% current_forum_time user %}</p>
 </div>
 {% endblock %}

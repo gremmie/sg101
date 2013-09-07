@@ -1,10 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" 
-   xmlns:og="http://ogp.me/ns#"
-   xmlns:fb="https://www.facebook.com/2008/fbml"
-   xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 {% load shoutbox_tags %}
 {% load irc_tags %}
 {% load potd_tags %}
@@ -13,27 +8,26 @@
 {% load donations_tags %}
 {% load core_tags %}
 {% load cache %}
-<head><title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
-<meta http-equiv="Content-Type" content="text/html" />
-<meta http-equiv="Content-Language" content="en-US" />
+<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#">
+<title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
+<meta charset="utf-8" />
 <meta name="robots" content="all" />
 <meta name="Author" content="Brian Neal" />
-<meta name="copyright" content="(C) Copyright 2006 - 2012 Brian Neal" />
 {% block custom_meta %}{% endblock %}
-<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/screen.css" type="text/css" media="screen, projection" />
-<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/print.css" type="text/css" media="print" /> 
+<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/screen.css" media="screen, projection" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/print.css" media="print" />
 <!--[if lt IE 8]>
 <link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/ie.css" type="text/css" media="screen, projection" />
 <![endif]-->
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/base.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/shoutbox.css" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/base.css" />
+<link rel="stylesheet" href="{{ STATIC_URL }}css/shoutbox.css" />
 {% script_tags "jquery" %}
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/jquery.cycle.all3.0.3.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox.js"></script>
-<link rel="shortcut icon" type="image/vnd.microsoft.com" href="{{ STATIC_URL }}favicon.ico" />
+<script src="{{ STATIC_URL }}js/jquery.cycle.all3.0.3.js"></script>
+<script src="{{ STATIC_URL }}js/shoutbox.js"></script>
+<link rel="shortcut icon" href="{{ STATIC_URL }}favicon.ico" />
 </head>
 <body>{% block begin_body %}{% endblock %}
 <div id="page" class="container">

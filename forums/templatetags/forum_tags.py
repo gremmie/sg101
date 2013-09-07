@@ -7,12 +7,9 @@ from pytz import timezone
 from django import template
 from django.conf import settings
 from django.core.cache import cache
-from django.contrib.auth.models import User
 
 from forums.models import Forum
 from forums.models import Topic
-from forums.models import Post
-from forums.models import Category
 from forums.latest import get_stats, get_latest_topics
 
 
@@ -94,7 +91,7 @@ def current_forum_time(user):
     else:
         fmt = TIME_FMT_12
 
-    return '<p>The current time is %s. All times shown are %s.</p>' % (
+    return 'The current time is %s. All times shown are %s.' % (
             curr_time.strftime(fmt), curr_time.strftime('%Z%z'))
 
 

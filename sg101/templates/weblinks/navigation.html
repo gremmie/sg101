@@ -9,8 +9,8 @@
 <li><a href="{% url 'weblinks-add_link' %}">Add Link</a></li>
 {% endif %}
 </ul>
-<center>
+<div class="centered">
    <form action="{% url 'weblinks-random_link' %}" method="post">{% csrf_token %}
       <input type="submit" value="Visit a Random Link" />
    </form>
-</center>
+</div>

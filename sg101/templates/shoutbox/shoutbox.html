@@ -11,23 +11,24 @@
       </p>
    {% endfor %}
 </div>
-<center>
+<div class="centered">
    <button type="button" id="shoutbox-prev" title="Previous">&laquo;</button>
    <a href="{% url 'shoutbox-history' %}">Shout History</a>
    <button type="button" id="shoutbox-next" title="Next">&raquo;</button>
-</center>
+</div>
 {% if user.is_authenticated %}
-<center>
-<div>
-   <input type="text" maxlength="2048" size="13" name="msg" value="" id="shoutbox-smiley-input" />
+<div class="centered">
+<form>
+   <input type="text" maxlength="2048" name="msg" value="" id="shoutbox-smiley-input"
+    style="width:98%;" />
    <br />
    <input id="shoutbox-submit" type="submit" value="Shout" />
    <input id="shoutbox-smilies" type="button" value="Smilies" />
-</div>
+</form>
 <div id="shoutbox-smiley-frame" style="display:none;">
 <img id="shoutbox-busy-icon" src="{{ STATIC_URL }}icons/ajax_busy.gif" alt="Please wait" />
 </div>
-</center>
+</div>
 {% else %}
 <p>
 Please <a href="{% url 'accounts-login' %}">login</a> or

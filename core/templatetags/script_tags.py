@@ -15,13 +15,13 @@ def script_tags(libraries):
                 prefix = ''
                 if not path.startswith('http'):
                     prefix = settings.STATIC_URL
-                s += '<link rel="stylesheet" href="%s%s" type="text/css" />' % (prefix, path)
+                s += '<link rel="stylesheet" href="%s%s" />' % (prefix, path)
 
         if library in settings.GPP_THIRD_PARTY_JS:
             for path in settings.GPP_THIRD_PARTY_JS[library]:
                 prefix = ''
                 if not path.startswith('http'):
                     prefix = settings.STATIC_URL
-                s += '<script type="text/javascript" src="%s%s"></script>' % (prefix, path)
+                s += '<script src="%s%s"></script>' % (prefix, path)
 
     return s
