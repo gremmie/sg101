@@ -84,6 +84,7 @@ urlpatterns = patterns('',
    (r'^profile/', include('bio.urls')),
    (r'^shout/', include('shoutbox.urls')),
    (r'^smiley/', include('smiley.urls')),
+   (r'^user_photos/', include('user_photos.urls')),
    (r'^ygroup/', include('ygroup.urls')),
 )
 

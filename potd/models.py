@@ -32,7 +32,7 @@ class Photo(models.Model):
     thumb = models.ImageField(upload_to='potd/%Y/%m/%d/thumbs', blank=True, null=True)
     caption = models.CharField(max_length=128)
     description = models.TextField()
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, related_name='potd_set')
     date_added = models.DateField()
     potd_count = models.IntegerField(default=0)
 

@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     'potd',
     'shoutbox',
     'smiley',
+    'user_photos',
     'weblinks',
     'wiki',
     'ygroup',
@@ -289,6 +290,11 @@ WIKI_COOKIE_NAME = 'sg101_wiki'
 WIKI_COOKIE_DOMAIN = '.surfguitar101.com'
 WIKI_COOKIE_AGE = SESSION_COOKIE_AGE
 WIKI_REDIS_SET = 'wiki_cookie_keys'
+
+# User photo upload settings
+USER_PHOTO_ENABLED = True
+USER_PHOTO_ACCESS_KEY = SECRETS['AWS_ACCESS_KEY']
+USER_PHOTO_SECRET_KEY = SECRETS['AWS_SECRET_KEY']
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
