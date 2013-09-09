@@ -11,14 +11,12 @@ import uuid
 
 from django.conf import settings
 from PIL import Image
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
 
 
 logger = logging.getLogger(__name__)
 
 
-def process_file(f, user):
+def process_file(f, user, bucket):
     """Perform processing on the given uploaded image file:
 
     * The image is resized if necessary
@@ -51,30 +49,15 @@ def process_file(f, user):
     image.save(thumb, format=image.format)
 
     # Upload both images to S3
-    logger.debug('Getting connection / bucket')
-    conn = S3Connection(settings.USER_PHOTOS_ACCESS_KEY,
-                        settings.USER_PHOTOS_SECRET_KEY)
-    bucket = conn.get_bucket(settings.USER_PHOTOS_BUCKET, validate=False)
-
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     logging.debug('Uploading image')
-    k1 = Key(bucket)
-    k1.key = unique_key + ext
-    k1.set_metadata('user', user.username)
-    k1.set_metadata('date', now)
-    k1.set_contents_from_filename(filename)
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    metadata = {'user': user.username, 'date': now}
+    file_key = unique_key + ext
+    bucket.upload_from_filename(file_key, filename, metadata)
 
     logging.debug('Uploading thumbnail')
-    k2 = Key(bucket)
-    k2.key = '{}t{}'.format(unique_key, ext)
-    k2.set_metadata('user', user.username)
-    k2.set_metadata('date', now)
-    k2.set_contents_from_string(thumb.getvalue())
-
-    logging.debug('Making public')
-    k1.make_public()
-    k2.make_public()
+    thumb_key = '{}t{}'.format(unique_key, ext)
+    bucket.upload_from_string(thumb_key, thumb.getvalue())
 
     os.remove(filename)
 
@@ -83,4 +66,4 @@ def process_file(f, user):
     url_base = '{}/{}/'.format(settings.USER_PHOTOS_BASE_URL,
                                settings.USER_PHOTOS_BUCKET)
 
-    return (url_base + k1.key, url_base + k2.key)
+    return (url_base + file_key, url_base + thumb_key)
