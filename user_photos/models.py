@@ -4,6 +4,7 @@ import datetime
 
 from django.db import models
 from django.conf import settings
+from django.core.urlresolvers import reverse
 
 
 class Photo(models.Model):
@@ -19,7 +20,7 @@ class Photo(models.Model):
                                self.upload_date.strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_absolute_url(self):
-        return self.url
+        return reverse('user_photos-detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.upload_date:

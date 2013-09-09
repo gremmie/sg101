@@ -292,9 +292,13 @@ WIKI_COOKIE_AGE = SESSION_COOKIE_AGE
 WIKI_REDIS_SET = 'wiki_cookie_keys'
 
 # User photo upload settings
-USER_PHOTO_ENABLED = True
-USER_PHOTO_ACCESS_KEY = SECRETS['AWS_ACCESS_KEY']
-USER_PHOTO_SECRET_KEY = SECRETS['AWS_SECRET_KEY']
+USER_PHOTOS_ENABLED = True
+USER_PHOTOS_ACCESS_KEY = SECRETS['AWS_ACCESS_KEY']
+USER_PHOTOS_SECRET_KEY = SECRETS['AWS_SECRET_KEY']
+USER_PHOTOS_BUCKET = 'sg101.user.photos'
+USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
+USER_PHOTOS_MAX_SIZE = (660, 720)
+USER_PHOTOS_THUMB_SIZE = (120, 120)
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)

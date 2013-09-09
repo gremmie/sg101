@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}User Photo Details{% endblock %}
+{% block content %}
+<h2>User Photo Details</h2>
+
+<ul>
+   <li>Uploader: {{ object.user.username }}</li>
+   <li>Upload date: {{ object.upload_date|date }}</li>
+</li>
+
+<div>
+   <img src="{{ object.thumb_url }}" alt="thumbnail" />
+</div>
+
+<div>
+   <img src="{{ object.url }}" alt="photo" />
+</div>
+{% endblock %}

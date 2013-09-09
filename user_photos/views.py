@@ -1,7 +1,7 @@
 """Views for the user_photos application."""
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from user_photos.forms import UploadForm
 
@@ -19,17 +19,16 @@ def upload(request):
 
     """
     form = None
-    uploads_enabled = settings.USER_PHOTO_ENABLED
+    uploads_enabled = settings.USER_PHOTOS_ENABLED
 
     if uploads_enabled:
         if request.method == 'POST':
-            form = UploadForm(request.POST, request.FILES)
+            form = UploadForm(request.POST, request.FILES, user=request.user)
             if form.is_valid():
-                #TODO
-                print "**************", request.FILES['image_file']
-                pass
+                photo = form.save()
+                return redirect(photo)
         else:
-            form = UploadForm()
+            form = UploadForm(user=request.user)
 
     return render(request, 'user_photos/upload_form.html', {
         'enabled': uploads_enabled,
