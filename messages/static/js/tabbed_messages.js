@@ -12,18 +12,13 @@ $(document).ready(function() {
    }));
 
    $tabs = $('#tabs').tabs({
-      selected: initialTab,
-      select: function(event, ui) {
+      active: initialTab,
+      activate: function(event, ui) {
          $(ui.panel).html('');
       },
       load: function(event, ui) {
          selectedTab = ui;
-         if (ui.index == 1 && receiver && !doReply)
-         {
-            $('#id_receiver').val(receiver);
-            receiver = '';
-         }
-         else if (doReply && ui.index == 1)
+         if (doReply && ui.tab.index() == 1)
          {
             doReply = false;
             var msg = msgCache[$msgDialog.msgId];
@@ -34,11 +29,11 @@ $(document).ready(function() {
                $msgDialog.msgId + '" />');
          }
       },
-      ajaxOptions: {
-         error: function(xhr, status, index, anchor) {
+      beforeLoad: function(event, ui) {
+         ui.jqXHR.error(function(xhr, status, index, anchor) {
             $(anchor.hash).html(
                "Oops, we couldn't load this tab. We'll try to fix this as soon as possible.");
-         }
+         });
       }
    });
    $msgDialog = $('#msgDialog').dialog({
@@ -53,7 +48,7 @@ $(document).ready(function() {
             click: function() { 
                doReply = true;
                $(this).dialog('close'); 
-               $tabs.tabs("select", 1);
+               $tabs.tabs("option", "active", 1);
             } 
          },
          { 
@@ -183,7 +178,7 @@ function bulkMsgAction(form, action) {
          data: $(form).serialize(),
          dataType: 'text',
          success: function (data, textStatus) {
-            $tabs.tabs("load", selectedTab.index);
+            $tabs.tabs("load", selectedTab.tab.index());
          },
          error: function (xhr, textStatus, ex) {
             alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
