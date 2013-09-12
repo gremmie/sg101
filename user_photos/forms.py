@@ -1,10 +1,12 @@
 """Forms for the user_photos application."""
+import datetime
+
 from django import forms
 from django.conf import settings
 
+from core.s3 import S3Bucket
+from core.image_uploader import upload
 from user_photos.models import Photo
-from user_photos.images import process_file
-from user_photos.s3 import S3Bucket
 
 
 class UploadForm(forms.Form):
@@ -21,12 +23,20 @@ class UploadForm(forms.Form):
         This function should only be called if is_valid() returns True.
 
         """
-        bucket = S3Bucket(settings.USER_PHOTOS_ACCESS_KEY,
-                          settings.USER_PHOTOS_SECRET_KEY,
-                          settings.USER_PHOTOS_BUCKET)
-        url, thumb_url = process_file(self.cleaned_data['image_file'],
-                                      self.user,
-                                      bucket)
+        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
+                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
+                          base_url=settings.USER_PHOTOS_BASE_URL,
+                          bucket_name=settings.USER_PHOTOS_BUCKET)
+
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        metadata = {'user': self.user.username, 'date': now}
+
+        url, thumb_url = upload(fp=self.cleaned_data['image_file'],
+                                bucket=bucket,
+                                metadata=metadata,
+                                new_size=settings.USER_PHOTOS_MAX_SIZE,
+                                thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
+
         photo = Photo(user=self.user, url=url, thumb_url=thumb_url)
         photo.save()
         return photo

@@ -1,13 +1,26 @@
-"""This file houses various core utility functions for GPP"""
+"""This file houses various core utility functions"""
+from contextlib import contextmanager
 import datetime
-import re
 import logging
+import os
+import re
 
 from django.contrib.sites.models import Site
 from django.conf import settings
 import django.core.mail
 
 import core.tasks
+
+
+@contextmanager
+def temp_open(path, mode):
+    """A context manager for closing and removing temporary files."""
+    fp = open(path, mode)
+    try:
+        yield fp
+    finally:
+        fp.close()
+        os.remove(path)
 
 
 def send_mail(subject, message, from_email, recipient_list, defer=True, **kwargs):
@@ -52,7 +65,7 @@ def email_managers(subject, message):
     site = Site.objects.get_current()
     subject = '[%s] %s' % (site.name, subject)
     send_mail(subject,
-            msg,
+            message,
             '%s@%s' % (settings.GPP_NO_REPLY_EMAIL, site.domain),
             [mail_tuple[1] for mail_tuple in settings.MANAGERS])
 
