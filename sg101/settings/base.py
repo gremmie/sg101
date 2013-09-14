@@ -299,6 +299,7 @@ USER_PHOTOS_BUCKET = 'sg101.user.photos'
 USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
 USER_PHOTOS_MAX_SIZE = (660, 720)
 USER_PHOTOS_THUMB_SIZE = (120, 120)
+USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
