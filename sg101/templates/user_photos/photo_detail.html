@@ -1,18 +1,59 @@
 {% extends 'base.html' %}
 {% block title %}User Photo Details{% endblock %}
+{% block custom_js %}
+<script>
+   $(document).ready(function() {
+      $("input[type='text']").click(function() {
+         $(this).select();
+      });
+   });
+</script>
+{% endblock %}
 {% block content %}
 <h2>User Photo Details</h2>
 
-<ul>
-   <li>Uploader: {{ object.user.username }}</li>
-   <li>Upload date: {{ object.upload_date|date }}</li>
-</li>
-
 <div>
-   <img src="{{ object.thumb_url }}" alt="thumbnail" />
+   <a href="{{ object.url }}" title="Click to view full size">
+      <img src="{{ object.thumb_url }}" alt="thumbnail" /></a>
 </div>
 
-<div>
-   <img src="{{ object.url }}" alt="photo" />
-</div>
+<h3>Photo Details</h3>
+<table>
+<tr>
+   <th>Uploader:</th>
+   <td>{{ object.user.username }}</td>
+</tr>
+<tr>
+   <th>Date:</th>
+   <td>{{ object.upload_date|date }}</td>
+</tr>
+</table>
+
+<h3>Image Codes</h3>
+<p>
+Use the SG101 code on this site. The BB Code will work on many other forums.
+The direct link is useful for email.
+</p>
+
+<table>
+<tr>
+   <th>SG101 Code:</th>
+   <td><input type="text" class="title" value="![photo]({{ object.url }})" /></td>
+</tr>
+<tr>
+   <th>BB Code:</th>
+   <td><input type="text" class="title" value="[img]{{ object.url }}[/img]" /></td>
+</tr>
+<tr>
+   <th>Direct Link:</th>
+   <td><input type="text" class="title" value="{{ object.url }}" /></td>
+</tr>
+</table>
+
+<p>
+<img src="{{ STATIC_URL }}icons/picture_add.png" alt="Photo" />
+<a href="{% url 'user_photos-upload' %}">Upload another photo</a>
+</p>
+
+
 {% endblock %}
