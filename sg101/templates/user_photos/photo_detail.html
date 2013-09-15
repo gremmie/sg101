@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load bio_tags %}
 {% block title %}User Photo Details{% endblock %}
 {% block custom_js %}
 <script>
@@ -21,7 +22,7 @@
 <table>
 <tr>
    <th>Uploader:</th>
-   <td>{{ object.user.username }}</td>
+   <td>{% profile_link object.user.username %}</td>
 </tr>
 <tr>
    <th>Date:</th>
@@ -33,6 +34,10 @@
 <p>
 Use the SG101 code on this site. The BB Code will work on many other forums.
 The direct link is useful for email.
+</p>
+<p>
+Click on a code then copy it to your clipboard (e.g. CTRL-C). You can then
+paste the code into a forum post or email (e.g. CTRL-V).
 </p>
 
 <table>
@@ -50,10 +55,19 @@ The direct link is useful for email.
 </tr>
 </table>
 
+{% if request.user == object.user %}
+<ul class="icon-list">
+   <li><img src="{{ STATIC_URL }}icons/picture_add.png" alt="Photo" />
+       <a href="{% url 'user_photos-upload' %}">Upload another photo</a></li>
+   <li><img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />
+       <a href="{% url 'user_photos-gallery' username=object.user.username %}">See all my photos</a></li>
+ </ul>
+{% else %}
 <p>
-<img src="{{ STATIC_URL }}icons/picture_add.png" alt="Photo" />
-<a href="{% url 'user_photos-upload' %}">Upload another photo</a>
+<img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />
+<a href="{% url 'user_photos-gallery' username=object.user.username %}">See all photos from {{ object.user.username }}</a></li>
 </p>
+{% endif %}
 
 
 {% endblock %}

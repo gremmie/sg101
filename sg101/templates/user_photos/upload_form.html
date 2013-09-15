@@ -17,6 +17,10 @@
          <p><input type="submit" name="submit" value="Upload Photo" /></p>
       </fieldset>
    </form>
+   <p>
+   <a href="{% url 'user_photos-gallery' username=user.username %}">See all
+      photos you've uploaded</a>.
+   </p>
 {% else %}
    <p class="error">
       We're sorry but uploading is currently disabled. Please try back later.

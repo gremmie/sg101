@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load bio_tags %}
+{% block title %}Photo Gallery for {{ gallery_owner.username }}{% endblock %}
+{% block content %}
+
+<h2>Photo Gallery for {{ gallery_owner.username }}</h2>
+
+{% if user == gallery_owner %}
+<p>
+You have uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
+Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
+</p>
+{% else %}
+<p>
+{% profile_link gallery_owner.username %} has uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
+</p>
+{% endif %}
+
+{% if photos %}
+   {% for photo in photos %}
+      <div style="padding: 1em; display: inline;">
+         <a href="{{ photo.get_absolute_url }}">
+            <img src="{{ photo.thumb_url }}" alt="thumbnail" 
+               title="{{ photo.upload_date|date }}" /></a>
+      </div>
+   {% endfor %}
+
+   {% if page_obj %}
+      <hr style="margin-top: 1.5em;" />
+      {% include 'core/django_pagination.html' %}
+   {% endif %}
+{% else %}
+   <p>Looks like {{ gallery_owner.username }} has no photos at this time.</p>
+{% endif %}
+
+{% endblock %}

@@ -26,6 +26,7 @@
    <p>{% avatar subject 0 %}
    <ul>
       <li><a href="{% url 'forums-my_posts' %}">My forum posts</a></li>
+      <li><a href="{% url 'user_photos-gallery' username=subject.username %}">My uploaded photos</a></li>
       <li><a href="{% url 'forums-manage_favorites' %}">My favorite forum topics</a></li>
       <li><a href="{% url 'forums-manage_subscriptions' %}">My forum topic subscriptions</a></li>
    </ul>
@@ -83,6 +84,8 @@
    <a href="{% url 'bio-edit_profile' %}">Edit Profile</a></li>
    <li><a href="{% url 'bio-change_avatar' %}"><img src="{{ STATIC_URL }}icons/image_edit.png" alt="Change Avatar" /></a>
       <a href="{% url 'bio-change_avatar' %}">Change Avatar</a></li>
+   <li><a href="{% url 'user_photos-upload' %}"><img src="{{ STATIC_URL }}icons/picture_add.png" alt="Upload Photo" /></a>
+      <a href="{% url 'user_photos-upload' %}">Upload Photo</a></li>
    <li><a href="{% url 'bio-edit_elsewhere' %}"><img src="{{ STATIC_URL }}icons/link_edit.png" alt="Edit Links" /></a>
    <a href="{% url 'bio-edit_elsewhere' %}">Edit Elsewhere Links</a></li>
    <li><a href="{% url 'django.contrib.auth.views.password_change' %}"><img src="{{ STATIC_URL }}icons/key.png" alt="Change Password" /></a>
@@ -94,6 +97,8 @@
    <li><a href="{% url 'messages-compose_to' subject.username %}"><img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url 'messages-compose_to' subject.username %}">Send a private message to {{ subject.username }}</a></li>
    <li><a href="{% url 'forums-posts_for_user' username=subject.username %}"><img src="{{ STATIC_URL }}icons/comments.png"
       alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url 'forums-posts_for_user' username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
+   <li><a href="{% url 'user_photos-gallery' username=subject.username %}"><img src="{{ STATIC_URL }}icons/pictures.png"
+      alt="View photos" title="View photos uploaded by {{ subject.username }}" /></a> <a href="{% url 'user_photos-gallery' username=subject.username %}">View photos uploaded by {{ subject.username }}</a></li>
    <li><img src="{{ STATIC_URL }}icons/flag_red.png" alt="Flag" />
       <a href="#" class="profile-flag" id="fp-{{ profile.id }}">Report this profile</a></li>
 </ul>
