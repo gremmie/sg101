@@ -29,8 +29,6 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
       <hr style="margin-top: 1.5em;" />
       {% include 'core/django_pagination.html' %}
    {% endif %}
-{% else %}
-   <p>Looks like {{ gallery_owner.username }} has no photos at this time.</p>
 {% endif %}
 
 {% endblock %}
