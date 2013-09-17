@@ -18,7 +18,13 @@ $(document).ready(function() {
       },
       load: function(event, ui) {
          selectedTab = ui;
-         if (doReply && ui.tab.index() == 1)
+
+         if (ui.tab.index() == 1 && receiver && !doReply)
+         {
+            $('#id_receiver').val(receiver);
+            receiver = '';
+         }
+         else if (doReply && ui.tab.index() == 1)
          {
             doReply = false;
             var msg = msgCache[$msgDialog.msgId];
