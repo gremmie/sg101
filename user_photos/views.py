@@ -4,7 +4,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView
+from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+from django.contrib import messages
 
 from user_photos.forms import UploadForm
 from user_photos.models import Photo
@@ -62,3 +64,27 @@ class GalleryView(ListView):
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
         return super(GalleryView, self).dispatch(*args, **kwargs)
+
+
+@login_required
+@require_POST
+def delete(request):
+    photo_ids = []
+    for photo_id in request.POST.getlist('photo_id'):
+        try:
+            n = int(photo_id)
+        except ValueError:
+            continue
+        photo_ids.append(n)
+
+    count = 0
+    if photo_ids:
+        qs = Photo.objects.filter(user=request.user, pk__in=photo_ids)
+        count = qs.count()
+        qs.delete()
+
+    if count:
+        msg = "{} photo{} deleted".format(count, '' if count == 1 else 's')
+        messages.add_message(request, messages.INFO, msg)
+
+    return redirect('user_photos-gallery', username=request.user.username)

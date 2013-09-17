@@ -6,6 +6,12 @@
 <h2>Photo Gallery for {{ gallery_owner.username }}</h2>
 
 {% if user == gallery_owner %}
+{% if messages %}
+   <ul class="user-messages">
+    {% for message in messages %}
+       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+{% endif %}
 <p>
 You have uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
 Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
@@ -17,13 +23,31 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
 {% endif %}
 
 {% if photos %}
-   {% for photo in photos %}
-      <div style="padding: 1em; display: inline;">
-         <a href="{{ photo.get_absolute_url }}">
-            <img src="{{ photo.thumb_url }}" alt="thumbnail" 
-               title="{{ photo.upload_date|date }}" /></a>
-      </div>
-   {% endfor %}
+   {% if user == gallery_owner %}
+      <form action="{% url 'user_photos-delete' %}" method="post">{% csrf_token %}
+      {% for photo in photos %}
+         <div style="margin: 1em; display: inline-block; border: 1px solid gray;">
+            <a href="{{ photo.get_absolute_url }}">
+               <img src="{{ photo.thumb_url }}" alt="thumbnail" 
+                  title="{{ photo.upload_date|date }}" style="margin:auto;width:100%" /></a>
+            <br />
+            <div class="centered">
+            <input type="checkbox" name="photo_id" value="{{ photo.id }}"></input>
+            </div>
+         </div>
+      {% endfor %}
+      <br />
+      <input type="submit" name="submit" value="Delete Checked Photos" />
+      </form>
+   {% else %}
+      {% for photo in photos %}
+         <div style="margin: 1em; display: inline;">
+            <a href="{{ photo.get_absolute_url }}">
+               <img src="{{ photo.thumb_url }}" alt="thumbnail" 
+                  title="{{ photo.upload_date|date }}" /></a>
+         </div>
+      {% endfor %}
+   {% endif %}
 
    {% if page_obj %}
       <hr style="margin-top: 1.5em;" />

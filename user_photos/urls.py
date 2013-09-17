@@ -14,4 +14,5 @@ urlpatterns = patterns('',
     url(r'^gallery/(?P<username>[\w.@+-]{1,30})/$',
         GalleryView.as_view(),
         name='user_photos-gallery'),
+    url(r'^delete/$', 'user_photos.views.delete', name='user_photos-delete'),
 )
