@@ -1,11 +1,11 @@
-{{ object.user.username }}
-{{ object.user.get_full_name }}
-{{ object.location }}
-{{ object.occupation }}
-{{ object.interests }}
-{{ object.profile_text }}
-{{ object.signature }}
+{{ object.user.username|safe }}
+{{ object.user.get_full_name|safe }}
+{{ object.location|safe }}
+{{ object.occupation|safe }}
+{{ object.interests|safe }}
+{{ object.profile_text|safe }}
+{{ object.signature|safe }}
 {% for website in object.user.website_profiles.all %}
-{{ website.name }}
+{{ website.name|safe }}
 {{ website.url }}
 {% endfor %}

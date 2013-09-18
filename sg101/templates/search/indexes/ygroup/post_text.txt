@@ -1,2 +1,2 @@
-{{ object.title }}
-{{ object.msg }}
+{{ object.title|safe }}
+{{ object.msg|safe }}
