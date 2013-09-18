@@ -1,6 +1,6 @@
-{{ object.title }}
-{{ object.submitter.username }}
-{{ object.submitter.get_full_name }}
-{{ object.short_text }}
-{{ object.long_text }}
-{{ object.tags }}
+{{ object.title|safe }}
+{{ object.submitter.username|safe }}
+{{ object.submitter.get_full_name|safe }}
+{{ object.short_text|safe }}
+{{ object.long_text|safe }}
+{{ object.tags|safe }}

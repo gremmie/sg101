@@ -1,5 +1,5 @@
-{{ object.title }}
+{{ object.title|safe }}
 {{ object.url }}
-{{ object.user.username }}
-{{ object.user.get_full_name }}
-{{ object.description }}
+{{ object.user.username|safe }}
+{{ object.user.get_full_name|safe }}
+{{ object.description|safe }}
