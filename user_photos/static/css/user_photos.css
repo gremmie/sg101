@@ -1,0 +1,14 @@
+.user_photo {
+   margin: 1em;
+   display: inline-block;
+}
+.owner_photo {
+   border: 1px solid gray;
+}
+.owner_photo img {
+   margin: auto;
+   width: 100%;
+}
+hr.footer_divider {
+   margin-top: 1.5em;
+}

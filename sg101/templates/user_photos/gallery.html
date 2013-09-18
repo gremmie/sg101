@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load bio_tags %}
 {% block title %}Photo Gallery for {{ gallery_owner.username }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/user_photos.css" />
+{% endblock %}
 {% block content %}
 
 <h2>Photo Gallery for {{ gallery_owner.username }}</h2>
@@ -26,10 +29,10 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
    {% if user == gallery_owner %}
       <form action="{% url 'user_photos-delete' %}" method="post">{% csrf_token %}
       {% for photo in photos %}
-         <div style="margin: 1em; display: inline-block; border: 1px solid gray;">
+         <div class="user_photo owner_photo">
             <a href="{{ photo.get_absolute_url }}">
                <img src="{{ photo.thumb_url }}" alt="thumbnail" 
-                  title="{{ photo.upload_date|date }}" style="margin:auto;width:100%" /></a>
+                  title="{{ photo.upload_date|date }}" /></a>
             <br />
             <div class="centered">
             <input type="checkbox" name="photo_id" value="{{ photo.id }}"></input>
@@ -41,7 +44,7 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
       </form>
    {% else %}
       {% for photo in photos %}
-         <div style="margin: 1em; display: inline;">
+         <div class="user_photo">
             <a href="{{ photo.get_absolute_url }}">
                <img src="{{ photo.thumb_url }}" alt="thumbnail" 
                   title="{{ photo.upload_date|date }}" /></a>
@@ -50,7 +53,7 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
    {% endif %}
 
    {% if page_obj %}
-      <hr style="margin-top: 1.5em;" />
+      <hr class="footer_divider" />
       {% include 'core/django_pagination.html' %}
    {% endif %}
 {% endif %}
