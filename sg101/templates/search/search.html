@@ -9,13 +9,13 @@ $(document).ready(function() {
       var chkboxes = $('#search-form input[type="checkbox"]');
       $('#chk_all').click(function() {
          chkboxes.each(function(index) {
-            $(this).attr('checked', true);
+            $(this).prop('checked', true);
          });
          return false;
       });
       $('#chk_none').click(function() {
          chkboxes.each(function(index) {
-            $(this).attr('checked', false);
+            $(this).prop('checked', false);
          });
          return false;
       });
