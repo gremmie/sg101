@@ -10,6 +10,7 @@ from django.contrib import messages
 
 from user_photos.forms import UploadForm
 from user_photos.models import Photo
+from user_photos.s3 import delete_photos
 
 
 @login_required
@@ -69,6 +70,14 @@ class GalleryView(ListView):
 @login_required
 @require_POST
 def delete(request):
+    """A view function to allow a user to delete their own photos."""
+
+    ret_view, username = 'user_photos-gallery', request.user.username
+
+    if not settings.USER_PHOTOS_ENABLED:
+        messages.error(request, "This function is disabled temporarily")
+        return redirect(ret_view, username)
+
     photo_ids = []
     for photo_id in request.POST.getlist('photo_id'):
         try:
@@ -80,11 +89,14 @@ def delete(request):
     count = 0
     if photo_ids:
         qs = Photo.objects.filter(user=request.user, pk__in=photo_ids)
-        count = qs.count()
-        qs.delete()
+        count = len(qs)
+        if count:
+            delete_photos(qs)
+            qs.delete()
 
-    if count:
-        msg = "{} photo{} deleted".format(count, '' if count == 1 else 's')
-        messages.add_message(request, messages.INFO, msg)
+    msg = "{} photo{} deleted".format(count, '' if count == 1 else 's')
+    messages.add_message(request,
+            messages.SUCCESS if count > 0 else messages.WARNING,
+            msg)
 
-    return redirect('user_photos-gallery', username=request.user.username)
+    return redirect(ret_view, username)

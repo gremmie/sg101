@@ -61,7 +61,14 @@ paste the code into a forum post or email (e.g. CTRL-V).
        <a href="{% url 'user_photos-upload' %}">Upload another photo</a></li>
    <li><img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />
        <a href="{% url 'user_photos-gallery' username=object.user.username %}">See all my photos</a></li>
- </ul>
+</ul>
+
+<form id="photo-delete" action="{% url 'user_photos-delete' %}" method="post"
+         onsubmit="return confirm('Really delete this photo?');" >{% csrf_token %}
+   <input type="hidden" name="photo_id" value="{{ object.id }}"></input>
+   <input type="submit" name="submit" value="Delete Photo" />
+</form>
+
 {% else %}
 <p>
 <img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />

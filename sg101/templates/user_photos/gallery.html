@@ -4,6 +4,34 @@
 {% block custom_css %}
 <link rel="stylesheet" href="{{ STATIC_URL }}css/user_photos.css" />
 {% endblock %}
+{% block custom_js %}
+{% if user == gallery_owner %}
+<script>
+function confirmPhotoDelete(submit)
+{
+   var n = $("#photo-delete input[type='checkbox']:checked").length;
+   if (n == 0)
+   {
+      alert("Please select some photos to delete.");
+      return false;
+   }
+
+   var msg = [
+      "Are you sure you want to delete these photos?\n",
+      "This will cause broken images in any posts you pasted them in. ",
+      "To fix this you can edit the posts."
+   ].join("");
+   var result = confirm(msg);
+   if (result)
+   {
+      submit.disabled = true;
+      submit.value = "Please wait...";
+   }
+   return result;
+}
+</script>
+{% endif %}
+{% endblock %}
 {% block content %}
 
 <h2>Photo Gallery for {{ gallery_owner.username }}</h2>
@@ -27,7 +55,8 @@ Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
 
 {% if photos %}
    {% if user == gallery_owner %}
-      <form action="{% url 'user_photos-delete' %}" method="post">{% csrf_token %}
+      <form id="photo-delete" action="{% url 'user_photos-delete' %}" method="post"
+         onsubmit="return confirmPhotoDelete(submit);" >{% csrf_token %}
       {% for photo in photos %}
          <div class="user_photo owner_photo">
             <a href="{{ photo.get_absolute_url }}">

@@ -10,8 +10,6 @@ from boto.s3.key import Key
 class S3Bucket(object):
     """This class abstracts an Amazon S3 bucket.
 
-    We currently only support upload functionality.
-
     """
     def __init__(self, access_key, secret_key, base_url, bucket_name):
         self.conn = S3Connection(access_key, secret_key)
@@ -70,6 +68,28 @@ class S3Bucket(object):
         if public:
             key.make_public()
         return '{}{}/{}'.format(self.base_url, self.name, key_name)
+
+    def delete_keys(self, key_urls):
+        """Deletes a set of keys, specified as a list of URLs. The URLs could
+        have been returned by one or more of the upload_* methods.
+
+        Returns the number of keys that were successfully deleted.
+
+        """
+        if len(key_urls) == 0:
+            return 0
+
+        prefix = '{}{}/'.format(self.base_url, self.name)
+        prefix_len = len(prefix)
+
+        keys = []
+        for url in key_urls:
+            if url.startswith(prefix):
+                key = url[prefix_len:]
+                keys.append(key)
+
+        response = self.bucket.delete_keys(keys, quiet=True)
+        return len(key_urls) - len(response.errors)
 
     def _make_key(self, key_name, metadata):
         """Private method to create a key and optionally apply metadata to
