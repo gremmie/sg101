@@ -58,9 +58,9 @@ def upload_ajax(request):
 
     """
     if not request.user.is_authenticated():
-        return HttpResponseForbidden
+        return HttpResponseForbidden()
     if not request.is_ajax() or request.method != 'POST':
-        return HttpResponseNotAllowed
+        return HttpResponseNotAllowed()
 
     ret = {'success': False, 'msg': '', 'url': ''}
     if settings.USER_PHOTOS_ENABLED:
