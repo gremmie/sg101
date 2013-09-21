@@ -13,6 +13,17 @@ import forums.permissions as perms
 from forums.signals import notify_new_topic, notify_new_post
 
 
+FORUMS_FORM_CSS = {
+    'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
+            settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
+}
+FORUMS_FORM_JS = (
+    settings.GPP_THIRD_PARTY_JS['markitup'] +
+    settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
+    ['js/jquery.form.min.js', 'js/forums.js']
+)
+
+
 class NewPostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='',
@@ -22,13 +33,8 @@ class NewPostForm(forms.Form):
     topic = None
 
     class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
-        }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
-                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ['js/forums.js'])
+        css = FORUMS_FORM_CSS
+        js = FORUMS_FORM_JS
 
     def __init__(self, *args, **kwargs):
         super(NewPostForm, self).__init__(*args, **kwargs)
@@ -76,13 +82,8 @@ class NewTopicForm(forms.Form):
     has_mod_fields = False
 
     class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
-        }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
-                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ['js/forums.js'])
+        css = FORUMS_FORM_CSS
+        js = FORUMS_FORM_JS
 
     def __init__(self, user, forum, *args, **kwargs):
         super(NewTopicForm, self).__init__(*args, **kwargs)
@@ -153,13 +154,8 @@ class PostForm(forms.ModelForm):
         fields = ('body', )
 
     class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
-        }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
-                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ['js/forums.js'])
+        css = FORUMS_FORM_CSS
+        js = FORUMS_FORM_JS
 
     def __init__(self, *args, **kwargs):
         topic_name = kwargs.pop('topic_name', None)

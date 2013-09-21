@@ -32,8 +32,29 @@
 <br />
 <fieldset>
 <legend>Video Attachments</legend>
+   <p><a href="/forums/topic/18843/">Need help?</a></p>
 <div id="attachment"></div>
 </fieldset>
 
+</fieldset>
+</form>
+
+<form id="photo-upload-form" action="{% url 'user_photos-upload_ajax' %}" method="post"
+   enctype="multipart/form-data">{% csrf_token %}
+<fieldset>
+   <legend>Upload Photo</legend>
+   <p>
+   You can upload a photo directly from your computer or device with this
+   form. After the photo is uploaded it will be resized and an image code will be
+   placed in the post box, above.
+   </p>
+   <p>To hot-link a photo hosted elsewhere, use the
+   <img src="{{ STATIC_URL }}js/markitup/sets/markdown/images/picture.png">
+   icon on the post box.
+   </p>
+   <input type="file" name="image_file" /><br />
+   <input type="submit" id="photo-upload-submit" name="submit" value="Upload photo" />
+   <div style="width: 80%;margin:auto;"><div id="photo-upload-progress"
+         style="margin:auto;width:100%;"></div></div>
 </fieldset>
 </form>

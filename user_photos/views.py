@@ -1,7 +1,11 @@
 """Views for the user_photos application."""
+import json
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.http import (HttpResponse, HttpResponseForbidden,
+    HttpResponseNotAllowed)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView
 from django.views.decorators.http import require_POST
@@ -19,10 +23,6 @@ def upload(request):
     The photo will be resized if necessary and a thumbnail image will be
     created. The image and thumbnail will then be uploaded to the Amazon
     S3 service for storage.
-
-    TODO: rate limiting
-          pass off the processing to a celery task
-          ajax version of this view
 
     """
     form = None
@@ -42,6 +42,46 @@ def upload(request):
         'form': form,
         },
         status=200 if uploads_enabled else 503)
+
+
+def upload_ajax(request):
+    """This view is the ajax version of the upload function, above.
+
+    We return a JSON object response to the client with the following name
+    & value pairs:
+            'success' : false for failure and true for success
+            'msg' : string error message if success is false
+            'url' : the image URL as a string if success
+
+    If a non-200 status code is returned the response will simply be a text
+    string error message.
+
+    """
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden
+    if not request.is_ajax() or request.method != 'POST':
+        return HttpResponseNotAllowed
+
+    ret = {'success': False, 'msg': '', 'url': ''}
+    if settings.USER_PHOTOS_ENABLED:
+        form = UploadForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            photo = form.save()
+            ret['success'] = True
+            ret['url'] = photo.url
+        else:
+            # gather form error messages
+            errors = []
+            non_field_errors = form.non_field_errors().as_text()
+            if non_field_errors:
+                errors.append(non_field_errors)
+            for field_errors in form.errors.values():
+                errors.append(field_errors.as_text())
+            ret['msg'] = '\n'.join(errors)
+    else:
+        ret['msg'] = 'Photo uploads are temporarily disabled'
+
+    return HttpResponse(json.dumps(ret), content_type='application/json')
 
 
 class GalleryView(ListView):

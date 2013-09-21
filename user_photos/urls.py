@@ -8,6 +8,9 @@ from user_photos.views import GalleryView
 
 urlpatterns = patterns('',
     url(r'^upload/$', 'user_photos.views.upload', name='user_photos-upload'),
+    url(r'^upload-ajax/$',
+        'user_photos.views.upload_ajax',
+        name='user_photos-upload_ajax'),
     url(r'^photo/(?P<pk>\d+)/$',
         DetailView.as_view(model=Photo),
         name='user_photos-detail'),
