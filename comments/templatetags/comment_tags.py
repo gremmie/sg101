@@ -10,7 +10,6 @@ We support the following template tags:
 from django import template
 from django.conf import settings
 from django.template.loader import render_to_string
-from django.contrib.contenttypes.models import ContentType
 
 from comments.models import Comment
 from comments.forms import CommentForm

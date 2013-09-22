@@ -128,53 +128,55 @@ $(document).ready(function() {
    });
 
    var $photoProgress = $('#photo-upload-progress');
-   var $photoForm = $('#photo-upload-form');
-   var $postBox = $('#id_body');
-   var $photoUploadSubmit = $('#photo-upload-submit');
+   if ($photoProgress.length) {
+      var $photoForm = $('#photo-upload-form');
+      var $postBox = $('#id_body');
+      var $photoUploadSubmit = $('#photo-upload-submit');
 
-   $photoForm.ajaxForm({
-      beforeSubmit: function(arr, $form, options) {
-         var fileObj = null;
-         $.each(arr, function(index, val) {
-            if (val.name == 'image_file') {
-               fileObj = val.value;
+      $photoForm.ajaxForm({
+         beforeSubmit: function(arr, $form, options) {
+            var fileObj = null;
+            $.each(arr, function(index, val) {
+               if (val.name == 'image_file') {
+                  fileObj = val.value;
+               }
+            });
+            if (!fileObj) {
+               alert("Please choose a file to upload.");
+               return false;
             }
-         });
-         if (!fileObj) {
-            alert("Please choose a file to upload.");
-            return false;
+            $photoUploadSubmit.attr('disabled', 'disabled').val('Uploading...');
+            return true;
+         },
+         beforeSend: function() {
+            $photoProgress.progressbar({value: 0});
+         },
+         uploadProgress: function(event, position, total, percentComplete) {
+            if (percentComplete < 100) {
+               $photoProgress.progressbar({value: percentComplete});
+            }
+            else {
+               $photoProgress.progressbar({value: false});
+            }
+         },
+         success: function(resp, statusText, xhr, $form) {
+            $photoProgress.progressbar({value: 100});
+            if (resp.success) {
+               $postBox.val($postBox.val() + '\n![image](' + resp.url + ')');
+               alert("Success! The image code was added to your post.");
+            }
+            else {
+               alert('Error: ' + resp.msg);
+            }
+         },
+         complete: function(xhr) {
+            $photoProgress.progressbar({value: 0});
+            $photoForm.clearForm();
+            $photoUploadSubmit.removeAttr('disabled').val('Upload photo');
+         },
+         error: function(xhr, textStatus, ex) {
+            alert('Oops, there was an error: ' + ex);
          }
-         $photoUploadSubmit.attr('disabled', 'disabled').val('Uploading...');
-         return true;
-      },
-      beforeSend: function() {
-         $photoProgress.progressbar({value: 0});
-      },
-      uploadProgress: function(event, position, total, percentComplete) {
-         if (percentComplete < 100) {
-            $photoProgress.progressbar({value: percentComplete});
-         }
-         else {
-            $photoProgress.progressbar({value: false});
-         }
-      },
-      success: function(resp, statusText, xhr, $form) {
-         $photoProgress.progressbar({value: 100});
-         if (resp.success) {
-            $postBox.val($postBox.val() + '\n![image](' + resp.url + ')');
-            alert("Success! The image code was added to your post.");
-         }
-         else {
-            alert('Error: ' + resp.msg);
-         }
-      },
-      complete: function(xhr) {
-         $photoProgress.progressbar({value: 0});
-         $photoForm.clearForm();
-         $photoUploadSubmit.removeAttr('disabled').val('Upload photo');
-      },
-      error: function(xhr, textStatus, ex) {
-         alert('Oops, there was an error: ' + ex);
-      }
-   });
+      });
+   }
 });
