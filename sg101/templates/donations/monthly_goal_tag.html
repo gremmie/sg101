@@ -3,7 +3,7 @@
 {% block block_content %}
 <p class="centered">Help us meet our monthly goal:</p>
 <div class="centered">
-   <progress max="100" value="{{ pct }}">{{ pct }}%</progress>
+   <progress max="100" value="{{ pct }}" style="width:90%">{{ pct }}%</progress>
 </div>
 <p class="centered"><strong>{{ pct }}%</strong></p>
 <p class="centered"><a href="{% url 'donations-index' %}">Donate Now</a></p>
