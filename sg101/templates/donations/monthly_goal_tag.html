@@ -2,9 +2,8 @@
 {% block block_title %}Donations{% endblock %}
 {% block block_content %}
 <p class="centered">Help us meet our monthly goal:</p>
-<div style="width: 98%; border: 1px solid black; margin: auto;">
-<div style="width: {{ pct }}%; background-color: #17E3CB; color: white;"><span>&nbsp;</span>
-</div>
+<div class="centered">
+   <progress max="100" value="{{ pct }}">{{ pct }}%</progress>
 </div>
 <p class="centered"><strong>{{ pct }}%</strong></p>
 <p class="centered"><a href="{% url 'donations-index' %}">Donate Now</a></p>
