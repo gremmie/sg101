@@ -26,7 +26,10 @@ class CustomModelSearchForm(ModelSearchForm):
 
     """
     q = forms.CharField(required=False, label='',
-            widget=forms.TextInput(attrs={'class': 'text', 'size': 48}))
+            widget=forms.TextInput(attrs={'type': 'search',
+                                          'class': 'search',
+                                          'size': 48,
+                                          }))
 
     def __init__(self, *args, **kwargs):
         super(CustomModelSearchForm, self).__init__(*args, **kwargs)

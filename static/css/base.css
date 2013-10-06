@@ -450,3 +450,8 @@ ul.no-bullet-inline-block li {
 html.busy, html.busy * {
   cursor: wait !important;
 }
+
+input.search {
+   margin: 0.5em 0;
+   padding: 5px;
+}
