@@ -170,7 +170,7 @@ function messageSubmit(form) {
 }
 
 function tabMasterCheckClick(box, name) {
-   var state = $(box).attr('checked');
+   var state = $(box).prop('checked');
    $('input[name="' + name + '"]').each(function() {
       this.checked = state;
    });
