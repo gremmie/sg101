@@ -81,7 +81,7 @@ major credit cards are also accepted. If you really don't do Paypal, please
          <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
          <label for="name_yes">Yes, list my name as gathered from Paypal</label></li>
    {% endif %}
-   <li><input name="item_number" type="radio" value="{{ item_anon_number }}" id="name_no" />
+   <li><input name="item_number" type="radio" value="{{ item_anon_number }}" checked="checked" id="name_no" />
       <label for="name_no">No, list me as {{ anonymous }}</label></li>
    </ul>
    <input type="hidden" name="cmd" value="_donations" />
