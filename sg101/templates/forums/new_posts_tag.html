@@ -1,7 +1,7 @@
 {% load core_tags %}
 <div>
 <h2>Latest Forum Posts</h2>
-<p>Join us in our <a href="{% url 'forums-index' %}">forums</a> for some lively discussions. Here are the list of forum topics with new posts.</p>
+<p>Join us in our <a href="{% url 'forums-index' %}">forums</a> for some lively discussions. Here are the forum topics with new posts.</p>
 {% if topics %}
    <ul>
    {% for topic in topics %}
