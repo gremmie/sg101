@@ -64,6 +64,7 @@ LOGGING = {
             'mode': 'a',
             'maxBytes': 100 * 1024,
             'backupCount': 10,
+            'encoding': 'utf-8',
         },
         'auth': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -73,6 +74,7 @@ LOGGING = {
             'mode': 'a',
             'maxBytes': 2 * 1024 * 1024,
             'backupCount': 5,
+            'encoding': 'utf-8',
         },
         'mail_admins': {
             'class': 'django.utils.log.AdminEmailHandler',
