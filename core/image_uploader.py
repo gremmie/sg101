@@ -44,7 +44,7 @@ def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
     a thumbnail was not requested.
     """
 
-    filename = fp.name.encode('utf-8')
+    filename = fp.name
     logger.info('Processing image file: %s', filename)
 
     # Trying to use PIL (or Pillow) on a Django UploadedFile is often
