@@ -110,6 +110,7 @@ class ComposeForm(forms.Form):
 class OptionsForm(forms.ModelForm):
     class Meta:
         model = Options
+        fields = ['attach_signature', 'notify_email']
 
 
 def notify_receiver(new_msg):
