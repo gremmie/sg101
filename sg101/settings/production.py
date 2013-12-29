@@ -17,6 +17,9 @@ DATABASES = {
     },
 }
 
+# Lifetime of the database connections, in seconds:
+CONN_MAX_AGE = 1200
+
 STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
 
 # Used cached template loader
