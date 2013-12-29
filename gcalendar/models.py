@@ -18,10 +18,10 @@ GIG_FORUM_SLUG = "gigs"
 class PendingEventManager(models.Manager):
     """A manager for pending events."""
 
-    def get_query_set(self):
+    def get_queryset(self):
         """Returns a queryset of events that have been approved to update
         the Google calendar."""
-        return super(PendingEventManager, self).get_query_set().filter(
+        return super(PendingEventManager, self).get_queryset().filter(
                 Q(status=Event.NEW_APRV) |
                 Q(status=Event.EDIT_APRV) |
                 Q(status=Event.DEL_APRV)

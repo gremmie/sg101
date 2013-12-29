@@ -14,8 +14,8 @@ class PublicContestManager(models.Manager):
     The manager for all public contests.
 
     """
-    def get_query_set(self):
-        return super(PublicContestManager, self).get_query_set().filter(is_public=True)
+    def get_queryset(self):
+        return super(PublicContestManager, self).get_queryset().filter(is_public=True)
 
 
 class Contest(models.Model):

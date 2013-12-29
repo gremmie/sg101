@@ -43,8 +43,8 @@ def download_path(instance, filename):
 
 class PublicDownloadManager(models.Manager):
     """The manager for all public downloads."""
-    def get_query_set(self):
-        return super(PublicDownloadManager, self).get_query_set().filter(
+    def get_queryset(self):
+        return super(PublicDownloadManager, self).get_queryset().filter(
                 is_public=True).select_related()
 
 

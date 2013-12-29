@@ -61,7 +61,7 @@ class PostAdmin(admin.ModelAdmin):
     ordering = ('-creation_date', )
     save_on_top = True
 
-    def queryset(self, request):
+    def get_queryset(self, request):
         return Post.objects.select_related('user')
 
     # override save_model() to update the search index 
