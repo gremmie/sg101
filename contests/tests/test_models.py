@@ -39,7 +39,7 @@ class ContestTestCase(TestCase):
                 creation_date=start,
                 end_date=end)
 
-        self.failIf(c.is_active())
+        self.assertFalse(c.is_active())
 
         start = now - datetime.timedelta(days=7)
         end = start + datetime.timedelta(days=30)
@@ -63,7 +63,7 @@ class ContestTestCase(TestCase):
                 creation_date=start,
                 end_date=end)
 
-        self.failIf(c.is_active())
+        self.assertFalse(c.is_active())
 
     def test_can_enter(self):
 
@@ -78,7 +78,7 @@ class ContestTestCase(TestCase):
                 creation_date=start,
                 end_date=end)
 
-        self.failIf(c.can_enter())
+        self.assertFalse(c.can_enter())
 
         start = now - datetime.timedelta(days=7)
         end = start + datetime.timedelta(days=30)
@@ -102,7 +102,7 @@ class ContestTestCase(TestCase):
                 creation_date=start,
                 end_date=end)
 
-        self.failIf(c.can_enter())
+        self.assertFalse(c.can_enter())
 
         start = now - datetime.timedelta(days=7)
         end = start + datetime.timedelta(days=30)
@@ -119,7 +119,7 @@ class ContestTestCase(TestCase):
                 winner=user,
                 win_date=now)
 
-        self.failIf(c.can_enter())
+        self.assertFalse(c.can_enter())
 
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
@@ -133,7 +133,7 @@ class ContestTestCase(TestCase):
                 winner=user,
                 win_date=end + datetime.timedelta(days=1))
 
-        self.failIf(c.can_enter())
+        self.assertFalse(c.can_enter())
 
     def test_pick_winner(self):
 

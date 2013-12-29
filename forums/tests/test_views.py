@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
-from forums.models import Forum, Topic, Post
+from forums.models import Forum, Topic
 
 
 class ForumPostTestCase(TestCase):
@@ -56,7 +56,7 @@ class ForumPostTestCase(TestCase):
         self.assertEqual(topic.post_count, 1)
 
         post = topic.last_post
-        self.failIf(post is None)
+        self.assertFalse(post is None)
 
         if post:
             self.assertEqual(post.body, topic_body)
@@ -78,7 +78,7 @@ class ForumPostTestCase(TestCase):
             self.fail("topic doesn't exist")
 
         post = topic.last_post
-        self.failIf(post is None)
+        self.assertFalse(post is None)
         if post:
             self.assertEqual(post.body, post2_body)
             self.assertEqual(post.user.pk, self.user.pk)
@@ -102,7 +102,7 @@ class ForumPostTestCase(TestCase):
             self.fail("topic doesn't exist")
 
         post = topic.last_post
-        self.failIf(post is None)
+        self.assertFalse(post is None)
         if post:
             self.assertEqual(post.body, post3_body)
             self.assertEqual(post.user.pk, self.user.pk)
@@ -125,7 +125,7 @@ class ForumPostTestCase(TestCase):
             self.fail("topic doesn't exist")
 
         post = topic.last_post
-        self.failIf(post is None)
+        self.assertFalse(post is None)
         if post:
             self.assertEqual(post.body, post3_body)
             self.assertEqual(post.user.pk, self.user.pk)

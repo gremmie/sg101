@@ -94,10 +94,10 @@ class ContestEntryTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         c = json.loads(response.content)
-        self.failIf(c['entered'])
+        self.assertFalse(c['entered'])
 
         contest = Contest.objects.get(pk=self.contest_id)
-        self.failIf(self.user in contest.contestants.all())
+        self.assertFalse(self.user in contest.contestants.all())
 
 
 class NoPublicConstestsTestCase(TestCase):

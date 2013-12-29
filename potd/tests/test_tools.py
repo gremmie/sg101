@@ -3,7 +3,6 @@ Tests for the pick_potd() function.
 
 """
 from django.test import TestCase
-from django.contrib.auth.models import User
 
 from potd.models import Current, Photo, Sequence
 from potd.tools import pick_potd

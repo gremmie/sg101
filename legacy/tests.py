@@ -13,7 +13,7 @@ class UnPhpBbTest(TestCase):
         s1 = "&quot;Look! No head!&quot; - Laika &amp; The Cosmonauts"
         s2 = unphpbb(s1)
         s3 = u'"Look! No head!" - Laika & The Cosmonauts'
-        self.failUnlessEqual(s2, s3)
+        self.assertEqual(s2, s3)
 
     def test_rem_uuid1(self):
         s1 = ("[url=http://www.thesurfites.com][color=black:3fdb565c83]"
@@ -21,7 +21,7 @@ class UnPhpBbTest(TestCase):
         s2 = unphpbb(s1)
         s3 = (u'[url=http://www.thesurfites.com][color=black]'
                 'T H E - S U R F I T E S[/color][/url]')
-        self.failUnlessEqual(s2, s3)
+        self.assertEqual(s2, s3)
 
 
 class Html2MdTest(TestCase):
@@ -35,4 +35,4 @@ class Html2MdTest(TestCase):
         md_writer.feed(s1)
         s2 = md_writer.markdown()
         s3 = u'[Pollo Del Mar](http://surfguitar101.com/modules.php?name=Web_Links&l_op=visit&lid=50)  \n\n[Frankie & The Pool Boys](http://tinyurl.com/yjfmspj)  \n\n[PDM on FaceBook](http://tinyurl.com/cnr27t)  \n\n'
-        self.failUnlessEqual(s2, s3)
+        self.assertEqual(s2, s3)
