@@ -21,7 +21,7 @@ class CommentManager(models.Manager):
     def for_object(self, obj, filter_public=True):
         """QuerySet for all comments for a particular model instance."""
         ct = ContentType.objects.get_for_model(obj)
-        qs = self.get_query_set().filter(content_type__pk=ct.id,
+        qs = self.get_queryset().filter(content_type__pk=ct.id,
                 object_id=obj.id)
         if filter_public:
             qs = qs.filter(is_public=True)
