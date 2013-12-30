@@ -14,6 +14,7 @@ class Photo(models.Model):
     upload_date = models.DateTimeField()
     url = models.URLField(max_length=200)
     thumb_url = models.URLField(max_length=200, blank=True)
+    signature = models.CharField(max_length=32, blank=True, db_index=True)
 
     def __unicode__(self):
         return u'Photo by {} on {}'.format(self.user.username,

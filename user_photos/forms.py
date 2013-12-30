@@ -1,5 +1,6 @@
 """Forms for the user_photos application."""
 import datetime
+import hashlib
 
 from django import forms
 from django.conf import settings
@@ -49,9 +50,21 @@ class UploadForm(forms.Form):
         """Processes the image and creates a new Photo object, which is saved to
         the database. The new Photo instance is returned.
 
+        Note that we do de-duplication. A signature is computed for the photo.
+        If the user has already uploaded a file with the same signature, that
+        photo object is returned instead.
+
         This function should only be called if is_valid() returns True.
 
         """
+        # Check for duplicate uploads from this user
+        signature = self._signature()
+        try:
+            return Photo.objects.get(user=self.user, signature=signature)
+        except Photo.DoesNotExist:
+            pass
+
+        # This must not be a duplicate, proceed with upload to S3
         bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
                           secret_key=settings.USER_PHOTOS_SECRET_KEY,
                           base_url=settings.USER_PHOTOS_BASE_URL,
@@ -66,6 +79,20 @@ class UploadForm(forms.Form):
                                 new_size=settings.USER_PHOTOS_MAX_SIZE,
                                 thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
 
-        photo = Photo(user=self.user, url=url, thumb_url=thumb_url)
+        photo = Photo(user=self.user, url=url, thumb_url=thumb_url,
+                signature=signature)
         photo.save()
         return photo
+
+    def _signature(self):
+        """Calculates and returns a signature for the image file as a hex digest
+        string.
+
+        This function should only be called if is_valid() is True.
+
+        """
+        fp = self.cleaned_data['image_file']
+        md5 = hashlib.md5()
+        for chunk in fp.chunks():
+            md5.update(chunk)
+        return md5.hexdigest()
