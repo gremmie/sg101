@@ -2,10 +2,12 @@
 Celery tasks for the messages application.
 
 """
-from celery.task import task
+from __future__ import absolute_import
+
+from celery import shared_task
 
 
-@task
+@shared_task
 def purge_messages():
     """
     Task to purge messages that have been deleted by both sender & receiver.

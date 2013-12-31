@@ -2,22 +2,15 @@
 Celery tasks for the core application.
 
 """
-from celery.task import task
+from __future__ import absolute_import
+
+from celery import shared_task
 import django.core.mail
 
 import core.whos_online
 
 
-@task
-def add(x, y):
-    """
-    It is useful to have a test task laying around. This is it.
-
-    """
-    return x + y
-
-
-@task
+@shared_task
 def send_mail(subject, message, from_email, recipient_list, **kwargs):
     """
     A task to send mail via Django.
@@ -27,7 +20,7 @@ def send_mail(subject, message, from_email, recipient_list, **kwargs):
             **kwargs)
 
 
-@task
+@shared_task
 def cleanup():
     """
     A task to perform site-wide cleanup actions.
@@ -51,7 +44,7 @@ def cleanup():
     command.execute()
 
 
-@task
+@shared_task
 def max_users():
     """
     Run the periodic task to calculate the who's online max users/visitors

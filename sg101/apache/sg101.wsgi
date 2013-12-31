@@ -11,7 +11,6 @@ sys.path.append('/svr/django-sites/sg101/sg101')
 sys.path.append('/svr/django-sites/sg101/sg101/tools')
 
 os.environ['PYTHON_EGG_CACHE'] = '/svr/django-sites/sg101/eggs'
-os.environ['CELERY_LOADER'] = 'django'
 
 
 def offline_handler(environ, start_response):

@@ -2,11 +2,13 @@
 Celery tasks for the wiki app.
 
 """
+from __future__ import absolute_import
+
 import datetime
 import logging
 import time
 
-from celery.task import task
+from celery import shared_task
 from django.conf import settings
 import redis
 
@@ -16,7 +18,7 @@ from core.services import get_redis_connection
 logger = logging.getLogger(__name__)
 
 
-@task
+@shared_task
 def expire_cookies():
     """
     Periodically run this task to remove expired cookies from the Redis set

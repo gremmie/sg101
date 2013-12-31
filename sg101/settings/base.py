@@ -5,7 +5,6 @@ import os
 from decimal import Decimal
 
 from django.contrib.messages import constants as message_constants
-import djcelery
 from celery.schedules import crontab
 
 
@@ -110,7 +109,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.staticfiles',
-    'djcelery',
     'elsewhere',
     'haystack',
     'queued_search',
@@ -212,16 +210,12 @@ REDIS_DB = 0
 BROKER_URL = 'redis://localhost:6379/1'
 BROKER_POOL_LIMIT = 10
 
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
 CELERY_IGNORE_RESULT = True
-CELERY_RESULT_BACKEND = 'redis'
-CELERY_REDIS_HOST = 'localhost'
-CELERY_REDIS_PORT = 6379
-CELERY_REDIS_DB = 1
-
 CELERY_DISABLE_RATE_LIMITS = True
 CELERY_SEND_TASK_ERROR_EMAILS = True
-
-djcelery.setup_loader()
 
 CELERYBEAT_SCHEDULE = {
     "potd": {
