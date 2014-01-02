@@ -32,7 +32,7 @@ urlpatterns += patterns('',
         'django.contrib.auth.views.password_reset_done',
         kwargs={'template_name': 'accounts/password_reset_sent.html'},
         name='accounts-password_reset_sent'),
-    url(r'^password/reset/confirm/(?P<uidb36>[0-9a-z]+)/(?P<token>[0-9a-z]+-\w+)/$',
+    url(r'^password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9a-z]+-\w+)/$',
         'django.contrib.auth.views.password_reset_confirm',
         kwargs={
             'template_name': 'accounts/password_reset_confirm.html',
