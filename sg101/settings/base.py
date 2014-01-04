@@ -301,7 +301,7 @@ USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 
 # If this flag is False, the queued_search queue will not be processed. This is
 # useful when we are rebuilding the search index.
-SEARCH_QUEUE_ENABLED = False
+SEARCH_QUEUE_ENABLED = True
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
