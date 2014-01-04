@@ -192,10 +192,14 @@ MAX_TAG_LENGTH = 50
 #######################################################################
 # Haystack Search Settings
 #######################################################################
-HAYSTACK_SITECONF = 'sg101.search_sites'
-HAYSTACK_SEARCH_ENGINE = 'xapian'
-HAYSTACK_XAPIAN_PATH = os.path.join(PROJECT_PATH, 'xapian_index')
+HAYSTACK_SIGNAL_PROCESSOR = 'custom_search.signals.QueuedSignalProcessor'
 
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'xapian_backend.XapianEngine',
+        'PATH': os.path.join(PROJECT_PATH, 'xapian_index'),
+    },
+}
 
 #######################################################################
 # Redis integration & settings
@@ -297,7 +301,7 @@ USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 
 # If this flag is False, the queued_search queue will not be processed. This is
 # useful when we are rebuilding the search index.
-SEARCH_QUEUE_ENABLED = True
+SEARCH_QUEUE_ENABLED = False
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)

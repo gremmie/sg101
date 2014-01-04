@@ -1,30 +1,18 @@
 """Haystack search index for the bio application."""
-from haystack.indexes import *
-from haystack import site
-from custom_search.indexes import CondQueuedSearchIndex
+from haystack import indexes
 
 from bio.models import UserProfile
-from bio.signals import profile_content_update
 
 
-class UserProfileIndex(CondQueuedSearchIndex):
-    text = CharField(document=True, use_template=True)
-    author = CharField(model_attr='user')
+class UserProfileIndex(indexes.SearchIndex, indexes.Indexable):
+    text = indexes.CharField(document=True, use_template=True)
+    author = indexes.CharField(model_attr='user')
 
-    def index_queryset(self):
+    def get_model(self):
+        return UserProfile
+
+    def index_queryset(self, using=None):
         return UserProfile.objects.filter(user__is_active=True)
 
     def get_updated_field(self):
         return 'update_date'
-
-    def _setup_save(self, model):
-        profile_content_update.connect(self.enqueue_save)
-
-    def _teardown_save(self, model):
-        profile_content_update.disconnect(self.enqueue_save)
-
-    def enqueue_save(self, sender, **kwargs):
-        return self.enqueue('update', sender)
-
-
-site.register(UserProfile, UserProfileIndex)
