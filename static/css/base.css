@@ -79,7 +79,6 @@ a:hover {
  color: black;
 }
 #footer {
- height: 105px;
  font-size: 10px;
  line-height: 1em;
  background-repeat: no-repeat;
@@ -454,4 +453,18 @@ html.busy, html.busy * {
 input.search {
    margin: 0.5em 0;
    padding: 5px;
+}
+
+ul.logo-block {
+   margin: 1.5em 3em 1.5em 3em;
+   background-color: white;
+   border-top-left-radius: 5px;
+   border-top-right-radius: 5px;
+   border-bottom-left-radius: 5px;
+   border-bottom-right-radius: 5px;
+}
+ul.logo-block li {
+   display: inline-block;
+   vertical-align: middle;
+   margin: 1em 1.5em 1em 1.5em;
 }
