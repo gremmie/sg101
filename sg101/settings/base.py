@@ -133,7 +133,6 @@ INSTALLED_APPS = [
     'messages',
     'news',
     'oembed',
-    'phantombrigade',
     'podcast',
     'polls',
     'potd',
@@ -277,11 +276,6 @@ GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 # Google OAuth settings
 GOOGLE_OAUTH_CONSUMER_KEY = 'surfguitar101.com'
 GOOGLE_OAUTH_PRIVATE_KEY_PATH = SECRETS['GOOGLE_KEY_PATH']
-
-# Phantom Brigade TeamSpeak3 settings
-PB_TS3_IP = '208.77.144.55'
-PB_TS3_PORT = 10011
-PB_TS3_VID = 17
 
 # MoinMoin Wiki integration settings
 WIKI_COOKIE_NAME = 'sg101_wiki'
