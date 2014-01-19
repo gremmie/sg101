@@ -11,6 +11,7 @@ from haystack.query import SearchQuerySet
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
 from custom_search.forms import CustomModelSearchForm
+from custom_search.views import UserSearchView
 from core.views import FixedView
 
 
@@ -93,12 +94,14 @@ sqs = SearchQuerySet().order_by('-pub_date')
 
 urlpatterns += patterns('haystack.views',
     url(r'^search/$',
-        search_view_factory(form_class=CustomModelSearchForm,
+        search_view_factory(view_class=UserSearchView,
+                            form_class=CustomModelSearchForm,
                             searchqueryset=sqs,
                             load_all=True),
         name='haystack_search'),
     url(r'^search/ajax/$',
-        search_view_factory(template='search/search_ajax.html',
+        search_view_factory(view_class=UserSearchView,
+                            template='search/search_ajax.html',
                             form_class=CustomModelSearchForm,
                             searchqueryset=sqs,
                             load_all=True),

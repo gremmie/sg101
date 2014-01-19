@@ -33,6 +33,9 @@ class CustomModelSearchForm(ModelSearchForm):
     Haystack 2.1.0's auto_query() function did not seem to work right so we just
     rolled our own.
 
+    This form can optionally receive the user making the search as a keyword
+    argument ('user') to __init__. This will be used for logging search queries.
+
     """
     q = forms.CharField(required=False, label='All these words',
             widget=forms.TextInput(attrs={'type': 'search', 'class': 'search',
@@ -45,6 +48,7 @@ class CustomModelSearchForm(ModelSearchForm):
                 'size': 48}))
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(CustomModelSearchForm, self).__init__(*args, **kwargs)
         self.fields['models'] = forms.MultipleChoiceField(choices=MODEL_CHOICES,
                 label='Search in', widget=forms.CheckboxSelectMultiple)
@@ -65,11 +69,19 @@ class CustomModelSearchForm(ModelSearchForm):
         if not self.is_valid():
             return self.no_query_found()
 
-        logger.info('Search executed: /%s/%s/%s/ in %s',
+        if self.user is None:
+            username = 'UNKNOWN'
+        elif self.user.is_authenticated():
+            username = self.user.username
+        else:
+            username = 'ANONYMOUS'
+
+        logger.info('Search executed: /%s/%s/%s/ in %s by %s',
             self.cleaned_data['q'],
             self.cleaned_data['exact'],
             self.cleaned_data['exclude'],
-            self.cleaned_data['models'])
+            self.cleaned_data['models'],
+            username)
 
         sqs = self.searchqueryset
 
