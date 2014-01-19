@@ -2,7 +2,18 @@
 Settings to use when running tests. Uses sqlite for speed.
 
 """
+import logging
+
 from sg101.settings.base import *
+
+
+# Speed up tests:
+DEBUG = False
+TEMPLATE_DEBUG = False
+logging.disable(logging.CRITICAL)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.MD5PasswordHasher',
+]
 
 # Use a different database in Redis for tests
 REDIS_DB = 14
