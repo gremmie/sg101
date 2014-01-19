@@ -3,6 +3,7 @@ View tests for the accounts application.
 
 """
 import datetime
+import re
 
 from django.test import TestCase
 from django.core.urlresolvers import reverse
@@ -290,3 +291,61 @@ class ForgotUsernameTest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         if len(mail.outbox):
             self.assertTrue(mail.outbox[0].subject.startswith('Forgotten username'))
+
+
+class ForgotEmailTest(TestCase):
+    """Because we use a custom URL its important to test this. This got broken
+    in Django 1.6 when the URL pattern changed.
+
+    """
+
+    def setUp(self):
+        u = User.objects.create_user('user1', 'user1@example.com', 'pw')
+        u.save()
+
+    def test_nominal_case(self):
+        """Test a full forgot password scenario."""
+
+        # GET password reset page
+        response = self.client.get(reverse('accounts-password_reset'))
+        self.assertEqual(response.status_code, 200)
+
+        # POST email address
+        args = {'email': 'user1@example.com'}
+        response = self.client.post(reverse('accounts-password_reset'), args,
+                follow=True)
+        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+
+        # Ensure the email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        if (len(mail.outbox)):
+            msg = mail.outbox[0]
+            self.assertTrue(msg.subject.startswith('Password reset'))
+            self.assertTrue(len(msg.to) == 1 and msg.to[0] == 'user1@example.com')
+            msg_text = msg.message().as_string()
+            m = re.search(r'http://example.com/accounts/password/reset/confirm/'
+                r'(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9a-z]+-\w+)/',
+                msg_text)
+            self.assertTrue(m is not None)
+            if m:
+                uidb64, token = m.group('uidb64'), m.group('token')
+
+            # visit the password reset page
+            response = self.client.get(
+                    reverse('accounts-password_reset_confirm',
+                            kwargs={'uidb64': uidb64, 'token': token}))
+            self.assertEqual(response.status_code, 200)
+
+            # POST new password
+            args = {'new_password1': 'pw2', 'new_password2': 'pw2'}
+            response = self.client.post(
+                    reverse('accounts-password_reset_confirm',
+                            kwargs={'uidb64': uidb64, 'token': token}),
+                    args, follow=True)
+            self.assertRedirects(response,
+                    reverse('accounts-password_reset_success'))
+            self.assertEqual(response.status_code, 200)
+
+            # Check new password
+            u = User.objects.get(username='user1')
+            self.assertTrue(check_password('pw2', u.password))
