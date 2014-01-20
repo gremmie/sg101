@@ -95,7 +95,7 @@ def view_profile(request, username):
 
     user = get_object_or_404(User, username=username)
     if user == request.user:
-        return HttpResponseRedirect(reverse('bio.views.my_profile'))
+        return HttpResponseRedirect(reverse('bio-me'))
 
     profile = user.get_profile()
     hide_email = profile.hide_email
@@ -118,7 +118,7 @@ def view_profile(request, username):
 def edit_profile(request):
     if request.method == 'POST':
         if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return HttpResponseRedirect(reverse('bio.views.my_profile'))
+            return HttpResponseRedirect(reverse('bio-me'))
         profile = request.user.get_profile()
         user_form = EditUserForm(request.POST, instance=request.user)
         profile_form = EditUserProfileForm(request.POST, instance=profile)
@@ -127,7 +127,7 @@ def edit_profile(request):
             profile = profile_form.save(commit=False)
             profile.user = request.user
             profile.save()
-            return HttpResponseRedirect(reverse('bio.views.my_profile'))
+            return HttpResponseRedirect(reverse('bio-me'))
     else:
         profile = request.user.get_profile()
         user_form = EditUserForm(instance=request.user)

@@ -5,7 +5,6 @@ View tests for the bio application.
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.core.urlresolvers import reverse, NoReverseMatch
-from django.http import Http404
 
 
 class MemberSearchTest(TestCase):
@@ -121,7 +120,7 @@ class MemberListTest(TestCase):
         self._test_get('date', page=99, code=404)
 
 
-class MyProfileTest(TestCase):
+class ProfileTest(TestCase):
 
     def setUp(self):
         u1 = User.objects.create_user('paul', '', 'pw')
@@ -129,13 +128,62 @@ class MyProfileTest(TestCase):
         u2 = User.objects.create_user('eddie', '', 'pw')
         u2.save()
 
-    def test_anon(self):
+    def test_anon_my_profile(self):
         my_url = reverse('bio-me')
         response = self.client.get(my_url)
         login_url = reverse('accounts-login') + '?next=' + my_url
         self.assertRedirects(response, login_url)
 
-    def test_authenticated(self):
+    def test_authenticated_my_profile(self):
         self.client.login(username='paul', password='pw')
         response = self.client.get(reverse('bio-me'))
         self.assertEqual(response.status_code, 200)
+
+    def test_anon_other_profile(self):
+        url = reverse('bio-view_profile', kwargs={'username': 'eddie'})
+        response = self.client.get(url)
+        login_url = reverse('accounts-login') + '?next=' + url
+        self.assertRedirects(response, login_url)
+
+    def test_authenticated_other_profile(self):
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-view_profile', kwargs={'username': 'eddie'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_profile_as_me_redirects(self):
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-view_profile', kwargs={'username': 'paul'})
+        response = self.client.get(url)
+        self.assertRedirects(response, reverse('bio-me'))
+
+    def test_edit_anon(self):
+        url = reverse('bio-edit_profile')
+        response = self.client.get(url)
+        login_url = reverse('accounts-login') + '?next=' + url
+        self.assertRedirects(response, login_url)
+
+    def test_edit_profile(self):
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-edit_profile')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # Save some new data. We don't exhaustively test every field.
+        response = self.client.post(url, {
+            'first_name': 'Paul',
+            'last_name': 'Johnson',
+            'email': 'pjmoto@example.com',
+            'occupation': 'Surf Guitar Pioneer',
+            'profile_text': 'Wrote Mr. Moto at age 15.',
+            'submit_button': 'Save',
+        })
+        self.assertRedirects(response, reverse('bio-me'))
+
+        u = User.objects.get(username='paul')
+        self.assertEqual(u.first_name, 'Paul')
+        self.assertEqual(u.last_name, 'Johnson')
+        self.assertEqual(u.email, 'pjmoto@example.com')
+        profile = u.get_profile()
+        self.assertEqual(profile.occupation, 'Surf Guitar Pioneer')
+        self.assertEqual(profile.profile_text, 'Wrote Mr. Moto at age 15.')
