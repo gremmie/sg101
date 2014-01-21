@@ -2,9 +2,16 @@
 View tests for the bio application.
 
 """
+from io import BytesIO
+import os
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.core.urlresolvers import reverse, NoReverseMatch
+
+from PIL import Image
+
+from bio.models import UserProfile
 
 
 class MemberSearchTest(TestCase):
@@ -128,6 +135,11 @@ class ProfileTest(TestCase):
         u2 = User.objects.create_user('eddie', '', 'pw')
         u2.save()
 
+    def tearDown(self):
+        profile = UserProfile.objects.get(user__username='paul')
+        if profile.avatar:
+            os.remove(profile.avatar.path)
+
     def test_anon_my_profile(self):
         my_url = reverse('bio-me')
         response = self.client.get(my_url)
@@ -187,3 +199,20 @@ class ProfileTest(TestCase):
         profile = u.get_profile()
         self.assertEqual(profile.occupation, 'Surf Guitar Pioneer')
         self.assertEqual(profile.profile_text, 'Wrote Mr. Moto at age 15.')
+
+    def test_avatar_change(self):
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-change_avatar')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # Create an in-memory image for a dummy avatar
+        file_obj = BytesIO()
+        image = Image.new('RGBA', size=(100, 100))
+        image.save(file_obj, 'png')
+        file_obj.name = 'avatar.png'
+        file_obj.seek(0)
+
+        response = self.client.post(url, {'avatar_file': file_obj}, follow=True)
+        self.assertRedirects(response, reverse('bio-me'))
+
