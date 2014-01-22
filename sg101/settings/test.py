@@ -15,6 +15,9 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
+# Celery should always execute tasks immediately
+CELERY_ALWAYS_EAGER = True
+
 # Use a different database in Redis for tests
 REDIS_DB = 14
 QUEUE_REDIS_DB = 14

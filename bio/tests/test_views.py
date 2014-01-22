@@ -8,10 +8,11 @@ import os
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.core.urlresolvers import reverse, NoReverseMatch
+from django.core import mail
 
 from PIL import Image
 
-from bio.models import UserProfile
+from bio.models import UserProfile, UserProfileFlag
 
 
 class MemberSearchTest(TestCase):
@@ -216,3 +217,40 @@ class ProfileTest(TestCase):
         response = self.client.post(url, {'avatar_file': file_obj}, follow=True)
         self.assertRedirects(response, reverse('bio-me'))
 
+        profile = UserProfile.objects.get(user__username='paul')
+        self.assertTrue(profile.avatar.path)
+        self.assertTrue(profile.avatar.name)
+        self.assertTrue(os.path.exists(profile.avatar.path))
+
+    def test_flag_profile_get(self):
+        paul = User.objects.get(username='paul')
+        eddie = User.objects.get(username='eddie')
+        url = reverse('bio-flag_profile', args=[eddie.pk])
+
+        # not logged in, wrong request method:
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 405)
+
+        # logged in, wrong request method
+        self.client.login(username='paul', password='pw')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 405)
+
+        # logged out, right request method
+        self.client.logout()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(UserProfileFlag.objects.all().count(), 0)
+
+        # logged in, right request method
+        self.client.login(username='paul', password='pw')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(UserProfileFlag.objects.all().count(), 1)
+
+        flag = UserProfileFlag.objects.first()
+        self.assertEqual(flag.user, paul)
+        self.assertEqual(flag.profile, eddie.get_profile())
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('A Profile Has Been Flagged' in mail.outbox[0].subject)
