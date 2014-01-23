@@ -2,18 +2,15 @@
 Views for the bio application.
 
 """
-from django.shortcuts import render_to_response
+from django.shortcuts import render, redirect
 from django.shortcuts import get_object_or_404
-from django.template import RequestContext
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
-from django.http import HttpResponseRedirect
 from django.http import HttpResponseServerError
 from django.http import Http404
 from django.core.paginator import InvalidPage
-from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 
@@ -64,12 +61,11 @@ def member_list(request, type='user'):
     for user in the_page.object_list:
         user.user_profile = user_profiles[user.id]
 
-    return render_to_response('bio/members.html', {
+    return render(request, 'bio/members.html', {
         'page': the_page,
         'type': type,
         'num_members': num_members,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -79,14 +75,13 @@ def my_profile(request):
     badge_collection = BadgeOwnership.objects.filter(
             profile=profile).select_related("badge")
 
-    return render_to_response('bio/view_profile.html', {
+    return render(request, 'bio/view_profile.html', {
         'subject': request.user,
         'profile': profile,
         'hide_email': False,
         'this_is_me': True,
         'badge_collection': badge_collection,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -95,7 +90,7 @@ def view_profile(request, username):
 
     user = get_object_or_404(User, username=username)
     if user == request.user:
-        return HttpResponseRedirect(reverse('bio-me'))
+        return redirect('bio-me')
 
     profile = user.get_profile()
     hide_email = profile.hide_email
@@ -103,14 +98,13 @@ def view_profile(request, username):
     badge_collection = BadgeOwnership.objects.filter(
             profile=profile).select_related("badge")
 
-    return render_to_response('bio/view_profile.html', {
+    return render(request, 'bio/view_profile.html', {
         'subject': user,
         'profile': profile,
         'hide_email': hide_email,
         'this_is_me': False,
         'badge_collection': badge_collection,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -118,7 +112,7 @@ def view_profile(request, username):
 def edit_profile(request):
     if request.method == 'POST':
         if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return HttpResponseRedirect(reverse('bio-me'))
+            return redirect('bio-me')
         profile = request.user.get_profile()
         user_form = EditUserForm(request.POST, instance=request.user)
         profile_form = EditUserProfileForm(request.POST, instance=profile)
@@ -127,17 +121,16 @@ def edit_profile(request):
             profile = profile_form.save(commit=False)
             profile.user = request.user
             profile.save()
-            return HttpResponseRedirect(reverse('bio-me'))
+            return redirect('bio-me')
     else:
         profile = request.user.get_profile()
         user_form = EditUserForm(instance=request.user)
         profile_form = EditUserProfileForm(instance=profile)
 
-    return render_to_response('bio/edit_profile.html', {
+    return render(request, 'bio/edit_profile.html', {
         'user_form': user_form,
         'profile_form': profile_form,
-         },
-        context_instance = RequestContext(request))
+         })
 
 #######################################################################
 
@@ -157,21 +150,20 @@ def change_avatar(request):
                 name, avatar = form.save()
             except IOError:
                 messages.error(request, 'A file error occurred.')
-                return HttpResponseRedirect(reverse('bio-me'))
+                return redirect('bio-me')
 
             if avatar is not None:
                 profile.avatar.save(name, avatar, save=False)
             profile.save()
 
             messages.success(request, 'Avatar updated')
-            return HttpResponseRedirect(reverse('bio-me'))
+            return redirect('bio-me')
     else:
         form = UploadAvatarForm()
 
-    return render_to_response('bio/avatar.html', {
+    return render(request, 'bio/avatar.html', {
         'form': form,
-         },
-        context_instance = RequestContext(request))
+         })
 
 #######################################################################
 
@@ -195,8 +187,8 @@ def flag_profile(request, profile_id):
 
 A user has flagged a profile for review.
 """)
-    return HttpResponse('The profile was flagged. A moderator will review the' \
-        ' profile shortly. Thanks for helping to improve the content on this ' \
+    return HttpResponse('The profile was flagged. A moderator will review the'
+        ' profile shortly. Thanks for helping to improve the content on this '
         'site.')
 
 #######################################################################
@@ -230,7 +222,7 @@ def edit_elsewhere(request):
                 profile = form.save(commit=False)
                 profile.user = request.user
                 profile.save()
-                return HttpResponseRedirect(request.path)
+                return redirect(request.path)
 
         # Delete forms
         elif new_data.get('delete-sn-form') or new_data.get('delete-im-form') or new_data.get('delete-w-form'):
@@ -249,7 +241,7 @@ def edit_elsewhere(request):
             if update_occurred:
                 notify_profile_content_update(request.user.get_profile())
 
-            return HttpResponseRedirect(request.path)
+            return redirect(request.path)
 
         # WTF?
         else:
@@ -261,28 +253,20 @@ def edit_elsewhere(request):
         im_form = InstantMessengerForm(auto_id=im_id)
         w_form = WebsiteForm()
 
-    return render_to_response('bio/edit_elsewhere.html', {
+    return render(request, 'bio/edit_elsewhere.html', {
         'sn_form': sn_form,
         'im_form': im_form,
         'w_form': w_form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 #######################################################################
 
 @login_required
 def member_search(request):
-    if request.method == "POST":
-        form = SearchUsersForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            return HttpResponseRedirect(reverse("bio-view_profile",
-                kwargs={'username': username}))
-    else:
-        form = SearchUsersForm()
+    data = request.GET if request.GET else None
+    form = SearchUsersForm(data)
+    if form.is_valid():
+        username = form.cleaned_data['username']
+        return redirect('bio-view_profile', username=username)
 
-    return render_to_response('bio/member_search.html', {
-        'form': form,
-        },
-        context_instance=RequestContext(request))
-
+    return render(request, 'bio/member_search.html', {'form': form})

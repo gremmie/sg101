@@ -38,7 +38,7 @@ class MemberSearchTest(TestCase):
         Test a valid username.
         """
 
-        response = self.client.post(reverse('bio-member_search'),
+        response = self.client.get(reverse('bio-member_search'),
                             {'username': self.USERNAME},
                             follow=True)
 
@@ -56,7 +56,7 @@ class MemberSearchTest(TestCase):
         Test a invalid username.
         """
 
-        response = self.client.post(reverse('bio-member_search'),
+        response = self.client.get(reverse('bio-member_search'),
                             {'username': self.USERNAME + '!'})
 
         self.assertEqual(response.status_code, 200)
@@ -68,7 +68,7 @@ class MemberSearchTest(TestCase):
         """
 
         try:
-            response = self.client.post(reverse('bio-member_search'),
+            response = self.client.get(reverse('bio-member_search'),
                                 {'username': self.USERNAME + ' '},
                                 follow=True)
         except NoReverseMatch:
