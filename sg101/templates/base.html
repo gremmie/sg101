@@ -70,9 +70,6 @@
    {% cache 60 irc_block %}
       {% irc_status %}
    {% endcache %}
-   {% cache 300 rfb_block %}
-      {% include 'core/rfb_block.html' %}
-   {% endcache %}
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
    {% endcache %}
@@ -122,6 +119,8 @@
       <img src="{{ STATIC_URL }}logos/greencookie.png" alt="Green Cookie Records" title="Green Cookie Records"></a></li>
    <li><a href="http://www.deepeddy.net">
       <img src="{{ STATIC_URL }}logos/deepeddy.png" alt="Deep Eddy Records" title="Deep Eddy Records"></a></li>
+   <li><a href="http://radiofreebakersfield.com/">
+      <img src="{{ STATIC_URL }}logos/rfb.png" alt="Radio Free Bakersfield" title="Radio Free Bakersfield"></a></li>
    </ul>
    </div>
    <p>
