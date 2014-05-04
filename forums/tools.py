@@ -4,6 +4,7 @@ This module contains misc. utility functions for forum management.
 import logging
 
 from forums.models import Post, Topic, Forum, ForumLastVisit, TopicLastVisit
+from forums.signals import notify_new_topic, notify_new_post
 
 
 def delete_user_posts(user):
@@ -106,6 +107,9 @@ def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
             body=post_body,
             user_ip=ip)
     post.save()
+
+    notify_new_topic(topic)
+    notify_new_post(post)
 
 
 def auto_favorite(post):
