@@ -11,6 +11,7 @@ from core.functions import email_admins
 from bio.models import STA_SUSPENDED, STA_SPAMMER
 from comments.models import Comment
 from forums.tools import delete_user_posts
+from user_photos.s3 import delete_photos
 
 
 def contains_spam(s):
@@ -95,6 +96,12 @@ def deactivate_spammer(user):
 
     # delete shouts
     user.shout_set.all().delete()
+
+    # delete any uploaded photos
+    photos = user.uploaded_photos.all()
+    if len(photos):
+        delete_photos(photos)
+        photos.delete()
 
     logging.info("User deactivated for spam: %s", user.username)
 
