@@ -35,6 +35,23 @@ class RegistrationTest(TestCase):
         IllegalUsername.objects.create(username='illegalusername')
         IllegalEmail.objects.create(email='illegal@example.com')
 
+        self.post_vals = {
+            'username': 'a_new_user',
+            'email': 'test@example.com',
+            'password1': 'my_password',
+            'password2': 'my_password',
+            'agree_age': 'on',
+            'agree_tos': 'on',
+            'agree_privacy': 'on',
+            'question1': '101',
+            'question2': '',
+            'question3': '',
+            'question4': u'2',
+            'question5': u'328',
+            'question6': u'4',
+            'question7': [u'2', u'4', u'5', u'7'],
+        }
+
     def test_get_view(self):
         """
         Test a simple get of the registration view
@@ -68,18 +85,9 @@ class RegistrationTest(TestCase):
         Ensure we can't register with a pending username.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'pending_user',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['username'] = 'pending_user'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'A pending user with that username already exists')
 
@@ -88,18 +96,9 @@ class RegistrationTest(TestCase):
         Ensure we can't register with a banned username.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'illegalusername',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['username'] = 'illegalusername'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'That username is not allowed')
 
@@ -108,18 +107,9 @@ class RegistrationTest(TestCase):
         Ensure we can't register with a duplicate email address.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'existing_user@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['email'] = 'existing_user@example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'A user with that email address already exists')
 
@@ -128,18 +118,9 @@ class RegistrationTest(TestCase):
         Ensure we can't register with a duplicate email address.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'pending_user@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['email'] = 'pending_user@example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'A pending user with that email address already exists')
 
@@ -148,18 +129,9 @@ class RegistrationTest(TestCase):
         Ensure we can't register with a banned email address.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'illegal@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['email'] = 'illegal@example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'That email address is not allowed')
 
@@ -168,18 +140,9 @@ class RegistrationTest(TestCase):
         Ensure the passwords match.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password_doesnt match',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        self.post_vals['password2'] = "doesn't match"
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "The two password fields didn&#39;t match")
 
@@ -188,18 +151,9 @@ class RegistrationTest(TestCase):
         Ensure our anti-spam question is answered.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password_doesnt match',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': 'huh',
-            'question2': '',
-            })
-
+        self.post_vals['question1'] = 'huh'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Incorrect answer to our anti-spam question")
 
@@ -208,18 +162,102 @@ class RegistrationTest(TestCase):
         Ensure our honeypot question check works.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password_doesnt match',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': 'non blank',
-            })
+        self.post_vals['question2'] = 'non blank'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
 
+    def test_question3(self):
+        """
+        Ensure our non-hidden honeypot question check works.
+
+        """
+        self.post_vals['question3'] = 'non blank'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+    def test_question4(self):
+        """
+        Ensure our security question 4 works
+
+        """
+        self.post_vals['question4'] = u'1'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question4'] = u'4'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question4'] = u'8'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+    def test_question5(self):
+        """
+        Ensure our security question 5 works
+
+        """
+        self.post_vals['question5'] = u'1'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question5'] = u'X'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question5'] = u'2983'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+    def test_question6(self):
+        """
+        Ensure our security question 6 works
+
+        """
+        self.post_vals['question6'] = u'1'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question6'] = u'2'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question6'] = u'8'
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+    def test_question7(self):
+        """Test security question 7"""
+
+        self.post_vals['question7'] = []
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question7'] = [u'1']
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question7'] = [u'6', u'2', u'4', u'5', u'7']
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
+        self.assertEqual(response.status_code, 200)
+
+        self.post_vals['question7'] = [u'4', u'3', u'7']
+        response = self.client.post(reverse('accounts-register'),
+             self.post_vals)
         self.assertEqual(response.status_code, 200)
 
     def test_success(self):
@@ -227,18 +265,8 @@ class RegistrationTest(TestCase):
         Ensure we can successfully register.
 
         """
-        response = self.client.post(reverse('accounts-register'), {
-            'username': 'a_new_user',
-            'email': 'test@example.com',
-            'password1': 'my_password',
-            'password2': 'my_password',
-            'agree_age': 'on',
-            'agree_tos': 'on',
-            'agree_privacy': 'on',
-            'question1': '101',
-            'question2': '',
-            })
-
+        response = self.client.post(reverse('accounts-register'),
+                self.post_vals)
         self.assertEqual(response.status_code, 302)
 
         try:

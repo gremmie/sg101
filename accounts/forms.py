@@ -52,6 +52,31 @@ class RegisterForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'text'}))
     question2 = forms.CharField(label='', required=False,
         widget=forms.TextInput(attrs={'style': 'display: none;'}))
+    question3 = forms.CharField(label="Don't put anything in this box",
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'text'}))
+
+    SPAM_CHOICES = [(1, 'cat'), (2, '328'), (4, 'green'), (8, 'ocean')]
+    question4 = forms.ChoiceField(label="Pick the number", choices=SPAM_CHOICES)
+    question5 = forms.IntegerField(label="What number did you pick, above?",
+        widget=forms.TextInput(attrs={'class': 'text'}))
+    question6 = forms.ChoiceField(label="Pick the color", choices=SPAM_CHOICES)
+
+    USER_QUALITIES = [
+        (1, "I am the lowest form of life, a spammer"),
+        (2, "I'm a fan of surf music or I want to learn more"),
+        (3, "Someone is paying me to post links to this site"),
+        (4, "I am not going to spam this site"),
+        (5, "I understand my account may be removed if I post spam"),
+        (6, "I am going to spam the crap out of this site"),
+        (7, "Surf music is one of my interests, not spam"),
+    ]
+    question7 = forms.MultipleChoiceField(
+        label="Check all that apply",
+        choices=USER_QUALITIES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple)
+
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -117,6 +142,37 @@ class RegisterForm(forms.Form):
         if answer:
             logger.critical('Accounts/registration: Honeypot filled [%s]', self.ip)
             self._validation_error('Wrong answer #2', answer)
+        return answer
+
+    def clean_question3(self):
+        answer = self.cleaned_data.get('question3')
+        if answer:
+            self._validation_error('Oops, that should be blank', answer)
+        return answer
+
+    def clean_question4(self):
+        answer = self.cleaned_data.get('question4')
+        if answer != u'2':
+            self._validation_error('Please pick the number', answer)
+        return answer
+
+    def clean_question5(self):
+        answer = self.cleaned_data.get('question5')
+        if answer != 328:
+            self._validation_error('Please enter the correct number', answer)
+        return answer
+
+    def clean_question6(self):
+        answer = self.cleaned_data.get('question6')
+        if answer != u'4':
+            self._validation_error('Please pick the color', answer)
+        return answer
+
+    def clean_question7(self):
+        answer = self.cleaned_data.get('question7')
+        answer.sort()
+        if answer != [u'2', u'4', u'5', u'7']:
+            self._validation_error("Sorry, try again", answer)
         return answer
 
     def save(self):
