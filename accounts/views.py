@@ -4,9 +4,7 @@ Views for the accounts application.
 """
 import logging
 
-from django.shortcuts import render
-from django.http import HttpResponseRedirect
-from django.core.urlresolvers import reverse
+from django.shortcuts import render, redirect
 from django.conf import settings
 
 from accounts.models import PendingUser
@@ -22,13 +20,13 @@ logger = logging.getLogger('auth')
 @log_auth_failures('Register')
 def register(request):
     if request.user.is_authenticated():
-        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':
         form = RegisterForm(request.POST, ip=request.META.get('REMOTE_ADDR', '?'))
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('accounts.views.register_thanks'))
+            return redirect('accounts.views.register_thanks')
     else:
         form = RegisterForm()
 
@@ -38,7 +36,7 @@ def register(request):
 
 def register_thanks(request):
     if request.user.is_authenticated():
-        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     return render(request, 'accounts/register_thanks.html')
 
@@ -46,7 +44,7 @@ def register_thanks(request):
 
 def register_confirm(request, username, key):
     if request.user.is_authenticated():
-        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     # purge expired users
 
@@ -78,13 +76,13 @@ def register_confirm(request, username, key):
 def username_query(request):
     """This view handles forgotten username queries."""
     if request.user.is_authenticated():
-        return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':
         form = ForgotUsernameForm(data=request.POST)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('accounts-username_sent'))
+            return redirect('accounts-username_sent')
     else:
         form = ForgotUsernameForm()
 
