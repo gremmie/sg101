@@ -5,6 +5,7 @@
 {% load potd_tags %}
 {% load script_tags %}
 {% load poll_tags %}
+{% load contest_tags %}
 {% load donations_tags %}
 {% load core_tags %}
 {% load cache %}
@@ -72,6 +73,9 @@
    {% endcache %}
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
+   {% endcache %}
+   {% cache 3600 contests_block %}
+      {% latest_contests_block %}
    {% endcache %}
    {% cache 600 donations_block %}
       {% monthly_goal %}

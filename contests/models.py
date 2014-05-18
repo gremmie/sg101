@@ -17,6 +17,10 @@ class PublicContestManager(models.Manager):
     def get_queryset(self):
         return super(PublicContestManager, self).get_queryset().filter(is_public=True)
 
+    def get_current_contests(self):
+        now = datetime.datetime.now()
+        return self.filter(creation_date__lte=now, win_date__isnull=True)
+
 
 class Contest(models.Model):
     """

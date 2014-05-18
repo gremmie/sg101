@@ -1,0 +1,14 @@
+{% extends 'side_block.html' %}
+{% block block_title %}Current Contests{% endblock %}
+{% block block_content %}
+{% if contests %}
+<ul>
+   {% for contest in contests %}
+   <li><a href="{{ contest.get_absolute_url }}">{{ contest.title }}</a></li>
+   {% endfor %}
+</ul>
+{% else %}
+<p class="centered">No contests at this time. Check out our
+<a href="{% url 'contests-index' %}">past contests</a>.</p>
+{% endif %}
+{% endblock %}
