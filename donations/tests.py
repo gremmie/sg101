@@ -66,7 +66,7 @@ class DonationsIpnTestCase(TestCase):
                     datetime.datetime(2011, 1, 21, 4, 14, 8))
 
             # user should have got a badge for donating
-            p = user.get_profile()
+            p = user.profile
             badges = list(p.badges.all())
             self.assertEqual(len(badges), 1)
             if len(badges) == 1:
@@ -107,7 +107,7 @@ class DonationsIpnTestCase(TestCase):
                     datetime.datetime(2011, 1, 16, 5, 40, 33))
 
             # user should not have got a badge for donating
-            p = user.get_profile()
+            p = user.profile
             self.assertEqual(p.badges.count(), 0)
 
 

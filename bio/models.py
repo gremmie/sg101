@@ -78,7 +78,7 @@ def avatar_file_path(instance, filename):
 class UserProfile(models.Model):
     """model to represent additional information about users"""
 
-    user = models.ForeignKey(User, unique=True)
+    user = models.OneToOneField(User, related_name='profile')
     location = models.CharField(max_length=128, blank=True)
     country = models.CharField(max_length=2, blank=True, default='',
             choices=bio.flags.FLAG_CHOICES,

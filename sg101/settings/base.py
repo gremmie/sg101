@@ -19,8 +19,6 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-AUTH_PROFILE_MODULE = 'bio.userprofile'
-
 INTERNAL_IPS = ['127.0.0.1']
 
 # Local time zone for this installation. Choices can be found here:

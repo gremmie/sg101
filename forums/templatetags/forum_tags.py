@@ -68,7 +68,7 @@ def get_time_prefs(user):
     cache_key = '%s_tz_prefs' % user.username
     tz_prefs = cache.get(cache_key)
     if tz_prefs is None:
-        profile = user.get_profile()
+        profile = user.profile
         tz_prefs = profile.use_24_time, profile.time_zone
         cache.set(cache_key, tz_prefs)
 

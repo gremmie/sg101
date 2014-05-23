@@ -37,7 +37,7 @@ def member_list(request, type='user'):
     """
     This view displays the member list. Only active members are displayed.
     """
-    qs = User.objects.filter(is_active=True)
+    qs = User.objects.filter(is_active=True).select_related('profile')
     if type == 'user':
         qs = qs.order_by('username')
     else:
@@ -51,16 +51,6 @@ def member_list(request, type='user'):
     except InvalidPage:
         raise Http404
 
-    # Attach user profiles to each user to avoid using get_user_profile() in
-    # the template.
-    users = set(user.id for user in the_page.object_list)
-
-    profiles = UserProfile.objects.filter(user__id__in=users).select_related()
-    user_profiles = dict((profile.user.id, profile) for profile in profiles)
-
-    for user in the_page.object_list:
-        user.user_profile = user_profiles[user.id]
-
     return render(request, 'bio/members.html', {
         'page': the_page,
         'type': type,
@@ -71,7 +61,7 @@ def member_list(request, type='user'):
 
 @login_required
 def my_profile(request):
-    profile = request.user.get_profile()
+    profile = request.user.profile
     badge_collection = BadgeOwnership.objects.filter(
             profile=profile).select_related("badge")
 
@@ -88,11 +78,12 @@ def my_profile(request):
 @login_required
 def view_profile(request, username):
 
-    user = get_object_or_404(User, username=username)
+    user = get_object_or_404(User.objects.select_related('profile'),
+            username=username)
     if user == request.user:
         return redirect('bio-me')
 
-    profile = user.get_profile()
+    profile = user.profile
     hide_email = profile.hide_email
 
     badge_collection = BadgeOwnership.objects.filter(
@@ -113,7 +104,7 @@ def edit_profile(request):
     if request.method == 'POST':
         if request.POST.get('submit_button', 'Cancel') == 'Cancel':
             return redirect('bio-me')
-        profile = request.user.get_profile()
+        profile = request.user.profile
         user_form = EditUserForm(request.POST, instance=request.user)
         profile_form = EditUserProfileForm(request.POST, instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
@@ -123,7 +114,7 @@ def edit_profile(request):
             profile.save()
             return redirect('bio-me')
     else:
-        profile = request.user.get_profile()
+        profile = request.user.profile
         user_form = EditUserForm(instance=request.user)
         profile_form = EditUserProfileForm(instance=profile)
 
@@ -140,7 +131,7 @@ def change_avatar(request):
         form = UploadAvatarForm(request.POST, request.FILES)
         if form.is_valid():
             # Update the profile with the new avatar
-            profile = request.user.get_profile()
+            profile = request.user.profile
 
             # First delete any old avatar file
             if profile.avatar.name != '':
@@ -239,7 +230,7 @@ def edit_elsewhere(request):
                 update_occurred = False
 
             if update_occurred:
-                notify_profile_content_update(request.user.get_profile())
+                notify_profile_content_update(request.user.profile)
 
             return redirect(request.path)
 

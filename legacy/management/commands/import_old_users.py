@@ -139,7 +139,7 @@ class Command(LabelCommand):
 
         u.save()
 
-        p = u.get_profile()
+        p = u.profile
         p.location = row['user_from'].decode('latin-1')
         p.occupation = row['user_occ'].decode('latin-1')
         p.interests = row['user_interests'].decode('latin-1')

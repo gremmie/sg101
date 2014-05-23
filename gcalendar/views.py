@@ -20,8 +20,7 @@ from gcalendar.models import Event
 def index(request):
     user = request.user
     if user.is_authenticated():
-        profile = user.get_profile()
-        tz = profile.time_zone
+        tz = user.profile.time_zone
     else:
         tz = 'US/Pacific'
 

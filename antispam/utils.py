@@ -36,7 +36,7 @@ def spam_check(request, content):
     user profile.
     """
     user = request.user
-    if user.get_profile().is_stranger() and contains_spam(content):
+    if user.profile.is_stranger() and contains_spam(content):
 
         ip = request.META.get('REMOTE_ADDR', "unknown")
 
@@ -60,7 +60,7 @@ def suspend_user(user):
     """This function marks the user as suspended."""
     user.is_active = False
     user.save()
-    profile = user.get_profile()
+    profile = user.profile
     profile.status = STA_SUSPENDED
     profile.status_date = datetime.datetime.now()
     profile.save(content_update=False)
@@ -77,7 +77,7 @@ def deactivate_spammer(user):
     user.is_active = False
     user.save()
 
-    profile = user.get_profile()
+    profile = user.profile
     profile.status = STA_SPAMMER
     profile.status_date = datetime.datetime.now()
     profile.reset()

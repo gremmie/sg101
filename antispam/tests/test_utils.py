@@ -56,7 +56,7 @@ class AntispamCase(TestCase):
         user = User.objects.create_user('spammer_guy', '', 'password')
         user.save()
 
-        profile = user.get_profile()
+        profile = user.profile
         profile.location = 'Spamville'
         profile.country = 'US'
         profile.birthday = datetime.date.today()
@@ -93,7 +93,7 @@ class AntispamCase(TestCase):
 
         deactivate_spammer(user)
 
-        profile = user.get_profile()
+        profile = user.profile
         self.assertFalse(profile.location)
         self.assertFalse(profile.country)
         self.assertIsNone(profile.birthday)

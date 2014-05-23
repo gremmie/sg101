@@ -118,7 +118,7 @@ def auto_favorite(post):
     creator has that option set in their profile.
 
     """
-    profile = post.user.get_profile()
+    profile = post.user.profile
     if profile.auto_favorite:
         post.topic.bookmarkers.add(post.user)
 
@@ -129,6 +129,6 @@ def auto_subscribe(post):
     creator has that option set in their profile.
 
     """
-    profile = post.user.get_profile()
+    profile = post.user.profile
     if profile.auto_subscribe:
         post.topic.subscribers.add(post.user)

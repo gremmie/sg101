@@ -132,7 +132,7 @@ def add(request):
     cache.delete(CACHE_KEY)
 
     avatar_url = None
-    profile = entry.user.get_profile()
+    profile = entry.user.profile
     if profile.avatar and profile.avatar.url:
         avatar_url = profile.avatar.url
 

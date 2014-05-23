@@ -131,5 +131,8 @@ class ForumPostTestCase(TestCase):
             self.assertEqual(post.user.pk, self.user.pk)
         self.assertEqual(topic.post_count, 3)
 
-        profile = self.user.get_profile()
+        # our cached copy of the profile is out of date; need to refetch from
+        # the database
+        user = User.objects.get(username=self.username)
+        profile = user.profile
         self.assertEqual(profile.forum_post_count, 3)

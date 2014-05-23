@@ -29,7 +29,7 @@ The admin/moderator user %s has just deactivated the account of %s for spam.
 def promote_stranger(user):
     """This function upgrades the user from stranger status to a regular user.
     """
-    profile = user.get_profile()
+    profile = user.profile
     if user.is_active and profile.status == bio.models.STA_STRANGER:
         profile.status = bio.models.STA_ACTIVE
         profile.status_date = datetime.datetime.now()
@@ -42,7 +42,7 @@ def spammer(request, post_id):
 
     post = get_object_or_404(Post.objects.select_related(), pk=post_id)
     poster = post.user
-    poster_profile = poster.get_profile()
+    poster_profile = poster.profile
 
     can_moderate = perms.can_moderate(post.topic.forum, request.user)
     can_deactivate = (poster_profile.status == bio.models.STA_STRANGER and not
@@ -80,7 +80,7 @@ def spammer_nailed(request, spammer_id):
     deactivated.
     """
     user = get_object_or_404(User, pk=spammer_id)
-    profile = user.get_profile()
+    profile = user.profile
 
     success = not user.is_active and profile.status == bio.models.STA_SPAMMER
 
@@ -98,7 +98,7 @@ def stranger(request, post_id):
     """
     post = get_object_or_404(Post.objects.select_related(), pk=post_id)
     poster = post.user
-    poster_profile = poster.get_profile()
+    poster_profile = poster.profile
 
     can_moderate = perms.can_moderate(post.topic.forum, request.user)
     can_promote = poster_profile.status == bio.models.STA_STRANGER

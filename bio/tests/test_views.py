@@ -197,7 +197,7 @@ class ProfileTest(TestCase):
         self.assertEqual(u.first_name, 'Paul')
         self.assertEqual(u.last_name, 'Johnson')
         self.assertEqual(u.email, 'pjmoto@example.com')
-        profile = u.get_profile()
+        profile = u.profile
         self.assertEqual(profile.occupation, 'Surf Guitar Pioneer')
         self.assertEqual(profile.profile_text, 'Wrote Mr. Moto at age 15.')
 
@@ -250,7 +250,7 @@ class ProfileTest(TestCase):
 
         flag = UserProfileFlag.objects.first()
         self.assertEqual(flag.user, paul)
-        self.assertEqual(flag.profile, eddie.get_profile())
+        self.assertEqual(flag.profile, eddie.profile)
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('A Profile Has Been Flagged' in mail.outbox[0].subject)

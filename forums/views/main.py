@@ -362,7 +362,6 @@ def quick_reply_ajax(request):
 
         post = form.save(request.user, request.META.get("REMOTE_ADDR", ""))
         post.unread = True
-        post.user.user_profile = request.user.get_profile()
         post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic, datetime.datetime.now())
@@ -469,7 +468,7 @@ def edit_post(request, id):
     else:
         form = PostForm(instance=post, topic_name=topic_name)
 
-    post.user.user_profile = post.user.get_profile()
+    post.user.user_profile = post.user.profile
 
     return render_to_response('forums/edit_post.html', {
         'forum': post.topic.forum,
@@ -523,7 +522,7 @@ def _delete_post(post):
     Adjusts the parent topic and forum's last_post as needed.
     """
     # Adjust post creator's post count
-    profile = post.user.get_profile()
+    profile = post.user.profile
     if profile.forum_post_count > 0:
         profile.forum_post_count -= 1
         profile.save(content_update=False)
@@ -996,7 +995,7 @@ def _bump_post_count(user):
     """
     Increments the forum_post_count for the given user.
     """
-    profile = user.get_profile()
+    profile = user.profile
     profile.forum_post_count += 1
     profile.save(content_update=False)
 

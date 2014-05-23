@@ -21,7 +21,7 @@ def award_badge(badge_id, user):
         logging.error("Can't award badge with numeric_id = %d", badge_id)
         return
 
-    profile = user.get_profile()
+    profile = user.profile
 
     # Does the user already have badges of this type?
     try:

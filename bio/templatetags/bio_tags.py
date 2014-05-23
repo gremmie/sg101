@@ -16,7 +16,7 @@ register = template.Library()
 
 def get_img_url(profile=None):
     """
-    This function returns a URL for a user profile avatar. 
+    This function returns a URL for a user profile avatar.
     If the profile is None or the profile doesn't contain a valid
     avatar, the URL for the default avatar is returned.
 
@@ -30,12 +30,14 @@ def get_img_url(profile=None):
 @register.inclusion_tag('bio/avatar_tag.html')
 def avatar(user, profile_link=True, align='bottom'):
     """
-    Returns the HTML for a user's avatar image.
+    Returns a dict of attributes for a user's avatar image.
 
     If the user object has an attribute 'user_profile', this is assumed to be
     the user's profile that has been pre-fetched. Otherwise, the cache is
     consulted to retrieve the avatar info for the user. If there is a cache
-    miss, only then will a get_profile() call be made.
+    miss, only then will we access the profile attribute to retrieve the profile
+    from the database.
+
     """
     # img_info is a tuple that contains info about the avatar:
     # (url, width, height)
@@ -47,11 +49,7 @@ def avatar(user, profile_link=True, align='bottom'):
         cache_key = 'avatar_' + user.username
         img_url = cache.get(cache_key)
         if img_url is None:
-            try:
-                profile = user.get_profile()
-            except UserProfile.DoesNotExist:
-                profile = None
-
+            profile = user.profile
             img_url = get_img_url(profile)
             cache.set(cache_key, img_url)
 
