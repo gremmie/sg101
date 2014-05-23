@@ -37,6 +37,16 @@ class UserProfileAdmin(admin.ModelAdmin):
         'unsubscribe_forums',
     ]
 
+    def has_delete_permission(self, request, object=None):
+        # We don't want to delete a user profile; it is tied to the user object
+        return False
+
+    def get_actions(self, request):
+        # We don't want to delete a user profile; it is tied to the user object
+        actions = super(UserProfileAdmin, self).get_actions(request)
+        del actions['delete_selected']
+        return actions
+
     def get_status_display(self, obj):
         return obj.get_status_display()
     get_status_display.short_description = 'Status'
