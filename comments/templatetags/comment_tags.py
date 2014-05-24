@@ -160,7 +160,7 @@ def render_comment_list(object):
     Syntax:
         {% render_comment_list [object] %}
     """
-    qs = Comment.objects.for_object(object).select_related('user')
+    qs = Comment.objects.for_object(object).select_related('user', 'user__profile')
     return {
         'comments': qs,
         'STATIC_URL': settings.STATIC_URL,

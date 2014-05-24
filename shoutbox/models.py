@@ -31,7 +31,7 @@ class Shout(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             self.shout_date = datetime.datetime.now()
-        self.html = urlize(smilify_html(escape(self.shout)), trim_url_limit=15, 
+        self.html = urlize(smilify_html(escape(self.shout)), trim_url_limit=15,
                 nofollow=True)
         super(Shout, self).save(*args, **kwargs)
 

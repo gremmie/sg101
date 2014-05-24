@@ -57,9 +57,10 @@ def query(request):
         return HttpResponse(s, content_type='application/json')
 
     # Compute JSON for the map
-    entries = MapEntry.objects.all().select_related().order_by('user__username')
+    entries = MapEntry.objects.select_related('user', 'user__profile').\
+            order_by('user__username')
     users = []
-    user_ids = []
+    avatar_urls = []
     recent = []
     for entry in entries.iterator():
         users.append(dict(name=entry.user.username,
@@ -67,20 +68,17 @@ def query(request):
             lon=entry.lon,
             message=entry.html,
             ))
-        user_ids.append(entry.user.id)
+        avatar = entry.user.profile.avatar
+        if avatar and avatar.url:
+            avatar_urls.append(avatar.url)
+        else:
+            avatar_urls.append(None)
         recent.append((entry.date_updated, entry.user.username))
 
-    # Get avatars for all users
-    profiles = UserProfile.objects.filter(user__in=user_ids).select_related()
-    avatars = {}
-    for profile in profiles.iterator():
-        if profile.avatar and profile.avatar.url:
-            avatars[profile.user.username] = profile.avatar.url
-
     # Render the messages that go in the balloons
-    for user in users:
+    for user, avatar_url in zip(users, avatar_urls):
         user['message'] = render_to_string('membermap/balloon.html',
-                dict(user=user, avatar_url=avatars.get(user['name'])))
+                dict(user=user, avatar_url=avatar_url))
 
     # Produce the list of recent updates
     recent.sort(reverse=True)

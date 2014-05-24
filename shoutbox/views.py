@@ -54,7 +54,8 @@ def view_shout(request, id):
 
 def view_history(request):
     """This view allows one to view the shoutbox history."""
-    paginator = DiggPaginator(Shout.objects.all().select_related(), 
+    qs = Shout.objects.select_related('user', 'user__profile')
+    paginator = DiggPaginator(qs,
             SHOUTS_PER_PAGE, body=5, tail=3, margin=3, padding=2)
     page = get_page(request.GET)
     try:
@@ -66,7 +67,7 @@ def view_history(request):
         'page': the_page,
         },
         context_instance = RequestContext(request))
-   
+
 
 shout_id_re = re.compile(r'shout-(\d+)')
 

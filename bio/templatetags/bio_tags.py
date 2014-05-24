@@ -30,28 +30,15 @@ def get_img_url(profile=None):
 @register.inclusion_tag('bio/avatar_tag.html')
 def avatar(user, profile_link=True, align='bottom'):
     """
-    Returns a dict of attributes for a user's avatar image.
+    Renders a user's avatar image.
 
-    If the user object has an attribute 'user_profile', this is assumed to be
-    the user's profile that has been pre-fetched. Otherwise, the cache is
-    consulted to retrieve the avatar info for the user. If there is a cache
-    miss, only then will we access the profile attribute to retrieve the profile
-    from the database.
+    For best results, ensure the user's profile has already been loaded (perhaps
+    via a select_related()). We no longer cache the avatar url because with
+    proper use of select_related we will have the user profile already so there
+    is no need to go spend time checking the cache.
 
     """
-    # img_info is a tuple that contains info about the avatar:
-    # (url, width, height)
-
-    if hasattr(user, 'user_profile'):
-        img_url = get_img_url(user.user_profile)
-    else:
-        # try the cache
-        cache_key = 'avatar_' + user.username
-        img_url = cache.get(cache_key)
-        if img_url is None:
-            profile = user.profile
-            img_url = get_img_url(profile)
-            cache.set(cache_key, img_url)
+    img_url = get_img_url(user.profile)
 
     title = user.username
     style = ''

@@ -23,12 +23,12 @@ from django.db.models import F
 
 import antispam
 import antispam.utils
-from bio.models import UserProfile, BadgeOwnership
+from bio.models import BadgeOwnership
 from core.paginator import DiggPaginator
 from core.functions import email_admins, quote_message
 
 from forums.models import (Forum, Topic, Post, FlaggedPost, TopicLastVisit,
-        ForumLastVisit, Attachment)
+        ForumLastVisit)
 from forums.forms import (NewTopicForm, NewPostForm, PostForm, MoveTopicForm,
         SplitTopicForm)
 from forums.unread import (get_forum_unread_status, get_topic_unread_status,
@@ -170,7 +170,9 @@ def topic_index(request, id):
     topic.view_count = F('view_count') + 1
     topic.save(force_update=True)
 
-    posts = topic.posts.select_related('user')
+    posts = topic.posts.\
+                select_related('user', 'user__profile').\
+                prefetch_related('attachments')
 
     paginator = create_post_paginator(posts)
     page_num = get_page_num(request)
@@ -180,39 +182,23 @@ def topic_index(request, id):
         raise Http404
     get_post_unread_status(topic, page.object_list, request.user)
 
-    # Attach user profiles to each post's user to avoid using
-    # get_user_profile() in the template.
-    users = set(post.user.id for post in page.object_list)
-
-    profiles = UserProfile.objects.filter(user__id__in=users).select_related()
-    profile_keys = [profile.id for profile in profiles]
-    user_profiles = dict((profile.user.id, profile) for profile in profiles)
+    # Get the BadgeOwnership & Badges for each user who has posted in the
+    # thread. This is done to save SQL queries in the template.
 
     last_post_on_page = None
+    profile_ids = []
     for post in page.object_list:
-        post.user.user_profile = user_profiles[post.user.id]
-        post.attach_list = []
         last_post_on_page = post
+        profile_ids.append(post.user.profile.pk)
 
-    # Attach badge ownership info to the user profiles to avoid lots
-    # of database hits in the template:
-    bos_qs = BadgeOwnership.objects.filter(
-            profile__id__in=profile_keys).select_related()
+    bo_qs = BadgeOwnership.objects.filter(profile__in=profile_ids).\
+                select_related()
     bos = collections.defaultdict(list)
-    for bo in bos_qs:
-        bos[bo.profile.id].append(bo)
+    for bo in bo_qs:
+        bos[bo.profile.pk].append(bo)
 
-    for user_id, profile in user_profiles.iteritems():
-        profile.badge_ownership = bos[profile.id]
-
-    # Attach any attachments
-    post_ids = [post.pk for post in page.object_list]
-    attachments = Attachment.objects.filter(post__in=post_ids).select_related(
-            'embed').order_by('order')
-
-    post_dict = dict((post.pk, post) for post in page.object_list)
-    for item in attachments:
-        post_dict[item.post.id].attach_list.append(item.embed)
+    for post in page.object_list:
+        post.user.profile.badge_ownership = bos[post.user.profile.pk]
 
     last_page = page_num == paginator.num_pages
 
@@ -467,8 +453,6 @@ def edit_post(request, id):
             return HttpResponseRedirect(post.get_absolute_url())
     else:
         form = PostForm(instance=post, topic_name=topic_name)
-
-    post.user.user_profile = post.user.profile
 
     return render_to_response('forums/edit_post.html', {
         'forum': post.topic.forum,
