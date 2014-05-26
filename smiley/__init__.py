@@ -43,8 +43,9 @@ class SmilifyMarkdown(object):
     A class to "smilify" text by replacing text with Markdown image syntax for
     smiley images.
     """
-    def __init__(self):
-        self.regexes = Smiley.objects.get_smiley_regexes()
+    def __init__(self, relative_urls=True):
+        self.regexes = Smiley.objects.get_smiley_regexes(
+                                        relative_urls=relative_urls)
 
     def convert(self, s):
         """

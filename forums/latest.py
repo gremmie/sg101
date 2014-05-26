@@ -64,6 +64,7 @@ from forums.models import Forum, Topic, Post, Attachment
 from forums.views.subscriptions import notify_topic_subscribers
 from forums.tools import auto_favorite, auto_subscribe
 from core.services import get_redis_connection
+from core.markup import site_markup
 
 # This constant controls how many latest posts per forum we store
 MAX_POSTS = 50
@@ -453,16 +454,17 @@ def _serialize_post(post):
     """Serialize a post to JSON and return it.
 
     """
-    # get any attachments for the post
+    # Use absolute URLs for smileys for RSS. This means we have to reconvert the
+    # post Markdown to HTML.
+    content = site_markup(post.body, relative_urls=False)
 
+    # get any attachments for the post
     attachments = Attachment.objects.filter(post=post).select_related(
             'embed').order_by('order')
     embeds = [item.embed for item in attachments]
-    if len(embeds) == 0:
-        content = post.html
-    else:
+    if len(embeds):
         content = render_to_string('forums/post_rss.html', {
-            'post': post,
+            'content': content,
             'embeds': embeds,
         })
 

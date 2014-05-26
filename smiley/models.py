@@ -39,19 +39,24 @@ class SmileyManager(models.Manager):
         cache.set(key, smilies, CACHE_TIMEOUT)
         return smilies
 
-    def get_smiley_regexes(self):
+    def get_smiley_regexes(self, relative_urls=True):
         """
         Returns a list of 2-tuples of the form: (regex, repl)
         where regex is a regular expression for a smiley and
         repl is the replacement image in Markdown format.
+
+        If relative_urls is true, the smiley images will use relative URLs. If
+        False, absolute URLs will be used.
+
         """
-        regexes = cache.get('smiley_regexes')
+        key = 'smiley_regexes_rel' if relative_urls else 'smiley_regexes_abs'
+        regexes = cache.get(key)
         if regexes:
             return regexes
 
         regexes = [(re.compile(r"(^|\s|(?<=\s))%s(\s|$)" % re.escape(s.code)),
-            r"\1%s\2" % s.markdown()) for s in self.all()]
-        cache.set('smiley_regexes', regexes, CACHE_TIMEOUT)
+            r"\1%s\2" % s.markdown(relative_urls=relative_urls)) for s in self.all()]
+        cache.set(key, regexes, CACHE_TIMEOUT)
         return regexes
 
 
@@ -82,10 +87,19 @@ class Smiley(models.Model):
         return u''
     html.allow_tags = True
 
-    def markdown(self):
-        """Returns a markdown representation of the smiley."""
+    def markdown(self, relative_urls=True):
+        """Returns a markdown representation of the smiley.
+
+        If relative_urls is True, relative URLs will be generated. If False,
+        absolute URLs will be used.
+
+        """
         if self.image:
-            site = Site.objects.get_current()
-            return (u'![%s](http://%s%s "%s")' % 
-                    (self.title, site.domain, self.get_absolute_url(), self.title))
+            if relative_urls:
+                return u'![%s](%s "%s")' % (self.title, self.image.url,
+                        self.title)
+            else:
+                site = Site.objects.get_current()
+                return (u'![%s](http://%s%s "%s")' %
+                    (self.title, site.domain, self.image.url, self.title))
         return u''

@@ -8,11 +8,8 @@ from smiley import SmilifyMarkdown
 
 class Markdown(object):
     """
-    This is a thin wrapper around the Markdown class which deals with the
-    differences in Markdown versions on the production and development server.
-    This code was inspired by the code in
-    django/contrib/markup/templatetags/markup.py.
-    Currently, we only have to worry about Markdown 1.6b and 2.0.
+    This is a thin wrapper around the Markdown class.
+
     """
     def __init__(self, safe_mode='escape'):
         self.md = _markdown.Markdown(safe_mode=safe_mode,
@@ -34,18 +31,22 @@ class SiteMarkup(object):
     """
     This class provides site markup by combining markdown and
     our own smiley markup.
+
+    The relative_urls parameter controls whether the smileys are generated with
+    relative or absolute URLs.
+
     """
-    def __init__(self):
+    def __init__(self, relative_urls=True):
         self.md = Markdown()
-        self.smiley = SmilifyMarkdown()
+        self.smiley = SmilifyMarkdown(relative_urls=relative_urls)
 
     def convert(self, s):
         return self.md.convert(self.smiley.convert(s))
 
 
-def site_markup(s):
+def site_markup(s, relative_urls=True):
     """
     Convenience function for one-off site markup jobs.
     """
-    sm = SiteMarkup()
+    sm = SiteMarkup(relative_urls=relative_urls)
     return sm.convert(s)
