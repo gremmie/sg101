@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 import os
 import platform
+import sys
 
 from celery import Celery
 from django.conf import settings
@@ -13,6 +14,9 @@ settings_val = 'sg101.settings.{}'.format(role)
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_val)
+
+# Add some stuff to the Python path
+sys.path.append('/svr/django-sites/sg101/sg101/tools')
 
 app = Celery('sg101')
 
