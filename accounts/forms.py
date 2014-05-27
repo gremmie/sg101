@@ -172,7 +172,7 @@ class RegisterForm(forms.Form):
         answer = self.cleaned_data.get('question7')
         answer.sort()
         if answer != [u'2', u'4', u'5', u'7']:
-            self._validation_error("Sorry, try again", answer)
+            self._validation_error("Please double-check your checkboxes", answer)
         return answer
 
     def save(self):
