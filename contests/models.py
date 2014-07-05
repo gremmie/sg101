@@ -35,10 +35,12 @@ class Contest(models.Model):
     end_date = models.DateTimeField()
     contestants = models.ManyToManyField(User, related_name='contests',
             null=True, blank=True)
-    winner = models.ForeignKey(User, null=True, blank=True,
+    winners = models.ManyToManyField(User, null=True, blank=True,
             related_name='winning_contests')
     win_date = models.DateTimeField(null=True, blank=True)
     meta_description = models.TextField()
+    num_winners = models.IntegerField(default=1,
+            verbose_name='Number of winners')
 
     objects = models.Manager()
     public_objects = PublicContestManager()
@@ -69,19 +71,31 @@ class Contest(models.Model):
 
     def can_enter(self):
         """
-        Returns True if the contest is still active and does not have a winner.
+        Returns True if the contest is still active and does not have any
+        winners.
 
         """
-        return not self.winner and self.is_active()
+        return not self.win_date and self.is_active()
 
-    def pick_winner(self):
+    def pick_winners(self):
         """
-        This function randomly picks a winner from all the contestants.
+        This function randomly picks winners from all the contestants.
 
         """
-        user_ids = self.contestants.values_list('id', flat=True)
-        winner_id = random.choice(user_ids)
-        self.winner = User.objects.get(id=winner_id)
+        user_ids = list(self.contestants.values_list('id', flat=True))
+
+        winner_count = min(len(user_ids), self.num_winners)
+        if winner_count == 0:
+            return
+
+        winner_ids = []
+        for n in xrange(winner_count):
+            winner = random.choice(user_ids)
+            winner_ids.append(winner)
+            user_ids.remove(winner)
+
+        winners = list(User.objects.filter(pk__in=winner_ids))
+        self.winners.add(*winners)
         self.win_date = datetime.datetime.now()
 
     def ogp_tags(self):

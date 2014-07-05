@@ -49,16 +49,24 @@ This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
 </p>
 {% endif %}
 
-<h4>Contest Winner</h4>
+<h4>Contest Winners</h4>
+{% if contest.win_date %}
 <p>
-{% if contest.winner %}
-The winner of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }}, is 
-{% profile_link contest.winner.username '.' %} Congratulations to <strong>{{ contest.winner.username }}</strong>!
-{% else %}
-A contest winner will be determined sometime on or after {{ contest.end_date|date:"l, F d, Y" }}.
-Please check back later.
-{% endif %}
+The winner{{ contest.num_winners|pluralize }} of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }},
+{% if contest.num_winners == 1 %}is:{% else %}are:{% endif %}
 </p>
+<ul>
+   {% for winner in contest.winners.all %}
+   <li>{% profile_link winner.username %}</li>
+   {% endfor %}
+</ul>
+<p>Congratulations to the winners!</p>
+{% else %}
+<p>
+We will randomly choose {{ contest.num_winners }} winner{{ contest.num_winners|pluralize }}
+sometime on or after {{ contest.end_date|date:"l, F d, Y" }}. Please check back later.
+</p>
+{% endif %}
 <hr />
 {% social_sharing contest.title contest.get_absolute_url %}
 {% endblock %}

@@ -116,26 +116,30 @@ class ContestTestCase(TestCase):
                 is_public=True,
                 creation_date=start,
                 end_date=end,
-                winner=user,
                 win_date=now)
+        c.save()
+        c.contestants.add(user)
+        c.winners.add(user)
 
         self.assertFalse(c.can_enter())
 
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
 
-        c = Contest(title='test',
-                slug='test',
-                description='test',
+        c = Contest(title='test 2',
+                slug='test-2',
+                description='test 2',
                 is_public=True,
                 creation_date=start,
                 end_date=end,
-                winner=user,
                 win_date=end + datetime.timedelta(days=1))
+        c.save()
+        c.contestants.add(user)
+        c.winners.add(user)
 
         self.assertFalse(c.can_enter())
 
-    def test_pick_winner(self):
+    def test_pick_winners(self):
 
         now = datetime.datetime.now()
         start = now - datetime.timedelta(days=7)
@@ -146,7 +150,8 @@ class ContestTestCase(TestCase):
                 description='test',
                 is_public=False,
                 creation_date=start,
-                end_date=end)
+                end_date=end,
+                num_winners=1)
         c.save()
 
         user1 = User.objects.create_user('test_user1', '', 'password')
@@ -158,9 +163,49 @@ class ContestTestCase(TestCase):
 
         c.contestants.add(user1, user2, user3)
 
-        c.pick_winner()
+        c.pick_winners()
 
         self.assertTrue(datetime.datetime.now() - c.win_date <
                 datetime.timedelta(seconds=1))
-        self.assertTrue(c.winner.id in [user1.id, user2.id, user3.id])
+
+        winners = list(c.winners.all())
+        self.assertEqual(len(winners), 1)
+        self.assertTrue(winners[0].id in [user1.id, user2.id, user3.id])
+
+    def test_pick_winners2(self):
+
+        now = datetime.datetime.now()
+        start = now - datetime.timedelta(days=7)
+        end = start - datetime.timedelta(days=3)
+
+        c = Contest(title='test',
+                slug='test',
+                description='test',
+                is_public=False,
+                creation_date=start,
+                end_date=end,
+                num_winners=2)
+        c.save()
+
+        user1 = User.objects.create_user('test_user1', '', 'password')
+        user1.save()
+        user2 = User.objects.create_user('test_user2', '', 'password')
+        user2.save()
+        user3 = User.objects.create_user('test_user3', '', 'password')
+        user3.save()
+
+        c.contestants.add(user1, user2, user3)
+
+        c.pick_winners()
+
+        self.assertTrue(datetime.datetime.now() - c.win_date <
+                datetime.timedelta(seconds=1))
+
+        winners = list(c.winners.all())
+        self.assertEqual(len(winners), 2)
+
+        user_ids = set([user1.id, user2.id, user3.id])
+        self.assertTrue(winners[0].id in user_ids)
+        self.assertTrue(winners[1].id in user_ids)
+        self.assertTrue(winners[0].id != winners[1].id)
 

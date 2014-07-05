@@ -10,13 +10,13 @@ from contests.models import Contest
 
 class ContestAdmin(admin.ModelAdmin):
     list_display = ['title', 'is_public', 'creation_date', 'end_date',
-            'contestant_count', 'winner']
+            'contestant_count', 'winner_count']
     list_editable = ['is_public']
     date_hierarchy = 'creation_date'
     search_fields = ['title', 'description']
     prepopulated_fields = {'slug': ['title']}
-    raw_id_fields = ['winner', 'contestants']
-    actions = ['pick_winner']
+    raw_id_fields = ['contestants', 'winners']
+    actions = ['pick_winners']
 
     class Media:
         js = (['js/contests/contests_admin.js'] +
@@ -26,7 +26,11 @@ class ContestAdmin(admin.ModelAdmin):
         return obj.contestants.count()
     contestant_count.short_description = '# Entries'
 
-    def pick_winner(self, request, qs):
+    def winner_count(self, obj):
+        return obj.winners.count()
+    winner_count.short_description = '# Winners'
+
+    def pick_winners(self, request, qs):
         """
         Picks a winner on the contests selected by the admin. Note that for
         safety reasons, we only update those contests that don't have winners
@@ -35,15 +39,15 @@ class ContestAdmin(admin.ModelAdmin):
         """
         count = 0
         for contest in qs:
-            if not contest.winner:
-                contest.pick_winner()
+            if not contest.win_date:
+                contest.pick_winners()
                 contest.save()
                 count += 1
 
         self.message_user(request, "%d of %d winners picked" % (count,
             qs.count()))
 
-    pick_winner.short_description = "Pick winners for selected contests"
+    pick_winners.short_description = "Pick winners for selected contests"
 
 
 

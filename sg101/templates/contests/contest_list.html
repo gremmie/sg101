@@ -13,8 +13,12 @@ the current and past contests on the site.</p>
    {% if contest.is_active %}
       <img src="{{ STATIC_URL }}icons/new.png" alt="New" />
    {% else %}
-      {% if contest.winner %}
-         <img src="{{ STATIC_URL }}icons/rosette.png" alt="Winner" /> {% profile_link contest.winner.username %}
+      {% if contest.win_date %}
+         <ul>
+         {% for winner in contest.winners.all %}
+            <li><img src="{{ STATIC_URL }}icons/rosette.png" alt="Winner" /> {% profile_link winner.username %}</li>
+         {% endfor %}
+         </ul>
       {% else %}
          <img src="{{ STATIC_URL }}icons/lock.png" alt="Old" />
       {% endif %}

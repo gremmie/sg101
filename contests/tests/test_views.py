@@ -39,9 +39,11 @@ class ConstestsTestCase(TestCase):
                 is_public=True,
                 creation_date=start,
                 end_date=end,
-                winner=user,
-                win_date=end + datetime.timedelta(days=1))
+                win_date=end + datetime.timedelta(days=1),
+                num_winners=1)
         c.save()
+        c.contestants.add(user)
+        c.winners.add(user)
         self.contest_id = c.id
 
     def test_contests(self):
@@ -72,7 +74,8 @@ class ContestEntryTestCase(TestCase):
                 description='test',
                 is_public=True,
                 creation_date=start,
-                end_date=end)
+                end_date=end,
+                num_winners=1)
         c.save()
         self.contest_id = c.id
 
