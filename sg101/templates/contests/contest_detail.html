@@ -60,7 +60,7 @@ The winner{{ contest.num_winners|pluralize }} of this contest, selected on {{ co
    <li>{% profile_link winner.username %}</li>
    {% endfor %}
 </ul>
-<p>Congratulations to the winners!</p>
+<p>Congratulations to the winner{{ contest.num_winners|pluralize }}!</p>
 {% else %}
 <p>
 We will randomly choose {{ contest.num_winners }} winner{{ contest.num_winners|pluralize }}
