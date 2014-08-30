@@ -1,11 +1,11 @@
-{% if messages %}
-<ul class="user-messages">
-   {% for msg in messages %}
-      <li{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</li>
-   {% endfor %}
-</ul>
-{% endif %}
-{% if msgs.object_list %}
+{% extends 'messages/messages_base.html' %}
+{% block messages_content %}
+<h3>Outbox <small>(Page {{ page.number }} of {{ page.paginator.num_pages }})</small></h3>
+<p>
+This is your outbox. It contains messages you have sent to other members. Messages in <strong>bold</strong> are unread
+by the recipient. Messages in <em>italics</em> have been replied to.
+</p>
+{% if page.object_list %}
    <form action="." onsubmit="return bulkMsgAction(this, 'delete');">
    <table class="messages"> 
    <tr>
@@ -15,7 +15,7 @@
       <th>Received</th>
       <th><input type="checkbox" onclick="tabMasterCheckClick(this, 'outbox_ids');" /></th>
    </tr>
-   {% for msg in msgs.object_list %}
+   {% for msg in page.object_list %}
    <tr>
       <td><a href="{% url 'bio.views.view_profile' msg.receiver.username %}">
          {{ msg.receiver.username }}</a></td>
@@ -32,11 +32,8 @@
    </table>
    </form>
    {% include "messages/pagination.html" %}
-   <ul>
-      <li>Messages in <strong>bold</strong> are unread.</li>
-      <li>Messages in <em>italics</em> have been replied to.</li>
-   </ul>
 {% else %}
    <p><em>Your Outbox is empty.</em></p>
 {% endif %}
-{% include 'messages/usage_graph.html' with box_name='outbox' %}
+{% include 'messages/usage_graph.html' with pct_used=outbox_pct box_name='outbox' %}
+{% endblock %}

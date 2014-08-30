@@ -8,7 +8,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages as django_messages
-from django.core.paginator import Paginator, EmptyPage, InvalidPage
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.http import HttpResponseForbidden
@@ -35,14 +35,6 @@ TAB_INDICES = {
 }
 
 
-def _get_page(request):
-    try:
-        n = int(request.GET.get('page', '1'))
-    except ValueError:
-        n = 1
-    return n
-
-
 def _quota_check(box_name, count, request):
     """
     Checks the message box count against MSG_BOX_LIMIT.
@@ -58,16 +50,49 @@ def _quota_check(box_name, count, request):
     return 100 * count / MSG_BOX_LIMIT
 
 
-@login_required
-def index(request, tab=None):
-    """
-    This function displays the base tabbed private messages view.
+def _get_page(request, qs):
+    """Paginates the given queryset and returns a page object"""
+    paginator = Paginator(qs, MSGS_PER_PAGE)
+    try:
+        page = paginator.page(request.GET.get('page', '1'))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+    return page
 
-    """
-    tab_index = TAB_INDICES[tab] if tab else 0
-    return render(request, 'messages/tabbed_base.html', {
-        'tab': tab_index,
-        'unread_count': Message.objects.unread_count(request.user),
+
+@login_required
+def inbox(request):
+
+    msg_list = Message.objects.inbox(request.user)
+    msg_count = msg_list.count()
+    pct_used = _quota_check('inbox', msg_count, request)
+
+    page = _get_page(request, msg_list)
+
+    return render(request, 'messages/inbox.html', {
+        'tab': 'inbox',
+        'page': page,
+        'inbox_pct': pct_used,
+        'outbox_pct': None,
+        })
+
+
+@login_required
+def outbox(request):
+
+    msg_list = Message.objects.outbox(request.user)
+    msg_count = msg_list.count()
+    pct_used = _quota_check('outbox', msg_count, request)
+
+    page = _get_page(request, msg_list)
+
+    return render(request, 'messages/outbox.html', {
+        'tab': 'outbox',
+        'page': page,
+        'inbox_pct': None,
+        'outbox_pct': pct_used,
         })
 
 
@@ -85,56 +110,6 @@ def compose_to(request, receiver):
         'tab': tab_index,
         'receiver': receiver,
         'unread_count': Message.objects.unread_count(request.user),
-        })
-
-
-def inbox(request):
-    """
-    Returns the inbox for the user.
-
-    """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-
-    msg_list = Message.objects.inbox(request.user)
-    msg_count = msg_list.count()
-    pct_used = _quota_check('inbox', msg_count, request)
-
-    paginator = Paginator(msg_list, MSGS_PER_PAGE)
-    try:
-        msgs = paginator.page(_get_page(request))
-    except (EmptyPage, InvalidPage):
-        msgs = paginator.page(paginator.num_pages)
-
-    return render(request, 'messages/inbox_tab.html', {
-        'msgs': msgs,
-        'url': reverse('messages-inbox'),
-        'pct_used': pct_used,
-        })
-
-
-def outbox(request):
-    """
-    Returns the outbox for the user.
-
-    """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-
-    msg_list = Message.objects.outbox(request.user)
-    msg_count = msg_list.count()
-    pct_used = _quota_check('outbox', msg_count, request)
-
-    paginator = Paginator(msg_list, MSGS_PER_PAGE)
-    try:
-        msgs = paginator.page(_get_page(request))
-    except (EmptyPage, InvalidPage):
-        msgs = paginator.page(paginator.num_pages)
-
-    return render(request, 'messages/outbox_tab.html', {
-        'msgs': msgs,
-        'url': reverse('messages-outbox'),
-        'pct_used': pct_used,
         })
 
 

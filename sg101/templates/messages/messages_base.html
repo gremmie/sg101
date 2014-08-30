@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load script_tags %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/messages.css" />
+{% endblock %}
+{% block content %}
+<h2>Your Private Messages</h2>
+
+{% if messages %}
+<ul class="user-messages">
+{% for message in messages %}
+   <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<p>Private messages menu:</p>
+<ul>
+   <li>{% if tab != 'inbox' %}<a href="{% url 'messages-inbox' %}">{% endif %}Inbox{% if tab != 'inbox' %}</a>{% endif %}
+      {% if inbox_pct %}({{ inbox_pct }}% used){% endif %}</li>
+{% comment %}
+   <li>{% if tab != 'compose' %}<a href="{% url 'messages-compose' %}">{% endif %}Compose new message{% if tab != 'compose' %}</a>{% endif %}</li>
+{% endcomment %}
+   <li>{% if tab != 'outbox' %}<a href="{% url 'messages-outbox' %}">{% endif %}Outbox{% if tab != 'outbox' %}</a>{% endif %}
+      {% if outbox_pct %}({{ outbox_pct }}% used){% endif %}</li>
+{% comment %}
+   <li>{% if tab != 'trash' %}<a href="{% url 'messages-trash' %}">{% endif %}Trash{% if tab != 'trash' %}</a>{% endif %}</li>
+   <li>{% if tab != 'options' %}<a href="{% url 'messages-options' %}">{% endif %}Options{% if tab != 'options' %}</a>{% endif %}</li>
+{% endcomment %}
+</ul>
+
+{% block messages_content %}{% endblock %}
+
+{% endblock %}
