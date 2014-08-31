@@ -21,7 +21,7 @@ by the recipient. Messages in <em>italics</em> have been replied to.
       <td><a href="{% url 'bio.views.view_profile' msg.receiver.username %}">
          {{ msg.receiver.username }}</a></td>
       <td>
-         <a href="#" onclick="msgShow(this, {{ msg.id }}); return false;"
+         <a href="{% url 'messages-view' msg.pk %}"
             class="{% if msg.unread %}unread {% endif %}{% if msg.replied_to %}replied_to{% endif %}">{{ msg.subject }}</a>
          </td>
       <td>{{ msg.send_date|date:"M j, Y g:i A" }}</td>

@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 from messages.models import Message, Options
 from messages.forms import OptionsForm, ComposeForm
@@ -164,32 +164,43 @@ def compose(request):
 @login_required
 def view(request, msg_id):
     """
-    This view function retrieves a message and returns it as a JSON object.
+    This view function displays a private message for reading to the user. If
+    the user is a recipient of the message, a reply can be composed and sent.
 
     """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
+    if request.method == 'POST':
+        form = ComposeForm(request.user, request.POST)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Reply sent.')
+            return redirect('messages-inbox')
+    else:
+        msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
+        if msg.sender != request.user and msg.receiver != request.user:
+            django_messages.error(request,
+                    "You don't have permission to read that message.")
+            return redirect('messages-inbox')
 
-    msg_id = request.POST.get('msg_id')
-    msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
-    if msg.sender != request.user and msg.receiver != request.user:
-        return HttpResponseForbidden()
+        initial_data = {
+            'receiver': msg.sender.username,
+            'subject': reply_subject(msg.subject),
+            'message': quote_message(msg.sender.username, msg.message),
+            'parent_id': msg.pk,
+        }
 
-    if msg.receiver == request.user and msg.read_date is None:
-        msg.read_date = datetime.datetime.now()
-        msg.save()
+        if msg.receiver == request.user:
+            if msg.read_date is None:
+                msg.read_date = datetime.datetime.now()
+                msg.save()
+        else:
+            initial_data['receiver'] = msg.receiver.username
 
-    msg_dict = dict(subject=msg.subject,
-                    sender=msg.sender.username,
-                    receiver=msg.receiver.username,
-                    content=msg.html,
-                    re_subject=reply_subject(msg.subject),
-                    re_content=quote_message(msg.sender.username, msg.message))
+        form = ComposeForm(request.user, initial=initial_data)
 
-    result = json.dumps(msg_dict, ensure_ascii=False)
-    return HttpResponse(result, content_type='application/json')
+    return render(request, 'messages/view_message.html', {
+        'msg': msg,
+        'form': form,
+        })
 
 
 def _only_integers(slist):
