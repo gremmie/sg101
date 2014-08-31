@@ -112,6 +112,28 @@ def trash(request):
 
 
 @login_required
+def options(request):
+    """
+    This view handles the displaying and changing of private message options.
+
+    """
+    if request.method == 'POST':
+        options = Options.objects.for_user(request.user)
+        form = OptionsForm(request.POST, instance=options, prefix='opts')
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Options saved.')
+    else:
+        options = Options.objects.for_user(request.user)
+        form = OptionsForm(instance=options, prefix='opts')
+
+    return render(request, 'messages/options.html', {
+        'tab': 'options',
+        'form': form,
+        })
+
+
+@login_required
 def compose_to(request, receiver):
     """
     This function displays the base tabbed private messages view,
@@ -156,29 +178,6 @@ def message(request):
 
     result = json.dumps(msg_dict, ensure_ascii=False)
     return HttpResponse(result, content_type='application/json')
-
-
-def options(request):
-    """
-    This view handles the displaying and changing of private message options.
-
-    """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-
-    if request.method == "POST":
-        options = Options.objects.for_user(request.user)
-        form = OptionsForm(request.POST, instance=options, prefix='opts')
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Options saved.')
-    else:
-        options = Options.objects.for_user(request.user)
-        form = OptionsForm(instance=options, prefix='opts')
-
-    return render(request, 'messages/options_tab.html', {
-        'form': form,
-        })
 
 
 def compose(request, receiver=None):
