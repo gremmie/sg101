@@ -97,6 +97,21 @@ def outbox(request):
 
 
 @login_required
+def trash(request):
+
+    msg_list = Message.objects.trash(request.user)
+
+    page = _get_page(request, msg_list)
+
+    return render(request, 'messages/trash.html', {
+        'tab': 'trash',
+        'page': page,
+        'inbox_pct': None,
+        'outbox_pct': None,
+        })
+
+
+@login_required
 def compose_to(request, receiver):
     """
     This function displays the base tabbed private messages view,
@@ -110,27 +125,6 @@ def compose_to(request, receiver):
         'tab': tab_index,
         'receiver': receiver,
         'unread_count': Message.objects.unread_count(request.user),
-        })
-
-
-def trash(request):
-    """
-    Returns the trash for the user.
-
-    """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-
-    msg_list = Message.objects.trash(request.user)
-    paginator = Paginator(msg_list, MSGS_PER_PAGE)
-    try:
-        msgs = paginator.page(_get_page(request))
-    except (EmptyPage, InvalidPage):
-        msgs = paginator.page(paginator.num_pages)
-
-    return render(request, 'messages/trash_tab.html', {
-        'msgs': msgs,
-        'url': reverse('messages-trash'),
         })
 
 

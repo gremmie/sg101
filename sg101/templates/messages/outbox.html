@@ -6,6 +6,7 @@ This is your outbox. It contains messages you have sent to other members. Messag
 by the recipient. Messages in <em>italics</em> have been replied to.
 </p>
 {% if page.object_list %}
+   {% include "messages/pagination.html" %}
    <form action="." onsubmit="return bulkMsgAction(this, 'delete');">
    <table class="messages"> 
    <tr>

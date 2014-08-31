@@ -23,8 +23,8 @@
 {% endcomment %}
    <li>{% if tab != 'outbox' %}<a href="{% url 'messages-outbox' %}">{% endif %}Outbox{% if tab != 'outbox' %}</a>{% endif %}
       {% if outbox_pct %}({{ outbox_pct }}% used){% endif %}</li>
-{% comment %}
    <li>{% if tab != 'trash' %}<a href="{% url 'messages-trash' %}">{% endif %}Trash{% if tab != 'trash' %}</a>{% endif %}</li>
+{% comment %}
    <li>{% if tab != 'options' %}<a href="{% url 'messages-options' %}">{% endif %}Options{% if tab != 'options' %}</a>{% endif %}</li>
 {% endcomment %}
 </ul>

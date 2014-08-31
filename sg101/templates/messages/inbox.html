@@ -6,6 +6,7 @@ This is your inbox. It contains messages sent to you by others. Messages in <str
 Messages in <em>italics</em> have been replied to.
 </p>
 {% if page.object_list %}
+   {% include "messages/pagination.html" %}
    <form action="." onsubmit="return bulkMsgAction(this, 'delete');">
    <table class="messages">
    <tr>
