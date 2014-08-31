@@ -134,23 +134,35 @@ def options(request):
 
 
 @login_required
-def compose_to(request, receiver):
+def compose(request):
     """
-    This function displays the base tabbed private messages view,
-    and configures it to display the compose PM tab for the given
-    receiver.
+    Process or prepare the compose form to create a new private message.
 
     """
-    user = get_object_or_404(User, username=receiver)
-    tab_index = TAB_INDICES['compose']
-    return render(request, 'messages/tabbed_base.html', {
-        'tab': tab_index,
-        'receiver': receiver,
-        'unread_count': Message.objects.unread_count(request.user),
+    if request.method == 'POST':
+        compose_form = ComposeForm(request.user, request.POST)
+        if compose_form.is_valid():
+            compose_form.save()
+            django_messages.success(request, 'Message sent.')
+            compose_form = ComposeForm(request.user)
+    else:
+        receiver = request.GET.get('to')
+        if receiver:
+            form_data = {'receiver': receiver}
+            compose_form = ComposeForm(request.user, initial=form_data)
+        else:
+            compose_form = ComposeForm(request.user)
+
+        _quota_check('outbox', Message.objects.outbox(request.user).count(), request)
+
+    return render(request, 'messages/compose.html', {
+        'tab': 'compose',
+        'compose_form': compose_form,
         })
 
 
-def message(request):
+@login_required
+def view(request, msg_id):
     """
     This view function retrieves a message and returns it as a JSON object.
 
@@ -178,45 +190,6 @@ def message(request):
 
     result = json.dumps(msg_dict, ensure_ascii=False)
     return HttpResponse(result, content_type='application/json')
-
-
-def compose(request, receiver=None):
-    """
-    Process or prepare the compose form to create a new private message.
-
-    """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-
-    if request.method == "POST":
-        compose_form = ComposeForm(request.user, request.POST)
-
-        # Is this a reply to another message?
-        parent_msg_id = request.POST.get('reply_to')
-        if parent_msg_id:
-            parent_msg = get_object_or_404(Message, id=parent_msg_id)
-            if (request.user != parent_msg.receiver and
-                request.user != parent_msg.sender):
-                return HttpResponseForbidden()
-        else:
-            parent_msg = None
-
-        if compose_form.is_valid():
-            compose_form.save(parent_msg=parent_msg)
-            django_messages.success(request, 'Message sent.')
-            compose_form = ComposeForm(request.user)
-    else:
-        if receiver is not None:
-            form_data = {'receiver': receiver}
-            compose_form = ComposeForm(request.user, initial=form_data)
-        else:
-            compose_form = ComposeForm(request.user)
-
-        _quota_check('outbox', Message.objects.outbox(request.user).count(), request)
-
-    return render(request, 'messages/compose_tab.html', {
-        'compose_form': compose_form,
-        })
 
 
 def _only_integers(slist):

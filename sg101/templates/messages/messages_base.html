@@ -18,9 +18,7 @@
 <ul>
    <li>{% if tab != 'inbox' %}<a href="{% url 'messages-inbox' %}">{% endif %}Inbox{% if tab != 'inbox' %}</a>{% endif %}
       {% if inbox_pct %}({{ inbox_pct }}% used){% endif %}</li>
-{% comment %}
    <li>{% if tab != 'compose' %}<a href="{% url 'messages-compose' %}">{% endif %}Compose new message{% if tab != 'compose' %}</a>{% endif %}</li>
-{% endcomment %}
    <li>{% if tab != 'outbox' %}<a href="{% url 'messages-outbox' %}">{% endif %}Outbox{% if tab != 'outbox' %}</a>{% endif %}
       {% if outbox_pct %}({{ outbox_pct }}% used){% endif %}</li>
    <li>{% if tab != 'trash' %}<a href="{% url 'messages-trash' %}">{% endif %}Trash{% if tab != 'trash' %}</a>{% endif %}</li>

@@ -1,7 +1,7 @@
 """
 Forms for the messages application.
-"""
 
+"""
 from django import forms
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -30,6 +30,7 @@ class ComposeForm(forms.Form):
     subject = forms.CharField(max_length=120, widget=forms.TextInput(attrs={'size': 52}))
     message = forms.CharField(widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     attach_signature = forms.BooleanField(label='Attach Signature?', required=False)
+    parent_id = forms.IntegerField(required=False, widget=forms.HiddenInput)
 
     def __init__(self, user, *args, **kwargs):
         forms.Form.__init__(self, *args, **kwargs)
@@ -90,10 +91,20 @@ class ComposeForm(forms.Form):
             signature_attached=attach_signature,
         )
         new_msg.save()
-        if parent_msg is not None:
-            parent_msg.reply_date = new_msg.send_date
-            parent_msg.save()
 
+        # Update the parent message (if there is one)
+        parent_id = self.cleaned_data['parent_id']
+        if parent_id:
+            try:
+                parent_msg = Message.objects.get(pk=parent_id)
+            except Message.DoesNotExist:
+                parent_msg = None
+
+            if parent_msg and parent_msg.receiver == self.user:
+                parent_msg.reply_date = new_msg.send_date
+                parent_msg.save()
+
+        # Notify recipient
         receiver_opts = Options.objects.for_user(receiver)
         if receiver_opts.notify_email:
             notify_receiver(new_msg)

@@ -1,0 +1,23 @@
+{% extends 'messages/messages_base.html' %}
+{% load core_tags %}
+{% load script_tags %}
+{% block custom_js %}
+{% script_tags 'jquery-ui' %}
+{% script_tags 'markitup' %}
+{% endblock %}
+{% block messages_content %}
+<h3>Compose Private Message</h3>
+<p>Use this form to send a new private message to another user.</p>
+<form action="." method="post" id="msg_compose_form">{% csrf_token %}
+<table>
+{{ compose_form.as_table }}
+<tr>
+   <td>&nbsp;</td>
+   <td>
+      {% comment_dialogs %}
+      <input type="submit" name="submit_button" value="Send" />
+   </td>
+</tr>
+</table>
+</form>
+{% endblock %}
