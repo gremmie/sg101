@@ -6,6 +6,7 @@ import datetime
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
 from django.contrib import messages as django_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -203,52 +204,56 @@ def view(request, msg_id):
         })
 
 
-def _only_integers(slist):
+def _delete_pms(user, pm_ids):
     """
-    Accepts a list of strings. Returns a list of integers consisting of only
-    those elements from the original list that could be converted to integers
+    Process the request to delete the list of PM ids by user.
 
     """
-    result = []
-    for s in slist:
-        try:
-            n = int(s)
-        except ValueError:
-            pass
-        else:
-            result.append(n)
-    return result
-
-
-def _delete_msgs(user, msg_ids):
-    """
-    Deletes the messages given by the list of msg_ids. For this to succeed, the
-    user has to be either the sender or receiver on each message.
-
-    """
-    msg_ids = _only_integers(msg_ids)
-    msgs = Message.objects.filter(id__in=msg_ids)
+    msgs = Message.objects.filter(id__in=pm_ids)
+    now = datetime.datetime.now()
 
     for msg in msgs:
         if msg.sender == user:
-            if (msg.receiver_delete_date is not None or
-                    msg.read_date is None):
+            if msg.receiver_delete_date is not None or msg.read_date is None:
                 # Both parties deleted the message or receiver hasn't read it
                 # yet, we can delete it now
                 msg.delete()
             else:
-                # receiver still has it in inbox
-                msg.sender_delete_date = datetime.datetime.now()
+                # receiver still has PM in their inbox
+                msg.sender_delete_date = now
                 msg.save()
-
         elif msg.receiver == user:
             if msg.sender_delete_date is not None:
                 # both parties deleted the message, we can delete it now
                 msg.delete()
             else:
-                # sender still has it in the outbox
-                msg.receiver_delete_date = datetime.datetime.now()
+                # sender still has PM in their inbox
+                msg.receiver_delete_date = now
                 msg.save()
+
+
+@login_required
+@require_POST
+def delete(request):
+    """
+    Deletes the requested PM's. The user must be either a sender or receiver for
+    this to work.
+
+    """
+    pm_ids = request.POST.getlist('pm_ids')
+    if pm_ids:
+        _delete_pms(request.user, pm_ids)
+
+    # Figure out where to redirect to
+    src = request.POST.get('src', 'inbox')
+    try:
+        page = int(request.POST.get('page', '1'))
+    except ValueError:
+        page = 1
+
+    view_name = 'messages-inbox' if src == inbox else 'messages-outbox'
+    url = reverse(view_name) + '?page={}'.format(page)
+    return redirect(url)
 
 
 def _undelete_msgs(user, msg_ids):
