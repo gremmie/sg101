@@ -1,6 +1,7 @@
 {% extends 'bio/base.html' %}
 {% load cycle from future %}
 {% load bio_tags %}
+{% load messages_tags %}
 {% block title %}Member List{% endblock %}
 {% block bio_css %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
@@ -40,7 +41,7 @@ user profiles.
    <td>{{ u.profile.location }}</td>
    <td>{{ u.date_joined|date:"M. d, Y" }}</td>
    <td>
-      {% ifnotequal user u %}<a href="{% url 'messages-compose_to' u.username %}">
+      {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
          <img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
       {% if not u.profile.hide_email %}<a href="mailto:{{ u.email }}">
          <img src="{{ STATIC_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}

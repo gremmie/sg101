@@ -3,6 +3,7 @@
 {% load elsewhere_tags %}
 {% load core_tags %}
 {% load forum_tags %}
+{% load messages_tags %}
 {% block title %}User Profile for {{ subject.username }}{% endblock %}
 {% block custom_js %}
 <script type="text/javascript">
@@ -94,7 +95,7 @@
 {% else %}
 {% if user.is_authenticated %}
 <ul class="icon-list">
-   <li><a href="{% url 'messages-compose_to' subject.username %}"><img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% url 'messages-compose_to' subject.username %}">Send a private message to {{ subject.username }}</a></li>
+   <li><a href="{% send_pm_url subject.username %}"><img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send Private Message" /></a> <a href="{% send_pm_url subject.username %}">Send a private message to {{ subject.username }}</a></li>
    <li><a href="{% url 'forums-posts_for_user' username=subject.username %}"><img src="{{ STATIC_URL }}icons/comments.png"
       alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url 'forums-posts_for_user' username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
    <li><a href="{% url 'user_photos-gallery' username=subject.username %}"><img src="{{ STATIC_URL }}icons/pictures.png"

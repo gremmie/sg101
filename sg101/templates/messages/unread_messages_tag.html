@@ -1,9 +1,5 @@
 {% if unread_count == 0 %}
-<a href="{% url 'messages-index' %}"><span id="unread_msg_text">Private Messages</span></a>
-{% endif %}
-{% if unread_count == 1 %}
-<a href="{% url 'messages-index' %}"><span id="unread_msg_text">1 New Message</span></a>
-{% endif %}
-{% if unread_count > 1 %}
-<a href="{% url 'messages-index' %}"><span id="unread_msg_text">{{ unread_count }} New Messages</span></a>
+<a href="{% url 'messages-inbox' %}"><span id="unread_msg_text">Private Messages</span></a>
+{% else %}
+<a href="{% url 'messages-inbox' %}"><span id="unread_msg_text">{{ unread_count }} New Message{{ unread_count|pluralize }}</span></a>
 {% endif %}

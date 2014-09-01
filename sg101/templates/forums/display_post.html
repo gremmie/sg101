@@ -1,5 +1,6 @@
 {% load bio_tags %}
 {% load forum_tags %}
+{% load messages_tags %}
 <tr class="forum-post {{ rowcolors }}" id="post-{{ post.id }}">
    <td class="forum-post-author">
       <a name="p{{ post.id }}"></a>
@@ -18,7 +19,7 @@
       {% endfor %}
       {% if user.is_authenticated %}
       <p>
-      <a href="{% url 'messages-compose_to' post.user.username %}">
+      <a href="{% send_pm_url post.user.username %}">
       <img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send Private Message to {{ post.user.username }}" /></a>
       {% if not post.user.profile.hide_email %}<a href="mailto:{{ post.user.email }}">
          <img src="{{ STATIC_URL }}icons/email.png" alt="Email" title="Send Email to {{ post.user.username}}" /></a>{% endif %}
