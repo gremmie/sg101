@@ -134,7 +134,7 @@ def notify_receiver(new_msg):
     email_body = render_to_string('messages/notification_email.txt', {
                 'site': site,
                 'msg': new_msg,
-                'options_url': reverse('messages-options_tab'),
+                'options_url': reverse('messages-options'),
             })
 
     subject = 'New private message for %s at %s' % (new_msg.receiver.username, site.name)
