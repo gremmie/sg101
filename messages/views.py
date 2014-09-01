@@ -3,17 +3,12 @@ Views for the messages application.
 
 """
 import datetime
-import json
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.contrib.auth.models import User
 from django.contrib import messages as django_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
-from django.http import HttpResponseForbidden
-from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
 
@@ -25,15 +20,6 @@ from core.functions import quote_message
 
 
 MSGS_PER_PAGE = 20      # message pagination value
-
-# This must match the jQuery UI tab control
-TAB_INDICES = {
-    'inbox': 0,
-    'compose': 1,
-    'outbox': 2,
-    'trash': 3,
-    'options': 4,
-}
 
 
 def _quota_check(box_name, count, request):
@@ -208,10 +194,13 @@ def _delete_pms(user, pm_ids):
     """
     Process the request to delete the list of PM ids by user.
 
+    Returns the number of PM's deleted.
+
     """
     msgs = Message.objects.filter(id__in=pm_ids)
     now = datetime.datetime.now()
 
+    count = 0
     for msg in msgs:
         if msg.sender == user:
             if msg.receiver_delete_date is not None or msg.read_date is None:
@@ -222,6 +211,7 @@ def _delete_pms(user, pm_ids):
                 # receiver still has PM in their inbox
                 msg.sender_delete_date = now
                 msg.save()
+            count += 1
         elif msg.receiver == user:
             if msg.sender_delete_date is not None:
                 # both parties deleted the message, we can delete it now
@@ -230,6 +220,9 @@ def _delete_pms(user, pm_ids):
                 # sender still has PM in their inbox
                 msg.receiver_delete_date = now
                 msg.save()
+            count += 1
+
+    return count
 
 
 @login_required
@@ -242,7 +235,9 @@ def delete(request):
     """
     pm_ids = request.POST.getlist('pm_ids')
     if pm_ids:
-        _delete_pms(request.user, pm_ids)
+        count = _delete_pms(request.user, pm_ids)
+        msg = '{} message{} deleted.'.format(count, '' if count == 1 else 's')
+        django_messages.success(request, msg)
 
     # Figure out where to redirect to
     src = request.POST.get('src', 'inbox')
@@ -251,50 +246,52 @@ def delete(request):
     except ValueError:
         page = 1
 
-    view_name = 'messages-inbox' if src == inbox else 'messages-outbox'
+    view_name = 'messages-inbox' if src == 'inbox' else 'messages-outbox'
     url = reverse(view_name) + '?page={}'.format(page)
     return redirect(url)
 
 
-def _undelete_msgs(user, msg_ids):
+def _undelete_pms(user, msg_ids):
     """
     Attempts to "undelete" the messages given by the msg_ids list.
     This will only succeed if the user is either the sender or receiver.
 
+    Returns the number of PM's undeleted.
+
     """
-    msg_ids = _only_integers(msg_ids)
     msgs = Message.objects.filter(id__in=msg_ids)
+    count = 0
     for msg in msgs:
         if msg.sender == user:
             msg.sender_delete_date = None
             msg.save()
+            count += 1
         elif msg.receiver == user:
             msg.receiver_delete_date = None
             msg.save()
+            count += 1
+    return count
 
 
-def bulk(request):
+@login_required
+@require_POST
+def undelete(request):
     """
-    This view processes messages in bulk. Arrays of message ids are expected in
-    the POST query dict: inbox_ids and outbox_ids will be deleted; trash_ids will
-    be undeleted.
+    Undeletes the requested PM's. The user must be either a sender or receiver for
+    this to work.
 
     """
-    if not request.user.is_authenticated():
-        return HttpResponseForbidden()
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
+    pm_ids = request.POST.getlist('pm_ids')
+    if pm_ids:
+        count = _undelete_pms(request.user, pm_ids)
+        msg = '{} message{} undeleted.'.format(count, '' if count == 1 else 's')
+        django_messages.success(request, msg)
 
-    delete_ids = []
-    if 'inbox_ids' in request.POST:
-        delete_ids.extend(request.POST.getlist('inbox_ids'))
-    if 'outbox_ids' in request.POST:
-        delete_ids.extend(request.POST.getlist('outbox_ids'))
+    # Figure out where to redirect to
+    try:
+        page = int(request.POST.get('page', '1'))
+    except ValueError:
+        page = 1
 
-    if len(delete_ids):
-        _delete_msgs(request.user, delete_ids)
-
-    if 'trash_ids' in request.POST:
-        _undelete_msgs(request.user, request.POST.getlist('trash_ids'))
-
-    return HttpResponse('');
+    url = reverse('messages-trash') + '?page={}'.format(page)
+    return redirect(url)
