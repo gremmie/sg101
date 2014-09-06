@@ -12,8 +12,8 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
 
-from messages.models import Message, Options
-from messages.forms import OptionsForm, ComposeForm
+from messages.models import Flag, Message, Options
+from messages.forms import OptionsForm, ComposeForm, ReportForm
 from messages.utils import reply_subject
 from messages import MSG_BOX_LIMIT
 from core.functions import quote_message
@@ -184,9 +184,15 @@ def view(request, msg_id):
 
         form = ComposeForm(request.user, initial=initial_data)
 
+    try:
+        msg_flag = msg.flag
+    except Flag.DoesNotExist:
+        msg_flag = None
+
     return render(request, 'messages/view_message.html', {
         'msg': msg,
         'form': form,
+        'msg_flag': msg_flag,
         })
 
 
@@ -295,3 +301,38 @@ def undelete(request):
 
     url = reverse('messages-trash') + '?page={}'.format(page)
     return redirect(url)
+
+
+@login_required
+def report(request, msg_id):
+    """This view is for reporting a PM as spam or abuse.
+
+    """
+    msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
+    if msg.receiver != request.user:
+        django_messages.error(request, "You can't report this message.")
+        return redirect('messages-inbox')
+    try:
+        msg.flag
+    except Flag.DoesNotExist:
+        pass
+    else:
+        django_messages.error(request, "This message has already been reported.")
+        return redirect('messages-inbox')
+
+    if request.method == 'POST':
+        form = ReportForm(request.POST)
+        if form.is_valid():
+            flag = form.save(commit=False)
+            flag.message = msg
+            flag.save()
+            django_messages.success(request,
+                    'Message reported. An admin will be notified. Thank you.')
+            return redirect('messages-inbox')
+    else:
+        form = ReportForm()
+
+    return render(request, 'messages/report_message.html', {
+        'msg': msg,
+        'form': form,
+        })

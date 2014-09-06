@@ -12,6 +12,7 @@ from gcalendar.models import Event
 from news.models import PendingStory
 from weblinks.models import PendingLink, FlaggedLink
 from shoutbox.models import ShoutFlag
+from messages.models import Flag as PmFlag
 
 
 register = template.Library()
@@ -28,13 +29,14 @@ def admin_dashboard(user):
     new_downloads = PendingDownload.objects.count()
     flagged_posts = FlaggedPost.objects.count()
     event_requests = Event.objects.filter(
-                Q(status=Event.NEW) | 
-                Q(status=Event.EDIT_REQ) | 
+                Q(status=Event.NEW) |
+                Q(status=Event.EDIT_REQ) |
                 Q(status=Event.DEL_REQ)).count()
     new_stories = PendingStory.objects.count()
     new_links = PendingLink.objects.count()
     broken_links = FlaggedLink.objects.count()
     flagged_shouts = ShoutFlag.objects.count()
+    flagged_msgs = PmFlag.objects.count()
 
     return {
         'user': user,
@@ -47,4 +49,5 @@ def admin_dashboard(user):
         'new_links': new_links,
         'broken_links': broken_links,
         'flagged_shouts': flagged_shouts,
+        'flagged_msgs': flagged_msgs,
         }

@@ -90,3 +90,9 @@ table.pm th {
 table.pm td {
    background-color: #EDF7F6;
 }
+#report_form textarea {
+   width: 90%;
+   margin-left: auto;
+   margin-right: auto;
+   height: 10em;
+}

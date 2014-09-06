@@ -101,3 +101,22 @@ class Options(models.Model):
         verbose_name_plural = "Options"
 
 
+class Flag(models.Model):
+    """The Flag model is used to represent when a receiver of a private message
+    has flagged the message for spam or abuse.
+
+    """
+    message = models.OneToOneField(Message)
+    flag_date = models.DateTimeField()
+    comments = models.TextField(blank=True)
+
+    def __unicode__(self):
+        msg = self.message
+        return "{} has flagged a PM from {}".format(msg.receiver.username,
+                msg.sender.username)
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.flag_date = datetime.datetime.now()
+        super(Flag, self).save(*args, **kwargs)
+

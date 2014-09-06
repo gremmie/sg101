@@ -11,8 +11,7 @@ from django.template.loader import render_to_string
 
 from core.functions import send_mail
 from core.widgets import AutoCompleteUserInput
-from messages.models import Message
-from messages.models import Options
+from messages.models import Flag, Message, Options
 from messages import MSG_BOX_LIMIT
 
 
@@ -122,6 +121,17 @@ class OptionsForm(forms.ModelForm):
     class Meta:
         model = Options
         fields = ['attach_signature', 'notify_email']
+
+
+class ReportForm(forms.ModelForm):
+    class Meta:
+        model = Flag
+        fields = ['comments']
+        labels = {'comments': ''}
+        widgets = {
+            'comments': forms.Textarea(attrs={
+                'placeholder': 'Enter a comment for the admin (optional).'})
+        }
 
 
 def notify_receiver(new_msg):
