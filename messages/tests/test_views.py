@@ -2,23 +2,24 @@
 Unit tests for the messages application views.
 
 """
+import datetime
+
 from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 
 from messages.models import Message, Options, Flag
 
-
-VIEW_NAMES = [
-    'messages-inbox',
-    'messages-compose',
-    'messages-outbox',
-    'messages-trash',
-    'messages-options',
-    'messages-delete',
-    'messages-undelete',
-    'messages-view',
-    'messages-report',
-]
+# TODO TODO TODO TODO
+# TODO TODO TODO TODO
+# TODO TODO TODO TODO
+#
+# 1) Test report functionality; ensure email sent to admin
+# 2) Test email sent when PM sent if options allow it
+#
+# TODO TODO TODO TODO
+# TODO TODO TODO TODO
+# TODO TODO TODO TODO
 
 
 class NotLoggedInTestCase(TestCase):
@@ -72,3 +73,409 @@ class NotLoggedInTestCase(TestCase):
         url_name = 'messages-report'
         self._test_get(url_name, args=[123])
         self._test_post(url_name, args=[123])
+
+
+class BasicTestCase(TestCase):
+    """Testing a logged in user visiting all the views with no messages."""
+    fixtures = ['messages_test_users.json']
+
+    def setUp(self):
+        self.users = {}
+        self.users['pj'] = User.objects.get(username='pj')
+        self.users['pj'].set_password('12345')
+        self.users['pj'].save()
+        self.assertTrue(self.client.login(username='pj', password='12345'))
+
+        self.users['eddie'] = User.objects.get(username='eddie')
+        self.users['eddie'].set_password('12345')
+        self.users['eddie'].save()
+
+        self.users['richard'] = User.objects.get(username='richard')
+
+    def test_simple_gets(self):
+        view_names = [
+            'messages-inbox',
+            'messages-compose',
+            'messages-outbox',
+            'messages-trash',
+            'messages-options',
+        ]
+        for view_name in view_names:
+            response = self.client.get(reverse(view_name))
+            self.assertEqual(response.status_code, 200)
+
+    def test_wrong_method(self):
+        view_names = [
+            'messages-delete',
+            'messages-undelete',
+        ]
+        for view_name in view_names:
+            response = self.client.get(reverse(view_name))
+            self.assertEqual(response.status_code, 405)
+
+    def test_nonexistent_pms(self):
+        view_names = [
+            'messages-view',
+            'messages-report',
+        ]
+        for view_name in view_names:
+            response = self.client.get(reverse(view_name, args=[42]))
+            self.assertEqual(response.status_code, 404)
+
+            response = self.client.post(reverse(view_name, args=[42]))
+            self.assertEqual(response.status_code, 404)
+
+    def test_options(self):
+        view_name = 'messages-options'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        post_data = {
+            'opts-attach_signature': 'on',
+            'opts-notify_email': 'on',
+        }
+        response = self.client.post(url, data=post_data, follow=True)
+        self.assertRedirects(response, url)
+
+        opts = Options.objects.for_user(self.users['pj'])
+        self.assertTrue(opts.attach_signature)
+        self.assertTrue(opts.notify_email)
+
+        post_data = {}
+        response = self.client.post(url, data=post_data, follow=True)
+        self.assertRedirects(response, url)
+
+        opts = Options.objects.for_user(self.users['pj'])
+        self.assertFalse(opts.attach_signature)
+        self.assertFalse(opts.notify_email)
+
+    def test_send_bogus_user(self):
+        post_data = {
+            'receiver': 'unknown_user',
+            'subject': 'hi',
+            'message': 'test',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, 'username does not exist', status_code=200)
+
+        qs = Message.objects.filter(sender=self.users['pj'])
+        self.assertEqual(qs.count(), 0)
+
+    def test_send_to_self(self):
+        post_data = {
+            'receiver': 'pj',
+            'subject': 'hi',
+            'message': 'test',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "You can&#39;t send a message to yourself", status_code=200)
+
+        qs = Message.objects.filter(sender=self.users['pj'])
+        self.assertEqual(qs.count(), 0)
+
+    def test_message_cycle(self):
+        # pj sends message to eddie
+        now = datetime.datetime.now()
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        # see if message got created in database
+        msg = Message.objects.get(sender=self.users['pj'])
+
+        self.assertEqual(msg.sender, self.users['pj'])
+        self.assertEqual(msg.receiver, self.users['eddie'])
+        self.assertTrue(now - msg.send_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg.read_date)
+        self.assertIsNone(msg.reply_date)
+        self.assertEqual(msg.subject, post_data['subject'])
+        self.assertEqual(msg.message, post_data['message'])
+        self.assertIsNone(msg.sender_delete_date)
+        self.assertIsNone(msg.receiver_delete_date)
+
+        # see if shows up in outbox view
+        view_name = 'messages-outbox'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+
+        # see if we can view it
+        view_name = 'messages-view'
+        url = reverse(view_name, args=[msg.pk])
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+        self.assertContains(response, post_data['message'], status_code=200)
+
+        # eddie logs in and checks various views
+        self.assertTrue(self.client.login(username='eddie', password='12345'))
+        view_name = 'messages-inbox'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+        view_name = 'messages-outbox'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data['subject'], status_code=200)
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data['subject'], status_code=200)
+
+        # eddie reads it
+        view_name = 'messages-view'
+        url = reverse(view_name, args=[msg.pk])
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+        self.assertContains(response, post_data['message'], status_code=200)
+
+        # see if message got updated in database
+        msg = Message.objects.get(receiver=self.users['eddie'])
+
+        self.assertEqual(msg.sender, self.users['pj'])
+        self.assertEqual(msg.receiver, self.users['eddie'])
+        self.assertTrue(now - msg.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg.read_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg.reply_date)
+        self.assertEqual(msg.subject, post_data['subject'])
+        self.assertEqual(msg.message, post_data['message'])
+        self.assertIsNone(msg.sender_delete_date)
+        self.assertIsNone(msg.receiver_delete_date)
+
+        # eddie replies
+        post_data2 = {
+            'receiver': 'pj',
+            'subject': 'Re: Mr. Moto Demo',
+            'message': 'South Bay Sound',
+            'parent_id': msg.pk,
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data2)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        self.assertEqual(Message.objects.all().count(), 2)
+
+        msg1 = Message.objects.get(receiver=self.users['eddie'])
+
+        self.assertEqual(msg1.sender, self.users['pj'])
+        self.assertEqual(msg1.receiver, self.users['eddie'])
+        self.assertTrue(now - msg1.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.read_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.reply_date < datetime.timedelta(seconds=5))
+        self.assertEqual(msg1.subject, post_data['subject'])
+        self.assertEqual(msg1.message, post_data['message'])
+        self.assertIsNone(msg1.sender_delete_date)
+        self.assertIsNone(msg1.receiver_delete_date)
+
+        msg2 = Message.objects.get(receiver=self.users['pj'])
+
+        self.assertEqual(msg2.sender, self.users['eddie'])
+        self.assertEqual(msg2.receiver, self.users['pj'])
+        self.assertTrue(now - msg2.send_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg2.read_date)
+        self.assertIsNone(msg2.reply_date)
+        self.assertEqual(msg2.subject, post_data2['subject'])
+        self.assertEqual(msg2.message, post_data2['message'])
+        self.assertIsNone(msg2.sender_delete_date)
+        self.assertIsNone(msg2.receiver_delete_date)
+
+        # pj logs in and checks various views
+        self.assertTrue(self.client.login(username='pj', password='12345'))
+        view_name = 'messages-inbox'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data2['subject'], status_code=200)
+        view_name = 'messages-outbox'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data['subject'], status_code=200)
+        self.assertNotContains(response, post_data2['subject'], status_code=200)
+
+        # pj reads reply
+        view_name = 'messages-view'
+        url = reverse(view_name, args=[msg2.pk])
+        response = self.client.get(url)
+        self.assertContains(response, post_data2['subject'], status_code=200)
+        self.assertContains(response, post_data2['message'], status_code=200)
+
+        msg = Message.objects.get(receiver=self.users['eddie'])
+
+        self.assertEqual(msg.sender, self.users['pj'])
+        self.assertEqual(msg.receiver, self.users['eddie'])
+        self.assertTrue(now - msg.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg.read_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg.reply_date < datetime.timedelta(seconds=5))
+        self.assertEqual(msg.subject, post_data['subject'])
+        self.assertEqual(msg.message, post_data['message'])
+        self.assertIsNone(msg.sender_delete_date)
+        self.assertIsNone(msg.receiver_delete_date)
+
+        msg2 = Message.objects.get(receiver=self.users['pj'])
+
+        self.assertEqual(msg2.sender, self.users['eddie'])
+        self.assertEqual(msg2.receiver, self.users['pj'])
+        self.assertTrue(now - msg2.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg2.read_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg2.reply_date)
+        self.assertEqual(msg2.subject, post_data2['subject'])
+        self.assertEqual(msg2.message, post_data2['message'])
+        self.assertIsNone(msg2.sender_delete_date)
+        self.assertIsNone(msg2.receiver_delete_date)
+
+        # pj deletes message 2
+        self.assertEqual(Message.objects.all().count(), 2)
+
+        delete_post_data = {
+            'pm_ids': [msg2.pk],
+        }
+        view_name = 'messages-delete'
+        url = reverse(view_name)
+        response = self.client.post(url, data=delete_post_data, follow=True)
+        self.assertContains(response, "1 message deleted", status_code=200)
+
+        self.assertEqual(Message.objects.all().count(), 2)
+
+        msg2 = Message.objects.get(receiver=self.users['pj'])
+
+        self.assertEqual(msg2.sender, self.users['eddie'])
+        self.assertEqual(msg2.receiver, self.users['pj'])
+        self.assertTrue(now - msg2.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg2.read_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg2.reply_date)
+        self.assertEqual(msg2.subject, post_data2['subject'])
+        self.assertEqual(msg2.message, post_data2['message'])
+        self.assertIsNone(msg2.sender_delete_date)
+        self.assertTrue(now - msg2.receiver_delete_date < datetime.timedelta(seconds=5))
+
+        # should be in pj's trash now
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data2['subject'], status_code=200)
+
+        # eddie logs in and deletes his copy of message 2
+        self.assertTrue(self.client.login(username='eddie', password='12345'))
+        delete_post_data = {
+            'pm_ids': [msg2.pk],
+        }
+        view_name = 'messages-delete'
+        url = reverse(view_name)
+        response = self.client.post(url, data=delete_post_data, follow=True)
+        self.assertContains(response, "1 message deleted", status_code=200)
+
+        # should be really deleted now
+        self.assertEqual(Message.objects.all().count(), 1)
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data2['subject'], status_code=200)
+
+        # eddie deletes then undeletes message 1
+        delete_post_data = {
+            'pm_ids': [msg1.pk],
+        }
+        view_name = 'messages-delete'
+        url = reverse(view_name)
+        response = self.client.post(url, data=delete_post_data, follow=True)
+        self.assertContains(response, "1 message deleted", status_code=200)
+
+        # should not be really deleted now
+        self.assertEqual(Message.objects.all().count(), 1)
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertContains(response, post_data['subject'], status_code=200)
+
+        msg1 = Message.objects.get(receiver=self.users['eddie'])
+
+        self.assertEqual(msg1.sender, self.users['pj'])
+        self.assertEqual(msg1.receiver, self.users['eddie'])
+        self.assertTrue(now - msg1.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.read_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.reply_date < datetime.timedelta(seconds=5))
+        self.assertEqual(msg1.subject, post_data['subject'])
+        self.assertEqual(msg1.message, post_data['message'])
+        self.assertIsNone(msg1.sender_delete_date)
+        self.assertTrue(now - msg1.receiver_delete_date < datetime.timedelta(seconds=5))
+
+        delete_post_data = {
+            'pm_ids': [msg1.pk],
+        }
+        view_name = 'messages-undelete'
+        url = reverse(view_name)
+        response = self.client.post(url, data=delete_post_data, follow=True)
+        self.assertContains(response, "1 message undeleted", status_code=200)
+
+        # should not be really deleted now
+        self.assertEqual(Message.objects.all().count(), 1)
+        view_name = 'messages-trash'
+        url = reverse(view_name)
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data['subject'], status_code=200)
+
+        msg1 = Message.objects.get(receiver=self.users['eddie'])
+
+        self.assertEqual(msg1.sender, self.users['pj'])
+        self.assertEqual(msg1.receiver, self.users['eddie'])
+        self.assertTrue(now - msg1.send_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.read_date < datetime.timedelta(seconds=5))
+        self.assertTrue(now - msg1.reply_date < datetime.timedelta(seconds=5))
+        self.assertEqual(msg1.subject, post_data['subject'])
+        self.assertEqual(msg1.message, post_data['message'])
+        self.assertIsNone(msg1.sender_delete_date)
+        self.assertIsNone(msg1.receiver_delete_date)
+
+    def test_read_permission(self):
+
+        now = datetime.datetime.now()
+        # pj sends a PM to richard
+        post_data = {
+            'receiver': 'richard',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        msg = Message.objects.get(sender=self.users['pj'])
+
+        # eddie should not be able to read it
+        self.assertTrue(self.client.login(username='eddie', password='12345'))
+        view_name = 'messages-view'
+        url = reverse(view_name, args=[msg.pk])
+        response = self.client.get(url)
+        self.assertNotContains(response, post_data['subject'], status_code=302)
+        self.assertNotContains(response, post_data['message'], status_code=302)
+
+        response = self.client.get(url, follow=True)
+        self.assertNotContains(response, post_data['subject'], status_code=200)
+        self.assertNotContains(response, post_data['message'], status_code=200)
+
+        msg = Message.objects.get(sender=self.users['pj'])
+
+        self.assertEqual(msg.sender, self.users['pj'])
+        self.assertEqual(msg.receiver, self.users['richard'])
+        self.assertTrue(now - msg.send_date < datetime.timedelta(seconds=5))
+        self.assertIsNone(msg.read_date)
+        self.assertIsNone(msg.reply_date)
+        self.assertEqual(msg.subject, post_data['subject'])
+        self.assertEqual(msg.message, post_data['message'])
+        self.assertIsNone(msg.sender_delete_date)
+        self.assertIsNone(msg.receiver_delete_date)

@@ -110,6 +110,7 @@ def options(request):
         if form.is_valid():
             form.save()
             django_messages.success(request, 'Options saved.')
+            return redirect('messages-options')
     else:
         options = Options.objects.for_user(request.user)
         form = OptionsForm(instance=options, prefix='opts')
@@ -155,6 +156,8 @@ def view(request, msg_id):
     the user is a recipient of the message, a reply can be composed and sent.
 
     """
+    msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
+
     if request.method == 'POST':
         form = ComposeForm(request.user, request.POST)
         if form.is_valid():
@@ -162,7 +165,6 @@ def view(request, msg_id):
             django_messages.success(request, 'Reply sent.')
             return redirect('messages-inbox')
     else:
-        msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
         if msg.sender != request.user and msg.receiver != request.user:
             django_messages.error(request,
                     "You don't have permission to read that message.")
