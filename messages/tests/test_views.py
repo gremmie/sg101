@@ -7,6 +7,7 @@ import datetime
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+from django.core import mail
 
 from messages.models import Message, Options, Flag
 
@@ -91,6 +92,8 @@ class BasicTestCase(TestCase):
         self.users['eddie'].save()
 
         self.users['richard'] = User.objects.get(username='richard')
+        self.users['richard'].set_password('12345')
+        self.users['richard'].save()
 
     def test_simple_gets(self):
         view_names = [
@@ -479,3 +482,119 @@ class BasicTestCase(TestCase):
         self.assertEqual(msg.message, post_data['message'])
         self.assertIsNone(msg.sender_delete_date)
         self.assertIsNone(msg.receiver_delete_date)
+
+    def test_report_message(self):
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        msg = Message.objects.get(sender=self.users['pj'])
+
+        # Ensure non-recipients can't report a message
+        view_name = 'messages-report'
+        url = reverse(view_name, args=[msg.pk])
+        response = self.client.post(url, data={}, follow=True)
+        self.assertContains(response, "You can&#39;t report this message", status_code=200)
+        self.assertEqual(Flag.objects.count(), 0)
+
+        self.assertTrue(self.client.login(username='richard', password='12345'))
+        response = self.client.post(url, data={}, follow=True)
+        self.assertContains(response, "You can&#39;t report this message", status_code=200)
+        self.assertEqual(Flag.objects.count(), 0)
+
+        # Test bogus report
+        self.assertTrue(self.client.login(username='eddie', password='12345'))
+        bad_url = reverse(view_name, args=[msg.pk + 1])
+        response = self.client.post(bad_url, data={})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Flag.objects.count(), 0)
+
+        # Test get of report view
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # Test posting to report view
+        post_data = {
+            'comments': 'This is abuse!',
+        }
+        now = datetime.datetime.now()
+        response = self.client.post(url, data=post_data, follow=True)
+        self.assertContains(response, "Message reported", status_code=200)
+
+        self.assertEqual(Flag.objects.count(), 1)
+        msg = Message.objects.get(receiver=self.users['eddie'])
+
+        try:
+            flag = msg.flag
+        except Flag.DoesNotExist:
+            self.fail("msg.flag does not exist!")
+
+        self.assertEqual(flag.message, msg)
+        self.assertTrue(now - flag.flag_date < datetime.timedelta(seconds=2))
+        self.assertEqual(flag.comments, post_data['comments'])
+
+        # Admin should have been sent an email
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(len(email.recipients()), 1)
+        self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
+        self.assertTrue(email.subject.endswith('A user has flagged a private message'))
+
+
+class EmailTestCase(TestCase):
+    """Testing to ensure email is sent when PM is sent if options allow."""
+    fixtures = ['messages_test_users.json']
+
+    def setUp(self):
+        self.users = {}
+        self.users['pj'] = User.objects.get(username='pj')
+        self.users['pj'].set_password('12345')
+        self.users['pj'].save()
+        self.assertTrue(self.client.login(username='pj', password='12345'))
+
+        self.users['eddie'] = User.objects.get(username='eddie')
+        self.users['eddie'].set_password('12345')
+        self.users['eddie'].save()
+
+    def _test_email(self, email_expected):
+        # pj sends message to eddie
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        # Ensure notification email sent
+        count = 1 if email_expected else 0
+        self.assertEqual(len(mail.outbox), count)
+
+        if count == 1:
+            email = mail.outbox[0]
+            self.assertEqual(len(email.recipients()), 1)
+            self.assertEqual(email.recipients()[0], 'eddie@example.com')
+            self.assertTrue(email.subject.startswith('New private message'))
+
+    def test_email_sent(self):
+        # eddie elects to receive email notifications
+        # Note: testing the options view is done above.
+        opts = Options.objects.for_user(self.users['eddie'])
+        opts.notify_email = True
+        opts.save()
+        self._test_email(True)
+
+    def test_no_email(self):
+        # eddie does not to elect to receive email notifications
+        opts = Options.objects.for_user(self.users['eddie'])
+        opts.notify_email = False
+        opts.save()
+        self._test_email(False)

@@ -16,10 +16,16 @@ from messages.models import Flag, Message, Options
 from messages.forms import OptionsForm, ComposeForm, ReportForm
 from messages.utils import reply_subject
 from messages import MSG_BOX_LIMIT
-from core.functions import quote_message
+from core.functions import email_admins, quote_message
 
 
 MSGS_PER_PAGE = 20      # message pagination value
+
+REPORT_SUBJECT = 'A user has flagged a private message'
+REPORT_MSG = """Hello,
+
+A user has flagged a private message for review.
+"""
 
 
 def _quota_check(box_name, count, request):
@@ -328,6 +334,7 @@ def report(request, msg_id):
             flag = form.save(commit=False)
             flag.message = msg
             flag.save()
+            email_admins(REPORT_SUBJECT, REPORT_MSG)
             django_messages.success(request,
                     'Message reported. An admin will be notified. Thank you.')
             return redirect('messages-inbox')
