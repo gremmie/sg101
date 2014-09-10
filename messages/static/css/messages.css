@@ -13,6 +13,7 @@ table.messages {
    border-collapse: collapse;
    margin: 1em auto;
    width: 96%;
+   background-color: #EDF7F6;
 }
 
 table.messages th {
@@ -95,4 +96,12 @@ table.pm td {
    margin-left: auto;
    margin-right: auto;
    height: 10em;
+}
+#messages_menu {
+   padding: 0;
+}
+#messages_menu li {
+   display: inline;
+   margin: 0.5em 1.0em 0.5em 1.5em;
+   font-size: larger;
 }

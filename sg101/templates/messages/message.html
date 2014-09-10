@@ -2,8 +2,8 @@
 <table class="pm">
    <tr><th>From:</th><td>{% profile_link msg.sender.username %}</td></tr>
    <tr><th>To:</th><td>{% profile_link msg.receiver.username %}</td></tr>
-   <tr><th>Send Date:</th><td>{{ msg.send_date }}</td></tr>
-   <tr><th>Read Date:</th><td>{{ msg.read_date }}</td></tr>
+   <tr><th>Send Date:</th><td>{{ msg.send_date|date:"M j, Y g:i A" }}</td></tr>
+   <tr><th>Read Date:</th><td>{{ msg.read_date|date:"M j, Y g:i A" }}</td></tr>
    <tr><th>Reply Date:</th><td>{{ msg.reply_date }}</td></tr>
    <tr><th>Subject:</th><td>{{ msg.subject }}</td></tr>
    <tr><td colspan="2">{{ msg.html|safe }}</td></tr>

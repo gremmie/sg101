@@ -14,8 +14,8 @@
 </ul>
 {% endif %}
 
-<p>Private messages menu:</p>
-<ul>
+<div>
+<ul id="messages_menu">
    <li>{% if tab != 'inbox' %}<a href="{% url 'messages-inbox' %}">{% endif %}Inbox{% if tab != 'inbox' %}</a>{% endif %}
       {% if inbox_pct %}({{ inbox_pct }}% used){% endif %}</li>
    <li>{% if tab != 'compose' %}<a href="{% url 'messages-compose' %}">{% endif %}Compose new message{% if tab != 'compose' %}</a>{% endif %}</li>
@@ -24,6 +24,8 @@
    <li>{% if tab != 'trash' %}<a href="{% url 'messages-trash' %}">{% endif %}Trash{% if tab != 'trash' %}</a>{% endif %}</li>
    <li>{% if tab != 'options' %}<a href="{% url 'messages-options' %}">{% endif %}Options{% if tab != 'options' %}</a>{% endif %}</li>
 </ul>
+</div>
+<hr />
 
 {% block messages_content %}{% endblock %}
 

@@ -11,17 +11,6 @@
 <h3>View Private Message</h3>
 {% include "messages/message.html" %}
 
-{% if msg_flag %}
-<div class="error">
-   You reported this message to the admin on {{ msg_flag.flag_date|date:"F d, Y" }}.
-</div>
-{% else %}
-<div class="notice">
-   <img src="{{ STATIC_URL }}icons/flag_red.png" alt="Report this message" />
-   <a href="{% url "messages-report" msg.id %}">Report this message for spam or abuse</a>.
-</div>
-{% endif %}
-
 {% if form %}
 <form action="." method="post" id="msg_compose_form">{% csrf_token %}
 <fieldset>
@@ -39,4 +28,16 @@
 </fieldset>
 </form>
 {% endif %}
+
+{% if msg_flag %}
+<div class="error">
+   You reported this message to the admin on {{ msg_flag.flag_date|date:"F d, Y" }}.
+</div>
+{% else %}
+<div class="notice">
+   <img src="{{ STATIC_URL }}icons/flag_red.png" alt="Report this message" />
+   <a href="{% url "messages-report" msg.id %}">Report this message for spam or abuse</a>.
+</div>
+{% endif %}
+
 {% endblock %}
