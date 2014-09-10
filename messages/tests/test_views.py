@@ -9,18 +9,8 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.core import mail
 
+import messages
 from messages.models import Message, Options, Flag
-
-# TODO TODO TODO TODO
-# TODO TODO TODO TODO
-# TODO TODO TODO TODO
-#
-# 1) Test report functionality; ensure email sent to admin
-# 2) Test email sent when PM sent if options allow it
-#
-# TODO TODO TODO TODO
-# TODO TODO TODO TODO
-# TODO TODO TODO TODO
 
 
 class NotLoggedInTestCase(TestCase):
@@ -79,6 +69,7 @@ class NotLoggedInTestCase(TestCase):
 class BasicTestCase(TestCase):
     """Testing a logged in user visiting all the views with no messages."""
     fixtures = ['messages_test_users.json']
+    MSG_BOX_LIMIT = 3
 
     def setUp(self):
         self.users = {}
@@ -94,6 +85,13 @@ class BasicTestCase(TestCase):
         self.users['richard'] = User.objects.get(username='richard')
         self.users['richard'].set_password('12345')
         self.users['richard'].save()
+
+        # To reduce test duration, reduce MSG_BOX_LIMIT
+        self.saved_msg_box_limit = messages.MSG_BOX_LIMIT
+        messages.MSG_BOX_LIMIT = self.MSG_BOX_LIMIT
+
+    def tearDown(self):
+        messages.MSG_BOX_LIMIT = self.saved_msg_box_limit
 
     def test_simple_gets(self):
         view_names = [
@@ -545,6 +543,66 @@ class BasicTestCase(TestCase):
         self.assertEqual(len(email.recipients()), 1)
         self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
         self.assertTrue(email.subject.endswith('A user has flagged a private message'))
+
+    def test_inbox_full(self):
+
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        for n in range(self.MSG_BOX_LIMIT):
+            response = self.client.post(url, data=post_data)
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+
+        # pj deletes a message so we can make sure we are testing inbox full
+        msg = Message.objects.filter(receiver=self.users['eddie']).last()
+        msg.sender_delete_date = datetime.datetime.now()
+        msg.save()
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+        self.assertEqual(Message.objects.outbox(self.users['pj']).count(),
+                self.MSG_BOX_LIMIT - 1)
+        self.assertEqual(Message.objects.inbox(self.users['eddie']).count(),
+                self.MSG_BOX_LIMIT)
+
+        # pj should not be able to send another
+        response = self.client.post(url, data=post_data)
+        self.assertNotContains(response, "Message sent", status_code=200)
+        self.assertContains(response, "inbox is full", status_code=200)
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+
+    def test_outbox_full(self):
+
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        for n in range(self.MSG_BOX_LIMIT):
+            response = self.client.post(url, data=post_data)
+            self.assertContains(response, "Message sent", status_code=200)
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+
+        # eddie deletes a message so we can make sure we are testing outbox full
+        msg = Message.objects.filter(receiver=self.users['eddie']).last()
+        msg.read_date = datetime.datetime.now()
+        msg.receiver_delete_date = msg.read_date
+        msg.save()
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+        self.assertEqual(Message.objects.outbox(self.users['pj']).count(),
+                self.MSG_BOX_LIMIT)
+        self.assertEqual(Message.objects.inbox(self.users['eddie']).count(),
+                self.MSG_BOX_LIMIT - 1)
+
+        # pj should not be able to send another
+        response = self.client.post(url, data=post_data)
+        self.assertNotContains(response, "Message sent", status_code=200)
+        self.assertContains(response, "Your outbox is full", status_code=200)
+        self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
 
 
 class EmailTestCase(TestCase):

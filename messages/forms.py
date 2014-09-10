@@ -11,8 +11,8 @@ from django.template.loader import render_to_string
 
 from core.functions import send_mail
 from core.widgets import AutoCompleteUserInput
+import messages
 from messages.models import Flag, Message, Options
-from messages import MSG_BOX_LIMIT
 
 
 # Maximum size of a private message in characters
@@ -62,13 +62,13 @@ class ComposeForm(forms.Form):
             # Can we send a message? Is our outbox full?
 
             count = Message.objects.outbox(self.user).count()
-            if count >= MSG_BOX_LIMIT:
+            if count >= messages.MSG_BOX_LIMIT:
                 raise forms.ValidationError(
                         "Your outbox is full. Please delete some messages.")
 
             # Is the receiver's inbox full?
             count = Message.objects.inbox(self.rcvr_user).count()
-            if count >= MSG_BOX_LIMIT:
+            if count >= messages.MSG_BOX_LIMIT:
                 raise forms.ValidationError(
                     "Sorry, %s's inbox is full. This message cannot be sent." %
                     self.rcvr_user.username)
