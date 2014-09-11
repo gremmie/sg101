@@ -6,7 +6,7 @@
 {% block content %}
 <div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; Edit Events</div>
 <h2>Edit Calendar Events</h2>
-{% if events %}
+{% if page.object_list %}
 <p>You have the following events on our calendar. Click on the event title to edit it, or click the
 <img src="{{ STATIC_URL }}icons/cross.png" alt="Cross" /> to delete it. 
 Your changes will be submitted to the site staff for approval, and won't be reflected on the Google
@@ -14,13 +14,14 @@ calendar until then. The approval process usually takes less than 12 hours. Than
 keep our calendar up to date!
 </p>
 <ul>
-{% for event in events %}
+{% for event in page.object_list %}
 <li>{{ event.start_date|date:"M d, Y"}} &bull;
 <a href="{% url 'gcalendar-edit_event' event.id %}" title="Edit Event">{{ event.what }}</a>
 <a class="gcal-del" id="gcal-{{ event.id }}" href="#"><img src="{{ STATIC_URL }}icons/cross.png" alt="Delete Event" title="Delete Event" /></a>
 </li>
 {% endfor %}
 </ul>
+{% include 'core/django_pagination.html' with page_obj=page %}
 {% else %}
 <p>You either have no events on our calendar, or all your events have pending changes 
 that require admin review.</p>

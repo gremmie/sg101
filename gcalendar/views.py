@@ -4,6 +4,7 @@ Views for the gcalendar application.
 
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
@@ -59,9 +60,19 @@ def add_thanks(request):
 
 @login_required
 def edit_events(request):
-    events = Event.objects.filter(user=request.user, status=Event.ON_CAL).order_by('start_date')
+    events = Event.objects.filter(user=request.user, status=Event.ON_CAL).\
+            order_by('-start_date')
+    paginator = Paginator(events, 25)
+    num = request.GET.get('page')
+    try:
+        page = paginator.page(num)
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+
     return render_to_response('gcalendar/edit.html', {
-        'events': events,
+        'page': page,
         },
         context_instance = RequestContext(request))
 
