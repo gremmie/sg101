@@ -123,7 +123,7 @@ def quote_message(who, message):
     Builds a message reply by quoting the existing message in a
     typical email-like fashion. The quoting is compatible with Markdown.
     """
-    msg = "> %s" % message.replace('\n', '\n> ')
+    msg = "> %s" % message.rstrip().replace('\n', '\n> ')
     if msg.endswith('\n> '):
         msg = msg[:-2]
 
