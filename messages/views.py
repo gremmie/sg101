@@ -11,15 +11,20 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
+from django.db.models import Q
+from django.template.loader import render_to_string
+from django.contrib.sites.models import Site
+from django.conf import settings
 
 from messages.models import Flag, Message, Options
 from messages.forms import OptionsForm, ComposeForm, ReportForm
 from messages.utils import reply_subject
 from messages import MSG_BOX_LIMIT
-from core.functions import email_admins, quote_message
+from core.functions import email_admins, quote_message, send_mail
 
 
 MSGS_PER_PAGE = 20      # message pagination value
+PM_EMAIL_MAX = 100      # max messages we will send via email
 
 REPORT_SUBJECT = 'A user has flagged a private message'
 REPORT_MSG = """Hello,
@@ -204,13 +209,46 @@ def view(request, msg_id):
         })
 
 
-def _delete_pms(user, pm_ids):
+@login_required
+@require_POST
+def bulk(request):
+    """
+    Perform bulk action on a list of PMs.
+
+    """
+    pm_ids = request.POST.getlist('pm_ids')
+
+    # Figure out what action to perform
+    action = None
+    action_val = request.POST.get('action', '')
+    if action_val.startswith('Delete'):
+        action = _delete_pms
+    elif action_val.startswith('Email'):
+        action = _email_pms
+
+    if pm_ids and action:
+        action(request, pm_ids)
+
+    # Figure out where to redirect to
+    src = request.POST.get('src', 'inbox')
+    try:
+        page = int(request.POST.get('page', '1'))
+    except ValueError:
+        page = 1
+
+    view_name = 'messages-inbox' if src == 'inbox' else 'messages-outbox'
+    url = reverse(view_name) + '?page={}'.format(page)
+    return redirect(url)
+
+
+def _delete_pms(request, pm_ids):
     """
     Process the request to delete the list of PM ids by user.
 
     Returns the number of PM's deleted.
 
     """
+    user = request.user
     msgs = Message.objects.filter(id__in=pm_ids)
     now = datetime.datetime.now()
 
@@ -236,33 +274,11 @@ def _delete_pms(user, pm_ids):
                 msg.save()
             count += 1
 
-    return count
-
-
-@login_required
-@require_POST
-def delete(request):
-    """
-    Deletes the requested PM's. The user must be either a sender or receiver for
-    this to work.
-
-    """
-    pm_ids = request.POST.getlist('pm_ids')
-    if pm_ids:
-        count = _delete_pms(request.user, pm_ids)
-        msg = '{} message{} deleted.'.format(count, '' if count == 1 else 's')
+    msg = '{} message{} deleted.'.format(count, '' if count == 1 else 's')
+    if count > 0:
         django_messages.success(request, msg)
-
-    # Figure out where to redirect to
-    src = request.POST.get('src', 'inbox')
-    try:
-        page = int(request.POST.get('page', '1'))
-    except ValueError:
-        page = 1
-
-    view_name = 'messages-inbox' if src == 'inbox' else 'messages-outbox'
-    url = reverse(view_name) + '?page={}'.format(page)
-    return redirect(url)
+    else:
+        django_messages.error(request, msg)
 
 
 def _undelete_pms(user, msg_ids):
@@ -345,3 +361,48 @@ def report(request, msg_id):
         'msg': msg,
         'form': form,
         })
+
+
+def _email_pms(request, msg_ids):
+    """
+    Attempts to email the messages given by the msg_ids list to the user.
+    This will only succeed if the user is either the sender or receiver.
+
+    Returns the number of PM's sent.
+
+    """
+    # Does the user have an email address?
+    user = request.user
+    email_addr = user.email
+    if not email_addr:
+        return 0
+
+    msgs = Message.objects.filter(
+            Q(sender=user) | Q(receiver=user),
+            id__in=msg_ids).order_by('pk')[:PM_EMAIL_MAX]
+
+    count = len(msgs)
+    if count == 0:
+        return 0
+
+    site = Site.objects.get_current()
+    admin_email = settings.ADMINS[0][1]
+
+    subject = 'Private messages from {} - {}'.format(site.domain,
+            msgs[0].subject)
+    if count > 1:
+        subject += ' (et al.)'
+    from_email = '{}@{}'.format(settings.GPP_NO_REPLY_EMAIL, site.domain)
+    msg_body = render_to_string('messages/pm_email.txt', {
+                    'site': site,
+                    'user': user,
+                    'msgs': msgs,
+                    'admin_email': admin_email,
+                })
+    send_mail(subject, msg_body, from_email, [email_addr], defer=False)
+
+    msg = '{} message{} sent to email.'.format(count, '' if count == 1 else 's')
+    if count > 0:
+        django_messages.success(request, msg)
+    else:
+        django_messages.error(request, msg)

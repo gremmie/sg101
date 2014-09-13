@@ -6,6 +6,11 @@ function tabMasterCheckClick(box, name) {
 }
 
 function bulkMsgAction(action) {
+   var total = $('input[name="pm_ids"]:checked').length;
+   if (total <= 0) {
+      alert('Please check some messages first.');
+      return false;
+   }
    return confirm("Really " + action + " checked messages?");
    return false;
 }

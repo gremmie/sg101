@@ -50,7 +50,7 @@ class NotLoggedInTestCase(TestCase):
         self._test_post(url_name)
 
     def test_delete(self):
-        self._test_get('messages-delete')
+        self._test_get('messages-bulk')
 
     def test_undelete(self):
         self._test_get('messages-undelete')
@@ -107,7 +107,7 @@ class BasicTestCase(TestCase):
 
     def test_wrong_method(self):
         view_names = [
-            'messages-delete',
+            'messages-bulk',
             'messages-undelete',
         ]
         for view_name in view_names:
@@ -343,8 +343,9 @@ class BasicTestCase(TestCase):
 
         delete_post_data = {
             'pm_ids': [msg2.pk],
+            'action': 'Delete',
         }
-        view_name = 'messages-delete'
+        view_name = 'messages-bulk'
         url = reverse(view_name)
         response = self.client.post(url, data=delete_post_data, follow=True)
         self.assertContains(response, "1 message deleted", status_code=200)
@@ -373,8 +374,9 @@ class BasicTestCase(TestCase):
         self.assertTrue(self.client.login(username='eddie', password='12345'))
         delete_post_data = {
             'pm_ids': [msg2.pk],
+            'action': 'Delete',
         }
-        view_name = 'messages-delete'
+        view_name = 'messages-bulk'
         url = reverse(view_name)
         response = self.client.post(url, data=delete_post_data, follow=True)
         self.assertContains(response, "1 message deleted", status_code=200)
@@ -389,8 +391,9 @@ class BasicTestCase(TestCase):
         # eddie deletes then undeletes message 1
         delete_post_data = {
             'pm_ids': [msg1.pk],
+            'action': 'Delete',
         }
-        view_name = 'messages-delete'
+        view_name = 'messages-bulk'
         url = reverse(view_name)
         response = self.client.post(url, data=delete_post_data, follow=True)
         self.assertContains(response, "1 message deleted", status_code=200)
@@ -603,6 +606,37 @@ class BasicTestCase(TestCase):
         self.assertNotContains(response, "Message sent", status_code=200)
         self.assertContains(response, "Your outbox is full", status_code=200)
         self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
+
+    def test_email_export(self):
+
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        view_name = 'messages-compose'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data)
+        self.assertContains(response, "Message sent", status_code=200)
+
+        msg = Message.objects.get(receiver=self.users['eddie'])
+        post_data = {
+            'pm_ids': [msg.id],
+            'action': 'Email',
+        }
+        view_name = 'messages-bulk'
+        url = reverse(view_name)
+        response = self.client.post(url, data=post_data, follow=True)
+        self.assertContains(response, "1 message sent to email", status_code=200)
+
+        # Ensure email sent
+        self.assertEqual(len(mail.outbox), 1)
+
+        if len(mail.outbox) == 1:
+            email = mail.outbox[0]
+            self.assertEqual(len(email.recipients()), 1)
+            self.assertEqual(email.recipients()[0], 'pj@example.com')
+            self.assertTrue(email.subject.startswith('Private messages from'))
 
 
 class EmailTestCase(TestCase):
