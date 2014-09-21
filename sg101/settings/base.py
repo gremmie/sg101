@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     'tagging',
     'accounts',
     'antispam',
+    'bandmap',
     'banners',
     'bio',
     'bulletins',

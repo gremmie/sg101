@@ -1,0 +1,7 @@
+{% extends 'bandmap/bandmap_base.html' %}
+{% block bandmap_content %}
+<p>Welcome to our surf band map! This map is updated by our users and displays
+the locations of both active and inactive surf bands from around the world.</p>
+<div id="map-canvas"></div>
+<p><a href="{% url 'bandmap-add' %}">Add a band to the map</a>.
+{% endblock %}
