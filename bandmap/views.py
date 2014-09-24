@@ -3,8 +3,12 @@
 """
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.contrib import messages as django_messages
 
 from bandmap.forms import BandForm
+
+
+SUCCESS = "Successfully submitted {} for admin review. Thanks!"
 
 
 def map_view(request):
@@ -23,7 +27,8 @@ def add_band(request):
             band = form.save(commit=False)
             band.user = request.user
             band.save()
-            redirect('bandmap-thanks')
+            django_messages.success(request, SUCCESS.format(band.name))
+            redirect('bandmap-add')
     else:
         form = BandForm()
 

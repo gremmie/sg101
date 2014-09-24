@@ -1,6 +1,13 @@
 {% extends 'bandmap/bandmap_base.html' %}
 {% block bandmap_content %}
 <h3>Add Band</h3>
+{% if messages %}
+<ul class="user-messages">
+{% for message in messages %}
+   <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+{% endfor %}
+</ul>
+{% endif %}
 <p>
 To add a band to our map, please fill out the form, below. The information will
 be reviewed by our staff and will normally be published within 24 hours.
@@ -28,7 +35,7 @@ Example locations:
 <tr>
    <td>&nbsp;</td>
    <td>
-      <input type="submit" name="submit_button" value="Submit" />
+      <input id="bandmap-add-submit" type="submit" name="submit_button" value="Submit" />
    </td>
 </tr>
 </table>
