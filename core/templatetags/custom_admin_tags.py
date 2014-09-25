@@ -13,6 +13,7 @@ from news.models import PendingStory
 from weblinks.models import PendingLink, FlaggedLink
 from shoutbox.models import ShoutFlag
 from messages.models import Flag as PmFlag
+from bandmap.models import BandEntry
 
 
 register = template.Library()
@@ -37,6 +38,7 @@ def admin_dashboard(user):
     broken_links = FlaggedLink.objects.count()
     flagged_shouts = ShoutFlag.objects.count()
     flagged_msgs = PmFlag.objects.count()
+    new_bands = BandEntry.objects.new_entry_count()
 
     return {
         'user': user,
@@ -50,4 +52,5 @@ def admin_dashboard(user):
         'broken_links': broken_links,
         'flagged_shouts': flagged_shouts,
         'flagged_msgs': flagged_msgs,
+        'new_bands': new_bands,
         }

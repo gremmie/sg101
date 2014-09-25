@@ -7,6 +7,11 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class BandEntryManager(models.Manager):
+    def new_entry_count(self):
+        return self.filter(is_approved=False).count()
+
+
 class BandEntry(models.Model):
     """Represents a band entry on the band map."""
     name = models.CharField(max_length=128)
@@ -20,6 +25,8 @@ class BandEntry(models.Model):
     note = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
     is_approved = models.BooleanField(default=False, db_index=True)
+
+    objects = BandEntryManager()
 
     class Meta:
         ordering = ['name']
