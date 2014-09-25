@@ -7,7 +7,7 @@ from bio.models import BadgeOwnership
 
 # Numeric ID's for badges that are awarded for user actions:
 (CONTRIBUTOR_PIN, CALENDAR_PIN, NEWS_PIN, LINK_PIN, DOWNLOAD_PIN,
-        SECURITY_PIN, POTD_PIN) = range(7)
+        SECURITY_PIN, POTD_PIN, MAP_PIN) = range(8)
 
 
 def award_badge(badge_id, user):
