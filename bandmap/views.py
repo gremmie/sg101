@@ -28,7 +28,7 @@ def add_band(request):
             band.user = request.user
             band.save()
             django_messages.success(request, SUCCESS.format(band.name))
-            redirect('bandmap-add')
+            return redirect('bandmap-add')
     else:
         form = BandForm()
 
