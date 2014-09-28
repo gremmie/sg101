@@ -3,6 +3,7 @@ Unit tests for the bandmap application views.
 
 """
 import datetime
+import json
 
 from django.test import TestCase
 from django.core.urlresolvers import reverse
@@ -81,3 +82,74 @@ class BasicTestCase(TestCase):
         self.assertEqual(entry.note, post_data['note'])
         self.assertTrue(entry.is_active)
         self.assertFalse(entry.is_approved)
+
+class QueryTestCase(TestCase):
+    """Testing the query view function which returns JSON."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='pj', email='pj@example.com', password='top_secret')
+
+        now = datetime.datetime.now()
+
+        kwargs = {
+            'name': 'Test Band 1',
+            'user': self.user,
+            'date_submitted': now,
+            'date_approved': now,
+            'url': 'http://example.com',
+            'location': 'Somewhere',
+            'lat': 42.0,
+            'lon': -30.0,
+            'note': 'Some text here',
+            'is_active': True,
+            'is_approved': True,
+        }
+        BandEntry.objects.create(**kwargs)
+
+        kwargs['name'] = 'Test Band 2'
+        kwargs['is_active'] = False
+        BandEntry.objects.create(**kwargs)
+
+        kwargs['name'] = 'Test Band 3'
+        kwargs['is_active'] = True
+        kwargs['is_approved'] = False
+        BandEntry.objects.create(**kwargs)
+
+    def test_query(self):
+        url = reverse('bandmap-query')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        result = json.loads(response.content)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['name'], 'Test Band 1')
+        self.assertEqual(result[1]['name'], 'Test Band 2')
+
+    def test_query_all(self):
+        url = reverse('bandmap-query')
+        response = self.client.get(url, {'show': 'all'})
+        self.assertEqual(response.status_code, 200)
+
+        result = json.loads(response.content)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['name'], 'Test Band 1')
+        self.assertEqual(result[1]['name'], 'Test Band 2')
+
+    def test_query_active(self):
+        url = reverse('bandmap-query')
+        response = self.client.get(url, {'show': 'active'})
+        self.assertEqual(response.status_code, 200)
+
+        result = json.loads(response.content)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['name'], 'Test Band 1')
+
+    def test_query_inactive(self):
+        url = reverse('bandmap-query')
+        response = self.client.get(url, {'show': 'inactive'})
+        self.assertEqual(response.status_code, 200)
+
+        result = json.loads(response.content)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['name'], 'Test Band 2')

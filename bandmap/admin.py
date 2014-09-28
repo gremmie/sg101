@@ -21,7 +21,7 @@ class BandEntryAdmin(admin.ModelAdmin):
     readonly_fields = ['lat', 'lon']
     search_fields = ['name', 'location', 'note']
     raw_id_fields = ['user']
-    actions = ['approve_bands', 'update_location']
+    actions = ['update_location', 'approve_bands']
 
     def approve_bands(self, request, qs):
         """This admin action awards a map pin to the user who added the band.
@@ -31,10 +31,12 @@ class BandEntryAdmin(admin.ModelAdmin):
         count = qs.count()
         now = datetime.datetime.now()
         for band in qs:
-            bio.badges.award_badge(bio.badges.MAP_PIN, band.user)
-            band.date_approved = now
-            band.is_approved = True
-            band.save()
+            if not band.is_approved:
+                if band.date_approved is None:
+                    bio.badges.award_badge(bio.badges.MAP_PIN, band.user)
+                band.date_approved = now
+                band.is_approved = True
+                band.save()
 
         self.message_user(request, "%d band(s) approved." % count)
 

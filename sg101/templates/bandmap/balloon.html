@@ -1,0 +1,15 @@
+<div class="band-balloon">
+{% if band.url %}
+<strong><a href="{{ band.url }}">{{ band.name }}</a></strong>
+{% else %}
+<strong>{{ band.name }}</strong>
+{% endif %}
+<em>
+{% if band.is_active %}
+(Active)
+{% else %}
+(Inactive)
+{% endif %}
+</em><br />
+{{ band.note }}
+</div>

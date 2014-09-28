@@ -3,5 +3,16 @@
 <p>Welcome to our surf band map! This map is updated by our users and displays
 the locations of both active and inactive surf bands from around the world.</p>
 <div id="map-canvas"></div>
-<p><a href="{% url 'bandmap-add' %}">Add a band to the map</a>.
+<div id="map-info">
+   <ul>
+      <li>Number of bands: <span id="map-band-count">0</span></li>
+      <li>Bands: <select id="map-bands"></select></li>
+      <li>Show: <select id="map-filter">
+                  <option value="all">all bands</option>
+                  <option value="active">active bands</option>
+                  <option value="inactive">inactive bands</option>
+               </select> <button id="map-filter-go">Go</button></li>
+      <li><a href="{% url 'bandmap-add' %}">Add a band to the map</a></li>
+   </ul>
+</div>
 {% endblock %}

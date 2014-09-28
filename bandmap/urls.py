@@ -8,4 +8,7 @@ urlpatterns = patterns('',
     url(r'^add/$',
         'bandmap.views.add_band',
         name='bandmap-add'),
+    url(r'^query/$',
+        'bandmap.views.query',
+        name='bandmap-query'),
 )
