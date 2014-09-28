@@ -14,7 +14,7 @@ import bio.badges
 
 
 class BandEntryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'date_submitted', 'date_approved', 'is_active',
+    list_display = ['name', 'date_submitted', 'location', 'is_active',
             'is_approved']
     date_hierarchy = 'date_submitted'
     list_filter = ['date_submitted', 'is_active', 'is_approved']

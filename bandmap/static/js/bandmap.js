@@ -53,7 +53,10 @@ function refreshMap() {
                var marker = new google.maps.Marker({
                   position: {lat: band.lat, lng: band.lon},
                   title: band.name,
+                  icon: band.is_active ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                                       : "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
                   map: bandmap
+
                });
                google.maps.event.addListener(marker, 'click', function() {
                   info_win.setContent(band.note);

@@ -71,6 +71,7 @@ def query(request):
             'url': band.url,
             'lat': band.lat,
             'lon': band.lon,
+            'is_active': band.is_active,
             'note': render_to_string('bandmap/balloon.html', {'band': band}),
         })
     results = json.dumps(bands)
