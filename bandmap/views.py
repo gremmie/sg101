@@ -66,13 +66,14 @@ def query(request):
 
     bands = []
     for band in qs.iterator():
+        note = render_to_string('bandmap/balloon.html', {'band': band})
+        note = note.strip().replace('\n', '')
         bands.append({
             'name': band.name,
-            'url': band.url,
             'lat': band.lat,
             'lon': band.lon,
             'is_active': band.is_active,
-            'note': render_to_string('bandmap/balloon.html', {'band': band}),
+            'note': note,
         })
     results = json.dumps(bands)
 

@@ -4,12 +4,7 @@
 {% else %}
 <strong>{{ band.name }}</strong>
 {% endif %}
-<em>
-{% if band.is_active %}
-(Active)
-{% else %}
-(Inactive)
+{% if band.note %}
+<br />{{ band.note }}
 {% endif %}
-</em><br />
-{{ band.note }}
 </div>
