@@ -56,7 +56,6 @@ function refreshMap() {
                   icon: band.is_active ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
                                        : "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
                   map: bandmap
-
                });
                google.maps.event.addListener(marker, 'click', function() {
                   info_win.setContent(band.note);
