@@ -73,7 +73,7 @@ $(document).ready(function() {
    var map_div = $('#map-canvas');
    if (map_div.length) {
       bandmap = new google.maps.Map(map_div[0], map_options);
-      info_win = new google.maps.InfoWindow();
+      info_win = new google.maps.InfoWindow({maxWidth: 300});
       $('#map-filter-go').click(refreshMap);
       $('#map-bands').change(function() {
          var n = $('option:selected', this).val();
