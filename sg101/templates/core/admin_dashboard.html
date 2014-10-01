@@ -32,7 +32,7 @@
 <li><a href="/admin/messages/flag/">PM's</a>: {{ flagged_msgs }}</li>
 {% endif %}
 {% if new_bands %}
-<li><a href="/admin/bandmap/bandentry/">Band Map</a>: {{ new_bands }}</li>
+<li><a href="/admin/bandmap/bandentry/?is_approved__exact=0">Band Map</a>: {{ new_bands }}</li>
 {% endif %}
 </ul>
 {% endif %}
