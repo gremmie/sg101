@@ -12,6 +12,7 @@ import uuid
 from PIL import Image
 
 from core.functions import temp_open
+from core.image import orient_image
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,12 @@ def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
         for chunk in fp.chunks():
             temp_file.write(chunk)
         temp_file.close()
+
+        # Re-orient if necessary
+        image = Image.open(temp_name)
+        changed, image = orient_image(image)
+        if changed:
+            image.save(temp_name)
 
         # Resize image if necessary
         if new_size:
