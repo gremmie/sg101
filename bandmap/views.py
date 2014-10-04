@@ -9,6 +9,7 @@ from django.contrib import messages as django_messages
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.core.cache import cache
+from django.conf import settings
 
 from bandmap.forms import BandForm
 from bandmap.models import BandEntry
@@ -54,7 +55,7 @@ def query(request):
     # Do we have the results cached already?
     cache_key = 'bandmap-results-{}'.format(show_param)
     results = cache.get(cache_key)
-    if results:
+    if results and not settings.DEBUG:
         return HttpResponse(results, content_type='application/json')
 
     # Generate results

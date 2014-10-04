@@ -18,7 +18,7 @@ class BandEntryAdmin(admin.ModelAdmin):
             'is_active', 'is_approved']
     date_hierarchy = 'date_submitted'
     list_filter = ['date_submitted', 'is_active', 'is_approved']
-    readonly_fields = ['lat', 'lon']
+    list_editable = ['lat', 'lon']
     search_fields = ['name', 'location', 'note']
     raw_id_fields = ['user']
     actions = ['update_location', 'approve_bands']
