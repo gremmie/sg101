@@ -25,7 +25,8 @@ def cookie_value(user, now):
     # difficult for a spoofer; something that can't be easily made up:
 
     h = hashlib.sha256()
-    h.update(user.username + user.email)
+    h.update(user.username.encode('utf-8'))
+    h.update(user.email.encode('utf-8'))
     h.update(now.isoformat())
     h.update(''.join(random.sample(string.printable, 64)))
     h.update(settings.SECRET_KEY)
