@@ -104,6 +104,9 @@ def orient_image(im):
     if hasattr(im, '_getexif'):
         exif = im._getexif()
         if exif and ORIENT_TAG in exif:
-            return (True, ORIENT_FUNCS[ORIENT_TAG](im))
+            orientation = exif[ORIENT_TAG]
+            func = ORIENT_FUNCS.get(orientation)
+            if func:
+                return (True, func(im))
 
     return (False, im)
