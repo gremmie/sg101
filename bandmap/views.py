@@ -15,7 +15,7 @@ from bandmap.forms import BandForm
 from bandmap.models import BandEntry
 
 
-SUCCESS = "Successfully submitted {} for admin review. Thanks!"
+SUCCESS = u"Successfully submitted {} for admin review. Thanks!"
 
 
 def map_view(request):
