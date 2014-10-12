@@ -1,11 +1,20 @@
 {% extends 'base.html' %}
 {% load bio_tags %}
 {% load core_tags %}
+{% load comment_tags %}
+{% load script_tags %}
 {% block custom_meta %}
 {% open_graph_meta_tags contest %}
 {% endblock %}
 {% block title %}Contests: {{ contest.title }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/comments.css" />
+{% endblock %}
 {% block custom_js %}
+{% if contest.is_active %}
+{% script_tags "markitup jquery-ui" %}
+<script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
+{% endif %}
 <script type="text/javascript">
    var contest_id = {{ contest.id }};
 </script>
@@ -69,4 +78,17 @@ sometime on or after {{ contest.end_date|date:"l, F d, Y" }}. Please check back 
 {% endif %}
 <hr />
 {% social_sharing contest.title contest.get_absolute_url %}
+
+<hr />
+{% get_comment_count for contest as comment_count %}
+<p>This contest has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
+<hr />
+{% render_comment_list contest %}
+{% if contest.is_active %}
+<p>Leave a comment?</p>
+{% render_comment_form for contest %}
+{% else %}
+<p>Comments are closed for this contest. If you'd like to share your thoughts
+on this contest with the site staff, you can <a href="{% url 'contact-form' %}?subject={{ contest.title|urlencode }}">contact us directly</a>.</p>
+{% endif %}
 {% endblock %}
