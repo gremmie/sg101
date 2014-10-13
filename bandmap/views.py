@@ -7,7 +7,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.contrib import messages as django_messages
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 from django.core.cache import cache
 from django.conf import settings
 
@@ -67,18 +66,16 @@ def query(request):
 
     bands = []
     for band in qs.iterator():
-        note = render_to_string('bandmap/balloon.html', {'band': band})
-        note = note.strip().replace('\n', '')
         bands.append({
             'name': band.name,
             'lat': band.lat,
             'lon': band.lon,
             'is_active': band.is_active,
-            'note': note,
+            'note': band.html,
         })
     results = json.dumps(bands)
 
     # Store in cache
-    cache.set(cache_key, results, 300)
+    cache.set(cache_key, results, 600)
 
     return HttpResponse(results, content_type='application/json')

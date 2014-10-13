@@ -22,6 +22,7 @@ class BandEntryAdmin(admin.ModelAdmin):
     search_fields = ['name', 'location', 'note']
     raw_id_fields = ['user']
     actions = ['update_location', 'approve_bands']
+    readonly_fields = ['html']
 
     def approve_bands(self, request, qs):
         """This admin action awards a map pin to the user who added the band.

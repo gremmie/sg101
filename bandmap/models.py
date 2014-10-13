@@ -5,6 +5,7 @@ import datetime
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.template.loader import render_to_string
 
 
 class BandEntryManager(models.Manager):
@@ -25,6 +26,7 @@ class BandEntry(models.Model):
     note = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
     is_approved = models.BooleanField(default=False, db_index=True)
+    html = models.TextField(blank=True)
 
     objects = BandEntryManager()
 
@@ -38,4 +40,6 @@ class BandEntry(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk and not self.date_submitted:
             self.date_submitted = datetime.datetime.now()
+        html = render_to_string('bandmap/balloon.html', {'band': self})
+        self.html = html.strip().replace('\n', '')
         super(BandEntry, self).save(*args, **kwargs)
