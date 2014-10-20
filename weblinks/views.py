@@ -191,6 +191,8 @@ def report_link(request, link_id):
 
 def link_detail(request, id):
     link = get_object_or_404(Link, pk=id)
+    if not link.is_public:
+        raise Http404
     return render_to_response('weblinks/link_detail.html', {
         'link': link,
         },

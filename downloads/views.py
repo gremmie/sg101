@@ -145,6 +145,8 @@ def rating(request):
 @login_required
 def details(request, id):
     download = get_object_or_404(Download.public_objects, pk=id)
+    if not download.is_public:
+        raise Http404
     return render_to_response('downloads/download_detail.html', {
         'download' : download,
         },
