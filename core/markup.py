@@ -1,10 +1,13 @@
 """
 Markup related utitlities useful for the entire project.
+
 """
 import markdown as _markdown
 from django.utils.encoding import force_unicode
 
 from smiley import SmilifyMarkdown
+from core.mdexts.urlize import UrlizeExtension
+from core.mdexts.deleted import DelExtension
 
 class Markdown(object):
     """
@@ -13,7 +16,11 @@ class Markdown(object):
     """
     def __init__(self, safe_mode='escape'):
         self.md = _markdown.Markdown(safe_mode=safe_mode,
-                                extensions=['urlize', 'nl2br', 'del'])
+                                     extensions=[
+                                         UrlizeExtension(),
+                                         'markdown.extensions.nl2br',
+                                         DelExtension(),
+                                     ])
 
     def convert(self, s):
         return self.md.convert(force_unicode(s))
