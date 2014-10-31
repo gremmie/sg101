@@ -11,7 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
-from django.db.models import Q
 from django.contrib.sites.models import Site
 from django.http import Http404
 
@@ -24,7 +23,6 @@ from core.functions import get_full_name
 from core.functions import get_page
 from core.paginator import DiggPaginator
 from news.models import Category
-from news.models import PendingStory
 from news.models import Story
 from news.forms import AddNewsForm
 from news.forms import SendStoryForm
@@ -145,8 +143,8 @@ def submit(request):
         if add_form.is_valid():
             pending_story = add_form.save(commit=False)
             pending_story.submitter = request.user
-            pending_story.short_text = clean_html(pending_story.short_text)
-            pending_story.long_text = clean_html(pending_story.long_text)
+            pending_story.short_text = _clean_html(pending_story.short_text)
+            pending_story.long_text = _clean_html(pending_story.long_text)
             pending_story.save()
             return HttpResponseRedirect(reverse('news.views.submit_thanks'))
     else:
@@ -239,3 +237,7 @@ def email_thanks(request):
         },
         context_instance = RequestContext(request))
 
+#######################################################################
+
+def _clean_html(s):
+    return clean_html(s, profile='news')

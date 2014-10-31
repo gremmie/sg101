@@ -6,7 +6,6 @@ from django import forms
 from django.conf import settings
 
 from news.models import PendingStory
-from news.models import Category
 
 
 class AddNewsForm(forms.ModelForm):

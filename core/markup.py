@@ -8,22 +8,23 @@ from django.utils.encoding import force_unicode
 from smiley import SmilifyMarkdown
 from core.mdexts.urlize import UrlizeExtension
 from core.mdexts.deleted import DelExtension
+from core.html import clean_html
+
 
 class Markdown(object):
     """
     This is a thin wrapper around the Markdown class.
 
     """
-    def __init__(self, safe_mode='escape'):
-        self.md = _markdown.Markdown(safe_mode=safe_mode,
-                                     extensions=[
+    def __init__(self):
+        self.md = _markdown.Markdown(extensions=[
                                          UrlizeExtension(),
                                          'markdown.extensions.nl2br',
                                          DelExtension(),
                                      ])
 
     def convert(self, s):
-        return self.md.convert(force_unicode(s))
+        return clean_html(self.md.convert(force_unicode(s)))
 
 
 def markdown(s):
