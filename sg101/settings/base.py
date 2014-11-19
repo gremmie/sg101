@@ -272,9 +272,10 @@ OEMBED_MAXHEIGHT = 295
 # GCalendar settings
 GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
-# Google OAuth settings
-GOOGLE_OAUTH_CONSUMER_KEY = 'surfguitar101.com'
-GOOGLE_OAUTH_PRIVATE_KEY_PATH = SECRETS['GOOGLE_KEY_PATH']
+# GCalendar/Google OAuth settings
+GCAL_CLIENT_ID = SECRETS['GCAL_CLIENT_ID']
+GCAL_CLIENT_SECRET = SECRETS['GCAL_CLIENT_SECRET']
+GCAL_CREDENTIALS_PATH = SECRETS['GCAL_CREDENTIALS_PATH']
 
 # MoinMoin Wiki integration settings
 WIKI_COOKIE_NAME = 'sg101_wiki'

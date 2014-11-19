@@ -16,7 +16,11 @@
 </ul>
 {% endif %}
 
-<p>Access token status: {% bool_icon access_token %} &mdash; <a href="{% url 'admin:gcalendar-fetch_auth' %}">Request new access token</a></p>
+<p>Credentials file status: {% bool_icon cred_status %}
+{% if cred_status %}
+&mdash; <em>Last modified: {{ cred_status|date:"r" }}</em>
+{% endif %}
+&mdash; <a href="{% url 'admin:gcalendar-authorize' %}">Request new credentials</a></p>
 
 {% if events %}
 <p>The following pending events have been approved and are ready to be synchronized with the Google calendar.</p>

@@ -11,16 +11,11 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 
-import gdata.client
-
 from gcalendar.models import Event, AccessToken
 from gcalendar.calendar import Calendar, CalendarError
 from gcalendar import oauth
 
 import bio.badges
-
-
-SCOPES = ['https://www.google.com/calendar/feeds/']
 
 
 class EventAdmin(admin.ModelAdmin):
@@ -46,12 +41,12 @@ class EventAdmin(admin.ModelAdmin):
             url(r'^google_sync/$',
                 self.admin_site.admin_view(self.google_sync),
                 name="gcalendar-google_sync"),
-            url(r'^fetch_auth/$',
-                self.admin_site.admin_view(self.fetch_auth),
-                name="gcalendar-fetch_auth"),
-             url(r'^get_access_token/$',
-                self.admin_site.admin_view(self.get_access_token),
-                name="gcalendar-get_access_token"),
+            url(r'^authorize/$',
+                self.admin_site.admin_view(self.authorize),
+                name="gcalendar-authorize"),
+             url(r'^auth_return/$',
+                self.admin_site.admin_view(self.auth_return),
+                name="gcalendar-auth_return"),
         )
         return my_urls + urls
 
@@ -84,10 +79,10 @@ class EventAdmin(admin.ModelAdmin):
         # Get pending events
         events = Event.pending_events.all()
 
-        # Attempt to get saved access token to the Google calendar
-        access_token = AccessToken.objects.get_token().access_token()
+        # Check status of credentials file
+        cred_status = oauth.check_credentials_status()
 
-        messages = []
+        msgs = []
         err_msg = ''
         if request.method == 'POST':
             if access_token:
@@ -100,50 +95,37 @@ class EventAdmin(admin.ModelAdmin):
                     err_msg = e.msg
                     events = Event.pending_events.all()
                 else:
-                    messages.append('All events processed successfully.')
+                    msgs.append('All events processed successfully.')
                     events = Event.objects.none()
 
         return render(request, 'gcalendar/google_sync.html', {
             'current_app': self.admin_site.name,
-            'access_token': access_token,
-            'messages': messages,
+            'cred_status': cred_status,
+            'messages': msgs,
             'err_msg': err_msg,
             'events': events,
             })
 
-    def fetch_auth(self, request):
+    def authorize(self, request):
         """
-        This view fetches a request token and then redirects the user to
-        authorize it.
-
+        This view generates the authorization URL and redirects the user to it.
         """
         site = Site.objects.get_current()
         callback_url = 'http://%s%s' % (site.domain,
-                reverse('admin:gcalendar-get_access_token'))
-        try:
-            auth_url = oauth.fetch_auth(request, SCOPES, callback_url)
-        except gdata.client.Error, e:
-            messages.error(request, str(e))
-            return HttpResponseRedirect(reverse('admin:gcalendar-google_sync'))
-        else:
-            return HttpResponseRedirect(auth_url)
+                reverse('admin:gcalendar-auth_return'))
+        auth_url = oauth.get_auth_url(request, callback_url)
+        return HttpResponseRedirect(auth_url)
 
-    def get_access_token(self, request):
+    def auth_return(self, request):
         """
         This view is called by Google after the user has authorized us access to
-        their data. We call into the oauth module to upgrade the oauth token to
-        an access token. We then save the access token in the database and
-        redirect back to our admin Google sync view.
-
+        their data. We call into the oauth module to process the authorization
+        code and exchange it for tokens.
         """
         try:
-            access_token = oauth.get_access_token(request)
-        except gdata.client.Error, e:
-            messages.error(request, str(e))
-        else:
-            token = AccessToken.objects.get_token()
-            token.update(access_token)
-            token.save()
+            oauth.auth_return(request)
+        except oauth.OAuthError as e:
+            self.message_user(request, str(e), level=messages.ERROR)
 
         return HttpResponseRedirect(reverse('admin:gcalendar-google_sync'))
 
