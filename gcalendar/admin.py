@@ -11,7 +11,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 
-from gcalendar.models import Event, AccessToken
+from gcalendar.models import Event
 from gcalendar.calendar import Calendar, CalendarError
 from gcalendar import oauth
 
@@ -19,15 +19,15 @@ import bio.badges
 
 
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('what', 'user', 'start_date', 'where', 'date_submitted',
-            'status', 'is_approved', 'google_html')
-    list_filter = ('start_date', 'status')
+    list_display = ['what', 'user', 'start_date', 'where', 'date_submitted',
+            'status', 'is_approved', 'google_html']
+    list_filter = ['start_date', 'status']
     date_hierarchy = 'start_date'
-    search_fields = ('what', 'where', 'description')
-    raw_id_fields = ('user', )
-    exclude = ('html', 'google_id', 'google_url')
+    search_fields = ['what', 'where', 'description']
+    raw_id_fields = ['user']
+    exclude = ['html', 'google_id', 'google_url']
     save_on_top = True
-    actions = ('approve_events', )
+    actions = ['approve_events']
 
     pending_states = {
         Event.NEW: Event.NEW_APRV,
@@ -85,18 +85,21 @@ class EventAdmin(admin.ModelAdmin):
         msgs = []
         err_msg = ''
         if request.method == 'POST':
-            if access_token:
+            credentials = oauth.get_credentials()
+            if credentials:
                 try:
-                    cal = Calendar(source=oauth.USER_AGENT,
-                            calendar_id=settings.GCAL_CALENDAR_ID,
-                            access_token=access_token)
+                    cal = Calendar(calendar_id=settings.GCAL_CALENDAR_ID,
+                            credentials=credentials)
                     cal.sync_events(events)
                 except CalendarError, e:
-                    err_msg = e.msg
+                    err_msg = str(e)
                     events = Event.pending_events.all()
                 else:
                     msgs.append('All events processed successfully.')
                     events = Event.objects.none()
+            else:
+                self.message_user(request, "Invalid or missing credentials",
+                        level=messages.ERROR)
 
         return render(request, 'gcalendar/google_sync.html', {
             'current_app': self.admin_site.name,
@@ -113,7 +116,7 @@ class EventAdmin(admin.ModelAdmin):
         site = Site.objects.get_current()
         callback_url = 'http://%s%s' % (site.domain,
                 reverse('admin:gcalendar-auth_return'))
-        auth_url = oauth.get_auth_url(request, callback_url)
+        auth_url = oauth.get_auth_url(callback_url)
         return HttpResponseRedirect(auth_url)
 
     def auth_return(self, request):
@@ -131,4 +134,3 @@ class EventAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Event, EventAdmin)
-admin.site.register(AccessToken)

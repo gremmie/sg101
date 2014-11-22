@@ -28,18 +28,15 @@ def check_credentials_status():
     """
     try:
         status = os.stat(settings.GCAL_CREDENTIALS_PATH)
-        return datetime.datetime.fromtimestamp(status.st_mtime)
     except OSError:
         return None
+    return datetime.datetime.fromtimestamp(status.st_mtime)
 
 
-def get_auth_url(request, callback_url):
+def get_auth_url(callback_url):
     """
     This function creates an OAuth flow object and uses it to generate an
     authorization URL which is returned to the caller.
-
-    request - the HttpRequest object for the user requesting the token. The
-    token is stored in the session object attached to this request.
 
     callback_url - a string that is the URL that Google should redirect the user
     to after the user has authorized our application access to their data.
@@ -69,7 +66,7 @@ def get_auth_url(request, callback_url):
 
 def auth_return(request):
     """
-    This function should be called after Google has sent the user back to us
+    This function should be called after Google has redirected the user
     after the user authorized us. We retrieve the authorization code from the
     request query parameters and then exchange it for access tokens. These
     tokens are stored in our credentials file.
@@ -111,18 +108,7 @@ def auth_return(request):
     logging.info("auth_return completed successfully")
 
 
-def serialize_token(token):
-    """
-    This function turns a token into a string and returns it.
-
-    """
-    return gdata.gauth.TokenToBlob(token)
-
-
-def deserialize_token(s):
-    """
-    This function turns a string into a token returns it. The string must have
-    previously been created with serialize_token().
-
-    """
-    return gdata.gauth.TokenFromBlob(s)
+def get_credentials():
+    """Obtain the stored credentials if available, or None if they are not."""
+    storage = Storage(settings.GCAL_CREDENTIALS_PATH)
+    return storage.get()

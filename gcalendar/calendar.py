@@ -1,122 +1,120 @@
 """
-This file contains the calendar class wich abstracts the Google gdata API for working with
-Google Calendars.
+This file contains the calendar class wich abstracts the Google API for working
+with Google Calendars.
 
 """
 import datetime
 import pytz
 
+import httplib2
+from apiclient.discovery import build
+from apiclient.http import BatchHttpRequest
 from django.utils.tzinfo import FixedOffset
-from gdata.calendar.client import CalendarClient
-from gdata.calendar.data import (CalendarEventEntry, CalendarEventFeed,
-        CalendarWhere, When, EventWho)
-import atom.data
 
 from gcalendar.models import Event
 
 
 class CalendarError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
+    """Calendar exception base class."""
 
-    def __str__(self):
-        return repr(self.msg)
+
+def _make_err_msg(event, exception):
+    """Returns an error message string from the given Event and exception."""
+    return '%s - %s' % (event.what, exception)
 
 
 class Calendar(object):
-    DATE_FMT = '%Y-%m-%d'
-    DATE_TIME_FMT = DATE_FMT + 'T%H:%M:%S'
-    DATE_TIME_TZ_FMT = DATE_TIME_FMT + '.000Z'
+    DATE_TIME_FMT = '%Y-%m-%dT%H:%M:%S'
+    DATE_TIME_TZ_FMT = DATE_TIME_FMT + 'Z'
 
-    def __init__(self, source=None, calendar_id='default', access_token=None):
-        self.client = CalendarClient(source=source, auth_token=access_token)
-
-        self.insert_feed = ('https://www.google.com/calendar/feeds/'
-            '%s/private/full' % calendar_id)
-        self.batch_feed = '%s/batch' % self.insert_feed
+    def __init__(self, calendar_id='primary', credentials=None):
+        self.calendar_id = calendar_id
+        http = httplib2.Http()
+        if credentials:
+            http = credentials.authorize(http)
+        self.service = build('calendar', 'v3', http=http)
 
     def sync_events(self, qs):
-        request_feed = CalendarEventFeed()
-        for model in qs:
-            if model.status == Event.NEW_APRV:
-                event = CalendarEventEntry()
-                request_feed.AddInsert(entry=self._populate_event(model, event))
-            elif model.status == Event.EDIT_APRV:
-                event = self._retrieve_event(model)
-                request_feed.AddUpdate(entry=self._populate_event(model, event))
-            elif model.status == Event.DEL_APRV:
-                event = self._retrieve_event(model)
-                request_feed.AddDelete(entry=event)
-            else:
-                assert False, 'unexpected status in sync_events'
-
-        try:
-            response_feed = self.client.ExecuteBatch(request_feed, self.batch_feed)
-        except Exception, e:
-            raise CalendarError('ExecuteBatch exception: %s' % e)
+        """Process the pending events in a batch request to the Google calendar
+        API.
+        """
+        batch = BatchHttpRequest()
 
         err_msgs = []
-        for entry in response_feed.entry:
-            i = int(entry.batch_id.text)
-            code = int(entry.batch_status.code)
+        def insert_callback(request_id, event, exception):
+            n = int(request_id)
+            if not exception:
+                qs[n].status = Event.ON_CAL
+                qs[n].google_id = event['id']
+                qs[n].google_url = event['htmlLink']
+                qs[n].save()
+                qs[n].notify_on_calendar()
+            else:
+                err_msgs.append(_make_err_msg(qs[n], exception))
 
-            error = False
-            if qs[i].status == Event.NEW_APRV:
-                if code == 201:
-                    qs[i].status = Event.ON_CAL
-                    qs[i].google_id = entry.GetEditLink().href
-                    qs[i].google_url = entry.GetHtmlLink().href
-                    qs[i].save()
-                    qs[i].notify_on_calendar()
-                else:
-                    error = True
+        def update_callback(request_id, event, exception):
+            n = int(request_id)
+            if not exception:
+                qs[n].status = Event.ON_CAL
+                qs[n].save()
+            else:
+                err_msgs.append(_make_err_msg(qs[n], exception))
 
-            elif qs[i].status == Event.EDIT_APRV:
-                if code == 200:
-                    qs[i].status = Event.ON_CAL
-                    qs[i].save()
-                else:
-                    error = True
+        def delete_callback(request_id, response, exception):
+            n = int(request_id)
+            if not exception:
+                qs[n].delete()
+            else:
+                err_msgs.append(_make_err_msg(qs[n], exception))
 
-            elif qs[i].status == Event.DEL_APRV:
-                if code == 200:
-                    qs[i].delete()
-                else:
-                    error = True
+        for n, event in enumerate(qs):
+            if event.status == Event.NEW_APRV:
+                batch.add(self.service.events().insert(calendarId=self.calendar_id,
+                            body=self._make_event(event)),
+                        callback=insert_callback,
+                        request_id=str(n))
+            elif event.status == Event.EDIT_APRV:
+                batch.add(self.service.events().update(calendarId=self.calendar_id,
+                            eventId=event.google_id,
+                            body=self._make_event(event)),
+                        callback=update_callback,
+                        request_id=str(n))
+            elif event.status == Event.DEL_APRV:
+                batch.add(self.service.events().delete(calendarId=self.calendar_id,
+                            eventId=event.google_id),
+                        callback=delete_callback,
+                        request_id=str(n))
+            else:
+                raise CalendarError("Invalid event status: %s" % event.status)
 
-            if error:
-                err_msgs.append('%s - (%d) %s' % (
-                    qs[i].what, code, entry.batch_status.reason))
+        try:
+            batch.execute()
+        except Exception as ex:
+            raise CalendarError('Batch exception: %s' % ex)
 
-        if len(err_msgs) > 0:
+        if err_msgs:
             raise CalendarError(', '.join(err_msgs))
 
-    def _retrieve_event(self, model):
-        try:
-            event = self.client.GetEventEntry(model.google_id)
-        except Exception, e:
-            raise CalendarError('Could not retrieve event from Google: %s, %s' \
-                    % (model.what, e))
-        return event
-
-    def _populate_event(self, model, event):
-        """Populates a gdata event from an Event model object."""
-        event.title = atom.data.Title(text=model.what)
-        event.content = atom.data.Content(text=model.html)
-        event.where = [CalendarWhere(value=model.where)]
-        event.who = [EventWho(email=model.user.email)]
+    def _make_event(self, model):
+        """Creates an event body from a model instance."""
+        event = {
+            'summary': model.what,
+            'description': model.html,
+            'location': model.where,
+            'anyoneCanAddSelf': True,
+        }
 
         if model.all_day:
-            start_time = self._make_time(model.start_date)
-            if model.start_date == model.end_date:
-                end_time = None
-            else:
-                end_time = self._make_time(model.end_date)
+            start = {'date': model.start_date.isoformat()}
+            end = {'date': model.end_date.isoformat()}
         else:
-            start_time = self._make_time(model.start_date, model.start_time, model.time_zone)
-            end_time = self._make_time(model.end_date, model.end_time, model.time_zone)
+            start = {'dateTime': self._make_time(model.start_date, model.start_time,
+                                                 model.time_zone)}
+            end = {'dateTime': self._make_time(model.end_date, model.end_time,
+                                               model.time_zone)}
 
-        event.when = [When(start=start_time, end=end_time)]
+        event['start'] = start
+        event['end'] = end
         return event
 
     def _make_time(self, date, time=None, tz_name=None):
@@ -126,23 +124,20 @@ class Calendar(object):
         no time zone info will be added to the string.
         """
 
-        if time is not None:
+        if time:
             d = datetime.datetime.combine(date, time)
         else:
             d = datetime.datetime(date.year, date.month, date.day)
 
-        if time is None:
-            s = d.strftime(self.DATE_FMT)
-        elif tz_name is None:
+        if not tz_name:
             s = d.strftime(self.DATE_TIME_FMT)
         else:
             try:
                 tz = pytz.timezone(tz_name)
             except pytz.UnknownTimeZoneError:
-                raise CalendarError('Invalid time zone: %s' (tz_name,))
+                raise CalendarError('Invalid time zone: %s' % tz_name)
             local = tz.localize(d)
             zulu = local.astimezone(FixedOffset(0))
             s = zulu.strftime(self.DATE_TIME_TZ_FMT)
 
         return s
-
