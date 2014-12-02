@@ -94,6 +94,11 @@ LOGGING = {
             'propagate': False,
             'handlers': ['auth'],
         },
+        'MARKDOWN': {
+            'level': 'WARNING',
+            'propagate': False,
+            'handlers': ['file'],
+        },
     },
     'root': {
         'level': 'DEBUG',
