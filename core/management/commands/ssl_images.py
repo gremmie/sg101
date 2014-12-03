@@ -9,9 +9,12 @@ images to https. It does this by rewriting the markup:
 import logging
 from optparse import make_option
 import os.path
+import re
+import signal
 
 from django.core.management.base import NoArgsCommand, CommandError
 from django.conf import settings
+import markdown.inlinepatterns
 
 from comments.models import Comment
 from forums.models import Post
@@ -19,6 +22,17 @@ from forums.models import Post
 
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
 logger = logging.getLogger(__name__)
+
+IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE)
+IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE)
+
+quit_flag = False
+
+
+def signal_handler(signum, frame):
+    """SIGINT signal handler"""
+    global quit_flag
+    quit_flag = True
 
 
 def _setup_logging():
@@ -36,11 +50,11 @@ class CommentFacade(object):
         self.comment = comment
 
     @property
-    def markdown(self):
+    def text(self):
         return self.comment.comment
 
-    @markdown.setter
-    def markdown(self, value):
+    @text.setter
+    def text(self, value):
         self.comment.comment = value
 
 
@@ -50,12 +64,25 @@ class PostFacade(object):
         self.post = post
 
     @property
-    def markdown(self):
+    def text(self):
         return self.post.body
 
-    @markdown.setter
-    def markdown(self, value):
+    @text.setter
+    def text(self, value):
         self.post.body = value
+
+
+def process_post(post):
+    """Process the post object:
+
+    A regex substitution is run on the post's text field. This fixes up image
+    links, getting rid of plain old http sources; either converting to https
+    or relative style links (if the link is to SG101).
+
+    We also do a search for Markdown image reference markup. We aren't expecting
+    these, but we will log something if we see any.
+
+    """
 
 
 class Command(NoArgsCommand):
@@ -71,10 +98,10 @@ class Command(NoArgsCommand):
                 help="process comments"),
             make_option('-i', '--i',
                 type='int',
-                help="first slice index; the i in [i:j]"),
+                help="optional first slice index; the i in [i:j]"),
             make_option('-j', '--j',
                 type='int',
-                help="second slice index; the j in [i:j]"),
+                help="optional second slice index; the j in [i:j]"),
             )
 
     def handle_noargs(self, **options):
@@ -111,10 +138,16 @@ class Command(NoArgsCommand):
         elif i is None and j is not None:
             qs = qs[:j]
 
+        # Install signal handler for ctrl-c
+        signal.signal(signal.SIGINT, signal_handler)
+
         s = []
         for model in qs.iterator():
+            if quit_flag:
+                logger.warning("SIGINT received, exiting")
             obj = facade(model)
-            s.append(obj.markdown)
+            process_post(obj)
+            s.append(obj.text)
 
         import pprint
         pprint.pprint(s)
