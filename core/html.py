@@ -10,7 +10,7 @@ _CLEAN_PROFILES = {
     'comments': (
         [
             'a', 'b', 'blockquote', 'br', 'code', 'del', 'em',
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
             'i', 'img', 'li', 'ol', 'p', 'pre', 'strong', 'ul',
         ],
         {
@@ -23,7 +23,7 @@ _CLEAN_PROFILES = {
         [
             'a', 'b', 'blockquote', 'br', 'caption', 'center', 'code', 'col',
             'colgroup', 'dd', 'del', 'div', 'dl', 'dt', 'em',
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
             'i', 'img', 'ins', 'li', 'ol', 'p', 'pre', 'small', 'strike',
             'strong', 'sub', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th',
             'thead', 'tr', 'tt', 'u', 'ul',
