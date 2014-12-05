@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE)
 IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE)
 
+MODEL_CHOICES = ['comments', 'posts']
+
 quit_flag = False
 
 
@@ -44,35 +46,11 @@ def _setup_logging():
     logger.addHandler(handler)
 
 
-class CommentFacade(object):
-    """Wrapper class to provide uniform access to Comments."""
-    def __init__(self, comment):
-        self.comment = comment
-
-    @property
-    def text(self):
-        return self.comment.comment
-
-    @text.setter
-    def text(self, value):
-        self.comment.comment = value
+def replace_image_markup(match):
+    return match.group(0)
 
 
-class PostFacade(object):
-    """Wrapper class to provide uniform access to Forum posts."""
-    def __init__(self, post):
-        self.post = post
-
-    @property
-    def text(self):
-        return self.post.body
-
-    @text.setter
-    def text(self, value):
-        self.post.body = value
-
-
-def process_post(post):
+def process_post(text):
     """Process the post object:
 
     A regex substitution is run on the post's text field. This fixes up image
@@ -83,19 +61,16 @@ def process_post(post):
     these, but we will log something if we see any.
 
     """
+    return IMAGE_LINK_RE.sub(replace_image_markup, text)
 
 
 class Command(NoArgsCommand):
     help = "Rewrite forum posts and comments to not use http for images"
     option_list = NoArgsCommand.option_list + (
-            make_option('--forums',
-                action='store_true',
-                default=False,
-                help="process forum posts"),
-            make_option('--comments',
-                action='store_true',
-                default=False,
-                help="process comments"),
+            make_option('-m', '--model',
+                choices=MODEL_CHOICES,
+                help="which model to update; must be one of {{{}}}".format(
+                                                    ', '.join(MODEL_CHOICES))),
             make_option('-i', '--i',
                 type='int',
                 help="optional first slice index; the i in [i:j]"),
@@ -108,19 +83,15 @@ class Command(NoArgsCommand):
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)
 
-        do_comments = options['comments']
-        do_forums = options['forums']
-        if do_comments and do_forums:
-            raise CommandError("Please specify --forums or --comments, not both")
-        elif not do_comments and not do_forums:
-            raise CommandError("Please specify --forums or --comments")
+        if options['model'] not in MODEL_CHOICES:
+            raise CommandError('Please choose a --model option')
 
-        if do_comments:
+        if options['model'] == 'comments':
             qs = Comment.objects.all()
-            facade = CommentFacade
+            text_attr = 'comment'
         else:
             qs = Post.objects.all()
-            facade = PostFacade
+            text_attr = 'body'
 
         i, j = options['i'], options['j']
 
@@ -145,9 +116,9 @@ class Command(NoArgsCommand):
         for model in qs.iterator():
             if quit_flag:
                 logger.warning("SIGINT received, exiting")
-            obj = facade(model)
-            process_post(obj)
-            s.append(obj.text)
+            txt = getattr(model, text_attr)
+            new_txt = process_post(txt)
+            s.append(new_txt)
 
         import pprint
         pprint.pprint(s)
