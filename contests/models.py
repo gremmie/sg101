@@ -77,6 +77,9 @@ class Contest(models.Model):
         """
         return not self.win_date and self.is_active()
 
+    def can_comment_on(self):
+        return self.is_active()
+
     def pick_winners(self):
         """
         This function randomly picks winners from all the contestants.
