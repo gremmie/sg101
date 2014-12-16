@@ -24,8 +24,8 @@ from forums.models import Post
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
 logger = logging.getLogger(__name__)
 
-IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE)
-IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE)
+IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE, re.UNICODE)
+IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE, re.UNICODE)
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 MODEL_CHOICES = ['comments', 'posts']
@@ -54,7 +54,7 @@ def save_image_to_cloud(src):
 
 
 def replace_image_markup(match):
-    src_parts = match.group(9).split()
+    src_parts = match.group(8).split()
     if src_parts:
         src = src_parts[0]
         if src[0] == "<" and src[-1] == ">":
@@ -65,7 +65,7 @@ def replace_image_markup(match):
     title = ''
     if len(src_parts) > 1:
         title = " ".join(src_parts[1:])
-    alt = match.group(2)
+    alt = match.group(1)
 
     new_src = ''
     if src:
