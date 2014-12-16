@@ -11,6 +11,7 @@ from optparse import make_option
 import os.path
 import re
 import signal
+import urlparse
 
 from django.core.management.base import NoArgsCommand, CommandError
 from django.conf import settings
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE)
 IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE)
 
+SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 MODEL_CHOICES = ['comments', 'posts']
 
 quit_flag = False
@@ -46,8 +48,46 @@ def _setup_logging():
     logger.addHandler(handler)
 
 
+def save_image_to_cloud(src):
+    # TODO
+    return src
+
+
 def replace_image_markup(match):
-    return match.group(0)
+    src_parts = match.group(9).split()
+    if src_parts:
+        src = src_parts[0]
+        if src[0] == "<" and src[-1] == ">":
+            src = src[1:-1]
+    else:
+        src = ''
+
+    title = ''
+    if len(src_parts) > 1:
+        title = " ".join(src_parts[1:])
+    alt = match.group(2)
+
+    new_src = ''
+    if src:
+        r = urlparse.urlparse(src)
+        if r.scheme == 'http':
+            if r.hostname in SG101_HOSTS:
+                new_src = r.path    # convert to relative path
+            else:
+                new_src = save_image_to_cloud(src)
+        elif r.scheme == 'https':
+            new_src = src       # already https, accept it as-is
+
+    if new_src:
+        if title:
+            s = u'![{alt}]({src} "{title}")'.format(alt=alt, src=new_src, title=title)
+        else:
+            s = u'![{alt}]({src})'.format(alt=alt, src=new_src)
+    else:
+        # something's messed up, convert to a link using original src
+        s = u'[{alt}]({src})'.format(alt=alt, src=src)
+
+    return s
 
 
 def process_post(text):
