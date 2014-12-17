@@ -24,8 +24,10 @@ from forums.models import Post
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
 logger = logging.getLogger(__name__)
 
-IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE, re.UNICODE)
-IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE, re.UNICODE)
+IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE,
+                           re.DOTALL | re.UNICODE)
+IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
+                          re.DOTALL | re.UNICODE)
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 MODEL_CHOICES = ['comments', 'posts']
@@ -67,20 +69,19 @@ def replace_image_markup(match):
         title = " ".join(src_parts[1:])
     alt = match.group(1)
 
-    new_src = ''
+    new_src = None
     if src:
         r = urlparse.urlparse(src)
-        if r.scheme == 'http':
-            if r.hostname in SG101_HOSTS:
-                new_src = r.path    # convert to relative path
-            else:
-                new_src = save_image_to_cloud(src)
+        if r.hostname in SG101_HOSTS:
+            new_src = r.path        # convert to relative path
+        elif r.scheme == 'http':
+            new_src = save_image_to_cloud(src)
         elif r.scheme == 'https':
             new_src = src       # already https, accept it as-is
 
     if new_src:
         if title:
-            s = u'![{alt}]({src} "{title}")'.format(alt=alt, src=new_src, title=title)
+            s = u'![{alt}]({src} {title})'.format(alt=alt, src=new_src, title=title)
         else:
             s = u'![{alt}]({src})'.format(alt=alt, src=new_src)
     else:
