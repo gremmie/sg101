@@ -2,6 +2,8 @@
 import re
 import unittest
 
+import mock
+
 from core.management.commands.ssl_images import process_post
 
 
@@ -113,3 +115,19 @@ http://surfguitar101.com/media/zzz.jpg
             """
         result = process_post(test_str)
         self.assertEqual(expected, result)
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_simple_replacement(self, upload_mock):
+        old_src = 'http://example.com/images/my_image.jpg'
+        new_src = 'ttps://cloud.com/ABCDEF.jpg'
+        test_str = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?""".format(old_src)
+        expected = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?""".format(new_src)
+
+        upload_mock.return_value = new_src
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        upload_mock.assert_called_once_with(old_src)
