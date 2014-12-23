@@ -119,7 +119,7 @@ http://surfguitar101.com/media/zzz.jpg
     @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
     def test_simple_replacement(self, upload_mock):
         old_src = 'http://example.com/images/my_image.jpg'
-        new_src = 'ttps://cloud.com/ABCDEF.jpg'
+        new_src = 'https://cloud.com/ABCDEF.jpg'
         test_str = """Here is a really cool http: based image:
             ![flyer]({})
             Cool, right?""".format(old_src)
@@ -131,3 +131,64 @@ http://surfguitar101.com/media/zzz.jpg
         result = process_post(test_str)
         self.assertEqual(expected, result)
         upload_mock.assert_called_once_with(old_src)
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_multiple_replacement(self, upload_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'http://example.com/static/wow.gif',
+            'http://example.com/media/a/b/c/pic.png',
+        ]
+        new_src = [
+            'https://cloud.com/some/path/012345.jpg',
+            'https://cloud.com/some/path/6789AB.gif',
+            'https://cloud.com/some/path/CDEF01.png',
+        ]
+
+        template = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?
+            Another one: ![pic]({})
+            And finally
+            ![an image]({})
+            """
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        upload_mock.side_effect = new_src
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        expected_args = [mock.call(c) for c in old_src]
+        self.assertEqual(upload_mock.call_args_list, expected_args)
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_multiple_replacement_2(self, upload_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'https://example.com/static/wow.gif',
+            'http://www.surfguitar101.com/media/a/b/c/pic.png',
+            'http://surfguitar101.com/media/a/b/c/pic2.png',
+        ]
+        new_src = [
+            'https://cloud.com/some/path/012345.jpg',
+            'https://example.com/static/wow.gif',
+            '/media/a/b/c/pic.png',
+            '/media/a/b/c/pic2.png',
+        ]
+
+        template = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?
+            Another two: ![pic]({})  ![photo]({})
+            And finally
+            ![an image]({}).
+            """
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        upload_mock.side_effect = new_src
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        upload_mock.assert_called_once_with(old_src[0])
