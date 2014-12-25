@@ -48,6 +48,4 @@ class Command(LabelCommand):
             'MEDIA_URL': settings.MEDIA_URL,
             })
 
-        # encode it ourselves since it can fail if you try to redirect output to
-        # a file and any of the content is not ASCII...
-        self.stdout.write(output.encode('utf-8'))
+        self.stdout.write(output)
