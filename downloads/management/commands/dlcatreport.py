@@ -45,14 +45,12 @@ class Command(LabelCommand):
             'downloads': downloads,
             })
 
-        # encode it ourselves since it can fail if you try to redirect output to
-        # a file and any of the content is not ASCII...
-        self.stdout.write(report.encode('utf-8'))
+        self.stdout.write(report)
 
     def print_titles(self, dls):
         """Print out the download titles"""
 
         for dl in dls:
-            self.stdout.write(dl.title.encode('utf-8'))
+            self.stdout.write(dl.title)
 
 
