@@ -12,6 +12,9 @@ DATABASES = {
         'NAME': SECRETS['DB_NAME'],
         'USER': SECRETS['DB_USER'],
         'PASSWORD': SECRETS['DB_PASSWORD'],
+        'OPTIONS': {
+            'unix_socket': '/var/run/mysqld/mysqld.sock',
+        },
     },
 }
 
