@@ -9,7 +9,7 @@ html5lib==1.0b3
 bleach==1.4
 pytz==2013b
 queued-search==2.1.0
-queues==0.6.3
+hg+https://bgneal@bitbucket.org/bgneal/queues@862e884#egg=queues
 redis==2.7.2
 repoze.timeago==0.5
 -e git+https://github.com/notanumber/xapian-haystack.git@37add92bc43fe50bf165e91f370269c26272f1eb#egg=xapian_haystack-dev

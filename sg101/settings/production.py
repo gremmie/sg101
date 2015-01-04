@@ -14,6 +14,9 @@ DATABASES = {
         'NAME': SECRETS['DB_NAME'],
         'USER': SECRETS['DB_USER'],
         'PASSWORD': SECRETS['DB_PASSWORD'],
+        'OPTIONS': {
+            'unix_socket': '/var/run/mysqld/mysqld.sock',
+        },
     },
 }
 
@@ -33,7 +36,7 @@ TEMPLATE_LOADERS = [
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'LOCATION': 'unix:/var/run/memcached/memcached.sock',
         'TIMEOUT': 600,
         'KEY_PREFIX': 'sg101',
     },

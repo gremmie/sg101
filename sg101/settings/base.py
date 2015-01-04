@@ -202,14 +202,13 @@ HAYSTACK_CONNECTIONS = {
 #######################################################################
 # Redis integration & settings
 #######################################################################
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
+REDIS_UNIX_SOCKET = '/var/run/redis/redis.sock'
 REDIS_DB = 0
 
 #######################################################################
 # Celery integration & settings
 #######################################################################
-BROKER_URL = 'redis://localhost:6379/1'
+BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1'
 BROKER_POOL_LIMIT = 10
 
 CELERY_TIMEZONE = TIME_ZONE
@@ -301,7 +300,7 @@ SEARCH_QUEUE_ENABLED = True
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
 #######################################################################
 QUEUE_BACKEND = 'redisd'
-QUEUE_REDIS_CONNECTION = 'localhost:6379'
+QUEUE_REDIS_UNIX_SOCKET = REDIS_UNIX_SOCKET
 QUEUE_REDIS_DB = 0
 
 #######################################################################
