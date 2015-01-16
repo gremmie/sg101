@@ -11,14 +11,19 @@ from optparse import make_option
 import os.path
 import re
 import signal
+import socket
+import urllib
 import urlparse
+import uuid
 
 from django.core.management.base import NoArgsCommand, CommandError
 from django.conf import settings
 import markdown.inlinepatterns
+from PIL import Image
 
 from comments.models import Comment
 from forums.models import Post
+from core.s3 import S3Bucket
 
 
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
@@ -32,7 +37,14 @@ IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 MODEL_CHOICES = ['comments', 'posts']
 
+PHOTO_MAX_SIZE = (660, 720)
+PHOTO_BASE_URL = 'https://s3.amazonaws.com/'
+PHOTO_BUCKET_NAME = 'sg101.forum.photos'
+
 quit_flag = False
+opener = None
+bucket = None
+url_cache = {}
 
 
 def signal_handler(signum, frame):
@@ -50,9 +62,118 @@ def _setup_logging():
     logger.addHandler(handler)
 
 
+class ImageURLopener(urllib.FancyURLopener):
+    """Our URL opener. Handles redirects as per FancyURLopener. But all other
+    errors and authentication requests will raise an IOError.
+    """
+    HANDLED_ERRORS = set([302, 301, 303, 307])
+
+    def http_error_default(self, url, fp, errcode, errmsg, headers):
+        return urllib.URLopener.http_error_default(self, url, fp, errcode,
+                                                   errmsg, headers)
+
+    def http_error(self, url, fp, errcode, errmsg, headers, data=None):
+        """Handle http errors.
+        We let FancyURLopener handle the redirects, but any other error we want
+        to let fail.
+        """
+        if errcode in self.HANDLED_ERRORS:
+            name = 'http_error_%d' % errcode
+            method = getattr(self, name)
+            if data is None:
+                result = method(url, fp, errcode, errmsg, headers)
+            else:
+                result = method(url, fp, errcode, errmsg, headers, data)
+            if result:
+                return result
+        return self.http_error_default(url, fp, errcode, errmsg, headers)
+
+
+def download_image(src):
+    """Downloads the image file from the given source URL.
+
+    If successful returns the path to the downloaded file. Otherwise None is
+    returned.
+    """
+    logger.info("Retrieving %s", src)
+    try:
+        fn, hdrs = opener.retrieve(src)
+    except IOError as ex:
+        args = ex.args
+        if len(args) == 4 and args[0] == 'http error':
+            logger.error("http error: %d - %s", args[1], args[2])
+        else:
+            logger.error("%s", ex)
+        return None
+
+    # If there is an error or timeout, sometimes there is no content-length
+    # header.
+    content_length = hdrs.get('content-length')
+    if not content_length:
+        logger.error("Bad content-length: %s", content_length)
+        return None
+
+    # Does it look like an image?
+    content_type = hdrs.get('content-type')
+    if not content_type:
+        logger.error("No content-type header found")
+        return None
+
+    logger.info("Retrieved: %s bytes; content-type: %s", content_length,
+                 content_type)
+
+    parts = content_type.split('/')
+    if len(parts) < 2 or parts[0] != 'image':
+        logger.error("Unknown content-type: %s", content_type)
+        return None
+
+    return fn
+
+
+def resize_image(img_path):
+    """Resizes the image found at img_path if necessary."""
+    image = Image.open(img_path)
+    if image.size > PHOTO_MAX_SIZE:
+        logger.info('Resizing from %s to %s', image.size, PHOTO_MAX_SIZE)
+        image.thumbnail(PHOTO_MAX_SIZE, Image.ANTIALIAS)
+        image.save(img_path)
+
+
+def upload_image(img_path):
+    """Upload image file located at img_path to our S3 bucket.
+
+    Returns the URL of the image in the bucket or None if an error occurs.
+    """
+    logger.info("upload_image starting")
+    # Make a unique name for the image in the bucket
+    unique_key = uuid.uuid4().hex
+    ext = os.path.splitext(img_path)[1]
+    file_key = unique_key + ext
+    try:
+        return bucket.upload_from_filename(file_key, img_path, public=True)
+    except IOError as ex:
+        logger.error("Error uploading file: %s", ex)
+    return None
+
+
 def save_image_to_cloud(src):
-    # TODO
-    return src
+    """Downloads an image at a given source URL. Uploads it to cloud storage.
+
+    Returns the new URL or None if unsuccessful.
+    """
+    # Check the cache first
+    new_url = url_cache.get(src)
+    if new_url:
+        return new_url
+
+    fn = download_image(src)
+    if fn:
+        resize_image(fn)
+        new_url = upload_image(fn)
+        if new_url:
+            url_cache[src] = new_url
+        return new_url
+    return None
 
 
 def replace_image_markup(match):
@@ -130,9 +251,11 @@ class Command(NoArgsCommand):
         if options['model'] == 'comments':
             qs = Comment.objects.all()
             text_attr = 'comment'
+            model_name = 'Comment'
         else:
             qs = Post.objects.all()
             text_attr = 'body'
+            model_name = 'Post'
 
         i, j = options['i'], options['j']
 
@@ -150,15 +273,34 @@ class Command(NoArgsCommand):
         elif i is None and j is not None:
             qs = qs[:j]
 
+        # Set global socket timeout
+        socket.setdefaulttimeout(30)
+
         # Install signal handler for ctrl-c
         signal.signal(signal.SIGINT, signal_handler)
 
+        # Create URL opener to download photos
+        global opener
+        opener = ImageURLopener()
+
+        # Create bucket to upload photos
+        global bucket
+        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
+                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
+                          base_url=PHOTO_BASE_URL,
+                          bucket_name=PHOTO_BUCKET_NAME)
         s = []
-        for model in qs.iterator():
+        for n, model in enumerate(qs.iterator()):
             if quit_flag:
                 logger.warning("SIGINT received, exiting")
+                break
+            logger.info("Processing %s #%d (pk = %d)", model_name, n + i, model.pk)
             txt = getattr(model, text_attr)
             new_txt = process_post(txt)
+            if txt != new_txt:
+                logger.debug("content changed")
+                logger.debug("original: %s", txt)
+                logger.debug("changed:  %s", new_txt)
             s.append(new_txt)
 
         import pprint
