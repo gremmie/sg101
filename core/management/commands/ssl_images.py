@@ -6,6 +6,7 @@ images to https. It does this by rewriting the markup:
     - Non SG101 images that use http: are downloaded, resized, and uploaded to
       an S3 bucket. The src attribute is replaced with the new S3 URL.
 """
+import base64
 import logging
 from optparse import make_option
 import os.path
@@ -139,6 +140,11 @@ def resize_image(img_path):
         image.save(img_path)
 
 
+def gen_key():
+    """Return a random key."""
+    return base64.b64encode(uuid.uuid4().bytes, '-_').rstrip('=')
+
+
 def upload_image(img_path):
     """Upload image file located at img_path to our S3 bucket.
 
@@ -146,9 +152,8 @@ def upload_image(img_path):
     """
     logger.info("upload_image starting")
     # Make a unique name for the image in the bucket
-    unique_key = uuid.uuid4().hex
     ext = os.path.splitext(img_path)[1]
-    file_key = unique_key + ext
+    file_key = gen_key() + ext
     try:
         return bucket.upload_from_filename(file_key, img_path, public=True)
     except IOError as ex:
