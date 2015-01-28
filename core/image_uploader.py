@@ -3,6 +3,7 @@
 The image can be resized and a thumbnail can be generated and uploaded as well.
 
 """
+from base64 import b64encode
 import logging
 from io import BytesIO
 import os.path
@@ -16,6 +17,11 @@ from core.image import orient_image
 
 
 logger = logging.getLogger(__name__)
+
+
+def make_key():
+    """Generate a random key suitable for a filename"""
+    return b64encode(uuid.uuid4().bytes, '-_').rstrip('=')
 
 
 def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
@@ -54,7 +60,7 @@ def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
     # to perform on it fail if this is the case. To get around these issues,
     # we make a copy of the file on the file system and operate on the copy.
     # First generate a unique name and temporary file path.
-    unique_key = uuid.uuid4().hex
+    unique_key = make_key()
     ext = os.path.splitext(fp.name)[1]
     temp_name = os.path.join(tempfile.gettempdir(), unique_key + ext)
 
