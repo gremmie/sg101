@@ -107,6 +107,10 @@ def download_image(src):
             logger.error("%s", ex)
         return None
 
+    # TODO: This code below is not right. content-length is optional and will
+    # not appear when using chunked encoding, for example. Remove this check. If
+    # we want to log the size of the file, use stat() on it or something.
+    #
     # If there is an error or timeout, sometimes there is no content-length
     # header.
     content_length = hdrs.get('content-length')
@@ -201,6 +205,11 @@ def replace_image_markup(match):
         if r.hostname in SG101_HOSTS:
             new_src = r.path        # convert to relative path
         elif r.scheme == 'http':
+            # TODO: it has been observed that at least 2 different services
+            # serve up the same image on https: with the URL otherwise the same.
+            # Add code to see if the image is available at https (maybe do
+            # a HEAD request?) and if so just change the protocol to https in
+            # the original URL.
             new_src = save_image_to_cloud(src)
         elif r.scheme == 'https':
             new_src = src       # already https, accept it as-is
@@ -217,15 +226,21 @@ def replace_image_markup(match):
     return s
 
 
+def warn_if_image_refs(text, model_name, pk):
+    """Search text for Markdown image reference markup.
+
+    We aren't expecting these, but we will log something if we see any.
+    """
+    if IMAGE_REF_RE.search(text):
+        logger.warning("Image reference found in %s pk = #%d", model_name, pk)
+
+
 def process_post(text):
     """Process the post object:
 
     A regex substitution is run on the post's text field. This fixes up image
     links, getting rid of plain old http sources; either converting to https
     or relative style links (if the link is to SG101).
-
-    We also do a search for Markdown image reference markup. We aren't expecting
-    these, but we will log something if we see any.
 
     """
     return IMAGE_LINK_RE.sub(replace_image_markup, text)
@@ -294,19 +309,24 @@ class Command(NoArgsCommand):
                           secret_key=settings.USER_PHOTOS_SECRET_KEY,
                           base_url=PHOTO_BASE_URL,
                           bucket_name=PHOTO_BUCKET_NAME)
-        s = []
+
+        if i is None:
+            i = 0
+
         for n, model in enumerate(qs.iterator()):
             if quit_flag:
                 logger.warning("SIGINT received, exiting")
                 break
             logger.info("Processing %s #%d (pk = %d)", model_name, n + i, model.pk)
             txt = getattr(model, text_attr)
+            warn_if_image_refs(txt, model_name, model.pk)
             new_txt = process_post(txt)
             if txt != new_txt:
-                logger.debug("content changed")
+                logger.info("Content changed on %s #%d (pk= %d)",
+                            model_name, n + i, model.pk)
                 logger.debug("original: %s", txt)
                 logger.debug("changed:  %s", new_txt)
-            s.append(new_txt)
+                setattr(model, text_attr, new_txt)
+                model.save()
 
-        import pprint
-        pprint.pprint(s)
+        logger.info("ssl_images exiting")
