@@ -171,10 +171,14 @@ def convert_to_ssl(parsed_url):
     # Check to see if the image is available via https first.
     new_url = check_https_availability(parsed_url)
     if new_url:
+        url_cache[src] = new_url
         return new_url
 
     # If none of the above worked, try to download and upload to our S3 bucket
-    return save_image_to_cloud(src)
+    new_url = save_image_to_cloud(src)
+    if new_url:
+        url_cache[src] = new_url
+    return new_url
 
 
 def check_https_availability(parsed_url):
@@ -215,10 +219,7 @@ def save_image_to_cloud(src):
     fn = download_image(src)
     if fn:
         resize_image(fn)
-        new_url = upload_image(fn)
-        if new_url:
-            url_cache[src] = new_url
-        return new_url
+        return upload_image(fn)
     return None
 
 
@@ -355,7 +356,7 @@ class Command(NoArgsCommand):
             warn_if_image_refs(txt, model_name, model.pk)
             new_txt = process_post(txt)
             if txt != new_txt:
-                logger.info("Content changed on %s #%d (pk= %d)",
+                logger.info("Content changed on %s #%d (pk = %d)",
                             model_name, n + i, model.pk)
                 logger.debug("original: %s", txt)
                 logger.debug("changed:  %s", new_txt)

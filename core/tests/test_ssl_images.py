@@ -1,15 +1,20 @@
 """Unit tests for the ssl_images management command."""
 import re
 import unittest
+from urlparse import urlparse
 
 import mock
 
 from core.management.commands.ssl_images import process_post
+import core.management.commands.ssl_images
 
 
 class ProcessPostTestCase(unittest.TestCase):
 
     SG101_RE = re.compile(r'http://(?:www\.)?surfguitar101.com/', re.I)
+
+    def tearDown(self):
+        core.management.commands.ssl_images.url_cache = {}
 
     def test_empty_string(self):
         s = process_post('')
@@ -117,6 +122,8 @@ http://surfguitar101.com/media/zzz.jpg
         self.assertEqual(expected, result)
 
     @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    @mock.patch('core.management.commands.ssl_images.check_https_availability',
+                new=lambda r: None)
     def test_simple_replacement(self, upload_mock):
         old_src = 'http://example.com/images/my_image.jpg'
         new_src = 'https://cloud.com/ABCDEF.jpg'
@@ -133,6 +140,8 @@ http://surfguitar101.com/media/zzz.jpg
         upload_mock.assert_called_once_with(old_src)
 
     @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    @mock.patch('core.management.commands.ssl_images.check_https_availability',
+                new=lambda r: None)
     def test_multiple_replacement(self, upload_mock):
         old_src = [
             'http://example.com/images/my_image.jpg',
@@ -163,6 +172,8 @@ http://surfguitar101.com/media/zzz.jpg
         self.assertEqual(upload_mock.call_args_list, expected_args)
 
     @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    @mock.patch('core.management.commands.ssl_images.check_https_availability',
+                new=lambda r: None)
     def test_multiple_replacement_2(self, upload_mock):
         old_src = [
             'http://example.com/images/my_image.jpg',
@@ -192,3 +203,65 @@ http://surfguitar101.com/media/zzz.jpg
         result = process_post(test_str)
         self.assertEqual(expected, result)
         upload_mock.assert_called_once_with(old_src[0])
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    @mock.patch('core.management.commands.ssl_images.check_https_availability',
+                new=lambda r: None)
+    def test_caching(self, upload_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'http://example.com/static/wow.gif',
+            'http://example.com/images/my_image.jpg',
+        ]
+        new_src = [
+            'https://cloud.com/some/path/012345.jpg',
+            'https://cloud.com/some/path/6789AB.gif',
+            'https://cloud.com/some/path/012345.jpg',
+        ]
+
+        template = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?
+            Another one: ![pic]({})
+            And finally
+            ![an image]({})
+            """
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        upload_mock.side_effect = new_src
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        expected_args = [mock.call(c) for c in old_src[:2]]
+        self.assertEqual(upload_mock.call_args_list, expected_args)
+
+    @mock.patch('core.management.commands.ssl_images.check_https_availability')
+    def test_https_availability(self, check_https_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'http://example.com/static/wow.gif',
+            'http://example.com/images/another_image.jpg',
+        ]
+        new_src = [
+            'https://example.com/images/my_image.jpg',
+            'https://example.com/static/wow.gif',
+            'https://example.com/images/another_image.jpg',
+        ]
+
+        template = """Here is a really cool http: based image:
+            ![flyer]({})
+            Cool, right?
+            Another one: ![pic]({})
+            And finally
+            ![an image]({})
+            """
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        check_https_mock.side_effect = new_src
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        expected_args = [mock.call(urlparse(c)) for c in old_src]
+        self.assertEqual(check_https_mock.call_args_list, expected_args)
