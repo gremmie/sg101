@@ -183,7 +183,7 @@ class RegisterForm(forms.Form):
         # Send the confirmation email
 
         site = Site.objects.get_current()
-        admin_email = settings.ADMINS[0][1]
+        admin_email = settings.DEFAULT_FROM_EMAIL
 
         activation_link = 'http://%s%s' % (site.domain, reverse('accounts.views.register_confirm',
                 kwargs = {'username' : pending_user.username, 'key' : pending_user.key}))
@@ -199,8 +199,7 @@ class RegisterForm(forms.Form):
                 })
 
         subject = 'Registration Confirmation for ' + site.name
-        send_mail(subject, msg, admin_email, [self.cleaned_data['email']],
-                defer=False)
+        send_mail(subject, msg, admin_email, [self.cleaned_data['email']])
         logger.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
                 self.cleaned_data['email'], pending_user.username, self.ip)
 
@@ -226,7 +225,7 @@ class ForgotUsernameForm(forms.Form):
             return
 
         site = Site.objects.get_current()
-        admin_email = settings.ADMINS[0][1]
+        admin_email = settings.DEFAULT_FROM_EMAIL
 
         subject = 'Forgotten username for %s' % site.name
         msg = render_to_string('accounts/forgot_user_email.txt', {
@@ -234,7 +233,7 @@ class ForgotUsernameForm(forms.Form):
             'site': site,
             'admin_email': admin_email,
             })
-        send_mail(subject, msg, admin_email, [email], defer=False)
+        send_mail(subject, msg, admin_email, [email])
 
         logger.info('Forgotten username email sent to {} <{}>'.format(
             user.username, email))

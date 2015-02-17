@@ -4,20 +4,22 @@ Celery tasks for the core application.
 """
 from __future__ import absolute_import
 
-from celery import shared_task
 import django.core.mail
+from celery import shared_task
 
 import core.whos_online
 
 
 @shared_task
-def send_mail(subject, message, from_email, recipient_list, **kwargs):
+def send_mail(**kwargs):
     """
     A task to send mail via Django.
 
+    kwargs must be a dict of keyword arguments for an EmailMessage.
+
     """
-    django.core.mail.send_mail(subject, message, from_email, recipient_list,
-            **kwargs)
+    msg = django.core.mail.EmailMessage(**kwargs)
+    msg.send()
 
 
 @shared_task

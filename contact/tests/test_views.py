@@ -27,7 +27,8 @@ class BaseTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
         self.assertEqual(len(email.recipients()), 1)
-        self.assertEqual(email.from_email, post_data['email'])
+        self.assertEqual(email.extra_headers['Reply-To'], post_data['email'])
+        self.assertEqual(email.from_email, 'no_reply@example.com')
         self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
         self.assertTrue(post_data['subject'] in email.subject)
         msg = email.message().as_string()

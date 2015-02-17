@@ -3,6 +3,7 @@ Views for the News application.
 """
 
 import datetime
+from django.conf import settings
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.template.loader import render_to_string
@@ -201,11 +202,11 @@ def email_story(request, story_id):
     if request.method == 'POST':
         send_form = SendStoryForm(request.POST)
         if send_form.is_valid():
+            site = Site.objects.get_current()
             to_name = send_form.name()
             to_email = send_form.email()
             from_name = get_full_name(request.user)
-            from_email = request.user.email
-            site = Site.objects.get_current()
+            from_email = settings.GPP_NO_REPLY_EMAIL + '@' + site.domain
 
             msg = render_to_string('news/send_story_email.txt',
                     {
@@ -218,7 +219,7 @@ def email_story(request, story_id):
                     })
 
             subject = 'Interesting Story at ' + site.name
-            send_mail(subject, msg, from_email, [to_email])
+            send_mail(subject, msg, from_email, [to_email], reply_to=request.user.email)
             return HttpResponseRedirect(reverse('news.views.email_thanks'))
     else:
         send_form = SendStoryForm()

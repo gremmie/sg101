@@ -399,7 +399,7 @@ def _email_pms(request, msg_ids):
                     'msgs': msgs,
                     'admin_email': admin_email,
                 })
-    send_mail(subject, msg_body, from_email, [email_addr], defer=False)
+    send_mail(subject, msg_body, from_email, [email_addr])
 
     msg = '{} message{} sent to email.'.format(count, '' if count == 1 else 's')
     if count > 0:
