@@ -102,7 +102,13 @@ def orient_image(im):
 
     """
     if hasattr(im, '_getexif'):
-        exif = im._getexif()
+        try:
+            exif = im._getexif()
+        except IndexError:
+            # Work around issue seen in Pillow
+            # https://github.com/python-pillow/Pillow/issues/518
+            exif = None
+
         if exif and ORIENT_TAG in exif:
             orientation = exif[ORIENT_TAG]
             func = ORIENT_FUNCS.get(orientation)
