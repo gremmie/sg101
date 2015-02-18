@@ -38,8 +38,11 @@ class ContactForm(forms.Form):
                     'site_name': site.name,
                     'user_name': self.cleaned_data['name'],
                     'user_email': self.cleaned_data['email'],
+                    'subject': self.cleaned_data['subject'],
                     'message': self.cleaned_data['message'],
                 })
 
         subject = site.name + ' Feedback: ' + self.cleaned_data['subject']
-        send_mail(subject, msg, self.cleaned_data['email'], self.recipient_list)
+        from_email = settings.GPP_NO_REPLY_EMAIL + '@' + site.domain
+        send_mail(subject, msg, from_email, self.recipient_list,
+                  reply_to=self.cleaned_data['email'])

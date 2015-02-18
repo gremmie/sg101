@@ -23,7 +23,7 @@ def temp_open(path, mode):
         os.remove(path)
 
 
-def send_mail(subject, message, from_email, recipient_list, defer=True, **kwargs):
+def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer=True):
     """
     The main send email function. Use this function to send email from the
     site. All applications should use this function instead of calling
@@ -39,15 +39,23 @@ def send_mail(subject, message, from_email, recipient_list, defer=True, **kwargs
         logging.warning("Empty recipient_list in send_mail")
         return
 
-    logging.debug('EMAIL:\nFrom: %s\nTo: %s\nSubject: %s\nMessage:\n%s',
-        from_email, str(recipient_list), subject, message)
+    logging.debug('EMAIL:\nFrom: %s\nTo: %s\nReply-To: %s\nSubject: %s\nMessage:\n%s',
+        from_email, str(recipient_list), reply_to, subject, message)
+
+    headers = {'Reply-To': reply_to} if reply_to else None
+    msg_kwargs = {
+        'subject': subject,
+        'body': message,
+        'from_email': from_email,
+        'to': recipient_list,
+        'headers': headers,
+    }
 
     if defer:
-        core.tasks.send_mail.delay(subject, message, from_email, recipient_list,
-                **kwargs)
+        core.tasks.send_mail.delay(**msg_kwargs)
     else:
-        django.core.mail.send_mail(subject, message, from_email, recipient_list,
-                **kwargs)
+        msg = django.core.mail.EmailMessage(**msg_kwargs)
+        msg.send()
 
 
 def email_admins(subject, message):
