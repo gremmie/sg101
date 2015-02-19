@@ -5,6 +5,7 @@ from urlparse import urlparse
 
 import mock
 
+from core.management.commands.ssl_images import html_check
 from core.management.commands.ssl_images import process_post
 import core.management.commands.ssl_images
 
@@ -265,3 +266,51 @@ http://surfguitar101.com/media/zzz.jpg
         self.assertEqual(expected, result)
         expected_args = [mock.call(urlparse(c)) for c in old_src]
         self.assertEqual(check_https_mock.call_args_list, expected_args)
+
+
+class HtmlCheckTestCase(unittest.TestCase):
+
+    def test_empty(self):
+        self.assertFalse(html_check(''))
+
+    def test_no_images(self):
+        self.assertFalse(html_check('<p>Hi there!</p>'))
+        self.assertFalse(html_check('<p>Hi <b>there</b>!</p>'))
+
+    def test_safe_image(self):
+        self.assertFalse(html_check('<img src="https://a.jpg" />'))
+        self.assertFalse(html_check('<img src="" alt="stuff" />'))
+        self.assertFalse(html_check('<img src="HTTPS://a.jpg" />'))
+        self.assertFalse(html_check("""
+            <div>
+            <p>Look: <img src="https://a.jpg" alt="a" /></p>
+            <p>Look again: <img src="https://b.jpg" alt="b" /></p>
+            </div>
+            """))
+
+    def test_one_image(self):
+        self.assertTrue(html_check('<img src="http://a.jpg" alt="a" />'))
+        self.assertTrue(html_check(
+            '<p>Look: <img src="http://a.jpg" alt="a" /></p>'))
+
+    def test_two_images(self):
+        self.assertTrue(html_check("""
+            <p>Look: <img src="https://a.jpg" alt="a" /></p>
+            <p>Look again: <img src="http://b.jpg" alt="b" /></p>
+            """))
+        self.assertTrue(html_check("""
+            <p>Look: <img src="http://a.jpg" alt="a" /></p>
+            <p>Look again: <img src="http://b.jpg" alt="b" /></p>
+            """))
+        self.assertTrue(html_check("""
+            <div>
+            <p>Look: <img src="http://a.jpg" alt="a" /></p>
+            <p>Look again: <img src="http://b.jpg" alt="b" /></p>
+            </div>
+            """))
+        self.assertTrue(html_check("""
+            <div>
+            <p>Look: <img src="http://a.jpg" alt="a" /></p>
+            <p>Look again: <img src="https://b.jpg" alt="b" /></p>
+            </div>
+            """))

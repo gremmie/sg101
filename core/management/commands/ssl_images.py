@@ -20,6 +20,7 @@ import uuid
 
 from django.core.management.base import NoArgsCommand, CommandError
 from django.conf import settings
+from lxml import etree
 import markdown.inlinepatterns
 from PIL import Image
 
@@ -280,6 +281,21 @@ def process_post(text):
     return IMAGE_LINK_RE.sub(replace_image_markup, text)
 
 
+def html_check(html):
+    """Return True if the given HTML fragment has <img> tags with src attributes
+    that use http, and False otherwise.
+    """
+    if not html:
+        return False
+
+    root = etree.HTML(html)
+    for img in root.iter('img'):
+        src = img.get('src')
+        if src and src.lower().startswith('http:'):
+            return True
+    return False
+
+
 class Command(NoArgsCommand):
     help = "Rewrite forum posts and comments to not use http for images"
     option_list = NoArgsCommand.option_list + (
@@ -361,6 +377,12 @@ class Command(NoArgsCommand):
                 logger.debug("original: %s", txt)
                 logger.debug("changed:  %s", new_txt)
                 setattr(model, text_attr, new_txt)
+                model.save()
+            elif html_check(model.html):
+                # Check for content generated with older smiley code that used
+                # absolute URLs for the smiley images. If True, then just save
+                # the model again to force updated HTML to be created.
+                logger.info("Older Smiley HTML detected, forcing a save")
                 model.save()
 
         logger.info("ssl_images exiting")
