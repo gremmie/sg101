@@ -7,6 +7,7 @@ images to https. It does this by rewriting the markup:
       an S3 bucket. The src attribute is replaced with the new S3 URL.
 """
 import base64
+import datetime
 import httplib
 import logging
 from optparse import make_option
@@ -312,6 +313,7 @@ class Command(NoArgsCommand):
             )
 
     def handle_noargs(self, **options):
+        time_started = datetime.datetime.now()
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)
 
@@ -363,6 +365,7 @@ class Command(NoArgsCommand):
         if i is None:
             i = 0
 
+        count = 0
         for n, model in enumerate(qs.iterator()):
             if quit_flag:
                 logger.warning("SIGINT received, exiting")
@@ -384,5 +387,9 @@ class Command(NoArgsCommand):
                 # the model again to force updated HTML to be created.
                 logger.info("Older Smiley HTML detected, forcing a save")
                 model.save()
+            count += 1
 
-        logger.info("ssl_images exiting")
+        time_finished = datetime.datetime.now()
+        elapsed = time_finished - time_started
+        logger.info("ssl_images exiting; number of objects: %d; elapsed: %s",
+                    count, elapsed)
