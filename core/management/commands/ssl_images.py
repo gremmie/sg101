@@ -8,7 +8,6 @@ images to https. It does this by rewriting the markup:
 """
 import base64
 import datetime
-import httplib
 import logging
 from optparse import make_option
 import os
@@ -168,49 +167,11 @@ def convert_to_ssl(parsed_url):
         logger.info("Found URL in cache: %s => %s", src, new_url)
         return new_url
 
-    # It has been observed that at least 2 different services
-    # serve up the same image on https: with the URL otherwise the same.
-    # Check to see if the image is available via https first.
-    new_url = check_https_availability(parsed_url)
-    if new_url:
-        url_cache[src] = new_url
-        return new_url
-
-    # If none of the above worked, try to download and upload to our S3 bucket
+    # Try to download and upload to our S3 bucket
     new_url = save_image_to_cloud(src)
     if new_url:
         url_cache[src] = new_url
     return new_url
-
-
-def check_https_availability(parsed_url):
-    """Given a urlparse.urlparse() result, perform a HEAD request over https
-    using the same net location and path. If we get a response that indicates an
-    image is available, return the url of the image over https. Otherwise return
-    None.
-    """
-    logger.info("Checking https availability for %s", parsed_url.geturl())
-    con = httplib.HTTPSConnection(parsed_url.netloc)
-    try:
-        con.request('HEAD', parsed_url.path)
-    except (httplib.HTTPException, socket.timeout) as ex:
-        logger.info("https HEAD request failed: %s", ex)
-        return None
-
-    content_type = None
-    response = con.getresponse()
-    if response.status == 200:
-        content_type = response.getheader('content-type')
-        if content_type:
-            parts = content_type.split('/')
-            if len(parts) >= 2 and parts[0] == 'image':
-                url = urlparse.urlunparse(('https', ) + parsed_url[1:])
-                logger.info("Image is available at %s", url)
-                return url
-
-    logger.info('https HEAD request failed; status = %d, content-type = %s',
-                response.status, content_type)
-    return None
 
 
 def save_image_to_cloud(src):
