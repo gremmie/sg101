@@ -8,6 +8,7 @@ images to https. It does this by rewriting the markup:
 """
 import base64
 import datetime
+import json
 import logging
 from optparse import make_option
 import os
@@ -44,10 +45,13 @@ PHOTO_MAX_SIZE = (660, 720)
 PHOTO_BASE_URL = 'https://s3.amazonaws.com/'
 PHOTO_BUCKET_NAME = 'sg101.forum.photos'
 
+CACHE_FILENAME = 'ssl_images_cache.json'
+
 quit_flag = False
 opener = None
 bucket = None
 url_cache = {}
+bad_hosts = set()
 
 
 def signal_handler(signum, frame):
@@ -92,19 +96,23 @@ class ImageURLopener(urllib.FancyURLopener):
         return self.http_error_default(url, fp, errcode, errmsg, headers)
 
 
-def download_image(src):
+def download_image(parsed_url):
     """Downloads the image file from the given source URL.
 
     If successful returns the path to the downloaded file. Otherwise None is
     returned.
     """
+    src = parsed_url.geturl()
     logger.info("Retrieving %s", src)
     try:
         fn, hdrs = opener.retrieve(src)
     except IOError as ex:
-        args = ex.args
+        args = ex.args if ex.args else []
         if len(args) == 4 and args[0] == 'http error':
             logger.error("http error: %d - %s", args[1], args[2])
+        elif len(args) == 2 and isinstance(args[1], socket.gaierror):
+            logger.error("gaierror, ignoring host %s", parsed_url.hostname)
+            bad_hosts.add(parsed_url.hostname)
         else:
             logger.error("%s", ex)
         return None
@@ -161,12 +169,16 @@ def convert_to_ssl(parsed_url):
 
     src = parsed_url.geturl()
 
-    # Check the cache first
+    if parsed_url.hostname in bad_hosts:
+        logger.info("Host known to be bad, skipping: %s", src)
+        return None
+
+    # Check the cache
     try:
         new_url = url_cache[src]
     except KeyError:
         # cache miss, try to get the file
-        new_url = save_image_to_cloud(src)
+        new_url = save_image_to_cloud(parsed_url)
         url_cache[src] = new_url
     else:
         if new_url:
@@ -177,12 +189,12 @@ def convert_to_ssl(parsed_url):
     return new_url
 
 
-def save_image_to_cloud(src):
+def save_image_to_cloud(parsed_url):
     """Downloads an image at a given source URL. Uploads it to cloud storage.
 
     Returns the new URL or None if unsuccessful.
     """
-    fn = download_image(src)
+    fn = download_image(parsed_url)
     if fn:
         resize_image(fn)
         return upload_image(fn)
@@ -331,6 +343,9 @@ class Command(NoArgsCommand):
                           base_url=PHOTO_BASE_URL,
                           bucket_name=PHOTO_BUCKET_NAME)
 
+        # Load cached info from previous runs
+        load_cache()
+
         if i is None:
             i = 0
 
@@ -373,3 +388,35 @@ class Command(NoArgsCommand):
 
         logger.info("Summary: http: %d; https: %d; lost: %d; saved: %3.1f %%",
                     http_images, https_images, bad_images, pct_saved)
+
+        save_cache()
+        logger.info("ssl_images done")
+
+
+def load_cache():
+    """Load cache from previous runs."""
+    logger.info("Loading cached information")
+    try:
+        with open(CACHE_FILENAME, 'r') as fp:
+            d = json.load(fp)
+    except IOError as ex:
+        logger.error("Cache file (%s) IOError: %s", CACHE_FILENAME, ex)
+        return
+    except ValueError:
+        logger.error("Mangled cache file: %s", CACHE_FILENAME)
+        return
+
+    global bad_hosts, url_cache
+    try:
+        bad_hosts = set(d['bad_hosts'])
+        url_cache = d['url_cache']
+    except KeyError:
+        logger.error("Malformed cache file: %s", CACHE_FILENAME)
+
+
+def save_cache():
+    """Save our cache to a file for future runs."""
+    logger.info("Saving cached information")
+    d = {'bad_hosts': list(bad_hosts), 'url_cache': url_cache}
+    with open(CACHE_FILENAME, 'w') as fp:
+        json.dump(d, fp, indent=4)
