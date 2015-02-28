@@ -274,6 +274,9 @@ class Command(NoArgsCommand):
             make_option('-j', '--j',
                 type='int',
                 help="optional second slice index; the j in [i:j]"),
+            make_option('-t', '--timeout',
+                type='int',
+                help="optional socket timeout (secs)"),
             )
 
     def handle_noargs(self, **options):
@@ -310,7 +313,9 @@ class Command(NoArgsCommand):
             qs = qs[:j]
 
         # Set global socket timeout
-        socket.setdefaulttimeout(30)
+        timeout = options.get('timeout', 30)
+        logger.info("Setting socket timeout to %d", timeout)
+        socket.setdefaulttimeout(timeout)
 
         # Install signal handler for ctrl-c
         signal.signal(signal.SIGINT, signal_handler)
