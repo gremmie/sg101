@@ -162,15 +162,18 @@ def convert_to_ssl(parsed_url):
     src = parsed_url.geturl()
 
     # Check the cache first
-    new_url = url_cache.get(src)
-    if new_url:
-        logger.info("Found URL in cache: %s => %s", src, new_url)
-        return new_url
-
-    # Try to download and upload to our S3 bucket
-    new_url = save_image_to_cloud(src)
-    if new_url:
+    try:
+        new_url = url_cache[src]
+    except KeyError:
+        # cache miss, try to get the file
+        new_url = save_image_to_cloud(src)
         url_cache[src] = new_url
+    else:
+        if new_url:
+            logger.info("Found URL in cache: %s => %s", src, new_url)
+        else:
+            logger.info("URL known to be bad, skipping: %s", src)
+
     return new_url
 
 
@@ -354,3 +357,14 @@ class Command(NoArgsCommand):
         elapsed = time_finished - time_started
         logger.info("ssl_images exiting; number of objects: %d; elapsed: %s",
                     count, elapsed)
+
+        http_images = len(url_cache)
+        https_images = sum(1 for v in url_cache.itervalues() if v)
+        bad_images = http_images - https_images
+        if http_images > 0:
+            pct_saved = float(https_images) / http_images * 100.0
+        else:
+            pct_saved = 0.0
+
+        logger.info("Summary: http: %d; https: %d; lost: %d; saved: %3.1f %%",
+                    http_images, https_images, bad_images, pct_saved)
