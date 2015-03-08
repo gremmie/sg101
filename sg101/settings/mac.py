@@ -18,3 +18,4 @@ DATABASES = {
 }
 
 REDIS_UNIX_SOCKET = '/tmp/redis.sock'
+BROKER_URL = 'redis+socket:///tmp/redis.sock?virtual_host=1'
