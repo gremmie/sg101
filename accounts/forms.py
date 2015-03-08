@@ -1,6 +1,7 @@
 """forms for the accounts application"""
 
 import logging
+import random
 
 from django import forms
 from django.contrib.auth.models import User
@@ -16,6 +17,30 @@ from accounts.models import IllegalEmail
 
 
 logger = logging.getLogger('auth')
+
+
+CODE_WORD_CHOICES = [
+    'reverb',
+    'sg101',
+    'guitar',
+    'showman',
+    'surf',
+    'surfer',
+    'tank',
+    'splash',
+    'gremmie',
+    'hodad',
+    'stomp',
+    'belairs',
+    'dickdale',
+    'chantays',
+    'astronauts',
+    'fender',
+]
+
+def generate_registration_code():
+    """Generates a simple, random registration code for the user to enter."""
+    return '{}-{}'.format(random.choice(CODE_WORD_CHOICES), random.randint(100, 999))
 
 
 class RegisterForm(forms.Form):
@@ -55,28 +80,6 @@ class RegisterForm(forms.Form):
     question3 = forms.CharField(label="Don't put anything in this box",
         required=False,
         widget=forms.TextInput(attrs={'class': 'text'}))
-
-    SPAM_CHOICES = [(1, 'cat'), (2, '328'), (4, 'green'), (8, 'ocean')]
-    question4 = forms.ChoiceField(label="Pick the number", choices=SPAM_CHOICES)
-    question5 = forms.IntegerField(label="What number did you pick, above?",
-        widget=forms.TextInput(attrs={'class': 'text'}))
-    question6 = forms.ChoiceField(label="Pick the color", choices=SPAM_CHOICES)
-
-    USER_QUALITIES = [
-        (1, "I am the lowest form of life, a spammer"),
-        (2, "I'm a fan of surf music or I want to learn more"),
-        (3, "Someone is paying me to post links to this site"),
-        (4, "I am not going to spam this site"),
-        (5, "I understand my account may be removed if I post spam"),
-        (6, "I am going to spam the crap out of this site"),
-        (7, "Surf music is one of my interests, not spam"),
-    ]
-    question7 = forms.MultipleChoiceField(
-        label="Check all that apply",
-        choices=USER_QUALITIES,
-        required=False,
-        widget=forms.CheckboxSelectMultiple)
-
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -150,60 +153,78 @@ class RegisterForm(forms.Form):
             self._validation_error('Oops, that should be blank', answer)
         return answer
 
-    def clean_question4(self):
-        answer = self.cleaned_data.get('question4')
-        if answer != u'2':
-            self._validation_error('Please pick the number', answer)
-        return answer
+    def save(self, request):
+        request.session['reg_info'] = {
+            'username': self.cleaned_data['username'],
+            'email': self.cleaned_data['email'],
+            'password': self.cleaned_data['password1'],
+            'code': generate_registration_code(),
+        }
 
-    def clean_question5(self):
-        answer = self.cleaned_data.get('question5')
-        if answer != 328:
-            self._validation_error('Please enter the correct number', answer)
-        return answer
+    def _validation_error(self, msg, param=None):
+        logger.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
+        raise forms.ValidationError(msg)
 
-    def clean_question6(self):
-        answer = self.cleaned_data.get('question6')
-        if answer != u'4':
-            self._validation_error('Please pick the color', answer)
-        return answer
 
-    def clean_question7(self):
-        answer = self.cleaned_data.get('question7')
-        answer.sort()
-        if answer != [u'2', u'4', u'5', u'7']:
-            self._validation_error("Please double-check your checkboxes", answer)
-        return answer
+class RegisterCodeForm(forms.Form):
+    """Form for processing anti-spam code."""
+    code = forms.CharField(
+            label="Registration code",
+            widget=forms.TextInput(attrs={'class': 'text'}))
+
+    def __init__(self, *args, **kwargs):
+        self.session = kwargs.pop('session', None)
+        self.ip = kwargs.pop('ip', '?')
+        super(RegisterCodeForm, self).__init__(*args, **kwargs)
+
+    def clean_code(self):
+        reg_info = self.session.get('reg_info')
+        saved_code = reg_info.get('code') if reg_info else None
+        if not saved_code:
+            self._validation_error("Registration code error")
+        user_code = self.cleaned_data['code']
+        if user_code:
+            user_code = user_code.strip()
+
+        if user_code != saved_code:
+            self._validation_error("The registration code does not match")
 
     def save(self):
-        pending_user = PendingUser.objects.create_pending_user(self.cleaned_data['username'],
-                self.cleaned_data['email'],
-                self.cleaned_data['password1'])
+        """Process successful registration."""
+        reg_info = self.session['reg_info']
+        username = reg_info['username']
+        email = reg_info['email']
+        password = reg_info['password']
+
+        pending_user = PendingUser.objects.create_pending_user(
+                username,
+                email,
+                password)
 
         # Send the confirmation email
-
         site = Site.objects.get_current()
         admin_email = settings.DEFAULT_FROM_EMAIL
 
-        activation_link = 'http://%s%s' % (site.domain, reverse('accounts.views.register_confirm',
-                kwargs = {'username' : pending_user.username, 'key' : pending_user.key}))
+        activation_link = 'http://%s%s' % (
+                site.domain,
+                reverse('accounts-register_confirm',
+                        kwargs={'username': pending_user.username,
+                                'key': pending_user.key}))
 
-        msg = render_to_string('accounts/registration_email.txt',
-                {
-                    'site_name' : site.name,
-                    'site_domain' : site.domain,
-                    'user_email' : pending_user.email,
-                    'activation_link' : activation_link,
-                    'username' : pending_user.username,
-                    'admin_email' : admin_email,
+        msg = render_to_string('accounts/registration_email.txt', {
+                'site_name' : site.name,
+                'site_domain' : site.domain,
+                'user_email' : pending_user.email,
+                'activation_link' : activation_link,
+                'username' : pending_user.username,
+                'admin_email' : admin_email,
                 })
 
         subject = 'Registration Confirmation for ' + site.name
-        send_mail(subject, msg, admin_email, [self.cleaned_data['email']])
+        send_mail(subject, msg, admin_email, [email])
         logger.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
-                self.cleaned_data['email'], pending_user.username, self.ip)
-
-        return pending_user
+                    email, pending_user.username, self.ip)
+        del self.session['reg_info']
 
     def _validation_error(self, msg, param=None):
         logger.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
