@@ -5,8 +5,13 @@ from django.views.generic import TemplateView
 
 urlpatterns = patterns('accounts.views',
     url(r'^register/$', 'register', name='accounts-register'),
-    (r'^register/thanks/$', 'register_thanks'),
-    (r'^register/confirm/(?P<username>[\w.@+-]{1,30})/(?P<key>[a-zA-Z0-9]{20})/$', 'register_confirm'),
+    url(r'^register/1/$', 'register1', name='accounts-register1'),
+    url(r'^register/2/$', 'register2', name='accounts-register2'),
+    url(r'^register/code/$', 'get_code', name='accounts-code'),
+    url(r'^register/thanks/$', 'register_thanks', name='accounts-register_thanks'),
+    url(r'^register/confirm/(?P<username>[\w.@+-]{1,30})/(?P<key>[a-zA-Z0-9]{20})/$',
+        'register_confirm',
+        name='accounts-register_confirm'),
 )
 
 urlpatterns += patterns('',

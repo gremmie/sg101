@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block custom_js %}
+<script type="text/javascript" src="{{ STATIC_URL }}js/accounts_code.js"></script>
+{% endblock %}
+{% block title %}New User Registration Step 2{% endblock %}
+{% block content %}
+<h2>New User Registration Step 2</h2>
+<p>
+Thank you! You are almost finished with your registration! Just one more step.
+</p>
+<p>
+Please remember or write down the following code as we will ask you to type
+it on the next page.
+</p>
+<p>
+   <strong class="large">
+   <span id="reg-code-block">Please wait for the registration code to appear...</span>
+   </strong>
+</p>
+<p>
+Got the code memorized or written down? Go to the next page and enter it.
+</p>
+
+<form action="{% url 'accounts-register2' %}" method="get">
+<button>Continue...</button>
+</form>
+{% endblock %}

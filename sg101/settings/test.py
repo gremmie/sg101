@@ -3,6 +3,7 @@ Settings to use when running tests. Uses sqlite for speed.
 
 """
 import logging
+import platform
 
 from sg101.settings.base import *
 
@@ -21,8 +22,12 @@ CELERY_ALWAYS_EAGER = True
 # Use a different database in Redis for tests
 REDIS_DB = 14
 QUEUE_REDIS_DB = 14
-BROKER_URL = 'redis://localhost:6379/15'
 CELERY_REDIS_DB = 15
+if platform.system() == 'Darwin':
+    REDIS_UNIX_SOCKET = '/tmp/redis.sock'
+    BROKER_URL = 'redis+socket:///tmp/redis.sock?virtual_host=15'
+else:
+    BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
 
 DATABASES = {
     'default': {
