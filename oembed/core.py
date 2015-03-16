@@ -52,6 +52,7 @@ def get_oembed(api_endpoint, url, format='json', **opts):
 if __name__ == "__main__":
     try:
         print get_oembed("http://www.youtube.com/oembed",
-                "http://www.youtube.com/watch?v=7_IMzJldOf4")
+                         "http://www.youtube.com/watch?v=7_IMzJldOf4",
+                         scheme='https')
     except urllib2.HTTPError, e:
         print e
