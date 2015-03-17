@@ -43,23 +43,24 @@ def fetch_media(request):
         if re.match(provider.url_regex, url):
             try:
                 data = get_oembed(provider.api_endpoint,
-                        url,
-                        maxwidth=settings.OEMBED_MAXWIDTH,
-                        maxheight=settings.OEMBED_MAXHEIGHT)
+                                  url,
+                                  maxwidth=settings.OEMBED_MAXWIDTH,
+                                  maxheight=settings.OEMBED_MAXHEIGHT,
+                                  scheme='https')
             except IOError, e:
                 return HttpResponseBadRequest(
                     "Sorry, we could not retrieve your video (%s)" % e)
 
-            if 'type' not in data or data['type'] != 'video':
+            if data.get('type') != 'video':
                 return HttpResponseBadRequest(
                     "Hey, this doesn't look like a video..??")
 
             oembed = Oembed(url=url,
-                    type=Oembed.VIDEO,
-                    title=data.get('title', ''),
-                    width=int(data.get('width', 0)),
-                    height=int(data.get('height', 0)),
-                    html=data.get('html', ''))
+                            type=Oembed.VIDEO,
+                            title=data.get('title', ''),
+                            width=int(data.get('width', 0)),
+                            height=int(data.get('height', 0)),
+                            html=data.get('html', ''))
             oembed.save()
 
             data = dict(id=oembed.id, embed=oembed.html)

@@ -46,10 +46,6 @@ class RegistrationTest(TestCase):
             'question1': '101',
             'question2': '',
             'question3': '',
-            'question4': u'2',
-            'question5': u'328',
-            'question6': u'4',
-            'question7': [u'2', u'4', u'5', u'7'],
         }
 
     def test_get_view(self):
@@ -75,6 +71,7 @@ class RegistrationTest(TestCase):
             'agree_privacy': 'on',
             'question1': '101',
             'question2': '',
+            'question3': '',
             })
 
         self.assertEqual(response.status_code, 200)
@@ -177,89 +174,6 @@ class RegistrationTest(TestCase):
              self.post_vals)
         self.assertEqual(response.status_code, 200)
 
-    def test_question4(self):
-        """
-        Ensure our security question 4 works
-
-        """
-        self.post_vals['question4'] = u'1'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question4'] = u'4'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question4'] = u'8'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-    def test_question5(self):
-        """
-        Ensure our security question 5 works
-
-        """
-        self.post_vals['question5'] = u'1'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question5'] = u'X'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question5'] = u'2983'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-    def test_question6(self):
-        """
-        Ensure our security question 6 works
-
-        """
-        self.post_vals['question6'] = u'1'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question6'] = u'2'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question6'] = u'8'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-    def test_question7(self):
-        """Test security question 7"""
-
-        self.post_vals['question7'] = []
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question7'] = [u'1']
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question7'] = [u'6', u'2', u'4', u'5', u'7']
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
-        self.post_vals['question7'] = [u'4', u'3', u'7']
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-
     def test_success(self):
         """
         Ensure we can successfully register.
@@ -267,7 +181,59 @@ class RegistrationTest(TestCase):
         """
         response = self.client.post(reverse('accounts-register'),
                 self.post_vals)
-        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('accounts-register1'))
+
+        # No pending user should exist yet
+        try:
+            pending = PendingUser.objects.get(username='a_new_user')
+        except PendingUser.DoesNotExist:
+            pass
+        else:
+            self.fail("PendingUser was created early")
+
+        # Should have created a reg_info dict in the session
+        reg_info = self.client.session.get('reg_info')
+        self.assertEqual(reg_info, {
+            'username': self.post_vals['username'],
+            'email': self.post_vals['email'],
+            'password': self.post_vals['password1'],
+            'code': reg_info['code'],
+            })
+        code = reg_info['code']
+        match = re.match(r'\w+-\d{3}', code)
+        self.assertIsNotNone(match)
+
+        # Get the next page
+        response = self.client.get(reverse('accounts-register2'))
+        self.assertEqual(response.status_code, 200)
+
+        # No pending user should exist yet
+        try:
+            pending = PendingUser.objects.get(username='a_new_user')
+        except PendingUser.DoesNotExist:
+            pass
+        else:
+            self.fail("PendingUser was created early")
+
+        # Try bad code
+        response = self.client.post(reverse('accounts-register2'),
+                                    {'code': code + code })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The registration code does not match")
+
+        # No pending user should exist yet
+        try:
+            pending = PendingUser.objects.get(username='a_new_user')
+        except PendingUser.DoesNotExist:
+            pass
+        else:
+            self.fail("PendingUser was created early")
+
+        # Try good code
+        response = self.client.post(reverse('accounts-register2'),
+                                    {'code': code })
+        self.assertRedirects(response, reverse('accounts-register_thanks'))
+        self.assertIsNone(self.client.session.get('reg_info'))
 
         try:
             pending = PendingUser.objects.get(username='a_new_user')
@@ -278,6 +244,44 @@ class RegistrationTest(TestCase):
         self.assertTrue(datetime.datetime.now() - pending.date_joined <
                 datetime.timedelta(minutes=1))
         self.assertTrue(check_password('my_password', pending.password))
+
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertTrue(msg.subject.startswith('Registration Confirmation'))
+        self.assertTrue(len(msg.to) == 1 and msg.to[0] == pending.email)
+        msg_text = msg.message().as_string()
+
+        activation_link = 'http://example.com%s' % (
+                reverse('accounts-register_confirm',
+                        kwargs={'username': pending.username,
+                                'key': pending.key}))
+        self.assertTrue(activation_link in msg_text)
+
+        # Vist confirm link
+        response = self.client.get(reverse('accounts-register_confirm',
+                                           kwargs={'username': pending.username,
+                                                   'key': pending.key}))
+        self.assertEqual(response.status_code, 200)
+
+        try:
+            pending = PendingUser.objects.get(username='a_new_user')
+        except PendingUser.DoesNotExist:
+            pass
+        else:
+            self.fail("PendingUser was not deleted upon confirmation")
+
+        user = User.objects.get(username=pending.username)
+        self.assertEqual(user.email, pending.email)
+        now = datetime.datetime.now()
+        delta = datetime.timedelta(seconds=10)
+        self.assertTrue(now - user.last_login < delta)
+        self.assertTrue(now - user.date_joined < delta)
+        self.assertEqual(user.password, pending.password)
+        self.assertEqual(user.first_name, '')
+        self.assertEqual(user.last_name, '')
+        self.assertFalse(user.is_staff)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.is_superuser)
 
 
 class ForgotUsernameTest(TestCase):

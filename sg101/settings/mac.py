@@ -18,3 +18,5 @@ DATABASES = {
 }
 
 REDIS_UNIX_SOCKET = '/tmp/redis.sock'
+QUEUE_REDIS_UNIX_SOCKET = REDIS_UNIX_SOCKET
+BROKER_URL = 'redis+socket:///tmp/redis.sock?virtual_host=1'

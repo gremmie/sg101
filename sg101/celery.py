@@ -8,8 +8,11 @@ import sys
 from celery import Celery
 from django.conf import settings
 
+if platform.system() == 'Darwin':
+    role = 'mac'
+else:
+    role = 'production' if platform.node() == 'jaguar' else 'local'
 
-role = 'production' if platform.node() == 'jaguar' else 'local'
 settings_val = 'sg101.settings.{}'.format(role)
 
 # set the default Django settings module for the 'celery' program.
