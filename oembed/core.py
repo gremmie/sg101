@@ -2,6 +2,7 @@
 This module contains core functionality for the oembed application.
 
 """
+from contextlib import closing
 import json
 import urllib
 import urllib2
@@ -16,18 +17,18 @@ except ImportError:
 USER_AGENT = 'gremmies python oembed'
 
 
-def get_oembed(api_endpoint, url, format='json', **opts):
+def get_oembed(api_endpoint, url, fmt='json', **opts):
     """
     Perform the GET request to retrieve the embedded media data from the given
     API endpoint for the given URL. Return the result as a Python dictionary.
 
-    format specifies the response format, and should be 'json' or 'xml'.
+    fmt specifies the response format, and should be 'json' or 'xml'.
     opts are any additional GET options that should be present in the GET
     request.
 
     """
     opts['url'] = url
-    opts['format'] = format
+    opts['format'] = fmt
     api_url = "%s?%s" % (api_endpoint, urllib.urlencode(opts))
 
     headers = {
@@ -35,17 +36,13 @@ def get_oembed(api_endpoint, url, format='json', **opts):
         'Accept-Encoding': 'gzip',
     }
     request = urllib2.Request(api_url, headers=headers)
-
-    opener = urllib2.build_opener()
-    f = opener.open(request)
-    headers = f.info()
-    result = f.read()
-    f.close()
+    with closing(urllib2.urlopen(request)) as response:
+        headers = response.info()
+        result = response.read()
 
     if headers.get('content-encoding') == 'gzip':
-        f = gzip.GzipFile(fileobj=StringIO(result))
-        result = f.read()
-        f.close()
+        with closing(gzip.GzipFile(fileobj=StringIO(result))) as f:
+            result = f.read()
 
     return json.loads(result)
 
