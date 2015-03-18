@@ -47,7 +47,8 @@ class Oembed(models.Model):
     date_added = models.DateTimeField()
 
     def __unicode__(self):
-        return self.title or self.url
+        desc = self.title if self.title else self.url
+        return u"<oembed {}: {}>".format(self.pk, desc)
 
     def save(self, *args, **kwargs):
         if not self.pk:
