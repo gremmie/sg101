@@ -36,7 +36,8 @@ def error_html(oembed):
     """Returns a string of HTML to be used when we can't retrieve the oEmbed
     data.
     """
-    return u'<p><a href="{url}">{title}</a></p>'.format(url=oembed.url, title=oembed.title)
+    return u'<p>Video: <a href="{url}">{title}</a></p>'.format(
+                url=oembed.url, title=oembed.title)
 
 
 def refresh_html(providers, oembed):
