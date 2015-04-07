@@ -103,7 +103,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.flatpages',
     'django.contrib.humanize',
-    'django.contrib.messages',
+    'sg101.apps.DjangoMessagesConfig',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.staticfiles',
