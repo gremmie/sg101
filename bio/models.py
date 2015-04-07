@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
 import bio.flags
+from bio.signals import notify_profile_content_update
 
 
 # These are the secondary user status enumeration values. 
@@ -221,6 +222,3 @@ class BadgeOwnership(models.Model):
         if self.count == 1:
             return u"1 %s" % self.badge.name
         return u"%d %ss" % (self.count, self.badge.name)
-
-# Put down here to avoid a circular import
-from bio.signals import notify_profile_content_update
