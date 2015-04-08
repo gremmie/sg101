@@ -1,6 +1,9 @@
-"""Signals for the downloads application.
+"""Signal handlers for the downloads application.
+
 We use signals to compute the denormalized category counts whenever a download
-is saved."""
+is saved.
+
+"""
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
 
@@ -53,8 +56,8 @@ def on_pending_download_delete(sender, **kwargs):
 
 
 post_save.connect(on_download_save, sender=Download,
-        dispatch_uid='downloads.signals')
+        dispatch_uid='downloads.receivers')
 post_delete.connect(on_download_delete, sender=Download,
-        dispatch_uid='downloads.signals')
+        dispatch_uid='downloads.receivers')
 post_delete.connect(on_pending_download_delete, sender=PendingDownload,
-        dispatch_uid='downloads.signals')
+        dispatch_uid='downloads.receivers')
