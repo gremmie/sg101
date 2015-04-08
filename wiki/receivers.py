@@ -42,5 +42,5 @@ def logout_callback(sender, request, user, **kwargs):
         request.wiki_delete_cookie = request.session.get(SESSION_SET_MEMBER)
 
 
-user_logged_in.connect(login_callback, dispatch_uid='wiki.signals.login')
-user_logged_out.connect(logout_callback, dispatch_uid='wiki.signals.logout')
+user_logged_in.connect(login_callback, dispatch_uid='wiki.receivers.login')
+user_logged_out.connect(logout_callback, dispatch_uid='wiki.receivers.logout')
