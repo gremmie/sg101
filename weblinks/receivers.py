@@ -1,6 +1,8 @@
-"""Signals for the weblinks application.
+"""Signal handlers for the weblinks application.
+
 We use signals to compute the denormalized category counts whenever a weblink
-is saved."""
+is saved.
+"""
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
 
@@ -37,5 +39,5 @@ def on_link_delete(sender, **kwargs):
     cat.save()
 
 
-post_save.connect(on_link_save, sender=Link, dispatch_uid='weblinks.signals')
-post_delete.connect(on_link_delete, sender=Link, dispatch_uid='weblinks.signals')
+post_save.connect(on_link_save, sender=Link, dispatch_uid='weblinks.receivers')
+post_delete.connect(on_link_delete, sender=Link, dispatch_uid='weblinks.receivers')
