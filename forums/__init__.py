@@ -1,2 +1,1 @@
-import signals
-import latest
+default_app_config = 'forums.apps.ForumsConfig'
