@@ -6,6 +6,7 @@ content that should be in the search index.
 """
 from django.db.models import signals
 import queued_search.signals
+import haystack
 
 from bio.signals import profile_content_update
 from forums.signals import topic_content_update, post_content_update
@@ -116,3 +117,18 @@ class QueuedSignalProcessor(queued_search.signals.QueuedSignalProcessor):
     def enqueue_profile(self, sender, **kwargs):
         """Forward the user profile instance on unconditionally."""
         self.enqueue_save(UserProfile, sender, **kwargs)
+
+
+# Starting with Django 1.7, we'd see Django generate warnings if we defined
+# a HAYSTACK_SIGNAL_PROCESSOR in our settings that referenced the class above.
+# This is because Haystack creates an instance of our signal processor class
+# (defined above) at import time, and thus imports this module very early in the
+# application startup sequence. Warnings are then generated when this module
+# imports our models, some of whose applications have not been imported yet.
+# This problem will presumably go away when Haystack can fully support Django
+# 1.7.x and implements an AppConfig with a ready() method. Until then, we don't
+# use Haystack's signal processor object; we'll just create one here. This
+# module will be imported when our custom_search app's ready() method runs.
+
+signal_processor = QueuedSignalProcessor(haystack.connections,
+                                         haystack.connection_router)

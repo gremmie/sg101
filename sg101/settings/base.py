@@ -190,8 +190,6 @@ MAX_TAG_LENGTH = 50
 #######################################################################
 # Haystack Search Settings
 #######################################################################
-HAYSTACK_SIGNAL_PROCESSOR = 'custom_search.signals.QueuedSignalProcessor'
-
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'xapian_backend.XapianEngine',
