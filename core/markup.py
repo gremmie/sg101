@@ -5,7 +5,7 @@ Markup related utitlities useful for the entire project.
 import markdown as _markdown
 from django.utils.encoding import force_unicode
 
-from smiley import SmilifyMarkdown
+from smiley.utils import SmilifyMarkdown
 from core.mdexts.urlize import UrlizeExtension
 from core.mdexts.deleted import DelExtension
 from core.html import clean_html

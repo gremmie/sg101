@@ -7,7 +7,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.html import escape, urlize
 
-from smiley import smilify_html
+from smiley.utils import smilify_html
 
 
 class Shout(models.Model):
