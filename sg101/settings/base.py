@@ -348,3 +348,6 @@ GPP_THIRD_PARTY_CSS = {
     ],
 }
 
+
+# Turn off warning about test runner behavior change
+SILENCED_SYSTEM_CHECKS = ['1_6.W001']
