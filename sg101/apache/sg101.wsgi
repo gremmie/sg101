@@ -35,8 +35,8 @@ def offline_handler(environ, start_response):
 
 if not OFFLINE:
    os.environ['DJANGO_SETTINGS_MODULE'] = 'sg101.settings.production'
-   import django.core.handlers.wsgi
-   application = django.core.handlers.wsgi.WSGIHandler()
+   from django.core.wsgi import get_wsgi_application
+   application = get_wsgi_application()
 else:
    application = offline_handler
 
