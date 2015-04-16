@@ -64,7 +64,7 @@ class Smiley(models.Model):
     image = models.ImageField(upload_to='smiley/images/')
     title = models.CharField(max_length=32)
     code = models.CharField(max_length=32)
-    is_extra = models.BooleanField()
+    is_extra = models.BooleanField(default=False)
 
     objects = SmileyManager()
 

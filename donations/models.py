@@ -96,7 +96,7 @@ class Donation(models.Model):
     """Model to represent a donation to the website."""
 
     user = models.ForeignKey(User, null=True, blank=True)
-    is_anonymous = models.BooleanField()
+    is_anonymous = models.BooleanField(default=False)
     test_ipn = models.BooleanField(default=False, verbose_name="Test IPN")
     txn_id = models.CharField(max_length=20, verbose_name="Txn ID")
     txn_type = models.CharField(max_length=64)

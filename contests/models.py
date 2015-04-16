@@ -30,7 +30,7 @@ class Contest(models.Model):
     title = models.CharField(max_length=64)
     slug = models.SlugField(max_length=64)
     description = models.TextField()
-    is_public = models.BooleanField(db_index=True)
+    is_public = models.BooleanField(default=False, db_index=True)
     creation_date = models.DateTimeField(blank=True)
     end_date = models.DateTimeField()
     contestants = models.ManyToManyField(User, related_name='contests',
