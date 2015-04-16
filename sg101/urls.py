@@ -15,8 +15,6 @@ from custom_search.views import UserSearchView
 from core.views import FixedView
 
 
-admin.autodiscover()
-
 urlpatterns = patterns('',
    url(r'^$',
        TemplateView.as_view(template_name='home.html'),
