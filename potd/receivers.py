@@ -27,5 +27,5 @@ def on_photo_delete(sender, **kwargs):
     Sequence.objects.remove_photo(photo.pk)
 
 
-post_save.connect(on_photo_save, sender=Photo, dispatch_uid='potd.signals')
-post_delete.connect(on_photo_delete, sender=Photo, dispatch_uid='potd.signals')
+post_save.connect(on_photo_save, sender=Photo, dispatch_uid='potd.receivers')
+post_delete.connect(on_photo_delete, sender=Photo, dispatch_uid='potd.receivers')
