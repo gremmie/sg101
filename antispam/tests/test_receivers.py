@@ -2,7 +2,6 @@
 import logging
 
 from django.contrib.auth.models import User
-from django.test import Client
 from django.test import TestCase
 
 from testfixtures import log_capture
@@ -12,7 +11,6 @@ class AntispamSignalRcvrTestCase(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('steve', 'steve@example.com', 'pwd')
-        self.client = Client()
 
         # Temporarily enable logging
         self.old_disable = logging.getLogger().manager.disable
