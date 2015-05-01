@@ -119,9 +119,9 @@ class Calendar(object):
 
     def _make_time(self, date, time=None, tz_name=None):
         """
-        Returns the gdata formatted date/time string given a date, optional time,
-        and optional time zone name (e.g. 'US/Pacific'). If the time zone name is None,
-        no time zone info will be added to the string.
+        Returns the formatted date/time string given a date, optional time, and
+        optional time zone name (e.g. 'US/Pacific'). If the time zone name is
+        None, no time zone info will be added to the string.
         """
 
         if time:
