@@ -65,6 +65,12 @@ class CustomModelSearchForm(ModelSearchForm):
 
         return self.cleaned_data
 
+    def clean_exact(self):
+        exact_field = self.cleaned_data['exact']
+        if "'" in exact_field or '"' in exact_field:
+            raise forms.ValidationError("Quotes are not needed in this field")
+        return exact_field
+
     def search(self):
         if not self.is_valid():
             return self.no_query_found()
@@ -83,24 +89,25 @@ class CustomModelSearchForm(ModelSearchForm):
             self.cleaned_data['models'],
             username)
 
-        sqs = self.searchqueryset
-
         # Note that in Haystack 2.x content is untrusted and is automatically
         # auto-escaped for us.
         #
-        # Filter on the q terms; these should be and'ed together:
-        terms = self.cleaned_data['q'].split()
-        for term in terms:
-            sqs = sqs.filter(content=term)
+        # Gather regular search terms
+        terms = ' '.join(self.cleaned_data['q'].split())
 
         # Exact words or phrases:
-        if self.cleaned_data['exact']:
-            sqs = sqs.filter(content__exact=self.cleaned_data['exact'])
+        exact = self.cleaned_data['exact'].strip()
+        if exact:
+            exact = '"{}"'.format(exact)
 
         # Exclude terms:
-        terms = self.cleaned_data['exclude'].split()
-        for term in terms:
-            sqs = sqs.exclude(content=term)
+        exclude = ["-{}".format(term) for term in self.cleaned_data['exclude'].split()]
+        exclude = ' '.join(exclude)
+
+        query = ' '.join([terms, exact, exclude]).strip()
+        logger.debug("auto_query: %s", query)
+
+        sqs = self.searchqueryset.auto_query(query)
 
         if self.load_all:
             sqs = sqs.load_all()

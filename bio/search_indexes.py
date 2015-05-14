@@ -2,10 +2,11 @@
 from haystack import indexes
 
 from bio.models import UserProfile
+from custom_search.fields import MaxTermSizeCharField
 
 
 class UserProfileIndex(indexes.SearchIndex, indexes.Indexable):
-    text = indexes.CharField(document=True, use_template=True)
+    text = MaxTermSizeCharField(document=True, use_template=True)
     author = indexes.CharField(model_attr='user')
 
     def get_model(self):

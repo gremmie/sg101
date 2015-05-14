@@ -1,11 +1,12 @@
 """Haystack search index for the weblinks application."""
 from haystack import indexes
 
+from custom_search.fields import MaxTermSizeCharField
 from weblinks.models import Link
 
 
 class LinkIndex(indexes.SearchIndex, indexes.Indexable):
-    text = indexes.CharField(document=True, use_template=True)
+    text = MaxTermSizeCharField(document=True, use_template=True)
     author = indexes.CharField(model_attr='user')
     pub_date = indexes.DateTimeField(model_attr='date_added')
 
