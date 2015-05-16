@@ -208,11 +208,17 @@ REDIS_DB = 0
 #######################################################################
 BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1'
 BROKER_POOL_LIMIT = 10
+BROKER_TRANSPORT_OPTIONS = {
+    'fanout_prefix': True,
+    'fanout_patterns': True,
+}
 
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_IGNORE_RESULT = True
+# Set this when we want results:
+#CELERY_RESULT_BACKEND = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1&new_join=1'
 CELERY_DISABLE_RATE_LIMITS = True
 CELERY_SEND_TASK_ERROR_EMAILS = True
 
