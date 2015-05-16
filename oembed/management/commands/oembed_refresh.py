@@ -49,7 +49,7 @@ def refresh_html(providers, oembed):
             endpoint = p.api_endpoint
             break
     else:
-        logger.error("No provider found for %s", oembed)
+        logger.error(u"No provider found for %s", oembed)
         return
 
     html = None
@@ -60,18 +60,18 @@ def refresh_html(providers, oembed):
                             scheme='https')
     except urllib2.HTTPError as ex:
         if 400 <= ex.code < 500:
-            logger.error("Server could not handle request for %s: %d", oembed, ex.code)
+            logger.error(u"Server could not handle request for %s: %d", oembed, ex.code)
             html = error_html(oembed)
         else:
-            logger.critical("Server error during request for %s: %d", oembed, ex.code)
+            logger.critical(u"Server error during request for %s: %d", oembed, ex.code)
 
     except urllib2.URLError as ex:
-        logger.critical("Failed to reach provider for %s: %s", oembed, ex.reason)
+        logger.critical(u"Failed to reach provider for %s: %s", oembed, ex.reason)
     else:
         html = result['html']
 
     if html:
-        logger.info("Updating %s", oembed)
+        logger.info(u"Updating %s", oembed)
         oembed.html = html
         oembed.save()
 
