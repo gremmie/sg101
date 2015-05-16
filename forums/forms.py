@@ -2,6 +2,8 @@
 Forms for the forums application.
 
 """
+from collections import OrderedDict
+
 from django import forms
 from django.conf import settings
 
@@ -161,10 +163,16 @@ class PostForm(forms.ModelForm):
         topic_name = kwargs.pop('topic_name', None)
         super(PostForm, self).__init__(*args, **kwargs)
 
-        if topic_name is not None:  # this is a "first post"
-            self.fields.insert(0, 'name', forms.CharField(label='Subject',
-                    max_length=255,
-                    widget=forms.TextInput(attrs={'size': 64})))
+        if topic_name is not None:
+            # this is a "first post", add a field for a topic name
+            new_fields = OrderedDict(name=forms.CharField(
+                            label='Subject', max_length=255,
+                            widget=forms.TextInput(attrs={
+                                'class': 'title',
+                                'style': 'width: 90%',
+                            })))
+            new_fields.update(self.fields)
+            self.fields = new_fields
             self.initial['name'] = topic_name
 
         attachments = args[0].getlist('attachment') if len(args) else []
