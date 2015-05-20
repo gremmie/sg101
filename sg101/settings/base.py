@@ -75,6 +75,7 @@ MIDDLEWARE_CLASSES = [
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',
     'wiki.middleware.WikiMiddleware',
+    'waffle.middleware.WaffleMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
@@ -111,6 +112,7 @@ INSTALLED_APPS = [
     'haystack',
     'queued_search',
     'tagging',
+    'waffle',
     'accounts',
     'antispam',
     'bandmap',
