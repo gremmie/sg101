@@ -61,18 +61,9 @@ def get_time_prefs(user):
     """
     Return the supplied user's time preferences in the form of a 2-tuple:
         (use_24_time, time_zone_name)
-
-    These preferences are cached to reduce database hits.
-
     """
-    cache_key = '%s_tz_prefs' % user.username
-    tz_prefs = cache.get(cache_key)
-    if tz_prefs is None:
-        profile = user.profile
-        tz_prefs = profile.use_24_time, profile.time_zone
-        cache.set(cache_key, tz_prefs)
-
-    return tz_prefs
+    profile = user.profile
+    return profile.use_24_time, profile.time_zone
 
 
 @register.simple_tag
