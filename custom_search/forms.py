@@ -54,13 +54,17 @@ class CustomModelSearchForm(ModelSearchForm):
                 label='Search in', widget=forms.CheckboxSelectMultiple)
 
     def clean(self):
+        super(CustomModelSearchForm, self).clean()
         if not settings.SEARCH_QUEUE_ENABLED:
             raise forms.ValidationError("Our search function is offline for "
                     "maintenance. Please try again later. "
                     "We apologize for any inconvenience.")
 
-        if not (self.cleaned_data['q'] or self.cleaned_data['exact'] or
-                self.cleaned_data['exclude']):
+        q = self.cleaned_data.get('q')
+        exact = self.cleaned_data.get('exact')
+        exclude = self.cleaned_data.get('exclude')
+
+        if not (q or exact or exclude):
             raise forms.ValidationError('Please supply some search terms')
 
         return self.cleaned_data
