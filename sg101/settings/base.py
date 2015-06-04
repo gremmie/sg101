@@ -298,6 +298,14 @@ USER_PHOTOS_MAX_SIZE = (660, 720)
 USER_PHOTOS_THUMB_SIZE = (120, 120)
 USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 
+USER_IMAGES_SOURCES = [
+    'dl.dropboxusercontent.com',
+    's3.amazonaws.com',
+    's3-us-west-1.amazonaws.com',
+    'scontent-ord1-1.xx.fbcdn.net',
+    'lh3.googleusercontent.com',
+]
+
 # If this flag is False, the queued_search queue will not be processed. This is
 # useful when we are rebuilding the search index.
 SEARCH_QUEUE_ENABLED = True

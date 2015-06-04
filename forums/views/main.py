@@ -20,6 +20,7 @@ from django.template.loader import render_to_string
 from django.template import RequestContext
 from django.views.decorators.http import require_POST
 from django.db.models import F
+import waffle
 
 import antispam
 import antispam.utils
@@ -30,7 +31,7 @@ from core.functions import email_admins, quote_message
 from forums.models import (Forum, Topic, Post, FlaggedPost, TopicLastVisit,
         ForumLastVisit)
 from forums.forms import (NewTopicForm, NewPostForm, PostForm, MoveTopicForm,
-        SplitTopicForm)
+        SplitTopicForm, NewTopicFormS3)
 from forums.unread import (get_forum_unread_status, get_topic_unread_status,
         get_post_unread_status, get_unread_topics)
 
@@ -295,8 +296,11 @@ def new_topic(request, slug):
     if not perms.can_access(forum.category, request.user):
         return HttpResponseForbidden()
 
+    form_class = (NewTopicFormS3 if waffle.flag_is_active(request, 's3_images')
+                                 else NewTopicForm)
+
     if request.method == 'POST':
-        form = NewTopicForm(request.user, forum, request.POST)
+        form = form_class(request.user, forum, request.POST)
         if form.is_valid():
             if antispam.utils.spam_check(request, form.cleaned_data['body']):
                 return HttpResponseRedirect(reverse('antispam-suspended'))
@@ -306,7 +310,7 @@ def new_topic(request, slug):
             return HttpResponseRedirect(reverse('forums-new_topic_thanks',
                                             kwargs={'tid': topic.pk}))
     else:
-        form = NewTopicForm(request.user, forum)
+        form = form_class(request.user, forum)
 
     return render_to_response('forums/new_topic.html', {
         'forum': forum,

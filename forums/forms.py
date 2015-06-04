@@ -7,12 +7,15 @@ from collections import OrderedDict
 from django import forms
 from django.conf import settings
 
+from core.markup import site_markup
 from forums.models import Forum
 from forums.models import Topic
 from forums.models import Post
 from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
 from forums.signals import notify_new_topic, notify_new_post
+from core.html import ImageCheckError
+from core.html import image_check
 
 
 FORUMS_FORM_CSS = {
@@ -117,7 +120,7 @@ class NewTopicForm(forms.Form):
             raise forms.ValidationError("This field is required.")
         return data
 
-    def save(self, ip=None):
+    def save(self, ip=None, html=None):
         """
         Creates the new Topic and first Post from the form data and supplied
         arguments.
@@ -133,7 +136,7 @@ class NewTopicForm(forms.Form):
                 user=self.user,
                 body=self.cleaned_data['body'],
                 user_ip=ip)
-        post.save()
+        post.save(html=html)
 
         self.attach_proc.save_attachments(post)
 
@@ -141,6 +144,23 @@ class NewTopicForm(forms.Form):
         notify_new_post(post)
 
         return topic
+
+
+class NewTopicFormS3(NewTopicForm):
+    """Form for ensuring image sources come from a white-listed set of
+    sources.
+    """
+    def clean_body(self):
+        body_data = self.cleaned_data['body']
+        self.body_html = site_markup(body_data)
+        try:
+            image_check(self.body_html)
+        except ImageCheckError as ex:
+            raise forms.ValidationError(str(ex))
+        return body_data
+
+    def save(self, ip=None):
+        return super(NewTopicFormS3, self).save(ip, html=self.body_html)
 
 
 class PostForm(forms.ModelForm):
