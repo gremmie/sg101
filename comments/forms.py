@@ -7,6 +7,10 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
 from comments.models import Comment
+from core.html import ImageCheckError
+from core.html import image_check
+from core.markup import site_markup
+
 
 COMMENT_MAX_LENGTH = getattr(settings, 'COMMENT_MAX_LENGTH', 3000)
 
@@ -63,6 +67,18 @@ class CommentForm(forms.Form):
                 return old
 
         return new
+
+    def clean_comment(self):
+        comment = self.cleaned_data['comment']
+        self.comment_html = None
+        if comment:
+            self.comment_html = site_markup(comment)
+            try:
+                image_check(self.comment_html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+
+        return comment
 
     class Media:
         css = {

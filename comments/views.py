@@ -67,7 +67,12 @@ def post_comment(request):
 
     form = CommentForm(target, request.POST)
     if not form.is_valid():
-        return HttpResponseBadRequest('Invalid comment; missing parameters?')
+        # The client side javascript is pretty simplistic right now and we don't
+        # want to change it yet. It is expecting a single error string. Just grab
+        # the first error message and use that.
+        errors = form.errors.as_data()
+        msg = errors.values()[0][0].message if errors else 'Unknown error'
+        return HttpResponseBadRequest(msg)
 
     comment = form.get_comment_object(request.user, request.META.get("REMOTE_ADDR", None))
 
@@ -76,7 +81,7 @@ def post_comment(request):
     if antispam.utils.spam_check(request, comment.comment):
         return HttpResponseForbidden(antispam.BUSTED_MESSAGE)
 
-    comment.save()
+    comment.save(html=form.comment_html)
 
     # return the rendered comment
     return render_to_response('comments/comment.html', {

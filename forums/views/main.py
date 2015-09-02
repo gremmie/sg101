@@ -359,7 +359,12 @@ def quick_reply_ajax(request):
             },
             context_instance=RequestContext(request))
 
-    return HttpResponseBadRequest("Oops, did you forget some text?");
+    # The client side javascript is pretty simplistic right now and we don't
+    # want to change it yet. It is expecting a single error string. Just grab
+    # the first error message and use that.
+    errors = form.errors.as_data()
+    msg = errors.values()[0][0].message if errors else 'Unknown error'
+    return HttpResponseBadRequest(msg)
 
 
 def _goto_post(post):
@@ -439,7 +444,7 @@ def edit_post(request, id):
                 return HttpResponseRedirect(reverse('antispam-suspended'))
             post = form.save(commit=False)
             post.touch()
-            post.save()
+            post.save(html=form.body_html)
             notify_updated_post(post)
 
             # if we are editing a first post, save the parent topic as well
@@ -589,7 +594,7 @@ def new_post(request, topic_id):
                 post.topic = topic
                 post.user = request.user
                 post.user_ip = request.META.get("REMOTE_ADDR", "")
-                post.save()
+                post.save(html=form.body_html)
                 notify_new_post(post)
 
                 # Save any attachments

@@ -13,6 +13,9 @@ from forums.models import Post
 from forums.attachments import AttachmentProcessor
 import forums.permissions as perms
 from forums.signals import notify_new_topic, notify_new_post
+from core.html import ImageCheckError
+from core.html import image_check
+from core.markup import site_markup
 
 
 FORUMS_FORM_CSS = {
@@ -44,17 +47,26 @@ class NewPostForm(forms.Form):
         self.attach_proc = AttachmentProcessor(attachments)
 
     def clean_body(self):
-        data = self.cleaned_data['body']
-        if not data and not self.attach_proc.has_attachments():
-            raise forms.ValidationError("This field is required.")
-        return data
+        body = self.cleaned_data['body']
+        self.body_html = None
+        if not body and not self.attach_proc.has_attachments():
+            raise forms.ValidationError("Please enter some text")
+
+        if body:
+            self.body_html = site_markup(body)
+            try:
+                image_check(self.body_html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+
+        return body
 
     def clean_topic_id(self):
         id = self.cleaned_data['topic_id']
         try:
             self.topic = Topic.objects.select_related().get(pk=id)
         except Topic.DoesNotExist:
-            raise forms.ValidationError('invalid topic')
+            raise forms.ValidationError('Invalid topic')
         return id
 
     def save(self, user, ip=None):
@@ -63,7 +75,7 @@ class NewPostForm(forms.Form):
         """
         post = Post(topic=self.topic, user=user, body=self.cleaned_data['body'],
                 user_ip=ip)
-        post.save()
+        post.save(html=self.body_html)
         self.attach_proc.save_attachments(post)
         notify_new_post(post)
         return post
@@ -112,10 +124,19 @@ class NewTopicForm(forms.Form):
                     choices=[(v, v) for v in pks])
 
     def clean_body(self):
-        data = self.cleaned_data['body']
-        if not data and not self.attach_proc.has_attachments():
+        body = self.cleaned_data['body']
+        self.body_html = None
+        if not body and not self.attach_proc.has_attachments():
             raise forms.ValidationError("This field is required.")
-        return data
+
+        if body:
+            self.body_html = site_markup(body)
+            try:
+                image_check(self.body_html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+
+        return body
 
     def save(self, ip=None):
         """
@@ -133,7 +154,7 @@ class NewTopicForm(forms.Form):
                 user=self.user,
                 body=self.cleaned_data['body'],
                 user_ip=ip)
-        post.save()
+        post.save(html=self.body_html)
 
         self.attach_proc.save_attachments(post)
 
@@ -189,10 +210,19 @@ class PostForm(forms.ModelForm):
                         widget=forms.HiddenInput(attrs={'value': post.id}))
 
     def clean_body(self):
-        data = self.cleaned_data['body']
-        if not data and not self.attach_proc.has_attachments():
+        body = self.cleaned_data['body']
+        self.body_html = None
+        if not body and not self.attach_proc.has_attachments():
             raise forms.ValidationError('This field is required.')
-        return data
+
+        if body:
+            self.body_html = site_markup(body)
+            try:
+                image_check(self.body_html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+
+        return body
 
     def save(self, *args, **kwargs):
         commit = kwargs.get('commit', False)

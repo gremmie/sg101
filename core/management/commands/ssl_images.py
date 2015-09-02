@@ -39,6 +39,7 @@ IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
                           re.DOTALL | re.UNICODE)
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
+WHITELIST_HOSTS = set(settings.USER_IMAGES_SOURCES)
 MODEL_CHOICES = ['comments', 'posts']
 
 PHOTO_MAX_SIZE = (660, 720)
@@ -224,7 +225,10 @@ def replace_image_markup(match):
             # Try a few things to get this on ssl:
             new_src = convert_to_ssl(r)
         elif r.scheme == 'https':
-            new_src = src       # already https, accept it as-is
+            if r.hostname in WHITELIST_HOSTS:
+                new_src = src   # already in whitelist
+            else:
+                new_src = convert_to_ssl(r)
 
     if new_src:
         if title:

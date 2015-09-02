@@ -311,7 +311,9 @@ class Post(models.Model):
             self.creation_date = datetime.datetime.now()
             self.update_date = self.creation_date
 
-        self.html = site_markup(self.body)
+        self.html = kwargs.pop('html', None)
+        if self.html is None:
+            self.html = site_markup(self.body)
         super(Post, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

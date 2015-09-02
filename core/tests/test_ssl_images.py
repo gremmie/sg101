@@ -4,6 +4,7 @@ import unittest
 from urlparse import urlparse
 
 import mock
+from django.conf import settings
 
 from core.management.commands.ssl_images import html_check
 from core.management.commands.ssl_images import process_post
@@ -13,6 +14,10 @@ import core.management.commands.ssl_images
 class ProcessPostTestCase(unittest.TestCase):
 
     SG101_RE = re.compile(r'http://(?:www\.)?surfguitar101.com/', re.I)
+
+    def setUp(self):
+        self.assertTrue(len(settings.USER_IMAGES_SOURCES) > 0)
+        self.safe_host = settings.USER_IMAGES_SOURCES[0]
 
     def tearDown(self):
         core.management.commands.ssl_images.url_cache = {}
@@ -50,9 +55,9 @@ http://surfguitar101.com/media/zzz.jpg
 
     def test_https_already(self):
         test_str = """An image that is already using https:
-            ![flyer](https://example.com/zzz.png)
+            ![flyer](https://{}/zzz.png)
             It's cool.
-            """
+            """.format(self.safe_host)
         result = process_post(test_str)
         self.assertEqual(test_str, result)
 
@@ -70,19 +75,19 @@ http://surfguitar101.com/media/zzz.jpg
 
     def test_multiple_non_http(self):
         test_str = """An image: ![image](http://www.surfguitar101.com/img.jpg)
-        And another: ![pic](HTTPS://example.com/foo/bar/img.png).
-        More stuff here."""
+        And another: ![pic](HTTPS://{}/foo/bar/img.png).
+        More stuff here.""".format(self.safe_host)
         expected = """An image: ![image](/img.jpg)
-        And another: ![pic](HTTPS://example.com/foo/bar/img.png).
-        More stuff here."""
+        And another: ![pic](HTTPS://{}/foo/bar/img.png).
+        More stuff here.""".format(self.safe_host)
         result = process_post(test_str)
         self.assertEqual(expected, result)
 
     def test_https_already_with_title(self):
         test_str = """An image that is already using https:
-            ![flyer](https://example.com/zzz.png "the title")
+            ![flyer](https://{}/zzz.png "the title")
             It's cool.
-            """
+            """.format(self.safe_host)
         result = process_post(test_str)
         self.assertEqual(test_str, result)
 
@@ -112,13 +117,13 @@ http://surfguitar101.com/media/zzz.jpg
 
     def test_https_already_brackets(self):
         test_str = """An image that is already using https:
-            ![flyer](<https://example.com/zzz.png>)
+            ![flyer](<https://{}/zzz.png>)
             It's cool.
-            """
+            """.format(self.safe_host)
         expected = """An image that is already using https:
-            ![flyer](https://example.com/zzz.png)
+            ![flyer](https://{}/zzz.png)
             It's cool.
-            """
+            """.format(self.safe_host)
         result = process_post(test_str)
         self.assertEqual(expected, result)
 
@@ -172,13 +177,13 @@ http://surfguitar101.com/media/zzz.jpg
     def test_multiple_replacement_2(self, upload_mock):
         old_src = [
             'http://example.com/images/my_image.jpg',
-            'https://example.com/static/wow.gif',
+            'https://{}/static/wow.gif'.format(self.safe_host),
             'http://www.surfguitar101.com/media/a/b/c/pic.png',
             'http://surfguitar101.com/media/a/b/c/pic2.png',
         ]
         new_src = [
             'https://cloud.com/some/path/012345.jpg',
-            'https://example.com/static/wow.gif',
+            'https://{}/static/wow.gif'.format(self.safe_host),
             '/media/a/b/c/pic.png',
             '/media/a/b/c/pic2.png',
         ]

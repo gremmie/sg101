@@ -57,7 +57,9 @@ class Comment(models.Model):
         if not self.id:
             self.creation_date = datetime.datetime.now()
 
-        self.html = site_markup(self.comment)
+        self.html = kwargs.pop('html', None)
+        if self.html is None:
+            self.html = site_markup(self.comment)
         super(Comment, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
