@@ -7,12 +7,10 @@ from base64 import b64encode
 import logging
 from io import BytesIO
 import os.path
-import tempfile
 import uuid
 
 from PIL import Image
 
-from core.functions import temp_open
 from core.image import orient_image
 
 
@@ -24,17 +22,16 @@ def make_key():
     return b64encode(uuid.uuid4().bytes, '-_').rstrip('=')
 
 
-def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
+def upload(filename, bucket, metadata=None, new_size=None, thumb_size=None):
     """Upload an image file to a given S3Bucket.
 
     The image can optionally be resized and a thumbnail can be generated and
     uploaded as well.
 
     Parameters:
-        fp - The image file to process. This is expected to be an instance of
-             Django's UploadedFile class. The file must have a name attribute and
-             we expect the name to have an extension. This is extension is
-             used for the uploaded image and thumbnail names.
+        filename - The path to the file to process. The filename should have an
+                   extension, and this is used for the uploaded image & thumbnail
+                   names.
         bucket - A core.s3.S3Bucket instance to upload to.
         metadata - If not None, must be a dictionary of metadata to apply to the
                    uploaded file and thumbnail.
@@ -51,52 +48,38 @@ def upload(fp, bucket, metadata=None, new_size=None, thumb_size=None):
     a thumbnail was not requested.
     """
 
-    filename = fp.name
     logger.info('Processing image file: %s', filename)
 
-    # Trying to use PIL (or Pillow) on a Django UploadedFile is often
-    # problematic because the file is often an in-memory file if it is under
-    # a certain size. This complicates matters and many of the operations we try
-    # to perform on it fail if this is the case. To get around these issues,
-    # we make a copy of the file on the file system and operate on the copy.
-    # First generate a unique name and temporary file path.
     unique_key = make_key()
-    ext = os.path.splitext(fp.name)[1]
-    temp_name = os.path.join(tempfile.gettempdir(), unique_key + ext)
+    ext = os.path.splitext(filename)[1]
 
-    # Write the UploadedFile to a temporary file on disk
-    with temp_open(temp_name, 'wb') as temp_file:
-        for chunk in fp.chunks():
-            temp_file.write(chunk)
-        temp_file.close()
+    # Re-orient if necessary
+    image = Image.open(filename)
+    changed, image = orient_image(image)
+    if changed:
+        image.save(filename)
 
-        # Re-orient if necessary
-        image = Image.open(temp_name)
-        changed, image = orient_image(image)
-        if changed:
-            image.save(temp_name)
+    # Resize image if necessary
+    if new_size:
+        image = Image.open(filename)
+        if image.size > new_size:
+            logger.debug('Resizing from {} to {}'.format(image.size, new_size))
+            image.thumbnail(new_size, Image.ANTIALIAS)
+            image.save(filename)
 
-        # Resize image if necessary
-        if new_size:
-            image = Image.open(temp_name)
-            if image.size > new_size:
-                logger.debug('Resizing from {} to {}'.format(image.size, new_size))
-                image.thumbnail(new_size, Image.ANTIALIAS)
-                image.save(temp_name)
+    # Create thumbnail if necessary
+    thumb = None
+    if thumb_size:
+        logger.debug('Creating thumbnail {}'.format(thumb_size))
+        image = Image.open(filename)
+        image.thumbnail(thumb_size, Image.ANTIALIAS)
+        thumb = BytesIO()
+        image.save(thumb, format=image.format)
 
-        # Create thumbnail if necessary
-        thumb = None
-        if thumb_size:
-            logger.debug('Creating thumbnail {}'.format(thumb_size))
-            image = Image.open(temp_name)
-            image.thumbnail(thumb_size, Image.ANTIALIAS)
-            thumb = BytesIO()
-            image.save(thumb, format=image.format)
-
-        # Upload images to S3
-        file_key = unique_key + ext
-        logging.debug('Uploading image')
-        image_url = bucket.upload_from_filename(file_key, temp_name, metadata)
+    # Upload images to S3
+    file_key = unique_key + ext
+    logging.debug('Uploading image')
+    image_url = bucket.upload_from_filename(file_key, filename, metadata)
 
     thumb_url = None
     if thumb:

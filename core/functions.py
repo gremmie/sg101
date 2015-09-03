@@ -1,9 +1,9 @@
 """This file houses various core utility functions"""
-from contextlib import contextmanager
 import datetime
 import logging
 import os
 import re
+import tempfile
 
 from django.contrib.sites.models import Site
 from django.conf import settings
@@ -12,15 +12,23 @@ import django.core.mail
 import core.tasks
 
 
-@contextmanager
-def temp_open(path, mode):
-    """A context manager for closing and removing temporary files."""
-    fp = open(path, mode)
-    try:
-        yield fp
-    finally:
-        fp.close()
-        os.remove(path)
+class TemporaryFile(object):
+    """Context manager class for working with temporary files.
+
+    The file will be closed and removed when the context is exited.
+    """
+    def __init__(self, **kwargs):
+        """kwargs will be passed to mkstemp."""
+        self.kwargs = kwargs
+
+    def __enter__(self):
+        self.fd, self.filename = tempfile.mkstemp(**self.kwargs)
+        self.file = os.fdopen(self.fd, 'w+b')
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file.close()
+        os.remove(self.filename)
 
 
 def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer=True):

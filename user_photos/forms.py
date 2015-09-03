@@ -1,12 +1,14 @@
 """Forms for the user_photos application."""
 import datetime
 import hashlib
+import os.path
 
 from django import forms
 from django.conf import settings
 
 from core.s3 import S3Bucket
 from core.image_uploader import upload
+from core.functions import TemporaryFile
 from core.services import get_redis_connection
 from user_photos.models import Photo
 
@@ -70,14 +72,29 @@ class UploadForm(forms.Form):
                           base_url=settings.USER_PHOTOS_BASE_URL,
                           bucket_name=settings.USER_PHOTOS_BUCKET)
 
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        metadata = {'user': self.user.username, 'date': now}
+        # Trying to use PIL (or Pillow) on a Django UploadedFile is often
+        # problematic because the file is often an in-memory file if it is under
+        # a certain size. This complicates matters and many of the operations we try
+        # to perform on it fail if this is the case. To get around these issues,
+        # we make a copy of the file on the file system and operate on the copy.
 
-        url, thumb_url = upload(fp=self.cleaned_data['image_file'],
-                                bucket=bucket,
-                                metadata=metadata,
-                                new_size=settings.USER_PHOTOS_MAX_SIZE,
-                                thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
+        fp = self.cleaned_data['image_file']
+        ext = os.path.splitext(fp.name)[1]
+
+        # Write the UploadedFile to a temporary file on disk
+        with TemporaryFile(suffix=ext) as t:
+            for chunk in fp.chunks():
+                t.file.write(chunk)
+            t.file.close()
+
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            metadata = {'user': self.user.username, 'date': now}
+
+            url, thumb_url = upload(filename=t.filename,
+                                    bucket=bucket,
+                                    metadata=metadata,
+                                    new_size=settings.USER_PHOTOS_MAX_SIZE,
+                                    thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
 
         photo = Photo(user=self.user, url=url, thumb_url=thumb_url,
                 signature=signature)
