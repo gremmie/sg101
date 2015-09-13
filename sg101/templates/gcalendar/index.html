@@ -2,10 +2,22 @@
 {% block title %}Event Calendar{% endblock %}
 {% block content %}
 <h2>SurfGuitar101 Event Calendar</h2>
-<p>Welcome to the SG101 event calendar. You can add any event on our calendar to your own 
-<a href="http://www.google.com/googlecalendar/overview.html">Google calendar</a>. If you do, the event
-will be displayed in your time zone, and you can have Google send you email or text message reminders for
-the events. Click on any event below to see more details or copy it to your calendar.</p>
+<p>
+<strong>Welcome to the SG101 event calendar!</strong> Our users can add events to this
+calendar. Please see the links below the calendar to add, modify, or delete events.
+</p>
+<div class="info">
+   <p>
+   This calendar is now aggregating several Google calendars, both from
+   SurfGuitar101 and other friends in the surf music world. This allows us to give you
+   more information without duplicating efforts in the community.
+   </p>
+   <p>
+   By default we show you all events from all calendars. Too much information?
+   No problem, just use the pull-down menu in the upper right corner of the
+   calendar to filter the calendars you wish to see.
+   </p>
+</div>
 {% if user.is_authenticated %}
 <p><strong>Please note:</strong> all times shown are in the <strong>{{ tz }}</strong>
 time zone, which is the time zone preference you have set in your
@@ -16,23 +28,20 @@ time zone, which is the time zone preference you have set in your
 <a href="{% url 'accounts-login' %}">login</a> to view the times based on the time zone set in your profile.</p>
 {% endif %}
 
-<iframe src="//www.google.com/calendar/embed?mode=AGENDA&amp;showTitle=0&amp;showTz=0&amp;height=540&amp;wkst=1&amp;bgcolor=%23DFDFDF&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;ctz={{ tz|urlencode:"" }}" style=" border:solid 1px #777 " width="720" height="540" frameborder="0" scrolling="no"></iframe>
+<iframe src="https://www.google.com/calendar/embed?showTitle=0&amp;mode=AGENDA&amp;height=640&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=cn1s9ucnemr669g0cc80mfl4s8%40group.calendar.google.com&amp;color=%238C500B&amp;src=b4gjo175fvn4mvbeipr65nc3gg%40group.calendar.google.com&amp;color=%23691426&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;src=qrihvvsqabp3i3uv8gj4i5lfik%40group.calendar.google.com&amp;color=%23AB8B00&amp;ctz={{ tz|urlencode:"" }}" style="border:solid 1px #777" width="750" height="640" frameborder="0" scrolling="no"></iframe>
 
 <ul>
 {% if user.is_authenticated %}
    <li><a href="{% url 'gcalendar-add' %}"><img src="{{ STATIC_URL}}icons/calendar_add.png" alt="Add" /></a>
-      <a href="{% url 'gcalendar-add' %}">Add an event to our calendar</a>.</li>
+      <a href="{% url 'gcalendar-add' %}">Add an event to our calendar</a></li>
    <li><a href="{% url 'gcalendar-edit_events' %}"><img src="{{ STATIC_URL}}icons/calendar_edit.png" alt="Edit" /></a>
-      <a href="{% url 'gcalendar-edit_events' %}">Change or delete an event you previously added</a>.</li>
+      <a href="{% url 'gcalendar-edit_events' %}">Change or delete an event you previously added</a></li>
 {% endif %}
    <li>
 <a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
 <img src="{{ STATIC_URL }}icons/feed.png" alt="feed" /></a>
 <a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
 RSS Feed</a>
-</li>
-<li>
-Want to embed this calendar on your website or blog? <a href="http://www.google.com/calendar/embedhelper?src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&ctz=America/Chicago">Use this helper tool</a>.
 </li>
 </ul>
 {% endblock %}
