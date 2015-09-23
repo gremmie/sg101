@@ -18,4 +18,7 @@ urlpatterns = patterns('',
         GalleryView.as_view(),
         name='user_photos-gallery'),
     url(r'^delete/$', 'user_photos.views.delete', name='user_photos-delete'),
+    url(r'^hotlink/$',
+        'user_photos.views.hotlink_image',
+        name='user_photos-hotlink'),
 )

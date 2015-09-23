@@ -2,13 +2,15 @@
 import datetime
 import hashlib
 import os.path
+import urlparse
 
 from django import forms
 from django.conf import settings
 
-from core.s3 import S3Bucket
-from core.image_uploader import upload
+from core.download import download_file
 from core.functions import TemporaryFile
+from core.images.upload import upload
+from core.s3 import S3Bucket
 from core.services import get_redis_connection
 from user_photos.models import Photo
 
@@ -29,6 +31,15 @@ def rate_limit(key, limit, seconds):
     return val > limit
 
 
+def rate_limit_user(user):
+    """Shared function to rate limit user uploads."""
+    key = 'user_photos:counts:' + user.username
+    limit = settings.USER_PHOTOS_RATE_LIMIT
+    if rate_limit(key, *limit):
+        raise forms.ValidationError("You've exceeded your upload quota. "
+                "Please try again later.")
+
+
 class UploadForm(forms.Form):
     image_file = forms.ImageField()
 
@@ -38,14 +49,7 @@ class UploadForm(forms.Form):
 
     def clean(self):
         cleaned_data = super(UploadForm, self).clean()
-
-        # rate limit uploads
-        key = 'user_photos:counts:' + self.user.username
-        limit = settings.USER_PHOTOS_RATE_LIMIT
-        if rate_limit(key, *limit):
-            raise forms.ValidationError("You've exceeded your upload quota. "
-                    "Please try again later.")
-
+        rate_limit_user(self.user)
         return cleaned_data
 
     def save(self):
@@ -113,3 +117,55 @@ class UploadForm(forms.Form):
         for chunk in fp.chunks():
             md5.update(chunk)
         return md5.hexdigest()
+
+
+class HotLinkImageForm(forms.Form):
+    """Form for hot-linking images. If the supplied URL's host is on
+    a white-list, return it as-is. Otherwise attempt to download the image at
+    the given URL and upload it into our S3 storage. The URL to the new location
+    is returned.
+    """
+    url = forms.URLField()
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user')
+        super(HotLinkImageForm, self).__init__(*args, **kwargs)
+
+    def clean_url(self):
+        the_url = self.cleaned_data['url']
+        self.url_parts = urlparse.urlsplit(the_url)
+        if self.url_parts.scheme not in ['http', 'https']:
+            raise forms.ValidationError("Invalid URL scheme")
+        return the_url
+
+    def clean(self):
+        cleaned_data = super(HotLinkImageForm, self).clean()
+        rate_limit_user(self.user)
+        return cleaned_data
+
+    def save(self):
+        import pdb; pdb.set_trace()
+
+        url = self.url_parts.geturl()
+        if (self.url_parts.scheme == 'https' and
+                self.url_parts.hostname in settings.USER_IMAGES_SOURCES):
+            return url
+
+        # Try to download the file
+        path = download_file(url)
+
+        # Upload it to our S3 bucket
+        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
+                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
+                          base_url=settings.HOT_LINK_PHOTOS_BASE_URL,
+                          bucket_name=settings.HOT_LINK_PHOTOS_BUCKET)
+
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        metadata = {'user': self.user.username, 'date': now}
+
+        url, _ = upload(filename=path,
+                        bucket=bucket,
+                        metadata=metadata,
+                        new_size=settings.USER_PHOTOS_MAX_SIZE)
+
+        return url

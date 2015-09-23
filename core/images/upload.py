@@ -11,7 +11,7 @@ import uuid
 
 from PIL import Image
 
-from core.image import orient_image
+from .utils import orient_image
 
 
 logger = logging.getLogger(__name__)

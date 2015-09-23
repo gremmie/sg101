@@ -39,6 +39,20 @@
 </fieldset>
 </form>
 
+<form id="hot-link-form" action="{% url 'user_photos-hotlink' %}" method="post"
+   enctype="multipart/form-data">{% csrf_token %}
+<fieldset>
+   <legend>Hot Link Image</legend>
+   <p>
+   To add an image already on the Internet to your post, copy &amp; paste the
+   image URL to the box below, and hit "Hot Link". An image code will be placed
+   in the post box, above.
+   </p>
+   <input type="url" name="url" /><br />
+   <input type="submit" id="hot-link-form-submit" name="submit" value="Hot Link" />
+</fieldset>
+</form>
+
 <form id="photo-upload-form" action="{% url 'user_photos-upload_ajax' %}" method="post"
    enctype="multipart/form-data">{% csrf_token %}
 <fieldset>
@@ -47,10 +61,6 @@
    You can upload a photo directly from your computer or device with this
    form. After the photo is uploaded it will be resized and an image code will be
    placed in the post box, above.
-   </p>
-   <p>To hot-link a photo hosted elsewhere, use the
-   <img src="{{ STATIC_URL }}js/markitup/sets/markdown/images/picture.png">
-   icon on the post box.
    </p>
    <input type="file" name="image_file" /><br />
    <input type="submit" id="photo-upload-submit" name="submit" value="Upload photo" />

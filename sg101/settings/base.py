@@ -295,6 +295,8 @@ USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
 USER_PHOTOS_MAX_SIZE = (660, 720)
 USER_PHOTOS_THUMB_SIZE = (120, 120)
 USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
+HOT_LINK_PHOTOS_BASE_URL = 'https://s3.amazonaws.com/'
+HOT_LINK_PHOTOS_BUCKET = 'sg101.forum.photos'
 
 USER_IMAGES_SOURCES = [
     'dl.dropboxusercontent.com',

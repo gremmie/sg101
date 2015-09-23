@@ -15,7 +15,7 @@ import pytz
 
 from bio.models import UserProfile
 from core.widgets import AutoCompleteUserInput
-from core.image import parse_image, downscale_image_square
+from core.images.utils import parse_image, downscale_image_square
 
 
 class EditUserForm(forms.ModelForm):

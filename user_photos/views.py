@@ -5,14 +5,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import (HttpResponse, HttpResponseForbidden,
-    HttpResponseNotAllowed)
+    HttpResponseNotAllowed, JsonResponse)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 
-from user_photos.forms import UploadForm
+from user_photos.forms import HotLinkImageForm, UploadForm
 from user_photos.models import Photo
 from user_photos.s3 import delete_photos
 
@@ -140,3 +140,48 @@ def delete(request):
             msg)
 
     return redirect(ret_view, username)
+
+
+def hotlink_image(request):
+    """This view is responsible for accepting an image URL from a user and
+    converting it to a URL pointing into our S3 bucket if necessary.
+
+    We return a JSON object response to the client with the following name
+    & value pairs:
+            'error_msg': string error message if an error occurred
+            'url': the image URL as a string if success
+    """
+    ret = {'error_msg': '', 'url': ''}
+    status_code = 400
+
+    if not request.user.is_authenticated():
+        ret['error_msg'] = 'Please login to use this service'
+        return JsonResponse(ret, status=status_code)
+    if not request.is_ajax() or request.method != 'POST':
+        ret['error_msg'] = 'This method is not allowed'
+        return JsonResponse(ret, status=status_code)
+
+    if settings.USER_PHOTOS_ENABLED:
+        form = HotLinkImageForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            try:
+                ret['url'] = form.save()
+                status_code = 200
+            except Exception as ex:
+                ret['error_msg'] = str(ex)
+                status_code = 500
+        else:
+            # gather form error messages
+            errors = []
+            non_field_errors = form.non_field_errors().as_text()
+            if non_field_errors:
+                errors.append(non_field_errors)
+            for field_errors in form.errors.values():
+                errors.append(field_errors.as_text())
+            ret['error_msg'] = '\n'.join(errors)
+    else:
+        ret['error_msg'] = 'Image linking is temporarily disabled'
+        status_code = 403
+
+    return JsonResponse(ret, status=status_code)
+

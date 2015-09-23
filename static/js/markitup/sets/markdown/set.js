@@ -179,4 +179,38 @@ $(document).ready(function() {
          }
       });
    }
+
+   var $hotLinkForm = $('#hot-link-form');
+   if ($hotLinkForm.length) {
+      var $postBox = $('#id_body');
+      var $hotLinkFormSubmit = $('#hot-link-form-submit');
+
+      $hotLinkForm.ajaxForm({
+         beforeSubmit: function(arr, $form, options) {
+            var url = null;
+            $.each(arr, function(index, val) {
+               if (val.name == 'url') {
+                  url = val.value;
+               }
+            });
+            if (!url) {
+               alert("Please enter an image URL.");
+               return false;
+            }
+            $hotLinkFormSubmit.attr('disabled', 'disabled').val('Retrieving...');
+            return true;
+         },
+         success: function(resp, statusText, xhr, $form) {
+            $postBox.val($postBox.val() + '\n![image](' + resp.url + ')');
+            alert("Success! The image code was added to your post.");
+            $hotLinkForm.clearForm();
+         },
+         complete: function(xhr) {
+            $hotLinkFormSubmit.removeAttr('disabled').val('Hot Link');
+         },
+         error: function(xhr, textStatus, ex) {
+            alert('Oops, there was an error: ' + ex);
+         }
+      });
+   }
 });

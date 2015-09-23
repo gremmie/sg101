@@ -38,6 +38,7 @@ uritemplate==0.6
 mock==1.0.1
 lxml==3.4.2
 testfixtures==4.1.2
+requests==2.7.0
 -e git+https://github.com/gremmie/django-elsewhere.git@1203bd331aba4c5d4e702cc4e64d807310f2b591#egg=django_elsewhere-master
 -e git+https://github.com/notanumber/xapian-haystack.git@a3a3a4e7cfba3e2e1be3a42abf59edd29ea03c05#egg=xapian_haystack-master
 -e hg+https://bgneal@bitbucket.org/bgneal/queues@862e8846f7e5f5a0df7f08bfe4b4e5283acb4614#egg=queues-dev
