@@ -144,8 +144,6 @@ class HotLinkImageForm(forms.Form):
         return cleaned_data
 
     def save(self):
-        import pdb; pdb.set_trace()
-
         url = self.url_parts.geturl()
         if (self.url_parts.scheme == 'https' and
                 self.url_parts.hostname in settings.USER_IMAGES_SOURCES):

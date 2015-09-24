@@ -156,13 +156,13 @@ def hotlink_image(request):
 
     if not request.user.is_authenticated():
         ret['error_msg'] = 'Please login to use this service'
-        return JsonResponse(ret, status=status_code)
+        return JsonResponse(ret, status=403)
     if not request.is_ajax() or request.method != 'POST':
         ret['error_msg'] = 'This method is not allowed'
-        return JsonResponse(ret, status=status_code)
+        return JsonResponse(ret, status=405)
 
     if settings.USER_PHOTOS_ENABLED:
-        form = HotLinkImageForm(request.POST, request.FILES, user=request.user)
+        form = HotLinkImageForm(request.POST, user=request.user)
         if form.is_valid():
             try:
                 ret['url'] = form.save()
