@@ -1,6 +1,7 @@
 """This module contains routines for downloading files."""
 
 import logging
+import mimetypes
 import os
 import shutil
 import tempfile
@@ -35,7 +36,11 @@ def download_file(url, path=None):
     # Save file data
 
     if not path:
-        fd, path = tempfile.mkstemp()
+        content_type = r.headers.get('content-type')
+        suffix = mimetypes.guess_extension(content_type) if content_type else ''
+        if suffix == '.jpe':
+            suffix = '.jpg'
+        fd, path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
 
     try:
