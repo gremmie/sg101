@@ -14,12 +14,23 @@ from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
 from core.functions import email_admins
+from core.html import image_check, ImageCheckError
 from core.markup import site_markup
 from comments.forms import CommentForm
 from comments.models import Comment
 from comments.models import CommentFlag
 import antispam
 import antispam.utils
+
+
+PREVIEW_UNAVAILABLE = """
+<p><strong>Error</strong>: {}</p>
+<p>Sorry, preview is unavailable.</p>
+<p>There is an image in your post which failed our image check. We can only
+accept images from a small number of sources for security reasons. You may use
+the forms below this box to safely hot-link to images hosted elsewhere on the
+Internet or upload from your computer or device.</p>
+"""
 
 
 @login_required
@@ -133,7 +144,13 @@ def markdown_preview(request):
     if data is None:
         return HttpResponseBadRequest('No data')
 
+    html = site_markup(data)
+    try:
+        image_check(html)
+    except ImageCheckError as ex:
+        html = PREVIEW_UNAVAILABLE.format(ex)
+
     return render_to_response('comments/markdown_preview.html', {
-        'data': site_markup(data),
+        'data': html,
         },
         context_instance = RequestContext(request))
