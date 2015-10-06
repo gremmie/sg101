@@ -28,7 +28,6 @@ mySettings = {
 			return markItUp.line+'. ';
 		}, multiline:true},
 		{separator:'---------------' },
-		{name:'Picture', key:'P', replaceWith:'![image]([![Url:!:http://]!])'},
 		{name:'Link', key:'L', openWith:'[', closeWith:']([![Url:!:http://]!])', placeHolder:'Your text to link here...' },
 		{separator:'---------------'},
 		{name:'Quotes', openWith:'> ', multiline:true},
