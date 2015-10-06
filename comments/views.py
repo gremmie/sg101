@@ -145,10 +145,11 @@ def markdown_preview(request):
         return HttpResponseBadRequest('No data')
 
     html = site_markup(data)
-    try:
-        image_check(html)
-    except ImageCheckError as ex:
-        html = PREVIEW_UNAVAILABLE.format(ex)
+    if html:
+        try:
+            image_check(html)
+        except ImageCheckError as ex:
+            html = PREVIEW_UNAVAILABLE.format(ex)
 
     return render_to_response('comments/markdown_preview.html', {
         'data': html,
