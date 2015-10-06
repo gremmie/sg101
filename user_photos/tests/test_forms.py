@@ -1,6 +1,7 @@
 """
 Tests for the forms in the user_photos application.
 """
+from contextlib import contextmanager
 
 import mock
 from django import forms
@@ -9,6 +10,11 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from user_photos.forms import HotLinkImageForm
+
+
+@contextmanager
+def fake_remove_file(path):
+    yield path
 
 
 class HotLinkImageFormTestCase(TestCase):
@@ -41,6 +47,7 @@ class HotLinkImageFormTestCase(TestCase):
 
     @mock.patch('user_photos.forms.rate_limit_user')
     @mock.patch('user_photos.forms.download_file')
+    @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
     @mock.patch('user_photos.forms.S3Bucket')
     @mock.patch('user_photos.forms.upload')
     def test_white_listed_url(self, upload_mock, bucket_mock, dl_mock, rate_limit_mock):
@@ -56,6 +63,7 @@ class HotLinkImageFormTestCase(TestCase):
 
     @mock.patch('user_photos.forms.rate_limit_user')
     @mock.patch('user_photos.forms.download_file')
+    @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
     @mock.patch('user_photos.forms.S3Bucket')
     @mock.patch('user_photos.forms.upload')
     def test_happy_path(self, upload_mock, bucket_mock, dl_mock, rate_limit_mock):

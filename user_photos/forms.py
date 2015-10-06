@@ -8,7 +8,7 @@ from django import forms
 from django.conf import settings
 
 from core.download import download_file
-from core.functions import TemporaryFile
+from core.functions import remove_file, TemporaryFile
 from core.images.upload import upload
 from core.s3 import S3Bucket
 from core.services import get_redis_connection
@@ -150,20 +150,20 @@ class HotLinkImageForm(forms.Form):
             return url
 
         # Try to download the file
-        path = download_file(url)
+        with remove_file(download_file(url)) as path:
 
-        # Upload it to our S3 bucket
-        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
-                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
-                          base_url=settings.HOT_LINK_PHOTOS_BASE_URL,
-                          bucket_name=settings.HOT_LINK_PHOTOS_BUCKET)
+            # Upload it to our S3 bucket
+            bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
+                              secret_key=settings.USER_PHOTOS_SECRET_KEY,
+                              base_url=settings.HOT_LINK_PHOTOS_BASE_URL,
+                              bucket_name=settings.HOT_LINK_PHOTOS_BUCKET)
 
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        metadata = {'user': self.user.username, 'date': now}
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            metadata = {'user': self.user.username, 'date': now}
 
-        url, _ = upload(filename=path,
-                        bucket=bucket,
-                        metadata=metadata,
-                        new_size=settings.USER_PHOTOS_MAX_SIZE)
+            url, _ = upload(filename=path,
+                            bucket=bucket,
+                            metadata=metadata,
+                            new_size=settings.USER_PHOTOS_MAX_SIZE)
 
         return url

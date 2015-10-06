@@ -49,6 +49,7 @@ def download_file(url, path=None):
             shutil.copyfileobj(r.raw, fp)
     except requests.RequestException:
         logger.exception("download_file download exception")
+        os.remove(path)
         raise
 
     file_size = os.stat(path).st_size

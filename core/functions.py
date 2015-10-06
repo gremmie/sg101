@@ -1,4 +1,5 @@
 """This file houses various core utility functions"""
+from contextlib import contextmanager
 import datetime
 import logging
 import os
@@ -29,6 +30,15 @@ class TemporaryFile(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.file.close()
         os.remove(self.filename)
+
+
+@contextmanager
+def remove_file(path):
+    """Context manager for removing a file when the context is exited."""
+    try:
+        yield path
+    finally:
+        os.remove(path)
 
 
 def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer=True):
