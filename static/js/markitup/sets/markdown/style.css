@@ -20,16 +20,13 @@
 }
 
 .markItUp .markItUpButton6 a {
-	background-image:url(images/picture.png); 
-}
-.markItUp .markItUpButton7 a {
 	background-image:url(images/link.png);
 }
 
-.markItUp .markItUpButton8 a	{
+.markItUp .markItUpButton7 a	{
 	background-image:url(images/quotes.png);
 }
-.markItUp .markItUpButton9 a	{
+.markItUp .markItUpButton8 a	{
 	background-image:url(images/code.png);
 }
 
