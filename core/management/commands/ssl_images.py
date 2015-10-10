@@ -15,7 +15,6 @@ import os
 import re
 import signal
 import socket
-import urllib
 import urlparse
 import uuid
 
@@ -24,9 +23,12 @@ from django.conf import settings
 from lxml import etree
 import markdown.inlinepatterns
 from PIL import Image
+import requests
 
 from comments.models import Comment
 from forums.models import Post
+from core.download import download_file
+from core.functions import remove_file
 from core.s3 import S3Bucket
 
 
@@ -43,13 +45,12 @@ WHITELIST_HOSTS = set(settings.USER_IMAGES_SOURCES)
 MODEL_CHOICES = ['comments', 'posts']
 
 PHOTO_MAX_SIZE = (660, 720)
-PHOTO_BASE_URL = 'https://s3.amazonaws.com/'
-PHOTO_BUCKET_NAME = 'sg101.forum.photos'
+PHOTO_BASE_URL = settings.HOT_LINK_PHOTOS_BASE_URL
+PHOTO_BUCKET_NAME = settings.HOT_LINK_PHOTOS_BUCKET
 
 CACHE_FILENAME = 'ssl_images_cache.json'
 
 quit_flag = False
-opener = None
 bucket = None
 url_cache = {}
 bad_hosts = set()
@@ -70,78 +71,24 @@ def _setup_logging():
     logger.addHandler(handler)
 
 
-class ImageURLopener(urllib.FancyURLopener):
-    """Our URL opener. Handles redirects as per FancyURLopener. But all other
-    errors and authentication requests will raise an IOError.
-    """
-    HANDLED_ERRORS = set([302, 301, 303, 307])
-
-    def http_error_default(self, url, fp, errcode, errmsg, headers):
-        return urllib.URLopener.http_error_default(self, url, fp, errcode,
-                                                   errmsg, headers)
-
-    def http_error(self, url, fp, errcode, errmsg, headers, data=None):
-        """Handle http errors.
-        We let FancyURLopener handle the redirects, but any other error we want
-        to let fail.
-        """
-        if errcode in self.HANDLED_ERRORS:
-            name = 'http_error_%d' % errcode
-            method = getattr(self, name)
-            if data is None:
-                result = method(url, fp, errcode, errmsg, headers)
-            else:
-                result = method(url, fp, errcode, errmsg, headers, data)
-            if result:
-                return result
-        return self.http_error_default(url, fp, errcode, errmsg, headers)
-
-
-def download_image(parsed_url):
-    """Downloads the image file from the given source URL.
-
-    If successful returns the path to the downloaded file. Otherwise None is
-    returned.
-    """
-    src = parsed_url.geturl()
-    logger.info("Retrieving %s", src)
-    try:
-        fn, hdrs = opener.retrieve(src)
-    except IOError as ex:
-        args = ex.args if ex.args else []
-        if len(args) == 4 and args[0] == 'http error':
-            logger.error("http error: %d - %s", args[1], args[2])
-        elif len(args) == 2 and isinstance(args[1], socket.gaierror):
-            logger.error("gaierror, ignoring host %s", parsed_url.hostname)
-            bad_hosts.add(parsed_url.hostname)
-        else:
-            logger.error("%s", ex)
-        return None
-
-    # Does it look like an image?
-    content_type = hdrs.get('content-type')
-    if not content_type:
-        logger.error("No content-type header found")
-        return None
-
-    file_size = os.stat(fn).st_size
-    logger.info("Retrieved: %s bytes; content-type: %s", file_size, content_type)
-
-    parts = content_type.split('/')
-    if len(parts) < 2 or parts[0] != 'image':
-        logger.error("Unknown content-type: %s", content_type)
-        return None
-
-    return fn
-
-
 def resize_image(img_path):
-    """Resizes the image found at img_path if necessary."""
-    image = Image.open(img_path)
+    """Resizes the image found at img_path if necessary.
+
+    Returns True if the image was resized or resizing wasn't necessary.
+    Returns False if the image could not be read or processed.
+    """
+    try:
+        image = Image.open(img_path)
+    except IOError as ex:
+        logger.error("Error opening %s: %s", img_path, ex)
+        return False
+
     if image.size > PHOTO_MAX_SIZE:
         logger.info('Resizing from %s to %s', image.size, PHOTO_MAX_SIZE)
         image.thumbnail(PHOTO_MAX_SIZE, Image.ANTIALIAS)
         image.save(img_path)
+
+    return True
 
 
 def gen_key():
@@ -195,10 +142,22 @@ def save_image_to_cloud(parsed_url):
 
     Returns the new URL or None if unsuccessful.
     """
-    fn = download_image(parsed_url)
+    url = parsed_url.geturl()
+    fn = None
+    try:
+        fn = download_file(url)
+    except requests.ConnectionError as ex:
+        logger.error("ConnectionError, ignoring host %s", parsed_url.hostname)
+        bad_hosts.add(parsed_url.hostname)
+    except requests.RequestException as ex:
+        logger.error("%s", ex)
+    except Exception as ex:
+        logger.exception("%s", ex)
+
     if fn:
-        resize_image(fn)
-        return upload_image(fn)
+        with remove_file(fn):
+            if resize_image(fn):
+                return upload_image(fn)
     return None
 
 
@@ -292,7 +251,8 @@ class Command(NoArgsCommand):
                 help="optional second slice index; the j in [i:j]"),
             make_option('-t', '--timeout',
                 type='int',
-                help="optional socket timeout (secs)"),
+                help="optional socket timeout (secs)",
+                default=30),
             )
 
     def handle_noargs(self, **options):
@@ -329,16 +289,12 @@ class Command(NoArgsCommand):
             qs = qs[:j]
 
         # Set global socket timeout
-        timeout = options.get('timeout', 30)
+        timeout = options.get('timeout')
         logger.info("Setting socket timeout to %d", timeout)
         socket.setdefaulttimeout(timeout)
 
         # Install signal handler for ctrl-c
         signal.signal(signal.SIGINT, signal_handler)
-
-        # Create URL opener to download photos
-        global opener
-        opener = ImageURLopener()
 
         # Create bucket to upload photos
         global bucket

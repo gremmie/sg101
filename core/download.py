@@ -40,6 +40,8 @@ def download_file(url, path=None):
         suffix = mimetypes.guess_extension(content_type) if content_type else ''
         if suffix == '.jpe':
             suffix = '.jpg'
+        elif suffix is None:
+            suffix = ''
         fd, path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
 
