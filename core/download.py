@@ -12,7 +12,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def download_file(url, path=None):
+def download_file(url, path=None, timeout=None):
     """Downloads the image file from the given source URL and stores it in the
     filename given by path. If path is None, a temporary file will be created.
 
@@ -24,7 +24,7 @@ def download_file(url, path=None):
     logger.info("download_file from %s; path=%s", url, path)
 
     try:
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=timeout)
     except requests.RequestException:
         logger.exception("download_file requests.get('%s') exception", url)
         raise

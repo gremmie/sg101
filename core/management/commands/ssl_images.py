@@ -14,7 +14,6 @@ from optparse import make_option
 import os
 import re
 import signal
-import socket
 import urlparse
 import uuid
 
@@ -54,6 +53,7 @@ quit_flag = False
 bucket = None
 url_cache = {}
 bad_hosts = set()
+request_timeout = None
 
 
 def signal_handler(signum, frame):
@@ -145,7 +145,7 @@ def save_image_to_cloud(parsed_url):
     url = parsed_url.geturl()
     fn = None
     try:
-        fn = download_file(url)
+        fn = download_file(url, timeout=request_timeout)
     except requests.ConnectionError as ex:
         logger.error("ConnectionError, ignoring host %s", parsed_url.hostname)
         bad_hosts.add(parsed_url.hostname)
@@ -250,9 +250,9 @@ class Command(NoArgsCommand):
                 type='int',
                 help="optional second slice index; the j in [i:j]"),
             make_option('-t', '--timeout',
-                type='int',
+                type='float',
                 help="optional socket timeout (secs)",
-                default=30),
+                default=30.0),
             )
 
     def handle_noargs(self, **options):
@@ -289,9 +289,9 @@ class Command(NoArgsCommand):
             qs = qs[:j]
 
         # Set global socket timeout
-        timeout = options.get('timeout')
-        logger.info("Setting socket timeout to %d", timeout)
-        socket.setdefaulttimeout(timeout)
+        global request_timeout
+        request_timeout = options.get('timeout')
+        logger.info("Using socket timeout of %4.2f", request_timeout)
 
         # Install signal handler for ctrl-c
         signal.signal(signal.SIGINT, signal_handler)
