@@ -75,6 +75,10 @@ def image_check(html, allowed_hosts=None):
     hosts. If None, USER_IMAGES_SOURCES from settings will be used as the
     whitelist.
     """
+    html = html.strip()
+    if not html:
+        return True
+
     if not allowed_hosts:
         allowed_hosts = ALLOWED_HOSTS
 

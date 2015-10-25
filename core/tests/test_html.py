@@ -66,3 +66,11 @@ class ImageCheckTestCase(unittest.TestCase):
         html = TEST_HTML.format(src1=url1, src2=url2)
 
         self.assertRaises(ImageCheckError, image_check, html, self.allowed_hosts)
+
+    def test_empty_string(self):
+        result = image_check('')
+        self.assertTrue(result)
+
+    def test_whitespace(self):
+        result = image_check('\r\n\r\n')
+        self.assertTrue(result)
