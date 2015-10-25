@@ -75,6 +75,11 @@ def _setup_logging():
     requests_log.propagate = True
     requests_log.addHandler(handler)
 
+    dl_log = logging.getLogger("core.download")
+    dl_log.setLevel(logging.INFO)
+    dl_log.propagate = True
+    dl_log.addHandler(handler)
+
 
 def resize_image(img_path):
     """Resizes the image found at img_path if necessary.
