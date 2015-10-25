@@ -70,6 +70,11 @@ def _setup_logging():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    requests_log = logging.getLogger("requests.packages.urllib3")
+    requests_log.setLevel(logging.INFO)
+    requests_log.propagate = True
+    requests_log.addHandler(handler)
+
 
 def resize_image(img_path):
     """Resizes the image found at img_path if necessary.
@@ -85,8 +90,12 @@ def resize_image(img_path):
 
     if image.size > PHOTO_MAX_SIZE:
         logger.info('Resizing from %s to %s', image.size, PHOTO_MAX_SIZE)
-        image.thumbnail(PHOTO_MAX_SIZE, Image.ANTIALIAS)
-        image.save(img_path)
+        try:
+            image.thumbnail(PHOTO_MAX_SIZE, Image.ANTIALIAS)
+            image.save(img_path)
+        except IOError as ex:
+            logger.error("Error resizing image from %s: %s", img_path, ex)
+            return False
 
     return True
 

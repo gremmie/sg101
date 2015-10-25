@@ -5,6 +5,7 @@ import mimetypes
 import os
 import shutil
 import tempfile
+from urlparse import urlparse
 
 import requests
 
@@ -38,10 +39,15 @@ def download_file(url, path=None, timeout=None):
     if not path:
         content_type = r.headers.get('content-type')
         suffix = mimetypes.guess_extension(content_type) if content_type else ''
+
+        # mimetypes currently returns '.jpe' for jpeg; so fix that up here...
         if suffix == '.jpe':
             suffix = '.jpg'
-        elif suffix is None:
-            suffix = ''
+        elif not suffix:
+            # No content-type so guess based on extension if we can
+            p = urlparse(url)
+            suffix = os.path.splitext(p.path)[1]
+
         fd, path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
 
