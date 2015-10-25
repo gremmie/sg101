@@ -234,6 +234,15 @@ http://surfguitar101.com/media/zzz.jpg
         expected_args = [mock.call(urlparse(c)) for c in old_src[:2]]
         self.assertEqual(upload_mock.call_args_list, expected_args)
 
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_bad_image_url(self, upload_mock):
+        test_str = u'![image](http://[url=http://www.flickr.com/photos/85447101@N04/8025176073/][img]http://farm9.staticflickr.com/8456/8025176073_91ac0c3d18_b.jpg[/img][/url] [url=http://www.flickr.com/photos/85447101@N04/8025176073/]IMG_0398[/url] by [url=http://www.flickr.com/people/85447101@N04/]friendshipmaster[/url], on Flick)'
+        expected = u'{bad image}'
+
+        result = process_post(test_str)
+        self.assertEqual(expected, result)
+        self.assertEqual(upload_mock.call_count, 0)
+
 
 class HtmlCheckTestCase(unittest.TestCase):
 

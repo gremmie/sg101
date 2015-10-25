@@ -191,7 +191,11 @@ def replace_image_markup(match):
 
     new_src = None
     if src:
-        r = urlparse.urlparse(src)
+        try:
+            r = urlparse.urlparse(src)
+        except ValueError:
+            return u'{bad image}'
+
         if r.hostname in SG101_HOSTS:
             new_src = r.path        # convert to relative path
         elif r.scheme == 'http':
