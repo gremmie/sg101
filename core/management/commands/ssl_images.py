@@ -20,6 +20,7 @@ import uuid
 from django.core.management.base import NoArgsCommand, CommandError
 from django.conf import settings
 from lxml import etree
+import lxml.html
 import markdown.inlinepatterns
 from PIL import Image
 import requests
@@ -29,6 +30,7 @@ from forums.models import Post
 from core.download import download_file
 from core.functions import remove_file
 from core.s3 import S3Bucket
+from news.models import Story
 
 
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
@@ -41,7 +43,7 @@ IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 WHITELIST_HOSTS = set(settings.USER_IMAGES_SOURCES)
-MODEL_CHOICES = ['comments', 'posts']
+MODEL_CHOICES = ['comments', 'posts', 'news']
 
 PHOTO_MAX_SIZE = (660, 720)
 PHOTO_BASE_URL = settings.HOT_LINK_PHOTOS_BASE_URL
@@ -239,6 +241,50 @@ def process_post(text):
     return IMAGE_LINK_RE.sub(replace_image_markup, text)
 
 
+def process_html(html):
+    """Process the html fragment, converting to https where needed."""
+    s = html.strip()
+    if not s:
+        return s
+
+    changed = False
+    root = lxml.html.fragment_fromstring(s, create_parent=True)
+    for img in root.iter('img'):
+        src = img.get('src')
+        src = src.strip() if src else ''
+        if src:
+            try:
+                r = urlparse.urlparse(src)
+            except ValueError:
+                logger.warning("Bad url? Should not happen; skipping...")
+                continue
+
+            new_src = None
+            if r.hostname in SG101_HOSTS:
+                new_src = r.path        # convert to relative path
+            elif ((r.scheme == 'http') or
+                  (r.scheme == 'https' and r.hostname not in WHITELIST_HOSTS)):
+                new_src = convert_to_ssl(r)
+                if not new_src:
+                    # failed to convert to https; convert to a link
+                    tail = img.tail
+                    img.clear()
+                    img.tag = 'a'
+                    img.set('href', src)
+                    img.text = 'Image'
+                    img.tail = tail
+                    changed = True
+
+            if new_src:
+                img.set('src', new_src)
+                changed = True
+
+    if changed:
+        result = lxml.html.tostring(root, encoding='utf-8')
+        return result[5:-6]     # strip off parent div we added
+    return html
+
+
 def html_check(html):
     """Return True if the given HTML fragment has <img> tags with src attributes
     that use http, and False otherwise.
@@ -283,12 +329,18 @@ class Command(NoArgsCommand):
 
         if options['model'] == 'comments':
             qs = Comment.objects.all()
-            text_attr = 'comment'
+            text_attrs = ['comment']
             model_name = 'Comment'
-        else:
+        elif options['model'] == 'posts':
             qs = Post.objects.all()
-            text_attr = 'body'
+            text_attrs = ['body']
             model_name = 'Post'
+        else:
+            qs = Story.objects.all()
+            text_attrs = ['short_text', 'long_text']
+            model_name = 'Story'
+
+        html_based = options['model'] == 'news'
 
         i, j = options['i'], options['j']
 
@@ -333,21 +385,31 @@ class Command(NoArgsCommand):
                 logger.warning("SIGINT received, exiting")
                 break
             logger.info("Processing %s #%d (pk = %d)", model_name, n + i, model.pk)
-            txt = getattr(model, text_attr)
-            warn_if_image_refs(txt, model_name, model.pk)
-            new_txt = process_post(txt)
-            if txt != new_txt:
-                logger.info("Content changed on %s #%d (pk = %d)",
-                            model_name, n + i, model.pk)
-                logger.debug("original: %s", txt)
-                logger.debug("changed:  %s", new_txt)
-                setattr(model, text_attr, new_txt)
-                model.save()
-            elif html_check(model.html):
-                # Check for content generated with older smiley code that used
-                # absolute URLs for the smiley images. If True, then just save
-                # the model again to force updated HTML to be created.
-                logger.info("Older Smiley HTML detected, forcing a save")
+            save_flag = False
+            for text_attr in text_attrs:
+                txt = getattr(model, text_attr)
+
+                if html_based:
+                    new_txt = process_html(txt)
+                else:
+                    new_txt = process_post(txt)
+                    warn_if_image_refs(txt, model_name, model.pk)
+
+                if txt != new_txt:
+                    logger.info("Content changed on %s #%d (pk = %d)",
+                                model_name, n + i, model.pk)
+                    logger.debug(u"original: %s", txt)
+                    logger.debug(u"changed:  %s", new_txt)
+                    setattr(model, text_attr, new_txt)
+                    save_flag = True
+                elif not html_based and html_check(model.html):
+                    # Check for content generated with older smiley code that used
+                    # absolute URLs for the smiley images. If True, then just save
+                    # the model again to force updated HTML to be created.
+                    logger.info("Older Smiley HTML detected, forcing a save")
+                    save_flag = True
+
+            if save_flag:
                 model.save()
             count += 1
 

@@ -7,7 +7,7 @@ import mock
 from django.conf import settings
 
 from core.management.commands.ssl_images import html_check
-from core.management.commands.ssl_images import process_post
+from core.management.commands.ssl_images import process_post, process_html
 import core.management.commands.ssl_images
 
 
@@ -290,3 +290,179 @@ class HtmlCheckTestCase(unittest.TestCase):
             <p>Look again: <img src="https://b.jpg" alt="b" /></p>
             </div>
             """))
+
+
+class ProcessHtmlTestCase(unittest.TestCase):
+
+    SG101_RE = re.compile(r'http://(?:www\.)?surfguitar101.com/', re.I)
+
+    def setUp(self):
+        self.assertTrue(len(settings.USER_IMAGES_SOURCES) > 0)
+        self.safe_host = settings.USER_IMAGES_SOURCES[0]
+
+    def tearDown(self):
+        core.management.commands.ssl_images.url_cache = {}
+
+    def test_empty_string(self):
+        s = process_html('')
+        self.assertEqual(s, '')
+
+    def test_whitespace_string(self):
+        s = process_html('\r\n\r\n')
+        self.assertEqual(s, '')
+
+    def test_no_matches(self):
+        test_str = """<p>Here is a post that doesn't contain any image links at
+        all. It also spans lines.</p>
+        """
+        result = process_html(test_str)
+        self.assertEqual(test_str, result)
+
+    def test_multiple_paragraphs(self):
+        test_str = """<p>Here is a post that doesn't contain any image links at
+        all. It also spans lines.</p>
+        """
+        test_str += test_str
+        result = process_html(test_str)
+        self.assertEqual(test_str, result)
+
+    def test_sg101_images(self):
+        test_str = """<p>An image:
+        <img src="http://www.surfguitar101.com/img.jpg" alt="image">
+        And another: <img src="HTTP://SURFGUITAR101.COM/foo/bar/img.png" alt="pic">
+        More stuff here.</p>"""
+        expected = self.SG101_RE.sub('/', test_str)
+        result = process_html(test_str)
+        self.assertNotEqual(test_str, expected)
+        self.assertEqual(expected, result)
+
+    def test_https_already(self):
+        test_str = """<p>An image that is already using https:
+            <img src="https://{}/zzz.png" alt="pic">
+            It's cool.</p>""".format(self.safe_host)
+        result = process_html(test_str)
+        self.assertEqual(test_str, result)
+
+    def test_https_sg101(self):
+        test_str = """<p>An image that is already using https:
+            <img src="https://www.SURFGUITAR101.com/zzz.png" alt="pic">
+            It's cool.</p>
+            """
+        expected = """<p>An image that is already using https:
+            <img src="/zzz.png" alt="pic">
+            It's cool.</p>"""
+        result = process_html(test_str)
+        self.assertEqual(expected, result)
+
+    def test_multiple_non_http(self):
+        test_str = """<p>An image:
+        <img src="http://www.surfguitar101.com/img.jpg" alt="pic">
+        And another:
+        <img src="HTTPS://{}/foo/bar/img.png" alt="stuff">
+        More stuff here.</p>
+        """.format(self.safe_host)
+        expected = """<p>An image:
+        <img src="/img.jpg" alt="pic">
+        And another:
+        <img src="HTTPS://{}/foo/bar/img.png" alt="stuff">
+        More stuff here.</p>""".format(self.safe_host)
+        result = process_html(test_str)
+        self.assertEqual(expected, result)
+
+    def test_https_already_with_title(self):
+        test_str = """<p>An image that is already using https:
+            <img src="https://{}/zzz.png" alt="1" title="the title">
+            It's cool.</p>
+            """.format(self.safe_host)
+        result = process_html(test_str)
+        self.assertEqual(test_str, result)
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_simple_replacement(self, upload_mock):
+        old_src = 'http://example.com/images/my_image.jpg'
+        new_src = 'https://cloud.com/ABCDEF.jpg'
+        test_str = """<p>Here is a really cool http: based image:
+            <img src="{}" alt="a">
+            Cool, right?</p>""".format(old_src)
+        expected = """<p>Here is a really cool http: based image:
+            <img src="{}" alt="a">
+            Cool, right?</p>""".format(new_src)
+
+        upload_mock.return_value = new_src
+        result = process_html(test_str)
+        self.assertEqual(expected, result)
+        upload_mock.assert_called_once_with(urlparse(old_src))
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_multiple_replacement(self, upload_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'http://example.com/static/wow.gif',
+            'http://example.com/media/a/b/c/pic.png',
+        ]
+        new_src = [
+            'https://cloud.com/some/path/012345.jpg',
+            'https://cloud.com/some/path/6789AB.gif',
+            'https://cloud.com/some/path/CDEF01.png',
+        ]
+
+        template = """<p>Here is a really cool http: based image:
+            <img src="{}" alt="a">
+            Cool, right?
+            Another one: <img src="{}" alt="b">
+            And finally
+            <img src="{}" alt="c">
+            </p>"""
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        upload_mock.side_effect = new_src
+        result = process_html(test_str)
+        self.assertEqual(expected, result)
+        expected_args = [mock.call(urlparse(c)) for c in old_src]
+        self.assertEqual(upload_mock.call_args_list, expected_args)
+
+    @mock.patch('core.management.commands.ssl_images.save_image_to_cloud')
+    def test_multiple_replacement_2(self, upload_mock):
+        old_src = [
+            'http://example.com/images/my_image.jpg',
+            'https://{}/static/wow.gif'.format(self.safe_host),
+            'http://www.surfguitar101.com/media/a/b/c/pic.png',
+            'http://surfguitar101.com/media/a/b/c/pic2.png',
+        ]
+        new_src = [
+            'https://cloud.com/some/path/012345.jpg',
+            'https://{}/static/wow.gif'.format(self.safe_host),
+            '/media/a/b/c/pic.png',
+            '/media/a/b/c/pic2.png',
+        ]
+
+        template = """<p>Here is a really cool http: based image:
+            <img src="{}" alt="a">
+            Cool, right?
+            Another two: <img src="{}" alt="b"><img src="{}" alt="c">
+            And finally
+            <img src="{}" alt="d"></p>"""
+
+        test_str = template.format(*old_src)
+        expected = template.format(*new_src)
+
+        upload_mock.side_effect = new_src
+        result = process_html(test_str)
+        self.assertEqual(expected, result)
+        upload_mock.assert_called_once_with(urlparse(old_src[0]))
+
+    @mock.patch('core.management.commands.ssl_images.convert_to_ssl')
+    def test_change_img_to_a(self, convert_mock):
+        convert_mock.return_value = None
+        test_str = """<p>A bad image:
+            <img src="http://example.com/zzz.png" alt="1" title="the title">
+            It's cool.</p>"""
+
+        result = process_html(test_str)
+
+        expected = """<p>A bad image:
+            <a href="http://example.com/zzz.png">Image</a>
+            It's cool.</p>"""
+        self.assertEqual(result, expected)

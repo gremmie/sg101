@@ -18,7 +18,7 @@ class Category(models.Model):
         return self.title
 
     def num_stories(self):
-        return News.objects.filter(category = self.pk).count()
+        return Story.objects.filter(category=self.pk).count()
 
     class Meta:
         verbose_name_plural = 'Categories'
