@@ -281,7 +281,8 @@ def process_html(html):
 
     if changed:
         result = lxml.html.tostring(root, encoding='utf-8')
-        return result[5:-6]     # strip off parent div we added
+        result = result[5:-6]     # strip off parent div we added
+        return result.decode('utf-8')
     return html
 
 
