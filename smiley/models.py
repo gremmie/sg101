@@ -81,9 +81,8 @@ class Smiley(models.Model):
     def html(self):
         """Returns a HTML img tag representation of the smiley."""
         if self.image:
-            site = Site.objects.get_current()
-            return (u'<img src="http://%s%s" alt="%s" title="%s" />' %
-                    (site.domain, self.get_absolute_url(), self.title, self.title))
+            return (u'<img src="%s" alt="%s" title="%s" />' %
+                    (self.get_absolute_url(), self.title, self.title))
         return u''
     html.allow_tags = True
 
