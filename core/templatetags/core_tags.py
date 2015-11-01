@@ -91,7 +91,7 @@ def _fully_qualify(url, domain):
 
     """
     if url.startswith('/'):
-        url = "http://%s%s" % (domain, url)
+        url = "%s://%s%s" % (settings.SITE_SCHEME, domain, url)
     return url
 
 
@@ -110,7 +110,7 @@ def open_graph_meta_tags(item=None):
         props = {
             'og:title': site.name,
             'og:type': 'website',
-            'og:url': 'http://%s' % site.domain,
+            'og:url': '%s://%s' % (settings.SITE_SCHEME, site.domain),
             'og:description': settings.OGP_SITE_DESCRIPTION,
         }
 

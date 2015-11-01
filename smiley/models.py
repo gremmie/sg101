@@ -4,6 +4,7 @@ Models for the smiley application.
 import re
 
 from django.db import models
+from django.conf import settings
 from django.core.cache import cache
 from django.contrib.sites.models import Site
 
@@ -99,6 +100,6 @@ class Smiley(models.Model):
                         self.title)
             else:
                 site = Site.objects.get_current()
-                return (u'![%s](http://%s%s "%s")' %
-                    (self.title, site.domain, self.image.url, self.title))
+                return (u'![%s](%s://%s%s "%s")' % (
+                    self.title, settings.SITE_SCHEME, site.domain, self.image.url, self.title))
         return u''

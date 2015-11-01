@@ -34,6 +34,9 @@ LANGUAGE_CODE = 'en-us'
 
 SITE_ID = 1
 
+# Site scheme; http or https.
+SITE_SCHEME = 'http'
+
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
 USE_I18N = False
@@ -320,7 +323,7 @@ QUEUE_REDIS_DB = 0
 #######################################################################
 # Open Graph Protocol related settings
 #######################################################################
-OGP_DEFAULT_IMAGE = 'http://surfguitar101.com/media/podcast/podcast_logo.jpg'
+OGP_DEFAULT_IMAGE = SITE_SCHEME + '://surfguitar101.com/media/podcast/podcast_logo.jpg'
 OGP_FB_ID = '100001558124013'
 OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
     ' instrumental surf music. We have forums, podcasts, surf music news, an'
@@ -336,13 +339,13 @@ GPP_THIRD_PARTY_JS = {
         'js/jquery.imagesloaded.min.js',
     ],
     'jquery': [
-        'http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js',
+        'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js',
     ],
     'jquery-jeditable': [
         'js/jquery.jeditable.mini.js',
     ],
     'jquery-ui': [
-        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js',
+        'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js',
     ],
     'markitup': [
         'js/markitup/jquery.markitup1.1.14.min.js',
@@ -356,14 +359,13 @@ GPP_THIRD_PARTY_JS = {
 
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': [
-        'http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/redmond/jquery-ui.css',
+        'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/redmond/jquery-ui.css',
     ],
     'markitup': [
         'js/markitup/skins/markitup/style.css',
         'js/markitup/sets/markdown/style.css',
     ],
 }
-
 
 # Turn off warning about test runner behavior change
 SILENCED_SYSTEM_CHECKS = ['1_6.W001']

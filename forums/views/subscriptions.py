@@ -33,7 +33,7 @@ def notify_topic_subscribers(post, defer=True):
     if recipients:
         site = Site.objects.get_current()
         subject = "[%s] Topic Reply: %s" % (site.name, topic.name)
-        url_prefix = "http://%s" % site.domain
+        url_prefix = "%s://%s" % (settings.SITE_SCHEME, site.domain)
         post_url = url_prefix + post.get_absolute_url()
         unsubscribe_url = url_prefix + reverse("forums-manage_subscriptions")
         msg = render_to_string("forums/topic_notify_email.txt", {

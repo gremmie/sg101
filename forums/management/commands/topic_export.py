@@ -9,6 +9,7 @@ from __future__ import with_statement
 from optparse import make_option
 import re
 
+from django.conf import settings
 from django.core.management.base import LabelCommand, CommandError
 from django.template.loader import render_to_string, TemplateDoesNotExist
 
@@ -16,7 +17,7 @@ from forums.models import Topic
 
 
 SRC_RE = re.compile(r'src="/media/')
-SRC_REPL = 'src="http://surfguitar101.com/media/'
+SRC_REPL = 'src="{}://surfguitar101.com/media/'.format(settings.SITE_SCHEME)
 
 
 class Command(LabelCommand):

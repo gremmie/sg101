@@ -49,7 +49,7 @@ class BandEntryAdmin(admin.ModelAdmin):
         data.
 
         """
-        base_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s"
+        base_url = "https://maps.googleapis.com/maps/api/geocode/json?address=%s"
         ok_cnt = 0
         for band in qs:
             url = base_url % urllib.quote_plus(band.location)

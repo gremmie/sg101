@@ -205,7 +205,8 @@ class RegisterCodeForm(forms.Form):
         site = Site.objects.get_current()
         admin_email = settings.DEFAULT_FROM_EMAIL
 
-        activation_link = 'http://%s%s' % (
+        activation_link = '%s://%s%s' % (
+                settings.SITE_SCHEME,
                 site.domain,
                 reverse('accounts-register_confirm',
                         kwargs={'username': pending_user.username,

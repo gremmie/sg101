@@ -114,7 +114,9 @@ class EventAdmin(admin.ModelAdmin):
         This view generates the authorization URL and redirects the user to it.
         """
         site = Site.objects.get_current()
-        callback_url = 'http://%s%s' % (site.domain,
+        callback_url = '%s://%s%s' % (
+                settings.SITE_SCHEME,
+                site.domain,
                 reverse('admin:gcalendar-auth_return'))
         auth_url = oauth.get_auth_url(callback_url)
         return HttpResponseRedirect(auth_url)

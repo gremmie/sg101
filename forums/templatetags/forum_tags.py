@@ -3,10 +3,9 @@ Template tags for the forums application.
 """
 import datetime
 
-from pytz import timezone
+from pytz import timezone, UnknownTimeZoneError
 from django import template
 from django.conf import settings
-from django.core.cache import cache
 
 from forums.models import Forum
 from forums.models import Topic
@@ -31,6 +30,7 @@ DATE_FMT_12 = (
 )
 
 SERVER_TZ = timezone(settings.TIME_ZONE)
+DEFAULT_TZ = timezone('US/Pacific')
 
 
 @register.inclusion_tag('forums/last_post_info.html', takes_context=True)
@@ -76,7 +76,10 @@ def current_forum_time(user):
 
     if user.is_authenticated():
         tz_prefs = get_time_prefs(user)
-        user_tz = timezone(tz_prefs[1])
+        try:
+            user_tz = timezone(tz_prefs[1])
+        except UnknownTimeZoneError:
+            user_tz = DEFAULT_TZ
         curr_time = curr_time.astimezone(user_tz)
         fmt = TIME_FMT_24 if tz_prefs[0] else TIME_FMT_12
     else:
@@ -97,7 +100,10 @@ def forum_date(date, user, long_format=True):
     date = SERVER_TZ.localize(date)
     if user.is_authenticated():
         tz_prefs = get_time_prefs(user)
-        user_tz = timezone(tz_prefs[1])
+        try:
+            user_tz = timezone(tz_prefs[1])
+        except UnknownTimeZoneError:
+            user_tz = DEFAULT_TZ
         date = date.astimezone(user_tz)
         fmt = DATE_FMT_24 if tz_prefs[0] else DATE_FMT_12
     else:
