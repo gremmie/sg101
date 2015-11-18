@@ -15,12 +15,12 @@
       reports, and music reviews are good examples. Bad examples are wishing
       someone a happy birthday or submitting comments on something you saw on
       TV.</li>
-      <li>If you wish to start a discussion, please use the forums, you'll get
-      a much better response there.</li>
       <li>For-sale or wanted-to-buy ads should go in the forums.</li>
       <li>Please spend some time on your grammar and spelling. Minor issues
       will be corrected by the staff, but major problems may cause a delay in
       publishing or even cause your item to be rejected.</li>
+      <li>To add images to your news item, use the forms at the bottom of the
+      page.</li>
    </ul>
    <p>Thank you for contributing content to SG101!</p>
    <form action="." method="post">{% csrf_token %}
@@ -30,6 +30,9 @@
          &nbsp;<a href="{% url 'news-index_page' %}">Cancel</a></td></tr>
       </table>
    </form>
+
+   {% include 'user_photos/image_forms.html' %}
+
 {% else %}
    <p><strong>Thank you for submitting a news item!</strong></p>
    <p>Your news item has been submitted for review to the site staff. Your item may be edited for content,

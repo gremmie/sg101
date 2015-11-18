@@ -1,11 +1,17 @@
 """
 Models for the news application.
 """
-
 import datetime
+
 from django.db import models
 from django.contrib.auth.models import User
 from tagging.fields import TagField
+
+from core.markup import site_markup
+
+
+# News App versions
+NEWS_VERSION = 2
 
 
 class Category(models.Model):
@@ -39,29 +45,40 @@ class StoryBase(models.Model):
     update_date = models.DateTimeField(db_index=True, blank=True)
     priority = models.IntegerField(db_index=True, default=0, blank=True)
     meta_description = models.TextField(blank=True)
+    short_markup = models.TextField(default='')
+    long_markup = models.TextField(default='', blank=True)
+    admin_content = models.TextField(default='', blank=True)
+    version = models.SmallIntegerField(default=NEWS_VERSION)
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_submitted = datetime.datetime.now()
+            self.update_date = self.date_submitted
+        else:
+            self.update_date = datetime.datetime.now()
+
+        self.short_text = kwargs.pop('short_text', None)
+        if self.short_text is None and self.short_markup:
+            self.short_text = site_markup(self.short_markup)
+
+        self.long_text = kwargs.pop('long_text', None)
+        if self.long_text is None and self.long_markup:
+            self.long_text = site_markup(self.long_markup)
+
+        super(StoryBase, self).save(*args, **kwargs)
 
 
 class PendingStory(StoryBase):
     """Stories submitted by users are held pending admin approval"""
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            if not self.date_submitted:
-                self.date_submitted = datetime.datetime.now()
-            self.update_date = self.date_submitted
-        else:
-            self.update_date = datetime.datetime.now()
-
-        super(PendingStory, self).save(*args, **kwargs)
-
     def __unicode__(self):
         return self.title
 
     class Meta:
-        ordering = ('-date_submitted', )
+        ordering = ['-date_submitted']
         verbose_name_plural = 'Pending Stories'
 
 
@@ -76,18 +93,9 @@ class Story(StoryBase):
         return self.title
 
     class Meta:
-        ordering = ('-date_submitted', )
+        ordering = ['-date_submitted']
         verbose_name = 'news story'
         verbose_name_plural = 'news stories'
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.date_submitted = datetime.datetime.now()
-            self.update_date = self.date_submitted
-        else:
-            self.update_date = datetime.datetime.now()
-
-        super(Story, self).save(*args, **kwargs)
 
     def can_comment_on(self):
         now = datetime.datetime.now()

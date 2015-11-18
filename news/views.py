@@ -142,11 +142,7 @@ def submit(request):
     if request.method == "POST":
         add_form = AddNewsForm(request.POST)
         if add_form.is_valid():
-            pending_story = add_form.save(commit=False)
-            pending_story.submitter = request.user
-            pending_story.short_text = _clean_html(pending_story.short_text)
-            pending_story.long_text = _clean_html(pending_story.long_text)
-            pending_story.save()
+            add_form.save(request.user)
             return HttpResponseRedirect(reverse('news.views.submit_thanks'))
     else:
         add_form = AddNewsForm()
