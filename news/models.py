@@ -37,7 +37,7 @@ class StoryBase(models.Model):
     submitter = models.ForeignKey(User)
     category = models.ForeignKey(Category)
     short_text = models.TextField()
-    long_text = models.TextField(blank=True)
+    long_text = models.TextField(default='', blank=True)
     date_submitted = models.DateTimeField(db_index=True)
     allow_comments = models.BooleanField(default=True)
     tags = TagField()
@@ -60,12 +60,12 @@ class StoryBase(models.Model):
         else:
             self.update_date = datetime.datetime.now()
 
-        self.short_text = kwargs.pop('short_text', None)
-        if self.short_text is None and self.short_markup:
+        self.short_text = kwargs.pop('short_text', '')
+        if not self.short_text and self.short_markup:
             self.short_text = site_markup(self.short_markup)
 
-        self.long_text = kwargs.pop('long_text', None)
-        if self.long_text is None and self.long_markup:
+        self.long_text = kwargs.pop('long_text', '')
+        if not self.long_text and self.long_markup:
             self.long_text = site_markup(self.long_markup)
 
         super(StoryBase, self).save(*args, **kwargs)

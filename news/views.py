@@ -143,7 +143,7 @@ def submit(request):
         add_form = AddNewsForm(request.POST)
         if add_form.is_valid():
             add_form.save(request.user)
-            return HttpResponseRedirect(reverse('news.views.submit_thanks'))
+            return HttpResponseRedirect(reverse('news-submit_thanks'))
     else:
         add_form = AddNewsForm()
 
