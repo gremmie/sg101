@@ -22,8 +22,31 @@ class PendingStoryAdmin(admin.ModelAdmin):
     search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
     actions = ['approve_story']
-    readonly_fields = ['update_date']
+    readonly_fields = ['update_date', 'version']
     raw_id_fields = ['submitter']
+
+    fieldsets = [
+        (None, {
+            'fields': ['title', 'submitter', 'category'],
+            }),
+        ('New Markdown Fields', {
+            'fields': ['short_markup', 'long_markup'],
+            }),
+        ('HTML Fields', {
+            'fields': ['short_text', 'long_text', 'admin_content'],
+            'classes': ['collapse'],
+            }),
+        ('Meta Fields', {
+            'fields': [
+                'date_submitted', 'allow_comments', 'tags',
+                'front_page_expiration', 'priority', 'meta_description',
+                ]
+            }),
+        ('Read-Only Fields', {
+            'fields': ['update_date', 'version'],
+            'classes': ['collapse'],
+            }),
+    ]
 
     def approve_story(self, request, qs):
         for pending_story in qs:
@@ -38,7 +61,10 @@ class PendingStoryAdmin(admin.ModelAdmin):
                     tags=pending_story.tags,
                     front_page_expiration=pending_story.front_page_expiration,
                     priority=pending_story.priority,
-                    meta_description=pending_story.meta_description)
+                    meta_description=pending_story.meta_description,
+                    short_markup=pending_story.short_markup,
+                    long_markup=pending_story.long_markup,
+                    admin_content=pending_story.admin_content)
             story.save()
             pending_story.delete()
 
@@ -57,9 +83,11 @@ class StoryAdmin(admin.ModelAdmin):
     list_filter = ['date_submitted', 'category']
     search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
-    readonly_fields = ['update_date']
+    readonly_fields = ['update_date', 'version']
     raw_id_fields = ['submitter']
     actions = ['fix_text']
+
+    fieldsets = PendingStoryAdmin.fieldsets
 
     def fix_text(self, request, qs):
         for story in qs:

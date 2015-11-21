@@ -36,7 +36,7 @@ class StoryBase(models.Model):
     title = models.CharField(max_length=255)
     submitter = models.ForeignKey(User)
     category = models.ForeignKey(Category)
-    short_text = models.TextField()
+    short_text = models.TextField(default='', blank=True)
     long_text = models.TextField(default='', blank=True)
     date_submitted = models.DateTimeField(db_index=True)
     allow_comments = models.BooleanField(default=True)
