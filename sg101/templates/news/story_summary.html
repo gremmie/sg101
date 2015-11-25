@@ -17,6 +17,9 @@
 <div class="news-content">
    {{ story.short_text|safe }}
 </div>
+{% if story.admin_content %}
+   {{ story.admin_content|safe }}
+{% endif %}
 {% if story.long_text %}
 <p>
 <img src="{{ STATIC_URL }}icons/bullet_go.png" alt="Read More" />
