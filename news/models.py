@@ -3,6 +3,7 @@ Models for the news application.
 """
 import datetime
 
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.contrib.auth.models import User
 from tagging.fields import TagField
@@ -97,9 +98,8 @@ class Story(StoryBase):
                                         db_index=False,
                                         help_text="Forum topic used for comments")
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('news.views.story', [str(self.id)])
+        return reverse('news-story', args=[str(self.id)])
 
     def __unicode__(self):
         return self.title
