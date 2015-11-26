@@ -17,6 +17,7 @@ class AddNewsForm(forms.ModelForm):
     short_markup = forms.CharField(
             label="Article text",
             widget=forms.Textarea(attrs={
+                'id': 'id_body',    # needed for image related js
                 'rows': 60,
                 'cols': 80,
                 'class': 'markItUp smileyTarget',
