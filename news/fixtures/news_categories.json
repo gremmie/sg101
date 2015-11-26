@@ -1,101 +1,112 @@
 [
-    {
-        "pk": 2, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Articles.png", 
-            "slug": "articles", 
-            "title": "Articles"
-        }
-    }, 
-    {
-        "pk": 3, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Bands.png", 
-            "slug": "bands", 
-            "title": "Bands"
-        }
-    }, 
-    {
-        "pk": 11, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Featured_Video.png", 
-            "slug": "featured-videos", 
-            "title": "Featured Videos"
-        }
-    }, 
-    {
-        "pk": 4, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Gear.png", 
-            "slug": "gear", 
-            "title": "Gear"
-        }
-    }, 
-    {
-        "pk": 5, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Interviews.png", 
-            "slug": "interviews", 
-            "title": "Interviews"
-        }
-    }, 
-    {
-        "pk": 6, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Reviews.png", 
-            "slug": "reviews", 
-            "title": "Reviews"
-        }
-    }, 
-    {
-        "pk": 7, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Show_Announcements.png", 
-            "slug": "show-announcements", 
-            "title": "Show Announcements"
-        }
-    }, 
-    {
-        "pk": 8, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Show_Reports.png", 
-            "slug": "show-reports", 
-            "title": "Show Reports"
-        }
-    }, 
-    {
-        "pk": 1, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Site_News.png", 
-            "slug": "site-news", 
-            "title": "Site News"
-        }
-    }, 
-    {
-        "pk": 9, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Surf_Scene_News.png", 
-            "slug": "surf-scene-news", 
-            "title": "Surf Scene News"
-        }
-    }, 
-    {
-        "pk": 10, 
-        "model": "news.category", 
-        "fields": {
-            "icon": "news/categories/Guitar_Tabs.png", 
-            "slug": "tablature", 
-            "title": "Tablature"
-        }
-    }
+{
+    "fields": {
+        "forum_slug": "surfguitar101-website",
+        "icon": "news/categories/Site_News.png",
+        "slug": "site-news",
+        "title": "Site News"
+    },
+    "model": "news.category",
+    "pk": 1
+},
+{
+    "fields": {
+        "forum_slug": "surf-music",
+        "icon": "news/categories/Articles.png",
+        "slug": "articles",
+        "title": "Articles"
+    },
+    "model": "news.category",
+    "pk": 2
+},
+{
+    "fields": {
+        "forum_slug": "surf-music",
+        "icon": "news/categories/Bands.png",
+        "slug": "bands",
+        "title": "Bands"
+    },
+    "model": "news.category",
+    "pk": 3
+},
+{
+    "fields": {
+        "forum_slug": "gear",
+        "icon": "news/categories/Gear.png",
+        "slug": "gear",
+        "title": "Gear"
+    },
+    "model": "news.category",
+    "pk": 4
+},
+{
+    "fields": {
+        "forum_slug": "surf-music",
+        "icon": "news/categories/Interviews.png",
+        "slug": "interviews",
+        "title": "Interviews"
+    },
+    "model": "news.category",
+    "pk": 5
+},
+{
+    "fields": {
+        "forum_slug": "music-reviews",
+        "icon": "news/categories/Reviews.png",
+        "slug": "reviews",
+        "title": "Reviews"
+    },
+    "model": "news.category",
+    "pk": 6
+},
+{
+    "fields": {
+        "forum_slug": "gigs",
+        "icon": "news/categories/Show_Announcements.png",
+        "slug": "show-announcements",
+        "title": "Show Announcements"
+    },
+    "model": "news.category",
+    "pk": 7
+},
+{
+    "fields": {
+        "forum_slug": "surf-music",
+        "icon": "news/categories/Show_Reports.png",
+        "slug": "show-reports",
+        "title": "Show Reports"
+    },
+    "model": "news.category",
+    "pk": 8
+},
+{
+    "fields": {
+        "forum_slug": "surf-music",
+        "icon": "news/categories/Surf_Scene_News.png",
+        "slug": "surf-scene-news",
+        "title": "Surf Scene News"
+    },
+    "model": "news.category",
+    "pk": 9
+},
+{
+    "fields": {
+        "forum_slug": "surf-musician",
+        "icon": "news/categories/Guitar_Tabs.png",
+        "slug": "tablature",
+        "title": "Tablature"
+    },
+    "model": "news.category",
+    "pk": 10
+},
+{
+    "fields": {
+        "forum_slug": "surf-videos",
+        "icon": "news/categories/Featured_Video.png",
+        "slug": "featured-videos",
+        "title": "Featured Videos"
+    },
+    "model": "news.category",
+    "pk": 11
+}
 ]

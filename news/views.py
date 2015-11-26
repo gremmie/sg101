@@ -42,7 +42,8 @@ def create_paginator(stories):
 def index(request):
     # Defer the tags field because we are going to get all the
     # tags out in 1 query later...
-    stories = Story.objects.all().defer('tags').select_related()
+    stories = Story.objects.all().defer('tags').select_related(
+            'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
 
     page = get_page(request.GET)
@@ -75,7 +76,8 @@ def archive_index(request):
 
 def archive(request, year, month):
     stories = Story.objects.defer('tags').filter(date_submitted__year=year,
-            date_submitted__month=month).select_related()
+            date_submitted__month=month).select_related(
+                'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
     page = get_page(request.GET)
     try:
@@ -110,7 +112,8 @@ def category_index(request):
 
 def category(request, slug):
     category = get_object_or_404(Category, slug=slug)
-    stories = Story.objects.defer('tags').filter(category=category).select_related()
+    stories = Story.objects.defer('tags').filter(category=category).select_related(
+                    'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
     page = get_page(request.GET)
     try:
@@ -129,7 +132,8 @@ def category(request, slug):
 #######################################################################
 
 def story(request, story_id):
-    story = get_object_or_404(Story, pk=story_id)
+    story = get_object_or_404(Story.objects.select_related(
+                'submitter', 'category', 'forums_topic'), pk=story_id)
     return render_to_response('news/story.html', {
         'story': story,
         },
@@ -174,7 +178,8 @@ def tags(request):
 def tag(request, tag_name):
     tag = get_object_or_404(Tag, name=tag_name)
     stories = TaggedItem.objects.get_by_model(
-            Story.objects.defer('tags').select_related(), tag)
+            Story.objects.defer('tags').select_related(
+                'submitter', 'category', 'forums_topic'), tag)
     paginator = create_paginator(stories)
     page = get_page(request.GET)
     try:

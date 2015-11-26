@@ -19,6 +19,13 @@ class Category(models.Model):
     title = models.CharField(max_length=64)
     slug = models.SlugField(max_length=64)
     icon = models.ImageField(upload_to='news/categories/', blank=True)
+    forum_slug = models.CharField(
+            max_length=80,
+            default='',
+            blank=True,
+            help_text=("Identifies the forum to create comment threads in for "
+                       "stories in this category. If blank, no comment threads "
+                       "will be created for stories in this category."))
 
     def __unicode__(self):
         return self.title
@@ -85,6 +92,10 @@ class PendingStory(StoryBase):
 
 class Story(StoryBase):
     """Model for news stories"""
+    forums_topic = models.OneToOneField('forums.Topic', blank=True, null=True,
+                                        on_delete=models.SET_NULL,
+                                        db_index=False,
+                                        help_text="Forum topic used for comments")
 
     @models.permalink
     def get_absolute_url(self):
@@ -99,9 +110,16 @@ class Story(StoryBase):
         verbose_name_plural = 'news stories'
 
     def can_comment_on(self):
+        # Only used for version 0 stories
         now = datetime.datetime.now()
         delta = now - self.date_submitted
         return self.allow_comments and delta.days < 30
+
+    def forums_comment_count(self):
+        """Returns number of comments for V2 news stories."""
+        if self.forums_topic:
+            return max(0, self.forums_topic.post_count - 1)
+        return 0
 
     def search_title(self):
         return self.title

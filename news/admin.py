@@ -4,6 +4,7 @@ This file contains the automatic admin site definitions for the News models.
 from django.contrib import admin
 from django.conf import settings
 
+from forums.tools import create_topic
 from news.models import PendingStory
 from news.models import Story
 from news.models import Category
@@ -11,9 +12,14 @@ from news.models import Category
 import ftfy
 
 
+COMMENT_THREAD_BODY = ("This topic was automatically created to discuss the "
+        "news story [{title}]({url}).")
+
+
 class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ("title", )}
-    list_display = ['title', 'slug']
+    list_display = ['title', 'slug', 'forum_slug']
+    list_editable = ['forum_slug']
 
 
 class PendingStoryAdmin(admin.ModelAdmin):
@@ -21,7 +27,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
     list_filter = ['date_submitted']
     search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
-    actions = ['approve_story']
+    actions = ['approve_stories']
     readonly_fields = ['update_date', 'version']
     raw_id_fields = ['submitter']
 
@@ -48,31 +54,43 @@ class PendingStoryAdmin(admin.ModelAdmin):
             }),
     ]
 
-    def approve_story(self, request, qs):
+    def approve_stories(self, request, qs):
         for pending_story in qs:
-            story = Story(
-                    title=pending_story.title,
-                    submitter=pending_story.submitter,
-                    category=pending_story.category,
-                    short_text=pending_story.short_text,
-                    long_text=pending_story.long_text,
-                    date_submitted=pending_story.date_submitted,
-                    allow_comments=pending_story.allow_comments,
-                    tags=pending_story.tags,
-                    front_page_expiration=pending_story.front_page_expiration,
-                    priority=pending_story.priority,
-                    meta_description=pending_story.meta_description,
-                    short_markup=pending_story.short_markup,
-                    long_markup=pending_story.long_markup,
-                    admin_content=pending_story.admin_content)
-            story.save()
-            pending_story.delete()
+            self._approve_story(pending_story)
 
         count = len(qs)
         msg = "1 story" if count == 1 else "%d stories" % count
         self.message_user(request, "%s approved." % msg)
 
-    approve_story.short_description = "Approve selected pending stories"
+    approve_stories.short_description = "Approve selected pending stories"
+
+    def _approve_story(self, pending_story):
+        story = Story(
+                title=pending_story.title,
+                submitter=pending_story.submitter,
+                category=pending_story.category,
+                short_text=pending_story.short_text,
+                long_text=pending_story.long_text,
+                date_submitted=pending_story.date_submitted,
+                allow_comments=pending_story.allow_comments,
+                tags=pending_story.tags,
+                front_page_expiration=pending_story.front_page_expiration,
+                priority=pending_story.priority,
+                meta_description=pending_story.meta_description,
+                short_markup=pending_story.short_markup,
+                long_markup=pending_story.long_markup,
+                admin_content=pending_story.admin_content)
+        story.save()
+        pending_story.delete()
+
+        # Create comment thread if configured to do so.
+        forum_slug = story.category.forum_slug
+        if story.allow_comments and forum_slug:
+            post_body = COMMENT_THREAD_BODY.format(title=story.title,
+                                                   url=story.get_absolute_url())
+            topic = create_topic(forum_slug, story.submitter, story.title, post_body)
+            story.forums_topic = topic
+            story.save()
 
     class Media:
         js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']

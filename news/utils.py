@@ -28,17 +28,25 @@ def attach_extra_attrs(stories):
 
     for story in stories_dict.values():
         story.tag_list = []
-        story.comment_count = 0
+        if story.version == 0:
+            story.comment_count = 0
+        elif story.forums_topic:
+            # for convenience/consistency with old models...
+            story.comment_count = story.forums_comment_count()
 
     # attach tags
     for item in tagged_items:
         stories_dict[item.object_id].tag_list.append(item.tag.name)
 
-    # Now get all the comment counts out in one fell swoop
+    # Now get all the comment counts out in one fell swoop. This is only needed
+    # for older news stories...
 
-    story_ids = Comment.objects.filter(content_type=ct,
-            object_id__in=story_ids).values_list('object_id', flat=True)
+    story_ids = [pk for pk in story_ids if stories_dict[pk].version == 0]
 
-    # compute comment_count
-    for story_id in story_ids:
-        stories_dict[story_id].comment_count += 1
+    if story_ids:
+        story_ids = Comment.objects.filter(content_type=ct,
+                object_id__in=story_ids).values_list('object_id', flat=True)
+
+        # compute comment_count
+        for story_id in story_ids:
+            stories_dict[story_id].comment_count += 1

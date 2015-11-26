@@ -55,6 +55,8 @@
    {% endif %}
    {% social_sharing story.title story.get_absolute_url %}
 </div>
+
+{% if story.version == 0 %}
 {% get_comment_count for story as comment_count %}
 <p>This story has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
 <hr />
@@ -65,6 +67,13 @@
 {% else %}
 <p>Comments are closed for this story. If you'd like to share your thoughts on this story 
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
+{% endif %}
+{% else %}
+   {% if story.forums_topic %}
+      <a href="{{ story.forums_topic.get_absolute_url }}">{{ story.forums_comment_count }} comment{{ story.forums_comment_count|pluralize }}</a>
+   {% else %}
+      <p><em>Comments are disabled.</em></p>
+   {% endif %}
 {% endif %}
 </div>
 {% endblock %}

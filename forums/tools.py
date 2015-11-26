@@ -88,6 +88,7 @@ def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
     'sticky' - if True, the post will be stickied
     'locked' - if True, the post will be locked
 
+    The new topic is returned.
     """
     try:
         forum = Forum.objects.get(slug=forum_slug)
@@ -110,6 +111,7 @@ def create_topic(forum_slug, user, topic_name, post_body, ip='', sticky=False,
 
     notify_new_topic(topic)
     notify_new_post(post)
+    return topic
 
 
 def auto_favorite(post):
