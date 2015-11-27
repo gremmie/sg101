@@ -25,6 +25,7 @@ import markdown.inlinepatterns
 from PIL import Image
 import requests
 
+from bio.models import UserProfile
 from comments.models import Comment
 from forums.models import Post
 from core.download import download_file
@@ -43,7 +44,7 @@ IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
 WHITELIST_HOSTS = set(settings.USER_IMAGES_SOURCES)
-MODEL_CHOICES = ['comments', 'posts', 'news']
+MODEL_CHOICES = ['comments', 'posts', 'news', 'profiles']
 
 PHOTO_MAX_SIZE = (660, 720)
 PHOTO_BASE_URL = settings.HOT_LINK_PHOTOS_BASE_URL
@@ -328,6 +329,7 @@ class Command(NoArgsCommand):
         if options['model'] not in MODEL_CHOICES:
             raise CommandError('Please choose a --model option')
 
+        save_kwargs = {}
         if options['model'] == 'comments':
             qs = Comment.objects.all()
             text_attrs = ['comment']
@@ -336,6 +338,11 @@ class Command(NoArgsCommand):
             qs = Post.objects.all()
             text_attrs = ['body']
             model_name = 'Post'
+        elif options['model'] == 'profiles':
+            qs = UserProfile.objects.all()
+            text_attrs = ['profile_text', 'signature']
+            model_name = 'UserProfile'
+            save_kwargs = {'content_update': True}
         else:
             qs = Story.objects.all()
             text_attrs = ['short_text', 'long_text']
@@ -403,7 +410,7 @@ class Command(NoArgsCommand):
                     logger.debug(u"changed:  %s", new_txt)
                     setattr(model, text_attr, new_txt)
                     save_flag = True
-                elif not html_based and html_check(model.html):
+                elif not html_based and hasattr(model, 'html') and html_check(model.html):
                     # Check for content generated with older smiley code that used
                     # absolute URLs for the smiley images. If True, then just save
                     # the model again to force updated HTML to be created.
@@ -411,7 +418,7 @@ class Command(NoArgsCommand):
                     save_flag = True
 
             if save_flag:
-                model.save()
+                model.save(**save_kwargs)
             count += 1
 
         time_finished = datetime.datetime.now()
