@@ -26,3 +26,26 @@ class EditUserProfileFormTestCase(TestCase):
         form = EditUserProfileForm({})
         self.assertTrue(form.is_valid())
 
+    def test_profile_text_good(self):
+        post_data = {'profile_text': "This is my profile, no images."}
+        form = EditUserProfileForm(post_data)
+        self.assertTrue(form.is_valid())
+
+    def test_profile_text_bad_image(self):
+        post_data = {
+            'profile_text': "I'm cool. ![image](http://example.com/test.jpg)",
+        }
+        form = EditUserProfileForm(post_data)
+        self.assertFalse(form.is_valid())
+
+    def test_signature_good(self):
+        post_data = {'signature': "This is my signature, no images."}
+        form = EditUserProfileForm(post_data)
+        self.assertTrue(form.is_valid())
+
+    def test_signature_bad_image(self):
+        post_data = {
+            'signature': "I'm cool. ![image](http://example.com/test.jpg)",
+        }
+        form = EditUserProfileForm(post_data)
+        self.assertFalse(form.is_valid())

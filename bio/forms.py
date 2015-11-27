@@ -14,8 +14,11 @@ from django.contrib.auth.models import User
 import pytz
 
 from bio.models import UserProfile
-from core.widgets import AutoCompleteUserInput
+from core.html import image_check
+from core.html import ImageCheckError
 from core.images.utils import parse_image, downscale_image_square
+from core.markup import site_markup
+from core.widgets import AutoCompleteUserInput
 
 
 class EditUserForm(forms.ModelForm):
@@ -59,7 +62,7 @@ class EditUserProfileForm(forms.ModelForm):
 
     def clean_time_zone(self):
         """Ensure the timezone is valid and will work with pytz.
-        
+
         A blank (empty) value is allowed.
         """
 
@@ -71,6 +74,22 @@ class EditUserProfileForm(forms.ModelForm):
                 raise forms.ValidationError('Invalid timezone')
 
         return tz
+
+    def _image_check(self, field_name):
+        text = self.cleaned_data[field_name]
+        if text:
+            html = site_markup(text)
+            try:
+                image_check(html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+        return text
+
+    def clean_profile_text(self):
+        return self._image_check('profile_text')
+
+    def clean_signature(self):
+        return self._image_check('signature')
 
 
 class UploadAvatarForm(forms.Form):
