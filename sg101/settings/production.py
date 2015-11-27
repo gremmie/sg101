@@ -51,6 +51,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 DONATIONS_DEBUG = False
 
+# SSL related settings
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # Logging configuration
 
 LOGGING = {
