@@ -53,7 +53,7 @@ class StoryBase(models.Model):
     update_date = models.DateTimeField(db_index=True, blank=True)
     priority = models.IntegerField(db_index=True, default=0, blank=True)
     meta_description = models.TextField(blank=True)
-    short_markup = models.TextField(default='')
+    short_markup = models.TextField(default='', blank=True)
     long_markup = models.TextField(default='', blank=True)
     admin_content = models.TextField(default='', blank=True)
     version = models.SmallIntegerField(default=NEWS_VERSION)

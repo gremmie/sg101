@@ -79,7 +79,8 @@ class PendingStoryAdmin(admin.ModelAdmin):
                 meta_description=pending_story.meta_description,
                 short_markup=pending_story.short_markup,
                 long_markup=pending_story.long_markup,
-                admin_content=pending_story.admin_content)
+                admin_content=pending_story.admin_content,
+                version=pending_story.version)
         story.save()
         pending_story.delete()
 
