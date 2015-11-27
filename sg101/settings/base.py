@@ -367,5 +367,9 @@ GPP_THIRD_PARTY_CSS = {
     ],
 }
 
+# SSL related settings
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
 # Turn off warning about test runner behavior change
 SILENCED_SYSTEM_CHECKS = ['1_6.W001']
