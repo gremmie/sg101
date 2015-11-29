@@ -4,7 +4,7 @@ billiard==3.3.0.20
 bleach==1.4
 boto==2.13.0
 celery==3.1.18
-Django==1.7.10
+Django==1.7.11
 django-haystack==2.3.1
 django-picklefield==0.3.1
 django-tagging==0.3.1
