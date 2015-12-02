@@ -1,0 +1,6 @@
+{% load static from staticfiles %}
+{% if flag %}
+<img src="{% static "icons/accept.png" %}" alt="Yes" title="Yes" />
+{% else %}
+<img src="{% static "icons/delete.png" %}" alt="No" title="No" />
+{% endif %}

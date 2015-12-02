@@ -3,7 +3,6 @@ Template tags for the bio application.
 """
 from django import template
 from django.conf import settings
-from django.core.cache import cache
 from django.db.models import Count
 
 import bio.flags
@@ -92,14 +91,14 @@ def flag_icon(code, size='small'):
     try:
         name = bio.flags.FLAG_DATA[code]
     except KeyError:
-        code = 'zz'
-        name = ''
+        src = None
+    else:
+        n = '24' if size == 'small' else '64'
+        src = "flags/{n}/{code}.png".format(n=n, code=code)
 
     return {
-        'code': code,
+        'src': src,
         'name': name,
-        'size': size,
-        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -111,9 +110,10 @@ def member_flags():
             annotate(count=Count('country')).order_by('country')
 
     for rec in flag_data:
-        rec['name'] = bio.flags.FLAG_DATA[rec['country']]
+        country = rec['country']
+        rec['name'] = bio.flags.FLAG_DATA[country]
+        rec['src'] = "flags/24/{}.png".format(country)
 
     return {
         'flag_data': flag_data,
-        'STATIC_URL': settings.STATIC_URL,
     }

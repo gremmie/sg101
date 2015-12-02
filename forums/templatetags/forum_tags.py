@@ -37,7 +37,6 @@ DEFAULT_TZ = timezone('US/Pacific')
 def last_post_info(context, post):
     return {
         'post': post,
-        'STATIC_URL': context['STATIC_URL'],
         'user': context['user'],
     }
 
@@ -53,7 +52,6 @@ def post_edit_button(post, user, can_moderate):
     return {
         'post': post,
         'show_button': show_button,
-        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -122,7 +120,6 @@ def show_form(legend_text, form, submit_value, is_ajax):
         'form': form,
         'submit_value': submit_value,
         'is_ajax': is_ajax,
-        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -155,7 +152,6 @@ def topic_icons(topic):
     """Displays the "unread", "sticky", and "locked" icons for a given topic."""
     return {
         'topic': topic,
-        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -194,4 +190,4 @@ def forum_navigation(obj, subtitle=None):
     if subtitle:
         nav_list.append(dict(name=subtitle, url=None))
 
-    return dict(nav_list=nav_list, STATIC_URL=settings.STATIC_URL)
+    return dict(nav_list=nav_list)

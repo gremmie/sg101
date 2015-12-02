@@ -6,22 +6,22 @@ from django.conf import settings
 
 register = template.Library()
 
-@register.simple_tag
+@register.inclusion_tag('core/script_tags.html')
 def script_tags(libraries):
-    s = ''
+    css = []
+    js = []
     for library in libraries.split():
         if library in settings.GPP_THIRD_PARTY_CSS:
             for path in settings.GPP_THIRD_PARTY_CSS[library]:
-                prefix = ''
-                if not path.startswith('http'):
-                    prefix = settings.STATIC_URL
-                s += '<link rel="stylesheet" href="%s%s" />' % (prefix, path)
+                local = not path.startswith('http')
+                css.append((local, path))
 
         if library in settings.GPP_THIRD_PARTY_JS:
             for path in settings.GPP_THIRD_PARTY_JS[library]:
-                prefix = ''
-                if not path.startswith('http'):
-                    prefix = settings.STATIC_URL
-                s += '<script src="%s%s"></script>' % (prefix, path)
+                local = not path.startswith('http')
+                js.append((local, path))
 
-    return s
+    return {
+        'css_sources': css,
+        'js_sources': js,
+    }

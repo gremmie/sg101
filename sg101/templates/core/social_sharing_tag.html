@@ -1,13 +1,14 @@
+{% load static from staticfiles %}
 <div class="social-sharing">
 <ul class="no-bullet-inline-block">
 <li style="vertical-align:top; margin-right:1.5em">
-<a href="https://twitter.com/intent/tweet?text={{ title|urlencode }}&amp;url={{ url|urlencode }}&amp;via=SurfGuitar101"><img src="{{ STATIC_URL }}icons/button-twitter.png" alt="Tweet"/></a>
+<a href="https://twitter.com/intent/tweet?text={{ title|urlencode }}&amp;url={{ url|urlencode }}&amp;via=SurfGuitar101"><img src="{% static "icons/button-twitter.png" %}" alt="Tweet"/></a>
 </li>
 <li style="vertical-align:top; margin-right:1.5em">
-<a href="https://plus.google.com/share?url={{ url|urlencode }}"><img src="{{ STATIC_URL }}icons/button-googleplus.png" alt="Share on Google Plus"/></a>
+<a href="https://plus.google.com/share?url={{ url|urlencode }}"><img src="{% static "icons/button-googleplus.png" %}" alt="Share on Google Plus"/></a>
 </li>
 <li style="vertical-align:top">
-<a href="https://www.facebook.com/sharer/sharer.php?u={{ url|urlencode }}"><img src="{{ STATIC_URL }}icons/button-facebook.png" alt="Share on Facebook"/></a>
+<a href="https://www.facebook.com/sharer/sharer.php?u={{ url|urlencode }}"><img src="{% static "icons/button-facebook.png" %}" alt="Share on Facebook"/></a>
 </li>
 </ul>
 </div>

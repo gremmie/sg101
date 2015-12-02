@@ -21,21 +21,15 @@ from bio.models import UserProfile
 
 register = template.Library()
 
-ICON_PARAMS = {
-    True: (settings.STATIC_URL + 'icons/accept.png', 'Yes'),
-    False: (settings.STATIC_URL + 'icons/delete.png', 'No'),
-}
 
-@register.simple_tag
+@register.inclusion_tag('core/bool_icon.html')
 def bool_icon(flag):
-    params = ICON_PARAMS[bool(flag)]
-    return u"""<img src="%s" alt="%s" title="%s" />""" % (
-            params[0], params[1], params[1])
+    return {'flag': flag}
 
 
 @register.inclusion_tag('core/comment_dialogs.html')
 def comment_dialogs():
-    return {'STATIC_URL': settings.STATIC_URL}
+    return {}
 
 
 @register.inclusion_tag('core/max_users_tag.html')
@@ -79,7 +73,6 @@ def social_sharing(title, url):
     return {
         'title': title,
         'url': url,
-        'STATIC_URL': settings.STATIC_URL,
     }
 
 
@@ -182,7 +175,6 @@ def birthday_block():
     birthdays.sort(key=lambda b: b.day)
 
     return {
-        'STATIC_URL': settings.STATIC_URL,
         'birthdays': birthdays,
         'today': today,
     }

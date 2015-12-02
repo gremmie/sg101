@@ -4,7 +4,6 @@ Template tags for the news application.
 import datetime
 
 from django import template
-from django.conf import settings
 
 from news.models import Story
 from news.utils import attach_extra_attrs
@@ -26,6 +25,5 @@ def current_news():
 
     return {
         'stories': stories,
-        'STATIC_URL': settings.STATIC_URL,
         'on_home': True,
     }

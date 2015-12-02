@@ -1,15 +1,20 @@
+{% load static from staticfiles %}
 {% if social_nets or ims or websites %}
 <ul class="icon-list">
    {% for net in social_nets %}
-      <li><img src="{{ STATIC_URL }}elsewhere/{{ net.icon_name }}" alt="{{ net.name }}" />
+      {% with 'elsewhere/'|add:net.icon_name as src %}
+      <li><img src="{% static src %}" alt="{{ net.name }}" />
       <a href="{{ net.url }}">{{ net.name }}</a></li>
+      {% endwith %}
    {% endfor %}
    {% for im in ims %}
-      <li><img src="{{ STATIC_URL }}elsewhere/{{ im.icon_name }}" alt="{{ im.name }}" />
+      {% with 'elsewhere/'|add:im.icon_name as src %}
+      <li><img src="{% static src %}" alt="{{ im.name }}" />
       <a href="{{ im.url }}">{{ im.name }}</a></li>
+      {% endwith %}
    {% endfor %}
    {% for site in websites %}
-      <li><img src="{{ STATIC_URL }}icons/world.png" alt="{{ site.name }}" />
+      <li><img src="{% static 'icons/world.png' %}" alt="{{ site.name }}" />
       <a href="{{ site.url }}">{{ site.name }}</a></li>
    {% endfor %}
 </ul>

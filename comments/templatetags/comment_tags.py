@@ -8,7 +8,6 @@ We support the following template tags:
     {% render_comment_list [object] %}
 """
 from django import template
-from django.conf import settings
 from django.template.loader import render_to_string
 
 from comments.models import Comment
@@ -163,6 +162,5 @@ def render_comment_list(object):
     qs = Comment.objects.for_object(object).select_related('user', 'user__profile')
     return {
         'comments': qs,
-        'STATIC_URL': settings.STATIC_URL,
     }
 

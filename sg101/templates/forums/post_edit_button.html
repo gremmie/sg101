@@ -1,3 +1,4 @@
+{% load static from staticfiles %}
 {% if show_button %}
-<a href="{% url 'forums-edit_post' id=post.id %}"><img src="{{ STATIC_URL }}icons/page_edit.png" alt="Edit post" title="Edit post" /></a>
+<a href="{% url 'forums-edit_post' id=post.id %}"><img src="{% static "icons/page_edit.png" %}" alt="Edit post" title="Edit post" /></a>
 {% endif %}

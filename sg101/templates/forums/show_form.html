@@ -1,3 +1,4 @@
+{% load static from staticfiles %}
 {% load core_tags %}
 <form action="." method="post" id="forums_post_form">{% csrf_token %}
 <fieldset>
@@ -10,7 +11,7 @@
 <div id="topic_search_results">
 </div>
 <div id="topic-search-results">
-<img id="search-busy-icon" src="{{ STATIC_URL }}icons/ajax_busy.gif" alt="Please wait" style="display:none;"/>
+<img id="search-busy-icon" src="{% static "icons/ajax_busy.gif" %}" alt="Please wait" style="display:none;"/>
 </div>
 </p>
 <p>{{ form.body.errors }}{{ form.body }}</p>

@@ -1,10 +1,6 @@
-{% if code != 'zz' %}
-   {% if size == 'large' %}
-      <div class="flag">
-      <img src="{{ STATIC_URL }}flags/64/{{ code }}.png" alt="{{ name }}" title="{{ name }}" />
-      {{ name }}
-      </div>
-   {% else %}
-      <img src="{{ STATIC_URL }}flags/24/{{ code }}.png" alt="{{ name }}" title="{{ name }}" />
-   {% endif %}
+{% load static from staticfiles %}
+{% if src %}
+   <div class="flag">
+      <img src="{% static src %}" alt="{{ name }}" title="{{ name }}" /> {{ name }}
+   </div>
 {% endif %}

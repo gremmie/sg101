@@ -1,0 +1,17 @@
+{% load static from staticfiles %}
+<!-- begin script tags -->
+{% for local, src in css_sources %}
+{% if local %}
+<link rel="stylesheet" href="{% static src %}" />
+{% else %}
+<link rel="stylesheet" href="{{ src }}" />
+{% endif %}
+{% endfor %}
+{% for local, src in js_sources %}
+{% if local %}
+<script src="{% static src %}"></script>
+{% else %}
+<script src="{{ src }}"></script>
+{% endif %}
+{% endfor %}
+<!-- end script tags -->

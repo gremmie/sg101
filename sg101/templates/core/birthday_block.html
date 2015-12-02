@@ -1,7 +1,8 @@
 {% extends 'side_block.html' %}
 {% load bio_tags %}
 {% load humanize %}
-{% block block_title %}<img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {{ today|date:"F" }} Birthdays <img src="{{ STATIC_URL }}icons/cake.png" alt="Cake" class="middle" /> {% endblock %}
+{% load static from staticfiles %}
+{% block block_title %}<img src="{% static "icons/cake.png" %}" alt="Cake" class="middle" /> {{ today|date:"F" }} Birthdays <img src="{% static "icons/cake.png" %}" alt="Cake" class="middle" />{% endblock %}
 {% block block_content %}
 {% if birthdays %}
    <ul class="no-bullet">

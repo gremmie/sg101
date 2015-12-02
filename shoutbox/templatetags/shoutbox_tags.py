@@ -13,5 +13,4 @@ def shoutbox(context):
    return {
       'shouts': shouts,
       'user': context['user'],
-      'STATIC_URL': context['STATIC_URL'],
    }

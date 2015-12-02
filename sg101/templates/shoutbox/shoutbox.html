@@ -1,5 +1,6 @@
 {% extends 'side_block.html' %}
 {% load core_tags %}
+{% load static from staticfiles %}
 {% block block_title %}Shoutbox{% endblock %}
 {% block block_content %}
 <div id="shoutbox-shout-container">
@@ -26,7 +27,7 @@
    <input id="shoutbox-smilies" type="button" value="Smilies" />
 </form>
 <div id="shoutbox-smiley-frame" style="display:none;">
-<img id="shoutbox-busy-icon" src="{{ STATIC_URL }}icons/ajax_busy.gif" alt="Please wait" />
+<img id="shoutbox-busy-icon" src="{% static "icons/ajax_busy.gif" %}" alt="Please wait" />
 </div>
 </div>
 {% else %}
