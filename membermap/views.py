@@ -15,7 +15,6 @@ from django.core.cache import cache
 
 from membermap.models import MapEntry
 from membermap.forms import MapEntryForm
-from bio.models import UserProfile
 
 CACHE_KEY = 'membermap_json'
 CACHE_TIMEOUT = 5 * 60

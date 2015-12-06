@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% load forum_tags %}
+{% load script_tags %}
 {% block title %}Forums: New Topic{% endblock %}
-{% block custom_js %}{{ form.media }}{% endblock %}
+{% block custom_js %}
+   {% script_tags 'jquery-ui markitup' %}
+{% endblock %}
 {% block content %}
 {% forum_navigation forum "New Topic" %}
 

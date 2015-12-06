@@ -5,7 +5,6 @@ Forms for the forums application.
 from collections import OrderedDict
 
 from django import forms
-from django.conf import settings
 
 from forums.models import Forum
 from forums.models import Topic
@@ -18,17 +17,6 @@ from core.html import image_check
 from core.markup import site_markup
 
 
-FORUMS_FORM_CSS = {
-    'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-            settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
-}
-FORUMS_FORM_JS = (
-    settings.GPP_THIRD_PARTY_JS['markitup'] +
-    settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-    ['js/jquery.form.min.js', 'js/forums.js']
-)
-
-
 class NewPostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='',
@@ -36,10 +24,6 @@ class NewPostForm(forms.Form):
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     topic_id = forms.IntegerField(widget=forms.HiddenInput)
     topic = None
-
-    class Media:
-        css = FORUMS_FORM_CSS
-        js = FORUMS_FORM_JS
 
     def __init__(self, *args, **kwargs):
         super(NewPostForm, self).__init__(*args, **kwargs)
@@ -94,10 +78,6 @@ class NewTopicForm(forms.Form):
     user = None
     forum = None
     has_mod_fields = False
-
-    class Media:
-        css = FORUMS_FORM_CSS
-        js = FORUMS_FORM_JS
 
     def __init__(self, user, forum, *args, **kwargs):
         super(NewTopicForm, self).__init__(*args, **kwargs)
@@ -175,10 +155,6 @@ class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         fields = ('body', )
-
-    class Media:
-        css = FORUMS_FORM_CSS
-        js = FORUMS_FORM_JS
 
     def __init__(self, *args, **kwargs):
         topic_name = kwargs.pop('topic_name', None)

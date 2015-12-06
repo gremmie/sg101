@@ -3,13 +3,15 @@
 {% load forum_tags %}
 {% load core_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}Forums: {{ topic.name }}{% endblock %}
 {% block custom_meta %}
    {% open_graph_meta_tags topic %}
 {% endblock %}
 {% block custom_js %}
-   {% script_tags 'imagesloaded' %}
-   {{ form.media }}
+   {% script_tags 'jquery-ui markitup imagesloaded' %}
+   <script src="{% static "js/jquery.form.min.js" %}"></script>
+   <script src="{% static "js/forums.js" %}"></script>
    {% include "forums/jump_box.js" %}
 <script type="text/javascript">
 //<![CDATA[

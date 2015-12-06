@@ -1,9 +1,13 @@
 {% extends 'bio/base.html' %}
 {% load bio_tags %}
 {% load elsewhere_tags %}
+{% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}Edit Profile{% endblock %}
 {% block custom_js %}
-   {{ profile_form.media }}
+{% script_tags 'jquery-ui markitup' %}
+<script src="{% static "js/bio.js" %}"></script>
+<script src="{% static "js/timezone.js" %}"></script>
 {% endblock %}
 {% block content %}
 <div class="user_profile">

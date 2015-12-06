@@ -1,8 +1,15 @@
 {% extends 'base.html' %}
 {% load core_tags %}
+{% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}{{ title }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" href="{% static "css/gcalendar.css" %}" />
+{% endblock %}
 {% block custom_js %}
-{{ form.media }}
+{% script_tags 'jquery-ui markitup' %}
+<script src="{% static "js/timezone.js" %}"></script>
+<script src="{% static "js/gcalendar.js" %}"></script>
 {% endblock %}
 {% block content %}
 <div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; {{ title }}</div>

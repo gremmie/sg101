@@ -51,15 +51,6 @@ class EditUserProfileForm(forms.ModelForm):
             'profile_text', 'hide_email', 'signature', 'time_zone',
             'use_24_time', 'auto_favorite', 'auto_subscribe')
 
-    class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
-        }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
-            settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-            ['js/bio.js', 'js/timezone.js'])
-
     def clean_time_zone(self):
         """Ensure the timezone is valid and will work with pytz.
 
@@ -144,12 +135,6 @@ class SearchUsersForm(forms.Form):
     A form to search for users.
     """
     username = forms.CharField(max_length=30, widget=AutoCompleteUserInput())
-
-    class Media:
-        css = {
-          'all': settings.GPP_THIRD_PARTY_CSS['jquery-ui']
-        }
-        js = settings.GPP_THIRD_PARTY_JS['jquery-ui']
 
     def clean_username(self):
       username = self.cleaned_data['username'].strip()

@@ -79,12 +79,3 @@ class CommentForm(forms.Form):
                 raise forms.ValidationError(str(ex))
 
         return comment
-
-    class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                settings.GPP_THIRD_PARTY_CSS['jquery-ui']),
-        }
-        js = (settings.GPP_THIRD_PARTY_JS['markitup'] +
-                settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-                ['js/comments.js'])

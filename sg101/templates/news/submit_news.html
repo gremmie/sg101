@@ -1,8 +1,11 @@
 {% extends 'news/base.html' %}
+{% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}News: Submit News{% endblock %}
 {% if add_form %}
    {% block custom_js %}
-      {{ add_form.media }}
+      {% script_tags 'jquery-ui markitup' %}
+      <script src="{% static "js/jquery.form.min.js" %}"></script>
    {% endblock %}
 {% endif %}
 {% block submit-class %}class="active"{% endblock %}

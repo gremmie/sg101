@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
 {% load downloads_tags %}
 {% load core_tags %}
+{% load script_tags %}
 {% block title %}Add Download{% endblock %}
 {% block custom_css %}
-{{ add_form.media }}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/downloads.css" />
+{% endblock %}
+{% block custom_js %}
+{% script_tags 'jquery-ui markitup' %}
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>

@@ -3,7 +3,6 @@ Forms for the news application.
 
 """
 from django import forms
-from django.conf import settings
 
 from core.html import ImageCheckError
 from core.html import image_check
@@ -27,17 +26,6 @@ class AddNewsForm(forms.ModelForm):
     class Meta:
         model = PendingStory
         fields = ['title', 'category', 'short_markup']
-
-    class Media:
-        css = {
-            'all': (settings.GPP_THIRD_PARTY_CSS['markitup'] +
-                    settings.GPP_THIRD_PARTY_CSS['jquery-ui'])
-        }
-        js = (
-            settings.GPP_THIRD_PARTY_JS['markitup'] +
-            settings.GPP_THIRD_PARTY_JS['jquery-ui'] +
-            ['js/jquery.form.min.js']
-        )
 
     def clean_short_markup(self):
         md = self.cleaned_data['short_markup']

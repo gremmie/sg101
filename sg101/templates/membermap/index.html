@@ -1,11 +1,14 @@
 {% extends 'base.html' %}
 {% load core_tags %}
+{% load script_tags %}
 {% block title %}Member Map{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/membermap.css" />
+{% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="{{ STATIC_URL }}js/membermap.js"></script>
 <script src="https://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAql_1Xw9MGW3mOxzo8gLb3hSrh5-ALlu4lmYDsscYaAokjyRNqBRaVcqVr3jaDgMRVSK_3HydK9tYWw" type="text/javascript"></script>
-{{ form.media }}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/membermap.css" />
+{% script_tags 'jquery-ui markitup' %}
 <script type="text/javascript">
 //<![CDATA[
 var mmapUser = {
