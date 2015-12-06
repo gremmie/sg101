@@ -4,8 +4,6 @@ Local Django settings.
 """
 from sg101.settings.base import *
 
-DEBUG = True
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
