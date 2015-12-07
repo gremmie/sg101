@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% load bio_tags %}
 {% block title %}User Photo Details{% endblock %}
 {% block custom_js %}
@@ -57,9 +58,9 @@ paste the code into a forum post or email (e.g. CTRL-V).
 
 {% if request.user == object.user %}
 <ul class="icon-list">
-   <li><img src="{{ STATIC_URL }}icons/picture_add.png" alt="Photo" />
+   <li><img src="{% static "icons/picture_add.png" %}" alt="Photo" />
        <a href="{% url 'user_photos-upload' %}">Upload another photo</a></li>
-   <li><img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />
+    <li><img src="{% static "icons/pictures.png" %}" alt="Gallery" />
        <a href="{% url 'user_photos-gallery' username=object.user.username %}">See all my photos</a></li>
 </ul>
 
@@ -71,7 +72,7 @@ paste the code into a forum post or email (e.g. CTRL-V).
 
 {% else %}
 <p>
-<img src="{{ STATIC_URL }}icons/pictures.png" alt="Gallery" />
+<img src="{% static "icons/pictures.png" %}" alt="Gallery" />
 <a href="{% url 'user_photos-gallery' username=object.user.username %}">See all photos from {{ object.user.username }}</a></li>
 </p>
 {% endif %}

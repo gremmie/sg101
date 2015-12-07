@@ -1,7 +1,8 @@
 {% extends 'weblinks/base.html' %}
+{% load static from staticfiles %}
 {% block title %}Web Links: {{ link.title }}{% endblock %}
 {% block weblinks_js %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/weblinks.js"></script>
+<script type="text/javascript" src="{% static "js/weblinks.js" %}"></script>
 {% endblock %}
 {% block weblinks_content %}
 <h3>Link Details: {{ link.title }}</h3>

@@ -1,5 +1,6 @@
 {% load comment_tags %}
 {% load bio_tags %}
+{% load static from staticfiles %}
 {% get_comment_count for download as comment_count %}
 <dt>
 <a href="{{ download.get_absolute_url }}">{{ download.title }}</a>
@@ -19,7 +20,7 @@
 </tr>
 <tr>
     <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
-    <th><img src="{{ STATIC_URL }}icons/comments.png" alt="Comments" title="Comments" />
+    <th><img src="{% static "icons/comments.png" %}" alt="Comments" title="Comments" />
        <a href="{{ download.get_absolute_url }}">Comments</a>:</th><td>{{ comment_count }}</td>
 </tr>
 </table>

@@ -9,31 +9,32 @@
 {% load donations_tags %}
 {% load core_tags %}
 {% load cache %}
+{% load static from staticfiles %}
 <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#">
 <title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
 <meta charset="utf-8" />
 <meta name="robots" content="all" />
 <meta name="Author" content="Brian Neal" />
 {% block custom_meta %}{% endblock %}
-<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/screen.css" media="screen, projection" />
-<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/print.css" media="print" />
+<link rel="stylesheet" href="{% static "css/blueprint/screen.css" %}" media="screen, projection" />
+<link rel="stylesheet" href="{% static "css/blueprint/print.css" %}" media="print" />
 <!--[if lt IE 8]>
-<link rel="stylesheet" href="{{ STATIC_URL }}css/blueprint/ie.css" type="text/css" media="screen, projection" />
+<link rel="stylesheet" href="{% static "css/blueprint/ie.css" %}" type="text/css" media="screen, projection" />
 <![endif]-->
-<link rel="stylesheet" href="{{ STATIC_URL }}css/base.css" />
-<link rel="stylesheet" href="{{ STATIC_URL }}css/shoutbox.css" />
+<link rel="stylesheet" href="{% static "css/base.css" %}" />
+<link rel="stylesheet" href="{% static "css/shoutbox.css" %}" />
 {% script_tags "jquery" %}
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
-<script src="{{ STATIC_URL }}js/jquery.cycle.all3.0.3.js"></script>
-<script src="{{ STATIC_URL }}js/shoutbox.js"></script>
-<link rel="shortcut icon" href="{{ STATIC_URL }}favicon.ico" />
+<script src="{% static "js/jquery.cycle.all3.0.3.js" %}"></script>
+<script src="{% static "js/shoutbox.js" %}"></script>
+<link rel="shortcut icon" href="{% static "favicon.ico" %}" />
 </head>
 <body>{% block begin_body %}{% endblock %}
 <div id="page" class="container">
 <div id="header" class="span-24">
-   <p><a href="/" title="SG101 Home"><img src="{{ STATIC_URL }}themes/kds/sgLogo.png" alt="SurfGuitar101.com Logo" width="446" height="103" /></a></p>
+   <p><a href="/" title="SG101 Home"><img src="{% static "themes/kds/sgLogo.png" %}" alt="SurfGuitar101.com Logo" width="446" height="103" /></a></p>
 </div>
 <div id="header-nav" class="span-24">
    {% include "navbar.html" %}
@@ -51,7 +52,7 @@
       <li><a href="{% url 'downloads-index' %}">Downloads</a></li>
       <li><a href="{% url 'forums-index' %}">Forums</a></li>
       <li><a href="/forums/topic/24987/">Guitar Instruction</a>
-         <img src="{{ STATIC_URL }}icons/new.png" title="New!" alt="New!" /></li>
+         <img src="{% static "icons/new.png" %}" title="New!" alt="New!" /></li>
       <li><a href="{% url 'irc-main' %}">IRC</a></li>
       <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
       <li><a href="{% url 'membermap-index' %}">Member Map</a></li>
@@ -63,7 +64,7 @@
       <li><a href="{% url 'haystack_search' %}">Search</a></li>
       <li><a href="/store/">Store</a></li>
       <li><a href="{% url 'bandmap-map' %}">Surf Band Map</a>
-         <img src="{{ STATIC_URL }}icons/new.png" title="New!" alt="New!" /></li>
+         <img src="{% static "icons/new.png" %}" title="New!" alt="New!" /></li>
       <li><a href="http://wiki.surfguitar101.com">Wiki</a></li>
       <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
    </ul>
@@ -100,47 +101,47 @@
    <p>Please visit our friends in the surf music community:</p>
    <ul class="logo-block">
    <li><a href="http://www.surferjoemusic.com/festival/">
-         <img src="{{ STATIC_URL }}logos/surferjoe.jpg" alt="Surfer Joe Festival" title="Surfer Joe Festival"></a></li>
+      <img src="{% static "logos/surferjoe.jpg" %}" alt="Surfer Joe Festival" title="Surfer Joe Festival"></a></li>
    <li><a href="http://www.surfmusic-forum.com">
-      <img src="{{ STATIC_URL }}logos/surfmusicforum.png" alt="Surfmusic-Forum.de" title="Surfmusic-Forum.de"></a></li>
+      <img src="{% static "logos/surfmusicforum.png" %}" alt="Surfmusic-Forum.de" title="Surfmusic-Forum.de"></a></li>
    <li><a href="http://www.nesmasurf.org/">
-      <img src="{{ STATIC_URL }}logos/nesma.png" alt="NESMA" title="N.E.S.M.A."></a></li>
+      <img src="{% static "logos/nesma.png" %}" alt="NESMA" title="N.E.S.M.A."></a></li>
    <li><a href="http://hangninesurfmusic.blogspot.de/">
-      <img src="{{ STATIC_URL }}logos/hangnine.png" alt="HangNine" title="HangNine Blog"></a></li>
+      <img src="{% static "logos/hangnine.png" %}" alt="HangNine" title="HangNine Blog"></a></li>
    <li><a href="http://www.surfrockmusic.com">
-      <img src="{{ STATIC_URL }}logos/surfrock.png" alt="SurfRockMusic.com" title="SurfRockMusic.com"></a></li>
+      <img src="{% static "logos/surfrock.png" %}" alt="SurfRockMusic.com" title="SurfRockMusic.com"></a></li>
    <li><a href="http://www.northseasurfradio.com">
-      <img src="{{ STATIC_URL }}logos/northsea.png" alt="NSSR" title="North Sea Surf Radio"></a></li>
+      <img src="{% static "logos/northsea.png" %}" alt="NSSR" title="North Sea Surf Radio"></a></li>
    <li><a href="http://www.luxuriamusic.com/podcasts/Fiberglass%20Jungle">
-      <img src="{{ STATIC_URL }}logos/fiberglass.png" alt="Fiberglass Jungle" title="Fiberglass Jungle"></a></li>
+      <img src="{% static "logos/fiberglass.png" %}" alt="Fiberglass Jungle" title="Fiberglass Jungle"></a></li>
    <li><a href="https://www.facebook.com/surfmusicmadrid">
-      <img src="{{ STATIC_URL }}logos/madrid.png" alt="Surf Music Madrid" title="Surf Music Madrid"></a></li>
+      <img src="{% static "logos/madrid.png" %}" alt="Surf Music Madrid" title="Surf Music Madrid"></a></li>
    <li><a href="http://www.festivalsurforama.es/">
-      <img src="{{ STATIC_URL }}logos/surforama.png" alt="Surf-O-Rama" title="Surf-O-Rama Festival"></a></li>
+      <img src="{% static "logos/surforama.png" %}" alt="Surf-O-Rama" title="Surf-O-Rama Festival"></a></li>
    <li><a href="http://thevoodooclub.com/endlesssummer/">
-      <img src="{{ STATIC_URL }}logos/endless.png" alt="Endless Summer" title="Endless Summer Surf Music Festival"></a></li>
+      <img src="{% static "logos/endless.png" %}" alt="Endless Summer" title="Endless Summer Surf Music Festival"></a></li>
    <li><a href="https://www.facebook.com/AbiertoDeSurfInstrumental">
-      <img src="{{ STATIC_URL }}logos/abierto.png" alt="Abierto de Surf Instrumental" title="Abierto de Surf Instrumental"></a></li>
+      <img src="{% static "logos/abierto.png" %}" alt="Abierto de Surf Instrumental" title="Abierto de Surf Instrumental"></a></li>
    <li><a href="http://www.doublecrownrecords.com">
-      <img src="{{ STATIC_URL }}logos/doublecrown.png" alt="Double Crown Records" title="Double Crown Records"></a></li>
+      <img src="{% static "logos/doublecrown.png" %}" alt="Double Crown Records" title="Double Crown Records"></a></li>
    <li><a href="http://www.greencookie.gr">
-      <img src="{{ STATIC_URL }}logos/greencookie.png" alt="Green Cookie Records" title="Green Cookie Records"></a></li>
+      <img src="{% static "logos/greencookie.png" %}" alt="Green Cookie Records" title="Green Cookie Records"></a></li>
    <li><a href="http://www.deepeddy.net">
-      <img src="{{ STATIC_URL }}logos/deepeddy.png" alt="Deep Eddy Records" title="Deep Eddy Records"></a></li>
+      <img src="{% static "logos/deepeddy.png" %}" alt="Deep Eddy Records" title="Deep Eddy Records"></a></li>
    <li><a href="http://radiofreebakersfield.com/">
-      <img src="{{ STATIC_URL }}logos/rfb.png" alt="Radio Free Bakersfield" title="Radio Free Bakersfield"></a></li>
+      <img src="{% static "logos/rfb.png" %}" alt="Radio Free Bakersfield" title="Radio Free Bakersfield"></a></li>
    <li><a href="http://planetareverb.wix.com/planeta-reverb">
-      <img src="{{ STATIC_URL }}logos/planeta_reverb.png" alt="Planeta Reverb" title="Planeta Reverb"></a></li>
+      <img src="{% static "logos/planeta_reverb.png" %}" alt="Planeta Reverb" title="Planeta Reverb"></a></li>
    <li><a href="http://reverbjunkiesfilm.com/">
-      <img src="{{ STATIC_URL }}logos/reverb_junkies.png" alt="Reverb Junkies" title="Reverb Junkies"></a></li>
+      <img src="{% static "logos/reverb_junkies.png" %}" alt="Reverb Junkies" title="Reverb Junkies"></a></li>
    <li><a href="http://southernsurfstomp.blogspot.com/">
-      <img src="{{ STATIC_URL }}logos/southern_surf_stomp.png" alt="Southern Surf Stomp" title="Southern Surf Stomp"></a></li>
+      <img src="{% static "logos/southern_surf_stomp.png" %}" alt="Southern Surf Stomp" title="Southern Surf Stomp"></a></li>
    <li><a href="http://thenocturnebrain.com/prod.htm">
-      <img src="{{ STATIC_URL }}logos/nocturne_brain.png" alt="Nocturne Brain" title="Nocturne Brain"></a></li>
+      <img src="{% static "logos/nocturne_brain.png" %}" alt="Nocturne Brain" title="Nocturne Brain"></a></li>
    <li><a href="http://www.surfabillyfreakout.com/">
-      <img src="{{ STATIC_URL }}logos/surfabilly_freakout.png" alt="Surfabilly Freakout" title="Surfabilly Freakout"></a></li>
+      <img src="{% static "logos/surfabilly_freakout.png" %}" alt="Surfabilly Freakout" title="Surfabilly Freakout"></a></li>
    <li><a href="http://www.reverb-brasil.org/">
-      <img src="{{ STATIC_URL }}logos/reverb_brazil.jpg" alt="Reverb Brazil" title="Reverb Brazil"></a></li>
+      <img src="{% static "logos/reverb_brazil.jpg" %}" alt="Reverb Brazil" title="Reverb Brazil"></a></li>
    </ul>
    </div>
    <p>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block custom_head %}
 <link rel="alternate" type="application/rss+xml" title="SurfGuitar101 Podcast" href="{% url 'podcast-feed' %}" />
 {% endblock %}
@@ -17,7 +18,7 @@ In addition to the forum, you can contact us by email at
 <a href="mailto:podcast@surfguitar101.com">podcast@surfguitar101.com</a>.
 </p>
 <p>
-<a href="{% url 'podcast-feed' %}"><img src="{{ STATIC_URL }}icons/feed.png" alt="RSS Feed" title="RSS Feed" /></a> <a href="{% url 'podcast-feed' %}">Subscribe to the podcast via RSS</a>.
+<a href="{% url 'podcast-feed' %}"><img src="{% static "icons/feed.png" %}" alt="RSS Feed" title="RSS Feed" /></a> <a href="{% url 'podcast-feed' %}">Subscribe to the podcast via RSS</a>.
 </p>
 <p>
 <strong>Hey iTunes users!</strong> Here is our <a href="http://itunes.apple.com/WebObjects/MZStore.woa/wa/viewPodcast?id=284928526">listing in iTunes</a>. Follow the previous link and then click the subscribe button to let iTunes automatically download episodes for you.

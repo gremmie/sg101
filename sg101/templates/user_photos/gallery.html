@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% load bio_tags %}
 {% block title %}Photo Gallery for {{ gallery_owner.username }}{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" href="{{ STATIC_URL }}css/user_photos.css" />
+<link rel="stylesheet" href="{% static "css/user_photos.css" %}" />
 {% endblock %}
 {% block custom_js %}
 {% if user == gallery_owner %}

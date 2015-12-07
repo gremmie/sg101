@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% load cycle from future %}
 {% load forum_tags %}
 {% block title %}Forums: Split Topic{% endblock %}
@@ -26,7 +27,7 @@
    <td class="forum-post-author">{{ post.user.username }}</td>
    <td class="forum-post-body">
       <div class="forum-post-info quiet">
-      <a href="{{ post.get_absolute_url }}"><img src="{{ STATIC_URL }}icons/link.png" alt="Link" title="Link to this post" /></a>
+      <a href="{{ post.get_absolute_url }}"><img src="{% static "icons/link.png" %}" alt="Link" title="Link to this post" /></a>
          Posted on {{ post.creation_date|date:"M d, Y H:i" }} from IP: {{ post.user_ip }}
       </div>
       <div class="forum-post-body-split">

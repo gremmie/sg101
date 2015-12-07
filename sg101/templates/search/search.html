@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load highlight %}
 {% load core_tags %}
+{% load static from staticfiles %}
 {% block title %}Search{% endblock %}
 {% block custom_js %}
 <script type="text/javascript">
@@ -26,7 +27,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 {% block content %}
-<h2>Search <img src="{{ STATIC_URL }}icons/magnifier.png" alt="Search" /></h2>
+<h2>Search <img src="{% static "icons/magnifier.png" %}" alt="Search" /></h2>
 {% if query_parser_error %}
 <div class="error">
    <p>

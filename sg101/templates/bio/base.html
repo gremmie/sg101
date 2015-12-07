@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/bio.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/bio.css" %}" />
 {% block bio_css %}{% endblock %}
 {% endblock %}
 {% block content %}

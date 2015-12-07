@@ -7,6 +7,7 @@
 {% load poll_tags %}
 {% load forum_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% load cache %}
 {% block title %}Home{% endblock %}
 {% block custom_meta %}{% open_graph_meta_tags %}{% endblock %}
@@ -14,7 +15,7 @@
 <link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url 'feeds-news' %}" />
 {% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" href="{{ STATIC_URL }}css/news.css" />
+<link rel="stylesheet" href="{% static "css/news.css" %}" />
 {% endblock %}
 {% block custom_js %}
 <script>

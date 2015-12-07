@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% load downloads_tags %}
 {% block title %}Thanks for the Download{% endblock %}
 {% block custom_css %}
 {{ add_form.media }}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/downloads.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>

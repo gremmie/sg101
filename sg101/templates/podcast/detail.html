@@ -1,15 +1,16 @@
 {% extends 'podcast/base.html' %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% load core_tags %}
 {% block title %}Podcast: {{ podcast.title }}{% endblock %}
 {% block custom_meta %}
 {% open_graph_meta_tags podcast %}
 {% endblock %}
 {% block custom_css %}
-<link type="text/css" href="{{ STATIC_URL }}js/jplayer/skins/blue.monday/jplayer.blue.monday.css" rel="stylesheet" />
+<link type="text/css" href="{% static "js/jplayer/skins/blue.monday/jplayer.blue.monday.css" %}" rel="stylesheet" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/jplayer/jquery.jplayer.min.js"></script>
+<script type="text/javascript" src="{% static "js/jplayer/jquery.jplayer.min.js" %}"></script>
 
 <script type="text/javascript">
 //<![CDATA[
@@ -20,7 +21,7 @@
           $.jPlayer.timeFormat.showHour = true;
           $(this).jPlayer("setMedia", jplayer_media);
         },
-        swfPath: "{{ STATIC_URL }}js/jplayer",
+        swfPath: "{% static "js/jplayer" %}",
         supplied: "{{ jplayer_supplied }}"
       });
     });

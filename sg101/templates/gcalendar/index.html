@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block title %}Event Calendar{% endblock %}
 {% block content %}
 <h2>SurfGuitar101 Event Calendar</h2>
@@ -32,14 +33,14 @@ time zone, which is the time zone preference you have set in your
 
 <ul>
 {% if user.is_authenticated %}
-   <li><a href="{% url 'gcalendar-add' %}"><img src="{{ STATIC_URL}}icons/calendar_add.png" alt="Add" /></a>
+   <li><a href="{% url 'gcalendar-add' %}"><img src="{% static "icons/calendar_add.png" %}" alt="Add" /></a>
       <a href="{% url 'gcalendar-add' %}">Add an event to our calendar</a></li>
-   <li><a href="{% url 'gcalendar-edit_events' %}"><img src="{{ STATIC_URL}}icons/calendar_edit.png" alt="Edit" /></a>
+   <li><a href="{% url 'gcalendar-edit_events' %}"><img src="{% static "icons/calendar_edit.png" %}" alt="Edit" /></a>
       <a href="{% url 'gcalendar-edit_events' %}">Change or delete an event you previously added</a></li>
 {% endif %}
    <li>
 <a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
-<img src="{{ STATIC_URL }}icons/feed.png" alt="feed" /></a>
+<img src="{% static "icons/feed.png" %}" alt="feed" /></a>
 <a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
 RSS Feed</a>
 </li>

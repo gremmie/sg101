@@ -1,4 +1,5 @@
 {% extends 'messages/messages_base.html' %}
+{% load static from staticfiles %}
 {% load core_tags %}
 {% load script_tags %}
 {% block custom_js %}
@@ -35,7 +36,7 @@
 </div>
 {% else %}
 <div class="notice">
-   <img src="{{ STATIC_URL }}icons/flag_red.png" alt="Report this message" />
+   <img src="{% static "icons/flag_red.png" %}" alt="Report this message" />
    <a href="{% url "messages-report" msg.id %}">Report this message for spam or abuse</a>.
 </div>
 {% endif %}

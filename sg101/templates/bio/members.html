@@ -1,11 +1,12 @@
 {% extends 'bio/base.html' %}
 {% load cycle from future %}
+{% load static from staticfiles %}
 {% load bio_tags %}
 {% load messages_tags %}
 {% block title %}Member List{% endblock %}
 {% block bio_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/tab-nav.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
 {% endblock %}
 {% block content %}
 <h2>Member List</h2>
@@ -42,9 +43,9 @@ user profiles.
    <td>{{ u.date_joined|date:"M. d, Y" }}</td>
    <td>
       {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
-         <img src="{{ STATIC_URL }}icons/note.png" alt="PM" title="Send private message" /></a>{% endifnotequal %}
+         <img src="{% static "icons/note.png" %}" alt="PM" title="Send private message" /></a>{% endifnotequal %}
       {% if not u.profile.hide_email %}<a href="mailto:{{ u.email }}">
-         <img src="{{ STATIC_URL }}icons/email.png" alt="Email" title="Send Email" /></a>{% endif %}
+         <img src="{% static "icons/email.png" %}" alt="Email" title="Send Email" /></a>{% endif %}
    </td>
 </tr>
 {% endfor %}

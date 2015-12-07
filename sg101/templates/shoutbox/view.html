@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
 {% load bio_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/shoutbox_app.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/shoutbox_app.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
 {% endblock %}
 {% block custom_js %}
 {% script_tags "jquery-jeditable" %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/shoutbox_app.js"></script>
+<script type="text/javascript" src="{% static "js/shoutbox_app.js" %}"></script>
 {% endblock %}
 {% block title %}Shout History{% endblock %}
 {% block content %}

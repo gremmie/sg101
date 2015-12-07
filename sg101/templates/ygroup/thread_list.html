@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block title %}Yahoo Group Archives{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
 {% endblock %}
 {% block content %}
 <h2>Yahoo Group Archives &raquo; Page {{ page_obj.number }}</h2>

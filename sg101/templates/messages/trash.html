@@ -1,6 +1,7 @@
 {% extends 'messages/messages_base.html' %}
+{% load static from staticfiles %}
 {% block custom_js %}
-<script src="{{ STATIC_URL }}js/messages.js"></script>
+<script src="{% static "js/messages.js" %}"></script>
 {% endblock %}
 {% block messages_content %}
 <h3>Trash <small>(Page {{ page.number }} of {{ page.paginator.num_pages }})</small></h3>

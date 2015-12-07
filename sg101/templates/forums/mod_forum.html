@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
 {% load cycle from future %}
+{% load static from staticfiles %}
 {% load bio_tags %}
 {% load forum_tags %}
 {% block title %}Moderate Forum: {{ forum.name }}{% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/forums_mod.js"></script>
+<script type="text/javascript" src="{% static "js/forums_mod.js" %}"></script>
 {% endblock %}
 {% block content %}
 {% forum_navigation forum "Moderate Forum" %}
@@ -25,8 +26,8 @@
    <tbody>
    {% for topic in page.object_list %}
       <tr class="{% cycle 'odd' 'even' %}">
-         <td>{% if topic.sticky %}<img src="{{ STATIC_URL }}icons/asterisk_orange.png" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
-            {% if topic.locked %}<img src="{{ STATIC_URL }}icons/lock.png" alt="Locked" title="Locked"
+         <td>{% if topic.sticky %}<img src="{% static "icons/asterisk_orange.png" %}" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
+            {% if topic.locked %}<img src="{% static "icons/lock.png" %}" alt="Locked" title="Locked"
             class="forums-topic-icon" />{% endif %}
          <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
          <td class="forum-index_replies">{{ topic.reply_count }}</td>

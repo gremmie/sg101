@@ -3,22 +3,23 @@
 {% load core_tags %}
 {% load comment_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% block custom_meta %}
 {% open_graph_meta_tags contest %}
 {% endblock %}
 {% block title %}Contests: {{ contest.title }}{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/comments.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
 {% endblock %}
 {% block custom_js %}
 {% if contest.is_active %}
 {% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
+<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
 {% endif %}
 <script type="text/javascript">
    var contest_id = {{ contest.id }};
 </script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/contests/contests.js"></script>
+<script type="text/javascript" src="{% static "js/contests/contests.js" %}"></script>
 {% endblock %}
 
 {% block content %}

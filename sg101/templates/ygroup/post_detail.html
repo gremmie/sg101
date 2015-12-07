@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block title %}Yahoo Group Archives: {{ post.title }}{% endblock %}
 {% block content %}
 <h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo; </h2>
 <h3 class="forum-nav">{{ post.title }}
    <a href="{{ post.get_absolute_url }}" rel="nofollow">
-      <img src="{{ STATIC_URL }}icons/link.png" alt="permalink" title="permalink" /></a>
+      <img src="{% static "icons/link.png" %}" alt="permalink" title="permalink" /></a>
 </h3>
 <dl>
    <dt>{{ post.poster }} - {{ post.creation_date|date:"d M Y H:i:s" }}</dt>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block content %}
 
 <h2>SurfGuitar101 Store</h2>
@@ -61,7 +62,7 @@ hundreds of singles and albums from surf music's golden era of 1961-165. Now in
 its fourth edition, this book features more information, an expanded index, and
 color photos. Foreword by Dick Dale, the King of the Surf Guitar himself!
 </p>
-<p><img src="{{ STATIC_URL }}store/blairs_book.jpg" /></p>
+<p><img src="{% static "store/blairs_book.jpg" %}" /></p>
 <p>Order now at <a href="http://johnblair.us">John Blair's website</a>.</p>
 
 <hr />

@@ -1,9 +1,10 @@
+{% load static from staticfiles %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <title>Markdown Preview</title>
-<link rel="stylesheet" href="{{ STATIC_URL }}js/markitup/templates/preview.css" />
+<link rel="stylesheet" href="{% static "js/markitup/templates/preview.css" %}" />
 </head>
 {{ data|safe }}
 </body>

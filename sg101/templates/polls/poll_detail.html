@@ -1,15 +1,16 @@
 {% extends 'base.html' %}
 {% load comment_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}Poll Results: {{ poll.question }}{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/polls.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/comments.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/polls.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
 {% endblock %}
 {% block custom_js %}
 {% if poll.is_open %}
 {% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/comments.js"></script>
+<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
 {% endif %}
 {% endblock %}
 {% block content %}

@@ -1,5 +1,6 @@
+{% load static from staticfiles %}
 <div class="app-logo">
-<img src="{{ STATIC_URL }}icons/downloads-logo.jpg" alt="Downloads Logo" title="Downloads" />
+   <img src="{% static "icons/downloads-logo.jpg" %}" alt="Downloads Logo" title="Downloads" />
 </div>
 <ul class="app-menu">
     <li><a href="{% url 'downloads-index' %}">Categories</a></li>

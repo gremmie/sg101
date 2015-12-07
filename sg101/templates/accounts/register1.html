@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/accounts_code.js"></script>
+<script type="text/javascript" src="{% static "js/accounts_code.js" %}"></script>
 {% endblock %}
 {% block title %}New User Registration Step 2{% endblock %}
 {% block content %}

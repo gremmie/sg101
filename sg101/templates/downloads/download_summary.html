@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
 {% load downloads_tags %}
+{% load static from staticfiles %}
 {% block title %}{{ title }}{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/downloads.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/tab-nav.css" />
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/pagination.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "css/tab-nav.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{{ STATIC_URL }}js/rating.js"></script>
-<script type="text/javascript" src="{{ STATIC_URL }}js/downloads-get.js"></script>
+<script type="text/javascript" src="{% static "js/rating.js" %}"></script>
+<script type="text/javascript" src="{% static "js/downloads-get.js" %}"></script>
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>

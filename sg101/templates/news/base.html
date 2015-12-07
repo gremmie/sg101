@@ -1,13 +1,14 @@
 {% extends 'base.html' %}
+{% load static from staticfiles %}
 {% block custom_head %}
 <link rel="alternate" type="application/rss+xml" title="SurfGuitar101 News" href="{% url 'feeds-news' %}" />
 {% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/news.css" />
+<link rel="stylesheet" type="text/css" href="{% static "css/news.css" %}" />
 {% block news_css %}{% endblock %}
 {% endblock %}
 {% block content %}
-<h2>SurfGuitar101 News &amp; Articles <a href="{% url 'feeds-news' %}"><img src="{{ STATIC_URL }}icons/feed.png" alt="News Feed" title="News Feed" /></a></h2>
+<h2>SurfGuitar101 News &amp; Articles <a href="{% url 'feeds-news' %}"><img src="{% static "icons/feed.png" %}" alt="News Feed" title="News Feed" /></a></h2>
 
 <ul class="app-menu">
 <li><a href="{% url 'news-index_page' %}">News Main</a></li>

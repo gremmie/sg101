@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load bio_tags %}
+{% load static from staticfiles %}
 {% block title %}Contests{% endblock %}
 {% block content %}
 <h2>Contests</h2>
@@ -11,16 +12,16 @@ the current and past contests on the site.</p>
    <li><a href="{{ contest.get_absolute_url }}">{{ contest.title }}</a> -
    {{ contest.creation_date|date:"F d, Y" }} to {{ contest.end_date|date:"F d, Y" }}
    {% if contest.is_active %}
-      <img src="{{ STATIC_URL }}icons/new.png" alt="New" />
+      <img src="{% static "icons/new.png" %}" alt="New" />
    {% else %}
       {% if contest.win_date %}
          <ul>
          {% for winner in contest.winners.all %}
-            <li><img src="{{ STATIC_URL }}icons/rosette.png" alt="Winner" /> {% profile_link winner.username %}</li>
+            <li><img src="{% static "icons/rosette.png" %}" alt="Winner" /> {% profile_link winner.username %}</li>
          {% endfor %}
          </ul>
       {% else %}
-         <img src="{{ STATIC_URL }}icons/lock.png" alt="Old" />
+         <img src="{% static "icons/lock.png" %}" alt="Old" />
       {% endif %}
    {% endif %}
    </li>
