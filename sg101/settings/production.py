@@ -24,6 +24,7 @@ DATABASES = {
 CONN_MAX_AGE = 1200
 
 STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 # Used cached template loader
 TEMPLATE_LOADERS = [
