@@ -99,6 +99,7 @@ def flag_icon(code, size='small'):
     return {
         'src': src,
         'name': name,
+        'size': size,
     }
 
 

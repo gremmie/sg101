@@ -1,6 +1,10 @@
 {% load static from staticfiles %}
 {% if src %}
+   {% if size == 'large' %}
    <div class="flag">
       <img src="{% static src %}" alt="{{ name }}" title="{{ name }}" /> {{ name }}
    </div>
+   {% else %}
+      <img src="{% static src %}" alt="{{ name }}" title="{{ name }}" />
+   {% endif %}
 {% endif %}
