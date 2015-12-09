@@ -10,6 +10,7 @@
 {% script_tags 'jquery-ui markitup' %}
 <script src="{% static "js/timezone.js" %}"></script>
 <script src="{% static "js/gcalendar.js" %}"></script>
+<script src="{% static "js/jquery.form.min.js" %}"></script>
 {% endblock %}
 {% block content %}
 <div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; {{ title }}</div>
@@ -47,5 +48,6 @@
 <tr><td>&nbsp;</td><td>{% comment_dialogs %}<input type="submit" name="submit_button" value="Submit" /></td></tr>
 </table>
 </form>
+{% include 'user_photos/image_forms.html' %}
 <p><a href="{% url 'gcalendar-index' %}">&laquo; Back to the Event Calendar</a></p>
 {% endblock %}

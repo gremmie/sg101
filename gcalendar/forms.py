@@ -5,6 +5,9 @@ import datetime
 import pytz
 from django import forms
 
+from core.html import ImageCheckError
+from core.html import image_check
+from core.markup import site_markup
 from gcalendar.models import Event
 
 
@@ -68,8 +71,12 @@ class EventEntryForm(forms.ModelForm):
     end_time = forms.TimeField(required=False, widget=forms.Select(choices=TIME_CHOICES))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     where = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 60}))
-    description = forms.CharField(required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+    description = forms.CharField(
+            required=False,
+            widget=forms.Textarea(attrs={
+                'class': 'markItUp smileyTarget',
+                'id': 'id_body',    # needed for image related js
+                }))
 
     DATE_FORMAT = '%m/%d/%Y'    # must match the jQuery UI datepicker config
     TIME_FORMAT = '%H:%M'
@@ -115,6 +122,17 @@ class EventEntryForm(forms.ModelForm):
         # We don't want the user to create a forum thread on an existing event
         if instance is not None:
             del self.fields['create_forum_thread']
+
+    def clean_description(self):
+        description = self.cleaned_data['description']
+        self.html = None
+        if description:
+            self.html = site_markup(description, relative_urls=False)
+            try:
+                image_check(self.html)
+            except ImageCheckError as ex:
+                raise forms.ValidationError(str(ex))
+        return description
 
     def clean(self):
         start_date = self.cleaned_data.get('start_date')

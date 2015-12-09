@@ -27,9 +27,13 @@ PREVIEW_UNAVAILABLE = """
 <p><strong>Error</strong>: {}</p>
 <p>Sorry, preview is unavailable.</p>
 <p>There is an image in your post which failed our image check. We can only
-accept images from a small number of sources for security reasons. You may use
-the forms below this box to safely hot-link to images hosted elsewhere on the
-Internet or upload from your computer or device.</p>
+accept images from a small number of sources for security reasons.</p>
+<p>If there are forms below this post box, you may use them to safely hot-link
+to images hosted elsewhere on the Internet or upload from your computer or
+device.</p>
+<p>If there are no image forms on this page, you can upload a photo from your
+computer or device from your user profile. Copy the image code you receive
+into the post box here.</p>
 """
 
 

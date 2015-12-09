@@ -39,7 +39,7 @@ def add_event(request):
             event = form.save(commit=False)
             event.user = request.user
             event.repeat = 'none'
-            event.save()
+            event.save(html=form.html)
             return HttpResponseRedirect(reverse('gcalendar-add_thanks'))
     else:
         form = EventEntryForm()
