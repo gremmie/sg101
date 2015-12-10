@@ -10,6 +10,9 @@ from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 
 from core.functions import send_mail
+from core.html import ImageCheckError
+from core.html import image_check
+from core.markup import site_markup
 from core.widgets import AutoCompleteUserInput
 import messages
 from messages.models import Flag, Message, Options
@@ -48,9 +51,20 @@ class ComposeForm(forms.Form):
         return receiver
 
     def clean_message(self):
-        msg = self.cleaned_data['message']
+        msg = self.cleaned_data['message'].strip()
         if len(msg) > MESSAGE_MAX:
             raise forms.ValidationError("Your message is too long. Please trim some text.")
+
+        self.html = None
+        if not msg:
+            raise forms.ValidationError("Please enter a message.")
+
+        self.html = site_markup(msg)
+        try:
+            image_check(self.html)
+        except ImageCheckError as ex:
+            raise forms.ValidationError(str(ex))
+
         return msg
 
     def clean(self):
@@ -89,7 +103,7 @@ class ComposeForm(forms.Form):
             message=message,
             signature_attached=attach_signature,
         )
-        new_msg.save()
+        new_msg.save(html=self.html)
 
         # Update the parent message (if there is one)
         parent_id = self.cleaned_data['parent_id']

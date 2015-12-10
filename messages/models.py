@@ -64,7 +64,10 @@ class Message(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             self.send_date = datetime.datetime.now()
-        self.html = site_markup(self.message)
+
+        self.html = kwargs.pop('html', None)
+        if not self.html and self.message:
+            self.html = site_markup(self.message)
         super(Message, self).save(*args, **kwargs)
 
     def __unicode__(self):
