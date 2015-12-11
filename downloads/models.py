@@ -69,6 +69,18 @@ class DownloadBase(models.Model):
         except OSError:
             return '?'
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.date_added = datetime.datetime.now()
+            self.update_date = self.date_added
+        else:
+            self.update_date = datetime.datetime.now()
+
+        self.html = kwargs.pop('html', None)
+        if not self.html and self.description:
+            self.html = site_markup(self.description)
+        super(DownloadBase, self).save(*args, **kwargs)
+
 
 class PendingDownload(DownloadBase):
     """This model represents pending downloads created by users. These pending
@@ -80,16 +92,6 @@ class PendingDownload(DownloadBase):
 
     def __unicode__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.date_added = datetime.datetime.now()
-            self.update_date = self.date_added
-        else:
-            self.update_date = datetime.datetime.now()
-
-        self.html = site_markup(self.description)
-        super(PendingDownload, self).save(*args, **kwargs)
 
 
 class Download(DownloadBase):
@@ -109,16 +111,6 @@ class Download(DownloadBase):
     @models.permalink
     def get_absolute_url(self):
         return ('downloads-details', [str(self.id)])
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.date_added = datetime.datetime.now()
-            self.update_date = self.date_added
-        else:
-            self.update_date = datetime.datetime.now()
-
-        self.html = site_markup(self.description)
-        super(Download, self).save(*args, **kwargs)
 
     def vote(self, vote_value):
         """receives a vote_value and updates internal score accordingly"""

@@ -162,7 +162,7 @@ def add(request):
             dl = form.save(commit=False)
             dl.user = request.user
             dl.ip_address = request.META.get('REMOTE_ADDR', None)
-            dl.save()
+            dl.save(html=form.html)
             email_admins('New download for approval', """Hello,
 
 A user has uploaded a new download for your approval.
