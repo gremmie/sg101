@@ -13,6 +13,9 @@ from django.http import HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.core.cache import cache
 
+from core.html import ImageCheckError
+from core.html import image_check
+from core.markup import site_markup
 from membermap.models import MapEntry
 from membermap.forms import MapEntryForm
 
@@ -104,7 +107,7 @@ def add(request):
     loc = request.POST.get('loc', None)
     lat = request.POST.get('lat', None)
     lon = request.POST.get('lon', None)
-    msg = request.POST.get('msg', '')
+    msg = request.POST.get('msg', '').strip()
 
     if loc is None or lat is None or lon is None:
         return HttpResponseBadRequest('Missing parameters')
@@ -115,6 +118,14 @@ def add(request):
     except ValueError:
         return HttpResponseBadRequest('Invalid lat/lon')
 
+    html = ''
+    if msg:
+        html = site_markup(msg)
+        try:
+            image_check(html)
+        except ImageCheckError as ex:
+            return HttpResponseBadRequest(str(ex))
+
     try:
         entry = MapEntry.objects.get(user=request.user)
     except MapEntry.DoesNotExist:
@@ -124,7 +135,7 @@ def add(request):
     entry.lat = lat
     entry.lon = lon
     entry.message = msg
-    entry.save()
+    entry.save(html=html)
 
     cache.delete(CACHE_KEY)
 

@@ -118,6 +118,7 @@ $(document).ready(function() {
                               error: function (xhr, textStatus, ex) {
                                  alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 
                                     xhr.responseText);
+                                 submitButton.removeAttr('disabled').val('Update');
                               }
                            });
                      });
