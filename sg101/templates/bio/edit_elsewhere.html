@@ -8,7 +8,9 @@
     <ul>
     {% for profile in request.user.social_network_profiles.all %}
         <li>
-        <img src="{% static "elsewhere/{{ profile.icon_name }}" %}" alt="{{ profile.name }}" />
+        {% with "elsewhere/"|add:profile.icon_name as img_src %}
+        <img src="{% static img_src %}" alt="{{ profile.name }}" />
+        {% endwith %}
             <a href="{{ profile.url }}" rel="me">{{ profile.name }}</a>
             <form id="delete-network-{{ profile.id }}" method="post" action=".">{% csrf_token %}
                 <input type="hidden" name="delete_id" value="{{ profile.id }}" />
@@ -44,7 +46,9 @@
     <ul>
     {% for profile in request.user.instant_messenger_profiles.all %}
         <li>
-            <img src="{% static "elsewhere/{{ profile.icon_name }}" %}" alt="{{ profile.name }}" />
+            {% with "elsewhere/"|add:profile.icon_name as img_src %}
+            <img src="{% static img_src %}" alt="{{ profile.name }}" />
+            {% endwith %}
             {{ profile.name }}: <a href="{{ profile.url }}">{{ profile.username }}</a>
             <form id="delete-messenger-{{ profile.id }}" method="post" action=".">{% csrf_token %}
                 <input type="hidden" name="delete_id" value="{{ profile.id }}" />
