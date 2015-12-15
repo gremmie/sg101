@@ -12,8 +12,8 @@ from news.models import Category
 import ftfy
 
 
-COMMENT_THREAD_BODY = ("This topic was automatically created to discuss the "
-        "news story [{title}]({url}).")
+COMMENT_THREAD_BODY = (u"This topic was automatically created to discuss the "
+        u"news story [{title}]({url}).")
 
 
 class CategoryAdmin(admin.ModelAdmin):
