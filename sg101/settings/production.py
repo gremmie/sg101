@@ -5,6 +5,7 @@ Production Django settings.
 from sg101.settings.base import *
 
 DEBUG = False
+SITE_SCHEME = 'https'
 
 ALLOWED_HOSTS = ['.surfguitar101.com']
 
