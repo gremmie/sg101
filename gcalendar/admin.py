@@ -3,7 +3,7 @@ This file contains the automatic admin site definitions for the gcalendar applic
 
 """
 from django.conf import settings
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.contrib import admin
 from django.contrib import messages
 from django.contrib.sites.models import Site
@@ -37,7 +37,7 @@ class EventAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(EventAdmin, self).get_urls()
-        my_urls = patterns('',
+        my_urls = [
             url(r'^google_sync/$',
                 self.admin_site.admin_view(self.google_sync),
                 name="gcalendar-google_sync"),
@@ -47,7 +47,7 @@ class EventAdmin(admin.ModelAdmin):
              url(r'^auth_return/$',
                 self.admin_site.admin_view(self.auth_return),
                 name="gcalendar-auth_return"),
-        )
+        ]
         return my_urls + urls
 
     def approve_events(self, request, qs):

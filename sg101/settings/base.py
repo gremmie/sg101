@@ -11,7 +11,6 @@ from celery.schedules import crontab
 PROJECT_PATH = os.path.abspath(os.path.join(os.path.split(__file__)[0], '..'))
 
 DEBUG = True
-TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     ('Brian Neal', 'admin@surfguitar101.com'),
@@ -74,6 +73,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',
@@ -83,20 +83,24 @@ MIDDLEWARE_CLASSES = [
 
 ROOT_URLCONF = 'sg101.urls'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    os.path.join(PROJECT_PATH, 'templates'),
-)
-
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.contrib.auth.context_processors.auth",
-    "django.core.context_processors.debug",
-    "django.core.context_processors.request",
-    "django.core.context_processors.media",
-    "django.contrib.messages.context_processors.messages",
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            os.path.join(PROJECT_PATH, 'templates'),
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -365,6 +369,3 @@ GPP_THIRD_PARTY_CSS = {
         'js/markitup/sets/markdown/style.css',
     ],
 }
-
-# Turn off warning about test runner behavior change
-SILENCED_SYSTEM_CHECKS = ['1_6.W001']

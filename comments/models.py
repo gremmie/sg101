@@ -6,7 +6,7 @@ import datetime
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
 from django.core import urlresolvers
 
@@ -32,12 +32,12 @@ class Comment(models.Model):
     """My own version of a Comment class that can attach comments to any other model."""
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField(db_index=True)
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey('content_type', 'object_id')
     user = models.ForeignKey(User)
     comment = models.TextField(max_length=COMMENT_MAX_LENGTH)
     html = models.TextField(blank=True)
     creation_date = models.DateTimeField()
-    ip_address = models.IPAddressField('IP Address')
+    ip_address = models.GenericIPAddressField('IP Address')
     is_public = models.BooleanField(default=True,
             help_text='Uncheck this field to make the comment invisible.')
     is_removed = models.BooleanField(default=False,

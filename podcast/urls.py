@@ -2,14 +2,14 @@
 urls for the podcast application
 
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.views.decorators.cache import cache_page
 
-from podcast.views import feed
+import podcast.views
 
 
-urlpatterns = patterns('podcast.views',
-   url(r'^$', 'index', name='podcast-main'),
-   url(r'^(\d+)/$', 'detail', name='podcast-detail'),
-   url(r'^feed.xml/$', cache_page(3600)(feed), name='podcast-feed'),
-)
+urlpatterns = [
+   url(r'^$', podcast.views.index, name='podcast-main'),
+   url(r'^(\d+)/$', podcast.views.detail, name='podcast-detail'),
+   url(r'^feed.xml/$', cache_page(3600)(podcast.views.feed), name='podcast-feed'),
+]

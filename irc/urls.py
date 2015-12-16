@@ -1,6 +1,9 @@
 """urls for the IRC application"""
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
-urlpatterns = patterns('irc.views',
-   url(r'^$', 'view', name='irc-main'),
-)
+import irc.views
+
+
+urlpatterns = [
+   url(r'^$', irc.views.view, name='irc-main'),
+]

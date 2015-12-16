@@ -1,9 +1,12 @@
 """
 Urls for the core application.
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
-urlpatterns = patterns('core.views',
-    url(r'^markdown_help/$', 'markdown_help', name='core-markdown_help'),
-    url(r'^ajax/users/$', 'ajax_users', name='core-ajax_users'),
-)
+import core.views
+
+
+urlpatterns = [
+    url(r'^markdown_help/$', core.views.markdown_help, name='core-markdown_help'),
+    url(r'^ajax/users/$', core.views.ajax_users, name='core-ajax_users'),
+]

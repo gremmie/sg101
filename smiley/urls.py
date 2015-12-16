@@ -1,10 +1,12 @@
 """
 Urls for the Smiley application.
 """
+from django.conf.urls import url
 
-from django.conf.urls import patterns, url
+import smiley.views
 
-urlpatterns = patterns('smiley.views',
-    url(r'^farm/$', 'farm', name='smiley-farm'),
-    url(r'^farm/extra/$', 'farm', kwargs={'extra': True}, name='smiley-farm_extra'),
-)
+
+urlpatterns = [
+    url(r'^farm/$', smiley.views.farm, name='smiley-farm'),
+    url(r'^farm/extra/$', smiley.views.farm, kwargs={'extra': True}, name='smiley-farm_extra'),
+]

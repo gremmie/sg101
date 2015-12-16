@@ -57,7 +57,7 @@ class DownloadBase(models.Model):
     file = models.FileField(upload_to=download_path)
     user = models.ForeignKey(User)
     date_added = models.DateTimeField(db_index=True)
-    ip_address = models.IPAddressField('IP Address')
+    ip_address = models.GenericIPAddressField('IP Address')
     update_date = models.DateTimeField(db_index=True, blank=True)
 
     class Meta:

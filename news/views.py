@@ -4,12 +4,12 @@ Views for the News application.
 
 import datetime
 from django.conf import settings
-from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
+from django.shortcuts import render
 from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
@@ -18,7 +18,6 @@ from django.http import Http404
 from tagging.models import Tag
 from tagging.models import TaggedItem
 
-from core.html import clean_html
 from core.functions import send_mail
 from core.functions import get_full_name
 from core.functions import get_page
@@ -56,21 +55,19 @@ def index(request):
     # than one at a time in the template; this saves database queries
     attach_extra_attrs(the_page.object_list)
 
-    return render_to_response('news/index.html', {
+    return render(request, 'news/index.html', {
         'title': 'Main Index',
         'page': the_page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
 def archive_index(request):
     dates = Story.objects.dates('date_submitted', 'month', order='DESC')
-    return render_to_response('news/archive_index.html', {
+    return render(request, 'news/archive_index.html', {
         'title': 'News Archive',
         'dates': dates,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -89,11 +86,10 @@ def archive(request, year, month):
 
     month_name = datetime.date(int(year), int(month), 1).strftime('%B')
 
-    return render_to_response('news/index.html', {
+    return render(request, 'news/index.html', {
         'title': 'Archive for %s, %s' % (month_name, year),
         'page': the_page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -103,10 +99,9 @@ def category_index(request):
     for cat in categories:
         cat_list.append((cat, cat.story_set.defer('tags')[:10]))
 
-    return render_to_response('news/category_index.html', {
+    return render(request, 'news/category_index.html', {
         'cat_list': cat_list,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -123,21 +118,19 @@ def category(request, slug):
 
     attach_extra_attrs(the_page.object_list)
 
-    return render_to_response('news/index.html', {
+    return render(request, 'news/index.html', {
         'title': 'Category: ' + category.title,
         'page': the_page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
 def story(request, story_id):
     story = get_object_or_404(Story.objects.select_related(
                 'submitter', 'category', 'forums_topic'), pk=story_id)
-    return render_to_response('news/story.html', {
+    return render(request, 'news/story.html', {
         'story': story,
-        },
-        context_instance=RequestContext(request))
+        })
 
 #######################################################################
 
@@ -151,27 +144,23 @@ def submit(request):
     else:
         add_form = AddNewsForm()
 
-    return render_to_response('news/submit_news.html', {
+    return render(request, 'news/submit_news.html', {
         'add_form': add_form,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
 @login_required
 def submit_thanks(request):
-    return render_to_response('news/submit_news.html', {
-        },
-        context_instance = RequestContext(request))
+    return render(request, 'news/submit_news.html')
 
 #######################################################################
 
 def tags(request):
     tags = Tag.objects.cloud_for_model(Story)
-    return render_to_response('news/tag_index.html', {
+    return render(request, 'news/tag_index.html', {
         'tags': tags,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -189,11 +178,10 @@ def tag(request, tag_name):
 
     attach_extra_attrs(the_page.object_list)
 
-    return render_to_response('news/index.html', {
+    return render(request, 'news/index.html', {
         'title': 'Stories with tag: "%s"' % tag_name,
         'page': the_page,
-        },
-        context_instance=RequestContext(request))
+        })
 
 #######################################################################
 
@@ -225,21 +213,13 @@ def email_story(request, story_id):
     else:
         send_form = SendStoryForm()
 
-    return render_to_response('news/send_story.html', {
+    return render(request, 'news/send_story.html', {
         'send_form': send_form,
         'story': story,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
 @login_required
 def email_thanks(request):
-    return render_to_response('news/send_story.html', {
-        },
-        context_instance = RequestContext(request))
-
-#######################################################################
-
-def _clean_html(s):
-    return clean_html(s, profile='news')
+    return render(request, 'news/send_story.html')

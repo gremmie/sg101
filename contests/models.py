@@ -34,8 +34,8 @@ class Contest(models.Model):
     creation_date = models.DateTimeField(blank=True)
     end_date = models.DateTimeField()
     contestants = models.ManyToManyField(User, related_name='contests',
-            null=True, blank=True)
-    winners = models.ManyToManyField(User, null=True, blank=True,
+            blank=True)
+    winners = models.ManyToManyField(User, blank=True,
             related_name='winning_contests')
     win_date = models.DateTimeField(null=True, blank=True)
     meta_description = models.TextField()

@@ -2,13 +2,14 @@
 Url patterns for the contests application.
 
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.views.generic import DetailView, ListView
 
 from contests.models import Contest
+import contests.views
 
 
-urlpatterns = patterns('',
+urlpatterns = [
    url(r'^$',
        ListView.as_view(
            context_object_name='contests',
@@ -16,7 +17,7 @@ urlpatterns = patterns('',
        name='contests-index'),
 
    url(r'^enter/$',
-       'contests.views.enter',
+       contests.views.enter,
        name='contests-enter'),
 
    url(r'^c/(?P<slug>[\w-]+)/$',
@@ -24,4 +25,4 @@ urlpatterns = patterns('',
            context_object_name='contest',
            queryset=Contest.public_objects.all().prefetch_related('winners')),
        name='contests-contest'),
-)
+]

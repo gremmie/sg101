@@ -1,7 +1,8 @@
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from django.conf.urls.static import static
 from django.conf import settings
 from django.contrib import admin
+import django.contrib.auth.views
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 
@@ -15,7 +16,7 @@ from custom_search.views import UserSearchView
 from core.views import FixedView
 
 
-urlpatterns = patterns('',
+urlpatterns = [
    url(r'^$',
        TemplateView.as_view(template_name='home.html'),
        name='home'),
@@ -32,12 +33,12 @@ urlpatterns = patterns('',
        FixedView.as_view(title='Terms of Service', content_template='fixed/tos.html'),
        name='tos'),
 
-   (r'^admin/doc/', include('django.contrib.admindocs.urls')),
+   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
-   url(r'^admin/password_reset/$', 'django.contrib.auth.views.password_reset', name='admin_password_reset'),
-   (r'^admin/password_reset/done/$', 'django.contrib.auth.views.password_reset_done'),
-   (r'^reset/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', 'django.contrib.auth.views.password_reset_confirm'),
-   (r'^reset/done/$', 'django.contrib.auth.views.password_reset_complete'),
+   url(r'^admin/password_reset/$', django.contrib.auth.views.password_reset, name='admin_password_reset'),
+   url(r'^admin/password_reset/done/$', django.contrib.auth.views.password_reset_done),
+   url(r'^reset/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', django.contrib.auth.views.password_reset_confirm),
+   url(r'^reset/done/$', django.contrib.auth.views.password_reset_complete),
 
    url(r'^store/$',
        TemplateView.as_view(template_name='store/base.html'),
@@ -49,17 +50,17 @@ urlpatterns = patterns('',
        TemplateView.as_view(template_name='store/thanks.html'),
        name='store-thanks'),
 
-   (r'^admin/', include(admin.site.urls)),
-   (r'^accounts/', include('accounts.urls')),
-   (r'^antispam/', include('antispam.urls')),
-   (r'^bandmap/', include('bandmap.urls')),
-   (r'^calendar/', include('gcalendar.urls')),
-   (r'^comments/', include('comments.urls')),
-   (r'^contact/', include('contact.urls')),
-   (r'^contests/', include('contests.urls')),
-   (r'^core/', include('core.urls')),
-   (r'^donations/', include('donations.urls')),
-   (r'^downloads/', include('downloads.urls')),
+   url(r'^admin/', include(admin.site.urls)),
+   url(r'^accounts/', include('accounts.urls')),
+   url(r'^antispam/', include('antispam.urls')),
+   url(r'^bandmap/', include('bandmap.urls')),
+   url(r'^calendar/', include('gcalendar.urls')),
+   url(r'^comments/', include('comments.urls')),
+   url(r'^contact/', include('contact.urls')),
+   url(r'^contests/', include('contests.urls')),
+   url(r'^core/', include('core.urls')),
+   url(r'^donations/', include('donations.urls')),
+   url(r'^downloads/', include('downloads.urls')),
    url(r'^feeds/news/$',
        cache_page(6 * 60 * 60)(LatestNewsFeed()),
        name='feeds-news'),
@@ -70,28 +71,28 @@ urlpatterns = patterns('',
    url(r'^feeds/forums/(?P<forum_slug>[\w\d-]+)/$',
        cache_page(5 * 60)(ForumsFeed()),
        name='feeds-forum'),
-   (r'^forums/', include('forums.urls')),
-   (r'^irc/', include('irc.urls')),
-   (r'^links/', include('weblinks.urls')),
-   (r'^member_map/', include('membermap.urls')),
-   (r'^messages/', include('messages.urls')),
-   (r'^news/', include('news.urls')),
-   (r'^oembed/', include('oembed.urls')),
-   (r'^podcast/', include('podcast.urls')),
-   (r'^polls/', include('polls.urls')),
-   (r'^potd/', include('potd.urls')),
-   (r'^profile/', include('bio.urls')),
-   (r'^shout/', include('shoutbox.urls')),
-   (r'^smiley/', include('smiley.urls')),
-   (r'^user_photos/', include('user_photos.urls')),
-   (r'^ygroup/', include('ygroup.urls')),
-)
+   url(r'^forums/', include('forums.urls')),
+   url(r'^irc/', include('irc.urls')),
+   url(r'^links/', include('weblinks.urls')),
+   url(r'^member_map/', include('membermap.urls')),
+   url(r'^messages/', include('messages.urls')),
+   url(r'^news/', include('news.urls')),
+   url(r'^oembed/', include('oembed.urls')),
+   url(r'^podcast/', include('podcast.urls')),
+   url(r'^polls/', include('polls.urls')),
+   url(r'^potd/', include('potd.urls')),
+   url(r'^profile/', include('bio.urls')),
+   url(r'^shout/', include('shoutbox.urls')),
+   url(r'^smiley/', include('smiley.urls')),
+   url(r'^user_photos/', include('user_photos.urls')),
+   url(r'^ygroup/', include('ygroup.urls')),
+]
 
 # Haystack search views
 
 sqs = SearchQuerySet().order_by('-pub_date')
 
-urlpatterns += patterns('haystack.views',
+urlpatterns += [
     url(r'^search/$',
         search_view_factory(view_class=UserSearchView,
                             form_class=CustomModelSearchForm,
@@ -105,7 +106,7 @@ urlpatterns += patterns('haystack.views',
                             searchqueryset=sqs,
                             load_all=True),
         name='haystack_search_ajax'),
-)
+]
 
 # For serving media files in development only:
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

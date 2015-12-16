@@ -1,9 +1,12 @@
 """
 URLs for the POTD application.
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
-urlpatterns = patterns('potd.views',
-    url(r'^$', 'view', name='potd-view'),
-    url(r'^archive/(\d+)/$', 'archive', name='potd-archive'),
-)
+import potd.views
+
+
+urlpatterns = [
+    url(r'^$', potd.views.view, name='potd-view'),
+    url(r'^archive/(\d+)/$', potd.views.archive, name='potd-archive'),
+]

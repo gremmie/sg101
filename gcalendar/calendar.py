@@ -9,7 +9,7 @@ import pytz
 import httplib2
 from apiclient.discovery import build
 from apiclient.http import BatchHttpRequest
-from django.utils.tzinfo import FixedOffset
+from django.utils.timezone import get_fixed_timezone
 
 from gcalendar.models import Event
 
@@ -137,7 +137,7 @@ class Calendar(object):
             except pytz.UnknownTimeZoneError:
                 raise CalendarError('Invalid time zone: %s' % tz_name)
             local = tz.localize(d)
-            zulu = local.astimezone(FixedOffset(0))
+            zulu = local.astimezone(get_fixed_timezone(0))
             s = zulu.strftime(self.DATE_TIME_TZ_FMT)
 
         return s

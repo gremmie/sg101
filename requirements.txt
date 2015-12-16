@@ -4,10 +4,10 @@ billiard==3.3.0.20
 bleach==1.4
 boto==2.13.0
 celery==3.1.18
-Django==1.7.11
+Django==1.8.7
 django-haystack==2.3.1
 django-picklefield==0.3.1
-django-tagging==0.3.1
+django-tagging==0.4
 docutils==0.10
 -e git+https://github.com/gremmie/django-elsewhere.git@1203bd331aba4c5d4e702cc4e64d807310f2b591#egg=django_elsewhere-master
 -e git+https://github.com/notanumber/xapian-haystack.git@a3a3a4e7cfba3e2e1be3a42abf59edd29ea03c05#egg=xapian_haystack-master

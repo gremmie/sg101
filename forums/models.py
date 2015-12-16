@@ -19,7 +19,7 @@ class Category(models.Model):
     name = models.CharField(max_length=80)
     slug = models.SlugField(max_length=80)
     position = models.IntegerField(blank=True, default=0)
-    groups = models.ManyToManyField(Group, blank=True, null=True,
+    groups = models.ManyToManyField(Group, blank=True,
         help_text="If groups are assigned to this category, only members" \
                     " of those groups can view this category.")
 
@@ -86,7 +86,7 @@ class Forum(models.Model):
     slug = models.SlugField(max_length=80)
     description = models.TextField(blank=True, default='')
     position = models.IntegerField(blank=True, default=0)
-    moderators = models.ManyToManyField(Group, blank=True, null=True)
+    moderators = models.ManyToManyField(Group, blank=True)
 
     # denormalized fields to reduce database hits
     topic_count = models.IntegerField(blank=True, default=0)
@@ -284,7 +284,7 @@ class Post(models.Model):
     update_date = models.DateTimeField(db_index=True)
     body = models.TextField()
     html = models.TextField()
-    user_ip = models.IPAddressField(blank=True, default='', null=True)
+    user_ip = models.GenericIPAddressField(blank=True, default='', null=True)
     attachments = models.ManyToManyField(Oembed, through='Attachment')
 
     class Meta:
