@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
 {% load forum_tags %}
 {% load script_tags %}
+{% load static from staticfiles %}
 {% block title %}Forums: New Topic{% endblock %}
 {% block custom_js %}
    {% script_tags 'jquery-ui markitup' %}
+   <script src="{% static "js/jquery.form.min.js" %}"></script>
+   <script src="{% static "js/forums.js" %}"></script>
 {% endblock %}
 {% block content %}
 {% forum_navigation forum "New Topic" %}
