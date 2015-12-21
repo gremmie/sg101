@@ -15,9 +15,8 @@ from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.template import RequestContext
 from django.views.decorators.http import require_POST
 from django.db.models import F
 
@@ -108,11 +107,10 @@ def index(request):
     cmpdef = lambda a, b: cmp(a['cat'].position, b['cat'].position)
     cats = sorted(cats.values(), cmpdef)
 
-    return render_to_response('forums/index.html', {
+    return render(request, 'forums/index.html', {
         'cats': cats,
         'feeds': feeds,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def forum_index(request, slug):
@@ -147,14 +145,13 @@ def forum_index(request, slug):
 
     can_moderate = perms.can_moderate(forum, request.user)
 
-    return render_to_response('forums/forum_index.html', {
+    return render(request, 'forums/forum_index.html', {
         'forum': forum,
         'feed': feed,
         'page': page,
         'page_nav': page_nav,
         'can_moderate': can_moderate,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def topic_index(request, id):
@@ -223,7 +220,7 @@ def topic_index(request, id):
     is_subscribed = request.user.is_authenticated() and (
             topic in request.user.subscriptions.all())
 
-    return render_to_response('forums/topic.html', {
+    return render(request, 'forums/topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'page': page,
@@ -234,8 +231,7 @@ def topic_index(request, id):
         'form': NewPostForm(initial={'topic_id': topic.id}),
         'is_favorite': is_favorite,
         'is_subscribed': is_subscribed,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def topic_unread(request, id):
@@ -308,11 +304,10 @@ def new_topic(request, slug):
     else:
         form = NewTopicForm(request.user, forum)
 
-    return render_to_response('forums/new_topic.html', {
+    return render(request, 'forums/new_topic.html', {
         'forum': forum,
         'form': form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -321,11 +316,10 @@ def new_topic_thanks(request, tid):
     This view displays the success page for a newly created topic.
     """
     topic = get_object_or_404(Topic.objects.select_related(), pk=tid)
-    return render_to_response('forums/new_topic_thanks.html', {
+    return render(request, 'forums/new_topic_thanks.html', {
         'forum': topic.forum,
         'topic': topic,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @require_POST
@@ -352,12 +346,11 @@ def quick_reply_ajax(request):
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic, datetime.datetime.now())
 
-        return render_to_response('forums/display_post.html', {
+        return render(request, 'forums/display_post.html', {
             'post': post,
             'can_moderate': perms.can_moderate(form.topic.forum, request.user),
             'can_reply': True,
-            },
-            context_instance=RequestContext(request))
+            })
 
     # The client side javascript is pretty simplistic right now and we don't
     # want to change it yet. It is expecting a single error string. Just grab
@@ -459,14 +452,13 @@ def edit_post(request, id):
     else:
         form = PostForm(instance=post, topic_name=topic_name)
 
-    return render_to_response('forums/edit_post.html', {
+    return render(request, 'forums/edit_post.html', {
         'forum': post.topic.forum,
         'topic': post.topic,
         'post': post,
         'form': form,
         'can_moderate': can_moderate,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @require_POST
@@ -615,13 +607,12 @@ def new_post(request, topic_id):
     else:
         form = None
 
-    return render_to_response('forums/new_post.html', {
+    return render(request, 'forums/new_post.html', {
         'forum': topic.forum,
         'topic': topic,
         'form': form,
         'can_post': can_post,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -685,12 +676,11 @@ def mod_topic_move(request, id):
     else:
         form = MoveTopicForm(request.user)
 
-    return render_to_response('forums/move_topic.html', {
+    return render(request, 'forums/move_topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'form': form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -740,13 +730,12 @@ def mod_forum(request, slug):
     if form is None:
         form = MoveTopicForm(request.user, hide_label=True)
 
-    return render_to_response('forums/mod_forum.html', {
+    return render(request, 'forums/mod_forum.html', {
         'forum': forum,
         'page': page,
         'page_nav': page_nav,
         'form': form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -757,7 +746,8 @@ def catchup_all(request):
     """
     forum_ids = Forum.objects.forum_ids_for_user(request.user)
 
-    tlvs = TopicLastVisit.objects.filter(user=request.user,
+    TopicLastVisit.objects.filter(
+            user=request.user,
             topic__forum__id__in=forum_ids).delete()
 
     now = datetime.datetime.now()
@@ -809,13 +799,12 @@ def mod_topic_split(request, id):
 
     posts = topic.posts.select_related()
 
-    return render_to_response('forums/mod_split_topic.html', {
+    return render(request, 'forums/mod_split_topic.html', {
         'forum': topic.forum,
         'topic': topic,
         'posts': posts,
         'form': form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -836,13 +825,12 @@ def unread_topics(request):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    return render_to_response('forums/topic_list.html', {
+    return render(request, 'forums/topic_list.html', {
         'title': 'Topics With Unread Posts',
         'page': page,
         'page_nav': page_nav,
         'unread': True,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def unanswered_topics(request):
@@ -865,13 +853,12 @@ def unanswered_topics(request):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    return render_to_response('forums/topic_list.html', {
+    return render(request, 'forums/topic_list.html', {
         'title': 'Unanswered Topics',
         'page': page,
         'page_nav': page_nav,
         'unread': False,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def active_topics(request, num):
@@ -910,13 +897,12 @@ def active_topics(request, num):
 
     title = 'Last %d Active Topics' % num
 
-    return render_to_response('forums/topic_list.html', {
+    return render(request, 'forums/topic_list.html', {
         'title': title,
         'page': page,
         'page_nav': page_nav,
         'unread': False,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -945,11 +931,10 @@ def post_ip_info(request, post_id):
     ip_users = sorted(set(Post.objects.filter(
         user_ip=post.user_ip).values_list('user__username', flat=True)))
 
-    return render_to_response('forums/post_ip.html', {
+    return render(request, 'forums/post_ip.html', {
         'post': post,
         'ip_users': ip_users,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def _user_posts(request, target_user, req_user, page_title):
@@ -972,12 +957,11 @@ def _user_posts(request, target_user, req_user, page_title):
     # we do this for the template since it is rendered twice
     page_nav = render_to_string('forums/pagination.html', {'page': page})
 
-    return render_to_response('forums/post_list.html', {
+    return render(request, 'forums/post_list.html', {
         'title': page_title,
         'page': page,
         'page_nav': page_nav,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 def _bump_post_count(user):

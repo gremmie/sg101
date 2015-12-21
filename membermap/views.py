@@ -4,9 +4,8 @@ Views for the membermap application.
 """
 import json
 
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.template import RequestContext
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
@@ -37,10 +36,9 @@ def index(request):
     else:
         form = MapEntryForm()
 
-    return render_to_response('membermap/index.html', {
+    return render(request, 'membermap/index.html', {
         'form': form,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 def query(request):

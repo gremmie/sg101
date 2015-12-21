@@ -3,8 +3,7 @@ Views for the downloads application.
 """
 import json
 
-from django.shortcuts import render_to_response, get_object_or_404
-from django.template import RequestContext
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.http import HttpResponse
@@ -37,11 +36,10 @@ def create_paginator(dls):
 def index(request):
     categories = Category.objects.all()
     total_dls = Download.public_objects.all().count()
-    return render_to_response('downloads/index.html', {
+    return render(request, 'downloads/index.html', {
         'categories': categories,
         'total_dls': total_dls,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 # Maps URL component to database field name for the Download table:
@@ -71,12 +69,11 @@ def category(request, slug, sort='title'):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('downloads/download_list.html', {
+    return render(request, 'downloads/download_list.html', {
         's' : sort,
         'category' : cat,
         'page' : the_page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -93,11 +90,10 @@ def new(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('downloads/download_summary.html', {
+    return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Newest Downloads',
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -114,11 +110,10 @@ def popular(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('downloads/download_summary.html', {
+    return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Popular Downloads',
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -134,11 +129,10 @@ def rating(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('downloads/download_summary.html', {
+    return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Highest Rated Downloads',
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -147,10 +141,9 @@ def details(request, id):
     download = get_object_or_404(Download.public_objects, pk=id)
     if not download.is_public:
         raise Http404
-    return render_to_response('downloads/download_detail.html', {
+    return render(request, 'downloads/download_detail.html', {
         'download' : download,
-        },
-        context_instance = RequestContext(request))
+        })
 
 #######################################################################
 
@@ -171,18 +164,16 @@ A user has uploaded a new download for your approval.
     else:
         form = AddDownloadForm()
 
-    return render_to_response('downloads/add.html', {
+    return render(request, 'downloads/add.html', {
         'add_form': form,
-        },
-        context_instance=RequestContext(request))
+        })
 
 #######################################################################
 
 @login_required
 def thanks(request):
-    return render_to_response('downloads/thanks.html', {
-        },
-        context_instance=RequestContext(request))
+    return render(request, 'downloads/thanks.html', {
+        })
 
 #######################################################################
 

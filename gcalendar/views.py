@@ -10,9 +10,8 @@ from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.http import HttpResponseRedirect
 from django.http import Http404
-from django.shortcuts import render_to_response
 from django.shortcuts import get_object_or_404
-from django.template import RequestContext
+from django.shortcuts import render
 
 from gcalendar.forms import EventEntryForm
 from gcalendar.models import Event
@@ -25,10 +24,9 @@ def index(request):
     else:
         tz = 'US/Pacific'
 
-    return render_to_response('gcalendar/index.html', {
+    return render(request, 'gcalendar/index.html', {
         'tz': tz,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @login_required
@@ -44,18 +42,16 @@ def add_event(request):
     else:
         form = EventEntryForm()
 
-    return render_to_response('gcalendar/event.html', {
+    return render(request, 'gcalendar/event.html', {
         'title': 'Add Calendar Event',
         'form': form,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @login_required
 def add_thanks(request):
-    return render_to_response('gcalendar/thanks_add.html', {
-        },
-        context_instance = RequestContext(request))
+    return render(request, 'gcalendar/thanks_add.html', {
+        })
 
 
 @login_required
@@ -71,10 +67,9 @@ def edit_events(request):
     except EmptyPage:
         page = paginator.page(paginator.num_pages)
 
-    return render_to_response('gcalendar/edit.html', {
+    return render(request, 'gcalendar/edit.html', {
         'page': page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @login_required
@@ -95,18 +90,16 @@ def edit_event(request, event_id):
     else:
         form = EventEntryForm(instance=event)
 
-    return render_to_response('gcalendar/event.html', {
+    return render(request, 'gcalendar/event.html', {
         'title': 'Change Calendar Event',
         'form': form,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @login_required
 def edit_thanks(request):
-    return render_to_response('gcalendar/thanks_edit.html', {
-        },
-        context_instance = RequestContext(request))
+    return render(request, 'gcalendar/thanks_edit.html', {
+        })
 
 
 def delete_event(request):
@@ -127,6 +120,3 @@ def delete_event(request):
         return HttpResponse(id)
 
     return HttpResponseForbidden()
-
-
-# vim: ts=4 sw=4

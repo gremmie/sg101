@@ -6,12 +6,10 @@ import decimal
 import datetime
 import logging
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
-from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
@@ -49,8 +47,8 @@ def verify_request(params):
     req.add_header("Content-type", "application/x-www-form-urlencoded")
     try:
         response = urllib2.urlopen(req)
-    except URLError, e:
-        logging.exception('IPN: exception verifying IPN: %s', e)
+    except urllib2.URLError as ex:
+        logging.exception('IPN: exception verifying IPN: %s', ex)
         return None
 
     return response.read()
@@ -61,7 +59,7 @@ def index(request):
     current_site = Site.objects.get_current()
     form_action, business = paypal_params()
 
-    return render_to_response('donations/index.html', {
+    return render(request, 'donations/index.html', {
         'goal': settings.DONATIONS_GOAL,
         'gross': gross,
         'net': net,
@@ -74,8 +72,7 @@ def index(request):
         'item_number': settings.DONATIONS_ITEM_NUM,
         'item_anon_number': settings.DONATIONS_ITEM_ANON_NUM,
         'domain': current_site.domain,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @csrf_exempt
@@ -218,4 +215,3 @@ def process_donation(item_number, params):
     else:
         donation.save()
         logging.info('IPN: donation saved')
-

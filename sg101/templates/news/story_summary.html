@@ -42,7 +42,7 @@ Category: <a href="{% url 'news-category' slug=story.category.slug %}">{{ story.
 {% endif %}
 <a href="{{ story.get_absolute_url }}"><img src="{% static "icons/link.png" %}" alt="Permalink" title="Permalink" /></a>
 {% if user.is_authenticated %}
-<a href="{% url 'news.views.email_story' story.id %}"><img src="{% static "icons/email_go.png" %}"
+<a href="{% url 'news-email_story' story.id %}"><img src="{% static "icons/email_go.png" %}"
    alt="Send this story to a friend" title="Send this story to a friend" /></a>
 {% endif %}
 </p>
