@@ -97,18 +97,18 @@ class CustomModelSearchForm(ModelSearchForm):
         # auto-escaped for us.
         #
         # Gather regular search terms
-        terms = ' '.join(self.cleaned_data['q'].split())
+        terms = u' '.join(self.cleaned_data['q'].split())
 
         # Exact words or phrases:
         exact = self.cleaned_data['exact'].strip()
         if exact:
-            exact = '"{}"'.format(exact)
+            exact = u'"{}"'.format(exact)
 
         # Exclude terms:
-        exclude = ["-{}".format(term) for term in self.cleaned_data['exclude'].split()]
-        exclude = ' '.join(exclude)
+        exclude = [u"-{}".format(term) for term in self.cleaned_data['exclude'].split()]
+        exclude = u' '.join(exclude)
 
-        query = ' '.join([terms, exact, exclude]).strip()
+        query = u' '.join([terms, exact, exclude]).strip()
         logger.debug("auto_query: %s", query)
 
         sqs = self.searchqueryset.auto_query(query)
