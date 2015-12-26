@@ -1,4 +1,3 @@
-{% load url from future %}
 Dear {{ msg.receiver.username }},
 
 You have just received a new private message at {{ site.name }}. The message

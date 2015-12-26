@@ -7,7 +7,7 @@ import json
 
 from django.contrib.auth.models import User
 from django.http import HttpResponse
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
@@ -21,7 +21,7 @@ def markdown_help(request):
     to be called via AJAX.
 
     """
-    return render_to_response('core/markdown_help.html')
+    return render(request, 'core/markdown_help.html')
 
 
 def ajax_users(request):

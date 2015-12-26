@@ -8,8 +8,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
 from django.db.models import get_model
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
@@ -99,10 +98,9 @@ def post_comment(request):
     comment.save(html=form.comment_html)
 
     # return the rendered comment
-    return render_to_response('comments/comment.html', {
+    return render(request, 'comments/comment.html', {
         'comment': comment,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 @require_POST
@@ -155,7 +153,6 @@ def markdown_preview(request):
         except ImageCheckError as ex:
             html = PREVIEW_UNAVAILABLE.format(ex)
 
-    return render_to_response('comments/markdown_preview.html', {
+    return render(request, 'comments/markdown_preview.html', {
         'data': html,
-        },
-        context_instance = RequestContext(request))
+        })

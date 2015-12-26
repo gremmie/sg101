@@ -1,7 +1,6 @@
 """Views for the antispam application."""
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 
 
 def suspended(request):
@@ -10,7 +9,6 @@ def suspended(request):
     """
     is_active = request.user.is_active
 
-    return render_to_response('antispam/suspended.html', {
+    return render(request, 'antispam/suspended.html', {
         'is_active': is_active,
-        },
-        context_instance = RequestContext(request))
+        })

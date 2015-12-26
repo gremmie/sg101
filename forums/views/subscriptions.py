@@ -8,8 +8,7 @@ from django.http import HttpResponseRedirect
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from forums.models import Topic
@@ -75,11 +74,10 @@ def subscription_status(request, topic_id):
     """Display the subscription status for the given topic."""
     topic = get_object_or_404(Topic.objects.select_related(), id=topic_id)
     is_subscribed = request.user in topic.subscribers.all()
-    return render_to_response('forums/subscription_status.html', {
+    return render(request, 'forums/subscription_status.html', {
         'topic': topic,
         'is_subscribed': is_subscribed,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -114,9 +112,8 @@ def manage_subscriptions(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('forums/manage_topics.html', {
+    return render(request, 'forums/manage_topics.html', {
         'page_title': 'Topic Subscriptions',
         'description': 'The forum topics you are currently subscribed to are listed below.',
         'page': page,
-        },
-        context_instance=RequestContext(request))
+        })

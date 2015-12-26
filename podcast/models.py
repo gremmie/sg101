@@ -4,14 +4,15 @@ Models for the podcast application.
 """
 import datetime
 
+from django.core.urlresolvers import reverse
 from django.db import models
 
 
-EXPLICIT_CHOICES = (
-        ('yes', 'Yes'),
-        ('no', 'No'),
-        ('clean', 'Clean'),
-    )
+EXPLICIT_CHOICES = [
+    ('yes', 'Yes'),
+    ('no', 'No'),
+    ('clean', 'Clean'),
+]
 
 
 class Channel(models.Model):
@@ -53,15 +54,14 @@ class Item(models.Model):
     explicit = models.CharField(max_length=8, choices=EXPLICIT_CHOICES)
     update_date = models.DateTimeField(db_index=True, blank=True)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('podcast.views.detail', [str(self.id)])
+        return reverse('podcast-detail', args=[str(self.id)])
 
     def __unicode__(self):
         return self.title
 
     class Meta:
-        ordering = ('-pubdate', )
+        ordering = ['-pubdate']
         verbose_name = 'podcast'
         verbose_name_plural = 'podcasts'
 

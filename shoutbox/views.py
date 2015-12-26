@@ -3,13 +3,11 @@ Views for the Shoutbox application.
 """
 
 import re
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.core.paginator import InvalidPage
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
-from django.http import HttpResponseRedirect
 from django.http import Http404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -17,7 +15,6 @@ from django.views.decorators.http import require_POST
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 from core.functions import get_page
-from shoutbox.forms import ShoutBoxForm
 from shoutbox.models import Shout
 from shoutbox.models import ShoutFlag
 
@@ -32,10 +29,9 @@ def shout(request):
 
     shout = Shout(user=request.user, shout=msg)
     shout.save()
-    return render_to_response('shoutbox/shout.html', {
+    return render(request, 'shoutbox/shout.html', {
        'shout': shout,
-       },
-       context_instance = RequestContext(request))
+       })
 
 
 def view_shout(request, id):
@@ -43,13 +39,11 @@ def view_shout(request, id):
     try:
         shout = Shout.objects.get(pk=id)
     except Shout.DoesNotExist:
-        return render_to_response('shoutbox/missing_shout.html', {},
-           context_instance = RequestContext(request))
+        return render(request, 'shoutbox/missing_shout.html')
 
-    return render_to_response('shoutbox/view_shout.html', {
+    return render(request, 'shoutbox/view_shout.html', {
        'shout': shout,
-       },
-       context_instance = RequestContext(request))
+       })
 
 
 def view_history(request):
@@ -63,10 +57,9 @@ def view_history(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('shoutbox/view.html', {
+    return render(request, 'shoutbox/view.html', {
         'page': the_page,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 shout_id_re = re.compile(r'shout-(\d+)')
@@ -153,5 +146,3 @@ A user has flagged a shout for review.
 """)
     return HttpResponse('The shout was flagged. A moderator will review the shout shortly. ' \
             'Thanks for helping to improve the quality of this site.')
-
-# vim: ts=4 sw=4

@@ -30,7 +30,7 @@
 {% endblock %}
 {% block podcast-content %}
 <div class="breadcrumbs">
-   <a href="{% url 'podcast.views.index' %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
+   <a href="{% url 'podcast-main' %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
 </div>
 <h3>{{ podcast.pubdate|date:"F d, Y" }} &bull; {{ podcast.title }}</h3>
 <h4>{{ podcast.subtitle }}</h4>

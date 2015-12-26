@@ -6,8 +6,7 @@ import json
 import os.path
 from urlparse import urlparse
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 
 from podcast.models import Channel
@@ -61,10 +60,9 @@ def index(request):
     except Channel.DoesNotExist:
         channel = None
 
-    return render_to_response('podcast/index.html', {
+    return render(request, 'podcast/index.html', {
         'channel': channel,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 def detail(request, id):
@@ -78,15 +76,14 @@ def detail(request, id):
     jplayer_media, jplayer_supplied = jplayer_params(ext, podcast.enclosure_url,
               alt_ext, podcast.alt_enclosure_url)
 
-    return render_to_response('podcast/detail.html', {
+    return render(request, 'podcast/detail.html', {
         'channel': podcast.channel,
         'podcast': podcast,
         'ext': ext,
         'alt_ext': alt_ext,
         'jplayer_media': jplayer_media,
         'jplayer_supplied': jplayer_supplied,
-        },
-        context_instance = RequestContext(request))
+        })
 
 
 def feed(request):
@@ -98,7 +95,6 @@ def feed(request):
     if channel:
         channel.items = Item.objects.filter(channel=channel)
 
-    return render_to_response('podcast/feed.xml', {
+    return render(request, 'podcast/feed.xml', {
         'channel': channel,
-        },
-        context_instance = RequestContext(request))
+        })

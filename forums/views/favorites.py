@@ -5,8 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.http import HttpResponseForbidden
 from django.http import Http404
@@ -63,23 +62,23 @@ def manage_favorites(request):
     except InvalidPage:
         raise Http404
 
-    return render_to_response('forums/manage_topics.html', {
+    return render(request, 'forums/manage_topics.html', {
         'page_title': 'Favorite Topics',
         'description': 'Your favorite topics are listed below.',
         'page': page,
-        },
-        context_instance=RequestContext(request))
+        })
+
 
 @login_required
 def favorites_status(request, topic_id):
     """Display the favorite status for the given topic."""
     topic = get_object_or_404(Topic.objects.select_related(), id=topic_id)
     is_favorite = request.user in topic.bookmarkers.all()
-    return render_to_response('forums/favorite_status.html', {
+    return render(request, 'forums/favorite_status.html', {
         'topic': topic,
         'is_favorite': is_favorite,
-        },
-        context_instance=RequestContext(request))
+        })
+
 
 @login_required
 @require_POST

@@ -3,8 +3,7 @@ Views for the weblinks application.
 
 """
 import random
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.core.paginator import InvalidPage
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
@@ -35,11 +34,10 @@ def create_paginator(links):
 def link_index(request):
    categories = Category.objects.all()
    total_links = Link.public_objects.all().count()
-   return render_to_response('weblinks/index.html', {
+   return render(request, 'weblinks/index.html', {
       'categories': categories,
       'total_links': total_links,
-      },
-      context_instance = RequestContext(request))
+      })
 
 #######################################################################
 
@@ -52,11 +50,10 @@ def new_links(request):
    except InvalidPage:
       raise Http404
 
-   return render_to_response('weblinks/link_summary.html', {
+   return render(request, 'weblinks/link_summary.html', {
       'page': the_page,
       'title': 'Newest Links',
-      },
-      context_instance = RequestContext(request))
+      })
 
 #######################################################################
 
@@ -68,11 +65,10 @@ def popular_links(request):
       the_page = paginator.page(page)
    except InvalidPage:
       raise Http404
-   return render_to_response('weblinks/link_summary.html', {
+   return render(request, 'weblinks/link_summary.html', {
       'page': the_page,
       'title': 'Popular Links',
-      },
-      context_instance = RequestContext(request))
+      })
 
 #######################################################################
 
@@ -92,18 +88,15 @@ A user has added a new link for your approval.
    else:
       add_form = AddLinkForm()
 
-   return render_to_response('weblinks/add_link.html', {
+   return render(request, 'weblinks/add_link.html', {
       'add_form': add_form,
-      },
-      context_instance = RequestContext(request))
+      })
 
 #######################################################################
 
 @login_required
 def add_thanks(request):
-   return render_to_response('weblinks/add_link.html', {
-      },
-      context_instance = RequestContext(request))
+   return render(request, 'weblinks/add_link.html')
 
 #######################################################################
 
@@ -135,12 +128,11 @@ def view_links(request, slug, sort='title'):
    except InvalidPage:
       raise Http404
 
-   return render_to_response('weblinks/view_links.html', {
+   return render(request, 'weblinks/view_links.html', {
       's' : sort,
       'category' : cat,
       'page' : the_page,
-      },
-      context_instance = RequestContext(request))
+      })
 
 #######################################################################
 
@@ -193,7 +185,6 @@ def link_detail(request, id):
     link = get_object_or_404(Link, pk=id)
     if not link.is_public:
         raise Http404
-    return render_to_response('weblinks/link_detail.html', {
+    return render(request, 'weblinks/link_detail.html', {
         'link': link,
-        },
-        context_instance = RequestContext(request))
+        })

@@ -27,5 +27,5 @@
 <p>This download has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
 <hr />
 {% render_comment_list download %}
-{% render_comment_form for download %}
+{% render_comment_form user download %}
 {% endblock %}

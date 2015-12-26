@@ -55,7 +55,7 @@ This poll ran from {{ poll.start_date|date:"F d, Y" }} to {{ poll.end_date|date:
 {% render_comment_list poll %}
 {% if poll.is_open %}
 <p>Leave a comment?</p>
-{% render_comment_form for poll %}
+{% render_comment_form user poll %}
 {% else %}
 <p>Comments are closed for this poll. If you'd like to share your thoughts on this poll 
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>

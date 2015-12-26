@@ -64,7 +64,7 @@
 {% render_comment_list story %}
 {% if story.can_comment_on %}
 <p>Leave a comment?</p>
-{% render_comment_form for story %}
+{% render_comment_form user story %}
 {% else %}
 <p>Comments are closed for this story. If you'd like to share your thoughts on this story 
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>

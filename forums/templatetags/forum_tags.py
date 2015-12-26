@@ -88,11 +88,14 @@ def current_forum_time(user):
 
 
 @register.simple_tag
-def forum_date(date, user, long_format=True):
+def forum_date(date, user, long_format=True, none_date_retval=u'Never'):
     """
     This tag displays an arbitrary datetime, adjusted by the user's
     time zone preferences.
     """
+    if date is None:
+        return none_date_retval
+
     fmt_index = 0 if long_format else 1
 
     date = SERVER_TZ.localize(date)

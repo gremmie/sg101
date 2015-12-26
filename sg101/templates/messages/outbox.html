@@ -22,7 +22,7 @@ by the recipient. Messages in <em>italics</em> have been replied to by the recei
    </tr>
    {% for msg in page.object_list %}
    <tr>
-      <td><a href="{% url 'bio.views.view_profile' msg.receiver.username %}">
+      <td><a href="{% url 'bio-view_profile' msg.receiver.username %}">
          {{ msg.receiver.username }}</a></td>
       <td>
          <a href="{% url 'messages-view' msg.pk %}"

@@ -4,7 +4,6 @@ Views for the News application.
 
 import datetime
 from django.conf import settings
-from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required

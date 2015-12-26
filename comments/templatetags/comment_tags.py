@@ -117,38 +117,9 @@ def get_comment_form(parser, token):
     return GetCommentFormNode(obj, var)
 
 
-class RenderCommentFormNode(template.Node):
-    def __init__(self, obj):
-        self.object = template.Variable(obj)
-
-    def render(self, context):
-        object = self.object.resolve(context)
-        context.push()
-        form_str = render_to_string('comments/comment_form.html', {
-            'form': CommentForm(object),
-            },
-            context)
-        context.pop()
-        return form_str
-
-
-@register.tag
-def render_comment_form(parser, token):
-    """
-    Renders a comment form for the specified object using the template
-    comments/comment_form.html.
-    Syntax:
-        {% render_comment_form for [object] %}
-    """
-    try:
-        (tag, for_word, obj) = token.split_contents()
-    except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires exactly 2 arguments" % token.contents.split()[0]
-
-    if for_word != 'for':
-        raise template.TemplateSyntaxError("First argument in %r tag must be 'for'" % tag)
-
-    return RenderCommentFormNode(obj)
+@register.inclusion_tag('comments/comment_form.html')
+def render_comment_form(user, obj):
+    return {'user': user, 'form': CommentForm(obj)}
 
 
 @register.inclusion_tag('comments/comment_list.html')

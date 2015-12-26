@@ -10,7 +10,7 @@ from django.contrib.sites.models import Site
 from django.conf import settings
 import django.core.mail
 
-import core.tasks
+from .tasks import send_mail as send_mail_task
 
 
 class TemporaryFile(object):
@@ -70,7 +70,7 @@ def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer
     }
 
     if defer:
-        core.tasks.send_mail.delay(**msg_kwargs)
+        send_mail_task.delay(**msg_kwargs)
     else:
         msg = django.core.mail.EmailMessage(**msg_kwargs)
         msg.send()

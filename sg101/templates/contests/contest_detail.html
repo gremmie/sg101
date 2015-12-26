@@ -87,7 +87,7 @@ sometime on or after {{ contest.end_date|date:"l, F d, Y" }}. Please check back 
 {% render_comment_list contest %}
 {% if contest.is_active %}
 <p>Leave a comment?</p>
-{% render_comment_form for contest %}
+{% render_comment_form user contest %}
 {% else %}
 <p>Comments are closed for this contest. If you'd like to share your thoughts
 on this contest with the site staff, you can <a href="{% url 'contact-form' %}?subject={{ contest.title|urlencode }}">contact us directly</a>.</p>

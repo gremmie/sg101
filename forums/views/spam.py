@@ -9,8 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.contrib.auth.models import User
 
 from forums.models import Post
@@ -66,12 +65,11 @@ def spammer(request, post_id):
         return HttpResponseRedirect(reverse('forums-spammer_nailed', args=[
             poster.id]))
 
-    return render_to_response('forums/spammer.html', {
+    return render(request, 'forums/spammer.html', {
         'can_moderate': can_moderate,
         'can_deactivate': can_deactivate,
         'post': post,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -84,11 +82,10 @@ def spammer_nailed(request, spammer_id):
 
     success = not user.is_active and profile.status == bio.models.STA_SPAMMER
 
-    return render_to_response('forums/spammer_nailed.html', {
+    return render(request, 'forums/spammer_nailed.html', {
         'spammer': user,
         'success': success,
-        },
-        context_instance=RequestContext(request))
+        })
 
 
 @login_required
@@ -111,9 +108,8 @@ def stranger(request, post_id):
 
         return HttpResponseRedirect(post.get_absolute_url())
 
-    return render_to_response('forums/stranger.html', {
+    return render(request, 'forums/stranger.html', {
         'can_moderate': can_moderate,
         'can_promote': can_promote,
         'post': post,
-        },
-        context_instance=RequestContext(request))
+        })

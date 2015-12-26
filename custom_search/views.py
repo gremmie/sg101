@@ -1,7 +1,7 @@
 """Custom views for searching."""
 import logging
 
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from haystack.views import SearchView
 from xapian import QueryParserError
 
@@ -46,8 +46,7 @@ class UserSearchView(SearchView):
         }
 
         context.update(self.extra_context())
-        return render_to_response(self.template, context,
-                                  context_instance=self.context_class(self.request))
+        return render(self.request, self.template, context)
 
     def extra_context(self):
         return {

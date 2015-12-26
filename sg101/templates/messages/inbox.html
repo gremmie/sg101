@@ -21,7 +21,7 @@ Messages in <em>italics</em> indicate you have replied to the message.
    </tr>
    {% for msg in page.object_list %}
    <tr>
-      <td><a href="{% url 'bio.views.view_profile' msg.sender.username %}">
+      <td><a href="{% url 'bio-view_profile' msg.sender.username %}">
          {{ msg.sender.username }}</a></td>
       <td>
          <a href="{% url 'messages-view' msg.pk %}"

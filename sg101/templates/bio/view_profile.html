@@ -90,8 +90,8 @@
       <a href="{% url 'user_photos-upload' %}">Upload Photo</a></li>
    <li><a href="{% url 'bio-edit_elsewhere' %}"><img src="{% static "icons/link_edit.png" %}" alt="Edit Links" /></a>
    <a href="{% url 'bio-edit_elsewhere' %}">Edit Elsewhere Links</a></li>
-   <li><a href="{% url 'django.contrib.auth.views.password_change' %}"><img src="{% static "icons/key.png" %}" alt="Change Password" /></a>
-      <a href="{% url 'django.contrib.auth.views.password_change' %}">Change Password</a></li>
+   <li><a href="{% url 'accounts-password_change' %}"><img src="{% static "icons/key.png" %}" alt="Change Password" /></a>
+      <a href="{% url 'accounts-password_change' %}">Change Password</a></li>
 </ul>
 {% else %}
 {% if user.is_authenticated %}
