@@ -103,10 +103,14 @@ class StoryAdmin(admin.ModelAdmin):
     search_fields = ['title', 'short_text', 'long_text']
     date_hierarchy = 'date_submitted'
     readonly_fields = ['update_date', 'version']
-    raw_id_fields = ['submitter']
+    raw_id_fields = ['submitter', 'forums_topic']
     actions = ['fix_text']
 
-    fieldsets = PendingStoryAdmin.fieldsets
+    fieldsets = PendingStoryAdmin.fieldsets + [
+        ('Comments', {
+            'fields': ['forums_topic'],
+            })
+    ]
 
     def fix_text(self, request, qs):
         for story in qs:
