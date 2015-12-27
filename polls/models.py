@@ -5,6 +5,7 @@ Models for the Polls application.
 import datetime
 
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Q
 
@@ -47,9 +48,8 @@ class Poll(models.Model):
         ordering = ('-start_date', )
         get_latest_by = 'start_date'
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('polls-detail', [], {'poll_id': str(self.id)})
+        return reverse('polls-detail', kwargs={'poll_id': str(self.pk)})
 
     def results(self):
         """

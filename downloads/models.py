@@ -4,8 +4,9 @@ Models for the downloads application.
 import os
 
 import datetime
-from django.db import models
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.db import models
 from django.template.defaultfilters import filesizeformat
 
 from core.markup import site_markup
@@ -108,9 +109,8 @@ class Download(DownloadBase):
     def __unicode__(self):
         return self.title
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('downloads-details', [str(self.id)])
+        return reverse('downloads-details', args=[str(self.pk)])
 
     def vote(self, vote_value):
         """receives a vote_value and updates internal score accordingly"""

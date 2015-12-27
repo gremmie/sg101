@@ -14,6 +14,7 @@ except:
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
+from django.core.urlresolvers import reverse
 
 POTD_THUMB_WIDTH = 120
 
@@ -42,9 +43,8 @@ class Photo(models.Model):
     def __unicode__(self):
         return u'%s (%s)' % (self.caption, self.pk)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('potd-archive', [str(self.id)])
+        return reverse('potd-archive', args=[str(self.id)])
 
     def save(self, *args, **kwargs):
         if not self.pk:

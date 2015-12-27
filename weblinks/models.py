@@ -3,8 +3,9 @@ This module contains the models for the weblinks application.
 """
 import datetime
 
-from django.db import models
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.db import models
 
 
 class Category(models.Model):
@@ -68,9 +69,8 @@ class Link(LinkBase):
 
         super(Link, self).save(*args, **kwargs)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('weblinks-link_detail', [str(self.id)])
+        return reverse('weblinks-link_detail', args=[str(self.pk)])
 
     def search_title(self):
         return self.title

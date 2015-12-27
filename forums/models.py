@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
 from django.core.cache import cache
+from django.core.urlresolvers import reverse
 
 from core.markup import site_markup
 from oembed.models import Oembed
@@ -102,9 +103,8 @@ class Forum(models.Model):
     def __unicode__(self):
         return self.name
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('forums-forum_index', [self.slug])
+        return reverse('forums-forum_index', kwargs={'slug': self.slug})
 
     def topic_count_update(self):
         """Call to notify the forum that its topic count has been updated."""
@@ -194,13 +194,11 @@ class Topic(models.Model):
     def __unicode__(self):
         return self.name
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('forums-topic_index', [self.pk])
+        return reverse('forums-topic_index', kwargs={'id': str(self.pk)})
 
-    @models.permalink
     def get_latest_post_url(self):
-        return ('forums-topic_latest', [self.pk])
+        return reverse('forums-topic_latest', kwargs={'id': str(self.pk)})
 
     def post_count_update(self):
         """
@@ -293,9 +291,8 @@ class Post(models.Model):
         verbose_name = 'forum post'
         verbose_name_plural = 'forum posts'
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('forums-goto_post', [self.pk])
+        return reverse('forums-goto_post', args=[str(self.pk)])
 
     def summary(self):
         limit = 65

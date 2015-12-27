@@ -5,6 +5,7 @@ import datetime
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.utils.html import escape, urlize
 
 from smiley.utils import smilify_html
@@ -24,9 +25,8 @@ class Shout(models.Model):
             return self.shout[:60] + "..."
         return self.shout
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('shoutbox-view', [str(self.id)])
+        return reverse('shoutbox-view', args=[str(self.pk)])
 
     def save(self, *args, **kwargs):
         if not self.id:

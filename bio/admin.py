@@ -20,9 +20,10 @@ class BadgeOwnerInline(admin.TabularInline):
 
 class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'user__first_name', 'user__last_name',
-            'user__email']
+                     'user__email']
     exclude = ['profile_html', 'signature_html']
-    list_display = ['__unicode__', 'user_is_active', 'get_status_display', 'status_date']
+    list_display = ['__unicode__', 'user_is_active', 'get_status_display',
+                    'status_date']
     readonly_fields = ['status', 'status_date', 'update_date']
     list_filter = ['status', ]
     date_hierarchy = 'status_date'

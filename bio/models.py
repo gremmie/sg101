@@ -9,6 +9,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.cache import cache
+from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
@@ -137,9 +138,8 @@ class UserProfile(models.Model):
         if content_update:
             notify_profile_content_update(self)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('bio-view_profile', (), {'username': self.user.username})
+        return reverse('bio-view_profile', kwargs={'username': self.user.username})
 
     def badge_ownership(self):
         return BadgeOwnership.objects.filter(profile=self).select_related('badge')

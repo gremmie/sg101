@@ -2,6 +2,7 @@
 Models for the ygroup application, which is a read-only archive of messages
 from the old Yahoo Group.
 """
+from django.core.urlresolvers import reverse
 from django.db import models
 
 
@@ -20,9 +21,8 @@ class Thread(models.Model):
     def __unicode__(self):
         return u'Thread %d, %s' % (self.pk, self.title)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('ygroup-thread_view', [self.id])
+        return reverse('ygroup-thread_view', args=[self.pk])
 
 
 class Post(models.Model):
@@ -44,9 +44,8 @@ class Post(models.Model):
     def __unicode__(self):
         return u'Post %d, %s' % (self.pk, self.title)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('ygroup-post_view', [], {'pk': self.id})
+        return reverse('ygroup-post_view', kwargs={'pk': str(self.pk)})
 
     def search_title(self):
         return self.title
