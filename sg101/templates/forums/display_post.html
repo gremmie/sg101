@@ -43,13 +43,15 @@
          <p class="small quiet">Last edited: {{ post.update_date|date:"M d, Y H:i:s" }}</p>
          {% endif %}
       </div>
-      {% if post.attachments.all %}
-      <div>
-         {% for item in post.attachments.all %}
-         <div class="forum-attachment">{{ item.html|safe }}</div>
-         {% endfor %}
-      </div>
-      {% endif %}
+      {% with attachments=post.attachments.all %}
+         {% if attachments %}
+         <div>
+            {% for item in attachments %}
+            <div class="forum-attachment">{{ item.html|safe }}</div>
+            {% endfor %}
+         </div>
+         {% endif %}
+      {% endwith %}
       <div class="forum-post-info-tools">
       <a href="#top" class="quiet" title="Goto the top of the page">Top</a>
       {% if can_reply %}

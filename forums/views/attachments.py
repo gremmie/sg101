@@ -9,6 +9,7 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
 
+from forums.models import Attachment
 from forums.models import Post
 
 
@@ -30,8 +31,8 @@ def fetch_attachments(request):
     except Post.DoesNotExist:
         return HttpResponseNotFound("That post doesn't exist.")
 
-    embeds = post.attachments.all().select_related('embed')
-    data = [{'id': embed.id, 'html': embed.html} for embed in embeds]
+    attachments = Attachment.objects.filter(post=post).select_related('embed')
+    data = [{'id': a.embed.id, 'html': a.embed.html} for a in attachments]
 
     return HttpResponse(json.dumps(data), content_type='application/json')
 
