@@ -42,10 +42,13 @@ class Command(LabelCommand):
             ext = os.path.splitext(dl.file.name)[1]
             dl.dest_filename = slugify(dl.title) + ext
 
+        base_url = "{}://{}{}".format(settings.SITE_SCHEME,
+                                      Site.objects.get_current().domain,
+                                      settings.MEDIA_URL)
+
         output = render_to_string('downloads/commands/wget_cat.html', {
             'downloads': downloads,
-            'domain': Site.objects.get_current().domain,
-            'MEDIA_URL': settings.MEDIA_URL,
+            'base_url': base_url,
             })
 
         self.stdout.write(output)
