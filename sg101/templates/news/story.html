@@ -70,11 +70,14 @@
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
 {% endif %}
 {% else %}
+<p>
+<img src="{% static "icons/comments.png" %}" alt="Comments" title="Comments" />
    {% if story.forums_topic %}
       <a href="{{ story.forums_topic.get_absolute_url }}">{{ story.forums_comment_count }} comment{{ story.forums_comment_count|pluralize }}</a>
    {% else %}
       <p><em>Comments are disabled.</em></p>
    {% endif %}
+</p>
 {% endif %}
 </div>
 {% endblock %}
