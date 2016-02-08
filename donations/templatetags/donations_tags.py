@@ -10,11 +10,15 @@ from donations.models import Donation
 register = template.Library()
 
 
-@register.inclusion_tag('donations/monthly_goal_tag.html')
-def monthly_goal():
-    return {
-        'pct': Donation.objects.monthly_goal_pct()
-    }
+@register.simple_tag(takes_context=True)
+def monthly_goal(context):
+    context['pct'] = Donation.objects.monthly_goal_pct()
+    context['pct'] = 10
+
+    template_name = ('donations/v3/monthly_goal_tag.html'
+            if 'V3_DESIGN' in context else 'donations/monthly_goal_tag.html')
+    t = template.loader.get_template(template_name)
+    return t.render(context)
 
 
 @register.inclusion_tag('donations/top_donors_tag.html')

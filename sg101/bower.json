@@ -1,0 +1,25 @@
+{
+  "name": "sg101",
+  "description": "SurfGuitar101.com website",
+  "main": "index.js",
+  "authors": [
+    "Brian Neal <bgneal@gmail.com>"
+  ],
+  "license": "ISC",
+  "moduleType": [],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "foundation-sites": "~6.1.1"
+  },
+  "devDependencies": {
+    "motion-ui": "~1.1.1"
+  }
+}

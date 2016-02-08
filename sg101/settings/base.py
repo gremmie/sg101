@@ -52,6 +52,7 @@ MEDIA_URL = '/media/'
 # Staticfiles settings:
 STATICFILES_DIRS = [
     os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static')),
+    os.path.abspath(os.path.join(PROJECT_PATH, 'static')),
 ]
 STATIC_ROOT = '/tmp/test_static_root'
 STATIC_URL = '/static/'
@@ -59,13 +60,6 @@ STATIC_URL = '/static/'
 # Make this unique, and don't share it with anybody.
 SECRETS = json.load(open(os.path.join(PROJECT_PATH, 'settings', 'secrets.json')))
 SECRET_KEY = SECRETS['SECRET_KEY']
-
-# List of Loader classes that know how to import templates from various sources.
-
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.common.CommonMiddleware',

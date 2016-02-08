@@ -1,7 +1,8 @@
 syntax: glob
 *.log
 *.log.?
-*.log.?.gz
+*.log.??
+*.log.*.gz
 *.pyc
 *.swp
 secrets.json
@@ -19,3 +20,5 @@ media/slideshow
 media/smiley
 celerybeat-schedule
 sg101/xapian_index
+sg101/node_modules
+sg101/bower_components

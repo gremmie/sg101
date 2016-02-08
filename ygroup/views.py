@@ -20,6 +20,12 @@ class ThreadIndexView(ListView):
     """
     model = Thread
     paginate_by = THREADS_PER_PAGE
+    template_name = 'ygroup/v3/thread_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ThreadIndexView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
 
     def get_paginator(self, queryset, per_page, **kwargs):
         """
@@ -35,7 +41,7 @@ class ThreadView(ListView):
 
     """
     context_object_name = "post_list"
-    template_name = "ygroup/thread.html"
+    template_name = "ygroup/v3/thread.html"
     paginate_by = POSTS_PER_PAGE
 
     def get_queryset(self):
@@ -45,6 +51,7 @@ class ThreadView(ListView):
     def get_context_data(self, **kwargs):
         context = super(ThreadView, self).get_context_data(**kwargs)
         context['thread'] = self.thread
+        context['V3_DESIGN'] = True
         return context
 
     def get_paginator(self, queryset, per_page, **kwargs):

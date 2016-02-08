@@ -1,0 +1,12 @@
+<div class="callout text-center">
+   <h5><i class="fi-camera"></i> Photo of the Day <i class="fi-camera"></i></h5>
+   <p>
+   {% if potd %}
+      <a href="{% url 'potd-view' %}" class="thumbnail">
+         <img src="{{ potd.thumb.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" /></a><br />
+      <a href="{% url 'potd-view' %}">{{ potd.caption }}</a>
+   {% else %}
+   No photo at this time.
+   {% endif %}
+   </p>
+</div>

@@ -1,0 +1,48 @@
+.full-width {
+   width: 100%;
+}
+
+.quiet {
+   font-size: smaller;
+}
+
+.size-12 { font-size: rem-calc(12); }
+.size-14 { font-size: rem-calc(14); }
+.size-16 { font-size: rem-calc(16); }
+.size-18 { font-size: rem-calc(18); }
+.size-21 { font-size: rem-calc(21); }
+.size-24 { font-size: rem-calc(24); }
+.size-36 { font-size: rem-calc(36); }
+.size-48 { font-size: rem-calc(48); }
+.size-60 { font-size: rem-calc(60); }
+.size-72 { font-size: rem-calc(72); }
+
+.sg101-menu-bar {
+   @include menu-base;
+   @include menu-direction(vertical);
+   @include menu-expand;
+   @include breakpoint(medium) {
+      @include menu-direction(horizontal);
+   }
+}
+
+@include breakpoint(medium) {
+   .medium-horizontal {
+      .is-dropdown-submenu {
+         top: 100%;
+         left: 0
+      }
+      .is-dropdown-submenu-parent.opens-left .is-dropdown-submenu {
+         right: 0
+      }
+   }
+}
+@include breakpoint(medium){
+ .medium-horizontal{
+  .is-dropdown-submenu-parent.is-right-arrow > a::after{
+   border-width: 5px;
+   border-style: solid solid inset inset;
+   border-color: $primary-color transparent transparent;
+  }
+ }
+}

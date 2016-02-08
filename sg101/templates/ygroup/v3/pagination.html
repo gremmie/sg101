@@ -1,0 +1,23 @@
+<div class="text-center">
+<ul class="pagination" role="navigation" aria-label="Pagination">
+<li class="pagination-previous {% if not page_obj.has_previous %}disabled{% endif %}">
+   {% if page_obj.has_previous %}<a href="./?page={{ page_obj.previous_page_number }}">{% endif %}Previous <span class="show-for-sr">page</span>
+   {% if page_obj.has_previous %}</a>{% endif %}
+</li>
+{% for num in page_obj.page_range %}
+   {% if num %}
+      {% if num == page_obj.number %}
+         <li class="current"><span class="show-for-sr">You're on page</span> {{ num }}</li>
+      {% else %}
+         <li><a href="./?page={{ num }}" aria-label="Page {{ num }}">{{ num }}</a></li>
+      {% endif %}
+   {% else %}
+      <li class="ellipsis" aria-hidden="true"></li>
+   {% endif %}
+{% endfor %}
+<li class="pagination-next {% if not page_obj.has_next %}disabled{% endif %}">
+   {% if page_obj.has_next %}<a href="./?page={{ page_obj.next_page_number }}">{% endif %}Next <span class="show-for-sr">page</span>
+   {% if page_obj.has_next %}</a>{% endif %}
+</li>
+</ul>
+</div>

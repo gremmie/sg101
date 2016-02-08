@@ -17,6 +17,7 @@ urlpatterns = [
         ThreadView.as_view(),
         name='ygroup-thread_view'),
     url(r'^post/(?P<pk>\d+)/$',
-        DetailView.as_view(model=Post, context_object_name='post'),
+        DetailView.as_view(model=Post, context_object_name='post',
+                           template_name='ygroup/v3/post.html'),
         name='ygroup-post_view'),
 ]

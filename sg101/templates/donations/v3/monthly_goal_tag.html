@@ -1,0 +1,12 @@
+<div class="callout text-center">
+   <h5><i class="fi-dollar"></i> Donations <i class="fi-dollar"></i></h5>
+   <p>Help us meet our monthly goal:</p>
+
+   <div class="progress" role="progressbar" tabindex="0" aria-valuenow="{{ pct }}" 
+         aria-valuemin="0" aria-valuetext="{{ pct }} percent" aria-valuemax="100">
+      <div class="progress-meter" style="width: {{ pct }}%"></div>
+   </div>
+
+   <p><strong>{{ pct }}%</strong></p>
+   <p><a href="{% url 'donations-index' %}">Donate Now</a></p>
+</div>

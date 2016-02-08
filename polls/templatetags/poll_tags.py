@@ -18,7 +18,11 @@ def latest_poll():
     return {'poll': poll}
 
 
-@register.inclusion_tag("polls/latest_poll_block_tag.html")
-def latest_poll_block():
+@register.simple_tag(takes_context=True)
+def latest_poll_block(context):
     polls = Poll.objects.get_current_polls()
-    return {'polls': polls}
+    context['polls'] = polls
+    template_name = ('polls/v3/latest_poll_block_tag.html'
+            if 'V3_DESIGN' in context else 'polls/latest_poll_block_tag.html')
+    t = template.loader.get_template(template_name)
+    return t.render(context)
