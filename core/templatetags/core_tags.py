@@ -158,14 +158,14 @@ class Birthday(object):
         self.profiles = profiles if profiles else []
 
 
-@register.inclusion_tag('core/birthday_block.html')
-def birthday_block():
+@register.simple_tag(takes_context=True)
+def birthday_block(context):
     """
     A template tag to display all the users who have birthdays this month.
     """
     today = datetime.date.today()
-    profiles = list(UserProfile.objects.filter(birthday__month=today.month).select_related(
-            'user'))
+    profiles = list(UserProfile.objects.filter(birthday__month=today.month)\
+                        .select_related('user'))
 
     days = collections.defaultdict(list)
     for profile in profiles:
@@ -174,10 +174,13 @@ def birthday_block():
     birthdays = [Birthday(day, profiles) for day, profiles in days.iteritems()]
     birthdays.sort(key=lambda b: b.day)
 
-    return {
-        'birthdays': birthdays,
-        'today': today,
-    }
+    context['birthdays'] = birthdays
+    context['today'] = today
+
+    template_name = ('core/v3/birthday_block.html'
+            if 'V3_DESIGN' in context else 'core/birthday_block.html')
+    t = template.loader.get_template(template_name)
+    return t.render(context)
 
 
 class EncodeParamsNode(template.Node):

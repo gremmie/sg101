@@ -3,8 +3,10 @@
 {% load cache %}
 {% load static from staticfiles %}
 {% load contest_tags %}
+{% load core_tags %}
 {% load donations_tags %}
 {% load irc_tags %}
+{% load messages_tags %}
 {% load poll_tags %}
 {% load potd_tags %}
 <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#">
@@ -18,9 +20,6 @@
    <link rel="stylesheet" href="{% static "css/v3/main.min.css" %}">
    <link rel="stylesheet" href="{% static "css/v3/foundation-icons.css" %}" />
    <link rel="shortcut icon" href="{% static "favicon.ico" %}">
-   <!-- link rel="stylesheet" href="http://dhbhdrzi4tiry.cloudfront.net/cdn/sites/foundation.min.css"-->
-   <!-- link href='http://cdnjs.cloudflare.com/ajax/libs/foundicons/3.0.0/foundation-icons.css' rel='stylesheet' type='text/css' -->
-   <!-- link rel="stylesheet" href="https://cdn.jsdelivr.net/foundation/6.1.2/foundation.min.css"-->
    {% block custom_head %}{% endblock %}
    {% block custom_css %}{% endblock %}
 </head>
@@ -32,7 +31,8 @@
             <li><a href="/">SurfGuitar101</a></li>
             {% if user.is_authenticated %}
                <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
-               <li><a href="{% url 'messages-inbox' %}">Private Messages <span class="alert badge">25</span></a></li>
+               <li><a href="{% url 'messages-inbox' %}">Private Messages
+                  {% unread_messages %}</a></li>
                <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
             {% else %}
                <li><a href="{% url 'accounts-login' %}">Login</a></li>
@@ -72,38 +72,44 @@
 <ul class="menu vertical medium-horizontal expanded XXXmedium-text-center" data-responsive-menu="drilldown medium-dropdown">
 <li class=""><a href="#">News</a>
    <ul class="menu vertical" data-submenu>
-      <li><a href="#">News</a></li>
-      <li><a href="#">Submit News</a></li>
+      <li><a href="{% url 'news-index_page' %}">News</a></li>
+      <li><a href="{% url 'news-submit' %}">Submit News</a></li>
    </ul>
 </li>
 <li class=""><a href="#">Forums</a>
    <ul class="menu vertical" data-submenu>
-      <li><a href="#">Latest Posts</a></li>
-      <li><a href="#">All Forums</a></li>
+      <li><a href="{% url 'forums-unread_topics' %}">Unread Topics</a></li>
+      <li><a href="{% url 'forums-active_topics' 30 %}">Active Topics</a></li>
+      <li><a href="{% url 'forums-index' %}">All Forums</a></li>
+      <li><a href="{% url 'forums-my_posts' %}">My Posts</a></li>
+      <li><a href="{% url 'forums-manage_favorites' %}">My Favorites</a></li>
+      <li><a href="{% url 'forums-manage_subscriptions' %}">My Subscriptions</a></li>
+      <li><a href="{% url 'forums-unanswered_topics' %}">Unanswered Topics</a></li>
    </ul>
 </li>
 <li class=""><a href="#">Surf Music</a>
    <ul class="menu vertical" data-submenu>
-      <li><a href="#">Calendar</a></li>
-      <li><a href="#">Contests</a></li>
-      <li><a href="#">Downloads</a></li>
-      <li><a href="#">Podcasts</a></li>
-      <li><a href="#">Polls</a></li>
-      <li><a href="#">Photo of the Day</a></li>
-      <li><a href="#">Links</a></li>
-      <li><a href="#">Surf Band Map</a></li>
+      <li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>
+      <li><a href="{% url 'contests-index' %}">Contests</a></li>
+      <li><a href="{% url 'downloads-index' %}">Downloads</a></li>
+      <li><a href="{% url 'podcast-main' %}">Podcast</a></li>
+      <li><a href="{% url 'polls-main' %}">Polls</a></li>
+      <li><a href="{% url 'potd-view' %}">Photo of the Day</a></li>
+      <li><a href="{% url 'weblinks-main' %}">Links</a></li>
+      <li><a href="{% url 'bandmap-map' %}">Surf Band Map</a></li>
+      <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
    </ul>
 </li>
 <li class=""><a href="#">Site</a>
    <ul class="menu vertical" data-submenu>
-      <li><a href="#">Contact</a></li>
-      <li><a href="#">Chat / IRC</a></li>
-      <li><a href="#">Donations</a></li>
-      <li><a href="#">Member List</a></li>
-      <li><a href="#">Member Map</a></li>
-      <li><a href="#">Search</a></li>
-      <li><a href="#">Store</a></li>
-      <li><a href="#">Wiki</a></li>
+      <li><a href="{% url 'contact-form' %}">Contact</a></li>
+      <li><a href="{% url 'irc-main' %}">Chat/IRC</a></li>
+      <li><a href="{% url 'donations-index' %}">Donations</a></li>
+      <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
+      <li><a href="{% url 'bio-member_search' %}">Member Search</a></li>
+      <li><a href="{% url 'membermap-index' %}">Member Map</a></li>
+      <li><a href="/store/">Store</a></li>
+      <li><a href="http://wiki.surfguitar101.com">Wiki</a></li>
    </ul>
 </li>
 </ul>
@@ -128,21 +134,47 @@
       {# cache 600 donations_block #}
          {% monthly_goal %}
       {# endcache #}
+      {# cache 3600 birthday_block #}
+         {% birthday_block %}
+      {# endcache #}
    </div>
    <div class="medium-9 columns">
    {% block content %}{% endblock %}
    </div>
 </div>
-   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-   <script src="{% static "js/v3/what-input.min.js" %}"></script>
-   <script src="{% static "js/v3/foundation.min.js" %}"></script>
 
-   <!--
-   <script src="http://dhbhdrzi4tiry.cloudfront.net/cdn/sites/foundation.js"></script>
-   <script src="https://cdn.jsdelivr.net/foundation/6.1.2/foundation.min.js"></script>
-   -->
+<footer>
+<div class="row expanded callout secondary align-middle">
+   <div class="medium-4 columns">
+      <a href="https://www.twitter.com/SurfGuitar101">
+      <i class="fi-social-twitter size-72"></i>
+      Follow SurfGuitar101 on Twitter!</a>
+   </div>
+   <div class="medium-4 columns">
+      <ul>
+         <li>Contact Us</li>
+         <li>About Us</li>
+         <li>Terms of Service</li>
+         <li>Privacy Policy</li>
+         <li>Colophon</li>
+      </ul>
+   </div>
+   <div class="medium-4 columns">
+      <p>
+         SurfGuitar101.com © 2004 - 2016 by Brian Neal. All comments and user 
+         contributed articles are property of the posters.
+      </p>
+      <p>
+         Thanks to all the surf bands, past and present. And thanks to all the
+         fans who care about and keep surf music alive.
+      </p>
+   </div>
+</div>
+</footer>
 
-   <script src="{% static "js/v3/sg101.js" %}"></script>
-
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="{% static "js/v3/what-input.min.js" %}"></script>
+<script src="{% static "js/v3/foundation.min.js" %}"></script>
+<script src="{% static "js/v3/sg101.js" %}"></script>
 </body>
 </html>

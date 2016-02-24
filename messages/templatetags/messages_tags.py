@@ -11,10 +11,18 @@ from messages.models import Message
 
 register = template.Library()
 
-@register.inclusion_tag('messages/unread_messages_tag.html')
-def unread_messages(user):
-    unread_count = Message.objects.unread_count(user)
-    return {'unread_count': unread_count}
+@register.simple_tag(takes_context=True)
+def unread_messages(context):
+    user = context['user']
+    if user.is_authenticated():
+        unread_count = Message.objects.unread_count(user)
+    else:
+        unread_count = None
+    context['unread_count'] = unread_count
+    template_name = ('messages/v3/unread_messages_tag.html'
+            if 'V3_DESIGN' in context else 'messages/unread_messages_tag.html')
+    t = template.loader.get_template(template_name)
+    return t.render(context)
 
 
 @register.simple_tag

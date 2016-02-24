@@ -1,0 +1,21 @@
+{% load bio_tags %}
+{% load humanize %}
+<div class="callout">
+   <div class="text-center">
+      <h5>{{ today|date:"F" }} Birthdays</h5>
+   </div>
+   <ul class="no-bullet">
+      {% for bday in birthdays %}
+      <li>
+      {% if bday.day == today.day %}<strong>{% endif %}
+      {{ bday.day|ordinal }} &ndash;
+      {% for profile in bday.profiles %}
+      <a href="{% url 'bio-view_profile' profile.user.username %}" title="View profile for {{ profile.user.username }}">{{ profile.user.username }}</a>{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+      {% if bday.day == today.day %}</strong>{% endif %}
+      </li>
+      {% empty %}
+         <li>No birthdays this month</li>
+      {% endfor %}
+   </ul>
+</div>
