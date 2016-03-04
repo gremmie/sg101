@@ -60,60 +60,61 @@
 
 <br>
 
-<div class="title-bar" data-responsive-toggle="main-menu" data-hide-for="medium">
-   <button class="menu-icon" type="button" data-toggle></button>
-   <div class="title-bar-title">Menu</div>
-</div>
-
 <div class="top-bar" id="main-menu">
-<div class="top-bar-left">
-<!-- ul class="menu dropdown expanded" data-dropdown-menu -->
-<!-- ul class="sg101-menu-bar" data-responsive-menu="drilldown medium-dropdown" -->
-<ul class="menu vertical medium-horizontal expanded XXXmedium-text-center" data-responsive-menu="drilldown medium-dropdown">
-<li class=""><a href="#">News</a>
-   <ul class="menu vertical" data-submenu>
-      <li><a href="{% url 'news-index_page' %}">News</a></li>
-      <li><a href="{% url 'news-submit' %}">Submit News</a></li>
-   </ul>
-</li>
-<li class=""><a href="#">Forums</a>
-   <ul class="menu vertical" data-submenu>
-      <li><a href="{% url 'forums-unread_topics' %}">Unread Topics</a></li>
-      <li><a href="{% url 'forums-active_topics' 30 %}">Active Topics</a></li>
-      <li><a href="{% url 'forums-index' %}">All Forums</a></li>
-      <li><a href="{% url 'forums-my_posts' %}">My Posts</a></li>
-      <li><a href="{% url 'forums-manage_favorites' %}">My Favorites</a></li>
-      <li><a href="{% url 'forums-manage_subscriptions' %}">My Subscriptions</a></li>
-      <li><a href="{% url 'forums-unanswered_topics' %}">Unanswered Topics</a></li>
-   </ul>
-</li>
-<li class=""><a href="#">Surf Music</a>
-   <ul class="menu vertical" data-submenu>
-      <li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>
-      <li><a href="{% url 'contests-index' %}">Contests</a></li>
-      <li><a href="{% url 'downloads-index' %}">Downloads</a></li>
-      <li><a href="{% url 'podcast-main' %}">Podcast</a></li>
-      <li><a href="{% url 'polls-main' %}">Polls</a></li>
-      <li><a href="{% url 'potd-view' %}">Photo of the Day</a></li>
-      <li><a href="{% url 'weblinks-main' %}">Links</a></li>
-      <li><a href="{% url 'bandmap-map' %}">Surf Band Map</a></li>
-      <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
-   </ul>
-</li>
-<li class=""><a href="#">Site</a>
-   <ul class="menu vertical" data-submenu>
-      <li><a href="{% url 'contact-form' %}">Contact</a></li>
-      <li><a href="{% url 'irc-main' %}">Chat/IRC</a></li>
-      <li><a href="{% url 'donations-index' %}">Donations</a></li>
-      <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
-      <li><a href="{% url 'bio-member_search' %}">Member Search</a></li>
-      <li><a href="{% url 'membermap-index' %}">Member Map</a></li>
-      <li><a href="/store/">Store</a></li>
-      <li><a href="http://wiki.surfguitar101.com">Wiki</a></li>
-   </ul>
-</li>
-</ul>
-</div>
+   <div class="top-bar-title">
+      <span data-responsive-toggle="responsive-menu" data-hide-for="medium">
+      <span class="menu-icon dark" data-toggle></span>
+      </span>
+      <span class="hide-for-medium"><strong>Menu</strong></span>
+   </div>
+   <div id="responsive-menu">
+   <div class="top-bar-left">
+      <ul class="menu vertical medium-horizontal expanded" data-responsive-menu="drilldown medium-dropdown">
+         <li class=""><a href="#">News</a>
+            <ul class="menu vertical">
+               <li><a href="{% url 'news-index_page' %}">News</a></li>
+               <li><a href="{% url 'news-submit' %}">Submit News</a></li>
+            </ul>
+         </li>
+         <li class=""><a href="#">Forums</a>
+            <ul class="menu vertical">
+               <li><a href="{% url 'forums-unread_topics' %}">Unread Topics</a></li>
+               <li><a href="{% url 'forums-active_topics' 30 %}">Active Topics</a></li>
+               <li><a href="{% url 'forums-index' %}">All Forums</a></li>
+               <li><a href="{% url 'forums-my_posts' %}">My Posts</a></li>
+               <li><a href="{% url 'forums-manage_favorites' %}">My Favorites</a></li>
+               <li><a href="{% url 'forums-manage_subscriptions' %}">My Subscriptions</a></li>
+               <li><a href="{% url 'forums-unanswered_topics' %}">Unanswered Topics</a></li>
+            </ul>
+         </li>
+         <li class=""><a href="#">Surf Music</a>
+            <ul class="menu vertical">
+               <li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>
+               <li><a href="{% url 'contests-index' %}">Contests</a></li>
+               <li><a href="{% url 'downloads-index' %}">Downloads</a></li>
+               <li><a href="{% url 'podcast-main' %}">Podcast</a></li>
+               <li><a href="{% url 'polls-main' %}">Polls</a></li>
+               <li><a href="{% url 'potd-view' %}">Photo of the Day</a></li>
+               <li><a href="{% url 'weblinks-main' %}">Links</a></li>
+               <li><a href="{% url 'bandmap-map' %}">Surf Band Map</a></li>
+               <li><a href="{% url 'ygroup-thread_index' %}">Yahoo Group</a></li>
+            </ul>
+         </li>
+         <li class=""><a href="#">Site</a>
+            <ul class="menu vertical">
+               <li><a href="{% url 'contact-form' %}">Contact</a></li>
+               <li><a href="{% url 'irc-main' %}">Chat/IRC</a></li>
+               <li><a href="{% url 'donations-index' %}">Donations</a></li>
+               <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
+               <li><a href="{% url 'bio-member_search' %}">Member Search</a></li>
+               <li><a href="{% url 'membermap-index' %}">Member Map</a></li>
+               <li><a href="/store/">Store</a></li>
+               <li><a href="http://wiki.surfguitar101.com">Wiki</a></li>
+            </ul>
+         </li>
+      </ul>
+   </div>
+   </div>
 </div>
 </header>
 
@@ -152,11 +153,11 @@
    </div>
    <div class="medium-4 columns">
       <ul>
-         <li>Contact Us</li>
-         <li>About Us</li>
-         <li>Terms of Service</li>
-         <li>Privacy Policy</li>
-         <li>Colophon</li>
+         <li><a href="{% url 'contact-form' %}">Contact Us</a></li>
+         <li><a href="/about/">About Us</a></li>
+         <li><a href="/policy/tos/">Terms of Service</a></li>
+         <li><a href="/policy/privacy/">Privacy Policy</a></li>
+         <li><a href="/colophon/">Colophon</a></li>
       </ul>
    </div>
    <div class="medium-4 columns">
@@ -172,7 +173,7 @@
 </div>
 </footer>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 <script src="{% static "js/v3/what-input.min.js" %}"></script>
 <script src="{% static "js/v3/foundation.min.js" %}"></script>
 <script src="{% static "js/v3/sg101.js" %}"></script>
