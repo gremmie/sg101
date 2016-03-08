@@ -24,7 +24,7 @@
    {% block custom_css %}{% endblock %}
 </head>
 <body>
-<header>
+<header id="base-header">
    <div class="top-bar">
       <div class="top-bar-left">
          <ul class="menu">
@@ -41,24 +41,32 @@
          </ul>
       </div>
       <div class="top-bar-right">
-         <ul class="menu">
-            <li><input type="search" placeholder="Search"></li>
-            <li><button type="button" class="button">Search</button></li>
-         </ul>
+         <form id="top-search" method="get" action="{% url 'haystack_search' %}">
+            <ul class="menu">
+               <li><input type="search" placeholder="Search" name="q"></li>
+               <li><button type="submit" class="button" form="top-search">Search</button></li>
+            </ul>
+            <input type="hidden" name="models" value="forums.topic" />
+            <input type="hidden" name="models" value="forums.post" />
+            <input type="hidden" name="models" value="news.story" />
+            <input type="hidden" name="models" value="bio.userprofile" />
+            <input type="hidden" name="models" value="weblinks.link" />
+            <input type="hidden" name="models" value="downloads.download" />
+            <input type="hidden" name="models" value="podcast.item" />
+            <input type="hidden" name="models" value="ygroup.post" />
+         </form>
       </div>
    </div>
 
 
-<div class="row">
+<div id="logo-row" class="row">
    <div class="medium-4 columns">
-      <img src="http://placehold.it/450x183&text=SG101" alt="SG101 logo">
+      <img src="https://placehold.it/450x183&text=SG101-Logo" alt="SG101 logo">
    </div>
    <div class="medium-8 columns show-for-medium">
-      <img src="http://placehold.it/900x175&text=Banner" alt="banner">
+      <img src="https://placehold.it/900x175&text=Banner" alt="banner">
    </div>
 </div>
-
-<br>
 
 <div class="top-bar" id="main-menu">
    <div class="top-bar-title">

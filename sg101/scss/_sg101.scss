@@ -16,3 +16,12 @@
 .size-48 { font-size: rem-calc(48); }
 .size-60 { font-size: rem-calc(60); }
 .size-72 { font-size: rem-calc(72); }
+
+#logo-row {
+   margin-top: rem-calc(8);
+   margin-bottom: rem-calc(8);
+}
+
+#base-header {
+   margin-bottom: rem-calc(16);
+}
