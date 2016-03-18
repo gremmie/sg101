@@ -2,8 +2,6 @@
 {% load static from staticfiles %}
 {% block title %}Yahoo Group Archives{% endblock %}
 {% block content %}
-<div class="row">
-<div class="large-12 columns">
 <h2>Yahoo Group Archives <small>&raquo; Page {{ page_obj.number }}</small></h2>
 <p>
 SurfGuitar101.com began as a Yahoo Group on October 31, 2001. It ran until
@@ -28,6 +26,4 @@ find the archived messages of our original Yahoo group. You can also search thro
    </tbody>
 </table>
 {% include "ygroup/v3/pagination.html" %}
-</div>
-</div>
 {% endblock %}

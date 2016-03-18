@@ -2,8 +2,6 @@
 {% load static from staticfiles %}
 {% block title %}Yahoo Group Archives: {{ thread.title }}{% endblock %}
 {% block content %}
-<div class="row">
-<div class="large-12 columns">
 <a name="top" class="intra"></a>
 {% if thread.page == 1 %}
 <h2 class="forum-nav"><a href="{% url 'ygroup-thread_index' %}">Yahoo Group Archives</a> &raquo; </h2>
@@ -30,6 +28,4 @@
    {% endfor %}
 </dl>
 {% include "ygroup/v3/pagination.html" %}
-</div>
-</div>
 {% endblock %}
