@@ -35,7 +35,11 @@
                   {% unread_messages %}</a></li>
                <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
             {% else %}
-               <li><a href="{% url 'accounts-login' %}">Login</a></li>
+               {% if request.path != "/accounts/logout/" %}
+                  <li><a href="{% url 'accounts-login' %}?next={{ request.path }}">Login</a></li>
+               {% else %}
+                  <li><a href="{% url 'accounts-login' %}">Login</a></li>
+               {% endif %}
                <li><a href="{% url 'accounts-register' %}">Register</a></li>
             {% endif %}
          </ul>
