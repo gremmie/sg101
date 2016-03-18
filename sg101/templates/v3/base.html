@@ -28,7 +28,7 @@
    <div class="top-bar">
       <div class="top-bar-left">
          <ul class="menu">
-            <li><a href="/">SurfGuitar101</a></li>
+            <li><a href="/"><i class="fi-home size-24" title="SG101 Home"></i></a></li>
             {% if user.is_authenticated %}
                <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
                <li><a href="{% url 'messages-inbox' %}">Private Messages
@@ -59,12 +59,12 @@
    </div>
 
 
-<div id="logo-row" class="row">
-   <div class="medium-4 columns">
-      <img src="https://placehold.it/450x183&text=SG101-Logo" alt="SG101 logo">
+<div id="logo-row" class="row align-center">
+   <div class="small-4 columns">
+      <img src="{% static "images/v3-logo.png" %}" alt="SG101 logo" title="Placeholder logo">
    </div>
-   <div class="medium-8 columns show-for-medium">
-      <img src="https://placehold.it/900x175&text=Banner" alt="banner">
+   <div class="small-8 columns show-for-medium">
+      <img src="{% static "images/v3-banner.png" %}" alt="banner" title="Placeholder banner">
    </div>
 </div>
 
