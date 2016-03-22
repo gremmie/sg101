@@ -10,6 +10,7 @@ register = template.Library()
 def irc_status(context):
     template_name = ('irc/v3/irc_block.html'
             if 'V3_DESIGN' in context else 'irc/irc_block.html')
-    context['nicks'] = get_users()
     t = template.loader.get_template(template_name)
-    return t.render(context)
+    with context.push():
+        context['nicks'] = get_users()
+        return t.render(context)
