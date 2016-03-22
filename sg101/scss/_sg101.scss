@@ -6,6 +6,10 @@
    font-size: smaller;
 }
 
+.scrollable-x {
+   overflow-x: auto;
+}
+
 .size-12 { font-size: rem-calc(12); }
 .size-14 { font-size: rem-calc(14); }
 .size-16 { font-size: rem-calc(16); }
