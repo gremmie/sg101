@@ -26,7 +26,7 @@ class MapEntry(models.Model):
         verbose_name_plural = 'map entries'
 
     def save(self, *args, **kwargs):
-        self.html = kwargs.pop('html', None)
+        self.html = kwargs.pop('html', '')
         if not self.html and self.message:
             self.html = site_markup(self.message)
         self.date_updated = datetime.datetime.now()

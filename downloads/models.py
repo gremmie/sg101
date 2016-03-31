@@ -77,7 +77,7 @@ class DownloadBase(models.Model):
         else:
             self.update_date = datetime.datetime.now()
 
-        self.html = kwargs.pop('html', None)
+        self.html = kwargs.pop('html', '')
         if not self.html and self.description:
             self.html = site_markup(self.description)
         super(DownloadBase, self).save(*args, **kwargs)

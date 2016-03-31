@@ -65,7 +65,7 @@ class Message(models.Model):
         if not self.id:
             self.send_date = datetime.datetime.now()
 
-        self.html = kwargs.pop('html', None)
+        self.html = kwargs.pop('html', '')
         if not self.html and self.message:
             self.html = site_markup(self.message)
         super(Message, self).save(*args, **kwargs)

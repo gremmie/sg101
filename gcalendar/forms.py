@@ -125,7 +125,7 @@ class EventEntryForm(forms.ModelForm):
 
     def clean_description(self):
         description = self.cleaned_data['description']
-        self.html = None
+        self.html = ''
         if description:
             self.html = site_markup(description, relative_urls=False)
             try:

@@ -69,7 +69,7 @@ class Event(models.Model):
         ordering = ('-date_submitted', )
 
     def save(self, *args, **kwargs):
-        self.html = kwargs.pop('html', None)
+        self.html = kwargs.pop('html', '')
         if not self.html and self.description:
             self.html = site_markup(self.description, relative_urls=False)
         super(Event, self).save(*args, **kwargs)
