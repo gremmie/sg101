@@ -10,22 +10,20 @@ actually ran in parallel for about a year and a half. On these pages you'll
 find the archived messages of our original Yahoo group. You can also search through these messages via our <a href="{% url 'haystack_search' %}">search page</a>.
 </p>
 {% include "ygroup/v3/pagination.html" %}
-<div class="scrollable-x">
-   <table class="full-width">
-      <thead>
-      <tr><th>Title</th><th>Author</th><th>Posts</th><th>Date</th></tr>
-      </thead>
-      <tbody>
-      {% for thread in page_obj.object_list %}
-      <tr>
-         <td><a href="{{ thread.get_absolute_url }}">{{ thread.title }}</a></td>
-         <td>{{ thread.poster }}</td>
-         <td>{{ thread.post_count }}</td>
-         <td>{{ thread.creation_date|date:"d M Y" }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-   </table>
-</div>
+<table class="stack">
+   <thead>
+   <tr><th>Title</th><th>Author</th><th>Posts</th><th>Date</th></tr>
+   </thead>
+   <tbody>
+   {% for thread in page_obj.object_list %}
+   <tr>
+      <td><a href="{{ thread.get_absolute_url }}">{{ thread.title }}</a></td>
+      <td>{{ thread.poster }}</td>
+      <td>{{ thread.post_count }}</td>
+      <td>{{ thread.creation_date|date:"d M Y" }}</td>
+   </tr>
+   {% endfor %}
+   </tbody>
+</table>
 {% include "ygroup/v3/pagination.html" %}
 {% endblock %}
