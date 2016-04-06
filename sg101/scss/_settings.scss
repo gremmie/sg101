@@ -69,6 +69,17 @@ $global-weight-bold: bold;
 $global-radius: 0;
 $global-text-direction: ltr;
 
+// SG101 colors
+// ------------
+$sg101-green: #3293a6;
+$sg101-green2: rgba($sg101-green, 0.75);
+$sg101-green3: rgba($sg101-green, 0.5);
+$sg101-green4: rgba($sg101-green, 0.25);
+$sg101-red: #b33800;
+$sg101-red2: rgba($sg101-red, 0.75);
+$sg101-red3: rgba($sg101-red, 0.5);
+$sg101-red4: rgba($sg101-red, 0.25);
+
 // 2. Breakpoints
 // --------------
 
@@ -133,7 +144,7 @@ $code-font-weight: $global-weight-normal;
 $code-background: $light-gray;
 $code-border: 1px solid $medium-gray;
 $code-padding: rem-calc(2 5 1);
-$anchor-color: $primary-color;
+$anchor-color: $sg101-green; //$primary-color;
 $anchor-color-hover: scale-color($anchor-color, $lightness: -14%);
 $anchor-text-decoration: none;
 $anchor-text-decoration-hover: none;
@@ -412,8 +423,8 @@ $pagination-item-color: $black;
 $pagination-item-padding: rem-calc(3 10);
 $pagination-item-spacing: rem-calc(1);
 $pagination-radius: $global-radius;
-$pagination-item-background-hover: $light-gray;
-$pagination-item-background-current: $primary-color;
+$pagination-item-background-hover: $sg101-green4; // $light-gray;
+$pagination-item-background-current: $sg101-red; // $primary-color;
 $pagination-item-color-current: foreground($pagination-item-background-current);
 $pagination-item-color-disabled: $medium-gray;
 $pagination-ellipsis-color: $black;
@@ -475,7 +486,7 @@ $switch-paddle-transition: all 0.25s ease-out;
 // 30. Table
 // ---------
 
-$table-background: $white;
+$table-background: $sg101-green4;
 $table-color-scale: 5%;
 $table-border: 1px solid smart-scale($table-background, $table-color-scale);
 $table-padding: rem-calc(8 10 10);
@@ -484,9 +495,9 @@ $table-row-hover: darken($table-background, $table-hover-scale);
 $table-row-stripe-hover: darken($table-background, $table-color-scale + $table-hover-scale);
 $table-striped-background: smart-scale($table-background, $table-color-scale);
 $table-stripe: even;
-$table-head-background: smart-scale($table-background, $table-color-scale / 2);
+$table-head-background: $sg101-red; // smart-scale($table-background, $table-color-scale / 2);
 $table-foot-background: smart-scale($table-background, $table-color-scale);
-$table-head-font-color: $body-font-color;
+$table-head-font-color: $white; //$body-font-color;
 $show-header-for-stacked: false;
 
 // 31. Tabs

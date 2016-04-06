@@ -29,3 +29,23 @@
 #base-header {
    margin-bottom: rem-calc(16);
 }
+
+.side-block-v3 {
+   margin: 0 0 1rem 0;
+   padding: 1rem;
+   //border: 1px solid $sg101-green;
+   border-radius: 2.5rem;
+   background-color: $sg101-green4;
+
+   h1 {
+      font-size: 1.25rem;
+   }
+
+   a {
+      color: $sg101-green;
+      &:hover,
+      &:focus {
+         color: $sg101-red;
+      }
+   }
+}
