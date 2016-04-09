@@ -9,16 +9,13 @@ from core.functions import send_mail
 
 class ContactForm(forms.Form):
     """Form used to contact the website admins"""
-    name=forms.CharField(label="Your Name", max_length=61,
-            widget=forms.TextInput(attrs={'size': 50 }))
-    email=forms.EmailField(label="Your Email",
-            widget=forms.TextInput(attrs={'size': 50 }))
-    subject=forms.CharField(max_length=64,
-            widget=forms.TextInput(attrs={'size': 50 }))
+    name=forms.CharField(label="Your Name")
+    email=forms.EmailField(label="Your Email")
+    subject=forms.CharField()
     honeypot=forms.CharField(max_length=64, required=False,
             label='If you enter anything in this field your message will be treated as spam')
     message=forms.CharField(label="Your Message",
-            widget=forms.Textarea(attrs={'rows': 16, 'cols': 50}),
+            widget=forms.Textarea(),
             max_length=3000)
 
     recipient_list = [mail_tuple[1] for mail_tuple in settings.MANAGERS]

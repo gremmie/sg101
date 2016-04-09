@@ -10,6 +10,16 @@
    overflow-x: auto;
 }
 
+.hidden {
+   display: none;
+}
+
+.errorlist {
+   background: #fbe3e4;
+   color: map-get($foundation-palette, alert);
+   border: 2px solid #ddd;
+}
+
 .size-12 { font-size: rem-calc(12); }
 .size-14 { font-size: rem-calc(14); }
 .size-16 { font-size: rem-calc(16); }
