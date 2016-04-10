@@ -14,6 +14,7 @@ from forums.feeds import ForumsFeed
 from custom_search.forms import CustomModelSearchForm
 from custom_search.views import UserSearchView
 from core.views import FixedView
+from sg101.views import StoreView
 
 
 urlpatterns = [
@@ -41,14 +42,8 @@ urlpatterns = [
    url(r'^reset/done/$', django.contrib.auth.views.password_reset_complete),
 
    url(r'^store/$',
-       TemplateView.as_view(template_name='store/base.html'),
+       StoreView.as_view(),
        name='store'),
-   url(r'^store/cancel/$',
-       TemplateView.as_view(template_name='store/cancel.html'),
-       name='store-cancel'),
-   url(r'^store/thanks/$',
-       TemplateView.as_view(template_name='store/thanks.html'),
-       name='store-thanks'),
 
    url(r'^admin/', include(admin.site.urls)),
    url(r'^accounts/', include('accounts.urls')),
