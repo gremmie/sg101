@@ -7,4 +7,7 @@ from irc.channel import get_users
 
 def view(request):
    nicks = get_users()
-   return render(request, 'irc/view.html', {'nicks': nicks})
+   return render(request, 'irc/view.html', {
+       'nicks': nicks,
+       'V3_DESIGN': True,
+   })
