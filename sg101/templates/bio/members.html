@@ -1,56 +1,58 @@
-{% extends 'bio/base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load bio_tags %}
 {% load messages_tags %}
 {% block title %}Member List{% endblock %}
-{% block bio_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/tab-nav.css" %}" />
-<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
-{% endblock %}
 {% block content %}
-<h2>Member List</h2>
+<h2>Member List <small>{% if type == 'user' %}Alphabetical{% else %}Chronological{%endif %}</small></h2>
 <p>Surfguitar101.com currently has {{ num_members }} active members. Looking for a
 particular user? Try our <a href="{% url 'bio-member_search' %}">member search</a>, or
 you can use our <a href="{% url 'haystack_search' %}">search function</a> to search
 user profiles.
 </p>
+<p>
+Here is a directory of all members. You can view in alphabetical order or by
+date they joined the site.
+</p>
 {% if page.object_list %}
-<ul class="tab-nav">
-   <li><a href="{% url 'bio-member_list' type='user' %}"
-      {% ifequal type "user" %}class="active" {% endifequal %}>User</a></li>
-   <li><a href="{% url 'bio-member_list' type='date' %}"
-      {% ifequal type "date" %}class="active" {% endifequal %}>Date</a></li>
+<ul class="menu">
+   <li{% if type == 'user' %} class="active"{% endif %}>
+      <a href="{% url 'bio-member_list' type='user' %}">Alphabetical</a></li>
+   <li{% if type == 'date' %} class="active"{% endif %}>
+      <a href="{% url 'bio-member_list' type='date' %}">Chronological</a></li>
 </ul>
-
-{% include 'core/pagination.html' %}
-<div class="members-list">
-<table>
-<tr>
-<th>Avatar</th>
-<th>Username</th>
-<th>Full Name</th>
-<th>Location</th>
-<th>Date Joined</th>
-<th>Contact</th>
-</tr>
-{% for u in page.object_list %}
-<tr class="{% cycle 'even' 'odd' %}">
-   <td>{% avatar u %}</td>
-   <td>{% profile_link u.username %}</td>
-   <td>{{ u.get_full_name }}</td>
-   <td>{{ u.profile.location }}</td>
-   <td>{{ u.date_joined|date:"M. d, Y" }}</td>
-   <td>
-      {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
-         <img src="{% static "icons/note.png" %}" alt="PM" title="Send private message" /></a>{% endifnotequal %}
-      {% if not u.profile.hide_email %}<a href="mailto:{{ u.email }}">
-         <img src="{% static "icons/email.png" %}" alt="Email" title="Send Email" /></a>{% endif %}
-   </td>
-</tr>
-{% endfor %}
+<br>
+{% include 'core/v3/pagination.html' %}
+<table class="stack">
+   <thead>
+      <tr>
+         <th>Avatar</th>
+         <th>Username</th>
+         <th>Full Name</th>
+         <th>Location</th>
+         <th>Date Joined</th>
+         <th>Contact</th>
+      </tr>
+   </thead>
+   <tbody>
+   {% for u in page.object_list %}
+      <tr>
+         <td>{% avatar u %}</td>
+         <td>{% profile_link u.username %}</td>
+         <td>{{ u.get_full_name }}</td>
+         <td>{{ u.profile.location }}</td>
+         <td>{{ u.date_joined|date:"M. d, Y" }}</td>
+         <td>
+            {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
+               <i class="fi-comment size-21" title="Send private message"></i></a>{% endifnotequal %}
+            {% if not u.profile.hide_email %}<a href="mailto:{{ u.email }}">
+               <i class="fi-mail size-21" title="Send Email"></i></a>{% endif %}
+         </td>
+      </tr>
+   {% endfor %}
+   </tbody>
 </table>
-</div>
 
-{% include 'core/pagination.html' %}
+{% include 'core/v3/pagination.html' %}
 {% endif %}
 {% endblock %}

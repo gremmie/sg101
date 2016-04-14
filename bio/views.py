@@ -55,6 +55,7 @@ def member_list(request, type='user'):
         'page': the_page,
         'type': type,
         'num_members': num_members,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
