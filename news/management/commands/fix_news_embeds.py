@@ -44,6 +44,12 @@ class Command(NoArgsCommand):
             return False
 
         root = lxml.html.fragment_fromstring(s, create_parent=True)
+
+        for iframe in root.iter('iframe'):
+            src = iframe.get('src')
+            if src and src.startswith('http:'):
+                print "*" * 5, "iframe with http src -", story.title
+
         for obj in root.iter('object'):
             if story.version != 0:
                 print "*" * 5, story.title, "bad version!"
