@@ -1,15 +1,77 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load core_tags %}
 {% load script_tags %}
 {% load static from staticfiles %}
 {% block title %}Member Map{% endblock %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/membermap.css" %}" />
+{% block pre_custom_css %}
+{% css_tags 'jquery-ui markitup' %}
+{% endblock %}
+{% block content %}
+<h2>Member Map</h2>
+<div id="member_map_main">
+    {% if user.is_authenticated %}
+    <p><i class="fi-torsos-all size-21"></i> Members on the map:</p>
+    <div class="stat">
+       <span id="member_map_count" class="stat">0</span>
+    </div>
+    <br>
+    <div class="row medium-unstack">
+       <div class="columns">
+          <label>Recent Updates:
+            <select id="member_map_recent"><option value="0" selected="selected">(select)</option></select></li>
+          </label>
+       </div>
+       <div class="columns">
+          <label>All Members:
+            <select id="member_map_members"><option value="0" selected="selected">(select)</option></select></li>
+          </label>
+       </div>
+    </div>
+    {% endif %}
+    <div id="member_map_map" class="map-div">
+    </div>
+    <div id="member_map_info">
+        {% if user.is_authenticated %}
+        <p id="member_map_directions"></p>
+        <div class="callout alert">
+        <i class="fi-alert size-21"></i>
+        The location you enter below will not be shown to others, but can be determined from the map.
+        For privacy reasons, we don't recommend you enter your exact address. Use a nearby intersection,
+        landmark, or just keep it city and state.
+        </div>
+        <div class="callout">
+        <p>
+        Example locations:
+        </p>
+        <ul>
+            <li>3rd and Main, Chicago, IL</li>
+            <li>Tucson, Arizona</li>
+            <li>Rome, Italy</li>
+            <li>5018EA, Tilburg, Netherlands</li>
+        </ul>
+        </div>
+        <form action="" method="post">{% csrf_token %}
+            {{ form.as_p }}
+            {% comment_dialogs %}
+            <input type="submit" id="member_map_submit" name="submit" value="Submit" class="primary button" />
+            <input type="submit" id="member_map_delete" name="delete" value="Delete" class="alert button" />
+        </form>
+        <br />
+        {% else %}
+        <p>
+        The member map allows members to place themselves on a google map along with a short message.
+        This feature is only for registered users of SurfGuitar101.com. Please
+        <a href="{% url 'accounts-login' %}">login</a> or
+        <a href="{% url 'accounts-register' %}">register</a> to use the member map.
+        </p>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="{% static "js/membermap.js" %}"></script>
 <script src="https://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAql_1Xw9MGW3mOxzo8gLb3hSrh5-ALlu4lmYDsscYaAokjyRNqBRaVcqVr3jaDgMRVSK_3HydK9tYWw" type="text/javascript"></script>
-{% script_tags 'jquery-ui markitup' %}
+{% js_tags 'jquery-ui markitup' %}
 <script type="text/javascript">
 //<![CDATA[
 var mmapUser = {
@@ -23,53 +85,4 @@ var mmapUser = {
 };
 //]]>
 </script>
-{% endblock %}
-{% block content %}
-<h2>Member Map</h2>
-<div id="member_map_main">
-    {% if user.is_authenticated %}
-    <div id="member_map_top">
-       <ul>
-          <li>Members on the map: <span id="member_map_count">0</span></li>
-          <li>Recent updates: <select id="member_map_recent"><option value="0" selected="selected">(select)</option></select></li>
-          <li>All Members: <select id="member_map_members"><option value="0" selected="selected">(select)</option></select></li>
-       </ul>
-    </div>
-    {% endif %}
-    <div id="member_map_map">
-    </div>
-    <div id="member_map_info">
-        {% if user.is_authenticated %}
-        <p id="member_map_directions"></p>
-        <p>
-        The location you enter below will not be shown to others, but can be determined from the map. 
-        For privacy reasons, we don't recommend you enter your exact address. Use a nearby intersection, 
-        landmark, or just keep it city and state.
-        </p>
-        <p>
-        Example locations:
-        </p>
-        <ul>
-            <li>3rd and Main, Chicago, IL</li>
-            <li>Tucson, Arizona</li>
-            <li>Rome, Italy</li>
-            <li>5018EA, Tilburg, Netherlands</li>
-        </ul>
-        <form action="" method="post">{% csrf_token %}
-            {{ form.as_p }}
-            {% comment_dialogs %}
-            <input type="submit" id="member_map_submit" name="submit" value="Submit" />
-            <input type="submit" id="member_map_delete" name="delete" value="Delete" />
-        </form>
-        <br />
-        {% else %}
-        <p>
-        The member map allows members to place themselves on a google map along with a short message.
-        This feature is only for registered users of SurfGuitar101.com. Please
-        <a href="{% url 'accounts-login' %}">login</a> or
-        <a href="{% url 'accounts-register' %}">register</a> to use the member map.
-        </p>
-        {% endif %}
-    </div>
-</div>
 {% endblock %}

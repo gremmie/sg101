@@ -38,6 +38,7 @@ def index(request):
 
     return render(request, 'membermap/index.html', {
         'form': form,
+        'V3_DESIGN': True,
         })
 
 

@@ -1,0 +1,8 @@
+{% load static from staticfiles %}
+{% for local, src in css_sources %}
+   {% if local %}
+      <link rel="stylesheet" href="{% static src %}" />
+   {% else %}
+      <link rel="stylesheet" href="{{ src }}" />
+   {% endif %}
+{% endfor %}

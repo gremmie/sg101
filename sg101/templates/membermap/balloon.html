@@ -1,7 +1,13 @@
 {% load bio_tags %}
-{% if avatar_url %}
-<a href="{% url 'bio-view_profile' username=user.name %}">
-<img src="{{ avatar_url }}" alt="{{ user.name }}" style="float:left;margin-right:3px;" /></a>
-{% endif %}
-{% profile_link user.name %}:<br />
-{{ user.message|safe }}
+<div class="media-object">
+   <div class="media-object-section">
+      {% if avatar_url %}
+         <a href="{% url 'bio-view_profile' username=user.name %}">
+            <img src="{{ avatar_url }}" alt="{{ user.name }}" title="{{ user.name }}" class="thumbnail" /></a><br>
+      {% endif %}
+      {% profile_link user.name %}
+   </div>
+   <div class="media-object-section">
+      {{ user.message|safe }}
+   </div>
+</div>

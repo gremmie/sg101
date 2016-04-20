@@ -43,7 +43,6 @@
 .side-block-v3 {
    margin: 0 0 1rem 0;
    padding: 1rem;
-   //border: 1px solid $sg101-green;
    border-radius: 2.5rem;
    background-color: $sg101-green4;
 
@@ -58,4 +57,18 @@
          color: $sg101-red;
       }
    }
+}
+
+.map-div {
+   width: 100%;
+   height: rem-calc(540);
+   border: 1px solid black;
+   margin: 0 auto;
+}
+
+.markItUpEditor {
+   position: relative;
+   width: rem-calc(590);
+   height: rem-calc(200);
+   top: rem-calc(8);
 }

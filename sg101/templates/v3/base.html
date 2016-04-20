@@ -17,10 +17,11 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    {% block custom_meta %}{% endblock %}
    <title>SurfGuitar101.com | {% block title %}{% endblock %}</title>
+   {% block custom_head %}{% endblock %}
+   {% block pre_custom_css %}{% endblock %}
    <link rel="stylesheet" href="{% static "css/v3/main.min.css" %}">
    <link rel="stylesheet" href="{% static "css/v3/foundation-icons.css" %}" />
    <link rel="shortcut icon" href="{% static "favicon.ico" %}">
-   {% block custom_head %}{% endblock %}
    {% block custom_css %}{% endblock %}
 </head>
 <body>
@@ -229,5 +230,6 @@
 <script src="{% static "js/v3/what-input.min.js" %}"></script>
 <script src="{% static "js/v3/foundation.min.js" %}"></script>
 <script src="{% static "js/v3/sg101.js" %}"></script>
+{% block custom_js %}{% endblock %}
 </body>
 </html>
