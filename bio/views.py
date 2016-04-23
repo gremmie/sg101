@@ -261,4 +261,7 @@ def member_search(request):
         username = form.cleaned_data['username']
         return redirect('bio-view_profile', username=username)
 
-    return render(request, 'bio/member_search.html', {'form': form})
+    return render(request, 'bio/member_search.html', {
+        'form': form,
+        'V3_DESIGN': True,
+    })

@@ -9,6 +9,7 @@ except:
 from django import forms
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
 import pytz
@@ -18,7 +19,6 @@ from core.html import image_check
 from core.html import ImageCheckError
 from core.images.utils import parse_image, downscale_image_square
 from core.markup import site_markup
-from core.widgets import AutoCompleteUserInput
 
 
 class EditUserForm(forms.ModelForm):
@@ -134,12 +134,21 @@ class SearchUsersForm(forms.Form):
     """
     A form to search for users.
     """
-    username = forms.CharField(max_length=30, widget=AutoCompleteUserInput())
+    username = forms.CharField(
+                    max_length=30,
+                    widget=forms.TextInput(attrs={
+                       'class': 'sg101-autocomplete',
+                    }))
+
+    def __init__(self, *args, **kwargs):
+        super(SearchUsersForm, self).__init__(*args, **kwargs)
+        url = reverse('core-ajax_users')
+        self.fields['username'].widget.attrs['data-autocomplete-url'] = url
 
     def clean_username(self):
-      username = self.cleaned_data['username'].strip()
-      try:
-         User.objects.get(username=username, is_active=True)
-      except User.DoesNotExist:
-         raise forms.ValidationError("That username does not exist.")
-      return username
+        username = self.cleaned_data['username'].strip()
+        try:
+            User.objects.get(username=username, is_active=True)
+        except User.DoesNotExist:
+            raise forms.ValidationError("That username does not exist.")
+        return username

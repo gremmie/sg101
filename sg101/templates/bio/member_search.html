@@ -1,17 +1,27 @@
-{% extends "base.html" %}
+{% extends "v3/base.html" %}
+{% load static from staticfiles %}
 {% load script_tags %}
 {% block title %}Member Search{% endblock %}
-{% block custom_js %}
-{% script_tags 'jquery-ui' %}
+{% block custom_css %}
+{% css_tags 'jquery-ui' %}
 {% endblock %}
 {% block content %}
 <h2>Member Search</h2>
 <p>Looking for a member? Start typing a username in the form below.</p>
 <form action="." method="get">
-<fieldset>
-<legend>Member Search</legend>
-   {{ form.as_p }}
-   <p><input type="submit" value="View Profile" /></p>
-</fieldset>
+   <div class="row">
+      <div class="small-12 medium-6 columns">
+      {{ form.as_p }}
+      </div>
+   </div>
+   <div class="row">
+      <div class="small-12 medium-6 columns">
+         <p><input type="submit" class="primary button" value="View Profile" /></p>
+      </div>
+   </div>
 </form>
+{% endblock %}
+{% block custom_js %}
+{% js_tags 'jquery-ui' %}
+<script src="{% static 'js/v3/autocomplete.js' %}"></script>
 {% endblock %}
