@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% load cache %}
 {% load donations_tags %}
@@ -7,110 +7,121 @@
 <h2>Donations</h2>
 <p>
 SurfGuitar101.com is a member supported website. We don't display ads or have other forms of
-sponsorship. If you enjoy this website, the forums, chatting in IRC, the podcasts, surf music news, 
-the show calendar, and everything else, please consider making a small donation to help cover server 
+sponsorship. If you enjoy this website, the forums, chatting in IRC, the podcasts, surf music news,
+the show calendar, and everything else, please consider making a small donation to help cover server
 and hosting costs.
 </p>
 <p>
 We are currently using Paypal to receive donations. You don't have to be a Paypal member to donate;
-major credit cards are also accepted. If you really don't do Paypal, please 
+major credit cards are also accepted. If you really don't do Paypal, please
 <a href="{% url 'contact-form' %}">contact me</a> and we can work something else out.
 </p>
 <p>Thank you for donating to SurfGuitar101.com!</p>
-<div class="span-9 append-1">
-<h3>Statistics for {% now "F, Y" %}:</h3>
-<table>
-   <tr><th>Goal:</th><td>${{ goal }}</td></tr>
-   <tr><th>Gross:</th><td>${{ gross }}</td></tr>
-   <tr><th>Net:</th><td>${{ net }}</td></tr>
-   <tr><th>Left to Go:</th><td>${{ left }}</td></tr>
-</table>
-</div>
-<div class="span-9 last">
-<h3>Donors for {% now "F, Y" %}:</h3>
-{% if donations %}
-<ol>
-   {% for donation in donations %}
-   <li>
-      {% if donation.is_anonymous %}
-         {{ anonymous }}
-      {% else %}
-         {% if donation.user %}
-            {% profile_link donation.user.username %}
+<div class="row medium-unstack">
+   <div class="columns">
+      <h3>Make A Donation</h3>
+      <form action="{{ form_action }}" method="post">
+      <fieldset class="fieldset">
+         <legend>Donation Form</legend>
+         <p>Please select an amount:</p>
+         <ul class="no-bullet">
+            <li><input name="amount" type="radio" value="5.00" id="amount_5" />
+               <label for="amount_5">$5</label></li>
+            <li><input name="amount" type="radio" value="10.00" id="amount_10" />
+               <label for="amount_10">$10</label></li>
+            <li><input name="amount" type="radio" value="15.00" id="amount_15" />
+               <label for="amount_15">$15</label></li>
+            <li><input name="amount" type="radio" value="20.00" id="amount_20" />
+               <label for="amount_20">$20</label></li>
+            <li><input name="amount" type="radio" value="" id="amount_other_r" />
+               <label for="amount_other">Other:</label>
+               <div class="input-group">
+                  <span class="input-group-label">$</span>
+                  <input class="input-group-field" name="amount" type="number" value="25.00" id="amount_other" />
+               </div>
+            </li>
+         </ul>
+         {% if user.is_authenticated %}
+            <input type="hidden" name="custom" value="{{ user.username }}" />
+            <p>You are currently logged in. Would you like your site username listed with your donation?</p>
+            <ul class="no-bullet">
+               <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
+               <label for="name_yes">Yes, list me as {{ user.username }}</label></li>
          {% else %}
-            {{ donation.donor }}
+         <p>You are not currently logged in. Please <a href="{% url 'accounts-login' %}">log in</a>
+         if you would like your site username listed with your donation. Otherwise you can have your
+         actual name (from Paypal) listed, or you can be listed as {{ anonymous }}.</p>
+            <ul class="no-bullet">
+               <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
+               <label for="name_yes">Yes, list my name as gathered from Paypal</label></li>
          {% endif %}
+            <li><input name="item_number" type="radio" value="{{ item_anon_number }}" checked="checked" id="name_no" />
+               <label for="name_no">No, list me as {{ anonymous }}</label></li>
+         </ul>
+         <input type="hidden" name="cmd" value="_donations" />
+         <input type="hidden" name="business" value="{{ business }}" />
+         <input type="hidden" name="charset" value="utf-8" />
+         <input type="hidden" name="return" value="http://{{ domain }}{% url 'donations-thanks' %}" />
+         <input type="hidden" name="currency_code" value="USD" />
+         <input type="hidden" name="item_name" value="{{ item_name }}" />
+         <input type="hidden" name="rm" value="1" />
+         <input type="hidden" name="no_note" value="0" />
+         <input type="hidden" name="cn" value="Do you have any comments for {{ domain }}?" />
+         <input type="hidden" name="no_shipping" value="1" />
+         <input type="hidden" name="cancel_return" value="http://{{ domain }}{% url 'donations-index' %}" />
+
+         <p><input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif" name="I1"
+            alt="Submit Button" title="Submit Donation" /></p>
+      </fieldset>
+      </form>
+   </div>
+   <div class="columns">
+      <h3>Statistics for {% now "F, Y" %}:</h3>
+      <table>
+         <tr><th>Goal:</th><td>${{ goal }}</td></tr>
+         <tr><th>Gross:</th><td>${{ gross }}</td></tr>
+         <tr><th>Net:</th><td>${{ net }}</td></tr>
+         <tr><th>Left to Go:</th><td>${{ left }}</td></tr>
+      </table>
+   </div>
+</div>
+
+<div class="row medium-unstack">
+   <div class="columns">
+      <h3>Donors for {% now "F, Y" %}</h3>
+      {% if donations %}
+         <ol>
       {% endif %}
-   </li>
-   {% endfor %}
-</ol>
-{% else %}
-<p>We haven't received any donations this month. You could be the first!</p>
-{% endif %}
+      {% for donation in donations %}
+         <li>
+         {% if donation.is_anonymous %}
+            {{ anonymous }}
+         {% else %}
+            {% if donation.user %}
+               {% profile_link donation.user.username %}
+            {% else %}
+               {{ donation.donor }}
+            {% endif %}
+         {% endif %}
+         </li>
+      {% empty %}
+         <div class="warning callout">
+            <i class="fi-asterisk size-21"></i>
+            We haven't received any donations this month. You could be the first!
+         </div>
+      {% endfor %}
+      {% if donations %}
+         </ol>
+      {% endif %}
+   </div>
+   <div class="columns">
+      <h3>Hall of Fame Donors</h3>
+      {% cache 3600 top_donors_tag %}
+         {% top_donors 20 %}
+      {% endcache %}
+   </div>
 </div>
 
-<div class="span-9 append-1">
-<form action="{{ form_action }}" method="post">
-<fieldset>
-   <legend>Make A Donation</legend>
-   <p>Please select an amount:</p>
-   <ul class="icon-list">
-   <li><input name="amount" type="radio" value="" id="amount_other_r" />
-      <label for="amount_other">Other:</label>
-      <input name="amount" type="text" value="25.00" id="amount_other" size="7" /></li>
-   <li><input name="amount" type="radio" value="5.00" id="amount_5" />
-      <label for="amount_5">$5</label></li>
-   <li><input name="amount" type="radio" value="10.00" id="amount_10" />
-      <label for="amount_10">$10</label></li>
-   <li><input name="amount" type="radio" value="15.00" id="amount_15" />
-      <label for="amount_15">$15</label></li>
-   <li><input name="amount" type="radio" value="20.00" id="amount_20" />
-      <label for="amount_20">$20</label></li>
-   </ul>
-   {% if user.is_authenticated %}
-      <input type="hidden" name="custom" value="{{ user.username }}" />
-      <p>You are currently logged in. Would you like your site username listed with your donation?</p>
-      <ul class="icon-list">
-         <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
-         <label for="name_yes">Yes, list me as {{ user.username }}</label></li>
-   {% else %}
-   <p>You are not currently logged in. Please <a href="{% url 'accounts-login' %}">log in</a>
-   if you would like your site username listed with your donation. Otherwise you can have your 
-   actual name (from Paypal) listed, or you can be listed as {{ anonymous }}.</p>
-      <ul class="icon-list">
-         <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
-         <label for="name_yes">Yes, list my name as gathered from Paypal</label></li>
-   {% endif %}
-   <li><input name="item_number" type="radio" value="{{ item_anon_number }}" checked="checked" id="name_no" />
-      <label for="name_no">No, list me as {{ anonymous }}</label></li>
-   </ul>
-   <input type="hidden" name="cmd" value="_donations" />
-   <input type="hidden" name="business" value="{{ business }}" />
-   <input type="hidden" name="charset" value="utf-8" />
-   <input type="hidden" name="return" value="http://{{ domain }}{% url 'donations-thanks' %}" />
-   <input type="hidden" name="currency_code" value="USD" />
-   <input type="hidden" name="item_name" value="{{ item_name }}" />
-   <input type="hidden" name="rm" value="1" />
-   <input type="hidden" name="no_note" value="0" />
-   <input type="hidden" name="cn" value="Do you have any comments for {{ domain }}?" />
-   <input type="hidden" name="no_shipping" value="1" />
-   <input type="hidden" name="cancel_return" value="http://{{ domain }}{% url 'donations-index' %}" />
-
-
-   <p><input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif" name="I1" 
-      alt="Submit Button" /></p>
-</fieldset>
-</form>
-</div>
-
-<div class="span-9 last">
-<h3>Hall of Fame Donors</h3>
-{% cache 3600 top_donors_tag %}
-   {% top_donors 20 %}
-{% endcache %}
-</div>
-
-<div class="span-18 last">
 <h2>More ways to help</h2>
 <p>
 Another way to help out SG101 is to buy products and services through our
@@ -135,5 +146,4 @@ links. Thanks!
    remain a customer for 90 days and SG101 will receive a credit.
    </dd>
 </dl>
-</div>
 {% endblock %}

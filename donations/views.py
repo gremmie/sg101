@@ -12,6 +12,7 @@ from django.contrib.sites.models import Site
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView
 
 
 from donations.models import Donation
@@ -72,7 +73,17 @@ def index(request):
         'item_number': settings.DONATIONS_ITEM_NUM,
         'item_anon_number': settings.DONATIONS_ITEM_ANON_NUM,
         'domain': current_site.domain,
+        'V3_DESIGN': True,
         })
+
+
+class ThanksView(TemplateView):
+    template_name = 'donations/thanks.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(ThanksView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
 
 
 @csrf_exempt
