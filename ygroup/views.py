@@ -3,7 +3,7 @@ Views for the ygroup (Yahoo Group Archive) application.
 
 """
 from django.shortcuts import get_object_or_404
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 
 from ygroup.models import Thread, Post
 from core.paginator import DiggPaginator
@@ -60,3 +60,14 @@ class ThreadView(ListView):
         """
         return DiggPaginator(queryset, per_page, body=5, tail=2,
                 margin=3, padding=2, **kwargs)
+
+
+class PostView(DetailView):
+    model = Post
+    context_object_name = 'post'
+    template_name = 'ygroup/v3/post.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(PostView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
