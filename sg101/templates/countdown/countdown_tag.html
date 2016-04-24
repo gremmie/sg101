@@ -1,0 +1,13 @@
+{% if events %}
+<div class="countdown">
+   <ul class="inline-bullet-list">
+      {% for delta, event in events %}
+         {% if delta == 0 %}
+            <li><a href="{{ event.url }}">{{ event.name }}</a> is today!</li>
+         {% else %}
+            <li>{{ delta }} days until <a href="{{ event.url }}">{{ event.name }}</a></li>
+         {% endif %}
+      {% endfor %}
+   </ul>
+</div>
+{% endif %}
