@@ -8,6 +8,7 @@
 {% load contest_tags %}
 {% load donations_tags %}
 {% load core_tags %}
+{% load countdown_tags %}
 {% load cache %}
 {% load static from staticfiles %}
 <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#">
@@ -97,6 +98,9 @@
          <img src="{% static "images/10yearsSG101-Rob_J.jpg" %}" alt="SG101 Turns 10 Years Old!"
             title="SG101 Turns 10 Years Old!"/></a>
    </div>
+   {% cache 3600 countdown_v2 %}
+      {% countdown_events %}
+   {% endcache %}
    {% block content %}
    {% endblock %}
 </div>

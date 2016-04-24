@@ -121,6 +121,7 @@ INSTALLED_APPS = [
     'contact',
     'contests',
     'core',
+    'countdown',
     'custom_search',
     'donations',
     'downloads',

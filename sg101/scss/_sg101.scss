@@ -19,6 +19,17 @@
    display: none;
 }
 
+.inline-bullet-list {
+   li {
+      display: inline-block;
+      margin: 0 rem-calc(6);
+      &:before {
+         content: "\2022";
+         margin-right: rem-calc(3);
+      }
+   }
+}
+
 .errorlist {
    background: #fbe3e4;
    color: map-get($foundation-palette, alert);

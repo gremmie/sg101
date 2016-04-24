@@ -468,3 +468,12 @@ ul.logo-block li {
    vertical-align: middle;
    margin: 1em 1.5em 1em 1.5em;
 }
+
+.inline-bullet-list li {
+   display: inline-block;
+   margin: 0 6px;
+}
+.inline-bullet-list li:before {
+   content: "\2022";
+   margin-right: 3px;
+}
