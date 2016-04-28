@@ -88,3 +88,18 @@
    height: rem-calc(200);
    top: rem-calc(8);
 }
+
+// Prevent FOUC around main menu
+.no-js {
+   @include breakpoint(small only) {
+      #medium-menu {
+         display: none;
+      }
+   }
+
+   @include breakpoint(medium) {
+      #small-menu {
+         display: none;
+      }
+   }
+}
