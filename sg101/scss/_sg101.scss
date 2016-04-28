@@ -19,6 +19,10 @@
    display: none;
 }
 
+.word-wrap {
+   word-wrap: break-word;
+}
+
 .inline-bullet-list {
    li {
       display: inline-block;
