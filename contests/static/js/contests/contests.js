@@ -12,7 +12,7 @@ $(function() {
          },
          dataType: 'json',
          success: function (data, textStatus) {
-            var classname = data.entered ? 'success' : 'info';
+            var classname = 'success callout';
             var $p = $('#contest-entry');
             $p.hide();
             $p.addClass(classname);

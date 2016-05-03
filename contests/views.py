@@ -8,8 +8,29 @@ from django.http import (HttpResponse, HttpResponseForbidden,
         HttpResponseBadRequest)
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView, ListView
 
 from contests.models import Contest
+
+
+class ContestListView(ListView):
+    context_object_name = 'contests'
+    queryset=Contest.public_objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super(ContestListView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
+
+
+class ContestDetailView(DetailView):
+    context_object_name = 'contest'
+    queryset=Contest.public_objects.all().prefetch_related('winners')
+
+    def get_context_data(self, **kwargs):
+        context = super(ContestDetailView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
 
 
 @require_POST

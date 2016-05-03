@@ -1,0 +1,18 @@
+{% load static from staticfiles %}
+<ul class="menu">
+   <li>
+      <a href="https://twitter.com/intent/tweet?text={{ title|urlencode }}&amp;url={{ url|urlencode }}&amp;via=SurfGuitar101">
+         <img src="{% static "icons/button-twitter.png" %}" alt="Tweet"/>
+      </a>
+   </li>
+   <li>
+      <a href="https://plus.google.com/share?url={{ url|urlencode }}">
+         <img src="{% static "icons/button-googleplus.png" %}" alt="Share on Google Plus"/>
+      </a>
+   </li>
+   <li>
+      <a href="https://www.facebook.com/sharer/sharer.php?u={{ url|urlencode }}">
+         <img src="{% static "icons/button-facebook.png" %}" alt="Share on Facebook"/>
+      </a>
+   </li>
+</ul>

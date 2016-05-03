@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% load core_tags %}
 {% load comment_tags %}
@@ -8,23 +8,19 @@
 {% open_graph_meta_tags contest %}
 {% endblock %}
 {% block title %}Contests: {{ contest.title }}{% endblock %}
+{% block pre_custom_css %}
+{% css_tags 'jquery-ui markitup' %}
+{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
-{% endblock %}
-{% block custom_js %}
-{% if contest.is_active %}
-{% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
-{% endif %}
-<script type="text/javascript">
-   var contest_id = {{ contest.id }};
-</script>
-<script type="text/javascript" src="{% static "js/contests/contests.js" %}"></script>
 {% endblock %}
 
 {% block content %}
 <h2><a href="{% url 'contests-index' %}">Contests</a></h2>
-<h3><a href="{% url 'contests-contest' slug=contest.slug %}">{{ contest.title }}</a></h3>
+<h3>{{ contest.title }}
+   <a href="{% url 'contests-contest' slug=contest.slug %}" rel="nofollow">
+      <i class="fi-link size-36" title="permalink"></i></a>
+</h3>
 <div>
    {{ contest.description|safe }}
    <br clear="all" />
@@ -33,63 +29,81 @@
 <h4>Contest Dates</h4>
 <p>
 {% if contest.is_active %}
-This contest began on {{ contest.creation_date|date:"F d, Y" }} and ends on
-{{ contest.end_date|date:"F d, Y" }}.
+   This contest began on {{ contest.creation_date|date:"F d, Y" }} and ends on
+   {{ contest.end_date|date:"F d, Y" }}.
 {% else %}
-This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
-{{ contest.end_date|date:"F d, Y" }}.
+   This contest ran from {{ contest.creation_date|date:"F d, Y" }} to
+   {{ contest.end_date|date:"F d, Y" }}.
 {% endif %}
 </p>
 
 {% if contest.can_enter %}
-<h4>Contest Entry</h4>
-<p id="contest-entry">
-{% if user.is_authenticated %}
-   {% if user in contest.contestants.all %}
-      You are currently entered into this contest.<br />
-      <button id="contest-button">Withdraw from this contest</button>
+   <h4>Contest Entry</h4>
+   <div id="contest-entry">
+   {% if user.is_authenticated %}
+      {% if user in contest.contestants.all %}
+         <p>You are currently entered into this contest.</p>
+         <p>
+            <button type="button" class="alert button" id="contest-button">
+               Withdraw from this contest
+            </button>
+         </p>
+      {% else %}
+         <p>You are not participating in this contest.</p>
+         <p>
+            <button type="button" class="success button" id="contest-button">
+               Please enter me into this contest!
+            </button>
+         </p>
+      {% endif %}
    {% else %}
-      You are not participating in this contest.<br />
-      <button id="contest-button">Please enter me into this contest!</button>
+      Please <a href="{% url 'accounts-login' %}?next={{ contest.get_absolute_url }}">login</a>
+      to enter this contest.
    {% endif %}
-{% else %}
-   Please <a href="{% url 'accounts-login' %}?next={{ contest.get_absolute_url }}">login</a>
-   to enter this contest.
-{% endif %}
-</p>
+   </div>
 {% endif %}
 
 <h4>Contest Winners</h4>
 {% if contest.win_date %}
-<p>
-The winner{{ contest.num_winners|pluralize }} of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }},
-{% if contest.num_winners == 1 %}is:{% else %}are:{% endif %}
-</p>
-<ul>
-   {% for winner in contest.winners.all %}
-   <li>{% profile_link winner.username %}</li>
-   {% endfor %}
-</ul>
-<p>Congratulations to the winner{{ contest.num_winners|pluralize }}!</p>
+   <p>
+   The winner{{ contest.num_winners|pluralize }} of this contest, selected on {{ contest.win_date|date:"l, F d, Y" }},
+   {% if contest.num_winners == 1 %}is:{% else %}are:{% endif %}
+   </p>
+   <ul>
+      {% for winner in contest.winners.all %}
+         <li>{% profile_link winner.username %}</li>
+      {% endfor %}
+   </ul>
+   <p>Congratulations to the winner{{ contest.num_winners|pluralize }}!</p>
 {% else %}
-<p>
-We will randomly choose {{ contest.num_winners }} winner{{ contest.num_winners|pluralize }}
-sometime on or after {{ contest.end_date|date:"l, F d, Y" }}. Please check back later.
-</p>
+   <p>
+   We will randomly choose {{ contest.num_winners }} winner{{ contest.num_winners|pluralize }}
+   sometime on or after {{ contest.end_date|date:"l, F d, Y" }}. Please check back later.
+   </p>
 {% endif %}
-<hr />
+
 {% social_sharing contest.title contest.get_absolute_url %}
 
 <hr />
 {% get_comment_count for contest as comment_count %}
 <p>This contest has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
-<hr />
 {% render_comment_list contest %}
 {% if contest.is_active %}
-<p>Leave a comment?</p>
-{% render_comment_form user contest %}
+   <p>Leave a comment?</p>
+   {% render_comment_form user contest %}
 {% else %}
-<p>Comments are closed for this contest. If you'd like to share your thoughts
-on this contest with the site staff, you can <a href="{% url 'contact-form' %}?subject={{ contest.title|urlencode }}">contact us directly</a>.</p>
+   <p>Comments are closed for this contest. If you'd like to share your thoughts
+   on this contest with the site staff, you can <a href="{% url 'contact-form' %}?subject={{ contest.title|urlencode }}">contact us directly</a>.</p>
+{% endif %}
+{% endblock %}
+
+{% block custom_js %}
+{% if contest.is_active %}
+   {% js_tags "markitup jquery-ui" %}
+   <script type="text/javascript" src="{% static "js/comments.js" %}"></script>
+   <script type="text/javascript">
+      var contest_id = {{ contest.id }};
+   </script>
+   <script type="text/javascript" src="{% static "js/contests/contests.js" %}"></script>
 {% endif %}
 {% endblock %}

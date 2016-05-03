@@ -61,8 +61,8 @@ def whos_online():
     }
 
 
-@register.inclusion_tag('core/social_sharing_tag.html')
-def social_sharing(title, url):
+@register.simple_tag(takes_context=True)
+def social_sharing(context, title, url):
     """
     Displays social media sharing buttons.
 
@@ -70,10 +70,14 @@ def social_sharing(title, url):
     site = Site.objects.get_current()
     url = _fully_qualify(url, site.domain)
 
-    return {
-        'title': title,
-        'url': url,
-    }
+    template_name = ('core/v3/social_sharing_tag.html'
+        if 'V3_DESIGN' in context else 'core/social_sharing_tag.html')
+    t = template.loader.get_template(template_name)
+
+    with context.push():
+        context['title'] = title
+        context['url'] = url
+        return t.render(context)
 
 
 def _fully_qualify(url, domain):
