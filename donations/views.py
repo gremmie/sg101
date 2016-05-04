@@ -57,14 +57,18 @@ def verify_request(params):
 
 def index(request):
     gross, net, donations = Donation.objects.monthly_stats()
+    goal = settings.DONATIONS_GOAL
     current_site = Site.objects.get_current()
     form_action, business = paypal_params()
 
+    pct = max(0, min(100, int(net / goal * 100)))
+
     return render(request, 'donations/index.html', {
-        'goal': settings.DONATIONS_GOAL,
+        'goal': goal,
         'gross': gross,
         'net': net,
         'left': settings.DONATIONS_GOAL - net,
+        'pct': pct,
         'donations': donations,
         'form_action': form_action,
         'business': business,
