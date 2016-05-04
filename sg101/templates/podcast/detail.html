@@ -9,29 +9,14 @@
 {% block custom_css %}
 <link type="text/css" href="{% static "js/jplayer/skins/blue.monday/jplayer.blue.monday.css" %}" rel="stylesheet" />
 {% endblock %}
-{% block custom_js %}
-<script type="text/javascript" src="{% static "js/jplayer/jquery.jplayer.min.js" %}"></script>
-
-<script type="text/javascript">
-//<![CDATA[
-    var jplayer_media = {{ jplayer_media|safe }};
-    $(document).ready(function(){
-      $("#jquery_jplayer_1").jPlayer({
-        ready: function () {
-          $.jPlayer.timeFormat.showHour = true;
-          $(this).jPlayer("setMedia", jplayer_media);
-        },
-        swfPath: "{% static "js/jplayer" %}",
-        supplied: "{{ jplayer_supplied }}"
-      });
-    });
-//]]>
-</script>
-{% endblock %}
 {% block podcast-content %}
-<div class="breadcrumbs">
-   <a href="{% url 'podcast-main' %}">Podcast Index</a> &gt;&gt; {{ podcast.title }}
-</div>
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li><a href="{% url 'podcast-main' %}">Podcast Index</a></li>
+      <li>{{ podcast.title }}</li>
+   </ul>
+</nav>
+
 <h3>{{ podcast.pubdate|date:"F d, Y" }} &bull; {{ podcast.title }}</h3>
 <h4>{{ podcast.subtitle }}</h4>
 {{ podcast.summary|linebreaks }}
@@ -92,4 +77,24 @@
    {% endif %}
 </ul>
 {% social_sharing podcast.search_title podcast.get_absolute_url %}
+{% endblock %}
+
+{% block custom_js %}
+<script type="text/javascript" src="{% static "js/jplayer/jquery.jplayer.min.js" %}"></script>
+
+<script type="text/javascript">
+//<![CDATA[
+    var jplayer_media = {{ jplayer_media|safe }};
+    $(document).ready(function(){
+      $("#jquery_jplayer_1").jPlayer({
+        ready: function () {
+          $.jPlayer.timeFormat.showHour = true;
+          $(this).jPlayer("setMedia", jplayer_media);
+        },
+        swfPath: "{% static "js/jplayer" %}",
+        supplied: "{{ jplayer_supplied }}"
+      });
+    });
+//]]>
+</script>
 {% endblock %}

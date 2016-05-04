@@ -62,11 +62,12 @@ def index(request):
 
     return render(request, 'podcast/index.html', {
         'channel': channel,
+        'V3_DESIGN': True,
         })
 
 
 def detail(request, id):
-    podcast = get_object_or_404(Item.objects.select_related(), pk = id)
+    podcast = get_object_or_404(Item.objects.select_related(), pk=id)
 
     ext = get_ext_from_url(podcast.enclosure_url)
     alt_ext = None
@@ -83,6 +84,7 @@ def detail(request, id):
         'alt_ext': alt_ext,
         'jplayer_media': jplayer_media,
         'jplayer_supplied': jplayer_supplied,
+        'V3_DESIGN': True,
         })
 
 
