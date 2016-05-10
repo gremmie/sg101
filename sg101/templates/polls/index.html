@@ -8,9 +8,7 @@
    <ul>
    {% for poll in current_polls %}
       <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a> &bull; 
-      {{ poll.total_votes }} vote{{ poll.total_votes|pluralize }} &bull;
-      {% get_comment_count for poll as comment_count %}
-      {{ comment_count }} comment{{ comment_count|pluralize }} &bull;
+      {{ poll.total_votes_ }} vote{{ poll.total_votes_|pluralize }} &bull;
       {{ poll.start_date|date:"M d, Y" }}
       {% if poll.end_date %}
          - {{ poll.end_date|date:"M d, Y" }}
@@ -26,9 +24,7 @@
    <ul>
    {% for poll in old_polls %}
       <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a> &bull; 
-      {{ poll.total_votes }} vote{{ poll.total_votes|pluralize }} &bull;
-      {% get_comment_count for poll as comment_count %}
-      {{ comment_count }} comment{{ comment_count|pluralize }} &bull;
+      {{ poll.total_votes_ }} vote{{ poll.total_votes_|pluralize }} &bull;
       {{ poll.start_date|date:"M d, Y" }} -
          {{ poll.end_date|date:"M d, Y" }}</li>
    {% endfor %}

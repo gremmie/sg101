@@ -36,8 +36,28 @@ def get_user_choice(user, poll):
 #######################################################################
 
 def poll_index(request):
-    current_polls = Poll.objects.get_current_polls()
-    old_polls = Poll.objects.get_old_polls()
+
+    # Do some stuff manually to avoid cascading hits to the database
+    now = datetime.datetime.now()
+    qs = Poll.objects.filter(is_enabled=True)
+    poll_dict = {}
+    current_polls = []
+    old_polls = []
+    for poll in qs:
+        poll.total_votes_ = 0
+        poll_dict[poll.pk] = poll
+        if (poll.start_date <= now and
+                (poll.end_date is None or poll.end_date >= now)):
+            current_polls.append(poll)
+        elif (poll.start_date < now and
+                (poll.end_date is not None and poll.end_date < now)):
+            old_polls.append(poll)
+
+    for choice in Choice.objects.iterator():
+        poll = poll_dict.get(choice.poll_id)
+        if poll:
+            poll.total_votes_ += choice.votes
+
     return render(request, 'polls/index.html', {
         'current_polls': current_polls,
         'old_polls': old_polls,
