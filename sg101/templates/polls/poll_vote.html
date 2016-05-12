@@ -1,31 +1,37 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% block title %}Polls: {{ poll.question }}{% endblock %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/polls.css" %}" />
-{% endblock %}
 {% block content %}
-<h2>Poll</h2>
-<h3>Voting Booth: {{ poll.question }}</h3>
+<nav aria-label="You are here:" role="navigation">
+  <ul class="breadcrumbs">
+    <li><a href="{% url 'polls-main' %}">Polls</a></li>
+    <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a></li>
+    <li>Vote</li>
+  </ul>
+</nav>
+<h2>{{ poll.question }}</h2>
 {% if user_choice %}
-<p>You voted for &quot;{{ user_choice.choice }}&quot;.</p>
-<form action="{% url 'polls-delete_vote' %}" method="post">{% csrf_token %}
-   <div class="poll-form">
-      <input type="hidden" name="poll_id" value="{{ poll.id }}" />
-      <input type="submit" value="Delete My Vote!" />
+   <div class="warning callout">
+   You previously voted for &quot;{{ user_choice.choice }}&quot;.
    </div>
-</form>
+   <form action="{% url 'polls-delete_vote' %}" method="post">{% csrf_token %}
+      <input type="hidden" name="poll_id" value="{{ poll.id }}" />
+      <input type="submit" value="Delete My Vote!" class="alert button" />
+   </form>
 {% else %}
    <form action="." method="post">{% csrf_token %}
-      <div class="poll-form">
-      {{ vote_form.as_p }}
-      <input type="submit" value="Vote" />
-      </div>
+      {% if vote_form.non_field_errors %}
+         {{ form.non_field_errors }}
+      {% endif %}
+      {% if vote_form.choices.errors %}
+         {{ vote_form.choices.errors }}
+      {% endif %}
+      <ul class="no-bullet">
+         {% for field in vote_form.choices %}
+               <li>{{ field }}</li>
+         {% endfor %}
+      </ul>
+      <input type="submit" value="Cast My Vote!" class="primary button" />
    </form>
 {% endif %}
-<p class="poll-nav">
-<a href="{{ poll.get_absolute_url }}">View results</a>
-| <a href="{% url 'polls-main' %}">All polls</a>
-</p>
-<p>This poll was published on {{ poll.start_date|date:"F d, Y" }}.</p>
 {% endblock %}

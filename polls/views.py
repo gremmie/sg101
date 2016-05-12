@@ -61,6 +61,7 @@ def poll_index(request):
     return render(request, 'polls/index.html', {
         'current_polls': current_polls,
         'old_polls': old_polls,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -77,6 +78,7 @@ def poll_detail(request, poll_id):
         'total_votes': total_votes,
         'choices': choices,
         'user_choice': get_user_choice(request.user, poll),
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -106,6 +108,7 @@ def poll_vote(request, poll_id):
         'poll': poll,
         'vote_form': vote_form,
         'user_choice': user_choice,
+        'V3_DESIGN': True,
         })
 
 #######################################################################

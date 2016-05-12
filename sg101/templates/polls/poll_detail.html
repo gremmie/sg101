@@ -1,39 +1,46 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load comment_tags %}
 {% load script_tags %}
 {% load static from staticfiles %}
 {% block title %}Poll Results: {{ poll.question }}{% endblock %}
+{% block pre_custom_css %}
+{% css_tags 'jquery-ui markitup' %}
+{% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/polls.css" %}" />
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
 {% endblock %}
-{% block custom_js %}
-{% if poll.is_open %}
-{% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
-{% endif %}
-{% endblock %}
+
 {% block content %}
-<h2>Polls</h2>
-<h3>Results for: {{ poll.question }}</h3>
+<nav aria-label="You are here:" role="navigation">
+  <ul class="breadcrumbs">
+    <li><a href="{% url 'polls-main' %}">Polls</a></li>
+    <li>{{ poll.question }}</li>
+  </ul>
+</nav>
+<h2>Results for: {{ poll.question }}</h2>
 <dl class="poll-result">
 {% for choice in choices %}
    <dt>{{ choice.choice }} - {{ choice.pct|floatformat }}% ({{ choice.votes }} vote{{ choice.votes|pluralize }})</dt>
    <dd>
-      <div class="poll-percent" style="width: {{ choice.pct|floatformat:0 }}%; background-color: teal; color: white;">
-         <span>&nbsp;</span></div>
+      <div class="progress" role="progressbar" tabindex="0"
+         aria-valuenow="{{ choice.pct }}" aria-valuemin="0"
+         aria-valuetext="{{ choice.pct }} percent" aria-valuemax="100">
+         <div class="progress-meter" style="width: {{ choice.pct|floatformat:0 }}%"></div>
+      </div>
    </dd>
 {% endfor %}
 </dl>
 <p><strong>{{ total_votes }} total vote{{ total_votes|pluralize }}.</strong></p>
 
 {% if user_choice %}
-<p>You voted for &quot;{{ user_choice.choice }}&quot;.</p>
+   <div class="primary callout">
+      You voted for &quot;{{ user_choice.choice }}&quot;.
+   </div>
 {% endif %}
 
 <p>
 {% if poll.is_open %}
-Voting for this poll started on {{ poll.start_date|date:"F d, Y" }}. 
+Voting for this poll started on {{ poll.start_date|date:"F d, Y" }}.
    {% if poll.end_date %}
       Voting will end on {{ poll.end_date|date:"F d, Y" }}.
    {% endif %}
@@ -42,12 +49,15 @@ This poll ran from {{ poll.start_date|date:"F d, Y" }} to {{ poll.end_date|date:
 {% endif %}
 </p>
 
-<p class="poll-nav">
+<div>
 {% if poll.is_open and user.is_authenticated %}
-<a href="{% url 'polls-vote' poll_id=poll.id %}">Vote</a> |
+   {% if user_choice %}
+      <a href="{% url 'polls-vote' poll_id=poll.id %}" class="alert button">Delete My Vote</a>
+   {% else %}
+      <a href="{% url 'polls-vote' poll_id=poll.id %}" class="primary button">Vote</a>
+   {% endif %}
 {% endif %}
-<a href="{% url 'polls-main' %}">All Polls</a>
-</p>
+</div>
 
 {% get_comment_count for poll as comment_count %}
 <p>This poll has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
@@ -57,7 +67,14 @@ This poll ran from {{ poll.start_date|date:"F d, Y" }} to {{ poll.end_date|date:
 <p>Leave a comment?</p>
 {% render_comment_form user poll %}
 {% else %}
-<p>Comments are closed for this poll. If you'd like to share your thoughts on this poll 
+<p>Comments are closed for this poll. If you'd like to share your thoughts on this poll
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
 {% endif %}
+{% endblock %}
+
+{% block custom_js %}
+   {% if poll.is_open %}
+      {% js_tags "markitup jquery-ui" %}
+      <script type="text/javascript" src="{% static "js/comments.js" %}"></script>
+   {% endif %}
 {% endblock %}
