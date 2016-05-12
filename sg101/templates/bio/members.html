@@ -41,7 +41,7 @@ date they joined the site.
          <td>{% profile_link u.username %}</td>
          <td>{{ u.get_full_name }}</td>
          <td>{{ u.profile.location }}</td>
-         <td>{{ u.date_joined|date:"M. d, Y" }}</td>
+         <td>{{ u.date_joined|date:"N d, Y" }}</td>
          <td>
             {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
                <i class="fi-comment size-21" title="Send private message"></i></a>{% endifnotequal %}
