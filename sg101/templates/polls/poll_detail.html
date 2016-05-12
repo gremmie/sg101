@@ -17,7 +17,7 @@
     <li>{{ poll.question }}</li>
   </ul>
 </nav>
-<h2>Results for: {{ poll.question }}</h2>
+<h2>{{ poll.question }}</h2>
 <dl class="poll-result">
 {% for choice in choices %}
    <dt>{{ choice.choice }} - {{ choice.pct|floatformat }}% ({{ choice.votes }} vote{{ choice.votes|pluralize }})</dt>
