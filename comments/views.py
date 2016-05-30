@@ -140,7 +140,7 @@ def markdown_preview(request):
     function for a javascript editor such as markItUp.
     """
     if not request.user.is_authenticated():
-        return HttpResponseForbidden('This service is only available to logged in users.')
+        return HttpResponseForbidden('This service is only available to logged-in users.')
 
     data = request.POST.get('data', None)
     if data is None:
@@ -156,3 +156,20 @@ def markdown_preview(request):
     return render(request, 'comments/markdown_preview.html', {
         'data': html,
         })
+
+
+@require_POST
+def markdown_preview_v3(request):
+    if not request.user.is_authenticated():
+        return HttpResponseForbidden(
+                'This service is only available to logged-in users.')
+
+    data = request.POST.get('data', None)
+    html = site_markup(data) if data else ''
+    if html:
+        try:
+            image_check(html)
+        except ImageCheckError as ex:
+            html = PREVIEW_UNAVAILABLE.format(ex)
+
+    return HttpResponse(html)

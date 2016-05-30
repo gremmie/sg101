@@ -3,8 +3,9 @@ Views for the gcalendar application.
 """
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import InvalidPage
 from django.core.urlresolvers import reverse
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
@@ -13,6 +14,8 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 
+from core.functions import get_page
+from core.paginator import DiggPaginator
 from gcalendar.forms import EventEntryForm
 from gcalendar.models import Event
 
@@ -26,6 +29,7 @@ def index(request):
 
     return render(request, 'gcalendar/index.html', {
         'tz': tz,
+        'V3_DESIGN': True,
         })
 
 
@@ -45,6 +49,7 @@ def add_event(request):
     return render(request, 'gcalendar/event.html', {
         'title': 'Add Calendar Event',
         'form': form,
+        'V3_DESIGN': True,
         })
 
 
@@ -58,17 +63,16 @@ def add_thanks(request):
 def edit_events(request):
     events = Event.objects.filter(user=request.user, status=Event.ON_CAL).\
             order_by('-start_date')
-    paginator = Paginator(events, 25)
-    num = request.GET.get('page')
+    paginator = DiggPaginator(events, 25, body=5, tail=2, margin=3, padding=2)
+    num = get_page(request.GET)
     try:
         page = paginator.page(num)
-    except PageNotAnInteger:
-        page = paginator.page(1)
-    except EmptyPage:
-        page = paginator.page(paginator.num_pages)
+    except InvalidPage:
+        raise Http404
 
     return render(request, 'gcalendar/edit.html', {
         'page': page,
+        'V3_DESIGN': True,
         })
 
 
@@ -76,7 +80,7 @@ def edit_events(request):
 def edit_event(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     if event.user != request.user:
-        raise Http404
+        raise PermissionDenied
 
     if request.method == 'POST':
         form = EventEntryForm(request.POST, instance=event)
@@ -105,11 +109,11 @@ def edit_thanks(request):
 def delete_event(request):
     """This view marks an event for deletion. It is called via AJAX."""
     if request.user.is_authenticated():
-        id = request.POST.get('id', None)
-        if id is None or not id.isdigit():
+        event_id = request.POST.get('id')
+        if event_id is None or not event_id.isdigit():
             return HttpResponseBadRequest()
         try:
-            event = Event.objects.get(pk=id)
+            event = Event.objects.get(pk=event_id)
         except Event.DoesNotExist:
             return HttpResponseBadRequest()
         if request.user != event.user:
@@ -117,6 +121,6 @@ def delete_event(request):
 
         event.status = Event.DEL_REQ
         event.save()
-        return HttpResponse(id)
+        return HttpResponse(event_id, content_type="text/plain")
 
     return HttpResponseForbidden()

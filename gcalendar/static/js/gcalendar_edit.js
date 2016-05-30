@@ -9,8 +9,8 @@ $(document).ready(function() {
                data: { id : RegExp.$1 }, 
                dataType: 'text',
                success: function (id) {
-                  var id = '#gcal-' + id;
-                  $(id).parents('li').hide('normal');
+                  var rowId = '#gcal-row-' + id;
+                  $(rowId).fadeOut(800);
                }, 
                error: function (xhr, textStatus, ex) {
                   alert('Oops, an error occurred. ' + xhr.statusText + ' - ' + 

@@ -1,30 +1,58 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% block title %}Edit Calendar Events{% endblock %}
-{% block custom_js %}
-<script type="text/javascript" src="{% static "js/gcalendar_edit.js" %}"></script>
-{% endblock %}
 {% block content %}
-<div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; Edit Events</div>
+
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>
+      <li>
+      <span class="show-for-sr">Current: </span> Edit Events
+      </li>
+   </ul>
+</nav>
+
 <h2>Edit Calendar Events</h2>
 {% if page.object_list %}
-<p>You have the following events on our calendar. Click on the event title to edit it, or click the
-<img src="{% static "icons/cross.png" %}" alt="Cross" /> to delete it. 
-Your changes will be submitted to the site staff for approval, and won't be reflected on the Google
-calendar until then. The approval process usually takes less than 12 hours. Thanks for helping to 
-keep our calendar up to date!
+<p>
+You have the following events on our calendar. Click on the event title to edit
+it, or click the <i class="fi-x size-16"></i> to delete it.  Your changes will
+be submitted to the site staff for approval, and won't be reflected on the
+Google calendar until then. The approval process usually takes less than 12
+hours. Thanks for helping to keep our calendar up to date!
 </p>
-<ul>
-{% for event in page.object_list %}
-<li>{{ event.start_date|date:"M d, Y"}} &bull;
-<a href="{% url 'gcalendar-edit_event' event.id %}" title="Edit Event">{{ event.what }}</a>
-<a class="gcal-del" id="gcal-{{ event.id }}" href="#"><img src="{% static "icons/cross.png" %}" alt="Delete Event" title="Delete Event" /></a>
-</li>
-{% endfor %}
-</ul>
-{% include 'core/django_pagination.html' with page_obj=page %}
+<table class="stack">
+   <thead>
+      <th>Date</th>
+      <th>Event Title</th>
+      <th>Actions</th>
+   </thead>
+   <tbody>
+      {% for event in page.object_list %}
+         <tr id="gcal-row-{{ event.id }}">
+            <td>{{ event.start_date|date:"M d, Y"}}</td>
+            <td><a href="{% url 'gcalendar-edit_event' event.id %}"
+                   title="Edit Event">{{ event.what }}</a></td>
+            <td>
+               <a class="gcal-del" id="gcal-{{ event.id }}"
+                  title="Delete Event"><i class="fi-x size-16"></i></a>
+            </td>
+         </tr>
+   {% endfor %}
+   </tbody>
+</table>
+<div class="secondary callout">
+   Please don't worry about deleting old events. It's nice to have
+   a historical record of events on the calendar.
+</div>
+{% include 'core/v3/pagination.html' %}
 {% else %}
-<p>You either have no events on our calendar, or all your events have pending changes 
-that require admin review.</p>
+<div class="callout">
+You either have no events on our calendar, or all your events have pending
+changes that require admin review.
+</div>
 {% endif %}
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{% static "js/gcalendar_edit.js" %}"></script>
 {% endblock %}

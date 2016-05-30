@@ -1,18 +1,29 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% block title %}Event Calendar{% endblock %}
 {% block content %}
 <h2>SurfGuitar101 Event Calendar</h2>
 <p>
-<strong>Welcome to the SG101 event calendar!</strong> Our users can add events to this
-calendar. Please see the links below the calendar to add, modify, or delete events.
+<strong>Welcome to the SG101 event calendar!</strong>
+Our users can add events to this calendar.
+{% if user.is_authenticated %}
+   Please click the buttons below to add, modify, or delete events.
+{% else %}
+   Please <a href="{% url 'accounts-login' %}?next={% url 'gcalendar-index' %}">login</a>
+   to add, modify, or delete events.
+{% endif %}
 </p>
-<div class="info">
-   <p>
-   This calendar is now aggregating several Google calendars, both from
-   SurfGuitar101 and other friends in the surf music world. This allows us to give you
-   more information without duplicating efforts in the community.
-   </p>
+<div class="primary callout">
+   <div class="media-object">
+      <div class="media-object-section">
+         <i class="fi-info size-36"></i>
+      </div>
+      <div class="media-object-section">
+         This calendar is now aggregating several Google calendars, both from
+         SurfGuitar101 and other friends in the surf music world. This allows us to give you
+         more information without duplicating efforts in the community.
+      </div>
+   </div>
    <p>
    By default we show you all events from all calendars. Too much information?
    No problem, just use the pull-down menu in the upper right corner of the
@@ -26,23 +37,16 @@ time zone, which is the time zone preference you have set in your
 </p>
 {% else %}
 <p><strong>Please note:</strong> all times shown are in the <strong>{{ tz }}</strong> time zone. Please
-<a href="{% url 'accounts-login' %}">login</a> to view the times based on the time zone set in your profile.</p>
+<a href="{% url 'accounts-login' %}?next={% url 'gcalendar-index' %}">login</a> to view the times based on the time zone set in your profile.</p>
 {% endif %}
 
+<div class="flex-video">
 <iframe src="https://www.google.com/calendar/embed?showTitle=0&amp;mode=AGENDA&amp;height=640&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=cn1s9ucnemr669g0cc80mfl4s8%40group.calendar.google.com&amp;color=%238C500B&amp;src=b4gjo175fvn4mvbeipr65nc3gg%40group.calendar.google.com&amp;color=%23691426&amp;src=i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com&amp;color=%231B887A&amp;src=qrihvvsqabp3i3uv8gj4i5lfik%40group.calendar.google.com&amp;color=%23AB8B00&amp;ctz={{ tz|urlencode:"" }}" style="border:solid 1px #777" width="750" height="640" frameborder="0" scrolling="no"></iframe>
-
-<ul>
-{% if user.is_authenticated %}
-   <li><a href="{% url 'gcalendar-add' %}"><img src="{% static "icons/calendar_add.png" %}" alt="Add" /></a>
-      <a href="{% url 'gcalendar-add' %}">Add an event to our calendar</a></li>
-   <li><a href="{% url 'gcalendar-edit_events' %}"><img src="{% static "icons/calendar_edit.png" %}" alt="Edit" /></a>
-      <a href="{% url 'gcalendar-edit_events' %}">Change or delete an event you previously added</a></li>
-{% endif %}
-   <li>
-<a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
-<img src="{% static "icons/feed.png" %}" alt="feed" /></a>
-<a href="http://www.google.com/calendar/feeds/i81lu3fkh57sgqqenogefd9v78%40group.calendar.google.com/public/basic">
-RSS Feed</a>
-</li>
-</ul>
+</div>
+<div class="button-group">
+   <a class="button" href="{% url 'gcalendar-add' %}"><i class="fi-plus size-16"></i>
+      Add New Event</a>
+   <a class="secondary button" href="{% url 'gcalendar-edit_events' %}">
+      <i class="fi-wrench size-16"></i> Change or Delete Events</a>
+</div>
 {% endblock %}

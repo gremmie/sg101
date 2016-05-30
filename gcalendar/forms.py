@@ -64,17 +64,22 @@ TIME_CHOICES = (
 
 
 class EventEntryForm(forms.ModelForm):
-    what = forms.CharField(widget=forms.TextInput(attrs={'size': 60}))
-    start_date = forms.DateField(widget=forms.TextInput(attrs={'size': 10}))
-    start_time = forms.TimeField(required=False, widget=forms.Select(choices=TIME_CHOICES))
-    end_date = forms.DateField(widget=forms.TextInput(attrs={'size': 10}))
-    end_time = forms.TimeField(required=False, widget=forms.Select(choices=TIME_CHOICES))
+    what = forms.CharField(label='Event Title')
+    start_date = forms.DateField(label='Start Date')
+    start_time = forms.TimeField(label='Start Time', required=False,
+                                 widget=forms.Select(choices=TIME_CHOICES))
+    end_date = forms.DateField(label='End Date')
+    end_time = forms.TimeField(label='End Time', required=False,
+                               widget=forms.Select(choices=TIME_CHOICES))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
-    where = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 60}))
+    where = forms.CharField(
+            label='Event Location',
+            required=False,
+            help_text='If applicable, please fill this out for an accurate Google map')
     description = forms.CharField(
+            label='Event Details',
             required=False,
             widget=forms.Textarea(attrs={
-                'class': 'markItUp smileyTarget',
                 'id': 'id_body',    # needed for image related js
                 }))
 

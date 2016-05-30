@@ -1,19 +1,21 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load core_tags %}
 {% load script_tags %}
 {% load static from staticfiles %}
 {% block title %}{{ title }}{% endblock %}
 {% block custom_css %}
+{% css_tags 'jquery-ui markitup' %}
 <link rel="stylesheet" href="{% static "css/gcalendar.css" %}" />
 {% endblock %}
-{% block custom_js %}
-{% script_tags 'jquery-ui markitup' %}
-<script src="{% static "js/timezone.js" %}"></script>
-<script src="{% static "js/gcalendar.js" %}"></script>
-<script src="{% static "js/jquery.form.min.js" %}"></script>
-{% endblock %}
+
 {% block content %}
-<div class="breadcrumbs"><a href="{% url 'gcalendar-index' %}">Calendar</a> &raquo; {{ title }}</div>
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>
+      <li><span class="show-for-sr">Current: </span>{{ title }}</li>
+   </ul>
+</nav>
+
 <h2>{{ title }}</h2>
 <p>Use this form to add or change an event on our calendar. Please note the following:</p>
 <ul>
@@ -22,6 +24,134 @@
    <li>Once submitted, your event will be reviewed by the site staff for approval. Normally it will appear on
    the calendar within 24 hours.</li>
 </ul>
+
+<form id="id_gcal_event_form" action="." method="post">{% csrf_token %}
+   {{ form.non_field_errors }}
+   {{ form.what.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.what.id_for_label }}">{{ form.what.label }}
+            {{ form.what }}
+         </label>
+      </div>
+   </div>
+   {{ form.start_date.errors }}
+   {{ form.start_time.errors }}
+   <div class="row medium-unstack">
+      <div class="medium-3 columns">
+         <label for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}
+            {{ form.start_date }}
+         </label>
+      </div>
+      <div class="medium-3 columns all-day-hide">
+         <label for="{{ form.start_time.id_for_label }}">{{ form.start_time.label }}
+            {{ form.start_time }}
+         </label>
+      </div>
+   </div>
+   {{ form.end_date.errors }}
+   {{ form.end_time.errors }}
+   <div class="row medium-unstack">
+      <div class="medium-3 columns">
+         <label for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}
+            {{ form.end_date }}
+         </label>
+      </div>
+      <div class="medium-3 columns all-day-hide">
+         <label for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}
+            {{ form.end_time }}
+         </label>
+      </div>
+   </div>
+   {{ form.all_day.errors }}
+   <div class="row">
+      <div class="columns">
+         {{ form.all_day }}
+         <label for="{{ form.all_day.id_for_label }}">
+            {{ form.all_day.label }}
+         </label>
+      </div>
+   </div>
+   <fieldset class="all-day-hide">
+   <legend>Time Zone</legend>
+   {{ form.time_zone.errors }}
+   <div class="row medium-unstack">
+      <div class="medium-3 columns">
+         <select id="id_tz_area"></select>
+      </div>
+      <div class="medium-3 columns">
+         <select id="id_tz_location"></select>
+      </div>
+   </div>
+   {{ form.time_zome }}
+   </fieldset>
+   {{ form.where.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.where.id_for_label }}">{{ form.where.label }}
+            {{ form.where }}
+         </label>
+         <p class="help-text" id="where-help-text">
+            {{ form.where.help_text }}
+         </p>
+      </div>
+   </div>
+   {{ form.description.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+         <ul class="tabs" data-tabs id="editor-tabs">
+            <li class="tabs-title is-active"><a href="#editor-panel"
+               aria-selected="true"><i class="fi-pencil size-21" title="Edit"></i></a></li>
+            <li class="tabs-title"><a href="#preview-panel">
+               <i class="fi-eye size-21" title="Preview"></i></a></li>
+         </ul>
+         <div class="tabs-content" data-tabs-content="editor-tabs">
+            <div class="tabs-panel is-active v3-editor" id="editor-panel">
+
+               <ul class="menu">
+                  <li><a class="editor-bold" href="#"><i class="fi-bold size-21" title="Bold"></i></a></li>
+                  <li><a class="editor-italic" href="#"><i class="fi-italic size-21" title="Italic"></i></a></li>
+                  <li><a class="editor-strike" href="#"><i class="fi-strikethrough size-21" title="Strike"></i></a></li>
+                  <li><a class="editor-link" href="#"><i class="fi-link size-21" title="Link"></i></a></li>
+                  <li><a class="editor-quote" href="#"><i class="fi-quote size-21" title="Quote"></i></a></li>
+                  <li><a class="editor-code" href="#"><i class="fi-music size-21" title="Format Tablature"></i></a></li>
+                  <li><a class="editor-bullet" href="#"><i class="fi-list-bullet size-21" title="Bullet List"></i></a></li>
+                  <li><a class="editor-number" href="#"><i class="fi-list-number size-21" title="Numbered List"></i></a></li>
+                  <li><a class="editor-hot-link" href="#">
+                     <i class="fi-photo size-21" title="Hot-Link Image"></i></a></li>
+                  <li><a class="editor-upload" href="#">
+                     <i class="fi-upload size-21" title="Upload Image"></i></a></li>
+               </ul>
+
+               <!--
+               <textarea name="description" placeholder="Event Details" rows="10"></textarea>
+               -->
+               {{ form.description }}
+            </div>
+            <div class="tabs-panel" id="preview-panel">
+               <p>Suspendisse dictum feugiat nisl ut dapibus.  Vivamus hendrerit arcu sed erat molestie vehicula. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor.  Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor.</p>
+            </div>
+         </div>
+      </div>
+   </div>
+   {% if form.create_forum_thread %}
+      {{ form.create_forum_thread.errors }}
+      <div class="row">
+         <div class="columns">
+            {{ form.create_forum_thread }}
+            <label class="middle" for="{{ form.create_forum_thread.id_for_label }}">
+               {{ form.create_forum_thread.label }}
+            </label>
+         </div>
+      </div>
+   {% endif %}
+   {{ form.time_zone }}
+   <input type="submit" name="submit_button" value="Add Event" class="primary button" />
+</form>
+<hr>
+
+<!--
 <form id="id_gcal_event_form" action="." method="post">{% csrf_token %}
 <table>
 {% if form.non_field_errors %}
@@ -50,4 +180,13 @@
 </form>
 {% include 'user_photos/image_forms.html' %}
 <p><a href="{% url 'gcalendar-index' %}">&laquo; Back to the Event Calendar</a></p>
+-->
+
+{% endblock %}
+
+{% block custom_js %}
+{% js_tags 'jquery-ui markitup' %}
+<script src="{% static "js/timezone.js" %}"></script>
+<script src="{% static "js/gcalendar.js" %}"></script>
+<script src="{% static "js/jquery.form.min.js" %}"></script>
 {% endblock %}
