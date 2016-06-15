@@ -49,6 +49,7 @@ def add_event(request):
     return render(request, 'gcalendar/event.html', {
         'title': 'Add Calendar Event',
         'form': form,
+        'is_new': True,
         'V3_DESIGN': True,
         })
 
@@ -97,6 +98,8 @@ def edit_event(request, event_id):
     return render(request, 'gcalendar/event.html', {
         'title': 'Change Calendar Event',
         'form': form,
+        'is_new': False,
+        'V3_DESIGN': True,
         })
 
 

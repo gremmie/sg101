@@ -84,6 +84,50 @@ def upload_ajax(request):
     return HttpResponse(json.dumps(ret), content_type='application/json')
 
 
+def upload_ajax_v3(request):
+    """This view is the V3 ajax version of the upload function, above.
+
+    We return a JSON object response to the client with the following name
+    & value pairs:
+            'msg' : string error message if success is false
+            'url' : the image URL as a string if success
+    """
+    ret = {'error_msg': '', 'url': ''}
+    status_code = 400
+
+    if not request.user.is_authenticated():
+        ret['error_msg'] = 'Please login to use this service'
+        return JsonResponse(ret, status=403)
+    if not request.is_ajax() or request.method != 'POST':
+        ret['error_msg'] = 'This method is not allowed'
+        return JsonResponse(ret, status=405)
+
+    if settings.USER_PHOTOS_ENABLED:
+        form = UploadForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            try:
+                photo = form.save()
+                ret['url'] = photo.url
+                status_code = 200
+            except Exception as ex:
+                ret['error_msg'] = str(ex)
+                status_code = 500
+        else:
+            # gather form error messages
+            errors = []
+            non_field_errors = form.non_field_errors().as_text()
+            if non_field_errors:
+                errors.append(non_field_errors)
+            for field_errors in form.errors.values():
+                errors.append(field_errors.as_text())
+            ret['msg'] = '\n'.join(errors)
+    else:
+        ret['msg'] = 'Photo uploads are temporarily disabled'
+        status_code = 403
+
+    return JsonResponse(ret, status=status_code)
+
+
 class GalleryView(ListView):
     """A ListView for displaying a user's photos"""
 

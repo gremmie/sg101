@@ -70,31 +70,31 @@ $(document).ready(function() {
     });
 
    var editorPanel = $('#editor-panel textarea');
-   var previewPanel = $('#preview-panel');
-   previewPanel.css('height', editorPanel.css('height'));
-   var observer = new MutationObserver(function(mutations) {
-      if (previewPanel.is(':visible')) {
-         alert(editorPanel[0].value);
-         $.ajax({
-            url: '/comments/markdown/v3/',
-            method: 'POST',
-            data: {'data': editorPanel[0].value},
-            dataType: 'html',
-            success: function(data, textStatus) {
-               alert(data);
-               previewPanel.html(data);
-            },
-            error: function (xhr, textStatus, ex) {
-               alert('Oops, an error occurred: ' + xhr.statusText + ' - ' +
-                     xhr.responseText);
-            }
-         });
-      }
+   var previewPanel = $('#editor-preview-panel');
+
+   $('#preview-modal').on('open.zf.reveal', function() {
+      previewPanel.html('');
+      previewPanel.scrollTop(0);
+      // TODO:
+      // Clear preview panel and/or show spinner
+      // If there is any text in editor panel {
+      $.ajax({
+         url: '/comments/markdown/v3/',
+         method: 'POST',
+         data: {'data': editorPanel[0].value},
+         dataType: 'html',
+         success: function(data, textStatus) {
+            previewPanel.html(data);
+         },
+         error: function (xhr, textStatus, ex) {
+            alert('Oops, an error occurred: ' + xhr.statusText + ' - ' +
+                  xhr.responseText);
+         }
+      });
    });
-   var target = document.getElementById('preview-panel');
-   observer.observe(target, {attributes: true});
 
    // Editor stuff
+   var $postBox;
    $('.v3-editor').each(function (index) {
       var $this = $(this);
       var textArea = $this.find('textarea')[0];
@@ -130,5 +130,116 @@ $(document).ready(function() {
          editorPrependLines(textArea, '1. ');
          return false;
       });
+      $this.find('.editor-hot-link').click(function () {
+         $postBox = $(textArea);
+      });
+      $this.find('.editor-upload').click(function () {
+         $postBox = $(textArea);
+      });
    });
+
+   var $hotLinkForm = $('#hot-link-form');
+   if ($hotLinkForm.length) {
+      var $hotLinkFormSubmit = $('#hot-link-form-submit');
+      var $hotLinkStatus = $('#hot-link-status');
+
+      $('#hot-link-modal').on('open.zf.reveal', function() {
+         $hotLinkForm.clearForm();
+      });
+      $('#hot-link-modal').on('closed.zf.reveal', function() {
+         $hotLinkStatus.hide();
+      });
+
+      $hotLinkForm.ajaxForm({
+         dataType: 'json',
+         beforeSubmit: function(arr, $form, options) {
+            var url = null;
+            $.each(arr, function(index, val) {
+               if (val.name == 'url') {
+                  url = val.value;
+               }
+            });
+            if (!url) {
+               $hotLinkStatus.removeClass('success').addClass('alert');
+               $hotLinkStatus.html("Please enter a link to an image.");
+               $hotLinkStatus.fadeIn(700);
+               return false;
+            } else {
+               $hotLinkStatus.hide();
+            }
+            $hotLinkFormSubmit.attr('disabled', 'disabled').val('Retrieving...');
+            $hotLinkFormSubmit.addClass('disabled');
+            return true;
+         },
+         success: function(resp, statusText, xhr, $form) {
+            $postBox.val($postBox.val() + '\n![image](' + resp.url + ')');
+            $hotLinkStatus.removeClass('alert').addClass('success');
+            $hotLinkStatus.html("Success! The image code was added to your post.");
+            $hotLinkStatus.fadeIn(700);
+            $hotLinkForm.clearForm();
+         },
+         complete: function(xhr) {
+            $hotLinkFormSubmit.removeAttr('disabled').val('Hot Link');
+            $hotLinkFormSubmit.removeClass('disabled');
+         },
+         error: function(xhr, textStatus, ex) {
+            $hotLinkStatus.removeClass('success').addClass('alert');
+            var resp = $.parseJSON(xhr.responseText);
+            $hotLinkStatus.html("Error: " + ex + ' - ' + resp.error_msg);
+            $hotLinkStatus.fadeIn(700);
+         }
+      });
+   }
+   var $photoForm = $('#photo-upload-form');
+   if ($photoForm.length) {
+      var $photoUploadSubmit = $('#photo-upload-submit');
+      var $photoStatus = $('#photo-status');
+
+      $('#upload-modal').on('open.zf.reveal', function() {
+         $photoForm.clearForm();
+      });
+      $('#upload-modal').on('closed.zf.reveal', function() {
+         $photoStatus.hide();
+      });
+
+      $photoForm.ajaxForm({
+         dataType: 'json',
+         beforeSubmit: function(arr, $form, options) {
+            var fileObj = null;
+            $.each(arr, function(index, val) {
+               if (val.name == 'image_file') {
+                  fileObj = val.value;
+               }
+            });
+            if (!fileObj) {
+               $photoStatus.removeClass('success').addClass('alert');
+               $photoStatus.html("Please choose a file to upload.");
+               $photoStatus.fadeIn(700);
+               return false;
+            } else {
+               $photoStatus.hide();
+            }
+            $photoUploadSubmit.attr('disabled', 'disabled').val('Uploading...');
+            $photoUploadSubmit.addClass('disabled');
+            return true;
+         },
+         success: function(resp, statusText, xhr, $form) {
+            $postBox.val($postBox.val() + '\n![image](' + resp.url + ')');
+            $photoStatus.removeClass('alert').addClass('success');
+            $photoStatus.html("Success! The image code was added to your post.");
+            $photoStatus.fadeIn(700);
+            $photoStatus.clearForm();
+         },
+         complete: function(xhr) {
+            $photoUploadSubmit.removeAttr('disabled').val('Upload photo');
+            $photoUploadSubmit.removeClass('disabled');
+         },
+         error: function(xhr, textStatus, ex) {
+            $photoStatus.removeClass('success').addClass('alert');
+            var resp = $.parseJSON(xhr.responseText);
+            $photoStatus.html("Error: " + ex + ' - ' + resp.error_msg);
+            $photoStatus.fadeIn(700);
+         }
+      });
+   }
 });
