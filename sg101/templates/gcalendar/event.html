@@ -21,6 +21,19 @@
    </ul>
 </nav>
 
+{% if thanks_flag %}
+<div class="success callout" data-closable>
+   <h5>Thanks for submitting an event!</h5>
+   <p>
+   Thanks for submitting an event to our calendar. Your event will be reviewed by the staff,
+   and should appear on the calendar shortly. You may be contacted if we have any questions.
+   </p>
+   <button class="close-button" aria-label="Dismiss message" type="button" data-close>
+      <span aria-hidden="true">&times;</span>
+   </button>
+</div>
+{% endif %}
+
 <h2>{{ title }}</h2>
 <p>Use this form to add or change an event on our calendar. Please note the following:</p>
 <ul>
@@ -140,7 +153,9 @@
       </div>
    {% endif %}
    {{ form.time_zone }}
-   <input type="submit" name="submit_button" value="Add Event" class="primary button" />
+   <input type="submit" name="submit_button"
+      value="{% if is_new %}Add{% else %}Update{% endif %} Event"
+      class="primary button" />
 </form>
 
 <div class="small reveal" id="hot-link-modal" data-reveal>

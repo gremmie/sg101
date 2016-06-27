@@ -12,6 +12,4 @@ urlpatterns = [
     url(r'^change/$', gcalendar.views.edit_events, name='gcalendar-edit_events'),
     url(r'^change/(\d+)/$', gcalendar.views.edit_event, name='gcalendar-edit_event'),
     url(r'^delete/$', gcalendar.views.delete_event, name='gcalendar-delete'),
-    url(r'^thanks/add/$', gcalendar.views.add_thanks, name='gcalendar-add_thanks'),
-    url(r'^thanks/change/$', gcalendar.views.edit_thanks, name='gcalendar-edit_thanks'),
 ]

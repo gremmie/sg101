@@ -12,6 +12,20 @@
    </ul>
 </nav>
 
+{% if thanks_flag %}
+<div class="success callout" data-closable>
+   <h5>Event Calendar Changes Received</h5>
+   <p>
+   Thanks for updating your event.
+   Your changes will be reviewed by the staff, and should appear on the calendar
+   shortly. You may be contacted if we have any questions.
+   </p>
+   <button class="close-button" aria-label="Dismiss message" type="button" data-close>
+      <span aria-hidden="true">&times;</span>
+   </button>
+</div>
+{% endif %}
+
 <h2>Edit Calendar Events</h2>
 {% if page.object_list %}
 <p>

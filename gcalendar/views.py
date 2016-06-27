@@ -35,6 +35,7 @@ def index(request):
 
 @login_required
 def add_event(request):
+    thanks_flag = False
     if request.method == 'POST':
         form = EventEntryForm(request.POST)
         if form.is_valid():
@@ -42,21 +43,17 @@ def add_event(request):
             event.user = request.user
             event.repeat = 'none'
             event.save(html=form.html)
-            return HttpResponseRedirect(reverse('gcalendar-add_thanks'))
+            return HttpResponseRedirect(reverse('gcalendar-add') + '?thanks=1')
     else:
         form = EventEntryForm()
+        thanks_flag = bool(request.GET.get('thanks', False))
 
     return render(request, 'gcalendar/event.html', {
         'title': 'Add Calendar Event',
         'form': form,
         'is_new': True,
+        'thanks_flag': thanks_flag,
         'V3_DESIGN': True,
-        })
-
-
-@login_required
-def add_thanks(request):
-    return render(request, 'gcalendar/thanks_add.html', {
         })
 
 
@@ -73,6 +70,7 @@ def edit_events(request):
 
     return render(request, 'gcalendar/edit.html', {
         'page': page,
+        'thanks_flag': bool(request.GET.get('thanks', False)),
         'V3_DESIGN': True,
         })
 
@@ -91,7 +89,7 @@ def edit_event(request, event_id):
             event.repeat = 'none'
             event.status = Event.EDIT_REQ
             event.save()
-            return HttpResponseRedirect(reverse('gcalendar-edit_thanks'))
+            return HttpResponseRedirect(reverse('gcalendar-edit_events') + '?thanks=1')
     else:
         form = EventEntryForm(instance=event)
 
@@ -100,12 +98,6 @@ def edit_event(request, event_id):
         'form': form,
         'is_new': False,
         'V3_DESIGN': True,
-        })
-
-
-@login_required
-def edit_thanks(request):
-    return render(request, 'gcalendar/thanks_edit.html', {
         })
 
 
