@@ -42,19 +42,16 @@ function editorLink(textArea) {
 }
 
 $(document).ready(function() {
-   var editorPanel = $('#editor-panel textarea');
+   var $postBox;
    var previewPanel = $('#editor-preview-panel');
 
    $('#preview-modal').on('open.zf.reveal', function() {
       previewPanel.html('');
       previewPanel.scrollTop(0);
-      // TODO:
-      // Clear preview panel and/or show spinner
-      // If there is any text in editor panel {
       $.ajax({
          url: '/comments/markdown/v3/',
          method: 'POST',
-         data: {'data': editorPanel[0].value},
+         data: {'data': $postBox.val()},
          dataType: 'html',
          success: function(data, textStatus) {
             previewPanel.html(data);
@@ -66,8 +63,6 @@ $(document).ready(function() {
       });
    });
 
-   // Editor stuff
-   var $postBox;
    $('.v3-editor').each(function (index) {
       var $this = $(this);
       var textArea = $this.find('textarea')[0];
@@ -107,6 +102,9 @@ $(document).ready(function() {
          $postBox = $(textArea);
       });
       $this.find('.editor-upload').click(function () {
+         $postBox = $(textArea);
+      });
+      $this.find('.editor-preview').click(function () {
          $postBox = $(textArea);
       });
    });

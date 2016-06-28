@@ -114,8 +114,6 @@
 
 .editor-preview-panel {
    @include callout-base;
-   max-height: 75%;
-   overflow-y: auto;
 }
 
 .code-callout {
