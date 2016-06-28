@@ -238,3 +238,10 @@ def slideshow_images():
     return {
         'slides': slides,
     }
+
+
+@register.inclusion_tag('core/v3/post_box.html')
+def post_box(form_field):
+    return {
+        'form_field': form_field,
+    }

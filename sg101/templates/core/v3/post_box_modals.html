@@ -1,0 +1,218 @@
+<div class="small reveal" id="hot-link-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <p class="lead">Hot-Link Image</p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns">
+         <p>
+         To add an image already on the Internet to your post, copy &amp; paste the
+         image address to the box below and click "Hot-Link". An image code will be placed
+         in your post after the image is processed.
+         </p>
+      </div>
+   </div>
+   <form id="hot-link-form" action="{% url 'user_photos-hotlink' %}" method="post">{% csrf_token %}
+      <div class="row">
+         <div class="columns">
+            <label>Image Address
+               <input type="url" name="url" placeholder="http://" />
+            </label>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns">
+            <div id="hot-link-status" class="hidden success callout">
+               Success! An image code was added to your post.
+            </div>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns text-right">
+            <input type="submit" id="hot-link-form-submit" class="primary button"
+               name="submit" value="Hot-Link" />
+            <button class="secondary button" data-close aria-label="Close modal" type="button">
+               Cancel
+            </button>
+         </div>
+      </div>
+   </form>
+</div>
+
+<div class="reveal" id="upload-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <p class="lead">Upload Image</p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns">
+         <p>
+         You can upload an image directly from your computer or device with this
+         form. After the image is uploaded it will be resized and an image code will be
+         placed your post.
+         </p>
+      </div>
+   </div>
+   <form id="photo-upload-form" action="{% url 'user_photos-upload_ajax_v3' %}" method="post"
+      enctype="multipart/form-data">{% csrf_token %}
+      <div class="row">
+         <div class="columns">
+            <input type="file" name="image_file" />
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns">
+            <div id="photo-status" class="hidden success callout">
+               Success! An image code was added to your post.
+            </div>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns text-right">
+            <input type="submit" id="photo-upload-submit" name="submit" value="Upload"
+               class="primary button" />
+            <button class="secondary button" data-close aria-label="Close modal" type="button">
+               Cancel
+            </button>
+         </div>
+      </div>
+      <div style="width: 80%;margin:auto;"><div id="photo-upload-progress"
+            style="margin:auto;width:100%;"></div></div>
+   </form>
+</div>
+
+<div class="small reveal" id="preview-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <p class="lead">Preview</p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns">
+         <div id="editor-preview-panel" class="editor-preview-panel">
+         </div>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns text-right">
+         <button class="button" data-close aria-label="Close modal" type="button">
+            Close
+         </button>
+      </div>
+   </div>
+</div>
+
+<div class="small reveal modal-scrollable" id="help-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <h4>Help with markup</h4>
+         <p>SurfGuitar101.com uses a variation of the markup language called
+         <a href="http://daringfireball.net/projects/markdown/">Markdown</a>.
+         This is the same markup used by Reddit. Markdown is a light-weight and
+         easy-to-use syntax for styling text on the web. Here is a quick
+         overview of how to use Markdown on SG101.
+         </p>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Emphasis</h5>
+         <div class="code-callout">*This text will be italic*
+_This will also be italic_
+
+**This text will be bold**
+__This will also be bold__
+
+_You can **combine** these_</div>
+      </div>
+      <div class="columns">
+         <h5>Lists</h5>
+         <div class="code-callout">* Bulleted list item 1
+* Bulleted list item 2
+
+1. Numbered list item 1
+2. Numbered list item 2
+   * You can have sub-lists
+   * if you indent</div>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Links</h5>
+         <div class="code-callout">https://surfguitar101.com - automatic!
+[SurfGuitar101](https://surfguitar101.com)</div>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Images</h5>
+         <div class="code-callout">![Image](https://example.com/a.jpg)</div>
+         <p>Note: for security reasons, please use the Hot-Link
+         (<i class="fi-photo"></i>) or Upload (<i class="fi-upload"></i>) buttons to add images
+         to your posts.
+         </p>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Quoting</h5>
+         <div class="code-callout">Dick Dale said:
+
+&gt; The kids called me King of the Surf Guitar.
+
+This is not part of the quote because of the blank line.
+</div>
+         <div class="warning callout">
+            <i class="fi-info size-21"></i> Be sure to put a blank line above and below your quote.
+         </div>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Tablature</h5>
+         <p>
+         To display tablature or code, insert at least 4 spaces in front
+         of each line. This is more easily accomplished by selecting all your
+         text and then clicking the <i class="fi-music"></i> button.
+         </p>
+         <div class="code-callout">Here is some tablature:
+
+    |-------------------------------------|
+    |-------------------------------------|
+    |o-----------------------------------o|
+    |o-----------------------------------o|
+    |--0-0---0-2---0---0-2-3-3-2-0---2-0--|
+    |------3-----3-----------------3------|</div>
+      </div>
+   </div>
+   <div class="row medium-unstack">
+      <div class="columns">
+         <h5>Strikethrough</h5>
+         <p>
+         Any words wrapped by 3 dashes (<code>---like this---</code>)
+         will appear crossed out.
+         </p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns text-right">
+         <button class="button" data-close aria-label="Close modal" type="button">
+            Close
+         </button>
+      </div>
+   </div>
+</div>
