@@ -9,7 +9,6 @@
 {% endblock %}
 {% block title %}Contests: {{ contest.title }}{% endblock %}
 {% block pre_custom_css %}
-{% css_tags 'jquery-ui markitup' %}
 {% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
@@ -90,7 +89,7 @@
 {% render_comment_list contest %}
 {% if contest.is_active %}
    <p>Leave a comment?</p>
-   {% render_comment_form user contest %}
+   {% render_comment_form_v3 user contest %}
 {% else %}
    <p>Comments are closed for this contest. If you'd like to share your thoughts
    on this contest with the site staff, you can <a href="{% url 'contact-form' %}?subject={{ contest.title|urlencode }}">contact us directly</a>.</p>
@@ -99,8 +98,8 @@
 
 {% block custom_js %}
 {% if contest.is_active %}
-   {% js_tags "markitup jquery-ui" %}
    <script type="text/javascript" src="{% static "js/comments.js" %}"></script>
+   <script src="{% static "js/v3/post_box.js" %}"></script>
    <script type="text/javascript">
       var contest_id = {{ contest.id }};
    </script>
