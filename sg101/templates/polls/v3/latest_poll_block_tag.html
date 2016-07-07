@@ -6,7 +6,7 @@
       {% for poll in polls %}
       <li><a href="{{ poll.get_absolute_url }}">{{ poll.question }}</a></li>
       {% empty %}
-      <li>No polls at this time. Check out our <a href="{% url 'polls-main' %}">past polls</a></li>
+      <li>No polls at this time. Check out our <a href="{% url 'polls-main' %}">past polls</a>.</li>
       {% endfor %}
    </ul>
 </div>

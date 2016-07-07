@@ -6,7 +6,7 @@
       {% for contest in contests %}
       <li><a href="{{ contest.get_absolute_url }}">{{ contest.title }}</a></li>
       {% empty %}
-      <li>No contests at this time. Check out our <a href="{% url 'contests-index' %}">past contests</a></li>
+      <li>No contests at this time. Check out our <a href="{% url 'contests-index' %}">past contests</a>.</li>
       {% endfor %}
    </ul>
 </div>
