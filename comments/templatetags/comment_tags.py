@@ -122,6 +122,11 @@ def render_comment_form(user, obj):
     return {'user': user, 'form': CommentForm(obj)}
 
 
+@register.inclusion_tag('comments/v3/comment_form.html')
+def render_comment_form_v3(user, obj):
+    return {'user': user, 'form': CommentForm(obj)}
+
+
 @register.inclusion_tag('comments/comment_list.html')
 def render_comment_list(object):
     """

@@ -4,7 +4,6 @@
 {% load static from staticfiles %}
 {% block title %}Poll Results: {{ poll.question }}{% endblock %}
 {% block pre_custom_css %}
-{% css_tags 'jquery-ui markitup' %}
 {% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
@@ -65,7 +64,7 @@ This poll ran from {{ poll.start_date|date:"F d, Y" }} to {{ poll.end_date|date:
 {% render_comment_list poll %}
 {% if poll.is_open %}
 <p>Leave a comment?</p>
-{% render_comment_form user poll %}
+{% render_comment_form_v3 user poll %}
 {% else %}
 <p>Comments are closed for this poll. If you'd like to share your thoughts on this poll
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
@@ -74,7 +73,7 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 
 {% block custom_js %}
    {% if poll.is_open %}
-      {% js_tags "markitup jquery-ui" %}
       <script type="text/javascript" src="{% static "js/comments.js" %}"></script>
+      <script src="{% static "js/v3/post_box.js" %}"></script>
    {% endif %}
 {% endblock %}
