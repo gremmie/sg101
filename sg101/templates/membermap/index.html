@@ -4,7 +4,7 @@
 {% load static from staticfiles %}
 {% block title %}Member Map{% endblock %}
 {% block pre_custom_css %}
-{% css_tags 'jquery-ui markitup' %}
+{% css_tags 'jquery-ui' %}
 {% endblock %}
 {% block content %}
 <h2>Member Map</h2>
@@ -51,12 +51,21 @@
         </ul>
         </div>
         <form action="" method="post">{% csrf_token %}
-            {{ form.as_p }}
-            {% comment_dialogs %}
+            {{ form.non_field_errors }}
+            {{ form.location.errors }}
+            <div class="row">
+               <div class="columns">
+                  <label for="{{ form.location.id_for_label }}">{{ form.location.label }}
+                     {{ form.location }}
+                  </label>
+               </div>
+            </div>
+            {% post_box form.message %}
             <input type="submit" id="member_map_submit" name="submit" value="Submit" class="primary button" />
             <input type="submit" id="member_map_delete" name="delete" value="Delete" class="alert button" />
         </form>
         <br />
+        {% include 'core/v3/post_box_modals.html' %}
         {% else %}
         <p>
         The member map allows members to place themselves on a google map along with a short message.
@@ -69,9 +78,10 @@
 </div>
 {% endblock %}
 {% block custom_js %}
-<script type="text/javascript" src="{% static "js/membermap.js" %}"></script>
+<script src="{% static "js/membermap.js" %}"></script>
+<script src="{% static "js/v3/post_box.js" %}"></script>
 <script src="https://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAql_1Xw9MGW3mOxzo8gLb3hSrh5-ALlu4lmYDsscYaAokjyRNqBRaVcqVr3jaDgMRVSK_3HydK9tYWw" type="text/javascript"></script>
-{% js_tags 'jquery-ui markitup' %}
+{% js_tags 'jquery-ui' %}
 <script type="text/javascript">
 //<![CDATA[
 var mmapUser = {
