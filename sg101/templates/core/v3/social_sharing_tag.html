@@ -1,4 +1,7 @@
 {% load static from staticfiles %}
+{% if center %}
+<div class="menu-centered">
+{% endif %}
 <ul class="menu">
    <li>
       <a href="https://twitter.com/intent/tweet?text={{ title|urlencode }}&amp;url={{ url|urlencode }}&amp;via=SurfGuitar101">
@@ -16,3 +19,6 @@
       </a>
    </li>
 </ul>
+{% if center %}
+</div>
+{% endif %}

@@ -14,6 +14,7 @@ def view(request):
     return render(request, 'potd/view.html', {
         'potd': potd,
         'is_current': True,
+        'V3_DESIGN': True,
         })
 
 
@@ -22,4 +23,5 @@ def archive(request, id):
     return render(request, 'potd/view.html', {
         'potd': photo,
         'is_current': False,
+        'V3_DESIGN': True,
         })

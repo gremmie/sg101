@@ -1,0 +1,16 @@
+{% load core_tags %}
+{% if user.is_authenticated %}
+   <form action="{% url 'comments-post' %}" method="post" id="comment-form">{% csrf_token %}
+      {{ form.non_field_errors }}
+      {% post_box form.comment %}
+      {{ form.content_type }}
+      {{ form.object_pk }}
+      <input type="submit" name="post" value="Post Comment" id="comment-form-post" class="primary button"/>
+   </form>
+   {% include 'core/v3/post_box_modals.html' %}
+{% else %}
+   <div class="callout">
+      Please <a href="{% url 'accounts-login' %}">login</a> or
+      <a href="{% url 'accounts-register' %}">register</a> to leave a comment.
+   </div>
+{% endif %}

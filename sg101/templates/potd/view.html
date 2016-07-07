@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load bio_tags %}
 {% load core_tags %}
@@ -9,12 +9,7 @@
 {% open_graph_meta_tags potd %}
 {% endblock %}
 {% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/potd.css" %}" />
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
-{% endblock %}
-{% block custom_js %}
-{% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
 {% endblock %}
 {% block content %}
 {% if is_current %}
@@ -24,29 +19,61 @@
 <h2>Photo Of The Day Archives</h2>
 {% endif %}
 {% if potd %}
-<div class="potd-details">
-<img src="{{ potd.photo.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" />
-<p class="caption">{{ potd.caption }}</p>
-<p class="details">
-Submitted by 
-{% profile_link potd.user.username %} on {{ potd.date_added|date:"d F Y" }}.<br />
-This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
-</p>
-<div class="description">{{ potd.description|safe }}</div>
-<p class="details">
-If you would like us to feature your photo, send it along with your username, a title, and 
-short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar101.com</a>.
-</p>
-{% social_sharing potd.caption potd.get_absolute_url %}
-{% get_comment_count for potd as comment_count %}
-<p>This photo has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
-<hr />
+<div class="row">
+   <div class="columns">
+      <div class="text-center">
+         <img src="{{ potd.photo.url }}" alt="{{ potd.caption }}" title="{{ potd.caption }}" />
+      </div>
+   </div>
 </div>
+<div class="row">
+   <div class="columns">
+      <div class="text-center">
+         <p><strong>{{ potd.caption }}</strong></p>
+         <p class="quiet">
+            <em>
+            Submitted by
+            {% profile_link potd.user.username %} on {{ potd.date_added|date:"d F Y" }}.<br />
+            This photo has been Photo of the Day {{ potd.potd_count }} time{{ potd.potd_count|pluralize }}.
+            </em>
+         </p>
+      </div>
+   </div>
+</div>
+<div class="row">
+   <div class="columns">
+      <div class="text-center"><p>{{ potd.description|safe }}</p></div>
+   </div>
+</div>
+<div class="row">
+   <div class="columns">
+      <div class="text-center quiet">
+         <p>
+         If you would like us to feature your photo, send it along with your username, a title, and 
+         short description to <a href="mailto:admin@surfguitar101.com">admin@surfguitar101.com</a>.
+         </p>
+      </div>
+   </div>
+</div>
+{% social_sharing potd.caption potd.get_absolute_url center=True %}
+{% get_comment_count for potd as comment_count %}
+<div class="row">
+   <div class="columns">
+      <div class="text-center quiet">
+         <em>
+         This photo has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.
+         </em>
+      </div>
+   </div>
+</div>
+
+<hr />
+
 {% render_comment_list potd %}
+<br>
 {% if potd.can_comment_on %}
 <p>Leave a comment?</p>
-{% render_comment_form user potd %}
-<br />
+{% render_comment_form_v3 user potd %}
 {% else %}
 <p>Comments are allowed only on today's photo of the day. If you'd like to share your thoughts on this photo 
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
@@ -54,4 +81,8 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 {% else %}
 <p>We're sorry, there doesn't seem to be a photo of the day right now.</p>
 {% endif %}
+{% endblock %}
+{% block custom_js %}
+   <script src="{% static "js/comments.js" %}"></script>
+   <script src="{% static "js/v3/post_box.js" %}"></script>
 {% endblock %}

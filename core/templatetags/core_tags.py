@@ -62,7 +62,7 @@ def whos_online():
 
 
 @register.simple_tag(takes_context=True)
-def social_sharing(context, title, url):
+def social_sharing(context, title, url, center=False):
     """
     Displays social media sharing buttons.
 
@@ -77,6 +77,7 @@ def social_sharing(context, title, url):
     with context.push():
         context['title'] = title
         context['url'] = url
+        context['center'] = center
         return t.render(context)
 
 
