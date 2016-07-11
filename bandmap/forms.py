@@ -21,20 +21,13 @@ class BandForm(forms.ModelForm):
             'location': 'See examples, above',
         }
         widgets = {
-            'name': forms.TextInput(attrs={
-                'size': 64,
-                'class': 'text'}),
             'url': forms.TextInput(attrs={
-                'size': 64,
-                'class': 'text',
+                'aria-describedby': 'url-help-text',
                 'placeholder': 'http://'}),
             'location': forms.TextInput(attrs={
-                'size': 64,
-                'class': 'text',
+                'aria-describedby': 'location-help-text',
                 'placeholder': 'Huntington Beach, CA, USA'}),
             'note': forms.TextInput(attrs={
-                'size': 64,
-                'class': 'text',
                 'placeholder': 'Optional short note about the band'}),
             'lat': forms.HiddenInput(),
             'lon': forms.HiddenInput(),

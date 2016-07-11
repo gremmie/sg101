@@ -1,13 +1,25 @@
 {% extends 'bandmap/bandmap_base.html' %}
 {% block bandmap_content %}
-<h3>Add Band</h3>
+
+<nav aria-label="You are here:" role="navigation">
+  <ul class="breadcrumbs">
+    <li><a href="{% url 'bandmap-map' %}">Surf Band Map</a></li>
+    <li>Add Band</li>
+  </ul>
+</nav>
+
+<h2>Add Band to Map</h2>
+
 {% if messages %}
-<ul class="user-messages">
-{% for message in messages %}
-   <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-{% endfor %}
-</ul>
+<div class="success callout">
+   <ul class="user-messages">
+   {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+   {% endfor %}
+   </ul>
+</div>
 {% endif %}
+
 <p>
 To add a band to our map, please fill out the form, below. The information will
 be reviewed by our staff and will normally be published within 24 hours.
@@ -18,10 +30,17 @@ address unless it is a public place or landmark special to the band (such
 a frequently played venue). Any text that you can use on Google Maps can be
 used here.
 </p>
-<div class="notice">
+<div class="warning callout">
+   <p>
+   <i class="fi-alert size-21"></i>
    Please try to be as specific as possible for a location. Bands with the
    exact same location will have map pins that stack on top of each other, and
    it will be difficult to find them on the map.
+   </p>
+   <p>
+   Please check the map to see if there are any other bands near the location
+   you wish to add, and try to pick a unique address.
+   </p>
 </div>
 <p>
 Example locations:
@@ -35,15 +54,56 @@ Example locations:
 </ul>
 
 <form id="bandmap-add-form" action="." method="post">{% csrf_token %}
-<table>
-{{ form.as_table }}
-<tr>
-   <td>&nbsp;</td>
-   <td>
-      <input id="bandmap-add-submit" type="submit" name="submit_button" value="Submit" />
-   </td>
-</tr>
-</table>
+   {{ form.non_field_errors }}
+   {{ form.name.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.name.id_for_label }}">{{ form.name.label }}
+            {{ form.name }}
+         </label>
+      </div>
+   </div>
+   {{ form.url.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.url.id_for_label }}">{{ form.url.label }}
+            {{ form.url }}
+         </label>
+         <p class="help-text" id="url-help-text">{{ form.url.help_text }}</p>
+      </div>
+   </div>
+   {{ form.location.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.location.id_for_label }}">{{ form.location.label }}
+            {{ form.location }}
+         </label>
+         <p class="help-text" id="location-help-text">{{ form.location.help_text }}</p>
+      </div>
+   </div>
+   {{ form.note.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.note.id_for_label }}">{{ form.note.label }}
+            {{ form.note }}
+         </label>
+      </div>
+   </div>
+   {{ form.is_active.errors }}
+   <div class="row">
+      <div class="columns">
+         {{ form.is_active }}
+         <label for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}
+         </label>
+      </div>
+   </div>
+   {{ form.lat }}
+   {{ form.lon }}
+   <div class="row">
+      <div class="columns">
+         <input id="bandmap-add-submit" class="primary button" type="submit"
+            name="submit_button" value="Submit" />
+      </div>
+   </div>
 </form>
-<p>Back to the <a href="{% url 'bandmap-map' %}">surf band map</a>.</p>
 {% endblock %}

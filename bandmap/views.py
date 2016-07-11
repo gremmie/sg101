@@ -18,7 +18,7 @@ SUCCESS = u"Successfully submitted {} for admin review. Thanks!"
 
 
 def map_view(request):
-    return render(request, 'bandmap/map.html')
+    return render(request, 'bandmap/map.html', {'V3_DESIGN': True})
 
 
 @login_required
@@ -40,6 +40,7 @@ def add_band(request):
 
     return render(request, 'bandmap/add.html', {
         'form': form,
+        'V3_DESIGN': True,
         })
 
 

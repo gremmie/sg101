@@ -1,13 +1,12 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/bandmap.css" %}" />
 {% endblock %}
+{% block content %}
+{% block bandmap_content %}{% endblock %}
+{% endblock %}
 {% block custom_js %}
 <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA8-qKS8Qi9vALxgndMLCdxQrRkXJ_CWNQ"></script>
 <script type="text/javascript" src="{% static "js/bandmap.js" %}"></script>
-{% endblock %}
-{% block content %}
-<h2>Surf Band Map</h2>
-{% block bandmap_content %}{% endblock %}
 {% endblock %}

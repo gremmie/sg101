@@ -1,27 +1,57 @@
 {% extends 'bandmap/bandmap_base.html' %}
 {% block bandmap_content %}
+<h2>Surf Band Map</h2>
 <p>Welcome to our surf band map! This map is updated by our users and displays
 the locations of both active and inactive surf bands from around the world.</p>
-<div id="map-canvas"></div>
-<div id="map-info">
-   <ul>
-      <li>Number of bands: <span id="map-band-count">0</span></li>
-      <li>Bands: <select id="map-bands"></select></li>
-      <li>Show: <select id="map-filter">
-                  <option value="all">all bands</option>
-                  <option value="active">active bands</option>
-                  <option value="inactive">inactive bands</option>
-               </select> <button id="map-filter-go">Go</button></li>
-      <li><a href="{% url 'bandmap-add' %}">Add a band to the map</a></li>
-   </ul>
-   <p>Map key:</p>
-   <ul>
-      <li>Active bands: <img src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="active marker" /></li>
-      <li>Inactive bands: <img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="inactive marker" /></li>
-   </ul>
+<div>
+   <p><i class="fi-torsos-all size-21"></i> Bands on the map:</p>
+   <div class="stat">
+      <span id="map-band-count">0</span>
+   </div>
 </div>
-<p>
+
+<div id="map-canvas" class="map-div"></div>
+
+<ul class="menu">
+  <li class="menu-text">
+      Active bands: <img src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="active marker" />
+  </li>
+  <li class="menu-text">
+      Inactive bands: <img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="inactive marker" />
+  </li>
+</ul>
+
+<div class="row">
+   <div class="columns">
+      <label>Bands:
+         <select id="map-bands"></select>
+      </label>
+   </div>
+</div>
+<div class="row">
+   <div class="small-12 medium-6 columns">
+      <div class="input-group">
+         <span class="input-group-label">Show:</span>
+         <select id="map-filter" class="input-group-field">
+            <option value="all">all bands</option>
+            <option value="active">active bands</option>
+            <option value="inactive">inactive bands</option>
+         </select>
+         <div class="input-group-button">
+            <button id="map-filter-go" class="button">Go</button>
+         </div>
+      </div>
+   </div>
+</div>
+<div>
+   <a class="button" href="{% url 'bandmap-add' %}">
+      <i class="fi-plus size-16"></i> Add a band to the map</a>
+</div>
+
+<hr>
+<div class="quiet">
 If you have any corrections or suggestions for bands on the map, please
 <a href="{% url 'contact-form' %}?subject=Surf%20Band%20Map">contact us</a>.
-</p>
+Members can <a href="{% url 'bandmap-add' %}">add bands to the map</a>.
+</div>
 {% endblock %}
