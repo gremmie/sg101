@@ -1,9 +1,12 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}Username Sent{% endblock %}
 {% block content %}
 <h2>Username Sent</h2>
+<div class="success callout">
+   Thank you. We have emailed the username to the email address you
+   provided. If the message doesn't arrive, please check your spam folders.
+</div>
 <p>
-Thank you. We have emailed the associated username to the email address you
-provided. 
+   <a href="{% url 'accounts-login' %}" class="primary button">Login</a>
 </p>
 {% endblock %}

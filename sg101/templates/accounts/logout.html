@@ -1,7 +1,14 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}Logged Out{% endblock %}
 {% block content %}
 <h2>Logged Out</h2>
-<p>You are now logged out of SurfGuitar101.com. Thanks for spending some quality time with us today. Tell all your
-friends about us and we hope we see you soon!</p>
+<div class="success callout">
+   You are now logged out of SurfGuitar101.com. Thanks for spending some
+   quality time with us today. Tell all your friends about us and we hope
+   we see you soon!
+</div>
+<p>
+   <a href="{% url 'accounts-login' %}"
+      class="primary button">I need more surf music, I want to login again.</a>
+</p>
 {% endblock %}

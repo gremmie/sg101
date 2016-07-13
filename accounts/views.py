@@ -8,6 +8,7 @@ import logging
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.conf import settings
+from django.views.generic import TemplateView
 
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
@@ -143,4 +144,16 @@ def username_query(request):
     else:
         form = ForgotUsernameForm()
 
-    return render(request, 'accounts/username_query.html', {'form': form})
+    return render(request, 'accounts/username_query.html', {
+        'form': form,
+        'V3_DESIGN': True,
+    })
+
+
+class UsernameSentView(TemplateView):
+    template_name = 'accounts/username_sent.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(UsernameSentView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context

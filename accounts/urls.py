@@ -20,11 +20,17 @@ urlpatterns = [
 urlpatterns += [
     url(r'^login/$',
         auth_views.login,
-        kwargs={'template_name': 'accounts/login.html'},
+        kwargs={
+            'template_name': 'accounts/login.html',
+            'extra_context': {'V3_DESIGN': True},
+        },
         name='accounts-login'),
     url(r'^logout/$',
         auth_views.logout,
-        kwargs={'template_name': 'accounts/logout.html'},
+        kwargs={
+            'template_name': 'accounts/logout.html',
+            'extra_context': {'V3_DESIGN': True},
+        },
         name='accounts-logout'),
     url(r'^password/$',
         auth_views.password_change,
@@ -56,6 +62,6 @@ urlpatterns += [
         accounts.views.username_query,
         name='accounts-username_query'),
     url(r'^username/sent/$',
-        TemplateView.as_view(template_name='accounts/username_sent.html'),
+        accounts.views.UsernameSentView.as_view(),
         name='accounts-username_sent'),
 ]
