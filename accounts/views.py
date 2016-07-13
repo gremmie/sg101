@@ -34,7 +34,10 @@ def register(request):
     else:
         form = RegisterForm()
 
-    return render(request, 'accounts/register.html', {'form': form})
+    return render(request, 'accounts/register.html', {
+        'form': form,
+        'V3_DESIGN': True,
+    })
 
 #######################################################################
 
@@ -43,7 +46,9 @@ def register1(request):
     if request.user.is_authenticated():
         return redirect(settings.LOGIN_REDIRECT_URL)
 
-    return render(request, 'accounts/register1.html')
+    return render(request, 'accounts/register1.html', {
+        'V3_DESIGN': True,
+    })
 
 #######################################################################
 
@@ -63,7 +68,10 @@ def register2(request):
     else:
         form = RegisterCodeForm()
 
-    return render(request, 'accounts/register2.html', {'form': form})
+    return render(request, 'accounts/register2.html', {
+        'form': form,
+        'V3_DESIGN': True,
+    })
 
 #######################################################################
 
@@ -81,7 +89,9 @@ def register_thanks(request):
     if request.user.is_authenticated():
         return redirect(settings.LOGIN_REDIRECT_URL)
 
-    return render(request, 'accounts/register_thanks.html')
+    return render(request, 'accounts/register_thanks.html', {
+        'V3_DESIGN': True,
+    })
 
 #######################################################################
 
@@ -97,22 +107,26 @@ def register_confirm(request, username, key):
     try:
         pending_user = PendingUser.objects.get(username = username)
     except PendingUser.DoesNotExist:
-        logger.error('Accounts register_confirm [%s]: user does not exist: %s', ip, username)
-        return render(request,
-                  'accounts/register_failure.html',
-                  {'username': username})
+        logger.error('Accounts register_confirm [%s]: user does not exist: %s',
+                     ip, username)
+        return render(request, 'accounts/register_failure.html', {
+            'username': username,
+            'V3_DESIGN': True,
+        })
 
     if pending_user.key != key:
         logger.error('Accounts register_confirm [%s]: key error: %s', ip, username)
-        return render(request,
-                'accounts/register_failure.html',
-                {'username': username})
+        return render(request, 'accounts/register_failure.html', {
+            'username': username,
+            'V3_DESIGN': True,
+        })
 
     create_new_user(pending_user, ip)
 
-    return render(request,
-            'accounts/register_success.html',
-            {'username': username})
+    return render(request, 'accounts/register_success.html', {
+        'username': username,
+        'V3_DESIGN': True,
+    })
 
 #######################################################################
 

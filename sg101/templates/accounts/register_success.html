@@ -1,8 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}Registration Confirmed{% endblock %}
 {% block content %}
-<h2>Congratulations, Your Account Has Been Created</h2>
-<p>Your registration of the user <strong>{{ username }}</strong> has been successful. Welcome to the site!<p>
-<p>Please proceed to the <a href="{% url 'django.contrib.auth.views.login' %}">login page</a> to log into the site
-with your username <strong>{{ username }}</strong> and the password you registered with.</p>
+<h2>Account Created</h2>
+<div class="success callout">
+   <i class="fi-like size-21"></i>
+   Welcome to SurfGuitar101.com <strong>{{ username }}</strong>!
+   Your account was successfully created.
+</div>
+<p>
+   Please proceed to the
+   <a href="{% url 'django.contrib.auth.views.login' %}">login page</a> and sign
+   in with your username <strong>{{ username }}</strong> and the
+   password you registered with.
+</p>
+<p>
+   <a href="{% url 'django.contrib.auth.views.login' %}"
+      class="primary button">Login Now</a>
+</p>
 {% endblock %}

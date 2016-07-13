@@ -1,11 +1,8 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
-{% block custom_js %}
-<script type="text/javascript" src="{% static "js/accounts_code.js" %}"></script>
-{% endblock %}
 {% block title %}New User Registration Step 2{% endblock %}
 {% block content %}
-<h2>New User Registration Step 2</h2>
+<h2>New User Registration <small>Step 2</small></h2>
 <p>
 Thank you! You are almost finished with your registration! Just one more step.
 </p>
@@ -13,16 +10,22 @@ Thank you! You are almost finished with your registration! Just one more step.
 Please remember or write down the following code as we will ask you to type
 it on the next page.
 </p>
-<p>
-   <strong class="large">
-   <span id="reg-code-block">Please wait for the registration code to appear...</span>
-   </strong>
-</p>
+<div class="callout large">
+   <p class="text-center">
+   <span id="reg-code-block" class="stat">Please wait for the registration code to appear...</span>
+   </p>
+</div>
 <p>
 Got the code memorized or written down? Go to the next page and enter it.
 </p>
 
 <form action="{% url 'accounts-register2' %}" method="get">
-<button>Continue...</button>
+   <div class="clearfix">
+      <button type="submit" class="primary button float-right">Next Step &nbsp;
+         <i class="fi-arrow-right size-21"></i></button>
+   </div>
 </form>
+{% endblock %}
+{% block custom_js %}
+<script src="{% static "js/accounts_code.js" %}"></script>
 {% endblock %}

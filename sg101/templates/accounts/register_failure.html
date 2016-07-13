@@ -1,9 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}Registration Error{% endblock %}
 {% block content %}
 <h2>Registration Error</h2>
-<p>We're sorry, but we don't have any registration information available for the user {{ username }}. Registration
-information is only good for 24 hours, and it may have expired. If you think this may have happened, please
-<a href="{% url 'accounts.views.register' %}">register again</a>. Sorry for the inconvenience.</p>
-<p>If you keep seeing this message, please contact the site staff for assistance.</p>
+<div class="alert callout">
+   We're sorry, we don't have any registration information available for the 
+   user <strong>{{ username }}</strong>. Registration information is only good
+   for 24 hours, and it may have expired. If you think this may have happened, please
+   <a href="{% url 'accounts.views.register' %}">register again</a>.
+</div>
+<p>
+   If you continue to have problems, please
+   <a href="{% url 'contact-form' %}?subject=Registration%20Problems">contact
+      the site staff</a> for assistance.
+</p>
 {% endblock %}

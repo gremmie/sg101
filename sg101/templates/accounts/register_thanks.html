@@ -1,8 +1,15 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}Registration Complete{% endblock %}
 {% block content %}
 <h2>Thanks for Registering!</h2>
-<p>A confirmation email has just been sent to the email address you provided. To complete
-the registration process, please follow the instructions in the confirmation email.</p>
-<p>If you do not receive the email, please check any spam folders.</p>
+<div class="success callout">
+   <i class="fi-like size-21"></i>
+   A confirmation email has just been sent to the email address you provided.
+   To complete the registration process, please follow the instructions in the
+   confirmation email.
+</div>
+<div class="alert callout">
+   <i class="fi-alert size-21"></i>
+   If you do not receive the email, please check any spam folders.
+</div>
 {% endblock %}
