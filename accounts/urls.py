@@ -2,7 +2,6 @@
 from django.conf.urls import url
 from django.conf import settings
 import django.contrib.auth.views as auth_views
-from django.views.generic import TemplateView
 
 import accounts.views
 
@@ -34,8 +33,11 @@ urlpatterns += [
         name='accounts-logout'),
     url(r'^password/$',
         auth_views.password_change,
-        {'template_name': 'accounts/password_change.html',
-         'post_change_redirect': settings.LOGIN_REDIRECT_URL},
+        kwargs={
+            'template_name': 'accounts/password_change.html',
+            'post_change_redirect': settings.LOGIN_REDIRECT_URL,
+            'extra_context': {'V3_DESIGN': True},
+        },
         name='accounts-password_change'),
     url(r'^password/reset/$',
         auth_views.password_reset,
