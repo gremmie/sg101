@@ -11,4 +11,5 @@ def suspended(request):
 
     return render(request, 'antispam/suspended.html', {
         'is_active': is_active,
-        })
+        'V3_DESIGN': True,
+    })
