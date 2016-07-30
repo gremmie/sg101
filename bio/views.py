@@ -72,6 +72,7 @@ def my_profile(request):
         'hide_email': False,
         'this_is_me': True,
         'badge_collection': badge_collection,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -96,6 +97,7 @@ def view_profile(request, username):
         'hide_email': hide_email,
         'this_is_me': False,
         'badge_collection': badge_collection,
+        'V3_DESIGN': True,
         })
 
 #######################################################################

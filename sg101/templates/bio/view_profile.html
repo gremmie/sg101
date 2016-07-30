@@ -1,4 +1,4 @@
-{% extends 'bio/base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load bio_tags %}
 {% load elsewhere_tags %}
@@ -6,14 +6,6 @@
 {% load forum_tags %}
 {% load messages_tags %}
 {% block title %}User Profile for {{ subject.username }}{% endblock %}
-{% block custom_js %}
-<script type="text/javascript">
-   $(document).ready(function() {
-      $('#bio_profile tr:even').addClass('even');
-   });
-</script>
-<script type="text/javascript" src="{% static "js/bio.js" %}"></script>
-{% endblock %}
 {% block content %}
 <div class="user_profile">
    <h2>User Profile for {{ subject.username }}</h2>
@@ -25,14 +17,34 @@
    </ul>
    {% endif %}
    {% if this_is_me %}
-   <p>{% avatar subject 0 %}
-   <ul>
-      <li><a href="{% url 'forums-my_posts' %}">My forum posts</a></li>
-      <li><a href="{% url 'user_photos-gallery' username=subject.username %}">My uploaded photos</a></li>
-      <li><a href="{% url 'forums-manage_favorites' %}">My favorite forum topics</a></li>
-      <li><a href="{% url 'forums-manage_subscriptions' %}">My forum topic subscriptions</a></li>
-   </ul>
-   </p>
+   <div>
+      {% avatar subject 0 %}
+   </div>
+   <h3>My Stuff</h3>
+   <div class="stacked-for-small button-group">
+      <a class="success button" href="{% url 'bio-edit_profile' %}"
+         title="Edit your profile">
+         <i class="fi-torso"></i> Profile</a>
+      <a class="button" href="{% url 'messages-inbox' %}"
+         title="See your private messages">
+         <i class="fi-comment"></i> Messages</a>
+      <a class="button" href="{% url 'forums-my_posts' %}"
+         title="See your forum posts">
+         <i class="fi-comments"></i> Forum Posts</a>
+      <a class="button" href="{% url 'user_photos-gallery' username=subject.username %}"
+         title="View your uploaded photos">
+         <i class="fi-photo"></i> Photos</a>
+      <a class="button" href="{% url 'forums-manage_favorites' %}"
+         title="Manage your forum favorites">
+         <i class="fi-bookmark"></i> Favorites</a>
+      <a class="button" href="{% url 'forums-manage_subscriptions' %}"
+         title="Manage your forum subscriptions">
+         <i class="fi-mail"></i> Subscriptions</a>
+      <a class="alert button" href="{% url 'accounts-password_change' %}"
+         title="Change your password">
+         <i class="fi-key"></i> Password</a>
+   </div>
+   <h3>My Profile</h3>
    {% else %}
    <p>{% avatar subject 0 %}</p>
    {% endif %}
@@ -68,17 +80,23 @@
    {% endif %}
    <tr><th>Elsewhere</th><td>{% elsewhere_links subject %}</td></tr>
    <tr><th>Time Zone</th><td>{{ profile.time_zone }}</td></tr>
-   <tr><th>Badges</th><td>
-         {% if badge_collection %}
-         <table id="badge_summary">
-         <tr><th>Badge</th><th>Qty.</th><th>Name</th><th>Description</th></tr>
-         {% for bo in badge_collection %}
-         <tr><td>{{ bo.badge.html|safe }}</td><td>{{ bo.count }}</td><td>{{ bo.badge.name }}</td><td>{{ bo.badge.description }}</td></tr>
-         {% endfor %}
-         </table>
-         {% endif %}
-      </td></tr>
 </table>
+{% if badge_collection %}
+<h3>Badges</h3>
+<table id="badge_summary" class="stack">
+   <thead>
+      <tr><th>Badge</th><th>Qty.</th><th>Name</th><th>Description</th></tr>
+   </thead>
+   <tbody>
+   {% for bo in badge_collection %}
+      <tr><td>{{ bo.badge.html|safe }}</td>
+          <td>{{ bo.count }}</td>
+          <td>{{ bo.badge.name }}</td>
+          <td>{{ bo.badge.description }}</td></tr>
+   {% endfor %}
+   </tbody>
+</table>
+{% endif %}
 </div>
 {% if this_is_me %}
 <ul class="icon-list">
@@ -106,4 +124,8 @@
 </ul>
 {% endif %}
 {% endif %}
+{% endblock %}
+
+{% block custom_js %}
+<script src="{% static "js/bio.js" %}"></script>
 {% endblock %}
