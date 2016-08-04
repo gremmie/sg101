@@ -1,4 +1,4 @@
-{% extends 'bio/base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% block title %}Change My Avatar{% endblock %}
 {% block content %}
@@ -9,15 +9,15 @@
    To change your avatar, upload a file using the form, below. You may leave the
    form blank to reset your avatar to the default.
    </p>
-   <p>
+   <div class="callout">
    Your file must be a recognizable graphic file, such as jpeg, gif, png, etc. 
    The maximum size of an avatar is 100 x 100 pixels. If your uploaded file is larger than 
    this it will be scaled down to 100 x 100 pixels. For best results, please ensure your
    image is square.
-   </p>
+   </div>
    <form enctype="multipart/form-data" method="POST" action=".">{% csrf_token %}
       {{ form.as_p }}
-      <input type="submit" value="Update Avatar" />
-      &nbsp;<a href="{% url 'bio-me' %}">Cancel</a>
+      <input type="submit" class="button" value="Update Avatar" />
+      <a href="{% url 'bio-me' %}" class="secondary button">Cancel</a>
    </form>
 {% endblock %}

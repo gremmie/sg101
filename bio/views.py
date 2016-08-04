@@ -157,6 +157,7 @@ def change_avatar(request):
 
     return render(request, 'bio/avatar.html', {
         'form': form,
+        'V3_DESIGN': True,
          })
 
 #######################################################################
