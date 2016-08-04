@@ -7,47 +7,64 @@
 {% load messages_tags %}
 {% block title %}User Profile for {{ subject.username }}{% endblock %}
 {% block content %}
-<div class="user_profile">
-   <h2>User Profile for {{ subject.username }}</h2>
-   {% if messages %}
-   <ul class="user-messages">
-    {% for message in messages %}
-       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-   </ul>
+<h2>User Profile for {{ subject.username }}</h2>
+{% if messages %}
+<ul class="user-messages">
+ {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+ {% endfor %}
+</ul>
+{% endif %}
+<p>
+   {% avatar subject 0 %}
+</p>
+{% if this_is_me %}
+<h3>My Stuff</h3>
+<div class="stacked-for-small button-group">
+   <a class="success button" href="{% url 'bio-edit_profile' %}"
+      title="Edit your profile">
+      <i class="fi-torso"></i> Profile</a>
+   <a class="button" href="{% url 'messages-inbox' %}"
+      title="See your private messages">
+      <i class="fi-comment"></i> Messages</a>
+   <a class="button" href="{% url 'forums-my_posts' %}"
+      title="See your forum posts">
+      <i class="fi-comments"></i> Forum Posts</a>
+   <a class="button" href="{% url 'user_photos-gallery' username=subject.username %}"
+      title="View your uploaded photos">
+      <i class="fi-photo"></i> Photos</a>
+   <a class="button" href="{% url 'forums-manage_favorites' %}"
+      title="Manage your forum favorites">
+      <i class="fi-bookmark"></i> Favorites</a>
+   <a class="button" href="{% url 'forums-manage_subscriptions' %}"
+      title="Manage your forum subscriptions">
+      <i class="fi-mail"></i> Subscriptions</a>
+   <a class="alert button" href="{% url 'accounts-password_change' %}"
+      title="Change your password">
+      <i class="fi-key"></i> Password</a>
+</div>
+<h3>My Profile</h3>
+{% else %}
+<div class="stacked-for-small button-group">
+   <a class="button" href="{% send_pm_url subject.username %}"
+      title="Send {{ subject.username }} a private message">
+      <i class="fi-comment"></i> Private Message</a>
+   {% if not profile.hide_email %}
+      <a class="button" href="mailto:{{ subject.email }}"
+         title="Send {{ subject.username }} an email">
+         <i class="fi-mail"></i> Email</a>
    {% endif %}
-   {% if this_is_me %}
-   <div>
-      {% avatar subject 0 %}
-   </div>
-   <h3>My Stuff</h3>
-   <div class="stacked-for-small button-group">
-      <a class="success button" href="{% url 'bio-edit_profile' %}"
-         title="Edit your profile">
-         <i class="fi-torso"></i> Profile</a>
-      <a class="button" href="{% url 'messages-inbox' %}"
-         title="See your private messages">
-         <i class="fi-comment"></i> Messages</a>
-      <a class="button" href="{% url 'forums-my_posts' %}"
-         title="See your forum posts">
-         <i class="fi-comments"></i> Forum Posts</a>
-      <a class="button" href="{% url 'user_photos-gallery' username=subject.username %}"
-         title="View your uploaded photos">
-         <i class="fi-photo"></i> Photos</a>
-      <a class="button" href="{% url 'forums-manage_favorites' %}"
-         title="Manage your forum favorites">
-         <i class="fi-bookmark"></i> Favorites</a>
-      <a class="button" href="{% url 'forums-manage_subscriptions' %}"
-         title="Manage your forum subscriptions">
-         <i class="fi-mail"></i> Subscriptions</a>
-      <a class="alert button" href="{% url 'accounts-password_change' %}"
-         title="Change your password">
-         <i class="fi-key"></i> Password</a>
-   </div>
-   <h3>My Profile</h3>
-   {% else %}
-   <p>{% avatar subject 0 %}</p>
-   {% endif %}
+   <a class="button" href="{% url 'forums-posts_for_user' username=subject.username %}"
+      title="See {{ subject.username }}'s forum posts">
+      <i class="fi-comments"></i> Forum Posts</a>
+   <a class="button" href="{% url 'user_photos-gallery' username=subject.username %}"
+      title="View {{ subject.username }}'s photos">
+      <i class="fi-photo"></i> Photos</a>
+   <a class="alert button profile-flag" href="#" id="fp-{{ profile.id }}"
+      title="Report {{ subject.username }}'s profile">
+      <i class="fi-flag"></i> Report Profile</a>
+</div>
+{% endif %}
 <table id="bio_profile">
    <tr><th>Full Name</th><td>{{ subject.get_full_name }}</td></tr>
    <tr><th>Date Joined</th><td>{{ subject.date_joined|date:"F d, Y" }}</td></tr>
@@ -70,7 +87,7 @@
    <tr><th>Interests</th><td>{{ profile.interests }}</td></tr>
    {% endif %}
    {% if not profile.hide_email %}
-   <tr><th>Email</th><td>{{ subject.email }}</td></tr>
+   <tr><th>Email</th><td><a href="mailto:{{ subject.email }}">{{ subject.email }}</a></td></tr>
    {% endif %}
    {% if profile.profile_html %}
    <tr><th>Profile</th><td>{{ profile.profile_html|safe }}</td></tr>
@@ -96,33 +113,6 @@
    {% endfor %}
    </tbody>
 </table>
-{% endif %}
-</div>
-{% if this_is_me %}
-<ul class="icon-list">
-   <li><a href="{% url 'bio-edit_profile' %}"><img src="{% static "icons/application_edit.png" %}" alt="Edit Profile" /></a>
-   <a href="{% url 'bio-edit_profile' %}">Edit Profile</a></li>
-   <li><a href="{% url 'bio-change_avatar' %}"><img src="{% static "icons/image_edit.png" %}" alt="Change Avatar" /></a>
-      <a href="{% url 'bio-change_avatar' %}">Change Avatar</a></li>
-   <li><a href="{% url 'user_photos-upload' %}"><img src="{% static "icons/picture_add.png" %}" alt="Upload Photo" /></a>
-      <a href="{% url 'user_photos-upload' %}">Upload Photo</a></li>
-   <li><a href="{% url 'bio-edit_elsewhere' %}"><img src="{% static "icons/link_edit.png" %}" alt="Edit Links" /></a>
-   <a href="{% url 'bio-edit_elsewhere' %}">Edit Elsewhere Links</a></li>
-   <li><a href="{% url 'accounts-password_change' %}"><img src="{% static "icons/key.png" %}" alt="Change Password" /></a>
-      <a href="{% url 'accounts-password_change' %}">Change Password</a></li>
-</ul>
-{% else %}
-{% if user.is_authenticated %}
-<ul class="icon-list">
-   <li><a href="{% send_pm_url subject.username %}"><img src="{% static "icons/note.png" %}" alt="PM" title="Send Private Message" /></a> <a href="{% send_pm_url subject.username %}">Send a private message to {{ subject.username }}</a></li>
-   <li><a href="{% url 'forums-posts_for_user' username=subject.username %}"><img src="{% static "icons/comments.png" %}"
-      alt="Forum Posts" title="View forum posts by {{ subject.username }}" /></a> <a href="{% url 'forums-posts_for_user' username=subject.username %}">View forum posts by {{ subject.username }}</a></li>
-   <li><a href="{% url 'user_photos-gallery' username=subject.username %}"><img src="{% static "icons/pictures.png" %}"
-      alt="View photos" title="View photos uploaded by {{ subject.username }}" /></a> <a href="{% url 'user_photos-gallery' username=subject.username %}">View photos uploaded by {{ subject.username }}</a></li>
-   <li><img src="{% static "icons/flag_red.png" %}" alt="Flag" />
-      <a href="#" class="profile-flag" id="fp-{{ profile.id }}">Report this profile</a></li>
-</ul>
-{% endif %}
 {% endif %}
 {% endblock %}
 
