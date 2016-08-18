@@ -31,19 +31,17 @@ class EditUserForm(forms.ModelForm):
 
 class EditUserProfileForm(forms.ModelForm):
     """Form for editing the fields of the UserProfile model."""
-    location = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
-    occupation = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
-    interests = forms.CharField(required=False, widget=forms.TextInput(attrs={'size': 64 }))
     time_zone = forms.CharField(required=False, widget=forms.HiddenInput())
     use_24_time = forms.BooleanField(label='Show times in 24-hour mode', required=False)
-    profile_text = forms.CharField(required=False,
-        widget=forms.Textarea(attrs={'class': 'markItUp'}))
-    signature = forms.CharField(required=False,
-        widget=forms.Textarea(attrs={'class': 'markItUp'}))
+    hide_email = forms.BooleanField(
+        label="Don't show my email address on my public profile",
+        required=False)
     auto_favorite = forms.BooleanField(
-        label='Automatically favorite every forum topic I create or reply to', required=False)
+        label='Automatically favorite every forum topic I create or reply to',
+        required=False)
     auto_subscribe = forms.BooleanField(
-        label='Automatically subscribe to every forum topic I create or reply to', required=False)
+        label='Automatically subscribe to every forum topic I create or reply to',
+        required=False)
 
     class Meta:
         model = UserProfile

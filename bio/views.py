@@ -105,8 +105,6 @@ def view_profile(request, username):
 @login_required
 def edit_profile(request):
     if request.method == 'POST':
-        if request.POST.get('submit_button', 'Cancel') == 'Cancel':
-            return redirect('bio-me')
         profile = request.user.profile
         user_form = EditUserForm(request.POST, instance=request.user)
         profile_form = EditUserProfileForm(request.POST, instance=profile)
@@ -124,6 +122,7 @@ def edit_profile(request):
     return render(request, 'bio/edit_profile.html', {
         'user_form': user_form,
         'profile_form': profile_form,
+        'V3_DESIGN': True,
          })
 
 #######################################################################
