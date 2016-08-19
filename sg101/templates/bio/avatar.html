@@ -2,6 +2,18 @@
 {% load bio_tags %}
 {% block title %}Change My Avatar{% endblock %}
 {% block content %}
+
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
+      <li><a href="{% url 'bio-edit_profile' %}">Edit Profile</a></li>
+      <li>
+      <span class="show-for-sr">Current: </span> Change Avatar
+      </li>
+   </ul>
+</nav>
+
+
 <h2>Change My Avatar</h2>
    <p>This is your current avatar:</p>
    <p>{% avatar user 0 %}</p>
