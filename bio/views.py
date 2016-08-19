@@ -251,6 +251,7 @@ def edit_elsewhere(request):
         'sn_form': sn_form,
         'im_form': im_form,
         'w_form': w_form,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
