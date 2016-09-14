@@ -51,4 +51,5 @@ class UserSearchView(SearchView):
     def extra_context(self):
         return {
             'query_parser_error': self.query_parser_error,
+            'V3_DESIGN': True,
         }

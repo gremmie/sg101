@@ -38,14 +38,11 @@ class CustomModelSearchForm(ModelSearchForm):
 
     """
     q = forms.CharField(required=False, label='All these words',
-            widget=forms.TextInput(attrs={'type': 'search', 'class': 'search',
-                'size': 48}))
+                        widget=forms.TextInput(attrs={'type': 'search'}))
     exact = forms.CharField(required=False, label='This exact word or phrase',
-            widget=forms.TextInput(attrs={'type': 'search', 'class': 'search',
-                'size': 48}))
+                            widget=forms.TextInput(attrs={'type': 'search'}))
     exclude = forms.CharField(required=False, label='None of these words',
-            widget=forms.TextInput(attrs={'type': 'search', 'class': 'search',
-                'size': 48}))
+                              widget=forms.TextInput(attrs={'type': 'search'}))
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
