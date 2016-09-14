@@ -103,7 +103,7 @@
          {% if not page.has_previous %}disabled{% endif %}">
             {% if page.has_previous %}<a href="?{% encode_params request.GET 'q' 'exact' 'exclude' 'models' %}&amp;page={{ page.previous_page_number }}">{% endif %}Previous Page{% if page.has_previous %}</a>{% endif %}
       </li>
-      <li class="pagination-next"
+      <li class="pagination-next
          {% if not page.has_next %}disabled{% endif %}">
             {% if page.has_next %}<a href="?{% encode_params request.GET 'q' 'exact' 'exclude' 'models' %}&amp;page={{ page.next_page_number }}">{% endif %}Next Page{% if page.has_next %}</a>{% endif %}
       </li>
