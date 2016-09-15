@@ -51,18 +51,20 @@
    <fieldset class="fieldset">
    <legend>Search in</legend>
       {{ form.models.errors }}
-      <div class="row">
-         <div class="columns">
-            {% for model in form.models %}
+      <div class="row small-up-1 medium-up-2 large-up-3">
+         {% for model in form.models %}
+            <div class="columns">
                {{ model.tag }}<label for="{{ model.id_for_label }}">
                {{ model.choice_label }}</label>
-            {% endfor %}
-         </div>
+            </div>
+         {% endfor %}
       </div>
       <div class="row">
          <div class="columns text-center">
-            <a href="#" id="chk_all">Check all</a> |
-            <a href="#" id="chk_none">Check none</a>
+            <div class="small button-group">
+               <a href="#" id="chk_all" class="secondary button">Check all</a>
+               <a href="#" id="chk_none" class="secondary button">Check none</a>
+            </div>
          </div>
       </div>
    </fieldset>
