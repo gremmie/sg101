@@ -146,3 +146,33 @@ div.band-balloon {
 .more-top-margin {
    margin-top: 1.5rem;
 }
+
+
+// Foundation's table.stack only shows the first th, but I want all of them.
+@mixin sg101-table-stack {
+  thead {
+    th {
+      display: block;
+    }
+  }
+
+  tfoot {
+    display: none;
+  }
+
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  td {
+    border-top: 0;
+  }
+}
+
+table.sg101-stack {
+   @include breakpoint(medium down) {
+      @include sg101-table-stack;
+   }
+}
