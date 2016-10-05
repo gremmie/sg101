@@ -1,10 +1,7 @@
 {% extends 'messages/messages_base.html' %}
 {% load static from staticfiles %}
-{% block custom_js %}
-<script src="{% static "js/messages.js" %}"></script>
-{% endblock %}
 {% block messages_content %}
-<h3>Trash <small>(Page {{ page.number }} of {{ page.paginator.num_pages }})</small></h3>
+<h3>Trash</h3>
 <p>
 This is your trash folder. It contains messages that you have deleted. The messages will be gone
 forever when the other party deletes their copies. Until that happens you can undelete them to move
@@ -14,9 +11,10 @@ them back to either the inbox or outbox.
 Messages in <strong>bold</strong> are unread.  Messages in <em>italics</em> have been replied to.
 </p>
 {% if page.object_list %}
-   {% include "messages/pagination.html" %}
+   {% include "core/v3/pagination.html" %}
    <form action="{% url 'messages-undelete' %}" method="post" onsubmit="return bulkMsgAction('undelete');">{% csrf_token %}
-   <table class="messages">
+   <table class="sg101-stack">
+   <thead>
    <tr>
       <th>From</th>
       <th>To</th>
@@ -24,6 +22,7 @@ Messages in <strong>bold</strong> are unread.  Messages in <em>italics</em> have
       <th>Date</th>
       <th><input type="checkbox" onclick="tabMasterCheckClick(this, 'pm_ids');" /></th>
    </tr>
+   </thead>
    {% for msg in page.object_list %}
    <tr>
       <td><a href="{% url 'bio-view_profile' msg.sender.username %}">
@@ -38,12 +37,20 @@ Messages in <strong>bold</strong> are unread.  Messages in <em>italics</em> have
       <td><input type="checkbox" name="pm_ids" value="{{ msg.id }}" /></td>
    </tr>
    {% endfor %}
-   <tr><td colspan="5"><input type="submit" value="Undelete Checked Messages" /></td></tr>
    </table>
    <input type="hidden" name="page" value="{{ page.number }}" />
+   <div class="row">
+      <div class="columns">
+         <input type="submit" value="Undelete Checked Messages"
+            class="primary button" />
+      </div>
+   </div>
    </form>
-   {% include "messages/pagination.html" %}
+   {% include "core/v3/pagination.html" %}
 {% else %}
    <p><em>Your Trash is empty.</em></p>
 {% endif %}
+{% endblock %}
+{% block custom_js %}
+<script src="{% static "js/messages.js" %}"></script>
 {% endblock %}

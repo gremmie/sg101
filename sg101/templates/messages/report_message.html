@@ -13,11 +13,25 @@ reviewed and possibly deleted.
 {% include "messages/message.html" %}
 
 <form action="." method="post" id="report_form">{% csrf_token %}
-<fieldset>
+<fieldset class="fieldset">
 <legend>Report Message</legend>
-{{ form.as_p }}
-<input type="submit" name="submit" value="Submit Report" />
+   {{ form.non_field_errors }}
+   {{ form.comments.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ form.comments.id_for_label }}">
+            {{ form.comments.label }}
+            {{ form.comments }}
+         </label>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns">
+         <a href="{% url "messages-view" msg.id %}" class="secondary button">Cancel</a>
+         <input type="submit" name="submit" value="Submit Report"
+            class="alert button" />
+      </div>
+   </div>
 </fieldset>
 </form>
-<p><a href="{% url "messages-view" msg.id %}">Cancel report and return to message</a></p>
 {% endblock %}

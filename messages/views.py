@@ -74,6 +74,7 @@ def inbox(request):
         'page': page,
         'inbox_pct': pct_used,
         'outbox_pct': None,
+        'V3_DESIGN': True,
         })
 
 
@@ -91,6 +92,7 @@ def outbox(request):
         'page': page,
         'inbox_pct': None,
         'outbox_pct': pct_used,
+        'V3_DESIGN': True,
         })
 
 
@@ -106,6 +108,7 @@ def trash(request):
         'page': page,
         'inbox_pct': None,
         'outbox_pct': None,
+        'V3_DESIGN': True,
         })
 
 
@@ -129,6 +132,7 @@ def options(request):
     return render(request, 'messages/options.html', {
         'tab': 'options',
         'form': form,
+        'V3_DESIGN': True,
         })
 
 
@@ -157,6 +161,7 @@ def compose(request):
     return render(request, 'messages/compose.html', {
         'tab': 'compose',
         'compose_form': compose_form,
+        'V3_DESIGN': True,
         })
 
 
@@ -178,7 +183,9 @@ def view(request, msg_id):
     else:
         if msg.sender != request.user and msg.receiver != request.user:
             django_messages.error(request,
-                    "You don't have permission to read that message.")
+                                  "You don't have permission to read that message.",
+                                  extra_tags="alert")
+
             return redirect('messages-inbox')
 
         initial_data = {
@@ -206,6 +213,7 @@ def view(request, msg_id):
         'msg': msg,
         'form': form,
         'msg_flag': msg_flag,
+        'V3_DESIGN': True,
         })
 
 
@@ -278,7 +286,7 @@ def _delete_pms(request, pm_ids):
     if count > 0:
         django_messages.success(request, msg)
     else:
-        django_messages.error(request, msg)
+        django_messages.error(request, msg, extra_tags="alert")
 
 
 def _undelete_pms(user, msg_ids):
@@ -334,14 +342,16 @@ def report(request, msg_id):
     """
     msg = get_object_or_404(Message.objects.select_related(), pk=msg_id)
     if msg.receiver != request.user:
-        django_messages.error(request, "You can't report this message.")
+        django_messages.error(request, "You can't report this message.",
+                              extra_tags="alert")
         return redirect('messages-inbox')
     try:
         msg.flag
     except Flag.DoesNotExist:
         pass
     else:
-        django_messages.error(request, "This message has already been reported.")
+        django_messages.error(request, "This message has already been reported.",
+                              extra_tags="alert")
         return redirect('messages-inbox')
 
     if request.method == 'POST':
@@ -360,6 +370,7 @@ def report(request, msg_id):
     return render(request, 'messages/report_message.html', {
         'msg': msg,
         'form': form,
+        'V3_DESIGN': True,
         })
 
 
@@ -405,4 +416,4 @@ def _email_pms(request, msg_ids):
     if count > 0:
         django_messages.success(request, msg)
     else:
-        django_messages.error(request, msg)
+        django_messages.error(request, msg, extra_tags="alert")

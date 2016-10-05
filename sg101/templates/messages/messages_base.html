@@ -1,31 +1,33 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load script_tags %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/messages.css" %}" />
-{% endblock %}
 {% block content %}
 <h2>Your Private Messages</h2>
 
-{% if messages %}
-<ul class="user-messages">
 {% for message in messages %}
-   <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+   <div class="{{ message.tags }} callout">
+      {{ message }}
+   </div>
 {% endfor %}
-</ul>
-{% endif %}
 
-<div>
-<ul id="messages_menu">
-   <li>{% if tab != 'inbox' %}<a href="{% url 'messages-inbox' %}">{% endif %}Inbox{% if tab != 'inbox' %}</a>{% endif %}
-      {% if inbox_pct %}({{ inbox_pct }}% used){% endif %}</li>
-   <li>{% if tab != 'compose' %}<a href="{% url 'messages-compose' %}">{% endif %}Compose new message{% if tab != 'compose' %}</a>{% endif %}</li>
-   <li>{% if tab != 'outbox' %}<a href="{% url 'messages-outbox' %}">{% endif %}Outbox{% if tab != 'outbox' %}</a>{% endif %}
-      {% if outbox_pct %}({{ outbox_pct }}% used){% endif %}</li>
-   <li>{% if tab != 'trash' %}<a href="{% url 'messages-trash' %}">{% endif %}Trash{% if tab != 'trash' %}</a>{% endif %}</li>
-   <li>{% if tab != 'options' %}<a href="{% url 'messages-options' %}">{% endif %}Options{% if tab != 'options' %}</a>{% endif %}</li>
+<ul class="vertical medium-horizontal menu">
+   <li{% if tab == 'inbox' %} class="active"{% endif %}>
+      <a href="{% url 'messages-inbox' %}">Inbox</a>
+   </li>
+   <li{% if tab == 'compose' %} class="active"{% endif %}>
+      <a href="{% url 'messages-compose' %}">Compose</a>
+   </li>
+   <li{% if tab == 'outbox' %} class="active"{% endif %}>
+      <a href="{% url 'messages-outbox' %}">Outbox</a>
+   </li>
+   <li{% if tab == 'trash' %} class="active"{% endif %}>
+      <a href="{% url 'messages-trash' %}">Trash</a>
+   </li>
+   <li{% if tab == 'options' %} class="active"{% endif %}>
+      <a href="{% url 'messages-options' %}">Options</a>
+   </li>
 </ul>
-</div>
+
 <hr />
 
 {% block messages_content %}{% endblock %}
