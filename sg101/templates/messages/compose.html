@@ -2,6 +2,9 @@
 {% load core_tags %}
 {% load script_tags %}
 {% load static from staticfiles %}
+{% block custom_css %}
+{% css_tags 'jquery-ui' %}
+{% endblock %}
 {% block messages_content %}
 <h3>Compose Private Message</h3>
 <p>Use this form to send a new private message to another user.</p>
@@ -42,5 +45,7 @@
 {% include 'core/v3/post_box_modals.html' %}
 {% endblock %}
 {% block custom_js %}
+{% js_tags 'jquery-ui' %}
+<script src="{% static "js/v3/user_autocomplete.js" %}"></script>
 <script src="{% static "js/v3/post_box.js" %}"></script>
 {% endblock %}

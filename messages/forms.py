@@ -13,7 +13,6 @@ from core.functions import send_mail
 from core.html import ImageCheckError
 from core.html import image_check
 from core.markup import site_markup
-from core.widgets import AutoCompleteUserInput
 import messages
 from messages.models import Flag, Message, Options
 
@@ -28,9 +27,9 @@ class ComposeForm(forms.Form):
     """
     receiver = forms.CharField(label='To',
             max_length=30,
-            widget=AutoCompleteUserInput())
-    subject = forms.CharField(max_length=120, widget=forms.TextInput(attrs={'size': 52}))
-    message = forms.CharField(widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+            widget=forms.TextInput(attrs={'class': 'sg101-user-autocomplete'}))
+    subject = forms.CharField(max_length=120)
+    message = forms.CharField(widget=forms.Textarea)
     attach_signature = forms.BooleanField(label='Attach Signature?', required=False)
     parent_id = forms.IntegerField(required=False, widget=forms.HiddenInput)
 
