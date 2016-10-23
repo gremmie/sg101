@@ -27,7 +27,7 @@ class ComposeForm(forms.Form):
     """
     receiver = forms.CharField(label='To',
             max_length=30,
-            widget=forms.TextInput(attrs={'class': 'sg101-user-autocomplete'}))
+            widget=forms.TextInput(attrs={'class': 'sg101-autocomplete'}))
     subject = forms.CharField(max_length=120)
     message = forms.CharField(widget=forms.Textarea)
     attach_signature = forms.BooleanField(label='Attach Signature?', required=False)
@@ -38,6 +38,8 @@ class ComposeForm(forms.Form):
         self.user = user
         options = Options.objects.for_user(user)
         self.fields['attach_signature'].initial = options.attach_signature
+        url = reverse('core-ajax_users')
+        self.fields['receiver'].widget.attrs['data-autocomplete-url'] = url
 
     def clean_receiver(self):
         receiver = self.cleaned_data['receiver']
