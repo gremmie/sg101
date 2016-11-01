@@ -57,6 +57,8 @@ def index(request):
     return render(request, 'news/index.html', {
         'title': 'Main Index',
         'page': the_page,
+        'section': 'main',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -66,6 +68,8 @@ def archive_index(request):
     return render(request, 'news/archive_index.html', {
         'title': 'News Archive',
         'dates': dates,
+        'section': 'archives',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -88,6 +92,8 @@ def archive(request, year, month):
     return render(request, 'news/index.html', {
         'title': 'Archive for %s, %s' % (month_name, year),
         'page': the_page,
+        'section': 'archives',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -100,6 +106,8 @@ def category_index(request):
 
     return render(request, 'news/category_index.html', {
         'cat_list': cat_list,
+        'section': 'categories',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -120,6 +128,8 @@ def category(request, slug):
     return render(request, 'news/index.html', {
         'title': 'Category: ' + category.title,
         'page': the_page,
+        'section': 'categories',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -129,6 +139,7 @@ def story(request, story_id):
                 'submitter', 'category', 'forums_topic'), pk=story_id)
     return render(request, 'news/story.html', {
         'story': story,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -145,13 +156,17 @@ def submit(request):
 
     return render(request, 'news/submit_news.html', {
         'add_form': add_form,
+        'section': 'submit',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
 
 @login_required
 def submit_thanks(request):
-    return render(request, 'news/submit_news.html')
+    return render(request, 'news/submit_news.html', {
+        'V3_DESIGN': True,
+        })
 
 #######################################################################
 
@@ -159,6 +174,8 @@ def tags(request):
     tags = Tag.objects.cloud_for_model(Story)
     return render(request, 'news/tag_index.html', {
         'tags': tags,
+        'section': 'tags',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -180,6 +197,7 @@ def tag(request, tag_name):
     return render(request, 'news/index.html', {
         'title': 'Stories with tag: "%s"' % tag_name,
         'page': the_page,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -208,17 +226,23 @@ def email_story(request, story_id):
 
             subject = 'Interesting Story at ' + site.name
             send_mail(subject, msg, from_email, [to_email], reply_to=request.user.email)
-            return HttpResponseRedirect(reverse('news.views.email_thanks'))
+            return HttpResponseRedirect(reverse('news.views.email_thanks',
+                                                args=[story_id]))
     else:
         send_form = SendStoryForm()
 
     return render(request, 'news/send_story.html', {
         'send_form': send_form,
         'story': story,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
 
 @login_required
-def email_thanks(request):
-    return render(request, 'news/send_story.html')
+def email_thanks(request, story_id):
+    story = get_object_or_404(Story, pk=story_id)
+    return render(request, 'news/send_story.html', {
+        'story': story,
+        'V3_DESIGN': True,
+        })

@@ -9,53 +9,63 @@
 {% block custom_meta %}
 {% open_graph_meta_tags story %}
 {% endblock %}
-{% block news_css %}
+{% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
 {% endblock %}
-{% block custom_js %}
-{% if story.can_comment_on %}
-{% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
-{% endif %}
-{% endblock %}
 {% block news_content %}
-<div class="solid-background">
+<div class="news-story-summary">
 <h3>{{ story.title }}</h3>
-<div class="news-details">
+<div class="byline">
    Submitted by {% profile_link story.submitter.username %} on {{ story.date_submitted|date:"F d, Y" }}.
 </div>
 <hr />
-<div class="news-content">
-   <a href="{% url 'news-category' slug=story.category.slug %}">
-   <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}" title="{{ story.category.title }}" 
-      class="news-icon" /></a>
-   {{ story.short_text|safe }}
-   {{ story.long_text|safe }}
-   {{ story.admin_content|safe }}
-   <br clear="all" />
-   <hr />
-   <p>
-   Category: <a href="{% url 'news-category' slug=story.category.slug %}">{{ story.category.title }}</a>
-   <a href="{{ story.get_absolute_url }}"><img src="{% static "icons/link.png" %}"
-      alt="Story Permalink" title="Story Permalink" /></a>
-{% if user.is_authenticated %}
-      <a href="{% url 'news-email_story' story.id %}"><img src="{% static "icons/email_go.png" %}"
-      alt="Send this story to a friend" title="Send this story to a friend" /></a>
-{% endif %}
-   </p>
-   {% tags_for_object story as story_tags %}
-   {% if story_tags %}
-   <div class="news-tags">
-      <img src="{% static "icons/tag_blue.png" %}" alt="Tags" title="Tags" /> Tags:
-      <ul>
-         {% for tag in story_tags %}
-            <li><a href="{% url 'news-tag_page' tag_name=tag.name %}">{{ tag.name }}</a></li>
-         {% endfor %}
-      </ul>
+<div class="row">
+   <div class="columns">
+      <div>
+         {{ story.short_text|safe }}
+      </div>
+      <div>
+         {{ story.long_text|safe }}
+      </div>
+      <div>
+         {{ story.admin_content|safe }}
+      </div>
    </div>
-   {% endif %}
-   {% social_sharing story.title story.get_absolute_url %}
+   <div class="shrink columns show-for-medium">
+      <a href="{% url 'news-category' slug=story.category.slug %}">
+         <img src="{{ story.category.icon.url }}" alt="{{ story.category.title }}"
+            title="{{ story.category.title }}" />
+      </a>
+   </div>
 </div>
+
+<hr>
+
+<ul class="inline-no-bullet-list">
+   <li><a href="{% url 'news-category' slug=story.category.slug %}" title="Category">
+         <i class="fi-folder size-21"></i> {{ story.category.title }}</a></li>
+   <li><a href="{{ story.get_absolute_url }}" title="Permalink" />
+         <i class="fi-link size-21"></i> Permalink</a>
+   </li>
+   {% if user.is_authenticated %}
+   <li><a href="{% url 'news-email_story' story.id %}">
+         <i class="fi-mail size-21"></i> Email to Friend</a>
+   </li>
+   {% endif %}
+</ul>
+
+{% tags_for_object story as story_tags %}
+{% if story_tags %}
+<div class="news-tags">
+   <i class="fi-pricetag-multiple size-21"></i> Tags:
+   <ul class="inline-no-bullet-list">
+      {% for tag in story_tags %}
+         <li><a href="{% url 'news-tag_page' tag_name=tag %}">{{ tag }}</a></li>
+      {% endfor %}
+   </ul>
+</div>
+{% endif %}
+{% social_sharing story.title story.get_absolute_url %}
 
 {% if story.version == 0 %}
 {% get_comment_count for story as comment_count %}
@@ -64,7 +74,7 @@
 {% render_comment_list story %}
 {% if story.can_comment_on %}
 <p>Leave a comment?</p>
-{% render_comment_form user story %}
+{% render_comment_form_v3 user story %}
 {% else %}
 <p>Comments are closed for this story. If you'd like to share your thoughts on this story 
 with the site staff, you can <a href="{% url 'contact-form' %}">contact us directly</a>.</p>
@@ -80,4 +90,12 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 </p>
 {% endif %}
 </div>
+{% endblock %}
+
+{% block custom_js %}
+   {% if story.can_comment_on %}
+      <script src="{% static "js/comments.js" %}"></script>
+      <script src="{% static "js/jquery.form.min.js" %}"></script>
+      <script src="{% static "js/v3/post_box.js" %}"></script>
+   {% endif %}
 {% endblock %}

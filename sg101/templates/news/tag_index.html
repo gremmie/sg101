@@ -9,15 +9,12 @@ bigger the tag, the more stories we have tagged with it. Click a tag to view a l
 of stories with that tag.
 </p>
 {% if tags %}
-   <div class="news-tag-cloud">
-   <ul>
+   <ul class="inline-no-bullet-list">
    {% for tag in tags %}
       <li><a href="{% url 'news-tag_page' tag_name=tag.name %}">
-         <font size="{{ tag.font_size }}">{{ tag.name }}</font></a></li>
+         <span class="tag-{{ tag.font_size }}">{{ tag.name }}</span></a></li>
    {% endfor %}
    </ul>
-   </div>
-   <br />
 {% else %}
 <p>No tags available at this time.</p>
 {% endif %}

@@ -38,6 +38,15 @@
    }
 }
 
+.inline-no-bullet-list {
+   display: inline;
+   margin: 0 rem-calc(3);
+   li {
+      display: inline-block;
+      margin: 0 rem-calc(6);
+   }
+}
+
 .errorlist {
    background: #fbe3e4;
    color: map-get($foundation-palette, alert);
@@ -54,6 +63,11 @@
 .size-48 { font-size: rem-calc(48); }
 .size-60 { font-size: rem-calc(60); }
 .size-72 { font-size: rem-calc(72); }
+
+.tag-1 { font-size: rem-calc(12); }
+.tag-2 { font-size: rem-calc(16); }
+.tag-3 { font-size: rem-calc(20); }
+.tag-4 { font-size: rem-calc(24); }
 
 #logo-row {
    margin-top: rem-calc(8);
@@ -147,7 +161,6 @@ div.band-balloon {
    margin-top: 1.5rem;
 }
 
-
 // Foundation's table.stack only shows the first th, but I want all of them.
 @mixin sg101-table-stack {
   thead {
@@ -175,4 +188,30 @@ table.sg101-stack {
    @include breakpoint(medium down) {
       @include sg101-table-stack;
    }
+}
+
+.news-story-summary {
+   margin-top: 2rem;
+   margin-bottom: 3rem;
+   padding-top: 1.5rem;
+   border-top: thick dotted $sg101-green;
+   &:last-child {
+      padding-bottom: 1.5rem;
+      border-bottom: thick dotted $sg101-green;
+      margin-bottom: 2rem;
+   }
+}
+
+.byline {
+   font-size: smaller;
+   font-style: italic;
+   margin: 1rem 0.5rem;
+}
+
+.news-tags {
+   margin: 0.5rem 0.5rem;
+}
+
+.news-last-row {
+   margin: 1.5rem 0;
 }
