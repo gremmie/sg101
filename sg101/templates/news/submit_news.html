@@ -1,14 +1,7 @@
 {% extends 'news/base.html' %}
-{% load script_tags %}
+{% load core_tags %}
 {% load static from staticfiles %}
 {% block title %}News: Submit News{% endblock %}
-{% if add_form %}
-   {% block custom_js %}
-      {% script_tags 'jquery-ui markitup' %}
-      <script src="{% static "js/jquery.form.min.js" %}"></script>
-   {% endblock %}
-{% endif %}
-{% block submit-class %}class="active"{% endblock %}
 {% block news_content %}
 <h3>Submit News</h3>
 {% if add_form %}
@@ -22,25 +15,50 @@
       <li>Please spend some time on your grammar and spelling. Minor issues
       will be corrected by the staff, but major problems may cause a delay in
       publishing or even cause your item to be rejected.</li>
-      <li>To add images to your news item, use the forms at the bottom of the
-      page.</li>
    </ul>
    <p>Thank you for contributing content to SG101!</p>
    <form action="." method="post">{% csrf_token %}
-      <table>
-         {{ add_form.as_table }}
-         <tr><td>&nbsp;</td><td><input type="submit" value="Submit" />
-         &nbsp;<a href="{% url 'news-index_page' %}">Cancel</a></td></tr>
-      </table>
+      {{ add_form.non_field_errors }}
+      {{ add_form.title.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.title.id_for_label }}">
+               {{ add_form.title.label }}
+               {{ add_form.title }}
+            </label>
+         </div>
+      </div>
+      {{ add_form.category.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.category.id_for_label }}">
+               {{ add_form.category.label }}
+               {{ add_form.category }}
+            </label>
+         </div>
+      </div>
+      {% post_box add_form.short_markup %}
+      <a href="{% url 'news-index_page' %}" class="secondary button">Cancel</a>
+      <input type="submit" value="Submit News" class="primary button" />
    </form>
 
-   {% include 'user_photos/image_forms.html' %}
+   {% include 'core/v3/post_box_modals.html' %}
 
 {% else %}
-   <p><strong>Thank you for submitting a news item!</strong></p>
-   <p>Your news item has been submitted for review to the site staff. Your item may be edited for content,
-   grammar, or spelling. If there are any problems or questions, you will receive an email or private message.
-   Thank you for contributing to the site!</p>
+   <div class="success callout">
+      <h5>Thank you for submitting a news item!</h5>
+      <p>
+      Your news item has been submitted for review to the site staff. Your
+      item may be edited for content, grammar, or spelling. If there are any
+      problems or questions, you will receive an email or private message.
+      Thank you for contributing to the site!
+      </p>
+   </div>
 {% endif %}
-<br />
+{% endblock %}
+{% block custom_js %}
+   {% if add_form %}
+      <script src="{% static "js/jquery.form.min.js" %}"></script>
+      <script src="{% static "js/v3/post_box.js" %}"></script>
+   {% endif %}
 {% endblock %}
