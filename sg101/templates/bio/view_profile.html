@@ -21,9 +21,6 @@
 {% if this_is_me %}
 <h3>My Stuff</h3>
 <div class="stacked-for-small button-group">
-   <a class="success button" href="{% url 'bio-edit_profile' %}"
-      title="Edit your profile">
-      <i class="fi-torso"></i> Profile</a>
    <a class="button" href="{% url 'messages-inbox' %}"
       title="See your private messages">
       <i class="fi-comment"></i> Messages</a>
@@ -39,11 +36,17 @@
    <a class="button" href="{% url 'forums-manage_subscriptions' %}"
       title="Manage your forum subscriptions">
       <i class="fi-mail"></i> Subscriptions</a>
-   <a class="alert button" href="{% url 'accounts-password_change' %}"
+   <a class="button" href="{% url 'accounts-password_change' %}"
       title="Change your password">
       <i class="fi-key"></i> Password</a>
 </div>
 <h3>My Profile</h3>
+<div class="stacked-for-small button-group">
+   <a class="button" href="{% url 'bio-edit_profile' %}">
+      <i class="fi-wrench"></i> Edit Profile</a>
+   <a class="button" href="{% url 'bio-change_avatar' %}">
+      <i class="fi-torso"></i> Change Avatar</a>
+</div>
 {% else %}
 <div class="stacked-for-small button-group">
    <a class="button" href="{% send_pm_url subject.username %}"
