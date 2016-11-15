@@ -14,12 +14,13 @@ from forums.feeds import ForumsFeed
 from custom_search.forms import CustomModelSearchForm
 from custom_search.views import UserSearchView
 from core.views import FixedView
+from sg101.views import HomePageView
 from sg101.views import StoreView
 
 
 urlpatterns = [
    url(r'^$',
-       TemplateView.as_view(template_name='home.html'),
+       HomePageView.as_view(),
        name='home'),
    url(r'^about/$',
        FixedView.as_view(title='About', content_template='fixed/about.html'),

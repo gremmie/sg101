@@ -4,5 +4,11 @@
    {% include 'news/story_summary.html' %}
 {% endfor %}
 <hr />
-<p>For more news stories, check out our <a href="{% url 'news-index_page' %}">news archive</a>.</p>
+<div class="row">
+   <div class="columns">
+      <p>
+      For more news stories, check out our <a href="{% url 'news-index_page' %}">news archive</a>.
+      </p>
+   </div>
+</div>
 {% endif %}

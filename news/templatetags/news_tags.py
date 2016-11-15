@@ -26,4 +26,5 @@ def current_news():
     return {
         'stories': stories,
         'on_home': True,
+        'V3_DESIGN': True,
     }

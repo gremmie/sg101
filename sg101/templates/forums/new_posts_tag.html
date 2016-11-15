@@ -1,14 +1,19 @@
 {% load core_tags %}
-<div>
-<h2>Latest Forum Posts</h2>
-<p>Join us in our <a href="{% url 'forums-index' %}">forums</a> for some lively discussions. Here are the forum topics with new posts.</p>
-{% if topics %}
-   <ul>
-   {% for topic in topics %}
-      <li><a href="{{ topic.url }}">{{ topic.title }}</a> by {{ topic.author }} {{ topic.date|elapsed }}</li>
-   {% endfor %}
-   </ul>
-{% else %}
-   <p>No forum topics at this time.</p>
-{% endif %}
+<div class="row">
+   <div class="columns">
+      <h2>Latest Forum Posts</h2>
+      <p>
+      Join us in our <a href="{% url 'forums-index' %}">forums</a> for some
+      lively discussions. Here are the forum topics with new posts.
+      </p>
+      {% if topics %}
+         <ul>
+         {% for topic in topics %}
+            <li><a href="{{ topic.url }}">{{ topic.title }}</a> by {{ topic.author }} {{ topic.date|elapsed }}</li>
+         {% endfor %}
+         </ul>
+      {% else %}
+         <p>No forum topics at this time.</p>
+      {% endif %}
+   </div>
 </div>
