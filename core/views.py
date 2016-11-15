@@ -56,4 +56,5 @@ class FixedView(TemplateView):
         context = super(FixedView, self).get_context_data(**kwargs)
         context['title'] = self.title
         context['content_template'] = self.content_template
+        context['V3_DESIGN'] = True
         return context
