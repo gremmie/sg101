@@ -37,6 +37,8 @@ def link_index(request):
    return render(request, 'weblinks/index.html', {
       'categories': categories,
       'total_links': total_links,
+      'top_menu': 'categories',
+      'V3_DESIGN': True,
       })
 
 #######################################################################
@@ -53,6 +55,8 @@ def new_links(request):
    return render(request, 'weblinks/link_summary.html', {
       'page': the_page,
       'title': 'Newest Links',
+      'top_menu': 'new',
+      'V3_DESIGN': True,
       })
 
 #######################################################################
@@ -68,6 +72,8 @@ def popular_links(request):
    return render(request, 'weblinks/link_summary.html', {
       'page': the_page,
       'title': 'Popular Links',
+      'top_menu': 'popular',
+      'V3_DESIGN': True,
       })
 
 #######################################################################
@@ -90,13 +96,18 @@ A user has added a new link for your approval.
 
    return render(request, 'weblinks/add_link.html', {
       'add_form': add_form,
+      'top_menu': 'add',
+      'V3_DESIGN': True,
       })
 
 #######################################################################
 
 @login_required
 def add_thanks(request):
-   return render(request, 'weblinks/add_link.html')
+   return render(request, 'weblinks/add_link.html', {
+      'V3_DESIGN': True,
+      'top_menu': 'add',
+      })
 
 #######################################################################
 
@@ -132,6 +143,7 @@ def view_links(request, slug, sort='title'):
       's' : sort,
       'category' : cat,
       'page' : the_page,
+      'V3_DESIGN': True,
       })
 
 #######################################################################
@@ -150,14 +162,19 @@ def visit(request, link_id):
 
 #######################################################################
 
-@require_POST
 def random_link(request):
-   ids = Link.public_objects.values_list('id', flat=True)
-   if not ids:
-       raise Http404
-   id = random.choice(ids)
-   random_link = Link.public_objects.get(pk=id)
-   return _visit_link(request, random_link)
+    if request.method == 'POST':
+        ids = Link.public_objects.values_list('id', flat=True)
+        if not ids:
+           raise Http404
+        the_id = random.choice(ids)
+        random_link = Link.public_objects.get(pk=the_id)
+        return _visit_link(request, random_link)
+
+    return render(request, 'weblinks/random_link.html', {
+        'top_menu': 'random',
+        'V3_DESIGN': True,
+        })
 
 #######################################################################
 
@@ -187,4 +204,5 @@ def link_detail(request, id):
         raise Http404
     return render(request, 'weblinks/link_detail.html', {
         'link': link,
+        'V3_DESIGN': True,
         })

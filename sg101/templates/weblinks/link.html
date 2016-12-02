@@ -1,25 +1,20 @@
 {% load static from staticfiles %}
 {% load bio_tags %}
-<dt>
+<div>
 <h4><a href="{{ link.url }}">{{ link.title }}</a></h4>
-</dt>
-<dd>
 <p>{{ link.description }}</p>
 <form action="{% url 'weblinks-visit' link.id %}" method="post">{% csrf_token %}
-<table class="link-stats">
-   <tr>
-      <th>Added by:</th><td>{% profile_link link.user.username %}</td>
-      <th>Category:</th><td><a href="{% url 'weblinks-view_links' slug=link.category.slug sort='date' %}">{{ link.category.title }}</a></td>
-   </tr>
-   <tr>
-      <th>Date Added:</th><td>{{ link.date_added|date:"M d, Y" }}</td>
-      <th>Hits:</th><td>{{ link.hits }}</td>
-      <td>
-         <a href="#" class="weblinks-broken" id="link-{{ link.id }}"><img src="{% static "icons/link_break.png" %}" alt="Broken Link" title="Report this link as broken" /></a>
-      </td>
-   </tr>
-   <tr><td><input type="submit" value="Visit Site" /></td></tr>
-</table>
+<ul>
+   <li><strong>Added by:</strong> {% profile_link link.user.username %}</li>
+   <li><strong>Category:</strong> <a href="{% url 'weblinks-view_links'
+         slug=link.category.slug sort='date' %}">{{ link.category.title }}</a></li>
+   <li><strong>Date Added:</strong> {{ link.date_added|date:"M d, Y" }}</li>
+   <li><strong>Hits:</strong> {{ link.hits }}</li>
+</ul>
+<input type="submit" class="button" value="Visit Link" />
+<a id="link-{{ link.id }}" class="alert button weblinks-broken" href="#">
+   Report Broken Link</a>
+
 </form>
-<br />
-</dd>
+</div>
+<hr>

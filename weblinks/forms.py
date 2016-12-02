@@ -20,4 +20,4 @@ class AddLinkForm(forms.ModelForm):
 
    class Meta:
       model = PendingLink
-      exclude = ('user', 'date_added', 'update_date')
+      fields = ['category', 'title', 'url', 'description']

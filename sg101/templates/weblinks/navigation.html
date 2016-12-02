@@ -1,17 +1,28 @@
 {% load static from staticfiles %}
-<div class="app-logo">
-   <img src="{% static "icons/weblinks-logo.jpg" %}" alt="Links Logo" title="Links" />
-</div>
-<ul class="app-menu">
-<li><a href="{% url 'weblinks-main' %}">Categories</a></li>
-<li><a href="{% url 'weblinks-new_links' %}">New</a></li>
-<li><a href="{% url 'weblinks-popular_links' %}">Popular</a></li>
-{% if user.is_authenticated %}
-<li><a href="{% url 'weblinks-add_link' %}">Add Link</a></li>
-{% endif %}
-</ul>
-<div class="centered">
-   <form action="{% url 'weblinks-random_link' %}" method="post">{% csrf_token %}
-      <input type="submit" value="Visit a Random Link" />
-   </form>
+<div class="callout">
+   <div class="text-center">
+      <img src="{% static "icons/weblinks-logo.jpg" %}" alt="Links Logo"
+         title="Links" />
+   </div>
+   <div class="menu-centered more-top-margin">
+   <ul class="vertical medium-horizontal menu size-24">
+      <li{% if top_menu == 'categories' %} class="active"{%endif %}>
+         <a href="{% url 'weblinks-main' %}">Categories</a>
+      </li>
+      <li{% if top_menu == 'new' %} class="active"{%endif %}>
+         <a href="{% url 'weblinks-new_links' %}">New</a>
+      </li>
+      <li{% if top_menu == 'popular' %} class="active"{%endif %}>
+         <a href="{% url 'weblinks-popular_links' %}">Popular</a>
+      </li>
+      {% if user.is_authenticated %}
+         <li{% if top_menu == 'add' %} class="active"{%endif %}>
+            <a href="{% url 'weblinks-add_link' %}">Add Link</a>
+         </li>
+      {% endif %}
+      <li{% if top_menu == 'random' %} class="active"{%endif %}>
+         <a href="{% url 'weblinks-random_link' %}">Random</a>
+      </li>
+   </ul>
+   </div>
 </div>

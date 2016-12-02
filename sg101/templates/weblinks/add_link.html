@@ -4,16 +4,57 @@
    <h3>Add Link</h3>
    {% if add_form %}
    <form action="." method="post">{% csrf_token %}
-   <table>
-      {{ add_form.as_table }}
-      <tr><td>&nbsp;</td><td><input type="submit" value="Add Link" />
-         &nbsp;<a href="{% url 'weblinks-main' %}">Cancel</a>
-         </td></tr>
-   </table>
+      {{ add_form.non_field_errors }}
+      {{ add_form.category.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.category.id_for_label }}">
+               {{ add_form.category.label }}
+               {{ add_form.category }}
+            </label>
+         </div>
+      </div>
+      {{ add_form.title.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.title.id_for_label }}">
+               {{ add_form.title.label }}
+               {{ add_form.title }}
+            </label>
+         </div>
+      </div>
+      {{ add_form.url.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.url.id_for_label }}">
+               {{ add_form.url.label }}
+               {{ add_form.url }}
+            </label>
+         </div>
+      </div>
+      {{ add_form.description.errors }}
+      <div class="row">
+         <div class="columns">
+            <label for="{{ add_form.description.id_for_label }}">
+               {{ add_form.description.label }}
+               {{ add_form.description }}
+            </label>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns">
+            <input type="submit" value="Add Link" class="button" />
+            <a href="{% url 'weblinks-main' %}" class="secondary button">Cancel</a>
+         </div>
+      </div>
    </form>
-   <br />
    {% else %}
-   <p><strong>Thank you for submitting a link!</strong></p>
-   <p>Your link has been submitted for review to the site staff.</p>
+   <div class="success callout">
+      <h4>Thank you for submitting a link!</h4>
+      <p>
+      Your link has been submitted for review to the site staff.
+      <a href="{% url 'weblinks-add_link' %}">Would you like to add another</a>?
+      </p>
+   </div>
    {% endif %}
 {% endblock %}
