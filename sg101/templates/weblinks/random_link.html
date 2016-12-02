@@ -1,0 +1,18 @@
+{% extends 'weblinks/base.html' %}
+{% block title %}Web Links: Random Link{% endblock %}
+{% block weblinks_content %}
+<h3>
+   <i class="fi-die-five"></i> <i class="fi-die-six"></i>
+   Random Link
+   <i class="fi-die-three"></i> <i class="fi-die-four"></i>
+</h3>
+
+<p>
+Feeling lucky? Click the button below to visit a randomly chosen
+link from our database.
+</p>
+
+<form action="." method="post">{% csrf_token %}
+   <input type="submit" value="Give me a random link!" class="button" />
+</form>
+{% endblock %}
