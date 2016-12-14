@@ -39,6 +39,8 @@ def index(request):
     return render(request, 'downloads/index.html', {
         'categories': categories,
         'total_dls': total_dls,
+        'top_menu': 'categories',
+        'V3_DESIGN': True,
         })
 
 #######################################################################

@@ -1,12 +1,18 @@
 {% load static from staticfiles %}
-<div class="app-logo">
-   <img src="{% static "icons/downloads-logo.jpg" %}" alt="Downloads Logo" title="Downloads" />
+<div class="callout">
+   <div class="text-center">
+      <img src="{% static "icons/downloads-logo.jpg" %}" alt="Downloads Logo"
+         title="Downloads" />
+   </div>
+   <div class="menu-centered more-top-margin">
+      <ul class="vertical medium-horizontal menu size-24">
+         <li{% if top_menu == 'categories' %} class="active"{%endif %}>
+            <a href="{% url 'downloads-index' %}">Categories</a>
+         </li>
+         <li><a href="{% url 'downloads-new' %}">New</a></li>
+         <li><a href="{% url 'downloads-popular' %}">Popular</a></li>
+         <li><a href="{% url 'downloads-rating' %}">Highest Rated</a></li>
+         <li><a href="{% url 'downloads-add' %}">Add</a></li>
+      </ul>
+   </div>
 </div>
-<ul class="app-menu">
-    <li><a href="{% url 'downloads-index' %}">Categories</a></li>
-    <li><a href="{% url 'downloads-new' %}">New</a></li>
-    <li><a href="{% url 'downloads-popular' %}">Popular</a></li>
-    <li><a href="{% url 'downloads-rating' %}">Highest Rated</a></li>
-    <li><a href="{% url 'downloads-add' %}">Add</a></li>
-</ul>
-<br />

@@ -1,10 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load downloads_tags %}
 {% block title %}Downloads{% endblock %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
-{% endblock %}
 {% block content %}
 <h2>Downloads</h2>
 {% include 'downloads/navigation.html' %}
