@@ -1,34 +1,29 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load downloads_tags %}
 {% block title %}Downloads: {{ category.title }}{% endblock %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
-<link rel="stylesheet" type="text/css" href="{% static "css/tab-nav.css" %}" />
-<link rel="stylesheet" type="text/css" href="{% static "css/pagination.css" %}" />
-{% endblock %}
-{% block custom_js %}
-<script type="text/javascript" src="{% static "js/rating.js" %}"></script>
-<script type="text/javascript" src="{% static "js/downloads-get.js" %}"></script>
-{% endblock %}
 {% block content %}
 <h2>Downloads</h2>
 {% include 'downloads/navigation.html' %}
 <h3>Category: {{ category.title }}</h3>
 
 {% if page.object_list %}
-<ul class="tab-nav">
-   <li><a href="{% url 'downloads-category' slug=category.slug sort="title" %}"
-      {% ifequal s "title" %}class="active" {% endifequal %}>Title</a></li>
-   <li><a href="{% url 'downloads-category' slug=category.slug sort="date" %}"
-      {% ifequal s "date" %}class="active"{% endifequal %}>Date</a></li>
-   <li><a href="{% url 'downloads-category' slug=category.slug sort="rating" %}"
-      {% ifequal s "rating" %}class="active"{% endifequal %}>Rating</a></li>
-   <li><a href="{% url 'downloads-category' slug=category.slug sort="hits" %}"
-      {% ifequal s "hits" %}class="active"{% endifequal %}>Hits</a></li>
+<ul class="menu">
+   <li{% ifequal s "title" %} class="active"{% endifequal %}>
+      <a href="{% url 'downloads-category' slug=category.slug sort="title" %}">Title</a>
+   </li>
+   <li{% ifequal s "date" %} class="active"{% endifequal %}>
+      <a href="{% url 'downloads-category' slug=category.slug sort="date" %}">Date</a>
+   </li>
+   <li{% ifequal s "rating" %} class="active"{% endifequal %}>
+      <a href="{% url 'downloads-category' slug=category.slug sort="rating" %}">Rating</a>
+   </li>
+   <li{% ifequal s "hits" %} class="active"{% endifequal %}>
+      <a href="{% url 'downloads-category' slug=category.slug sort="hits" %}">Hits</a>
+   </li>
 </ul>
 
-{% include 'core/pagination.html' %}
+{% include 'core/v3/pagination.html' %}
 
 <dl>
 {% for download in page.object_list %}
@@ -36,8 +31,12 @@
 {% endfor %}
 </dl>
 
-{% include 'core/pagination.html' %}
+{% include 'core/v3/pagination.html' %}
 {% else %}
 <p>No downloads in this category at this time.</p>
 {% endif %}
+{% endblock %}
+{% block custom_js %}
+<script type="text/javascript" src="{% static "js/rating.js" %}"></script>
+<script type="text/javascript" src="{% static "js/downloads-get.js" %}"></script>
 {% endblock %}

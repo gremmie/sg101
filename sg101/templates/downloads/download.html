@@ -1,29 +1,30 @@
 {% load comment_tags %}
 {% load bio_tags %}
-{% load static from staticfiles %}
 {% get_comment_count for download as comment_count %}
-<dt>
+<dt class="more-top-margin">
 <a href="{{ download.get_absolute_url }}">{{ download.title }}</a>
 </dt>
 <dd>
 {{ download.html|safe }}
-<table>
-<tr>
-    <th>Added By:</th>
-        <td>{% profile_link download.user.username %}</td>
-    <th>Date:</th><td>{{ download.date_added|date:"M d, Y" }}</td>
-    <th>Size:</th><td>{{ download.size }}</td>
-</tr>
-<tr>
-    <th>Category:</th><td>{{ download.category.title }}</td>
-    <th>Downloads:</th><td>{{ download.hits }}</td>
-</tr>
-<tr>
-    <th>Rating:</th><td><div class="rating" id="rating-{{ download.id }}">{{ download.average_score|floatformat }}</div></td>
-    <th><img src="{% static "icons/comments.png" %}" alt="Comments" title="Comments" />
-       <a href="{{ download.get_absolute_url }}">Comments</a>:</th><td>{{ comment_count }}</td>
-</tr>
-</table>
-<div id="link-{{ download.id }}"><button type="button" class="dl-button" id="dl-{{ download.id }}">Download</button></div>
-<br />
+<ul>
+   <li>Added By: {% profile_link download.user.username %}</li>
+   <li>Date: {{ download.date_added|date:"M d, Y" }}</li>
+   <li>Size: {{ download.size }}</li>
+   <li>Category: {{ download.category.title }}</li>
+   <li>Downloads: {{ download.hits }}</li>
+   <li>Rating:
+      <div class="rating" id="rating-{{ download.id }}" style="display: inline-block">
+         {{ download.average_score|floatformat }}
+      </div>
+   </li>
+   <li>
+      <a href="{{ download.get_absolute_url }}"><i class="fi-comments size-16"></i>
+         Comments: {{ comment_count }}</a>
+   </li>
+</ul>
+<div id="link-{{ download.id }}">
+   <button type="button" class="dl-button button" id="dl-{{ download.id }}">
+      Download
+   </button>
+</div>
 </dd>

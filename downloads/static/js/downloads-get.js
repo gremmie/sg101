@@ -18,6 +18,7 @@ $(document).ready(function() {
                   var link_id = result.id;
                   var div = $('#link-' + link_id);
                   div.hide();
+                  div.addClass('success callout');
                   div.html(
                      'Thank you! Your download is now ready. <a href="' + result.url +
                         '">Click here to download</a>.');

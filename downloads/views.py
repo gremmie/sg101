@@ -75,6 +75,8 @@ def category(request, slug, sort='title'):
         's' : sort,
         'category' : cat,
         'page' : the_page,
+        'top_menu': 'categories',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
