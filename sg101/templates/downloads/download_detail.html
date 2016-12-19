@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load downloads_tags %}
 {% load comment_tags %}
 {% load script_tags %}
@@ -6,13 +6,6 @@
 {% block title %}Downloads Details{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" type="text/css" href="{% static "css/comments.css" %}" />
-<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
-{% endblock %}
-{% block custom_js %}
-{% script_tags "markitup jquery-ui" %}
-<script type="text/javascript" src="{% static "js/comments.js" %}"></script>
-<script type="text/javascript" src="{% static "js/rating.js" %}"></script>
-<script type="text/javascript" src="{% static "js/downloads-get.js" %}"></script>
 {% endblock %}
 {% block content %}
 <h2>Downloads</h2>
@@ -27,5 +20,13 @@
 <p>This download has <span id="comment-count">{{ comment_count }}</span> comment{{ comment_count|pluralize }}.</p>
 <hr />
 {% render_comment_list download %}
-{% render_comment_form user download %}
+{% render_comment_form_v3 user download %}
+{% include 'core/v3/post_box_modals.html' %}
+{% endblock %}
+{% block custom_js %}
+   <script src="{% static "js/comments.js" %}"></script>
+   <script src="{% static "js/jquery.form.min.js" %}"></script>
+   <script src="{% static "js/v3/post_box.js" %}"></script>
+   <script src="{% static "js/rating.js" %}"></script>
+   <script src="{% static "js/downloads-get.js" %}"></script>
 {% endblock %}

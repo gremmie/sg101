@@ -97,6 +97,7 @@ def new(request):
     return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Newest Downloads',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -117,6 +118,7 @@ def popular(request):
     return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Popular Downloads',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -136,6 +138,7 @@ def rating(request):
     return render(request, 'downloads/download_summary.html', {
         'page': the_page,
         'title': 'Highest Rated Downloads',
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -147,6 +150,7 @@ def details(request, id):
         raise Http404
     return render(request, 'downloads/download_detail.html', {
         'download' : download,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -170,6 +174,7 @@ A user has uploaded a new download for your approval.
 
     return render(request, 'downloads/add.html', {
         'add_form': form,
+        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -177,6 +182,7 @@ A user has uploaded a new download for your approval.
 @login_required
 def thanks(request):
     return render(request, 'downloads/thanks.html', {
+        'V3_DESIGN': True,
         })
 
 #######################################################################

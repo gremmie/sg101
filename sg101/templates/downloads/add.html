@@ -1,15 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load downloads_tags %}
 {% load core_tags %}
 {% load script_tags %}
 {% load static from staticfiles %}
 {% block title %}Add Download{% endblock %}
-{% block custom_css %}
-<link rel="stylesheet" type="text/css" href="{% static "css/downloads.css" %}" />
-{% endblock %}
-{% block custom_js %}
-{% script_tags 'jquery-ui markitup' %}
-{% endblock %}
 {% block content %}
 <h2>Downloads</h2>
 {% include 'downloads/navigation.html' %}
@@ -35,18 +29,45 @@
 </ol>
 
 <form action="." method="post" enctype="multipart/form-data" id="downloads-add">{% csrf_token %}
-<fieldset>
+<fieldset class="fieldset">
 <legend>Upload Form</legend>
-<table>
-{{ add_form.as_table }}
-<tr>
-   <th>&nbsp;</th>
-   <td>
-      {% comment_dialogs %}
-      <input type="submit" name="submit_button" value="Add Download" />
-   </td>
-</table>
+   {{ add_form.non_field_errors }}
+   {{ add_form.title.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ add_form.title.id_for_label }}">{{ add_form.title.label }}
+            {{ add_form.title }}
+         </label>
+      </div>
+   </div>
+   {{ add_form.category.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ add_form.category.id_for_label }}">
+            {{ add_form.category.label }}
+            {{ add_form.category }}
+         </label>
+      </div>
+   </div>
+   {% post_box add_form.description %}
+   {{ add_form.file.errors }}
+   <div class="row">
+      <div class="columns">
+         <label for="{{ add_form.file.id_for_label }}">
+            {{ add_form.file.label }}
+            {{ add_form.file }}
+         </label>
+      </div>
+   </div>
+   <input type="submit" name="submit_button" value="Add Download"
+      class="primary button" />
 </fieldset>
 </form>
 
+{% include 'core/v3/post_box_modals.html' %}
+{% endblock %}
+
+{% block custom_js %}
+   <script src="{% static "js/jquery.form.min.js" %}"></script>
+   <script src="{% static "js/v3/post_box.js" %}"></script>
 {% endblock %}
