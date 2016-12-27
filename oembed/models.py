@@ -37,6 +37,8 @@ class Oembed(models.Model):
         (LINK, "link"),
         (RICH, "rich"),
     )
+    ALLOWED_TYPES = set(choice[1] for choice in MEDIA_TYPE_CHOICES)
+    MEDIA_TYPE_REVERSE = {choice[1]: choice[0] for choice in MEDIA_TYPE_CHOICES}
 
     url = models.URLField(max_length=255, db_index=True)
     type = models.IntegerField(choices=MEDIA_TYPE_CHOICES)

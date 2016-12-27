@@ -51,12 +51,13 @@ def fetch_media(request):
                 return HttpResponseBadRequest(
                     "Sorry, we could not retrieve your video (%s)" % e)
 
-            if data.get('type') != 'video':
+            data_type = data.get('type', '?')
+            if data_type not in Oembed.ALLOWED_TYPES:
                 return HttpResponseBadRequest(
-                    "Hey, this doesn't look like a video..??")
+                    "Hey, this doesn't look like a media type we support..??")
 
             oembed = Oembed(url=url,
-                            type=Oembed.VIDEO,
+                            type=Oembed.MEDIA_TYPE_REVERSE[data_type],
                             title=data.get('title', ''),
                             width=int(data.get('width', 0)),
                             height=int(data.get('height', 0)),
