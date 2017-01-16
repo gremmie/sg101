@@ -1,0 +1,31 @@
+// SG101 colors
+// ------------
+$sg101-green: #3293a6;
+$sg101-green2: rgba($sg101-green, 0.75);
+$sg101-green3: rgba($sg101-green, 0.5);
+$sg101-green4: rgba($sg101-green, 0.25);
+$sg101-red: #b33800;
+$sg101-red2: rgba($sg101-red, 0.75);
+$sg101-red3: rgba($sg101-red, 0.5);
+$sg101-red4: rgba($sg101-red, 0.25);
+
+// 4. Base Typography
+// ------------------
+$anchor-color: $sg101-green; //$primary-color;
+
+// 25. Pagination
+// --------------
+$pagination-item-background-hover: $sg101-green4; // $light-gray;
+$pagination-item-background-current: $sg101-red; // $primary-color;
+
+// 30. Table
+// ---------
+$table-background: $sg101-green4;
+$table-border: 1px solid smart-scale($table-background, $table-color-scale);
+$table-row-hover: darken($table-background, $table-hover-scale);
+$table-row-stripe-hover: darken($table-background, $table-color-scale + $table-hover-scale);
+$table-striped-background: smart-scale($table-background, $table-color-scale);
+$table-stripe: even;
+$table-head-background: $sg101-red;
+$table-foot-background: smart-scale($table-background, $table-color-scale);
+$table-head-font-color: $white;
