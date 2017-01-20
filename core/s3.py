@@ -3,7 +3,8 @@
 This module provides Amazon S3 convenience wrappers.
 
 """
-from boto.s3.connection import S3Connection
+from boto.s3 import connect_to_region
+from boto.s3.connection import OrdinaryCallingFormat
 from boto.s3.key import Key
 
 
@@ -11,13 +12,23 @@ class S3Bucket(object):
     """This class abstracts an Amazon S3 bucket.
 
     """
-    def __init__(self, access_key, secret_key, base_url, bucket_name):
-        self.conn = S3Connection(access_key, secret_key)
+    def __init__(self, access_key, secret_key, base_url, bucket_name,
+                 region_name='us-west-1'):
+        self.region_name = region_name
+        self.conn = self._get_connection(access_key, secret_key)
         self.bucket = self.conn.get_bucket(bucket_name, validate=False)
         self.base_url = base_url
         if not base_url.endswith('/'):
             self.base_url += '/'
         self.name = bucket_name
+
+    def _get_connection(self, access_key, secret_key):
+        conn = connect_to_region(
+                    self.region_name,
+                    aws_access_key_id=access_key,
+                    aws_secret_access_key=secret_key,
+                    calling_format=OrdinaryCallingFormat())
+        return conn
 
     def upload_from_file(self, key_name, fp, metadata=None, public=True):
         """Uploads data from the file object fp to a new key named
