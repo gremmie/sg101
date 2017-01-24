@@ -156,11 +156,11 @@ DEFAULT_FROM_EMAIL = ADMINS[0][1]
 #######################################################################
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 MESSAGE_TAGS = {
-    message_constants.DEBUG: 'notice',
-    message_constants.INFO: 'info',
+    message_constants.DEBUG: 'secondary',
+    message_constants.INFO: 'primary',
     message_constants.SUCCESS: 'success',
-    message_constants.WARNING: 'alert',
-    message_constants.ERROR: 'error',
+    message_constants.WARNING: 'warning',
+    message_constants.ERROR: 'alert',
 }
 
 #######################################################################

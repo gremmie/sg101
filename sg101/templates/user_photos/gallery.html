@@ -1,10 +1,101 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load bio_tags %}
 {% block title %}Photo Gallery for {{ gallery_owner.username }}{% endblock %}
 {% block custom_css %}
 <link rel="stylesheet" href="{% static "css/user_photos.css" %}" />
 {% endblock %}
+{% block content %}
+
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      {% if user == gallery_owner %}
+         <li>
+            <a href="{% url 'bio-me' %}">Your Profile</a>
+         </li>
+         <li>
+            <span class="show-for-sr">Current: </span> Your Photos
+         </li>
+      {% else %}
+         <li>
+            <a href="{% url 'bio-view_profile' username=gallery_owner.username %}">
+               {{ gallery_owner.username }}'s Profile</a>
+         </li>
+         <li>
+            <span class="show-for-sr">Current: </span>
+               {{ gallery_owner.username }}'s Photos
+         </li>
+      {% endif %}
+   </ul>
+</nav>
+
+<h2>Photo Gallery for {{ gallery_owner.username }}</h2>
+
+{% if user == gallery_owner %}
+{% if messages %}
+   <ul>
+    {% for message in messages %}
+       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+   </ul>
+{% endif %}
+<p>
+You have uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
+Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
+</p>
+{% else %}
+<p>
+{% profile_link gallery_owner.username %} has uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
+</p>
+{% endif %}
+
+{% if photos %}
+   {% if user == gallery_owner %}
+      <form id="photo-delete" action="{% url 'user_photos-delete' %}" method="post"
+         onsubmit="return confirmPhotoDelete(submit);" >{% csrf_token %}
+         <div class="row small-up-2 medium-up-3 large-up-5">
+            {% for photo in photos %}
+               <div class="column">
+                  <div class="card">
+                     <a href="{{ photo.get_absolute_url }}">
+                        <img src="{{ photo.thumb_url }}" alt="thumbnail"
+                           title="{{ photo.upload_date|date }}"
+                           class="float-center" /></a>
+                     <div class="card-section">
+                        <input type="checkbox" name="photo_id" value="{{ photo.id }}"
+                           class="float-center"></input>
+                     </div>
+                  </div>
+               </div>
+            {% endfor %}
+         </div>
+      <a class="button" href="{% url 'user_photos-upload' %}">Upload Photo</a>
+      <input type="submit" name="submit" value="Delete Checked Photos"
+         class="alert button" />
+      </form>
+   {% else %}
+      <div class="row small-up-2 medium-up-3 large-up-5">
+         {% for photo in photos %}
+            <div class="column">
+               <div class="card">
+                  <a href="{{ photo.get_absolute_url }}">
+                     <img src="{{ photo.thumb_url }}" alt="thumbnail"
+                        title="{{ photo.upload_date|date }}"
+                        class="float-center" /></a>
+               </div>
+            </div>
+         {% endfor %}
+      </div>
+   {% endif %}
+
+   {% if page_obj %}
+      <hr>
+      {% include 'core/v3/pagination.html' %}
+   {% endif %}
+{% endif %}
+
+{% endblock %}
+
 {% block custom_js %}
 {% if user == gallery_owner %}
 <script>
@@ -32,60 +123,4 @@ function confirmPhotoDelete(submit)
 }
 </script>
 {% endif %}
-{% endblock %}
-{% block content %}
-
-<h2>Photo Gallery for {{ gallery_owner.username }}</h2>
-
-{% if user == gallery_owner %}
-{% if messages %}
-   <ul class="user-messages">
-    {% for message in messages %}
-       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-{% endif %}
-<p>
-You have uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
-Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?
-</p>
-{% else %}
-<p>
-{% profile_link gallery_owner.username %} has uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
-</p>
-{% endif %}
-
-{% if photos %}
-   {% if user == gallery_owner %}
-      <form id="photo-delete" action="{% url 'user_photos-delete' %}" method="post"
-         onsubmit="return confirmPhotoDelete(submit);" >{% csrf_token %}
-      {% for photo in photos %}
-         <div class="user_photo owner_photo">
-            <a href="{{ photo.get_absolute_url }}">
-               <img src="{{ photo.thumb_url }}" alt="thumbnail" 
-                  title="{{ photo.upload_date|date }}" /></a>
-            <br />
-            <div class="centered">
-            <input type="checkbox" name="photo_id" value="{{ photo.id }}"></input>
-            </div>
-         </div>
-      {% endfor %}
-      <br />
-      <input type="submit" name="submit" value="Delete Checked Photos" />
-      </form>
-   {% else %}
-      {% for photo in photos %}
-         <div class="user_photo">
-            <a href="{{ photo.get_absolute_url }}">
-               <img src="{{ photo.thumb_url }}" alt="thumbnail" 
-                  title="{{ photo.upload_date|date }}" /></a>
-         </div>
-      {% endfor %}
-   {% endif %}
-
-   {% if page_obj %}
-      <hr class="footer_divider" />
-      {% include 'core/django_pagination.html' %}
-   {% endif %}
-{% endif %}
-
 {% endblock %}

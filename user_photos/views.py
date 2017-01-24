@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import (HttpResponse, HttpResponseForbidden,
     HttpResponseNotAllowed, JsonResponse)
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
@@ -40,6 +41,7 @@ def upload(request):
     return render(request, 'user_photos/upload_form.html', {
         'enabled': uploads_enabled,
         'form': form,
+        'V3_DESIGN': True,
         },
         status=200 if uploads_enabled else 503)
 
@@ -144,11 +146,24 @@ class GalleryView(ListView):
     def get_context_data(self, **kwargs):
         context = super(GalleryView, self).get_context_data(**kwargs)
         context['gallery_owner'] = self.gallery_owner
+        context['V3_DESIGN'] = True
+        context['page'] = context['page_obj']
         return context
 
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
         return super(GalleryView, self).dispatch(*args, **kwargs)
+
+
+class PhotoView(DetailView):
+    """A DetailView for displaying a user's photo"""
+
+    model = Photo
+
+    def get_context_data(self, **kwargs):
+        context = super(PhotoView, self).get_context_data(**kwargs)
+        context['V3_DESIGN'] = True
+        return context
 
 
 @login_required
@@ -228,4 +243,3 @@ def hotlink_image(request):
         status_code = 403
 
     return JsonResponse(ret, status=status_code)
-

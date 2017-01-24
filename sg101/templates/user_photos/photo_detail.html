@@ -1,25 +1,54 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load bio_tags %}
 {% block title %}User Photo Details{% endblock %}
-{% block custom_js %}
-<script>
-   $(document).ready(function() {
-      $("input[type='text']").click(function() {
-         $(this).select();
-      });
-   });
-</script>
-{% endblock %}
 {% block content %}
+
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      {% if user == object.user %}
+         <li>
+            <a href="{% url 'bio-me' %}">Your Profile</a>
+         </li>
+         <li>
+            <a href="{% url 'user_photos-gallery' username=object.user %}">Your
+               Photos</a>
+         </li>
+         <li>
+            <span class="show-for-sr">Current: </span> Your Photo
+         </li>
+      {% else %}
+         <li>
+            <a href="{% url 'bio-view_profile' username=object.user.username %}">
+               {{ object.user.username }}'s Profile</a>
+         </li>
+         <li>
+            <a href="{% url 'user_photos-gallery' username=object.user %}">
+               {{ object.user.username }}'s Photos</a>
+         </li>
+         <li>
+            <span class="show-for-sr">Current: </span>
+               {{ object.user.username }}'s Photo
+         </li>
+      {% endif %}
+   </ul>
+</nav>
+
 <h2>User Photo Details</h2>
 
-<div>
-   <a href="{{ object.url }}" title="Click to view full size">
-      <img src="{{ object.thumb_url }}" alt="thumbnail" /></a>
+<div class="row align-center">
+   <div class="small-3 columns text-center">
+      <a href="{{ object.url }}" title="Click to view full size" class="thumbnail">
+         <img src="{{ object.thumb_url }}" alt="thumbnail" />
+      </a>
+   </div>
+</div>
+<div class="row align-center">
+   <div class="small-3 columns text-center">
+      <p>Click for full size</p>
+   </div>
 </div>
 
-<h3>Photo Details</h3>
 <table>
 <tr>
    <th>Uploader:</th>
@@ -37,45 +66,95 @@ Use the SG101 code on this site. The BB Code will work on many other forums.
 The direct link is useful for email.
 </p>
 <p>
-Click on a code then copy it to your clipboard (e.g. CTRL-C). You can then
-paste the code into a forum post or email (e.g. CTRL-V).
+Use the buttons at the far right to copy the codes to your clipboard.
 </p>
 
-<table>
-<tr>
-   <th>SG101 Code:</th>
-   <td><input type="text" class="title" value="![photo]({{ object.url }})" /></td>
-</tr>
-<tr>
-   <th>BB Code:</th>
-   <td><input type="text" class="title" value="[img]{{ object.url }}[/img]" /></td>
-</tr>
-<tr>
-   <th>Direct Link:</th>
-   <td><input type="text" class="title" value="{{ object.url }}" /></td>
-</tr>
-</table>
+<div class="row">
+   <div class="columns">
+      <label>SG101 Code:</label>
+      <div class="input-group">
+         <input id="sg101" type="text" class="input-group-field"
+            value="![photo]({{ object.url }})" />
+         <div class="input-group-button">
+            <button class="clipboard-copy button" title="Copy to Clipboard"
+               data-clipboard-target="#sg101">
+                  <i class="fi-clipboard-pencil size-24"></i>
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
+<div class="row">
+   <div class="columns">
+      <label>BB Code:</label>
+      <div class="input-group">
+         <input id="bb" type="text" class="input-group-field"
+            value="[img]{{ object.url }}[/img]" />
+         <div class="input-group-button">
+            <button class="clipboard-copy button" title="Copy to Clipboard"
+               data-clipboard-target="#bb">
+                  <i class="fi-clipboard-pencil size-24"></i>
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
+<div class="row">
+   <div class="columns">
+      <label>Direct Link:</label>
+      <div class="input-group">
+         <input id="direct" type="text" value="{{ object.url }}"
+            class="input-group-field" />
+         <div class="input-group-button">
+            <button class="clipboard-copy button" title="Copy to Clipboard"
+               data-clipboard-target="#direct">
+                  <i class="fi-clipboard-pencil size-24"></i>
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
 
 {% if request.user == object.user %}
-<ul class="icon-list">
-   <li><img src="{% static "icons/picture_add.png" %}" alt="Photo" />
-       <a href="{% url 'user_photos-upload' %}">Upload another photo</a></li>
-    <li><img src="{% static "icons/pictures.png" %}" alt="Gallery" />
-       <a href="{% url 'user_photos-gallery' username=object.user.username %}">See all my photos</a></li>
-</ul>
-
 <form id="photo-delete" action="{% url 'user_photos-delete' %}" method="post"
          onsubmit="return confirm('Really delete this photo?');" >{% csrf_token %}
+   <a class="button" href="{% url 'user_photos-upload' %}">Upload Photo</a>
    <input type="hidden" name="photo_id" value="{{ object.id }}"></input>
-   <input type="submit" name="submit" value="Delete Photo" />
+   <input type="submit" name="submit" value="Delete Photo" class="alert button" />
 </form>
-
-{% else %}
-<p>
-<img src="{% static "icons/pictures.png" %}" alt="Gallery" />
-<a href="{% url 'user_photos-gallery' username=object.user.username %}">See all photos from {{ object.user.username }}</a></li>
-</p>
 {% endif %}
+{% endblock %}
 
-
+{% block custom_js %}
+<script src="https://cdn.jsdelivr.net/clipboard.js/1.5.16/clipboard.min.js"></script>
+<script>
+   $(document).ready(function() {
+      $("input[type='text']").click(function() {
+         $(this).select();
+      });
+      var clipboard = new Clipboard('.clipboard-copy');
+      clipboard.on('success', function(e) {
+         e.clearSelection();
+         var button = $(e.trigger);
+         var oldText = button.html();
+         button.addClass('success');
+         button.html('<i class="fi-check size-24"></i>');
+         setTimeout(function () {
+            button.removeClass('success');
+            button.html(oldText);
+         }, 2500);
+      });
+      clipboard.on('error', function(e) {
+         e.clearSelection();
+         var button = $(e.trigger);
+         var oldText = button.html();
+         button.addClass('alert');
+         button.html('<i class="fi-alert size-24"></i>');
+         setTimeout(function () {
+            button.removeClass('alert');
+            button.html(oldText);
+         }, 2500);
+      });
+   });
+</script>
 {% endblock %}

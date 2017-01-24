@@ -1,29 +1,53 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% block title %}User Photo Upload{% endblock %}
 {% block content %}
-<h2>User Photo Upload</h2>
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li>
+         <a href="{% url 'bio-me' %}">Your Profile</a>
+      </li>
+      <li>
+         <a href="{% url 'user_photos-gallery' username=user.username %}">Your Photos</a>
+      </li>
+      <li>
+         <span class="show-for-sr">Current: </span> Photo Upload
+      </li>
+   </ul>
+</nav>
+
+<h2>Photo Upload</h2>
+
 {% if enabled %}
    <p>
    This form will allow you to upload a photo from your computer or device,
    suitable for displaying in forum or comment posts. We will automatically
    resize your photo for you. When the process is complete we will return an
-   image code you can paste into your post to display your photo.
+   image code you can paste into your post to display the photo.
    </p>
    <form action="." method="post" enctype="multipart/form-data"
       onsubmit="submit.disabled = true; submit.value = 'Please wait...'; return true;">{% csrf_token %}
-      <fieldset>
+      <fieldset class="fieldset">
          <legend>Upload a photo:</legend>
-         {{ form.as_p }}
-         <p><input type="submit" name="submit" value="Upload Photo" /></p>
+         {{ form.non_field_errors }}
+         {{ form.image_file.errors }}
+         <div class="row">
+            <div class="columns">
+               <label for="{{ form.image_file.id_for_label }}">
+                  {{ form.image_file.label }}
+                  {{ form.image_file }}
+               </label>
+            </div>
+         </div>
+         <div>
+            <input type="submit" name="submit" value="Upload Photo"
+               class="button"/>
+         </div>
       </fieldset>
    </form>
    <p>
-   <a href="{% url 'user_photos-gallery' username=user.username %}">See all
-      photos you've uploaded</a>.
-   </p>
 {% else %}
-   <p class="error">
+   <div class="error callout">
       We're sorry but uploading is currently disabled. Please try back later.
-   </p>
+   </div>
 {% endif %}
 {% endblock %}

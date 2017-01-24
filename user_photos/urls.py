@@ -1,8 +1,6 @@
 """URLs for the user_photos application."""
 from django.conf.urls import url
-from django.views.generic import DetailView
 
-from user_photos.models import Photo
 import user_photos.views
 
 
@@ -15,7 +13,7 @@ urlpatterns = [
         user_photos.views.upload_ajax_v3,
         name='user_photos-upload_ajax_v3'),
     url(r'^photo/(?P<pk>\d+)/$',
-        DetailView.as_view(model=Photo),
+        user_photos.views.PhotoView.as_view(),
         name='user_photos-detail'),
     url(r'^gallery/(?P<username>[\w.@+-]{1,30})/$',
         user_photos.views.GalleryView.as_view(),
