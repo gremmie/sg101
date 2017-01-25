@@ -8,13 +8,7 @@
 {% block title %}User Profile for {{ subject.username }}{% endblock %}
 {% block content %}
 <h2>User Profile for {{ subject.username }}</h2>
-{% if messages %}
-<ul class="user-messages">
- {% for message in messages %}
-    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
- {% endfor %}
-</ul>
-{% endif %}
+{% include 'core/message_list.html' %}
 <p>
    {% avatar subject 0 %}
 </p>

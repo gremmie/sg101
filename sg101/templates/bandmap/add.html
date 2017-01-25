@@ -10,15 +10,7 @@
 
 <h2>Add Band to Map</h2>
 
-{% if messages %}
-<div class="success callout">
-   <ul class="user-messages">
-   {% for message in messages %}
-      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-   {% endfor %}
-   </ul>
-</div>
-{% endif %}
+{% include 'core/message_list.html' %}
 
 <p>
 To add a band to our map, please fill out the form, below. The information will

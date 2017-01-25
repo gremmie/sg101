@@ -32,13 +32,7 @@
 <h2>Photo Gallery for {{ gallery_owner.username }}</h2>
 
 {% if user == gallery_owner %}
-{% if messages %}
-   <ul>
-    {% for message in messages %}
-       <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-   </ul>
-{% endif %}
+{% include 'core/message_list.html' %}
 <p>
 You have uploaded {{ paginator.count }} photo{{ paginator.count|pluralize }}.
 Would you like to <a href="{% url 'user_photos-upload' %}">upload a photo</a>?

@@ -4,11 +4,7 @@
 {% block content %}
 <h2>Your Private Messages</h2>
 
-{% for message in messages %}
-   <div class="{{ message.tags }} callout">
-      {{ message }}
-   </div>
-{% endfor %}
+{% include 'core/message_list.html' %}
 
 <ul class="vertical medium-horizontal menu">
    <li{% if tab == 'inbox' %} class="active"{% endif %}>
