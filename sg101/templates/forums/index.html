@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static from staticfiles %}
 {% load accounts_tags %}
 {% load cache %}
@@ -8,56 +8,64 @@
 {% for feed in feeds %}
 <link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
 {% endfor %}
-{% include "forums/forum_query.js" %}
 {% endblock %}
 {% block title %}Forums{% endblock %}
 {% block content %}
-<h2>Forums <a href="/feeds/forums/"><img src="{% static "icons/feed.png" %}" alt="Forums Feed" title="Forums Feed" /></a></h2>
+<h2>Forums <a href="/feeds/forums/"><i class="fi-rss size-36" title="Forums RSS Feed"></i></a></h2>
 
 {% include "forums/forum_query.html" %}
 
 <div class="forum-block">
 {% for iter in cats %}
    <h3>{{ iter.cat }}</h3>
-   <table class="forum-index-table">
+   <table>
       <thead>
          <tr>
-            <th class="forum-title">Forum</th>
-            <th class="forum-topics">Topics</th>
-            <th class="forum-posts">Posts</th>
-            <th class="forum-last_post">Last Post</th>
+            <th>Forum</th>
+            <th class="text-center show-for-medium">Topics</th>
+            <th class="text-center show-for-medium">Posts</th>
+            <th class="text-center">Last Post</th>
          </tr>
       </thead>
       <tbody>
          {% for forum in iter.forums %}
-            <tr class="{% cycle 'odd' 'even' %}">
+            <tr>
                <td>
-                  {% if forum.has_unread %}
-                  <a href="{{ forum.get_absolute_url }}"><img src="{% static "icons/new.png" %}" alt="New Posts" title="New Posts" class="forums-topic-icon" /></a>
-                  {% endif %}
-                  <h4><a href="{{ forum.get_absolute_url }}">{{ forum.name }}</a></h4>
+                  <h4>
+                     <a href="{{ forum.get_absolute_url }}">
+                        {% if forum.has_unread %}
+                           <i class="fi-burst-new size-36 shiny"></i>
+                        {% endif %}
+                        {{ forum.name }}
+                     </a>
+                  </h4>
                   <p>{{ forum.description }}</p>
                </td>
-               <td class="forum-topics">{{ forum.topic_count }}</td>
-               <td class="forum-posts">{{ forum.post_count }}</td>
-               <td class="forum-last_post">{% last_post_info forum.last_post %}</td>
+               <td class="text-center show-for-medium">{{ forum.topic_count }}</td>
+               <td class="text-center show-for-medium">{{ forum.post_count }}</td>
+               <td class="text-center">{% last_post_info forum.last_post %}</td>
             </tr>
          {% endfor %}
       </tbody>
    </table>
 {% endfor %}
 <form action="{% url 'forums-catchup_all' %}" method="post">{% csrf_token %}
-   <input type="submit" value="Mark All Forums Read" />
+   <input type="submit" value="Mark All Forums Read" class="button" />
 </form>
-<br />
 {% user_stats %}
-{% cache 300 forum-stats-block %}
+<div class="secondary callout">
+{# cache 300 forum-stats-block #}
    {% forum_stats %}
-{% endcache %}
-{% cache 900 max-users-block %}
+{# endcache #}
+{# cache 900 max-users-block #}
    {% max_users %}
-{% endcache %}
+{# endcache #}
 {% whos_online %}
+<hr>
 <p>{% current_forum_time user %}</p>
 </div>
+</div>
+{% endblock %}
+{% block custom_js %}
+{% include "forums/forum_query.js" %}
 {% endblock %}

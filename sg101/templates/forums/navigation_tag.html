@@ -1,12 +1,20 @@
-{% load static from staticfiles %}
 <a class="intra" name="top"></a>
-<h2 class="forum-nav"><a href="{% url 'forums-index' %}">SurfGuitar101 Forums</a> &raquo;
-{% for nav_item in nav_list %}
-   {% if not forloop.last %}
-      <a href="{{ nav_item.url }}">{{ nav_item.name }}</a> &raquo;
-   {% else %}
-</h2><h3 class="forum-nav">{% if nav_item.url %}<a href="{{ nav_item.url }}" title="Permalink"><img src="{% static "icons/link.png" %}" alt="Permalink" /></a>{% endif %} {{ nav_item.name }}</h3>
-   {% endif %}
-{% empty %}
-   </h2>
-{% endfor %}
+<nav aria-label="You are here:" role="navigation">
+   <ul class="breadcrumbs">
+      <li><a href="{% url 'forums-index' %}">SurfGuitar101 Forums</a></li>
+      {% for nav_item in nav_list %}
+         {% if not forloop.last %}
+            <li><a href="{{ nav_item.url }}">{{ nav_item.name }}</a></li>
+         {% else %}
+            <li>
+               <span class="show-for-sr">Current: </span>
+               {% if nav_item.url %}
+                  <a href="{{ nav_item.url }}">{{ nav_item.name }}</a>
+               {% else %}
+                  {{ nav_item.name }}
+               {% endif %}
+            </li>
+         {% endif %}
+      {% endfor %}
+   </ul>
+</nav>

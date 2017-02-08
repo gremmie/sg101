@@ -1,5 +1,11 @@
-{% load static from staticfiles %}
-{% if topic.has_unread %}<a href="{% url 'forums-topic_unread' id=topic.id %}"><img src="{% static "icons/new.png" %}" alt="New Posts" title="New Posts" class="forums-topic-icon" /></a>{% endif %}
-{% if topic.sticky %}<img src="{% static "icons/asterisk_orange.png" %}" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
-{% if topic.locked %}<img src="{% static "icons/lock.png" %}" alt="Locked" title="Locked"
-class="forums-topic-icon" />{% endif %}
+{% if topic.has_unread %}
+   <a href="{% url 'forums-topic_unread' id=topic.id %}" title="New Posts">
+      <i class="fi-burst-new size-36 shiny"></i>
+   </a>
+{% endif %}
+{% if topic.sticky %}
+   <i class="fi-asterisk size-36 green3"></i>
+{% endif %}
+{% if topic.locked %}
+   <i class="fi-lock size-36 green3"></i>
+{% endif %}

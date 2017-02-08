@@ -1,17 +1,22 @@
 {% load bio_tags %}
 {% load cache %}
 {% load humanize %}
-<div id="accounts-stats">
+<div class="secondary callout">
 {% if num_users %}
-Our site has <strong>{{ num_users|intcomma }}</strong> members from <a href="{% url 'membermap-index' %}">around the world</a>:
+   <p>
+      Our site has <strong>{{ num_users|intcomma }}</strong> members from
+      <a href="{% url 'membermap-index' %}">around the world</a>:
+   </p>
 {% endif %} 
 {% cache 360 member_flags_tag %}{% member_flags %}{% endcache %}
 {% if new_users %}
-Please welcome our newest members:
-<ul class="inline-list">
-{% for user in new_users %}
-   <li>{% profile_link user %}</li>
-{% endfor %}
-</ul>
+   <p>
+      Please welcome our newest members:
+   </p>
+   <ul class="inline-no-bullet-list">
+      {% for user in new_users %}
+         <li>{% profile_link user %}</li>
+      {% endfor %}
+   </ul>
 {% endif %}
 </div>

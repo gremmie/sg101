@@ -1,5 +1,6 @@
-<div id="max-users">
 {% if stats %}
-The most registered users ever online was <strong>{{ stats.max_users }}</strong> on {{ stats.max_users_date|date:"P l, N d, Y" }}.<br />
+<p>
+The most registered users ever online was <strong>{{ stats.max_users }}</strong>
+on {{ stats.max_users_date|date:"P l, N d, Y" }}.
+</p>
 {% endif %}
-</div>

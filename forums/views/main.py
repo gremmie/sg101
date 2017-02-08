@@ -110,6 +110,7 @@ def index(request):
     return render(request, 'forums/index.html', {
         'cats': cats,
         'feeds': feeds,
+        'V3_DESIGN': True,
         })
 
 
@@ -140,17 +141,14 @@ def forum_index(request, slug):
     get_topic_unread_status(forum, page.object_list, request.user)
     attach_topic_page_ranges(page.object_list)
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     can_moderate = perms.can_moderate(forum, request.user)
 
     return render(request, 'forums/forum_index.html', {
         'forum': forum,
         'feed': feed,
         'page': page,
-        'page_nav': page_nav,
         'can_moderate': can_moderate,
+        'V3_DESIGN': True,
         })
 
 

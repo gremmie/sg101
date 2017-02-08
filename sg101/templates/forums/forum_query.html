@@ -1,15 +1,21 @@
-<form action="." method="get" id="forum-query-form">
-   <select id="forum-query-select">
-      {% if user.is_authenticated %}
-      <option value="{% url 'forums-unread_topics' %}">Show topics with unread posts</option>
-      {% endif %}
-      <option value="{% url 'forums-active_topics' 30 %}">Show active topics</option>
-      <option value="{% url 'forums-unanswered_topics' %}">Show unanswered topics</option>
-      {% if user.is_authenticated %}
-      <option value="{% url 'forums-my_posts' %}">Show my posts</option>
-      <option value="{% url 'forums-manage_favorites' %}">Show my favorite topics</option>
-      <option value="{% url 'forums-manage_subscriptions' %}">Show my subscribed topics</option>
-      {% endif %}
-   </select>
-   <button type="button" id="forum-query-button">Go</button>
-</form>
+<div class="row align-right">
+   <div class="small-12 medium-6 columns">
+      <div class="input-group">
+         <select id="forum-query-select" class="input-group-field">
+            {% if user.is_authenticated %}
+               <option value="{% url 'forums-unread_topics' %}">Show topics with unread posts</option>
+            {% endif %}
+            <option value="{% url 'forums-active_topics' 30 %}">Show active topics</option>
+            <option value="{% url 'forums-unanswered_topics' %}">Show unanswered topics</option>
+            {% if user.is_authenticated %}
+               <option value="{% url 'forums-my_posts' %}">Show my posts</option>
+               <option value="{% url 'forums-manage_favorites' %}">Show my favorite topics</option>
+               <option value="{% url 'forums-manage_subscriptions' %}">Show my subscribed topics</option>
+            {% endif %}
+         </select>
+         <div class="input-group-button">
+            <button type="button" id="forum-query-button" class="button">Go</button>
+         </div>
+      </div>
+   </div>
+</div>

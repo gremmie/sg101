@@ -1,48 +1,54 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% load bio_tags %}
 {% block custom_head %}
    {% if feed %}
    <link rel="alternate" type="application/rss+xml" title="{{ feed.name }}" href="{{ feed.feed }}" />
    {% endif %}
-   {% include "forums/jump_box.js" %}
 {% endblock %}
 {% block title %}Forums: {{ forum.name }}{% endblock %}
 {% block content %}
 {% forum_navigation forum %}
+<h2>
+   <a href="{{ forum.get_absolute_url }}" title="Permalink"><i class="fi-link"></i></a>
+   {{ forum.name }}
+</h2>
 
-<div class="forum-block">
 {% if user.is_authenticated %}
-<a href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a> &bull;
-<form action="{% url 'forums-catchup' slug=forum.slug %}" method="post" style="display:inline">{% csrf_token %}
-   <input type="submit" value="Mark All Topics Read" />
+<form action="{% url 'forums-catchup' slug=forum.slug %}" method="post">{% csrf_token %}
+   <a href="{% url 'forums-new_topic' slug=forum.slug %}"
+      class="button">Create New Topic</a>
+   <input type="submit" class="secondary button" value="Mark All Topics Read" />
 </form>
 {% endif %}
-{{ page_nav }}
-<table class="forum-index-table">
+
+{% include 'core/v3/pagination.html' %}
+<table>
    <thead>
       <tr>
-         <th class="forum-index_title">Topics</th>
-         <th class="forum-index_replies">Replies</th>
-         <th class="forum-index_author">Author</th>
-         <th class="forum-index_views">Views</th>
-         <th class="forum-index_last_post">Last Post</th>
+         <th>Topics</th>
+         <th class="text-center show-for-medium">Replies</th>
+         <th class="text-center show-for-medium">Author</th>
+         <th class="text-center show-for-medium">Views</th>
+         <th class="text-center">Last Post</th>
       </tr>
    </thead>
    <tbody>
    {% for topic in page.object_list %}
-      <tr class="{% cycle 'odd' 'even' %}">
+      <tr>
          <td>
-            {% topic_icons topic %}
-            <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4>
+            <h5>
+               {% topic_icons topic %}
+               <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>
+            </h5>
             {% if topic.page_range %}
                {% topic_page_range topic %}
             {% endif %}
          </td>
-         <td class="forum-index_replies">{{ topic.reply_count }}</td>
-         <td class="forum-index_author">{% profile_link topic.user.username %}</td>
-         <td class="forum-index_views">{{ topic.view_count }}</td>
-         <td class="forum-index_last_post">
+         <td class="text-center show-for-medium">{{ topic.reply_count }}</td>
+         <td class="text-center show-for-medium">{% profile_link topic.user.username %}</td>
+         <td class="text-center show-for-medium">{{ topic.view_count }}</td>
+         <td class="text-center">
             {% last_post_info topic.last_post %}
          </td>
       </tr>
@@ -55,17 +61,24 @@
    {% endfor %}
    </tbody>
 </table>
-{{ page_nav }}
+{% include 'core/v3/pagination.html' %}
 {% include 'forums/jump_box.html' %}
+
 {% if user.is_authenticated %}
-<a href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a> &bull;
-<form action="{% url 'forums-catchup' slug=forum.slug %}" method="post" style="display:inline">{% csrf_token %}
-   <input type="submit" value="Mark All Topics Read" />
+<form action="{% url 'forums-catchup' slug=forum.slug %}" method="post">{% csrf_token %}
+   <a href="{% url 'forums-new_topic' slug=forum.slug %}"
+      class="button">Create New Topic</a>
+   <input type="submit" class="secondary button" value="Mark All Topics Read" />
+   {% if can_moderate %}
+      <a href="{% url 'forums-mod_forum' slug=forum.slug %}" class="alert button">
+         Moderate this forum
+      </a>
+   {% endif %}
 </form>
 {% endif %}
-{% if can_moderate %}
-<p><a href="{% url 'forums-mod_forum' slug=forum.slug %}">Moderate this forum</a></p>
-{% endif %}
-<p>{% current_forum_time user %}</p>
-</div>
+<div class="secondary callout">{% current_forum_time user %}</div>
+{% endblock %}
+
+{% block custom_js %}
+   {% include "forums/jump_box.js" %}
 {% endblock %}

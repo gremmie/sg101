@@ -2,7 +2,7 @@
 {% load forum_tags %}
 {% load static from staticfiles %}
 {% if post %}
-<a href="{{ post.get_absolute_url }}" title="Goto last post"><img src="{% static "icons/note_go.png" %}" alt="Goto last post" /></a>
+<a href="{{ post.get_absolute_url }}" title="Goto last post"><i class="fi-arrow-right"></i></a>
 <a href="{{ post.get_absolute_url }}" title="Goto last post">{% forum_date post.creation_date user %}</a><br />
 {% profile_link post.user.username %}
 {% else %}
