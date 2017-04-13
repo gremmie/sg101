@@ -1,0 +1,47 @@
+{% load bio_tags %}
+{% load forum_tags %}
+<div class="row collapse">
+   <div class="small-12 medium-3 column">
+      <div class="{{ card_class }} show-for-medium" style="height:100%;">
+         <div class="{{ card_divider_class }}">
+            {% profile_link post.user.username %}
+         </div>
+         <div class="card-section quiet">
+            {% avatar post.user %}<br />
+            Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
+            Posts: {{ post.user.profile.forum_post_count }}<br />
+            {% if post.user.profile.location %}
+               {{ post.user.profile.location }}<br />
+            {% endif %}
+            {% if post.user.profile.country %}
+               {% flag_icon post.user.profile.country 'small' %}<br />
+            {% endif %}
+            {% for bo in post.user.profile.badge_ownership %}
+               <img src="{{ bo.badge.image.url }}" alt="{{ bo.badge_count_str }}" title="{{ bo.badge_count_str }}" />
+            {% endfor %}
+         </div>
+      </div>
+   </div>
+   <div class="small-12 medium-9 column">
+      <div class="{{ card_class }}" style="height:100%;">
+         <div class="{{ card_divider_class }}">
+            {% if post.unread %}
+               <i class="fi-burst-new shiny"></i>
+            {% endif %}
+            <a href="{{ post.get_absolute_url }}" title="Link to this post">
+                  <i class="fi-link"></i></a>
+            <span class="quiet show-for-medium">Posted on {% forum_date post.creation_date user %}</span>
+            <span class="quiet hide-for-medium">
+               {% profile_link post.user.username %} on
+               {% forum_date post.creation_date user %}
+            </span>
+            {% if can_moderate %}
+               <span class="quiet">from IP: {{ post.user_ip }}</span>
+            {% endif %}
+         </div>
+         <div class="card-section">
+            {{ post.html|safe }}
+         </div>
+      </div>
+   </div>
+</div>

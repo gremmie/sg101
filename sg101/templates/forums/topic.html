@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% load core_tags %}
 {% load script_tags %}
@@ -7,73 +7,46 @@
 {% block custom_meta %}
    {% open_graph_meta_tags topic %}
 {% endblock %}
-{% block custom_js %}
-   {% script_tags 'jquery-ui markitup imagesloaded' %}
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/forums.js" %}"></script>
-   {% include "forums/jump_box.js" %}
-<script type="text/javascript">
-//<![CDATA[
-$(document).ready(function() {
-   $('div.forum-post-body img').imagesLoaded(function($images, $proper, $broken) {
-      $proper.each(function(index) {
-         var $pic = $(this);
-         if ($pic.width() > 660) {
-            $pic.css('width', '660px');
-            $pic.wrap($('<a/>').attr('href', $pic.attr('src')).attr('title', 'Click to view full size'));
-         }
-      });
-   });
-});
-//]]>
-</script>
-{% endblock %}
 {% block content %}
 {% forum_navigation topic %}
+<h2>
+   <a href="{{ topic.get_absolute_url }}" title="Permalink"><i class="fi-link"></i></a>
+   {{ topic.name }}
+</h2>
 
 <div class="forum-block">
 {% if topic.sticky %}
-<img src="{% static "icons/asterisk_orange.png" %}" alt="Sticky" title="Sticky" />
+   <i class="fi-asterisk size-36 green3" title="Sticky Topic"></i>
 {% endif %}
 {% if topic.locked %}
-<img src="{% static "icons/lock.png" %}" alt="Lock" title="This topic is locked" />
+   <i class="fi-lock size-36 green3"></i>
 {% endif %}
 {% if can_reply %}
-{% if topic.locked or topic.sticky %}&bull;{% endif %}
-{% if last_page %}
-<a href="#forum-reply-form">New Reply</a>
-{% else %}
-<a href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a>
+   {% if last_page %}
+      <a class="button" href="#forum-reply-form">New Reply</a>
+   {% else %}
+      <a class="button" href="./?page={{ page.paginator.num_pages }}#forum-reply-form">New Reply</a>
+   {% endif %}
 {% endif %}
-{% endif %}
-&bull; <a href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a>
-{{ page_nav }}
+<a class="button" href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a>
+{% include 'core/v3/pagination.html' %}
 
+{% comment %} 
 <table class="forum-topic" id="forum-topic">
 {% for post in page.object_list %}
    {% cycle 'odd' 'even' as rowcolors silent %}
    {% include 'forums/display_post.html' %}
 {% endfor %}
 </table>
-{{ page_nav }}
-{% include 'forums/jump_box.html' %}
-{% if can_moderate %}
-<div class="forum-mod-controls">
-   <form action="{% url 'forums-mod_topic_stick' topic.id %}" method="post">{% csrf_token %}
-      <input type="submit" value="{% if topic.sticky %}Unstick{% else %}Stick{% endif %} Topic" />
-   </form>
-   <form action="{% url 'forums-mod_topic_lock' topic.id %}" method="post">{% csrf_token %}
-      <input type="submit" value="{% if topic.locked %}Unlock{% else %}Lock{% endif %} Topic" />
-   </form>
-   <form action="{% url 'forums-mod_topic_delete' topic.id %}" method="post">{% csrf_token %}
-      <input type="submit" value="Delete Topic" id="forum-mod-del-topic" />
-   </form>
-   <a href="{% url 'forums-mod_topic_move' topic.id %}"><img src="{% static "icons/application_go.png" %}" alt="Move Topic" title="Move Topic" /></a>
-   <a href="{% url 'forums-mod_topic_move' topic.id %}">Move this topic</a>
-   <a href="{% url 'forums-mod_topic_split' topic.id %}"><img src="{% static "icons/arrow_branch.png" %}" alt="Split Topic" title="Split Topic" /></a>
-   <a href="{% url 'forums-mod_topic_split' topic.id %}">Split this topic</a>
-</div>
-{% endif %}
+{% endcomment %}
+
+{% for post in page.object_list %}
+   {% cycle 'sg101-card1' 'sg101-card2' 'sg101-card3' as card_class silent %}
+   {% cycle 'sg101-card-divider1' 'sg101-card-divider2' 'sg101-card-divider3' as card_divider_class silent %}
+   {% include 'forums/display_post_v3.html' %}
+{% endfor %}
+
+{% include 'core/v3/pagination.html' %}
 
 {% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
@@ -81,48 +54,75 @@ $(document).ready(function() {
 {% endif %}
 
 {% if user.is_authenticated %}
-<form action={% if is_favorite %}"{% url 'forums-unfavorite_topic' topic.id %}"{% else %}"{% url 'forums-favorite_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
-<fieldset>
-   <legend>Favorite Options</legend>
-   <p>
-   {% if is_favorite %}
-      <img src="{% static "icons/delete.png" %}" alt="Favorite" />
-      You currently have saved this topic in your list of favorites.
-      <input type="submit" value="Remove from favorites" />
-   {% else %}
-      <img src="{% static "icons/add.png" %}" alt="Favorite" />
-      Would you like to save this topic to your favorites list?
-      <input type="submit" value="Save to favorites" />
-   {% endif %}
-   </p>
-   <p>
-   To manage all your forum topic favorites, please visit your 
-   <a href="{% url 'forums-manage_favorites' %}">favorites page</a>.
-   </p>
-</fieldset>
-</form>
-
-<form action={% if is_subscribed %}"{% url 'forums-unsubscribe_topic' topic.id %}"{% else %}"{% url 'forums-subscribe_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
-<fieldset>
-   <legend>Subscription Options</legend>
-   <p>
-   {% if is_subscribed %}
-      <img src="{% static "icons/email_delete.png" %}" alt="Email" />
-      You are currently subscribed to this topic and will receive an email when new replies are posted.
-      <input type="submit" value="Unsubscribe Me" />
-   {% else %}
-      <img src="{% static "icons/email_add.png" %}" alt="Email" />
-      Would you like to receive an email when someone replies to this topic?
-      <input type="submit" value="Subscribe via Email" />
-   {% endif %}
-   </p>
-   <p>
-   To manage all your forum topic subscriptions, please visit your 
-   <a href="{% url 'forums-manage_subscriptions' %}">subscriptions page</a>.
-   </p>
-</fieldset>
-</form>
-{% endif %}
-<a href="#top" class="quiet" title="Goto top of the page">Top</a>
+<div class="row medium-unstack">
+   <div class="columns">
+      <form action={% if is_favorite %}"{% url 'forums-unfavorite_topic' topic.id %}"{% else %}"{% url 'forums-favorite_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
+         {% if is_favorite %}
+            <input type="submit" class="alert expanded button" value="Remove from favorites" />
+         {% else %}
+            <input type="submit" class="primary expanded button" value="Save to favorites" />
+         {% endif %}
+      </form>
+   </div>
+   <div class="columns">
+      <a class="secondary expanded button" href="{% url 'forums-manage_favorites' %}">Manage favorites</a>
+   </div>
+   <div class="columns">
+      <form action={% if is_subscribed %}"{% url 'forums-unsubscribe_topic' topic.id %}"{% else %}"{% url 'forums-subscribe_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
+         {% if is_subscribed %}
+            <input type="submit" class="alert expanded button" value="Unsubscribe Me" />
+         {% else %}
+            <input type="submit" class="primary expanded button" value="Subscribe via Email" />
+         {% endif %}
+      </form>
+   </div>
+   <div class="columns">
+      <a class="secondary expanded button" href="{% url 'forums-manage_subscriptions' %}">Manage Subscriptions</a>
+   </div>
 </div>
+{% endif %}
+
+{% include 'forums/jump_box.html' %}
+
+{% if can_moderate %}
+<hr>
+<div class="row medium-unstack inline-forms">
+   <div class="columns">
+      <form action="{% url 'forums-mod_topic_stick' topic.id %}" method="post">{% csrf_token %}
+         <input type="submit" class="warning expanded button"
+            value="{% if topic.sticky %}Unstick{% else %}Stick{% endif %} Topic" />
+      </form>
+   </div>
+   <div class="columns">
+      <form action="{% url 'forums-mod_topic_lock' topic.id %}" method="post">{% csrf_token %}
+         <input type="submit" class="warning expanded button"
+            value="{% if topic.locked %}Unlock{% else %}Lock{% endif %} Topic" />
+      </form>
+   </div>
+   <div class="columns">
+      <form action="{% url 'forums-mod_topic_delete' topic.id %}" method="post">{% csrf_token %}
+         <input type="submit" class="alert expanded button"
+            value="Delete Topic" id="forum-mod-del-topic" />
+      </form>
+   </div>
+   <div class="columns">
+      <a class="warning expanded button" href="{% url 'forums-mod_topic_move' topic.id %}">Move this topic</a>
+   </div>
+   <div class="columns">
+      <a class="warning expanded button" href="{% url 'forums-mod_topic_split' topic.id %}">Split this topic</a>
+   </div>
+</div>
+{% endif %}
+
+<p>
+   <a href="#top" class="quiet" title="Goto top of the page">Top</a>
+</p>
+</div>
+{% endblock %}
+
+{% block custom_js %}
+   {% script_tags 'jquery-ui' %}
+   <script src="{% static "js/jquery.form.min.js" %}"></script>
+   <script src="{% static "js/forums.js" %}"></script>
+   {% include "forums/jump_box.js" %}
 {% endblock %}

@@ -237,3 +237,67 @@ table.sg101-stack {
 .green3 {
    color: $sg101-green3;
 }
+
+.inline-forms {
+   form {
+      display: inline;
+   }
+}
+
+.post-odd {
+   background-color: $sg101-green3;
+}
+
+.sg101-card1 {
+    @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
+}
+
+.sg101-card-divider1 {
+    @include card-divider($background: $sg101-surf-green3);
+
+    /****
+    a {
+       color: $sg101-red;
+       &:hover,
+       &:focus {
+          color: scale-color($sg101-red, $lightness: -14%);
+       }
+    }
+    ******/
+}
+
+.sg101-card2 {
+    @include card-container($background: $sg101-blue3, $border: 1px solid rgba(0, 0, 0, 0.1));
+}
+
+.sg101-card-divider2 {
+    @include card-divider($background: $sg101-blue3);
+
+    /***
+    a {
+       color: $sg101-red;
+       &:hover,
+       &:focus {
+          color: scale-color($sg101-red, $lightness: -14%);
+       }
+    }
+    ****/
+}
+
+.sg101-card3 {
+    @include card-container($background: $sg101-shell-pink3, $border: 1px solid rgba(0, 0, 0, 0.1));
+}
+
+.sg101-card-divider3 {
+    @include card-divider($background: $sg101-shell-pink3);
+
+    /****
+    a {
+       color: $sg101-red;
+       &:hover,
+       &:focus {
+          color: scale-color($sg101-red, $lightness: -14%);
+       }
+    }
+    ****/
+}
