@@ -2,7 +2,7 @@
 {% load forum_tags %}
 <div class="row collapse">
    <div class="small-12 medium-3 column">
-      <div class="{{ card_class }} show-for-medium" style="height:100%;">
+      <div class="{{ card_class }} show-for-medium">
          <div class="{{ card_divider_class }}">
             {% profile_link post.user.username %}
          </div>
@@ -23,21 +23,33 @@
       </div>
    </div>
    <div class="small-12 medium-9 column">
-      <div class="{{ card_class }}" style="height:100%;">
+      <div class="{{ card_class }}">
          <div class="{{ card_divider_class }}">
-            {% if post.unread %}
-               <i class="fi-burst-new shiny"></i>
-            {% endif %}
-            <a href="{{ post.get_absolute_url }}" title="Link to this post">
-                  <i class="fi-link"></i></a>
-            <span class="quiet show-for-medium">Posted on {% forum_date post.creation_date user %}</span>
-            <span class="quiet hide-for-medium">
-               {% profile_link post.user.username %} on
-               {% forum_date post.creation_date user %}
-            </span>
-            {% if can_moderate %}
-               <span class="quiet">from IP: {{ post.user_ip }}</span>
-            {% endif %}
+            <div class="show-for-medium">
+               {% if post.unread %}
+                  <i class="fi-burst-new shiny"></i>
+               {% endif %}
+               <a href="{{ post.get_absolute_url }}" title="Link to this post">
+                     <i class="fi-link"></i></a>
+               <span class="quiet">Posted on {% forum_date post.creation_date user %}</span>
+               {% if can_moderate %}
+                  <span class="quiet">from IP: {{ post.user_ip }}</span>
+               {% endif %}
+            </div>
+            <div class="hide-for-medium">
+               {% if post.unread %}
+                  <i class="fi-burst-new shiny"></i>
+               {% endif %}
+               <a href="{{ post.get_absolute_url }}" title="Link to this post">
+                     <i class="fi-link"></i></a>
+               <span>
+                  {% profile_link post.user.username %}
+               </span><br />
+               <span class="quiet">{% forum_date post.creation_date user %}</span>
+               {% if can_moderate %}
+                  <span class="quiet">- {{ post.user_ip }}</span>
+               {% endif %}
+            </div>
          </div>
          <div class="card-section">
             {{ post.html|safe }}

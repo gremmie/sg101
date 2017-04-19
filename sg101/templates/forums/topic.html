@@ -31,22 +31,15 @@
 <a class="button" href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a>
 {% include 'core/v3/pagination.html' %}
 
-{% comment %} 
-<table class="forum-topic" id="forum-topic">
 {% for post in page.object_list %}
-   {% cycle 'odd' 'even' as rowcolors silent %}
-   {% include 'forums/display_post.html' %}
-{% endfor %}
-</table>
-{% endcomment %}
-
-{% for post in page.object_list %}
-   {% cycle 'sg101-card1' 'sg101-card2' 'sg101-card3' as card_class silent %}
-   {% cycle 'sg101-card-divider1' 'sg101-card-divider2' 'sg101-card-divider3' as card_divider_class silent %}
+   {% cycle 'sg101-card1' 'sg101-card2' as card_class silent %}
+   {% cycle 'sg101-card-divider1' 'sg101-card-divider2' as card_divider_class silent %}
    {% include 'forums/display_post_v3.html' %}
 {% endfor %}
 
-{% include 'core/v3/pagination.html' %}
+<div class="more-top-margin">
+   {% include 'core/v3/pagination.html' %}
+</div>
 
 {% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
@@ -85,7 +78,8 @@
 {% include 'forums/jump_box.html' %}
 
 {% if can_moderate %}
-<hr>
+<div class="secondary callout more-top-margin">
+   <h5 class="text-center">Moderator Controls</h5>
 <div class="row medium-unstack inline-forms">
    <div class="columns">
       <form action="{% url 'forums-mod_topic_stick' topic.id %}" method="post">{% csrf_token %}
@@ -111,6 +105,7 @@
    <div class="columns">
       <a class="warning expanded button" href="{% url 'forums-mod_topic_split' topic.id %}">Split this topic</a>
    </div>
+</div>
 </div>
 {% endif %}
 

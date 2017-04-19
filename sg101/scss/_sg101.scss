@@ -250,54 +250,18 @@ table.sg101-stack {
 
 .sg101-card1 {
     @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
+    height: 100%;
 }
 
 .sg101-card-divider1 {
     @include card-divider($background: $sg101-surf-green3);
-
-    /****
-    a {
-       color: $sg101-red;
-       &:hover,
-       &:focus {
-          color: scale-color($sg101-red, $lightness: -14%);
-       }
-    }
-    ******/
 }
 
 .sg101-card2 {
     @include card-container($background: $sg101-blue3, $border: 1px solid rgba(0, 0, 0, 0.1));
+    height: 100%;
 }
 
 .sg101-card-divider2 {
     @include card-divider($background: $sg101-blue3);
-
-    /***
-    a {
-       color: $sg101-red;
-       &:hover,
-       &:focus {
-          color: scale-color($sg101-red, $lightness: -14%);
-       }
-    }
-    ****/
-}
-
-.sg101-card3 {
-    @include card-container($background: $sg101-shell-pink3, $border: 1px solid rgba(0, 0, 0, 0.1));
-}
-
-.sg101-card-divider3 {
-    @include card-divider($background: $sg101-shell-pink3);
-
-    /****
-    a {
-       color: $sg101-red;
-       &:hover,
-       &:focus {
-          color: scale-color($sg101-red, $lightness: -14%);
-       }
-    }
-    ****/
 }
