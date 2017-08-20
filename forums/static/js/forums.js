@@ -21,13 +21,24 @@ $(document).ready(function() {
          dataType: 'html',
          success: function (data, textStatus) {
             postText.val('');
-            var lastTr = $('#forum-topic tr:last');
-            var newClass = lastTr.hasClass('odd') ? 'even' : 'odd';
-            lastTr.after(data);
-            lastTr = $('#forum-topic tr:last');
-            lastTr.addClass(newClass);
-            lastTr.hide();
-            lastTr.fadeIn(3000);
+            var lastPost = $('#forum-topic-post-container > div:last-child');
+            var firstCard = lastPost.find('div > div').first();
+            var newCardClass = firstCard.hasClass('sg101-card1') ? 'sg101-card2' : 'sg101-card1';
+            var newDividerClass = newCardClass == 'sg101-card1' ? 'sg101-card-divider1' : 'sg101-card-divider2';
+            lastPost.after(data);
+
+            lastPost = $('#forum-topic-post-container > div:last-child');
+            var firstCard = lastPost.find('> div > div').first();
+            firstCard.addClass(newCardClass);
+            var firstDivider = firstCard.find('> div').first();
+            firstDivider.addClass(newDividerClass);
+            var lastCard = lastPost.find('> div:last-child > div').first();
+            lastCard.addClass(newCardClass);
+            var lastDivider = lastCard.find('> div').first();
+            lastDivider.addClass(newDividerClass);
+
+            lastPost.hide();
+            lastPost.fadeIn(3000);
             postButton.removeAttr('disabled').val('Submit Reply');
             initAttachments();
          },
@@ -179,10 +190,12 @@ $(document).ready(function() {
       {
          vid = 0;
          var s = '<div id="init-add">' +
-            '<img src="/static/icons/television_add.png" alt="Add" /> ' +
-            '<a href="#">Attach Video</a></div>';
+                     '<button class="button">' +
+                        '<i class="fi-video"></i> Attach Video' +
+                     '</button>' +
+                 '</div>';
          vidDiv.prepend(s);
-         $('#attachment a').click(function () {
+         $('#attachment button').click(function () {
             $('#init-add').remove();
             addVideo();
             return false;
@@ -208,10 +221,21 @@ $(document).ready(function() {
    {
       var id = "video-" + vid;
 
-      var fakeForm = '<div id="' + id + '">' +
-         '<img src="/static/icons/television_add.png" alt="Attach" class="r" /> ' +
-         '<input type="text" size="45" class="r" /> <button type="button" class="r">Attach</button> ' +
-         '<a href="#" class="r">Remove</a><br /></div>';
+      var fakeForm =
+         '<div id="' + id + '" class="row">' +
+            '<div class="columns r">' +
+               '<div class="input-group">' +
+                  '<span class="input-group-label"><i class="fi-video"></i></span>' +
+                  '<input class="input-group-field" type="text">' +
+                  '<div class="input-group-button">' +
+                     '<button type="button" class="button r">Attach</button>' +
+                  '</div>' +
+               '</div>' +
+            '</div>' +
+            '<div class="small-2 columns r">' +
+               '<a href="#">Remove</a>' +
+            '</div>' +
+         '</div>';
 
       var n = $('#attachment div').length;
 
@@ -229,7 +253,7 @@ $(document).ready(function() {
       }
       else
       {
-         $('#attachment div:last').after(fakeForm);
+         $('#attachment div.row:last').after(fakeForm);
       }
 
       $('#' + id + ' a').click(function() {
@@ -253,12 +277,13 @@ $(document).ready(function() {
             success: function (data, textStatus) {
                $('#' + id + " .r").remove();
                var myDiv = $('#' + id);
-               var html = '<span class="link">' +
-                  '<img src="/static/icons/television_delete.png" alt="Remove" /> ' +
-                  '<a href="#">Remove</a></span>' +
-                  '<input type="hidden" name="attachment" value="' + data.id + '" />';
+               var html =
+                  '<div class="columns">' +
+                     data.embed +
+                     '<p><a href="#"><i class="fi-x"></i> Remove ' +
+                        '<i class="fi-arrow-up"></i></a></p>' +
+                  '</div>';
                myDiv.prepend(html);
-               myDiv.prepend(data.embed);
                $('#' + id + ' a').click(function() {
                   myDiv.remove();
                   relabelAttachLink();

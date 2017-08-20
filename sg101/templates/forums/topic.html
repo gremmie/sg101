@@ -31,11 +31,13 @@
 <a class="button" href="{% url 'forums-new_topic' slug=forum.slug %}">New Topic</a>
 {% include 'core/v3/pagination.html' %}
 
+<div id="forum-topic-post-container">
 {% for post in page.object_list %}
    {% cycle 'sg101-card1' 'sg101-card2' as card_class silent %}
    {% cycle 'sg101-card-divider1' 'sg101-card-divider2' as card_divider_class silent %}
    {% include 'forums/display_post_v3.html' %}
 {% endfor %}
+</div>
 
 <div class="more-top-margin">
    {% include 'core/v3/pagination.html' %}
@@ -43,7 +45,8 @@
 
 {% if last_page and can_reply %}
 <a name="forum-reply-form"></a>
-{% show_form "Reply to Topic" form "Submit Reply" 1 %}
+{# show_form "Reply to Topic" form "Submit Reply" 1 #}
+{% include 'forums/new_post_form.html' %}
 {% endif %}
 
 {% if user.is_authenticated %}
@@ -116,8 +119,9 @@
 {% endblock %}
 
 {% block custom_js %}
-   {% script_tags 'jquery-ui' %}
+   {% js_tags 'jquery-ui' %}
    <script src="{% static "js/jquery.form.min.js" %}"></script>
    <script src="{% static "js/forums.js" %}"></script>
+   <script src="{% static "js/v3/post_box.js" %}"></script>
    {% include "forums/jump_box.js" %}
 {% endblock %}

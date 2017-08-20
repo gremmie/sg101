@@ -341,7 +341,7 @@ def quick_reply_ajax(request):
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic, datetime.datetime.now())
 
-        return render(request, 'forums/display_post.html', {
+        return render(request, 'forums/display_post_v3.html', {
             'post': post,
             'can_moderate': perms.can_moderate(form.topic.forum, request.user),
             'can_reply': True,
