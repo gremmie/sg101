@@ -55,8 +55,10 @@ import json
 import logging
 import time
 
+from django.conf import settings
 from django.dispatch import receiver
 from django.template.loader import render_to_string
+import pytz
 import redis
 
 from forums.signals import post_content_update, topic_content_update
@@ -71,6 +73,8 @@ MAX_POSTS = 50
 
 # This controls how many updated topics we track
 MAX_UPDATED_TOPICS = 50
+
+SERVER_TZ = pytz.timezone(settings.TIME_ZONE)
 
 # Redis key names:
 POST_COUNT_KEY = "forums:public_post_count"
@@ -292,7 +296,9 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
         post = json.loads(raw_post)
 
         # fix up the pubdate; turn it back into a datetime object
-        post['pubdate'] = datetime.datetime.fromtimestamp(post['pubdate'])
+        pubdate = datetime.datetime.utcfromtimestamp(post['pubdate'])
+        pubdate.replace(tzinfo=SERVER_TZ)
+        post['pubdate'] = pubdate
 
         posts.append(post)
 
@@ -474,7 +480,7 @@ def _serialize_post(post):
         'title': post.topic.name,
         'content': content,
         'author': post.user.username,
-        'pubdate': int(time.mktime(post.creation_date.timetuple())),
+        'pubdate': int(time.mktime(post.creation_date.utctimetuple())),
         'forum_name': post.topic.forum.name,
         'url': post.get_absolute_url()
     }
