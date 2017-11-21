@@ -23,24 +23,11 @@ major credit cards are also accepted. If you really don't do Paypal, please
       <form action="{{ form_action }}" method="post">
       <fieldset class="fieldset">
          <legend>Donation Form</legend>
-         <p>Please select an amount:</p>
-         <ul class="no-bullet">
-            <li><input name="amount" type="radio" value="5.00" id="amount_5" />
-               <label for="amount_5">$5</label></li>
-            <li><input name="amount" type="radio" value="10.00" id="amount_10" />
-               <label for="amount_10">$10</label></li>
-            <li><input name="amount" type="radio" value="15.00" id="amount_15" />
-               <label for="amount_15">$15</label></li>
-            <li><input name="amount" type="radio" value="20.00" id="amount_20" />
-               <label for="amount_20">$20</label></li>
-            <li><input name="amount" type="radio" value="" id="amount_other_r" />
-               <label for="amount_other">Other:</label>
-               <div class="input-group">
-                  <span class="input-group-label">$</span>
-                  <input class="input-group-field" name="amount" type="number" value="25.00" id="amount_other" />
-               </div>
-            </li>
-         </ul>
+         <p>Please enter an amount:</p>
+         <div class="input-group">
+            <span class="input-group-label">$</span>
+            <input class="input-group-field" name="amount" type="number" value="5.00"/>
+         </div>
          {% if user.is_authenticated %}
             <input type="hidden" name="custom" value="{{ user.username }}" />
             <p>You are currently logged in. Would you like your site username listed with your donation?</p>
@@ -48,7 +35,8 @@ major credit cards are also accepted. If you really don't do Paypal, please
                <li><input name="item_number" type="radio" value="{{ item_number }}" id="name_yes" />
                <label for="name_yes">Yes, list me as {{ user.username }}</label></li>
          {% else %}
-         <p>You are not currently logged in. Please <a href="{% url 'accounts-login' %}">log in</a>
+         <p>You are not currently logged in.
+         Please <a href="{% url 'accounts-login' %}?next={% url 'donations-index' %}">log in</a>
          if you would like your site username listed with your donation. Otherwise you can have your
          actual name (from Paypal) listed, or you can be listed as {{ anonymous }}.</p>
             <ul class="no-bullet">
