@@ -42,7 +42,7 @@ class ContactForm(forms.Form):
         super(ContactForm, self).clean()
         captcha_response = self.request.POST.get('g-recaptcha-response')
         if not captcha_response:
-            raise forms.ValidationError('Missing reCAPTCHA response')
+            raise forms.ValidationError("Please verify you aren't a robot")
         r = requests.post(settings.RECAPTCHA_URL, data={
                 'secret': settings.RECAPTCHA_SECRET_KEY,
                 'response': captcha_response,

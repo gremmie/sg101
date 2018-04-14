@@ -10,6 +10,7 @@ Answers to common questions and problems can be found in the
 </p>
 
 <form action="{% url 'contact-form' %}" method="post">{% csrf_token %}
+   {{ form.non_field_errors }}
    <div class="row">
       <div class="small-12 medium-8 columns">
          <label>{{ form.name.label }}
