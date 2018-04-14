@@ -311,6 +311,11 @@ USER_IMAGES_SOURCES = [
 # useful when we are rebuilding the search index.
 SEARCH_QUEUE_ENABLED = True
 
+# Google reCAPTCHA settings
+RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
+RECAPTCHA_SITE_KEY = SECRETS['RECAPTCHA_SITE_KEY']
+RECAPTCHA_SECRET_KEY = SECRETS['RECAPTCHA_SECRET_KEY']
+
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)
 #######################################################################

@@ -1,5 +1,6 @@
 """Views for the contact application."""
 
+from django.conf import settings
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
@@ -9,7 +10,7 @@ from core.functions import get_full_name
 
 def contact_form(request):
     if request.method == 'POST':
-        form = ContactForm(request.POST)
+        form = ContactForm(request.POST, request=request)
         if form.is_valid():
             form.save()
             return redirect('contact-thanks')
@@ -26,10 +27,11 @@ def contact_form(request):
         if subject:
             initial_data['subject'] = subject
 
-        form = ContactForm(initial=initial_data)
+        form = ContactForm(initial=initial_data, request=request)
 
     return render(request, 'contact/contact_form.html', {
         'form': form,
+        'RECAPTCHA_SITE_KEY': settings.RECAPTCHA_SITE_KEY,
         'V3_DESIGN': True,
     })
 

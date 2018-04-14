@@ -10,9 +10,6 @@ Answers to common questions and problems can be found in the
 </p>
 
 <form action="{% url 'contact-form' %}" method="post">{% csrf_token %}
-<!--
-<fieldset class="fieldset">
-   <legend>Contact Us</legend> -->
    <div class="row">
       <div class="small-12 medium-8 columns">
          <label>{{ form.name.label }}
@@ -54,9 +51,16 @@ Answers to common questions and problems can be found in the
    </div>
    <div class="row">
       <div class="small-12 medium-8 columns">
-         <input type="submit" class="button" value="Send Message" />
+         <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div>
       </div>
    </div>
-<!-- </fieldset> -->
+   <div class="row">
+      <div class="small-12 medium-8 columns">
+         <input type="submit" class="button more-top-margin" value="Send Message" />
+      </div>
+   </div>
 </form>
+{% endblock %}
+{% block custom_js %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endblock %}

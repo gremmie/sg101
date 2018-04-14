@@ -1,10 +1,18 @@
 """forms for the contact application"""
 
+import logging
+
 from django import forms
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
+import requests
+
+from core.functions import get_ip
 from core.functions import send_mail
+
+
+logger = logging.getLogger(__name__)
 
 
 class ContactForm(forms.Form):
@@ -20,11 +28,33 @@ class ContactForm(forms.Form):
 
     recipient_list = [mail_tuple[1] for mail_tuple in settings.MANAGERS]
 
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super(ContactForm, self).__init__(*args, **kwargs)
+
     def clean_honeypot(self):
         value = self.cleaned_data['honeypot']
         if value:
             raise forms.ValidationError(self.fields['honeypot'].label)
         return value
+
+    def clean(self):
+        super(ContactForm, self).clean()
+        captcha_response = self.request.POST.get('g-recaptcha-response')
+        if not captcha_response:
+            raise forms.ValidationError('Missing reCAPTCHA response')
+        r = requests.post(settings.RECAPTCHA_URL, data={
+                'secret': settings.RECAPTCHA_SECRET_KEY,
+                'response': captcha_response,
+                'remoteip': get_ip(self.request),
+            })
+        result = r.json()
+        logger.info("Contact Form captcha response: %s %s",
+                    result.get('success', '<Missing>'),
+                    result.get('error-codes', '<Missing>'))
+        success = result.get('success', False)
+        if not success:
+            raise forms.ValidationError('reCAPTCHA failure')
 
     def save(self):
         # Send the feedback message email
