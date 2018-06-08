@@ -23,16 +23,18 @@ def cookie_value(user, now):
 
     # The key part of the cookie is just a string that would make things
     # difficult for a spoofer; something that can't be easily made up:
+    username = user.username.encode('utf-8')
+    email = user.email.encode('utf-8')
 
     h = hashlib.sha256()
-    h.update(user.username.encode('utf-8'))
-    h.update(user.email.encode('utf-8'))
+    h.update(username)
+    h.update(email)
     h.update(now.isoformat())
     h.update(''.join(random.sample(string.printable, 64)))
     h.update(settings.SECRET_KEY)
     key = h.hexdigest()
 
-    parts = (user.username, user.email, key)
+    parts = (username, email, key)
     return '#'.join(parts)
 
 

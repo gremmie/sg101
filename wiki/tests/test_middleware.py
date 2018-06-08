@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Tests for the wiki integration application.
 
@@ -20,8 +21,8 @@ class MiddleWareTestCase(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = User.objects.create_user('test_user', 'test@example.com',
-                'password')
+        self.user = User.objects.create_user(u'Sérgio', u'test@example.com',
+                u'password')
         self.conn = get_redis_connection()
         self.mw = WikiMiddleware()
 
@@ -52,7 +53,7 @@ class MiddleWareTestCase(TestCase):
 
             cookie_val = cookie.value
             try:
-                user, email, key = cookie_val.split('#')
+                user, email, key = cookie_val.decode('utf-8').split('#')
             except ValueError:
                 self.fail('invalid cookie value')
             else:
