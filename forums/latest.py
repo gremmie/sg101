@@ -55,9 +55,11 @@ import json
 import logging
 import time
 
+import dateutil.parser
 from django.conf import settings
 from django.dispatch import receiver
 from django.template.loader import render_to_string
+from django.utils.timezone import get_default_timezone, make_aware
 import pytz
 import redis
 
@@ -296,13 +298,27 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
         post = json.loads(raw_post)
 
         # fix up the pubdate; turn it back into a datetime object
-        pubdate = datetime.datetime.utcfromtimestamp(post['pubdate'])
-        pubdate.replace(tzinfo=SERVER_TZ)
-        post['pubdate'] = pubdate
+        post['pubdate'] = _deserialize_date(post['pubdate'])
 
         posts.append(post)
 
     return posts
+
+
+def _deserialize_date(pubdate):
+    if isinstance(pubdate, (int, long)):
+        # legacy data, fix up and watch out for timezone glitches
+        new_date = datetime.datetime.utcfromtimestamp(pubdate)
+        new_date.replace(tzinfo=SERVER_TZ)
+
+        tz = get_default_timezone()
+        try:
+            make_aware(new_date, tz)
+        except pytz.NonExistentTimeError:
+            new_date += datetime.timedelta(hours=1)
+        return new_date
+
+    return dateutil.parser.parse(pubdate)
 
 
 @receiver(topic_content_update, dispatch_uid='forums.latest_posts')
@@ -480,7 +496,7 @@ def _serialize_post(post):
         'title': post.topic.name,
         'content': content,
         'author': post.user.username,
-        'pubdate': int(time.mktime(post.creation_date.utctimetuple())),
+        'pubdate': post.creation_date.isoformat(),
         'forum_name': post.topic.forum.name,
         'url': post.get_absolute_url()
     }
