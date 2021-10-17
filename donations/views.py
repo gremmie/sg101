@@ -158,7 +158,7 @@ def process_donation(item_number, params):
 
     # Is the email address ours?
     business = params.get('business')
-    if business != paypal_params()[1]:
+    if business not in paypal_params()[1]:
         logging.warning('IPN: invalid business: %s', business)
         return
 
