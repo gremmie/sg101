@@ -71,7 +71,7 @@ def index(request):
         'pct': pct,
         'donations': donations,
         'form_action': form_action,
-        'business': business,
+        'business': business[0],
         'anonymous': settings.DONATIONS_ANON_NAME,
         'item_name': settings.DONATIONS_ITEM_NAME,
         'item_number': settings.DONATIONS_ITEM_NUM,

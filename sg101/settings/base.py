@@ -262,8 +262,8 @@ AVATAR_DEFAULT_URL = MEDIA_URL + AVATAR_DIR + '/default.png'
 # Donations application settings:
 DONATIONS_DEBUG = False
 DONATIONS_ITEM_NAME = 'Donation for SurfGuitar101.com'
-DONATIONS_BUSINESS = 'brian@surfguitar101.com'
-DONATIONS_BUSINESS_DEBUG = 'bgneal_1246137628_biz@gmail.com'
+DONATIONS_BUSINESS = ['brian@surfguitar101.com', 'bgneal@gmail.com']
+DONATIONS_BUSINESS_DEBUG = ['bgneal_1246137628_biz@gmail.com']
 DONATIONS_GOAL = Decimal('120.00')  # monthly goal
 DONATIONS_ANON_NAME = u'Anonymous'
 DONATIONS_ITEM_NUM = '500'          # donation w/name listed
