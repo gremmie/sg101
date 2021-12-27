@@ -5,6 +5,7 @@ in a given category.
 """
 from optparse import make_option
 
+from django.core import serializers
 from django.core.management.base import LabelCommand, CommandError
 from django.template.loader import render_to_string
 
@@ -20,6 +21,10 @@ class Command(LabelCommand):
                 action='store_true',
                 default=False,
                 help='Output a text listing of titles only'),
+            make_option('--json',
+                action='store_true',
+                default=False,
+                help='Output downloads in JSON format'),
             )
 
     def handle_label(self, slug, **options):
@@ -40,6 +45,10 @@ class Command(LabelCommand):
             self.print_titles(downloads)
             return
 
+        if options.get('json'):
+            self.print_json(downloads)
+            return
+
         report = render_to_string('downloads/commands/category_report.html', {
             'category': category,
             'downloads': downloads,
@@ -52,5 +61,10 @@ class Command(LabelCommand):
 
         for dl in dls:
             self.stdout.write(dl.title)
+
+    def print_json(self, dls):
+        """Output downloads in JSON format"""
+        data = serializers.serialize('json', dls)
+        self.stdout.write(data)
 
 
