@@ -15,6 +15,7 @@ TITLE_RE = re.compile(r'^(\d+)\s+-\s+(.+)"(.+)"$')
 
 def process_mp3(mp3, args):
     title = mp3['fields']['title']
+    print(f'Processing {title}...')
     m = TITLE_RE.match(title)
     track_num = int(m[1])
     artist = m[2].strip()
@@ -23,6 +24,8 @@ def process_mp3(mp3, args):
     filepath = os.path.join(args.mp3_dir, filename)
 
     mp3file = eyed3.load(filepath)
+    if mp3file.tag is None:
+        mp3file.tag = eyed3.id3.tag.Tag()
     mp3file.tag.clear()
     mp3file.tag.title = title
     mp3file.tag.artist = artist
