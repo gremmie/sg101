@@ -307,6 +307,9 @@ USER_IMAGES_SOURCES = [
     'lh3.googleusercontent.com',
 ]
 
+USER_PHOTOS_LOCAL_UPLOAD = False
+USER_PHOTOS_LOCAL_UPLOAD_DIR = 'user_photos'
+
 # If this flag is False, the queued_search queue will not be processed. This is
 # useful when we are rebuilding the search index.
 SEARCH_QUEUE_ENABLED = True

@@ -4,17 +4,45 @@ The image can be resized and a thumbnail can be generated and uploaded as well.
 
 """
 from base64 import b64encode
+import datetime
 import logging
 from io import BytesIO
 import os.path
+import shutil
 import uuid
 
+from django.conf import settings
+from django.contrib.sites.models import Site
 from PIL import Image
 
 from .utils import orient_image
+from core.s3 import S3Bucket
 
 
 logger = logging.getLogger(__name__)
+
+
+def process_upload(user, filename):
+    if settings.USER_PHOTOS_LOCAL_UPLOAD:
+        url, thumb_url = _process_local_upload(
+                filename,
+                new_size=settings.USER_PHOTOS_MAX_SIZE,
+                thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
+    else:
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        metadata = {'user': user.username, 'date': now}
+
+        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
+                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
+                          base_url=settings.USER_PHOTOS_BASE_URL,
+                          bucket_name=settings.USER_PHOTOS_BUCKET)
+
+        url, thumb_url = upload(filename,
+                                bucket=bucket,
+                                metadata=metadata,
+                                new_size=settings.USER_PHOTOS_MAX_SIZE,
+                                thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
+    return (url, thumb_url)
 
 
 def make_key():
@@ -92,3 +120,64 @@ def upload(filename, bucket, metadata=None, new_size=None, thumb_size=None):
     logger.info('Completed processing image file: %s', filename)
 
     return (image_url, thumb_url)
+
+
+def _process_local_upload(filename, new_size=None, thumb_size=None):
+    # Re-orient if necessary
+    image = Image.open(filename)
+    changed, image = orient_image(image)
+    if changed:
+        image.save(filename)
+
+    # Resize image if necessary
+    if new_size:
+        image = Image.open(filename)
+        if image.size > new_size:
+            logger.debug('Resizing from {} to {}'.format(image.size, new_size))
+            image.thumbnail(new_size, Image.ANTIALIAS)
+            image.save(filename)
+
+    # Create thumbnail if necessary
+    thumb = None
+    if thumb_size:
+        logger.debug('Creating thumbnail {}'.format(thumb_size))
+        image = Image.open(filename)
+        image.thumbnail(thumb_size, Image.ANTIALIAS)
+        thumb = BytesIO()
+        image.save(thumb, format=image.format)
+
+    # Copy file and thumbnail to our user upload files directory.
+    upload_dir = os.path.join(settings.MEDIA_ROOT,
+                              settings.USER_PHOTOS_LOCAL_UPLOAD_DIR)
+    unique_name = uuid.uuid4().hex
+    ext = os.path.splitext(filename)[1]
+    image_name = '%s%s' % (unique_name, ext)
+    thumb_name = '%st%s' % (unique_name, ext)
+    image_path = os.path.join(upload_dir, image_name)
+    thumb_path = os.path.join(upload_dir, thumb_name)
+
+    shutil.copy(filename, image_path)
+    if thumb:
+        shutil.copyfileobj(thumb, thumb_path)
+
+    # Generate URLs for the image and thumb.
+    site = Site.objects.get_current()
+
+    url_pattern = '%s://%s%s%s/%s'
+
+    image_url = url_pattern % (
+            settings.SITE_SCHEME,
+            site.domain,
+            settings.MEDIA_URL,
+            settings.USER_PHOTOS_LOCAL_UPLOAD_DIR,
+            image_name)
+
+    thumb_url = url_pattern % (
+            settings.SITE_SCHEME,
+            site.domain,
+            settings.MEDIA_URL,
+            settings.USER_PHOTOS_LOCAL_UPLOAD_DIR,
+            thumb_name)
+
+    return (image_url, thumb_url)
+

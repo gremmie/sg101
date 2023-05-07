@@ -1,5 +1,4 @@
 """Forms for the user_photos application."""
-import datetime
 import hashlib
 import os.path
 import urlparse
@@ -9,8 +8,7 @@ from django.conf import settings
 
 from core.download import download_file
 from core.functions import remove_file, TemporaryFile
-from core.images.upload import upload
-from core.s3 import S3Bucket
+from core.images.upload import process_upload
 from core.services import get_redis_connection
 from user_photos.models import Photo
 
@@ -70,12 +68,6 @@ class UploadForm(forms.Form):
         except Photo.DoesNotExist:
             pass
 
-        # This must not be a duplicate, proceed with upload to S3
-        bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
-                          secret_key=settings.USER_PHOTOS_SECRET_KEY,
-                          base_url=settings.USER_PHOTOS_BASE_URL,
-                          bucket_name=settings.USER_PHOTOS_BUCKET)
-
         # Trying to use PIL (or Pillow) on a Django UploadedFile is often
         # problematic because the file is often an in-memory file if it is under
         # a certain size. This complicates matters and many of the operations we try
@@ -91,14 +83,7 @@ class UploadForm(forms.Form):
                 t.file.write(chunk)
             t.file.close()
 
-            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            metadata = {'user': self.user.username, 'date': now}
-
-            url, thumb_url = upload(filename=t.filename,
-                                    bucket=bucket,
-                                    metadata=metadata,
-                                    new_size=settings.USER_PHOTOS_MAX_SIZE,
-                                    thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
+            url, thumb_url = process_upload(self.user, t.filename)
 
         photo = Photo(user=self.user, url=url, thumb_url=thumb_url,
                 signature=signature)
@@ -151,19 +136,6 @@ class HotLinkImageForm(forms.Form):
 
         # Try to download the file
         with remove_file(download_file(url)) as path:
-
-            # Upload it to our S3 bucket
-            bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
-                              secret_key=settings.USER_PHOTOS_SECRET_KEY,
-                              base_url=settings.HOT_LINK_PHOTOS_BASE_URL,
-                              bucket_name=settings.HOT_LINK_PHOTOS_BUCKET)
-
-            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            metadata = {'user': self.user.username, 'date': now}
-
-            url, _ = upload(filename=path,
-                            bucket=bucket,
-                            metadata=metadata,
-                            new_size=settings.USER_PHOTOS_MAX_SIZE)
+            url, _ = process_upload(self.user, path)
 
         return url
