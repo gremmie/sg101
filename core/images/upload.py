@@ -7,6 +7,7 @@ from base64 import b64encode
 import datetime
 import logging
 from io import BytesIO
+import os
 import os.path
 import shutil
 import uuid
@@ -155,29 +156,30 @@ def _process_local_upload(filename, new_size=None, thumb_size=None):
     thumb_name = '%st%s' % (unique_name, ext)
     image_path = os.path.join(upload_dir, image_name)
     thumb_path = os.path.join(upload_dir, thumb_name)
+    perms = 0644
 
     shutil.copy(filename, image_path)
+    os.chmod(image_path, perms)
+
     if thumb:
+        thumb.seek(0)
         shutil.copyfileobj(thumb, thumb_path)
+        os.chmod(thumb_path, perms)
 
     # Generate URLs for the image and thumb.
-    site = Site.objects.get_current()
+    image_url = _user_photo_url(image_name)
+    thumb_url = _user_photo_url(thumb_name)
 
+    return (image_url, thumb_url)
+
+
+def _user_photo_url(filename):
     url_pattern = '%s://%s%s%s/%s'
+    site = Site.objects.get_current()
 
     image_url = url_pattern % (
             settings.SITE_SCHEME,
             site.domain,
             settings.MEDIA_URL,
             settings.USER_PHOTOS_LOCAL_UPLOAD_DIR,
-            image_name)
-
-    thumb_url = url_pattern % (
-            settings.SITE_SCHEME,
-            site.domain,
-            settings.MEDIA_URL,
-            settings.USER_PHOTOS_LOCAL_UPLOAD_DIR,
-            thumb_name)
-
-    return (image_url, thumb_url)
-
+            filename)

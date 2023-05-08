@@ -305,6 +305,7 @@ USER_IMAGES_SOURCES = [
     's3-us-west-1.amazonaws.com',
     'scontent-ord1-1.xx.fbcdn.net',
     'lh3.googleusercontent.com',
+    'surfguitar101.com',
 ]
 
 USER_PHOTOS_LOCAL_UPLOAD = False
