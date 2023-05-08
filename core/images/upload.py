@@ -178,7 +178,7 @@ def _user_photo_url(filename):
     url_pattern = '%s://%s%s%s/%s'
     site = Site.objects.get_current()
 
-    image_url = url_pattern % (
+    return url_pattern % (
             settings.SITE_SCHEME,
             site.domain,
             settings.MEDIA_URL,
