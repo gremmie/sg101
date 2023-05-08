@@ -163,7 +163,8 @@ def _process_local_upload(filename, new_size=None, thumb_size=None):
 
     if thumb:
         thumb.seek(0)
-        shutil.copyfileobj(thumb, thumb_path)
+        with open(thumb_path, 'wb') as out:
+            out.write(thumb.getvalue())
         os.chmod(thumb_path, perms)
 
     # Generate URLs for the image and thumb.
