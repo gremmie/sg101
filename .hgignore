@@ -5,6 +5,7 @@ syntax: glob
 *.log.*.gz
 *.pyc
 *.swp
+.DS_Store
 secrets.json
 *.db
 *.mp3
@@ -22,3 +23,4 @@ celerybeat-schedule
 sg101/xapian_index
 sg101/node_modules
 sg101/bower_components
+tools/ssg101/output
