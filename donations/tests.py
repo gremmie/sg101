@@ -116,9 +116,9 @@ class DonationsManagerTestCase(TestCase):
 
     def test_monthly_goal_pct(self):
 
-        self.assertEqual(settings.DONATIONS_GOAL, Decimal('120.00'))
+        self.assertEqual(settings.DONATIONS_GOAL, Decimal('94.00'))
         pct = Donation.objects.monthly_goal_pct(year=2012, month=9)
-        self.assertEqual(pct, 19)
+        self.assertEqual(pct, 24)
 
     def test_monthly_goal_pct2(self):
 

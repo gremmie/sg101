@@ -48,9 +48,8 @@ class HotLinkImageFormTestCase(TestCase):
     @mock.patch('user_photos.forms.rate_limit_user')
     @mock.patch('user_photos.forms.download_file')
     @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
-    @mock.patch('user_photos.forms.S3Bucket')
-    @mock.patch('user_photos.forms.upload')
-    def test_white_listed_url(self, upload_mock, bucket_mock, dl_mock, rate_limit_mock):
+    @mock.patch('user_photos.forms.process_upload')
+    def test_white_listed_url(self, upload_mock, dl_mock, rate_limit_mock):
         url = 'https://{}/a.jpg'.format(settings.USER_IMAGES_SOURCES[0])
         args = {'url': url}
         form = HotLinkImageForm(args, user=self.user)
@@ -58,15 +57,13 @@ class HotLinkImageFormTestCase(TestCase):
         result = form.save()
         self.assertEqual(result, url)
         self.assertFalse(dl_mock.called)
-        self.assertFalse(bucket_mock.called)
         self.assertFalse(upload_mock.called)
 
     @mock.patch('user_photos.forms.rate_limit_user')
     @mock.patch('user_photos.forms.download_file')
     @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
-    @mock.patch('user_photos.forms.S3Bucket')
-    @mock.patch('user_photos.forms.upload')
-    def test_happy_path(self, upload_mock, bucket_mock, dl_mock, rate_limit_mock):
+    @mock.patch('user_photos.forms.process_upload')
+    def test_happy_path(self, upload_mock, dl_mock, rate_limit_mock):
         url = 'http://example.com/a.jpg'
         args = {'url': url}
         form = HotLinkImageForm(args, user=self.user)
