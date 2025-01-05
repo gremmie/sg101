@@ -6,13 +6,13 @@ import django.contrib.auth.views
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 
-from haystack.views import search_view_factory
-from haystack.query import SearchQuerySet
+#from haystack.views import search_view_factory
+#from haystack.query import SearchQuerySet
 
 from news.feeds import LatestNewsFeed
 from forums.feeds import ForumsFeed
-from custom_search.forms import CustomModelSearchForm
-from custom_search.views import UserSearchView
+#from custom_search.forms import CustomModelSearchForm
+#from custom_search.views import UserSearchView
 from core.views import FixedView
 from sg101.views import HomePageView
 from sg101.views import StoreView
@@ -85,23 +85,32 @@ urlpatterns = [
 ]
 
 # Haystack search views
-
-sqs = SearchQuerySet().order_by('-pub_date')
-
+#
+#sqs = SearchQuerySet().order_by('-pub_date')
+#
 urlpatterns += [
-    url(r'^search/$',
-        search_view_factory(view_class=UserSearchView,
-                            form_class=CustomModelSearchForm,
-                            searchqueryset=sqs,
-                            load_all=True),
-        name='haystack_search'),
-    url(r'^search/ajax/$',
-        search_view_factory(view_class=UserSearchView,
-                            template='search/search_ajax.html',
-                            form_class=CustomModelSearchForm,
-                            searchqueryset=sqs,
-                            load_all=True),
-        name='haystack_search_ajax'),
+#    url(r'^search/$',
+#        search_view_factory(view_class=UserSearchView,
+#                            form_class=CustomModelSearchForm,
+#                            searchqueryset=sqs,
+#                            load_all=True),
+#        name='haystack_search'),
+#    url(r'^search/ajax/$',
+#        search_view_factory(view_class=UserSearchView,
+#                            template='search/search_ajax.html',
+#                            form_class=CustomModelSearchForm,
+#                            searchqueryset=sqs,
+#                            load_all=True),
+#        name='haystack_search_ajax'),
+#
+# Temporary replacements:
+#
+   url(r'^search/$',
+       FixedView.as_view(title='About', content_template='fixed/about.html'),
+       name='haystack_search'),
+   url(r'^search/ajax/$',
+       FixedView.as_view(title='About', content_template='fixed/about.html'),
+       name='haystack_search_ajax'),
 ]
 
 # For serving media files in development only:
