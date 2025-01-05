@@ -19,6 +19,7 @@ media/podcast
 media/potd
 media/slideshow
 media/smiley
+media/user_photos
 celerybeat-schedule
 sg101/xapian_index
 sg101/node_modules
