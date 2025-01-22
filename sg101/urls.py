@@ -46,7 +46,7 @@ urlpatterns = [
        StoreView.as_view(),
        name='store'),
 
-   url(r'^admin/', include(admin.site.urls)),
+   url(r'^admin/', admin.site.urls),
    url(r'^accounts/', include('accounts.urls')),
    url(r'^antispam/', include('antispam.urls')),
    url(r'^bandmap/', include('bandmap.urls')),

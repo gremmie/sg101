@@ -14,7 +14,7 @@ from accounts.models import PendingUser
 from accounts.forms import RegisterForm
 from accounts.forms import RegisterCodeForm
 from accounts.forms import ForgotUsernameForm
-from accounts import create_new_user
+from accounts.utils import create_new_user
 from antispam.decorators import log_auth_failures
 
 

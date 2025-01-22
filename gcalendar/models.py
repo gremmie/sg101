@@ -41,7 +41,7 @@ class Event(models.Model):
         (ON_CAL, 'On Calendar'),
     )
 
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     what = models.CharField(max_length=255)
     start_date = models.DateField()
     start_time = models.TimeField(null=True, blank=True)

@@ -26,7 +26,8 @@ class Thread(models.Model):
 
 
 class Post(models.Model):
-    thread = models.ForeignKey(Thread, null=True, blank=True,
+    thread = models.ForeignKey(
+            Thread, null=True, blank=True,
             on_delete=models.SET_NULL, related_name='posts')
     title = models.CharField(max_length=255)
     creation_date = models.DateTimeField()

@@ -52,11 +52,11 @@ class PublicDownloadManager(models.Manager):
 class DownloadBase(models.Model):
     """Abstract model to collect common download fields."""
     title = models.CharField(max_length=128)
-    category = models.ForeignKey(Category)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     description = models.TextField()
     html = models.TextField(blank=True)
     file = models.FileField(upload_to=download_path)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_added = models.DateTimeField(db_index=True)
     ip_address = models.GenericIPAddressField('IP Address')
     update_date = models.DateTimeField(db_index=True, blank=True)
@@ -147,8 +147,8 @@ class AllowedExtension(models.Model):
 
 class VoteRecord(models.Model):
     """Model to record the date that a user voted on a download."""
-    download = models.ForeignKey(Download)
-    user = models.ForeignKey(User)
+    download = models.ForeignKey(Download, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     vote_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):

@@ -37,9 +37,9 @@ class ForumPostTestCase(TestCase):
         self.assertEqual(len(response.redirect_chain), 1)
 
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                'http://testserver' + reverse('forums-new_topic_thanks',
-                    kwargs={'tid': '1'}))
+            self.assertEqual(
+                response.redirect_chain[0][0],
+                reverse('forums-new_topic_thanks', kwargs={'tid': '1'}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 200)

@@ -2,12 +2,12 @@
 Views for the comments application.
 
 """
+from django.apps import apps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseForbidden
-from django.db.models import get_model
 from django.shortcuts import render
 from django.utils.html import escape
 from django.views.decorators.http import require_POST
@@ -51,7 +51,7 @@ def post_comment(request):
         return HttpResponseBadRequest('Missing content_type or object_pk field.')
 
     try:
-        model = get_model(*ctype.split('.', 1))
+        model = apps.get_model(*ctype.split('.', 1))
         target = model.objects.get(pk=object_pk)
     except TypeError:
         return HttpResponseBadRequest(

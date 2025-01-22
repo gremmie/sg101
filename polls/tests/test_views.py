@@ -99,8 +99,9 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                    'http://testserver' + reverse('polls-detail', kwargs={'poll_id': poll.id}))
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse('polls-detail', kwargs={'poll_id': poll.id}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 200)
@@ -120,8 +121,9 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                'http://testserver' + reverse('polls-detail', kwargs={'poll_id': poll.id}))
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse('polls-detail', kwargs={'poll_id': poll.id}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 404)
@@ -146,8 +148,9 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                'http://testserver' + reverse('polls-detail', kwargs={'poll_id': poll.id}))
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse('polls-detail', kwargs={'poll_id': poll.id}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 200)
@@ -165,8 +168,9 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                'http://testserver' + reverse('polls-detail', kwargs={'poll_id': poll.id}))
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse('polls-detail', kwargs={'poll_id': poll.id}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 200)

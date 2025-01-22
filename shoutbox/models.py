@@ -12,7 +12,7 @@ from smiley.utils import smilify_html
 
 
 class Shout(models.Model):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     shout_date = models.DateTimeField(blank=True)
     shout = models.TextField()
     html = models.TextField()
@@ -38,8 +38,8 @@ class Shout(models.Model):
 
 class ShoutFlag(models.Model):
     """This model represents a user flagging a shout as inappropriate."""
-    user = models.ForeignKey(User)
-    shout = models.ForeignKey(Shout)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    shout = models.ForeignKey(Shout, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):

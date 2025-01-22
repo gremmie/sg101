@@ -32,11 +32,11 @@ class PublicLinkManager(models.Manager):
 
 class LinkBase(models.Model):
     """Abstract model to aggregate common fields of a web link."""
-    category = models.ForeignKey(Category)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     title = models.CharField(max_length=128)
     url = models.URLField(db_index=True)
     description = models.TextField(blank=True)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_added = models.DateTimeField(db_index=True)
     update_date = models.DateTimeField(db_index=True, blank=True)
 
@@ -108,8 +108,8 @@ class FlaggedLinkManager(models.Manager):
 
 class FlaggedLink(models.Model):
     """Model to represent links that have been flagged as broken by users"""
-    link = models.ForeignKey(Link)
-    user = models.ForeignKey(User)
+    link = models.ForeignKey(Link, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_flagged = models.DateField(auto_now_add = True)
     approved = models.BooleanField(default = False,
         help_text = 'Check this and save to remove the referenced link from the database')

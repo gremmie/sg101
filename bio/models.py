@@ -80,7 +80,8 @@ def avatar_file_path(instance, filename):
 class UserProfile(models.Model):
     """model to represent additional information about users"""
 
-    user = models.OneToOneField(User, related_name='profile')
+    user = models.OneToOneField(User, related_name='profile',
+                                on_delete=models.CASCADE)
     location = models.CharField(max_length=128, blank=True)
     country = models.CharField(max_length=2, blank=True, default='',
             choices=bio.flags.FLAG_CHOICES,
@@ -184,8 +185,8 @@ class UserProfile(models.Model):
 
 class UserProfileFlag(models.Model):
     """This model represents a user flagging a profile as inappropriate."""
-    user = models.ForeignKey(User)
-    profile = models.ForeignKey(UserProfile)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
@@ -202,8 +203,8 @@ class UserProfileFlag(models.Model):
 
 class BadgeOwnership(models.Model):
     """This model represents the ownership of badges by users."""
-    profile = models.ForeignKey(UserProfile)
-    badge = models.ForeignKey(Badge)
+    profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
     count = models.IntegerField(default=1)
 
     class Meta:

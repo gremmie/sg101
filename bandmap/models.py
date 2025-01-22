@@ -16,7 +16,7 @@ class BandEntryManager(models.Manager):
 class BandEntry(models.Model):
     """Represents a band entry on the band map."""
     name = models.CharField(max_length=128)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_submitted = models.DateTimeField()
     date_approved = models.DateTimeField(null=True, blank=True)
     url = models.URLField(blank=True, max_length=200)

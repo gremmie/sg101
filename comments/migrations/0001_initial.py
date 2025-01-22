@@ -24,8 +24,8 @@ class Migration(migrations.Migration):
                 ('ip_address', models.IPAddressField(verbose_name=b'IP Address')),
                 ('is_public', models.BooleanField(default=True, help_text=b'Uncheck this field to make the comment invisible.')),
                 ('is_removed', models.BooleanField(default=False, help_text=b'Check this field to replace the comment with a "This comment has been removed" message')),
-                ('content_type', models.ForeignKey(to='contenttypes.ContentType')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('content_type', models.ForeignKey(to='contenttypes.ContentType', on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('creation_date',),
@@ -36,8 +36,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('flag_date', models.DateTimeField(auto_now_add=True)),
-                ('comment', models.ForeignKey(to='comments.Comment')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('comment', models.ForeignKey(to='comments.Comment',
+                                              on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL,
+                                           on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('flag_date',),

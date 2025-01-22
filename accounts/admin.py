@@ -4,7 +4,7 @@ from django.contrib import admin
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
 from accounts.models import PendingUser
-from accounts import create_new_user
+from accounts.utils import create_new_user
 
 
 class PendingUserAdmin(admin.ModelAdmin):

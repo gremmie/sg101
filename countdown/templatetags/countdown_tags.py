@@ -25,4 +25,4 @@ def countdown_events(context):
     t = template.loader.get_template(template_name)
     with context.push():
         context['events'] = results
-        return t.render(context)
+        return t.render(context.flatten())

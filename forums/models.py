@@ -82,7 +82,8 @@ class Forum(models.Model):
     """
     A forum is a collection of topics.
     """
-    category = models.ForeignKey(Category, related_name='forums')
+    category = models.ForeignKey(Category, related_name='forums',
+                                 on_delete=models.CASCADE)
     name = models.CharField(max_length=80)
     slug = models.SlugField(max_length=80)
     description = models.TextField(blank=True, default='')
@@ -92,8 +93,9 @@ class Forum(models.Model):
     # denormalized fields to reduce database hits
     topic_count = models.IntegerField(blank=True, default=0)
     post_count = models.IntegerField(blank=True, default=0)
-    last_post = models.OneToOneField('Post', blank=True, null=True,
-        related_name='parent_forum')
+    last_post = models.OneToOneField(
+            'Post', blank=True, null=True, related_name='parent_forum',
+            on_delete=models.CASCADE)
 
     objects = ForumManager()
 
@@ -170,10 +172,11 @@ class Topic(models.Model):
     """
     A topic is a thread of discussion, consisting of a series of posts.
     """
-    forum = models.ForeignKey(Forum, related_name='topics')
+    forum = models.ForeignKey(Forum, related_name='topics',
+                              on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     creation_date = models.DateTimeField(db_index=True)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     view_count = models.IntegerField(blank=True, default=0)
     sticky = models.BooleanField(blank=True, default=False)
     locked = models.BooleanField(blank=True, default=False)
@@ -185,8 +188,9 @@ class Topic(models.Model):
     # denormalized fields to reduce database hits
     post_count = models.IntegerField(blank=True, default=0)
     update_date = models.DateTimeField(db_index=True)
-    last_post = models.OneToOneField('Post', blank=True, null=True,
-        related_name='parent_topic')
+    last_post = models.OneToOneField(
+            'Post', blank=True, null=True, related_name='parent_topic',
+            on_delete=models.CASCADE)
 
     class Meta:
         ordering = ('-sticky', '-update_date', )
@@ -276,8 +280,10 @@ class Post(models.Model):
     """
     A post is an instance of a user's single contribution to a topic.
     """
-    topic = models.ForeignKey(Topic, related_name='posts')
-    user = models.ForeignKey(User, related_name='posts')
+    topic = models.ForeignKey(Topic, related_name='posts',
+                              on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='posts',
+                             on_delete=models.CASCADE)
     creation_date = models.DateTimeField(db_index=True)
     update_date = models.DateTimeField(db_index=True)
     body = models.TextField()
@@ -336,8 +342,8 @@ class Post(models.Model):
 
 class FlaggedPost(models.Model):
     """This model represents a user flagging a post as inappropriate."""
-    user = models.ForeignKey(User)
-    post = models.ForeignKey(Post)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
@@ -360,8 +366,8 @@ class ForumLastVisit(models.Model):
     objects.
     Marking a forum as all read sets the begin_date equal to the end_date.
     """
-    user = models.ForeignKey(User)
-    forum = models.ForeignKey(Forum)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    forum = models.ForeignKey(Forum, on_delete=models.CASCADE)
     begin_date = models.DateTimeField()
     end_date = models.DateTimeField()
 
@@ -383,8 +389,8 @@ class TopicLastVisit(models.Model):
     Objects of this class exist for the window specified in the
     corresponding ForumLastVisit object.
     """
-    user = models.ForeignKey(User)
-    topic = models.ForeignKey(Topic)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     last_visit = models.DateTimeField(db_index=True)
 
     class Meta:
@@ -409,8 +415,8 @@ class Attachment(models.Model):
     This model is a "through" table for the M2M relationship between forum
     posts and Oembed objects.
     """
-    post = models.ForeignKey(Post)
-    embed = models.ForeignKey(Oembed)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    embed = models.ForeignKey(Oembed, on_delete=models.CASCADE)
     order = models.IntegerField()
 
     class Meta:

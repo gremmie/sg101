@@ -30,10 +30,10 @@ class CommentManager(models.Manager):
 
 class Comment(models.Model):
     """My own version of a Comment class that can attach comments to any other model."""
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField(db_index=True)
     content_object = GenericForeignKey('content_type', 'object_id')
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.TextField(max_length=COMMENT_MAX_LENGTH)
     html = models.TextField(blank=True)
     creation_date = models.DateTimeField()
@@ -85,8 +85,8 @@ class Comment(models.Model):
 
 class CommentFlag(models.Model):
     """This model represents a user flagging a comment as inappropriate."""
-    user = models.ForeignKey(User)
-    comment = models.ForeignKey(Comment)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):

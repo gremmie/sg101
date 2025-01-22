@@ -42,7 +42,7 @@ class Banner(models.Model):
     A model to represent a banner.
 
     """
-    campaign = models.ForeignKey(Campaign)
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
     image = models.ImageField(upload_to=banner_upload_to)
     description = models.CharField(max_length=128)
     creation_date = models.DateTimeField(blank=True)

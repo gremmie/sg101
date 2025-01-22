@@ -19,4 +19,4 @@ def latest_contests_block(context):
 
     with context.push():
         context['contests'] = contests
-        return t.render(context)
+        return t.render(context.flatten())

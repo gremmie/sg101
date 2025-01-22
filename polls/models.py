@@ -89,7 +89,7 @@ class Poll(models.Model):
 
 class Choice(models.Model):
     """Model for poll choices"""
-    poll = models.ForeignKey(Poll)
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE)
     choice = models.CharField(max_length=200)
     votes = models.IntegerField(default=0)
     voters = models.ManyToManyField(User, blank=True)

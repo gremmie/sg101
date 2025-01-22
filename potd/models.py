@@ -33,7 +33,8 @@ class Photo(models.Model):
     thumb = models.ImageField(upload_to='potd/%Y/%m/%d/thumbs', blank=True, null=True)
     caption = models.CharField(max_length=128)
     description = models.TextField()
-    user = models.ForeignKey(User, related_name='potd_set')
+    user = models.ForeignKey(User, related_name='potd_set',
+                             on_delete=models.CASCADE)
     date_added = models.DateField()
     potd_count = models.IntegerField(default=0)
 
@@ -115,7 +116,7 @@ class CurrentManager(models.Manager):
 
 class Current(models.Model):
     """This model simply stores the current POTD."""
-    potd = models.ForeignKey(Photo)
+    potd = models.ForeignKey(Photo, on_delete=models.CASCADE)
 
     objects = CurrentManager()
 

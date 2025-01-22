@@ -52,8 +52,10 @@ class Migration(migrations.Migration):
                 ('average_score', models.FloatField(default=0.0)),
                 ('total_votes', models.IntegerField(default=0)),
                 ('is_public', models.BooleanField(default=False, db_index=True)),
-                ('category', models.ForeignKey(to='downloads.Category')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('category', models.ForeignKey(to='downloads.Category',
+                                               on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL,
+                                           on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -70,8 +72,10 @@ class Migration(migrations.Migration):
                 ('date_added', models.DateTimeField(db_index=True)),
                 ('ip_address', models.IPAddressField(verbose_name=b'IP Address')),
                 ('update_date', models.DateTimeField(db_index=True, blank=True)),
-                ('category', models.ForeignKey(to='downloads.Category')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('category', models.ForeignKey(to='downloads.Category',
+                                               on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL,
+                                           on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('date_added',),
@@ -82,8 +86,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('vote_date', models.DateTimeField(auto_now_add=True)),
-                ('download', models.ForeignKey(to='downloads.Download')),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('download', models.ForeignKey(to='downloads.Download',
+                                               on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL,
+                                           on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('-vote_date',),

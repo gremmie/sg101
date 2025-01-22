@@ -18,7 +18,7 @@ def monthly_goal(context):
 
     with context.push():
         context['pct'] = Donation.objects.monthly_goal_pct()
-        return t.render(context)
+        return t.render(context.flatten())
 
 
 @register.inclusion_tag('donations/top_donors_tag.html')

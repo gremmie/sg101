@@ -26,4 +26,4 @@ def latest_poll_block(context):
     t = template.loader.get_template(template_name)
     with context.push():
         context['polls'] = polls
-        return t.render(context)
+        return t.render(context.flatten())

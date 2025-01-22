@@ -44,8 +44,10 @@ class MemberSearchTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                    'http://testserver' + reverse('bio-view_profile',
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse(
+                        'bio-view_profile',
                         kwargs={'username': self.USERNAME}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
@@ -76,8 +78,10 @@ class MemberSearchTest(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
         if response.redirect_chain:
-            self.assertEqual(response.redirect_chain[0][0],
-                    'http://testserver' + reverse('bio-view_profile',
+            self.assertEqual(
+                    response.redirect_chain[0][0],
+                    reverse(
+                        'bio-view_profile',
                         kwargs={'username': self.USERNAME}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 

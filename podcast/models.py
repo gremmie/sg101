@@ -38,7 +38,7 @@ class Channel(models.Model):
 
 class Item(models.Model):
     """Model to represent a channel item"""
-    channel = models.ForeignKey(Channel)
+    channel = models.ForeignKey(Channel, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255)

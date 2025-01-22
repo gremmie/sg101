@@ -13,4 +13,4 @@ def irc_status(context):
     t = template.loader.get_template(template_name)
     with context.push():
         context['nicks'] = get_users()
-        return t.render(context)
+        return t.render(context.flatten())

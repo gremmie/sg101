@@ -42,8 +42,8 @@ class Category(models.Model):
 class StoryBase(models.Model):
     """Abstract model to collect common fields."""
     title = models.CharField(max_length=255)
-    submitter = models.ForeignKey(User)
-    category = models.ForeignKey(Category)
+    submitter = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     short_text = models.TextField(default='', blank=True)
     long_text = models.TextField(default='', blank=True)
     date_submitted = models.DateTimeField(db_index=True)

@@ -78,7 +78,7 @@ def social_sharing(context, title, url, center=False):
         context['title'] = title
         context['url'] = url
         context['center'] = center
-        return t.render(context)
+        return t.render(context.flatten())
 
 
 def _fully_qualify(url, domain):
@@ -185,7 +185,7 @@ def birthday_block(context):
     template_name = ('core/v3/birthday_block.html'
             if 'V3_DESIGN' in context else 'core/birthday_block.html')
     t = template.loader.get_template(template_name)
-    return t.render(context)
+    return t.render(context.flatten())
 
 
 class EncodeParamsNode(template.Node):

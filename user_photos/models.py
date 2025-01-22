@@ -10,7 +10,8 @@ from django.core.urlresolvers import reverse
 class Photo(models.Model):
     """This model represents data about a user uploaded photo."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             related_name='uploaded_photos')
+                             related_name='uploaded_photos',
+                             on_delete=models.CASCADE)
     upload_date = models.DateTimeField()
     url = models.URLField(max_length=200)
     thumb_url = models.URLField(max_length=200, blank=True)

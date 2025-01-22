@@ -14,4 +14,4 @@ def photo_of_the_day(context):
     t = template.loader.get_template(template_name)
     with context.push():
         context['potd'] = potd
-        return t.render(context)
+        return t.render(context.flatten())

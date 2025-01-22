@@ -44,7 +44,7 @@ class SubmitViewTestCase(NewsTestCase):
         response = self.client.post(self.view_url, args, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain,
-                         [('http://testserver' + reverse('news-submit_thanks'), 302)])
+                         [(reverse('news-submit_thanks'), 302)])
 
         stories = list(PendingStory.objects.all())
         self.assertEqual(len(stories), 1)

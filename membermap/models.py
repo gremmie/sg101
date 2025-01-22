@@ -10,7 +10,7 @@ from core.markup import site_markup
 
 class MapEntry(models.Model):
     """Represents a user's entry on the map."""
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     location = models.CharField(max_length=255)
     lat = models.FloatField()
     lon = models.FloatField()

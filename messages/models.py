@@ -32,8 +32,10 @@ class MessageManager(models.Manager):
 
 class Message(models.Model):
     """The Message is a model for a private message between users."""
-    sender = models.ForeignKey(User, related_name='sender')
-    receiver = models.ForeignKey(User, related_name='receiver')
+    sender = models.ForeignKey(User, related_name='sender',
+                               on_delete=models.CASCADE)
+    receiver = models.ForeignKey(User, related_name='receiver',
+                                 on_delete=models.CASCADE)
     send_date = models.DateTimeField('Date Sent', null=True, blank=True)
     read_date = models.DateTimeField('Date Received', null=True, blank=True)
     reply_date = models.DateTimeField('Date Replied', null=True, blank=True)
@@ -91,7 +93,7 @@ class OptionsManager(models.Manager):
 
 class Options(models.Model):
     """Options is a model for user private message options."""
-    user = models.ForeignKey(User, editable=False)
+    user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE)
     attach_signature = models.BooleanField("Always attach signature?", default=True)
     notify_email = models.BooleanField("Notify me of new messages via email?", default=False)
 
@@ -109,7 +111,7 @@ class Flag(models.Model):
     has flagged the message for spam or abuse.
 
     """
-    message = models.OneToOneField(Message)
+    message = models.OneToOneField(Message, on_delete=models.CASCADE)
     flag_date = models.DateTimeField()
     comments = models.TextField(blank=True)
 
