@@ -9,18 +9,19 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 
+from mock import call, patch, Mock
+
 from antispam import SPAM_PHRASE_KEY
 from antispam.models import SpamPhrase
-from antispam.utils import contains_spam, deactivate_spammer
-
+from antispam.utils import contains_spam, deactivate_spammer, spam_check
 from comments.models import Comment
 from polls.models import Poll
 from elsewhere.models import WebsiteProfile
 from shoutbox.models import Shout
-from bio.models import STA_SPAMMER
+from bio.models import STA_ACTIVE, STA_SPAMMER, STA_STRANGER, STA_SUSPENDED
 
 
-class AntispamCase(TestCase):
+class AntispamUtilsCase(TestCase):
 
     def test_no_phrases(self):
         """
@@ -39,13 +40,13 @@ class AntispamCase(TestCase):
         SpamPhrase.objects.create(phrase="allday.ru")
         SpamPhrase.objects.create(phrase="stefa.pl")
 
-        self.assert_(contains_spam("grytner"))
-        self.assert_(contains_spam("11grytner"))
-        self.assert_(contains_spam("11grytner>"))
-        self.assert_(contains_spam("1djkl jsd stefa.pl"))
-        self.assert_(contains_spam("1djkl jsd <stefa.pl---sd8"))
-        self.assert_(contains_spam("1dsdjallday.rukl jsd <stefa.pl---sd8"))
-        self.assert_(contains_spam(" 1djallday.rukl"))
+        self.assertTrue(contains_spam("grytner"))
+        self.assertTrue(contains_spam("11grytner"))
+        self.assertTrue(contains_spam("11grytner>"))
+        self.assertTrue(contains_spam("1djkl jsd stefa.pl"))
+        self.assertTrue(contains_spam("1djkl jsd <stefa.pl---sd8"))
+        self.assertTrue(contains_spam("1dsdjallday.rukl jsd <stefa.pl---sd8"))
+        self.assertTrue(contains_spam(" 1djallday.rukl"))
         self.assertFalse(contains_spam("this one is spam free."))
 
     def test_deactivate_spammer(self):
@@ -113,3 +114,68 @@ class AntispamCase(TestCase):
         self.assertEqual(Comment.objects.filter(user=user).count(), 0)
         self.assertEqual(WebsiteProfile.objects.filter(user=user).count(), 0)
         self.assertEqual(Shout.objects.filter(user=user).count(), 0)
+
+
+class AntispamSpamCheckTestCase(TestCase):
+    def setUp(self):
+        user = User.objects.create_user('spammer_guy', '', 'password')
+        user.save()
+        SpamPhrase.objects.create(phrase="grytner")
+
+    @patch('antispam.utils.email_admins')
+    def test_not_a_stranger(self, email_admins_mock):
+        user = User.objects.get(username='spammer_guy')
+        user.profile.status = STA_ACTIVE
+        user.profile.save(content_update=False)
+
+        request = Mock()
+        request.user = user
+        result = spam_check(request, 'grytner')
+
+        self.assertFalse(result)
+        user = User.objects.get(username='spammer_guy')
+        self.assertTrue(user.is_active)
+        self.assertEqual(user.profile.status, STA_ACTIVE)
+        self.assertEqual(email_admins_mock.mock_calls, [])
+
+    @patch('antispam.utils.email_admins')
+    def test_stranger_no_spam(self, email_admins_mock):
+        user = User.objects.get(username='spammer_guy')
+        user.profile.status = STA_ACTIVE
+        user.profile.save(content_update=False)
+
+        request = Mock()
+        request.user = user
+        result = spam_check(request, 'not spam')
+
+        self.assertFalse(result)
+        user = User.objects.get(username='spammer_guy')
+        self.assertTrue(user.is_active)
+        self.assertEqual(user.profile.status, STA_ACTIVE)
+        self.assertEqual(email_admins_mock.mock_calls, [])
+
+    @patch('antispam.utils.email_admins')
+    def test_stranger_with_spam(self, email_admins_mock):
+        user = User.objects.get(username='spammer_guy')
+        user.profile.status = STA_STRANGER
+        user.profile.save(content_update=False)
+
+        request = Mock()
+        request.user = user
+        request.path = '/some/path'
+        request.META = {'REMOTE_ADDR': '127.0.0.1'}
+        result = spam_check(request, 'grytner')
+
+        self.assertTrue(result)
+        user = User.objects.get(username='spammer_guy')
+        self.assertFalse(user.is_active)
+        self.assertEqual(user.profile.status, STA_SUSPENDED)
+
+        expected_msg = ('SPAM FILTER TRIPPED by spammer_guy\n'
+                        'PATH: /some/path\n'
+                        'IP: 127.0.0.1\n'
+                        'Message:\n'
+                        'grytner\n')
+        self.assertEqual(email_admins_mock.mock_calls, [
+            call('SPAM FILTER TRIPPED BY spammer_guy', expected_msg),
+        ])
