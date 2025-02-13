@@ -25,7 +25,7 @@ def banner_url(slug):
     For each campaign, a list of banner URLs are kept in Redis. Each time this
     tag is called, the front banner is popped off the list. When the list is
     empty, we refresh the list from the database. In this way the banners for a
-    campaign are cycled through. 
+    campaign are cycled through.
     """
     key = BANNER_URL_KEY % slug
 
