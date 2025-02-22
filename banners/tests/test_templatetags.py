@@ -6,6 +6,8 @@ from django.test import TestCase
 
 from mock import call, patch, Mock
 
+from banners.templatetags.banner_tags import banner_url
+
 
 class BannersTemplateTagsTestCase(TestCase):
     def setUp(self):
