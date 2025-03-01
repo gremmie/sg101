@@ -53,10 +53,10 @@ def post_comment(request):
     try:
         model = apps.get_model(*ctype.split('.', 1))
         target = model.objects.get(pk=object_pk)
-    except TypeError:
+    except LookupError:
         return HttpResponseBadRequest(
             "Invalid content_type value: %r" % escape(ctype))
-    except AttributeError:
+    except ValueError:
         return HttpResponseBadRequest(
             "The given content-type %r does not resolve to a valid model." % \
                 escape(ctype))
@@ -64,6 +64,8 @@ def post_comment(request):
         return HttpResponseBadRequest(
             "No object matching content-type %r and object PK %r exists." % \
                 (escape(ctype), escape(object_pk)))
+    except:
+        return HttpResponseBadRequest('Unexpected error')
 
     # Can we comment on the target object?
     if hasattr(target, 'can_comment_on'):
@@ -110,7 +112,7 @@ def flag_comment(request):
     be the target of an AJAX post.
     """
     if not request.user.is_authenticated():
-        return HttpResponse('Please login or register to flag a comment.')
+        return HttpResponseForbidden('Please login or register to flag a comment.')
 
     id = request.POST.get('id', None)
     if id is None:
