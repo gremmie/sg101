@@ -4,7 +4,8 @@ We support the following template tags:
     {% get_comment_count for [object] as [var] %}
     {% get_comment_list for [object] as [var] %}`
     {% get_comment_form for [object] as [var] %}`
-    {% render_comment_form for [object] %}
+    {% render_comment_form [user] [object] %}
+    {% render_comment_form_v3 [user] [object] %}
     {% render_comment_list [object] %}
 """
 from django import template
