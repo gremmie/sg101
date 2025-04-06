@@ -55,7 +55,7 @@ def download_file(url, path=None, timeout=None):
         with open(path, 'wb') as fp:
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, fp)
-    except requests.RequestException:
+    except IOError:
         logger.exception("download_file download exception")
         os.remove(path)
         raise
