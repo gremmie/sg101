@@ -1,6 +1,9 @@
 """Tests for the core.html module."""
 import unittest
 
+from mock import call, patch
+
+from core.html import clean_html, _CLEAN_PROFILES
 from core.html import ImageCheckError
 from core.html import image_check
 
@@ -74,3 +77,32 @@ class ImageCheckTestCase(unittest.TestCase):
     def test_whitespace(self):
         result = image_check('\r\n\r\n')
         self.assertTrue(result)
+
+
+class CleanHtmlTestCase(unittest.TestCase):
+    def test_all_whitespace(self):
+        text = '  \t   \n  '
+        result = clean_html(text)
+        self.assertEqual(result, '')
+
+    @patch('core.html.bleach.clean')
+    def test_comments(self, clean_mock):
+        text = ' Lorem ipsum '
+        result = clean_html(text)
+        self.assertEqual(clean_mock.mock_calls, [
+            call('Lorem ipsum', tags=_CLEAN_PROFILES['comments'][0],
+                 attributes=_CLEAN_PROFILES['comments'][1],
+                 styles=_CLEAN_PROFILES['comments'][2], strip=True,
+                 strip_comments=True),
+        ])
+
+    @patch('core.html.bleach.clean')
+    def test_comments(self, clean_mock):
+        text = ' Lorem ipsum '
+        result = clean_html(text, profile='news')
+        self.assertEqual(clean_mock.mock_calls, [
+            call('Lorem ipsum', tags=_CLEAN_PROFILES['news'][0],
+                 attributes=_CLEAN_PROFILES['news'][1],
+                 styles=_CLEAN_PROFILES['news'][2], strip=True,
+                 strip_comments=True),
+        ])
