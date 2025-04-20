@@ -1,0 +1,67 @@
+import unittest
+
+from mock import patch, call, mock_open, Mock
+from core.images.upload import process_upload
+
+class ProcessUploadTestCase(unittest.TestCase):
+
+    @patch('core.images.upload.Site.objects.get_current')
+    @patch('core.images.upload.os.chmod')
+    @patch('core.images.upload.uuid')
+    @patch('core.images.upload.shutil')
+    @patch('core.images.upload.BytesIO')
+    @patch('core.images.upload.orient_image')
+    @patch('core.images.upload.Image')
+    @patch('core.images.upload.settings.SITE_SCHEME', new='https')
+    @patch('core.images.upload.settings.USER_PHOTOS_LOCAL_UPLOAD', new=True)
+    @patch('core.images.upload.settings.MEDIA_ROOT', new='/media')
+    @patch('core.images.upload.settings.USER_PHOTOS_LOCAL_UPLOAD_DIR', new='user_upload')
+    def test_local_upload(self, image_mock, orient_mock, bytes_mock,
+                          shutil_mock, uuid_mock, chmod_mock, current_mock):
+        filename = 'image.jpg'
+        orient_mock.return_value = (True, image_mock.open)
+
+        image = Mock()
+        image.size = (2000, 2000)
+        image_mock.open.return_value = image
+
+        uuid_mock.uuid4().hex = 'deadbeef'
+
+        site_mock = Mock()
+        site_mock.configure_mock(name='Site', domain='site.com')
+        current_mock.return_value = site_mock
+
+        open_mock = mock_open()
+        with patch('__builtin__.open', open_mock):
+            result = process_upload(None, filename)
+
+        self.assertEqual(image_mock.open.mock_calls, [
+            call(filename),
+            call.save(filename),
+            call(filename),
+            call().thumbnail((660, 720), image_mock.ANTIALIAS),
+            call().save(filename),
+            call(filename),
+            call().thumbnail((120, 120), image_mock.ANTIALIAS),
+            call().save(bytes_mock(), format=image.format),
+        ])
+        orient_mock.assert_called_with(image_mock.open())
+
+        expected_path = '/media/user_upload/deadbeef.jpg'
+        expected_thumb_path = '/media/user_upload/deadbeeft.jpg'
+        shutil_mock.copy.assert_called_once_with(filename, expected_path)
+        self.assertEqual(chmod_mock.mock_calls, [
+            call(expected_path, 0644),
+            call(expected_thumb_path, 0644),
+        ])
+
+        bytes_mock().seek.assert_called_once_with(0)
+        self.assertEqual(open_mock.mock_calls, [
+            call(expected_thumb_path, 'wb'),
+            call().__enter__(),
+            call().write(bytes_mock().getvalue()),
+            call().__exit__(None, None, None),
+        ])
+        self.assertEqual(result,
+                         ('https://site.com/media/user_upload/deadbeef.jpg',
+                          'https://site.com/media/user_upload/deadbeeft.jpg'))
