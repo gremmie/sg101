@@ -1,6 +1,6 @@
 """
 A python-markdown extension to add support for <del>.
-The Markdown syntax is --this is deleted text--.
+The Markdown syntax is ---this is deleted text---.
 
 """
 import markdown
