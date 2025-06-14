@@ -9,6 +9,8 @@ from django import forms
 from django.conf import settings
 from haystack.forms import ModelSearchForm
 
+from core.functions import get_ip
+
 
 MODEL_CHOICES = (
     ('forums.topic', 'Forum Topics'),
@@ -45,6 +47,7 @@ class CustomModelSearchForm(ModelSearchForm):
                               widget=forms.TextInput(attrs={'type': 'search'}))
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request')
         self.user = kwargs.pop('user', None)
         super(CustomModelSearchForm, self).__init__(*args, **kwargs)
         self.fields['models'] = forms.MultipleChoiceField(choices=MODEL_CHOICES,
@@ -83,12 +86,13 @@ class CustomModelSearchForm(ModelSearchForm):
         else:
             username = 'ANONYMOUS'
 
-        logger.info('Search executed: /%s/%s/%s/ in %s by %s',
+        logger.info('Search executed: /%s/%s/%s/ in %s by %s [%s]',
             self.cleaned_data['q'],
             self.cleaned_data['exact'],
             self.cleaned_data['exclude'],
             self.cleaned_data['models'],
-            username)
+            username,
+            get_ip(self.request))
 
         # Note that in Haystack 2.x content is untrusted and is automatically
         # auto-escaped for us.
