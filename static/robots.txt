@@ -1,2 +1,14 @@
 User-agent: *
 Crawl-delay: 30
+
+User-agent: Amazonbot
+User-agent: AwarioBot
+User-agent: AwarioRssBot
+User-agent: AwarioSmartBot
+User-agent: ClaudeBot
+User-agent: GPTBot
+User-agent: meta-externalagent
+User-agent: MJ12bot
+User-agent: PetalBot
+User-agent: SemrushBot
+Disallow: /
