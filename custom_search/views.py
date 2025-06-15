@@ -1,7 +1,7 @@
 """Custom views for searching."""
 import logging
 
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from haystack.views import SearchView
 from xapian import QueryParserError
 
@@ -14,10 +14,17 @@ class UserSearchView(SearchView):
     """
     query_parser_error = False
 
+    def __call__(self, request):
+        if not request.user.is_authenticated():
+            return redirect('/accounts/login/?next=%s' % request.path)
+        return super(UserSearchView, self).__call__(request)
+
     def build_form(self, form_kwargs=None):
-        """Pass the request.user object to the form's constructor."""
+        # Pass some useful objects to the form for logging, etc.
         if not form_kwargs:
             form_kwargs = {}
+        if 'request' not in form_kwargs:
+            form_kwargs['request'] = self.request
         if 'user' not in form_kwargs:
             form_kwargs['user'] = self.request.user
         return super(UserSearchView, self).build_form(form_kwargs)
