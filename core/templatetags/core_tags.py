@@ -42,6 +42,7 @@ def max_users():
         'stats': get_stats(),
     }
 
+
 @register.inclusion_tag('core/whos_online_tag.html')
 def whos_online():
     """
@@ -169,8 +170,9 @@ def birthday_block(context):
     A template tag to display all the users who have birthdays this month.
     """
     today = datetime.date.today()
-    profiles = list(UserProfile.objects.filter(birthday__month=today.month)\
-                        .select_related('user'))
+    profiles = list(UserProfile.objects
+                    .filter(birthday__month=today.month)
+                    .select_related('user'))
 
     days = collections.defaultdict(list)
     for profile in profiles:
