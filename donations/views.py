@@ -1,7 +1,7 @@
 """
 Views for the donations application.
 """
-import urllib2
+import subprocess
 import decimal
 import datetime
 import logging
@@ -44,15 +44,36 @@ def verify_request(params):
     if hasattr(settings, 'DONATIONS_DEBUG_VERIFY_RESPONSE'):
         return settings.DONATIONS_DEBUG_VERIFY_RESPONSE
 
-    req = urllib2.Request(paypal_params()[0], params)
-    req.add_header("Content-type", "application/x-www-form-urlencoded")
+    url = paypal_params()[0]
+
+    cmd = [
+        'curl', '-s', '-S',
+        '--tlsv1.2',
+        '-w', '\n%{http_code}',
+        '-X', 'POST',
+        '-H', 'Content-type: application/x-www-form-urlencoded',
+        '-d', params,
+        url,
+    ]
+
     try:
-        response = urllib2.urlopen(req)
-    except urllib2.URLError as ex:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as ex:
         logging.exception('IPN: exception verifying IPN: %s', ex)
         return None
 
-    return response.read()
+    try:
+        body, status_code = output.rsplit('\n', 1)
+        status_code = int(status_code)
+    except ValueError:
+        logging.exception('IPN: unexpected curl output: %s', output)
+        return None
+
+    if status_code != 200:
+        logging.exception('IPN: PayPal returned HTTP %d: %s', status_code, body)
+        return None
+
+    return body.strip()
 
 
 def index(request):
