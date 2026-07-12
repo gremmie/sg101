@@ -21,6 +21,22 @@ media/slideshow
 media/smiley
 media/user_photos
 celerybeat-schedule
+celerybeat.pid
+*.pid
+# Docker: production DB snapshots (real user PII — NEVER commit) + local env files
+snapshots/*.sql
+snapshots/*.sql.gz
+snapshots/*.sql.bz2
+snapshots/*.bz2
+snapshots/*.gz
+snapshots/*.dump
+snapshots/*.mysql
+snapshots/*.zip
+snapshots/*.tar
+snapshots/*.tgz
+.env
+# Personal Claude Code settings (machine-specific)
+.claude/settings.local.json
 sg101/xapian_index
 sg101/node_modules
 sg101/bower_components
