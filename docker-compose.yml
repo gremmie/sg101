@@ -1,0 +1,104 @@
+# Dockerized legacy SG101 dev stack (Step 1 of the modernization).
+#
+# Five services:
+#   web    - Django 1.9 dev server (the site), published on http://localhost:8000
+#   worker - Celery worker (background tasks)
+#   beat   - Celery beat (scheduled tasks)
+#   db     - MySQL 5.7 (holds a production snapshot)
+#   redis  - Redis (Celery broker + "who's online" + wiki cookies)
+#
+# The web/worker/beat services all run the SAME image (built from ./Dockerfile)
+# and bind-mount the repo, so editing code on the Mac is reflected live.
+#
+# Common commands (see DOCKER.md for the full walkthrough):
+#   docker compose build          # build the Python 2.7 image
+#   docker compose up             # start the whole stack
+#   docker compose up -d          # ...in the background
+#   docker compose logs -f web    # follow the web server logs
+#   docker compose down           # stop and remove the containers
+#
+# Config/secrets note: this rung still reads sg101/settings/secrets.json for
+# SECRET_KEY and API credentials (Step 3 converts everything to env vars). The
+# DB/Redis connection details below are injected via environment variables and
+# consumed by sg101/settings/docker.py.
+
+services:
+  db:
+    image: mysql:5.7
+    # mysql:5.7 ships amd64 only; run it under emulation on Apple Silicon.
+    platform: linux/amd64
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: sg101
+      MYSQL_USER: sg101
+      MYSQL_PASSWORD: sg101
+    command:
+      # The production snapshot is utf8 (3-byte), dumped from MySQL 5.5.
+      - --character-set-server=utf8
+      - --collation-server=utf8_general_ci
+      # 5.5-style permissive sql_mode: MySQL 5.7 defaults to STRICT + NO_ZERO_DATE,
+      # which rejects the 0000-00-00 dates the legacy 5.5 dump contains and which
+      # the legacy app relies on. Empty = faithful to the old server.
+      - --sql-mode=
+    volumes:
+      - db_data:/var/lib/mysql
+      # Drop DB snapshots here (git-ignored); load them with the mysql CLI.
+      # See DOCKER.md "Load the production snapshot".
+      - ./snapshots:/snapshots:ro
+    ports:
+      # Exposed on the host so you can connect a GUI/CLI if you like.
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpw"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:6
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    environment: &app_env
+      DJANGO_SETTINGS_MODULE: sg101.settings.docker
+      DB_HOST: db
+      DB_NAME: sg101
+      DB_USER: sg101
+      DB_PASSWORD: sg101
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build: .
+    command: celery -A sg101 worker -l info
+    environment: *app_env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  beat:
+    build: .
+    command: celery -A sg101 beat -l info
+    environment: *app_env
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+volumes:
+  db_data:

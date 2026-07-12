@@ -1,0 +1,58 @@
+# Requirements for the Step 1 Dockerized *legacy* environment (Python 2.7 /
+# Django 1.9). This is a faithful copy of the production pins in requirements.txt
+# with only the deps that cannot (and need not) be installed in the container
+# removed:
+#
+#   * xapian-haystack  -> needs native Xapian bindings; the search stack is
+#                         already disabled (haystack/queued_search are commented
+#                         out of INSTALLED_APPS) and is being replaced by
+#                         Postgres FTS. Omitted per the search decision.
+#   * queues (private hg+ssh://bobcat/...) -> unreachable private repo; only ever
+#                         imported by custom_search, which is NOT in
+#                         INSTALLED_APPS. The app boots fine without it.
+#
+# Both are formally pruned from the codebase in Step 4. Everything else matches
+# the legacy pins exactly (faithful reproduction first).
+
+amqp==1.4.9
+anyjson==0.3.3
+billiard==3.3.0.23
+bleach==1.4
+boto==2.13.0
+celery==3.1.23
+Django==1.9.13
+django-picklefield==0.3.1
+django-tagging==0.4.3
+docutils==0.10
+ftfy==2.0.1
+google-api-python-client==1.3.1
+html5lib==1.0b3
+httplib2==0.9
+kombu==3.0.36
+lxml==3.4.2
+Markdown==2.5.1
+mysqlclient==1.4.6
+oauth2client==1.4.1
+Pillow==2.7.0
+pyasn1==0.1.7
+pyasn1-modules==0.0.5
+python-dateutil==1.5
+python-memcached==1.48
+pytz==2015.2
+redis==2.10.5
+repoze.timeago==0.5
+requests==2.7.0
+rsa==3.1.4
+simplejson==3.6.5
+six==1.8.0
+uritemplate==0.6
+-e git+https://github.com/gremmie/django-elsewhere.git@c8c6f5e60b4b36c79bf544e654a88b9e4345142b#egg=django_elsewhere
+
+# --- Dev/test-only (from requirements_dev.txt) -------------------------------
+# Needed to run the existing test suite and the dev server in-container.
+mock==1.0.1
+testfixtures==4.1.2
+django-debug-toolbar==1.4
+# debug-toolbar 1.4 needs this exact sqlparse; a newer one breaks its SQL panel
+# with "process() takes exactly 3 arguments". Pinned in the legacy requirements_dev.txt.
+sqlparse==0.1.14

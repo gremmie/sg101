@@ -1,0 +1,26 @@
+# Keep the build context (and the COPY . /app layer) small and fast.
+.hg
+.git
+.agents
+.claude
+*.pyc
+*.pyo
+__pycache__
+*.log
+*.log.*
+.DS_Store
+snapshots
+static_serve
+sg101/node_modules
+sg101/bower_components
+sg101/logs/*.log
+media/user_photos
+media/downloads
+media/podcast
+media/potd
+media/banners
+media/slideshow
+*.sql
+*.sql.gz
+*.db
+.env
