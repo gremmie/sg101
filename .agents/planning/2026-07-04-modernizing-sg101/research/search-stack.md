@@ -126,6 +126,44 @@ as part of (or just after) the MySQL→Postgres move, validate it against docume
 current behavior, and only then cut over. During local development search can stay
 stubbed until the Postgres FTS work begins.
 
+## Snapshot + code findings (2026-07-12) — checklist resolved, decision CONFIRMED
+
+Reviewed the production snapshot volumes and the actual search code
+(`custom_search/forms.py`, `views.py`, the 7 `search_indexes.py`). **Decision:
+replace with Postgres FTS (option B) — confirmed, no blocker.**
+
+- **Volume (indexing feasibility):** 8 content types; the only large table is
+  `forums_post` (~463k rows), then `forums_topic` (~35.7k), `auth_user`/bios
+  (~15.2k), `news_story` (~1.7k); weblinks/downloads/podcast/ygroup are small.
+  **A GIN-indexed `tsvector` handles this comfortably** (sub-second queries;
+  one-time initial vector build is minutes). Scale is a non-issue.
+- **Actual feature set (simpler than the stack implies):** each index is a plain
+  `text` document (+ `author`, `pub_date`). The form offers three boxes —
+  "all these words" / "exact phrase" / "none of these words" — plus a
+  **model-type filter** ("Search in: Forum Topics/Posts, News, Bios, Links,
+  Downloads, Podcasts, Yahoo Group"). Search is **login-required**
+  (`UserSearchView` redirects anon → login). **Public-only** is baked into the
+  indexes (`index_queryset` filters forums to `public_forum_ids()`, bios to
+  active users), so no per-request permission checks are needed.
+- **Parity map to Postgres FTS:**
+  - 3-box query → **`websearch_to_tsquery`** maps almost 1:1 (unquoted words,
+    `"quoted phrase"`, `-exclude` in one call).
+  - Type filter → `content_type` filter (central table) or per-model queries.
+  - Ranking → `SearchRank` (algorithm differs from Xapian; acceptable — nothing
+    live to match bug-for-bug).
+  - **Two things get simpler/deleted:** the `QueryParserError` handling in
+    `views.py` (websearch_to_tsquery is injection-safe, never raises on user
+    input) and `MaxTermSizeCharField` (Xapian's 245-byte term cap workaround).
+- **The one genuine parity GAP:** Haystack/Xapian **spelling suggestions**
+  ("did you mean", `suggestion` in context) have **no native Postgres FTS
+  equivalent**. Step 12 decision: reproduce via `pg_trgm` similarity, or drop
+  (nice-to-have).
+- **Step 12 index-shape recommendation:** a **single denormalized search table**
+  (`content_type`, `object_id`, `tsvector`, `title`, `url`, `pub_date`,
+  `author`) updated by signals/Celery — makes cross-type ranking, pagination,
+  and the type filter trivial and mirrors Haystack's unified index — rather than
+  per-model `SearchVectorField`s + UNION. (Decide finally at Step 12.)
+
 ## Follow-ups / to confirm
 - User note (Q9): leaning Postgres if it simplifies the stack — this is the
   strongest single simplification available, and directly cures the "can't run
