@@ -14,7 +14,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 ## Progress checklist
 
 - [x] **Step 1** — Dockerized legacy environment + production snapshot (Postgres decision confirmed; 349/353 tests pass, 4 remaining = dead search-stack test modules deferred to Step 4) — done 2026-07-12
-- [ ] **Step 2** — hg → git, public GitHub, baseline CI, coverage baseline, secret-history audit
+- [ ] **Step 2** — hg → git, **private** GitHub (public later), baseline CI, coverage baseline, secret-history audit #1
 - [ ] **Step 3** — 12-factor env-var configuration (retire `secrets.json`)
 - [ ] **Step 4** — Prune dead/disabled code (`irc`, `legacy`, disabled search stack)
 - [ ] **Step 5** — Regression safety net (characterization functional tests for critical journeys)
@@ -59,14 +59,24 @@ volume) — records the choice that Steps 4/11/12 depend on.
 real forum/news content from the snapshot — on a machine that can't run Python 2.7
 natively.
 
-### Step 2: hg → git, public GitHub, baseline CI, coverage baseline
+### Step 2: hg → git, private GitHub, baseline CI, coverage baseline
 **Objective:** Move to git with history preserved; get automated tests running on
 every push; know the current coverage.
 **Guidance:** Convert with `hg-fast-export` (preserve branches incl. `modernize`,
-tags from `.hgtags`; author map). Add `.gitignore` (mirror `.hgignore`). Push to a
-**public** GitHub repo. **Secret-history audit** (`gitleaks`/`trufflehog`); rotate
-anything found. GitHub Actions workflow runs the suite (current rung: Py2.7/Django
-1.9 via the Step 1 image) + uploads a **coverage report**.
+tags from `.hgtags`; author map). **Bookmark the loose heads first so they survive
+as git branches** — done 2026-07-13: `v3-dev` (rev 1171), `abandoned-2015` (rev
+960); after conversion verify git branches `main`/`modernize`/`v3-dev`/
+`abandoned-2015` all exist (**head-parity check** vs `hg heads --topo --closed`).
+Add `.gitignore` (mirror `.hgignore`). Push to a **private** GitHub repo
+(visibility decision 2026-07-13: private initially, public later — see below).
+**Secret-history audit #1** (`gitleaks`/`trufflehog`) on full converted history;
+**rotate anything live immediately** (don't wait for the public flip). GitHub
+Actions workflow runs the suite (current rung: Py2.7/Django 1.9 via the Step 1
+image) + uploads a **coverage report**.
+**Before-public gate (later, e.g. at/after Step 21 cutover):** re-run the audit on
+everything added during modernization + a final full pass, confirm clean, verify
+`.gitignore`, rotate stragglers — *then* change visibility to public. (Rotation
+makes exposed secrets dead; optional `git filter-repo` scrub to physically remove.)
 **Tests:** CI executes the existing suite; add a coverage measurement job
 (`coverage run` + report). No product code changes.
 **Integration:** Uses the Step 1 container as the CI test image (parity).

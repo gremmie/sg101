@@ -44,6 +44,17 @@ Mac, seeded with a real production snapshot.
 - [x] Step 7 — **Implementation plan COMPLETE** (21 steps) → `implementation/plan.md`
 - [x] Step 8 — **Summary COMPLETE** → `summary.md`
 
+## Step 2 prep (2026-07-13, before starting Step 2)
+
+- **VCS heads:** repo has 4 topological heads; bookmarked the 2 loose ones so
+  they convert to git branches — `v3-dev` (rev 1171, 2018 anon head),
+  `abandoned-2015` (rev 960, closed 2015). Branch tips `modernize`/`default`
+  convert automatically. Step 2 must head-parity-check after conversion.
+- **Repo visibility:** decided **private initially, public later** (amends the
+  Q7 "public GitHub" decision). Secret audit now runs **twice**: audit #1 during
+  Step 2 (private, rotate live findings immediately) + audit #2 as the gate
+  before flipping to public. Details in `research/vcs-migration.md`.
+
 ## ✅ PLANNING COMPLETE (2026-07-04)
 All PDD steps done. Next real-world action: **execute Step 1** of
 `implementation/plan.md` (Dockerized legacy environment + load a prod snapshot).
