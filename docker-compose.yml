@@ -69,6 +69,12 @@ services:
       DB_USER: sg101
       DB_PASSWORD: sg101
       REDIS_HOST: redis
+    # Force sequential A/AAAA DNS lookups. Without this, resolving service names
+    # (db, redis) triggers glibc's parallel IPv4+IPv6 query; Docker's embedded DNS
+    # answers the A record but not the AAAA, so each lookup blocks the full 5s
+    # resolver timeout -> a ~5s stall on EVERY request (fresh DB connect per req).
+    dns_opt: &app_dns_opt
+      - single-request-reopen
     volumes:
       - .:/app
     ports:
@@ -83,6 +89,7 @@ services:
     build: .
     command: celery -A sg101 worker -l info
     environment: *app_env
+    dns_opt: *app_dns_opt
     volumes:
       - .:/app
     depends_on:
@@ -95,6 +102,7 @@ services:
     build: .
     command: celery -A sg101 beat -l info
     environment: *app_env
+    dns_opt: *app_dns_opt
     volumes:
       - .:/app
     depends_on:

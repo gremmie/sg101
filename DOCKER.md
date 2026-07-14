@@ -132,5 +132,15 @@ else builds on.
 - **A dependency fails to compile during `build`** — expected occasionally with
   20-year-old pins; we resolve these faithful-first (bump the patch version only
   if a pin truly can't build). Note the failing package and we'll address it.
+- **Pages taking ~5 seconds each** — this was a Docker DNS quirk, now fixed via
+  `dns_opt: [single-request-reopen]` on the app services. Cause: resolving a
+  service name (`db`/`redis`) makes glibc fire parallel IPv4+IPv6 DNS queries;
+  Docker's embedded resolver answers the IPv4 one but not IPv6, so every lookup
+  blocked the full 5s resolver timeout — and Django opens a fresh DB connection
+  per request, so it hit on every page. `single-request-reopen` forces the two
+  lookups to happen sequentially, eliminating the stall. (If you ever see it
+  return, confirm the container's `/etc/resolv.conf` has that option.)
 - **Apple Silicon note** — `db` runs the amd64 MySQL 5.7 image under emulation
-  (`platform: linux/amd64` in compose); it's slower but correct.
+  (`platform: linux/amd64`; MySQL 5.7 has no arm64 build). The app and Redis run
+  native arm64. Emulation adds some DB overhead but is not a major factor for
+  typical pages — and it disappears entirely at Step 11 (Postgres has arm64).
