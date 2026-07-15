@@ -56,3 +56,5 @@ django-debug-toolbar==1.4
 # debug-toolbar 1.4 needs this exact sqlparse; a newer one breaks its SQL panel
 # with "process() takes exactly 3 arguments". Pinned in the legacy requirements_dev.txt.
 sqlparse==0.1.14
+# Coverage for the CI report (and local use). <5 keeps Python 2.7 support.
+coverage<5

@@ -1,0 +1,41 @@
+name: CI
+
+# Runs the existing test suite on every push/PR to the modernization branch,
+# using the SAME Docker image as local dev (Python 2.7 / Django 1.9) for parity.
+# `main` intentionally has no CI: it's preserved legacy history and predates the
+# Docker/CI setup, which live only on `modernize`.
+on:
+  push:
+    branches: [modernize]
+  pull_request:
+    branches: [modernize]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the legacy image (Py2.7 / Django 1.9)
+        run: docker compose build web
+
+      # docker_test settings: sqlite DB + Redis over TCP (the `redis` service is
+      # started via depends_on). Measure coverage and print a summary.
+      - name: Run test suite with coverage
+        run: >
+          docker compose run --rm web
+          sh -c "coverage run --source='.' manage.py test --settings=sg101.settings.docker_test
+          && coverage report
+          && coverage xml"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

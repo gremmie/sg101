@@ -1,0 +1,65 @@
+# Mirrors .hgignore (carried over from the Mercurial repo). Kept in sync so the
+# same artifacts stay untracked after the git migration.
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+
+# Editors / OS
+*.swp
+.DS_Store
+
+# Secrets & local config (never commit)
+secrets.json
+.env
+.claude/settings.local.json
+
+# Logs / runtime
+*.log
+*.log.?
+*.log.??
+*.log.*.gz
+celerybeat-schedule
+celerybeat.pid
+*.pid
+
+# Databases / large binaries
+*.db
+*.mp3
+.tags
+
+# Production DB snapshots (real user PII — NEVER commit)
+snapshots/*.sql
+snapshots/*.sql.gz
+snapshots/*.sql.bz2
+snapshots/*.bz2
+snapshots/*.gz
+snapshots/*.dump
+snapshots/*.mysql
+snapshots/*.zip
+snapshots/*.tar
+snapshots/*.tgz
+
+# Static/served + media (user uploads)
+static_serve
+media/avatars/users
+media/badges
+media/banners
+media/downloads
+media/podcast
+media/potd
+media/slideshow
+media/smiley
+media/user_photos
+
+# Search index (legacy Xapian) + front-end build artifacts
+sg101/xapian_index
+sg101/node_modules
+sg101/bower_components
+tools/ssg101/output
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
