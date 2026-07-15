@@ -1,7 +1,34 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-12
+**Last updated:** 2026-07-15
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 2 (hg → git, private GitHub, CI) — DONE (2026-07-15)
+
+**The repo now lives in git.** Canonical working copy: `sg101-git/` (pushed to
+private `github.com/gremmie/sg101`, default branch `modernize`). The old hg repo
+(`sg101/`) is a frozen backup.
+
+- **Conversion tool:** git-cinnabar (hg-fast-export dropped the anonymous heads —
+  no bookmark support). Faithful: 1268 commits, identical file trees, `rollout`
+  tag. **All 4 heads preserved as branches:** `main` (←hg 1260), `modernize`
+  (active), `v3-dev` (←1171), `abandoned-2015` (←960). Authors cleaned via
+  git-filter-repo mailmap (gremmie→Brian, convert-repo→convert-repo@localhost).
+- **Secret audit #1:** gitleaks (5 historical hits) + trufflehog (**0 verified
+  live**). All old (2009–2015): 4 client-side Google Maps keys (public by design)
+  + one dead 2011 OAuth consumer key (no committed secret material). Nothing
+  rotated; re-check at audit #2 before any public flip.
+- **CI:** `.github/workflows/ci.yml` builds the Py2.7 image + runs the suite on
+  push/PR to `modernize`. **GREEN: 367 tests, coverage 70%.** (Fixed 4
+  test_receivers modules: removed dead custom_search coupling — pulled a slice of
+  Step 4 forward for a green baseline. CI also seeds secrets.json from the
+  committed example since base.py still requires it pre-Step-3.)
+- **GitHub's own "Dependency Graph / update-pip-graph" workflow** runs too
+  (dynamic, not ours) — benign.
+- **Transition TODO:** switch the local working dir + Docker compose stack from
+  `sg101/` (hg) over to `sg101-git/`; `secrets.json` already copied there
+  (git-ignored). Next real step: **Step 3** (12-factor env-var config, retire
+  secrets.json — which also removes the CI placeholder shim).
 
 ## EXECUTION — Step 1 (Dockerized legacy env) — ~DONE (2026-07-12)
 
