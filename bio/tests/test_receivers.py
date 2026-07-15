@@ -10,7 +10,6 @@ import bio.badges
 from bio.models import Badge
 from bio.models import BadgeOwnership
 from bio.models import UserProfile
-import custom_search.receivers
 from donations.models import Donation
 from downloads.models import Download
 import downloads.receivers
@@ -33,17 +32,12 @@ class ReceiverTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('user', 'user@example.com', 'pw')
 
-        # Don't let our custom search signal handler class catch any of the
-        # signals we are throwing here.
-        custom_search.receivers.signal_processor.teardown()
-
         # Don't let these signal handlers fire either
         post_save.disconnect(sender=Link, dispatch_uid='weblinks.receivers')
         post_save.disconnect(sender=Download, dispatch_uid='downloads.receivers')
         post_save.disconnect(sender=Photo, dispatch_uid='potd.receivers')
 
     def tearDown(self):
-        custom_search.receivers.signal_processor.setup()
         post_save.connect(weblinks.receivers.on_link_save, sender=Link,
                           dispatch_uid='weblinks.receivers')
         post_save.connect(downloads.receivers.on_download_save, sender=Download,
