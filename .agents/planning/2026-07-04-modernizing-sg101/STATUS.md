@@ -25,10 +25,13 @@ private `github.com/gremmie/sg101`, default branch `modernize`). The old hg repo
   committed example since base.py still requires it pre-Step-3.)
 - **GitHub's own "Dependency Graph / update-pip-graph" workflow** runs too
   (dynamic, not ours) — benign.
-- **Transition TODO:** switch the local working dir + Docker compose stack from
-  `sg101/` (hg) over to `sg101-git/`; `secrets.json` already copied there
-  (git-ignored). Next real step: **Step 3** (12-factor env-var config, retire
-  secrets.json — which also removes the CI placeholder shim).
+- **Transition DONE (2026-07-15):** the git repo now lives at the canonical path
+  `/Users/brianneal/workspaces/bgn/sg101/` (dirs swapped: old hg repo → frozen
+  backup `sg101-hg-backup/`). Directory basename `sg101` = compose project name,
+  so the existing `sg101_db_data` volume reattached with zero reload (verified:
+  15,227 users / 463,221 posts; `/`, `/forums/`, `/podcast/` all 200). Next real
+  step: **Step 3** (12-factor env-var config, retire secrets.json — which also
+  removes the CI placeholder shim).
 
 ## EXECUTION — Step 1 (Dockerized legacy env) — ~DONE (2026-07-12)
 
