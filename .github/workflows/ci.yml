@@ -16,6 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # base.py still loads sg101/settings/secrets.json (env-var config comes in
+      # Step 3). It's git-ignored, so CI seeds placeholder values from the
+      # committed example; tests use sqlite + dummy keys so this is sufficient.
+      - name: Provide placeholder secrets.json for tests
+        run: cp sg101/settings/secrets.json.example sg101/settings/secrets.json
+
       - name: Build the legacy image (Py2.7 / Django 1.9)
         run: docker compose build web
 
