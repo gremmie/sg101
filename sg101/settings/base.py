@@ -1,9 +1,9 @@
 # Base Django settings for the SG101 website.
 
-import json
 import os
 from decimal import Decimal
 
+import environ
 from django.contrib.messages import constants as message_constants
 from celery.schedules import crontab
 
@@ -57,9 +57,19 @@ STATICFILES_DIRS = [
 STATIC_ROOT = '/tmp/test_static_root'
 STATIC_URL = '/static/'
 
-# Make this unique, and don't share it with anybody.
-SECRETS = json.load(open(os.path.join(PROJECT_PATH, 'settings', 'secrets.json')))
-SECRET_KEY = SECRETS['SECRET_KEY']
+# 12-factor configuration: all secrets/config come from environment variables.
+# For local/bare-metal dev a git-ignored .env file at the repo root is loaded
+# into the environment; in Docker/CI/prod the vars are already set (Compose's
+# env_file, the CI step, or the host), so read_env is a no-op there (it does not
+# override existing vars). The path is overridable via DOTENV_PATH -- used by the
+# settings boot test to point at a nonexistent file and assert we fail loudly.
+env = environ.Env()
+env.read_env(os.environ.get('DOTENV_PATH',
+                            os.path.join(PROJECT_PATH, '..', '.env')))
+
+# Make this unique, and don't share it with anybody. Required: absent => the app
+# refuses to start (ImproperlyConfigured).
+SECRET_KEY = env('SECRET_KEY')
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.common.CommonMiddleware',
@@ -277,9 +287,9 @@ OEMBED_MAXHEIGHT = 295
 GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
 # GCalendar/Google OAuth settings
-GCAL_CLIENT_ID = SECRETS['GCAL_CLIENT_ID']
-GCAL_CLIENT_SECRET = SECRETS['GCAL_CLIENT_SECRET']
-GCAL_CREDENTIALS_PATH = SECRETS['GCAL_CREDENTIALS_PATH']
+GCAL_CLIENT_ID = env('GCAL_CLIENT_ID', default='')
+GCAL_CLIENT_SECRET = env('GCAL_CLIENT_SECRET', default='')
+GCAL_CREDENTIALS_PATH = env('GCAL_CREDENTIALS_PATH', default='')
 
 # MoinMoin Wiki integration settings
 WIKI_COOKIE_NAME = 'sg101_wiki'
@@ -289,8 +299,8 @@ WIKI_REDIS_SET = 'wiki_cookie_keys'
 
 # User photo upload settings
 USER_PHOTOS_ENABLED = True
-USER_PHOTOS_ACCESS_KEY = SECRETS['AWS_ACCESS_KEY']
-USER_PHOTOS_SECRET_KEY = SECRETS['AWS_SECRET_KEY']
+USER_PHOTOS_ACCESS_KEY = env('AWS_ACCESS_KEY', default='')
+USER_PHOTOS_SECRET_KEY = env('AWS_SECRET_KEY', default='')
 USER_PHOTOS_BUCKET = 'sg101.user.photos'
 USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
 USER_PHOTOS_MAX_SIZE = (660, 720)
@@ -317,8 +327,8 @@ SEARCH_QUEUE_ENABLED = True
 
 # Google reCAPTCHA settings
 RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
-RECAPTCHA_SITE_KEY = SECRETS['RECAPTCHA_SITE_KEY']
-RECAPTCHA_SECRET_KEY = SECRETS['RECAPTCHA_SECRET_KEY']
+RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
+RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')
 
 #######################################################################
 # Asynchronous settings (queues, queued_search, redis, celery, etc)

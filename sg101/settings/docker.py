@@ -11,9 +11,9 @@ network (TCP)":
   * Redis / the Celery broker (the `redis` service, not a local unix socket).
 
 Connection details are read from environment variables that docker-compose sets
-(see docker-compose.yml). Full 12-factor/env-var configuration of *all* secrets
-happens later, in Step 3 -- for now `secrets.json` is still the source of truth
-for SECRET_KEY and the various API credentials (loaded by base.py).
+(see docker-compose.yml). All config/secrets (SECRET_KEY, API credentials, DB
+creds) are env vars, loaded by base.py from the environment (Compose's
+`env_file: .env`).
 
 Selected via DJANGO_SETTINGS_MODULE=sg101.settings.docker (set in compose).
 """

@@ -3,6 +3,37 @@
 **Last updated:** 2026-07-15
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
+## EXECUTION — Step 3 (12-factor env-var config) — DONE (2026-07-15)
+
+`secrets.json` is retired; **all config/secrets come from environment variables.**
+
+- **Library:** `django-environ==0.4.5` (last Py2.7-compatible line; verified on the
+  container) added to `requirements.txt` + `requirements-docker.txt`.
+- **Loader:** `base.py` replaces the `json.load(secrets.json)` with
+  `environ.Env()` + `read_env(DOTENV_PATH or repo-root .env)`. Every
+  `SECRETS['X']` → `env('X')`: `SECRET_KEY` is **required** (missing ⇒
+  `ImproperlyConfigured`); `GCAL_*`/`AWS_*`/`RECAPTCHA_*` default to `''`; DB
+  creds via `env('DB_*')` in `local.py`/`production.py`.
+- **Env files:** git-ignored **`.env`** (real values, migrated from the old
+  `secrets.json`; DB creds = the `sg101` container creds) + committed
+  **`.env.example`** template. `secrets.json`(.example) deleted.
+- **Compose:** app services load `env_file: .env` (SECRET_KEY, DB_*, API keys);
+  only topology (`DJANGO_SETTINGS_MODULE`, `DB_HOST`, `REDIS_HOST`) stays inline.
+- **Hostname logic removed** (the plan's "platform.node()=='jaguar'" item — it
+  lived in `celery.py`, not settings): `celery.py` now just
+  `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.local')` and
+  drops the hardcoded `/svr/...` sys.path; `test.py` drops its Darwin Redis-socket
+  branch; **`mac.py` deleted** (Intel-Mac-only, unused). Legacy deploy artifacts
+  with `/svr` paths (`fabfile.py`, `apache/sg101.wsgi`) intentionally deferred to
+  the deploy step (Step 21).
+- **CI:** the `cp secrets.json.example secrets.json` shim is replaced by
+  `cp .env.example .env` (standard env mechanism, not a JSON side-channel).
+- **Test:** new `core/tests/test_settings.py` (subprocess boot tests: env value
+  reaches the setting; missing `SECRET_KEY` fails loudly).
+- **Verified:** full suite **369 pass** (70% cov); stack rebuilt (all 3 app
+  images) and boots from `.env` only — web/worker/beat healthy, site serves 200s,
+  no `secrets.json` present.
+
 ## EXECUTION — Step 2 (hg → git, private GitHub, CI) — DONE (2026-07-15)
 
 **The repo now lives in git.** Canonical working copy: `sg101-git/` (pushed to

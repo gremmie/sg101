@@ -2,24 +2,14 @@
 
 from __future__ import absolute_import
 import os
-import platform
-import sys
 
 from celery import Celery
 from django.conf import settings
 
-if platform.system() == 'Darwin':
-    role = 'mac'
-else:
-    role = 'production' if platform.node() == 'jaguar' else 'local'
-
-settings_val = 'sg101.settings.{}'.format(role)
-
-# set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_val)
-
-# Add some stuff to the Python path
-sys.path.append('/svr/django-sites/sg101/sg101/tools')
+# 12-factor: the settings module comes from the environment (Compose sets
+# DJANGO_SETTINGS_MODULE=sg101.settings.docker; a deploy sets its own). Default
+# to local for a bare invocation, matching manage.py.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.local')
 
 app = Celery('sg101')
 

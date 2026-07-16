@@ -17,10 +17,10 @@
 #   docker compose logs -f web    # follow the web server logs
 #   docker compose down           # stop and remove the containers
 #
-# Config/secrets note: this rung still reads sg101/settings/secrets.json for
-# SECRET_KEY and API credentials (Step 3 converts everything to env vars). The
-# DB/Redis connection details below are injected via environment variables and
-# consumed by sg101/settings/docker.py.
+# Config/secrets note: SECRET_KEY, DB creds, and API keys come from the
+# git-ignored .env file (see .env.example), loaded via `env_file:` below; base.py
+# reads them from the environment. The DB/Redis topology (DB_HOST, REDIS_HOST,
+# DJANGO_SETTINGS_MODULE) is set inline and consumed by sg101/settings/docker.py.
 
 services:
   db:
@@ -62,13 +62,17 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
+    # Docker-topology vars (not secrets): which settings module and where the
+    # db/redis services live on the Compose network.
     environment: &app_env
       DJANGO_SETTINGS_MODULE: sg101.settings.docker
       DB_HOST: db
-      DB_NAME: sg101
-      DB_USER: sg101
-      DB_PASSWORD: sg101
       REDIS_HOST: redis
+    # Secrets + DB credentials (SECRET_KEY, DB_*, API keys) come from the
+    # git-ignored .env file -- see .env.example. `environment:` above wins over
+    # anything also set here, by design.
+    env_file: &app_env_file
+      - .env
     # Force sequential A/AAAA DNS lookups. Without this, resolving service names
     # (db, redis) triggers glibc's parallel IPv4+IPv6 query; Docker's embedded DNS
     # answers the A record but not the AAAA, so each lookup blocks the full 5s
@@ -89,6 +93,7 @@ services:
     build: .
     command: celery -A sg101 worker -l info
     environment: *app_env
+    env_file: *app_env_file
     dns_opt: *app_dns_opt
     volumes:
       - .:/app
@@ -102,6 +107,7 @@ services:
     build: .
     command: celery -A sg101 beat -l info
     environment: *app_env
+    env_file: *app_env_file
     dns_opt: *app_dns_opt
     volumes:
       - .:/app

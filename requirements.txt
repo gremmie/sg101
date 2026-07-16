@@ -5,6 +5,7 @@ bleach==1.4
 boto==2.13.0
 celery==3.1.23
 Django==1.9.13
+django-environ==0.4.5  # 12-factor env-var config (last Py2.7-compatible line)
 # TODO SEARCH django-haystack==2.4.1
 django-picklefield==0.3.1
 django-tagging==0.4.3

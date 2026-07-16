@@ -15,7 +15,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 
 - [x] **Step 1** — Dockerized legacy environment + production snapshot (Postgres decision confirmed; 349/353 tests pass, 4 remaining = dead search-stack test modules deferred to Step 4) — done 2026-07-12
 - [x] **Step 2** — hg → git (git-cinnabar; 4 heads preserved: main/modernize/v3-dev/abandoned-2015), private GitHub `gremmie/sg101` (default=modernize), GitHub Actions CI GREEN (367 tests), coverage baseline 70%, secret-history audit #1 clear (0 live) — done 2026-07-15
-- [ ] **Step 3** — 12-factor env-var configuration (retire `secrets.json`)
+- [x] **Step 3** — 12-factor env-var configuration: `secrets.json` retired → `django-environ==0.4.5` reads all config from env vars (`.env`/`.env.example`, git-ignored `.env` loaded via Compose `env_file:`); removed hostname logic in `celery.py`/`test.py`; deleted `mac.py`; added settings boot test; stack boots from `.env` alone (369 tests pass) — done 2026-07-15
 - [ ] **Step 4** — Prune dead/disabled code (`irc`, `legacy`, disabled search stack)
 - [ ] **Step 5** — Regression safety net (characterization functional tests for critical journeys)
 - [ ] **Step 6** — Upgrade Django 1.9 → 1.11 LTS (still Python 2.7)

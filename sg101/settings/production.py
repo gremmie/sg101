@@ -12,9 +12,9 @@ ALLOWED_HOSTS = ['.surfguitar101.com']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': SECRETS['DB_NAME'],
-        'USER': SECRETS['DB_USER'],
-        'PASSWORD': SECRETS['DB_PASSWORD'],
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
         'OPTIONS': {
             'unix_socket': '/var/run/mysqld/mysqld.sock',
         },
