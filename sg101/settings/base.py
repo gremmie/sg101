@@ -118,8 +118,6 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.staticfiles',
     'elsewhere',
-    #'haystack',
-    #'queued_search',
     'tagging',
     'accounts',
     'antispam',
@@ -132,14 +130,10 @@ INSTALLED_APPS = [
     'contests',
     'core',
     'countdown',
-    #'custom_search',
     'donations',
     'downloads',
     'forums',
     'gcalendar',
-    'irc',
-    'legacy',
-    'membermap',
     'messages',
     'news',
     'oembed',
@@ -199,16 +193,6 @@ FORCE_LOWERCASE_TAGS = True
 MAX_TAG_LENGTH = 50
 
 #######################################################################
-# Haystack Search Settings
-#######################################################################
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'xapian_backend.XapianEngine',
-        'PATH': os.path.join(PROJECT_PATH, 'xapian_index'),
-    },
-}
-
-#######################################################################
 # Redis integration & settings
 #######################################################################
 REDIS_UNIX_SOCKET = '/var/run/redis/redis.sock'
@@ -249,10 +233,6 @@ CELERYBEAT_SCHEDULE = {
     "max_users": {
         "task": "core.tasks.max_users",
         "schedule": crontab(minute='*/15'),
-    },
-    "search_queue": {
-        "task": "custom_search.tasks.process_search_queue_task",
-        "schedule": crontab(minute='*/20'),
     },
     "expire_wiki_cookies": {
         "task": "wiki.tasks.expire_cookies",
@@ -321,21 +301,10 @@ USER_IMAGES_SOURCES = [
 USER_PHOTOS_LOCAL_UPLOAD = False
 USER_PHOTOS_LOCAL_UPLOAD_DIR = 'user_photos'
 
-# If this flag is False, the queued_search queue will not be processed. This is
-# useful when we are rebuilding the search index.
-SEARCH_QUEUE_ENABLED = True
-
 # Google reCAPTCHA settings
 RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
 RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
 RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')
-
-#######################################################################
-# Asynchronous settings (queues, queued_search, redis, celery, etc)
-#######################################################################
-QUEUE_BACKEND = 'redisd'
-QUEUE_REDIS_UNIX_SOCKET = REDIS_UNIX_SOCKET
-QUEUE_REDIS_DB = 0
 
 #######################################################################
 # Open Graph Protocol related settings

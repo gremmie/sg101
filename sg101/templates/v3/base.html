@@ -6,7 +6,6 @@
 {% load core_tags %}
 {% load countdown_tags %}
 {% load donations_tags %}
-{% load irc_tags %}
 {% load messages_tags %}
 {% load poll_tags %}
 {% load potd_tags %}
@@ -163,7 +162,6 @@
                   </li>
                   <li><a href="#">Members</a>
                      <ul class="menu vertical">
-                        <li><a href="{% url 'irc-main' %}">Chat/IRC</a></li>
                         <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
                         <li><a href="{% url 'bio-member_search' %}">Member Search</a></li>
                      </ul>
@@ -180,9 +178,6 @@
    <div class="medium-3 columns show-for-medium">
       {% cache 300 potd_block_v3 %}
          {% photo_of_the_day %}
-      {% endcache %}
-      {% cache 60 irc_block_v3 %}
-         {% irc_status %}
       {% endcache %}
       {% cache 3600 poll_block_v3 %}
          {% latest_poll_block %}

@@ -1,7 +1,44 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-15
+**Last updated:** 2026-07-16
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 4 (prune dead/disabled code) — DONE (2026-07-16)
+
+Removed code that should not be carried up the upgrade ladder. **54 files
+deleted, ~3,090 lines removed.** Tagged **`pre-step-4-prune`** before deleting
+(recoverable ref).
+
+- **Apps removed** (all had no migrations → clean): `irc` (chat status page),
+  `legacy` (one-off phpBB→SG101 importers: 13 mgmt commands + `phpbb.py`/
+  `html2md.py`; `models.py` was empty), `membermap` (user location map),
+  `custom_search` (Haystack signal-processor glue).
+- **Disabled search stack removed** per the Step 1 Postgres-FTS decision: 7
+  `search_indexes.py` (downloads, weblinks, forums, bio, news, ygroup, podcast),
+  `HAYSTACK_CONNECTIONS`, the `search_queue` Celery-beat entry,
+  `SEARCH_QUEUE_ENABLED`, and the `QUEUE_*` async block (base/docker/test).
+  **`/search/` stays a stub** (`FixedView`) — native PG FTS is built in Step 12.
+- **Wiring cleaned:** `INSTALLED_APPS` (incl. the commented `#haystack`/
+  `#queued_search`/`#custom_search`); `urls.py` (`/irc/`, `/member_map/` includes
+  + commented haystack view/import cruft); templates — irc `{% load %}`/nav link/
+  `irc_status` block pulled from `base.html` **and** `v3/base.html`; orphaned
+  `sg101/templates/{irc,membermap}/` dirs deleted.
+- **membermap wasn't fully unlinked** (contra the initial assumption): a live
+  `{% url 'membermap-index' %}` remained in `user_stats_tag.html`, which renders
+  on the **forums index** via `{% user_stats %}` → would have been a
+  `NoReverseMatch` 500. Reworded to plain text.
+- **Requirements slimmed:** dropped `django-haystack`, `queued-search`, `queues`
+  (private `hg+ssh://bobcat/...`), `xapian-haystack`, and `django-picklefield`
+  (was a queued_search dep; zero usage in the tree). `requirements-docker.txt`
+  header comment updated (the two omitted deps are now formally pruned).
+- **Left intentionally:** `colophon.html` still credits Xapian/Apache/MySQL in
+  prose — cosmetic, describes the still-legacy stack; revisit at Step 20.
+- **Test:** new `core/tests/test_pruned.py` guards against reintroduction (removed
+  apps not in INSTALLED_APPS; `/irc/`+`/member_map/` → 404; `irc-main`/
+  `membermap-index` reverse raises; `/search/` stub still 200).
+- **Verified:** suite **370 pass** (was 369: −3 `legacy/tests.py`, +4 new); image
+  rebuilt; live smoke test — `/`,`/forums/`,`/search/` = 200, `/irc/`,
+  `/member_map/` = 404.
 
 ## EXECUTION — Step 3 (12-factor env-var config) — DONE (2026-07-15)
 

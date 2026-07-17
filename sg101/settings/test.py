@@ -20,7 +20,6 @@ CELERY_ALWAYS_EAGER = True
 
 # Use a different database in Redis for tests
 REDIS_DB = 14
-QUEUE_REDIS_DB = 14
 CELERY_REDIS_DB = 15
 # Bare-metal default; docker_test.py overrides this to reach the `redis` service
 # over TCP (the only way tests actually run now).

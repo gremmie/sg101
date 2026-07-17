@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 {% load shoutbox_tags %}
-{% load irc_tags %}
 {% load potd_tags %}
 {% load script_tags %}
 {% load poll_tags %}
@@ -53,7 +52,6 @@
       <li><a href="{% url 'forums-index' %}">Forums</a></li>
       <li><a href="/forums/topic/24987/">Guitar Instruction</a>
          <img src="{% static "icons/new.png" %}" title="New!" alt="New!" /></li>
-      <li><a href="{% url 'irc-main' %}">IRC</a></li>
       <li><a href="{% url 'bio-member_list' type='user' %}">Member List</a></li>
       <li><a href="{% url 'messages-inbox' %}">Private Messages</a></li>
       <li><a href="{% url 'podcast-main' %}">Podcast</a></li>
@@ -71,9 +69,6 @@
       {% photo_of_the_day %}
    {% endcache %}
    {% shoutbox %}
-   {% cache 60 irc_block %}
-      {% irc_status %}
-   {% endcache %}
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
    {% endcache %}

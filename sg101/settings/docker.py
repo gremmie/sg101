@@ -54,8 +54,4 @@ REDIS_DB = 0
 # Celery broker over TCP (db 1 mirrors the legacy virtual_host=1).
 BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
 
-# The `queues` app used a redis unix socket too; keep it consistent (harmless --
-# the disabled search stack is the only consumer, pruned in Step 4).
-QUEUE_REDIS_UNIX_SOCKET = None
-
 ALLOWED_HOSTS = ['*']

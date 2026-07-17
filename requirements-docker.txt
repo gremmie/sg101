@@ -1,18 +1,7 @@
-# Requirements for the Step 1 Dockerized *legacy* environment (Python 2.7 /
-# Django 1.9). This is a faithful copy of the production pins in requirements.txt
-# with only the deps that cannot (and need not) be installed in the container
-# removed:
-#
-#   * xapian-haystack  -> needs native Xapian bindings; the search stack is
-#                         already disabled (haystack/queued_search are commented
-#                         out of INSTALLED_APPS) and is being replaced by
-#                         Postgres FTS. Omitted per the search decision.
-#   * queues (private hg+ssh://bobcat/...) -> unreachable private repo; only ever
-#                         imported by custom_search, which is NOT in
-#                         INSTALLED_APPS. The app boots fine without it.
-#
-# Both are formally pruned from the codebase in Step 4. Everything else matches
-# the legacy pins exactly (faithful reproduction first).
+# Requirements for the Dockerized *legacy* environment (Python 2.7 / Django 1.9).
+# Mirrors the production pins in requirements.txt. The Xapian/Haystack search
+# stack and its private `queues` dependency were pruned in Step 4 (native
+# Postgres FTS arrives in Step 12), so neither file lists them anymore.
 
 amqp==1.4.9
 anyjson==0.3.3
@@ -22,7 +11,6 @@ boto==2.13.0
 celery==3.1.23
 Django==1.9.13
 django-environ==0.4.5  # 12-factor env-var config (last Py2.7-compatible line)
-django-picklefield==0.3.1
 django-tagging==0.4.3
 docutils==0.10
 ftfy==2.0.1

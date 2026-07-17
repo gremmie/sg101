@@ -6,8 +6,6 @@ boto==2.13.0
 celery==3.1.23
 Django==1.9.13
 django-environ==0.4.5  # 12-factor env-var config (last Py2.7-compatible line)
-# TODO SEARCH django-haystack==2.4.1
-django-picklefield==0.3.1
 django-tagging==0.4.3
 docutils==0.10
 ftfy==2.0.1
@@ -25,7 +23,6 @@ pyasn1-modules==0.0.5
 python-dateutil==1.5
 python-memcached==1.48
 pytz==2015.2
-# TODO SEARCH queued-search==2.1.0
 redis==2.10.5
 repoze.timeago==0.5
 requests==2.7.0
@@ -34,5 +31,3 @@ simplejson==3.6.5
 six==1.8.0
 uritemplate==0.6
 -e git+https://github.com/gremmie/django-elsewhere.git@c8c6f5e60b4b36c79bf544e654a88b9e4345142b#egg=django_elsewhere
--e hg+ssh://brian@bobcat//svr/dvcs/hg/repos/public/queues@862e8846f7e5f5a0df7f08bfe4b4e5283acb4614#egg=queues
--e git+https://github.com/notanumber/xapian-haystack.git@a3a3a4e7cfba3e2e1be3a42abf59edd29ea03c05#egg=xapian_haystack
