@@ -8,8 +8,9 @@ import os.path
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils.html import format_html
 from django.core.cache import cache
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
@@ -59,10 +60,9 @@ class Badge(models.Model):
     def html(self):
         """Returns a HTML img tag representation of the badge."""
         if self.image:
-            return u'<img src="%s" alt="%s" title="%s" />' % (
+            return format_html('<img src="{}" alt="{}" title="{}" />',
                     self.get_absolute_url(), self.name, self.name)
         return u''
-    html.allow_tags = True
 
 
 def avatar_file_path(instance, filename):
@@ -197,8 +197,8 @@ class UserProfileFlag(models.Model):
         ordering = ('flag_date', )
 
     def get_profile_url(self):
-        return '<a href="%s">Profile</a>' % self.profile.get_absolute_url()
-    get_profile_url.allow_tags = True
+        return format_html('<a href="{}">Profile</a>',
+                self.profile.get_absolute_url())
 
 
 class BadgeOwnership(models.Model):

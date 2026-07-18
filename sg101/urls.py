@@ -91,3 +91,16 @@ urlpatterns += [
 
 # For serving media files in development only:
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Django Debug Toolbar (dev only): its URLs must be registered explicitly so the
+# toolbar can reverse its own 'djdt' namespace. Guarded to match the app +
+# middleware activation in settings/local.py.
+if settings.DEBUG:
+    try:
+        import debug_toolbar
+    except ImportError:
+        pass
+    else:
+        urlpatterns += [
+            url(r'^__debug__/', include(debug_toolbar.urls)),
+        ]

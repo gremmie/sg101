@@ -3,6 +3,97 @@
 **Last updated:** 2026-07-17
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
+## EXECUTION — Step 6 (Django 1.9 → 1.11 LTS, still Py2.7) — DONE (2026-07-18)
+
+Reached the last Django that supports both Py2 and Py3. **1.9.13 → 1.11.29**,
+**staged through 1.10.8** (Django's own advice: one feature release at a time —
+isolates which rung a failure belongs to; 1.11's headline change is form-widget
+template rendering). **549 tests green** on 1.10.8 and again on 1.11.29; live
+smoke green on real prod data.
+
+**Version-agnostic code changes (identical for 1.10 & 1.11):**
+- **Hard breaks** (dotted-path URL reversing removed in 1.10): `news/views.py`
+  `reverse('news.views.email_thanks')`→`'news-email_thanks'` (the Step-5 watch
+  item); templates `register_success.html` (×2)→`'accounts-login'`,
+  `register_failure.html`→`'accounts-register'`.
+- **Middleware:** `MIDDLEWARE_CLASSES`→`MIDDLEWARE` in `base.py` (+ `local.py`
+  debug-toolbar insert); dropped `SessionAuthenticationMiddleware` (always-on in
+  1.10+); added `MiddlewareMixin` to the 3 custom middleware (`InactiveUserMiddleware`,
+  `WhosOnline`, `WikiMiddleware`).
+- **`django.core.urlresolvers`→`django.urls`** — 55 sites (all `reverse`/
+  `NoReverseMatch`), mechanical sed.
+- **`allow_tags`→`format_html`/`mark_safe`** — 14 admin display methods across
+  forums/comments/messages/bio/user_photos/gcalendar/smiley/banners/shoutbox/
+  potd/weblinks (RemovedInDjango20). `message_text` uses `mark_safe` (pre-rendered
+  markdown); the rest `format_html` (XSS-safe interpolation).
+
+**1.10-specific breakages surfaced by the staged run:**
+- **`NoArgsCommand` removed + `optparse` `option_list`/`make_option` removed** →
+  **17 management commands** converted to `BaseCommand`/`LabelCommand` +
+  `add_arguments()`/argparse, `handle_noargs`→`handle(self, *args, **options)`.
+  **Only 3 were caught by the test suite** (`max_users`, `ssl_images`,
+  `purge_messages`); the other **14 have no tests** and stayed green — they
+  surfaced only when the live **celery worker/beat** booted and fired scheduled
+  tasks (`core.tasks.cleanup`→`forum_cleanup` crashed with
+  `ImportError: cannot import name NoArgsCommand`). Full list: `forum_cleanup`,
+  `sync_forums`, `oembed_refresh`, `avatar_cleanup`, `bio_image_check`,
+  `fix_news_embeds`, `sync_ygroup_threads`, `sync_ygroup_posts`, `pick_potd`,
+  `dlorphan`, `update_bands` (all `NoArgsCommand`), plus `topic_export`,
+  `top_donors`, `dlcatreport` (`option_list` on `BaseCommand`/`LabelCommand`; the
+  `LabelCommand` two call `super().add_arguments()` to keep the label positional).
+  **Two celery task wrappers** were invoking commands via `Command().execute()`
+  (KeyError `no_color` under BaseCommand, since options aren't populated) →
+  switched to `call_command`: `messages.tasks.purge_messages` and
+  `core.tasks.cleanup` (`clearsessions` + `forum_cleanup`). Verified by
+  load-building the parser for all **27** project commands + running each affected
+  path. (`tools/*.py` standalone scripts use stdlib `optparse` directly — fine.)
+  **Lesson: the green unit suite is necessary but not sufficient — booting the
+  worker/beat and the live dev server is what catches untested command/task code.**
+- **django-tagging 0.4.3 incompatible with 1.10** → **bumped to 0.5.0** (last line
+  supporting Py2.7 **and** Django 1.11). Root cause: `TagField` installs itself as
+  a class descriptor, so its attname is never in `instance.__dict__`; Django 1.10's
+  new "auto update_fields for deferred fields on save" saw `tags` as deferred and
+  set `update_fields` on a brand-new (pk-less) object → `ValueError: Cannot force
+  an update in save() with no primary key`. 0.5.0 fixes it and ships one forward
+  migration `0003_adapt_max_tag_length` (widens `Tag.name` to `MAX_TAG_LENGTH`,
+  default 50; applied cleanly to the real DB).
+
+**Other deprecation cleanups (kept the rung warning-clean):**
+- `potd.Sequence.seq` `CommaSeparatedIntegerField`→`CharField(validators=
+  [validate_comma_separated_integer_list])` (system-check W901; potd is a
+  syncdb/unmigrated app so **no migration needed**, both are varchar).
+
+**Dev-tooling the 1.11 dev server forced (dev/test-only, not in requirements.txt):**
+- **django-debug-toolbar 1.4→1.11** (+ `sqlparse 0.1.14→0.2.4`): 1.4 is broken on
+  1.11. And 1.11 requires the toolbar's URLs be wired explicitly — added a
+  DEBUG-guarded `include(debug_toolbar.urls)` at `^__debug__/` in `sg101/urls.py`
+  (matches `local.py`'s app+middleware guard). Without it every dev page 500'd with
+  `NoReverseMatch: 'djdt' is not a registered namespace`.
+
+**Migrations applied to the prod-snapshot dev DB** (all clean on real data):
+admin `0002_logentry_remove_auto_add`, auth `0007_alter_validators…` +
+`0008_alter_user_username_max_length` (30→150 on 15k users), sites
+`0002_alter_domain_unique`, tagging `0002_on_delete` + `0003_adapt_max_tag_length`.
+
+**Watch items for later rungs:**
+- **django-elsewhere fork** (vendored `-e git+…gremmie/django-elsewhere`) still
+  `import`s `django.core.urlresolvers` → the **only** remaining deprecation
+  warning in the suite. Harmless on 1.11; **must patch the fork + re-pin before
+  Django 2.0 (Step 9)** where urlresolvers is removed.
+- **Function-based auth views** (`accounts/urls.py` + `antispam/apps.py` monkeypatch
+  of `auth.views.login`) are **fine on 1.11** (class-based-view deprecation lands
+  in 2.1) — the Step 9 CBV migration handles them.
+- `mysql.W002` (strict mode off) — environmental, tied to Step 11 (Postgres).
+- The `docker_test` `PRAGMA legacy_alter_table` SQLite shim is still required on
+  1.11 (Django's SQLite schema editor keeps old ALTER-TABLE semantics until 2.0).
+
+**Files:** 90 changed (+323/−243); most are the 1-line urlresolvers swap and the
+17 management-command conversions.
+**Not committed yet** (awaiting go-ahead to bundle). Push remains the user's.
+**Next real-world action: Step 7** — make the code Python 2/3 compatible on
+Django 1.11 (still executing under Py2.7): `print()`, `except X as e`, octals,
+`iteritems`/`xrange`, `__unicode__`→`__str__` shim, `urllib2`→`requests`.
+
 ## EXECUTION — Step 5 (regression safety net) — DONE (2026-07-17)
 
 Characterization/functional tests that lock in **current** behavior of critical

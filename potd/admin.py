@@ -3,13 +3,14 @@ This file contains the admin definitions for the POTD application.
 """
 from django.contrib import admin
 from django.conf import settings
+from django.utils.html import format_html
 
 from potd.models import Photo
 from potd.models import Current
 from potd.models import Sequence
 
 
-IMG_TAG = '<img src="%s" alt="thumbnail" />'
+IMG_TAG = '<img src="{}" alt="thumbnail" />'
 
 
 class PhotoAdmin(admin.ModelAdmin):
@@ -23,8 +24,7 @@ class PhotoAdmin(admin.ModelAdmin):
         js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
     def thumbnail(self, obj):
-        return IMG_TAG % obj.thumb.url
-    thumbnail.allow_tags = True
+        return format_html(IMG_TAG, obj.thumb.url)
 
     def regen_thumbnail(self, request, qs):
         """
@@ -42,8 +42,7 @@ class CurrentAdmin(admin.ModelAdmin):
     raw_id_fields = ('potd', )
 
     def thumbnail(self, obj):
-        return IMG_TAG % obj.potd.thumb.url
-    thumbnail.allow_tags = True
+        return format_html(IMG_TAG, obj.potd.thumb.url)
 
 
 admin.site.register(Photo, PhotoAdmin)

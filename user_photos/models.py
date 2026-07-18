@@ -4,7 +4,7 @@ import datetime
 
 from django.db import models
 from django.conf import settings
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class Photo(models.Model):

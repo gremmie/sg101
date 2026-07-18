@@ -12,7 +12,7 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
 from django.core.paginator import InvalidPage
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core.paginator import DiggPaginator

@@ -9,7 +9,7 @@ the kind of breakage a framework upgrade can introduce silently.
 """
 from django.contrib import admin
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 

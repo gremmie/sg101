@@ -71,13 +71,12 @@ env.read_env(os.environ.get('DOTENV_PATH',
 # refuses to start (ImproperlyConfigured).
 SECRET_KEY = env('SECRET_KEY')
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',

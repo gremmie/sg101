@@ -6,7 +6,6 @@ template.
 
 """
 from __future__ import with_statement
-from optparse import make_option
 import re
 
 from django.conf import settings
@@ -22,14 +21,15 @@ SRC_REPL = 'src="{}://surfguitar101.com/media/'.format(settings.SITE_SCHEME)
 
 class Command(LabelCommand):
     help = "Exports a forum topic thread by rendering it through a given template"
-    option_list = LabelCommand.option_list + (
-            make_option('-t', '--template',
+
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument('-t', '--template',
                         default='forums/topic_export.html',
-                        help='template to render'),
-            make_option('-o', '--output',
+                        help='template to render')
+        parser.add_argument('-o', '--output',
                         default=None,
-                        help='output filename [default: stdout]'),
-            )
+                        help='output filename [default: stdout]')
 
     def handle_label(self, tid, **opts):
         """Fetch the topic and related posts. Render through a template.

@@ -3,6 +3,7 @@ This file contains the automatic admin site definitions for the banners models.
 
 """
 from django.contrib import admin
+from django.utils.html import format_html
 
 from banners.models import Campaign, Banner
 
@@ -27,8 +28,7 @@ class BannerAdmin(admin.ModelAdmin):
     list_filter = ['campaign']
 
     def image_tag(self, obj):
-        return '<img src="%s" alt="%s" />' % (obj.image.url, obj.description)
-    image_tag.allow_tags = True
+        return format_html('<img src="{}" alt="{}" />', obj.image.url, obj.description)
 
 admin.site.register(Campaign, CampaignAdmin)
 admin.site.register(Banner, BannerAdmin)

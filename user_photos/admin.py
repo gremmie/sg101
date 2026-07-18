@@ -1,5 +1,6 @@
 """Admin definitions for the user_photos application."""
 from django.contrib import admin
+from django.utils.html import format_html
 
 from user_photos.models import Photo
 from user_photos.s3 import delete_photos
@@ -15,8 +16,7 @@ class PhotoAdmin(admin.ModelAdmin):
     actions = ['custom_delete']
 
     def thumbnail(self, obj):
-        return IMG_TAG.format(url=obj.url, thumb_url=obj.thumb_url)
-    thumbnail.allow_tags = True
+        return format_html(IMG_TAG, url=obj.url, thumb_url=obj.thumb_url)
 
     def custom_delete(self, request, qs):
         """Custom delete in order to remove images from the S3 bucket in

@@ -6,8 +6,9 @@ import datetime
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
+from django.utils.html import format_html
 from django.core.cache import cache
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from core.markup import site_markup
 from oembed.models import Oembed
@@ -353,8 +354,7 @@ class FlaggedPost(models.Model):
         ordering = ('flag_date', )
 
     def get_post_url(self):
-        return '<a href="%s">Post</a>' % self.post.get_absolute_url()
-    get_post_url.allow_tags = True
+        return format_html('<a href="{}">Post</a>', self.post.get_absolute_url())
 
 
 class ForumLastVisit(models.Model):

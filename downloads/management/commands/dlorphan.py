@@ -1,25 +1,24 @@
 """dlorphan - a management command to remove orphaned downloads files."""
 
-from optparse import make_option
 import os
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from downloads.models import Download, PendingDownload
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Finds and optionally deletes orphan downloads files"
-    option_list = NoArgsCommand.option_list + (
-            make_option('--delete',
+
+    def add_arguments(self, parser):
+        parser.add_argument('--delete',
                 action='store_true',
                 dest='delete',
                 default=False,
-                help='Delete orphan files'),
-    )
+                help='Delete orphan files')
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         """Find and optionally delete orphan downloads files."""
 
         delete = options.get('delete', False)

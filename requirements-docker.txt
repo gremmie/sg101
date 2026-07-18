@@ -1,4 +1,4 @@
-# Requirements for the Dockerized *legacy* environment (Python 2.7 / Django 1.9).
+# Requirements for the Dockerized *legacy* environment (Python 2.7 / Django 1.11).
 # Mirrors the production pins in requirements.txt. The Xapian/Haystack search
 # stack and its private `queues` dependency were removed (native Postgres
 # full-text search will replace them later), so neither file lists them anymore.
@@ -9,9 +9,9 @@ billiard==3.3.0.23
 bleach==1.4
 boto==2.13.0
 celery==3.1.23
-Django==1.9.13
+Django==1.11.29
 django-environ==0.4.5  # 12-factor env-var config (last Py2.7-compatible line)
-django-tagging==0.4.3
+django-tagging==0.5.0
 docutils==0.10
 ftfy==2.0.1
 google-api-python-client==1.3.1
@@ -41,9 +41,10 @@ uritemplate==0.6
 # Needed to run the existing test suite and the dev server in-container.
 mock==1.0.1
 testfixtures==4.1.2
-django-debug-toolbar==1.4
-# debug-toolbar 1.4 needs this exact sqlparse; a newer one breaks its SQL panel
-# with "process() takes exactly 3 arguments". Pinned in the legacy requirements_dev.txt.
-sqlparse==0.1.14
+# debug-toolbar 1.11 is the last line supporting both Python 2.7 and Django 1.11.
+django-debug-toolbar==1.11
+# sqlparse 0.2.4 is the SQL-panel companion that works with debug-toolbar 1.11
+# (still Python 2.7 compatible; 0.4+ drops Py2.7).
+sqlparse==0.2.4
 # Coverage for the CI report (and local use). <5 keeps Python 2.7 support.
 coverage<5

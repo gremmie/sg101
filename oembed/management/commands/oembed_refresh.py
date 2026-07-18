@@ -11,7 +11,7 @@ import os.path
 import re
 import urllib2
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from oembed.core import get_oembed
@@ -76,10 +76,10 @@ def refresh_html(providers, oembed):
         oembed.save()
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Refresh oEmbed objects by requesting new data from providers"""
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         time_started = datetime.datetime.now()
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)

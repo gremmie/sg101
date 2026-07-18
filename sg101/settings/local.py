@@ -25,8 +25,8 @@ if DEBUG:
     except ImportError:
         pass
     else:
-        i = MIDDLEWARE_CLASSES.index('django.middleware.common.CommonMiddleware')
-        MIDDLEWARE_CLASSES.insert(i + 1,
+        i = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
+        MIDDLEWARE.insert(i + 1,
                 'debug_toolbar.middleware.DebugToolbarMiddleware')
         INSTALLED_APPS.append('debug_toolbar')
         DEBUG_TOOLBAR_CONFIG = {

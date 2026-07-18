@@ -3,8 +3,6 @@ dlcatreport - a management command to produce a HTML report of all the downloads
 in a given category.
 
 """
-from optparse import make_option
-
 from django.core import serializers
 from django.core.management.base import LabelCommand, CommandError
 from django.template.loader import render_to_string
@@ -14,18 +12,17 @@ from downloads.models import Category, Download
 
 class Command(LabelCommand):
     help = "Produce on standard output a report of all downloads in a category."
-    args = "category-slug"
 
-    option_list = LabelCommand.option_list + (
-            make_option('--titles-only',
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument('--titles-only',
                 action='store_true',
                 default=False,
-                help='Output a text listing of titles only'),
-            make_option('--json',
+                help='Output a text listing of titles only')
+        parser.add_argument('--json',
                 action='store_true',
                 default=False,
-                help='Output downloads in JSON format'),
-            )
+                help='Output downloads in JSON format')
 
     def handle_label(self, slug, **options):
         """

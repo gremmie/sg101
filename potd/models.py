@@ -13,8 +13,9 @@ except:
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import validate_comma_separated_integer_list
 from django.core.files.base import ContentFile
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 POTD_THUMB_WIDTH = 120
 
@@ -167,7 +168,8 @@ class SequenceManager(models.Manager):
 
 class Sequence(models.Model):
     """This model stores the sequence of photos for the POTD."""
-    seq = models.CommaSeparatedIntegerField(max_length=4096)
+    seq = models.CharField(max_length=4096,
+            validators=[validate_comma_separated_integer_list])
 
     objects = SequenceManager()
 

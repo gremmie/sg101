@@ -5,6 +5,7 @@ Models for the gcalendar application.
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.utils.html import format_html
 
 from core.markup import site_markup
 import forums.tools
@@ -81,9 +82,8 @@ class Event(models.Model):
     def google_html(self):
         """Returns a HTML <a> tag to the event if it exits."""
         if self.google_url:
-            return u'<a href="%s">On Google</a>' % self.google_url
+            return format_html('<a href="{}">On Google</a>', self.google_url)
         return u''
-    google_html.allow_tags = True
     google_html.short_description = 'Google Link'
 
     def notify_on_calendar(self):

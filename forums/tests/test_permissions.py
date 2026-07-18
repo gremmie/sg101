@@ -12,7 +12,7 @@ that needs a restricted forum or a real moderator wires that up explicitly.
 """
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 from forums.models import Forum, Post, Topic

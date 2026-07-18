@@ -3,7 +3,7 @@ Models for the news application.
 """
 import datetime
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db import models
 from django.contrib.auth.models import User
 from tagging.fields import TagField

@@ -6,7 +6,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.contrib.sites.models import Site
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.template.loader import render_to_string
 
 from core.functions import send_mail

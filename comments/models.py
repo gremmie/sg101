@@ -6,6 +6,7 @@ import datetime
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.utils.html import format_html
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
 from django.core import urlresolvers
@@ -96,6 +97,6 @@ class CommentFlag(models.Model):
         ordering = ('flag_date', )
 
     def get_comment_url(self):
-        return '<a href="/admin/comments/comment/%s">Comment</a>' % self.comment.id
-    get_comment_url.allow_tags = True
+        return format_html('<a href="/admin/comments/comment/{}">Comment</a>',
+                self.comment.id)
 

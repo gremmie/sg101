@@ -20,7 +20,7 @@ scenario pins one branch of that algorithm.
 import datetime
 
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 from forums.models import (Forum, ForumLastVisit, Post, Topic,

@@ -12,7 +12,7 @@ and clear the page cache to keep each test hermetic.
 """
 from django.core.cache import cache
 from django.contrib.auth.models import Group, User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 from core.services import get_redis_connection

@@ -2,7 +2,7 @@
 Models for the ygroup application, which is a read-only archive of messages
 from the old Yahoo Group.
 """
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db import models
 
 

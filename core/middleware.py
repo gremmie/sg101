@@ -5,12 +5,13 @@ import logging
 from django.db import IntegrityError
 from django.contrib.auth import logout
 from django.conf import settings
+from django.utils.deprecation import MiddlewareMixin
 
 from core.functions import get_ip
 from core.whos_online import report_user, report_visitor
 
 
-class InactiveUserMiddleware(object):
+class InactiveUserMiddleware(MiddlewareMixin):
     """
     This middleware ensures users with is_active set to False get their
     session destroyed and are treated as logged out.
@@ -28,7 +29,7 @@ ONLINE_COOKIE = 'sg101_online'  # online cookie name
 ONLINE_TIMEOUT = 5 * 60         # online cookie lifetime in seconds
 
 
-class WhosOnline(object):
+class WhosOnline(MiddlewareMixin):
     """
     This middleware class keeps track of which registered users have
     been seen recently, and the number of unique unregistered users.

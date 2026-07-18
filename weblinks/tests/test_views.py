@@ -6,7 +6,7 @@ browse/detail journeys, the visit (hit-count redirect), random link, the
 report-broken-link AJAX endpoint, and the login-gated add form.
 """
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 from weblinks.models import Category, FlaggedLink, Link, PendingLink

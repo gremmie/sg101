@@ -4,15 +4,15 @@ It is intended to be called from a cron job to purge messages that have been
 deleted by both sender and receiver.
 """
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from messages.models import Message
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Delete messages that have been sent to the trash by both sender and receiver."
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         Message.objects.filter(sender_delete_date__isnull=False,
                 receiver_delete_date__isnull=False).delete()
 

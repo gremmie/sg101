@@ -8,7 +8,7 @@ subscribing to an inaccessible topic raises Http404 while favoriting one returns
 """
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 
 from forums.models import Forum, Post, Topic

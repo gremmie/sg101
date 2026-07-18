@@ -13,7 +13,6 @@ def purge_messages():
     Task to purge messages that have been deleted by both sender & receiver.
 
     """
-    from messages.management.commands.purge_messages import Command
+    from django.core.management import call_command
 
-    command = Command()
-    command.execute()
+    call_command('purge_messages')

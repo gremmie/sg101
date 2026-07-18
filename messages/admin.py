@@ -2,7 +2,9 @@
 This file contains the automatic admin site definitions for the Message models.
 """
 from django.contrib import admin
-from django.core.urlresolvers import reverse
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from messages.models import Flag, Message, Options
 import bio.badges
@@ -24,14 +26,12 @@ class FlagAdmin(admin.ModelAdmin):
     actions = ['accept_flags']
 
     def message_link(self, obj):
-        return '<a href="{}">Message</a>'.format(
+        return format_html('<a href="{}">Message</a>',
                 reverse('admin:messages_message_change', args=[obj.message.id]))
-    message_link.allow_tags = True
     message_link.short_description = 'Message'
 
     def message_text(self, obj):
-        return obj.message.html
-    message_text.allow_tags = True
+        return mark_safe(obj.message.html)
     message_text.short_description = 'Message text'
 
     def accept_flags(self, request, qs):

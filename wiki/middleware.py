@@ -9,6 +9,7 @@ import string
 import time
 
 from django.conf import settings
+from django.utils.deprecation import MiddlewareMixin
 import redis
 
 from core.services import get_redis_connection
@@ -92,7 +93,7 @@ def destroy_wiki_session(set_member, response):
             logger.error("Error deleting wiki cookie set member")
 
 
-class WikiMiddleware(object):
+class WikiMiddleware(MiddlewareMixin):
     """
     Check for flags on the request object to determine when to set or delete an
     external cookie for the wiki application. When creating a cookie, also

@@ -3,26 +3,24 @@ sync_ygroup_posts.py - A management command to synchronize the yahoo group
 archives by recomputing the de-normalized fields in the post objects.
 
 """
-import optparse
-
-from django.core.management.base import NoArgsCommand, CommandError
-from django.core.urlresolvers import reverse
+from django.core.management.base import BaseCommand, CommandError
+from django.urls import reverse
 
 from ygroup.models import Thread, Post
 import ygroup.views
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = """\
 This command synchronizes the ygroup application's post objects
 by updating their de-normalized fields.
 """
-    option_list = NoArgsCommand.option_list + (
-        optparse.make_option("-p", "--progress", action="store_true",
-            help="Output a . after every 100 posts to show progress"),
-    )
 
-    def handle_noargs(self, **opts):
+    def add_arguments(self, parser):
+        parser.add_argument("-p", "--progress", action="store_true",
+            help="Output a . after every 100 posts to show progress")
+
+    def handle(self, *args, **opts):
 
         show_progress = opts.get('progress', False) or False
 

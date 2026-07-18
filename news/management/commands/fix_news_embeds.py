@@ -2,27 +2,26 @@
 Custom management command to find and fix the old YouTube <object> embeds in the
 news stories.
 """
-from optparse import make_option
 import urlparse
 from urllib2 import HTTPError
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 import lxml.html
 
 from news.models import Story
 from oembed.core import get_oembed
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Rewrite news stories that have old flash YouTube embeds"
-    option_list = NoArgsCommand.option_list + (
-        make_option('-p', '--preview',
+
+    def add_arguments(self, parser):
+        parser.add_argument('-p', '--preview',
                     action='store_true',
                     default=False,
-                    help="find and print old embeds but don't update"),
-        )
+                    help="find and print old embeds but don't update")
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         self.preview = options['preview']
 
         qs = Story.objects.all()

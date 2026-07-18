@@ -5,16 +5,16 @@ now this entails deleting old forum and topic last visit records.
 """
 import datetime
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from forums.models import ForumLastVisit, TopicLastVisit
 import forums.unread
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "This command deletes old forum and topic last visit records."
 
-    def handle_noargs(self, **opts):
+    def handle(self, *args, **opts):
 
         now = datetime.datetime.now()
         threshold = now - forums.unread.THRESHOLD * 2

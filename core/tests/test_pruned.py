@@ -7,7 +7,7 @@ URL include resurrected.
 """
 from django.apps import apps
 from django.conf import settings
-from django.core.urlresolvers import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, reverse
 from django.test import TestCase
 
 

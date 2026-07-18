@@ -5,13 +5,13 @@ number of users online statistic.
 """
 import datetime
 
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from core.whos_online import max_users
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Run periodically to compute the max users online statistic."
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         max_users()

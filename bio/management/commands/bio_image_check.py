@@ -2,9 +2,7 @@
 
 A management command to check profiles for non-secure images.
 """
-from optparse import make_option
-
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 from bio.models import UserProfile
 from core.html import image_check
@@ -19,17 +17,17 @@ def _image_check(html):
     return True
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Checks user profiles for non-secure images"
-    option_list = NoArgsCommand.option_list + (
-            make_option('--resave',
+
+    def add_arguments(self, parser):
+        parser.add_argument('--resave',
                 action='store_true',
                 dest='resave',
                 default=False,
-                help='Re-save profile if issue found'),
-    )
+                help='Re-save profile if issue found')
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
 
         resave = options.get('resave', False)
 

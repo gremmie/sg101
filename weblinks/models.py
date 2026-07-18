@@ -4,8 +4,9 @@ This module contains the models for the weblinks application.
 import datetime
 
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db import models
+from django.utils.html import format_html
 
 
 class Category(models.Model):
@@ -127,9 +128,8 @@ class FlaggedLink(models.Model):
         return self.link.url
 
     def get_link_url(self):
-        return '<a href="%s">Link #%d</a>' % (self.link.get_absolute_url(),
-                self.link.id)
-    get_link_url.allow_tags = True
+        return format_html('<a href="{}">Link #{}</a>',
+                self.link.get_absolute_url(), self.link.id)
     get_link_url.short_description = "View Link on Site"
 
     def __unicode__(self):

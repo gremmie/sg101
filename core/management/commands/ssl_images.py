@@ -10,14 +10,13 @@ import base64
 import datetime
 import json
 import logging
-from optparse import make_option
 import os
 import re
 import signal
 import urlparse
 import uuid
 
-from django.core.management.base import NoArgsCommand, CommandError
+from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from lxml import etree
 import lxml.html
@@ -302,26 +301,26 @@ def html_check(html):
     return False
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     help = "Rewrite forum posts and comments to not use http for images"
-    option_list = NoArgsCommand.option_list + (
-            make_option('-m', '--model',
+
+    def add_arguments(self, parser):
+        parser.add_argument('-m', '--model',
                 choices=MODEL_CHOICES,
                 help="which model to update; must be one of {{{}}}".format(
-                                                    ', '.join(MODEL_CHOICES))),
-            make_option('-i', '--i',
-                type='int',
-                help="optional first slice index; the i in [i:j]"),
-            make_option('-j', '--j',
-                type='int',
-                help="optional second slice index; the j in [i:j]"),
-            make_option('-t', '--timeout',
-                type='float',
-                help="optional socket timeout (secs)",
-                default=30.0),
-            )
+                                                    ', '.join(MODEL_CHOICES)))
+        parser.add_argument('-i', '--i',
+                type=int,
+                help="optional first slice index; the i in [i:j]")
+        parser.add_argument('-j', '--j',
+                type=int,
+                help="optional second slice index; the j in [i:j]")
+        parser.add_argument('-t', '--timeout',
+                type=float,
+                default=30.0,
+                help="optional socket timeout (secs)")
 
-    def handle_noargs(self, **options):
+    def handle(self, *args, **options):
         time_started = datetime.datetime.now()
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)

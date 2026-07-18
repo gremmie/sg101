@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.core.paginator import InvalidPage
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.sites.models import Site
 from django.http import Http404
 
@@ -226,7 +226,7 @@ def email_story(request, story_id):
 
             subject = 'Interesting Story at ' + site.name
             send_mail(subject, msg, from_email, [to_email], reply_to=request.user.email)
-            return HttpResponseRedirect(reverse('news.views.email_thanks',
+            return HttpResponseRedirect(reverse('news-email_thanks',
                                                 args=[story_id]))
     else:
         send_form = SendStoryForm()

@@ -3,7 +3,7 @@ Template tags for the messages application.
 
 """
 from django import template
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.http import urlquote
 
 from messages.models import Message
