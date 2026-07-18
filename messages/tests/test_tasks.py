@@ -31,5 +31,8 @@ class PurgeMessagesTaskTestCase(TestCase):
 
     def test_purge_command(self):
         self.assertEqual(Message.objects.all().count(), 1)
-        task = purge_messages.s().apply()
+        # .get() re-raises any exception from the task body; without it a failure
+        # in the task (e.g. the command wrapper raising) would hide here and show
+        # only as the count assertion below not matching.
+        purge_messages.s().apply().get()
         self.assertEqual(Message.objects.all().count(), 0)

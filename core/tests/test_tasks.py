@@ -2,9 +2,14 @@
 Tests for the core tasks.
 
 """
+import datetime
+
+from django.contrib.auth.models import User
 from django.test import TestCase
 from mock import call, patch
 
+import forums.unread
+from forums.models import Category, Forum, ForumLastVisit
 from core.tasks import cleanup
 from core.tasks import max_users
 from core.tasks import send_mail
@@ -22,21 +27,24 @@ class CoreTasksTestCase(TestCase):
             call().send(),
         ])
 
-    """
-    Can't get this to work... :(
-    @patch('django.contrib.sessions.management.commands.clearsessions')
-    @patch('forums.management.commands.forum_cleanup')
-    def test_cleanup(self, forum_cleanup_mock, clearsessions_mock):
+    def test_cleanup_runs_and_purges_stale_forum_visits(self):
+        # cleanup delegates to the clearsessions + forum_cleanup management
+        # commands. Invoking a command's execute() directly (as this task once
+        # did) raises KeyError 'no_color' under Django 1.10+, so run the task and
+        # .get() its result to surface such an error instead of letting it hide
+        # inside the task result. The stale ForumLastVisit proves forum_cleanup
+        # actually ran.
+        cat = Category.objects.create(name='Cat', slug='cat')
+        forum = Forum.objects.create(category=cat, name='Forum', slug='forum')
+        user = User.objects.create_user('u', '', 'pw')
+        stale = (datetime.datetime.now() - forums.unread.THRESHOLD * 2
+                 - datetime.timedelta(days=1))
+        flv = ForumLastVisit.objects.create(user=user, forum=forum,
+                                            begin_date=stale, end_date=stale)
 
-        cleanup.s().apply()
+        cleanup.s().apply().get()
 
-        self.assertEquals(clearsessions.mock_calls, [
-            # TODO
-        ])
-        self.assertEquals(forum_cleanup_mock.mock_calls, [
-            # TODO
-        ])
-    """
+        self.assertFalse(ForumLastVisit.objects.filter(pk=flv.pk).exists())
 
     @patch('core.tasks.core.whos_online')
     def test_max_users(self, whos_online_mock):

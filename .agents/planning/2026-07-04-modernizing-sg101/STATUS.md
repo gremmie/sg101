@@ -49,6 +49,13 @@ smoke green on real prod data.
   path. (`tools/*.py` standalone scripts use stdlib `optparse` directly — fine.)
   **Lesson: the green unit suite is necessary but not sufficient — booting the
   worker/beat and the live dev server is what catches untested command/task code.**
+  **Safety net added** (follow-up commit, +5 tests → 554): `core/tests/test_commands.py`
+  loads every registered command + builds its parser (would have caught all 14 at
+  once); `forums/tests/test_commands.py` (forum_cleanup), `potd/tests/test_commands.py`
+  (pick_potd command), and the long-abandoned `core.tasks.cleanup` task test are now
+  real; `messages` purge task test `.get()`s the result so a task exception fails
+  loudly. These guard the command surface for the harder rungs ahead (the Py3 flip
+  will break command bodies: print/urllib2/cStringIO/iteritems).
 - **django-tagging 0.4.3 incompatible with 1.10** → **bumped to 0.5.0** (last line
   supporting Py2.7 **and** Django 1.11). Root cause: `TagField` installs itself as
   a class descriptor, so its attname is never in `instance.__dict__`; Django 1.10's
