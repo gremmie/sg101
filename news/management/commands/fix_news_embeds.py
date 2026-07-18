@@ -2,6 +2,8 @@
 Custom management command to find and fix the old YouTube <object> embeds in the
 news stories.
 """
+from __future__ import print_function
+
 import urlparse
 from urllib2 import HTTPError
 
@@ -33,7 +35,7 @@ class Command(BaseCommand):
         r2 = self._process_html(story, 'long_text')
         r3 = self._process_html(story, 'admin_content')
         if not self.preview and (r1 or r2 or r3):
-            print "Updating", story.title
+            print("Updating", story.title)
             story.save()
 
     def _process_html(self, story, field):
@@ -47,11 +49,11 @@ class Command(BaseCommand):
         for iframe in root.iter('iframe'):
             src = iframe.get('src')
             if src and src.startswith('http:'):
-                print "*" * 5, "iframe with http src -", story.title
+                print("*" * 5, "iframe with http src -", story.title)
 
         for obj in root.iter('object'):
             if story.version != 0:
-                print "*" * 5, story.title, "bad version!"
+                print("*" * 5, story.title, "bad version!")
                 continue
             for param in obj.iter('param'):
                 value = param.get('value')
@@ -59,12 +61,12 @@ class Command(BaseCommand):
                     r = urlparse.urlparse(value)
                     if (r.hostname != 'www.youtube.com' and
                         r.hostname != 'www.youtube-nocookie.com'):
-                        print "Unknown source hostname:", r.hostname, ";", story.title
+                        print("Unknown source hostname:", r.hostname, ";", story.title)
                         continue
                     try:
                         new_embed = self._process_path(story, r.path)
                     except HTTPError as ex:
-                        print "*" * 5, story.title, ex
+                        print("*" * 5, story.title, ex)
                         continue
                     if not new_embed:
                         continue
@@ -73,8 +75,8 @@ class Command(BaseCommand):
                     parent.replace(obj, new_child)
                     new_html = lxml.html.tostring(root)[5:-6]
                     if self.preview:
-                        print story.title
-                        print new_html, "\n" * 3
+                        print(story.title)
+                        print(new_html, "\n" * 3)
                         return False
 
                     setattr(story, field, new_html)
@@ -89,7 +91,7 @@ class Command(BaseCommand):
             playlist_id = strip_query(path[3:])
             url = "https://www.youtube.com/playlist?list=PL{}".format(playlist_id)
         else:
-            print "Unknown YouTube path:", path, ";", story.title
+            print("Unknown YouTube path:", path, ";", story.title)
             return None
 
         oembed = get_oembed("http://www.youtube.com/oembed", url, scheme='https')

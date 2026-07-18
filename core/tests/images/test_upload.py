@@ -52,8 +52,8 @@ class ProcessUploadTestCase(unittest.TestCase):
         expected_thumb_path = '/media/user_upload/deadbeeft.jpg'
         shutil_mock.copy.assert_called_once_with(filename, expected_path)
         self.assertEqual(chmod_mock.mock_calls, [
-            call(expected_path, 0644),
-            call(expected_thumb_path, 0644),
+            call(expected_path, 0o644),
+            call(expected_thumb_path, 0o644),
         ])
 
         bytes_mock().seek.assert_called_once_with(0)

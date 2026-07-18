@@ -49,7 +49,7 @@ class Command(LabelCommand):
         try:
             with open(src_path, 'r') as f:
                 src_text = f.read()
-        except IOError, ex:
+        except IOError as ex:
             raise CommandError(str(ex))
 
         # transform text
@@ -62,7 +62,7 @@ class Command(LabelCommand):
         try:
             with open(dst_path, 'w') as f:
                 f.write(content.encode('utf-8'))
-        except IOError, ex:
+        except IOError as ex:
             raise CommandError(str(ex))
 
         prefix = os.path.commonprefix([src_path, dst_path])

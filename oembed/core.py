@@ -2,6 +2,8 @@
 This module contains core functionality for the oembed application.
 
 """
+from __future__ import print_function
+
 from contextlib import closing
 import json
 import urllib
@@ -48,8 +50,8 @@ def get_oembed(api_endpoint, url, fmt='json', **opts):
 
 if __name__ == "__main__":
     try:
-        print get_oembed("http://www.youtube.com/oembed",
+        print(get_oembed("http://www.youtube.com/oembed",
                          "http://www.youtube.com/watch?v=7_IMzJldOf4",
-                         scheme='https')
-    except urllib2.HTTPError, e:
-        print e
+                         scheme='https'))
+    except urllib2.HTTPError as e:
+        print(e)

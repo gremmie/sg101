@@ -399,7 +399,7 @@ def get_stats():
     try:
         conn = get_redis_connection()
         result = conn.mget(TOPIC_COUNT_KEY, POST_COUNT_KEY)
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
         return (None, None)
 
@@ -418,7 +418,7 @@ def get_latest_topic_ids(num):
     try:
         conn = get_redis_connection()
         result = conn.zrevrange(UPDATED_TOPICS_SET_KEY, 0, num - 1)
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
         return []
 
@@ -438,7 +438,7 @@ def get_latest_topics(num):
         topic_keys = [UPDATED_TOPIC_KEY % n for n in result]
         json_list = conn.mget(topic_keys) if topic_keys else []
 
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
         return []
 
@@ -468,7 +468,7 @@ def notify_topic_delete(topic):
         pipeline.zrem(UPDATED_TOPICS_SET_KEY, topic.id)
         pipeline.delete(UPDATED_TOPIC_KEY % topic.id)
         pipeline.execute()
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
 
 

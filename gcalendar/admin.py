@@ -91,7 +91,7 @@ class EventAdmin(admin.ModelAdmin):
                     cal = Calendar(calendar_id=settings.GCAL_CALENDAR_ID,
                             credentials=credentials)
                     cal.sync_events(events)
-                except CalendarError, e:
+                except CalendarError as e:
                     err_msg = str(e)
                     events = Event.pending_events.all()
                 else:

@@ -1,4 +1,5 @@
 """This module contains routines for downloading files."""
+from __future__ import print_function
 
 import logging
 import mimetypes
@@ -72,4 +73,4 @@ if __name__ == '__main__':
     logging.info("argument is %s", sys.argv[1])
     result = download_file(sys.argv[1])
     if result:
-        print result
+        print(result)

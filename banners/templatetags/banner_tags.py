@@ -32,7 +32,7 @@ def banner_url(slug):
     try:
         conn = get_redis_connection()
         url = conn.lpop(key)
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error("banner_url: '%s' on lpop", e)
         return u''
 
@@ -53,7 +53,7 @@ def banner_url(slug):
     if urls:
         try:
             conn.rpush(key, *urls)
-        except redis.RedisError, e:
+        except redis.RedisError as e:
             logger.error("banner_url: '%s' on rpush", e)
             pass
 

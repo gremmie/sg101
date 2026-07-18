@@ -6,6 +6,7 @@ http://blog.elsdoerfer.name/2008/05/26/diggpaginator-update/
 http://blog.elsdoerfer.name/2008/03/06/yet-another-paginator-digg-style/
 """
 import math
+from functools import reduce
 from django.core.paginator import (
     Paginator, QuerySetPaginator, Page, InvalidPage, EmptyPage,
     PageNotAnInteger)
@@ -52,7 +53,7 @@ class ExPaginator(Paginator):
     def page(self, number, softlimit=False):
         try:
             return super(ExPaginator, self).page(number)
-        except InvalidPage, e:
+        except InvalidPage as e:
             number = self._ensure_int(number, e)
             if number > self.num_pages and softlimit:
                 return self.page(self.num_pages, softlimit=False)

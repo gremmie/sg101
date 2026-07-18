@@ -92,7 +92,7 @@ class Contest(models.Model):
             return
 
         winner_ids = []
-        for n in xrange(winner_count):
+        for n in range(winner_count):
             winner = random.choice(user_ids)
             winner_ids.append(winner)
             user_ids.remove(winner)

@@ -151,7 +151,7 @@ LOGIN_URL = 'accounts-login'
 LOGIN_REDIRECT_URL = 'bio-me'
 LOGOUT_URL = 'accounts-logout'
 
-FILE_UPLOAD_PERMISSIONS = 0644
+FILE_UPLOAD_PERMISSIONS = 0o644
 DEFAULT_FROM_EMAIL = ADMINS[0][1]
 
 #######################################################################

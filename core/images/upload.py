@@ -156,7 +156,7 @@ def _process_local_upload(filename, new_size=None, thumb_size=None):
     thumb_name = '%st%s' % (unique_name, ext)
     image_path = os.path.join(upload_dir, image_name)
     thumb_path = os.path.join(upload_dir, thumb_name)
-    perms = 0644
+    perms = 0o644
 
     shutil.copy(filename, image_path)
     os.chmod(image_path, perms)

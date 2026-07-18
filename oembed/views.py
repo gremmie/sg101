@@ -47,7 +47,7 @@ def fetch_media(request):
                                   maxwidth=settings.OEMBED_MAXWIDTH,
                                   maxheight=settings.OEMBED_MAXHEIGHT,
                                   scheme='https')
-            except IOError, e:
+            except IOError as e:
                 return HttpResponseBadRequest(
                     "Sorry, we could not retrieve your video (%s)" % e)
 

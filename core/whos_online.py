@@ -38,7 +38,7 @@ def _get_connection():
     try:
         conn = get_redis_connection()
         return conn
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
 
     return None
@@ -62,7 +62,7 @@ def _zadd(key, member):
         ts = to_timestamp(datetime.datetime.now())
         try:
             conn.zadd(key, ts, member)
-        except redis.RedisError, e:
+        except redis.RedisError as e:
             logger.error(e)
 
 
@@ -81,7 +81,7 @@ def _zrangebyscore(key):
         max = to_timestamp(now)
         try:
             return conn.zrangebyscore(key, min, max)
-        except redis.RedisError, e:
+        except redis.RedisError as e:
             logger.error(e)
 
     return []
@@ -136,7 +136,7 @@ def _tick(conn):
         pipeline.zcard(USER_SET_KEY)
         pipeline.zcard(VISITOR_SET_KEY)
         result = pipeline.execute()
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)
         return 0, 0
 
@@ -198,7 +198,7 @@ def get_stats(conn=None):
     if conn:
         try:
             stats = conn.hgetall(CORE_STATS_KEY)
-        except redis.RedisError, e:
+        except redis.RedisError as e:
             logger.error(e)
 
         if stats:
@@ -235,5 +235,5 @@ def _save_stats_to_redis(conn, stats):
     try:
         conn.hmset(CORE_STATS_KEY, fields)
         conn.expire(CORE_STATS_KEY, 4 * 60 * 60)
-    except redis.RedisError, e:
+    except redis.RedisError as e:
         logger.error(e)

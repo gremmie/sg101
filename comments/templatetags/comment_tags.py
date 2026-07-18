@@ -40,7 +40,7 @@ def get_comment_count(parser, token):
     try:
         (tag, for_word, obj, as_word, var) = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires exactly 4 arguments" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%r tag requires exactly 4 arguments" % token.contents.split()[0])
 
     if for_word != 'for':
         raise template.TemplateSyntaxError("First argument in %r tag must be 'for'" % tag)
@@ -74,7 +74,7 @@ def get_comment_list(parser, token):
     try:
         (tag, for_word, obj, as_word, var) = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires exactly 4 arguments" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%r tag requires exactly 4 arguments" % token.contents.split()[0])
 
     if for_word != 'for':
         raise template.TemplateSyntaxError("First argument in %r tag must be 'for'" % tag)
@@ -107,7 +107,7 @@ def get_comment_form(parser, token):
     try:
         (tag, for_word, obj, as_word, var) = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%r tag requires exactly 4 arguments" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%r tag requires exactly 4 arguments" % token.contents.split()[0])
 
     if for_word != 'for':
         raise template.TemplateSyntaxError("First argument in %r tag must be 'for'" % tag)
