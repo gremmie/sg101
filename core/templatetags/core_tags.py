@@ -178,7 +178,7 @@ def birthday_block(context):
     for profile in profiles:
         days[profile.birthday.day].append(profile)
 
-    birthdays = [Birthday(day, profiles) for day, profiles in days.iteritems()]
+    birthdays = [Birthday(day, profiles) for day, profiles in days.items()]
     birthdays.sort(key=lambda b: b.day)
 
     context['birthdays'] = birthdays

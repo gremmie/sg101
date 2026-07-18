@@ -426,7 +426,7 @@ class Command(BaseCommand):
                     count, elapsed)
 
         http_images = len(url_cache)
-        https_images = sum(1 for v in url_cache.itervalues() if v)
+        https_images = sum(1 for v in url_cache.values() if v)
         bad_images = http_images - https_images
         if http_images > 0:
             pct_saved = float(https_images) / http_images * 100.0

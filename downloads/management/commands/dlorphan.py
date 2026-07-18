@@ -31,7 +31,10 @@ class Command(BaseCommand):
         # find the set of all files in the downloads area
         for root, dirs, files in os.walk(dls_dir, followlinks=True):
             for name in files:
-                orphans.add(unicode(os.path.join(root, name), 'utf-8'))
+                path = os.path.join(root, name)
+                if isinstance(path, bytes):
+                    path = path.decode('utf-8')
+                orphans.add(path)
 
         # examine the pending downloads:
         for dl in PendingDownload.objects.iterator():

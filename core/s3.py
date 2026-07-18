@@ -110,6 +110,6 @@ class S3Bucket(object):
         key = Key(self.bucket)
         key.key = key_name
         if metadata:
-            for k, v in metadata.iteritems():
+            for k, v in metadata.items():
                 key.set_metadata(k, v)
         return key

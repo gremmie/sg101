@@ -69,11 +69,9 @@ class PendingUserManager(models.Manager):
    def _make_key(self):
       s = ''.join(random.sample(string.printable, 8))
       delta = datetime.date.today() - datetime.date(1846, 12, 28)
-      days = base64.urlsafe_b64encode(str(delta * 10))
-      key = hashlib.sha1(settings.SECRET_KEY +
-         unicode(self.create_count) +
-         unicode(s) +
-         unicode(days)).hexdigest()[::2]
+      days = base64.urlsafe_b64encode(str(delta * 10).encode('ascii')).decode('ascii')
+      raw = u'%s%s%s%s' % (settings.SECRET_KEY, self.create_count, s, days)
+      key = hashlib.sha1(raw.encode('utf-8')).hexdigest()[::2]
       return key
 
 
