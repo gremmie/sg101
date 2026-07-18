@@ -1,7 +1,80 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-16
+**Last updated:** 2026-07-17
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 5 (regression safety net) — DONE (2026-07-17)
+
+Characterization/functional tests that lock in **current** behavior of critical
+journeys, so the Django upgrade ladder (Steps 6+) surfaces regressions loudly.
+**+179 tests (370 → 549), total coverage 75% → 83%.** Full suite green in-container.
+
+Opened by running a fresh per-file coverage report to target real gaps (not a
+blanket unit sweep). The already-strong apps from the earlier manual pass
+(accounts/login-registration, comments, messages/PMs) were left as-is; new tests
+went to the thin, high-risk journeys:
+
+- **forums permissions** — `forums/tests/test_permissions.py` (16). Anon→login vs
+  403 on AJAX; member can't edit/delete others' posts or moderate; locked-topic
+  reply refused; superuser + group-moderator powers; private-category access.
+  `permissions.py` 83%→93%.
+- **forums read/unread tracking** — `forums/tests/test_unread.py` (25). The whole
+  `forums.unread` algorithm branch-by-branch (get_post/topic/forum_unread_status,
+  get_unread_topics) + journeys (topic_unread jump-to-first-unread, forum_catchup/
+  catchup_all, visit writes ForumLastVisit). **`unread.py` 15%→78%** (was the
+  worst-covered core module).
+- **donations PayPal-IPN** — appended to `donations/tests.py` (15). The IPN
+  listener's defensive branches: unverified, non-Completed, non-donation item,
+  **duplicate txn_id**, **wrong business email**, wrong txn_type, missing/invalid
+  amounts & payment_date; edge saves (unknown custom user → unlinked, test_ipn
+  flag); index/thanks pages. **`donations/views.py` 62%→90%.**
+- **user_photos upload** — `user_photos/tests/test_upload_views.py` (26). upload
+  (form/503-disabled/redirect), upload_ajax (v2 JSON), upload_ajax_v3 (status-code
+  semantics incl. save-error 500), GalleryView, PhotoView, delete (own vs another
+  user's photo). Mocked at the app's seams (UploadForm, delete_photos) — no Pillow
+  or S3. **`user_photos/views.py` 39%→97%.**
+- **admin smoke** — `core/tests/test_admin.py` (3). Walks `admin.site._registry`
+  and loads every changelist + add form (and the index) as a superuser over all
+  **60** registered models. Cheap insurance the admin still boots after upgrades.
+- **forums moderation + spam tools** — `forums/tests/test_moderation.py` (17).
+  Topic stick/move/split/split-at (effects, not just gates), bulk mod_forum
+  (sticky/lock/delete/move), and the spam tools: deactivate a stranger spammer
+  (account off, STA_SPAMMER, posts deleted), can't-deactivate-non-stranger,
+  non-moderator blocked, nailed-confirmation, promote-stranger. **`spam.py`
+  40%→98%.**
+- **forums subscriptions + favorites** — `forums/tests/test_subscriptions.py`
+  (16). subscribe/unsubscribe/status/manage for both features, incl. the
+  asymmetry: subscribing to an inaccessible topic 404s while favoriting 403s.
+  subscriptions.py 37%→79%, favorites.py 34%→89%.
+- **forums latest-posts datastore + RSS feeds** — `forums/tests/test_feeds_latest.py`
+  (9). Drives the real Redis-backed `forums.latest` (process a post → combined/
+  per-forum feeds, updated-topics list, get_stats, notify_topic_delete) and the
+  syndication feed (renders combined/per-forum/empty, excludes private forums).
+  Real Redis DB 14 with `forums:*` flush + page-cache clear per test.
+  **feeds.py 46%→100%, latest.py 48%→69%.**
+- **forums/views/main.py** rose 38%→73% (permissions + unread + moderation).
+- **news display + email** — `news/tests/test_display_views.py` (15). Front-page
+  index, archives, category index/page, story, tag cloud/page (+404s), and the
+  email-story-to-a-friend flow. **news/views.py 39%→93%.** Watch item for Step 6:
+  email_story redirects via legacy `reverse('news.views.email_thanks')` (dotted
+  view-path form — works in 1.9, removed in 1.10+); the test will flag it.
+- **downloads** — `downloads/tests/test_views.py` (18). index/category(all sorts)/
+  new/popular/rating/details (login-gated, 404 non-public), add form, and the AJAX
+  rate (login/bad-params/duplicate-vote) + request (hit-count) endpoints.
+  **downloads/views.py 28%→85%.**
+- **weblinks** — `weblinks/tests/test_views.py` (19). Public browse (index/new/
+  popular/category/detail + 404s), visit (hit-count redirect), random link, report-
+  broken-link (anon gets friendly 200, not 403), login-gated add → PendingLink.
+  **weblinks/views.py 31%→92%.**
+
+Also **swept modernization step-number references out of shipped code/comments**
+(test_pruned.py, docker.py, urls.py, requirements-docker.txt, and the two new
+forums test docstrings): comments describe the code, not the plan; step history
+lives here in `.agents/planning/`. No functional change; touched tests stay green.
+
+**Not committed yet** (awaiting the go-ahead to bundle). Push remains the user's.
+**Next real-world action: Step 6** — upgrade Django 1.9 → 1.11 LTS (still Py2.7),
+with this safety net as the regression gate.
 
 ## EXECUTION — Step 4 (prune dead/disabled code) — DONE (2026-07-16)
 

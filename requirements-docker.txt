@@ -1,7 +1,7 @@
 # Requirements for the Dockerized *legacy* environment (Python 2.7 / Django 1.9).
 # Mirrors the production pins in requirements.txt. The Xapian/Haystack search
-# stack and its private `queues` dependency were pruned in Step 4 (native
-# Postgres FTS arrives in Step 12), so neither file lists them anymore.
+# stack and its private `queues` dependency were removed (native Postgres
+# full-text search will replace them later), so neither file lists them anymore.
 
 amqp==1.4.9
 anyjson==0.3.3

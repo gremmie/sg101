@@ -7,6 +7,7 @@ import datetime
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from django.conf import settings
 
@@ -145,3 +146,131 @@ class DonationsManagerTestCase(TestCase):
         self.assertEqual(gross, Decimal('0.00'))
         self.assertEqual(net, Decimal('0.00'))
         self.assertEqual(len(donations), 0)
+
+
+# A complete, valid IPN payload for a *named* ($5) donation, as a dict so
+# individual fields can be overridden per scenario. Mirrors the shape of a real
+# Paypal "web_accept" completed-payment notification.
+def valid_ipn(**overrides):
+    data = {
+        'mc_gross': '5.00',
+        'mc_fee': '0.50',
+        'payer_id': 'FAKEPAYERID01',
+        'payment_date': '04:14:08 Jan 21, 2011 PST',
+        'payment_status': 'Completed',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'custom': 'test_user',
+        'payer_status': 'verified',
+        'business': 'brian@surfguitar101.com',
+        'payer_email': 'test_user@example.com',
+        'txn_id': 'TESTTXNID0001',
+        'receiver_email': 'brian@surfguitar101.com',
+        'txn_type': 'web_accept',
+        'item_name': 'Donation for www.surfguitar101.com',
+        'mc_currency': 'USD',
+        'item_number': settings.DONATIONS_ITEM_NUM,
+    }
+    data.update(overrides)
+    # Allow a field to be dropped entirely by passing it as None.
+    return {k: v for k, v in data.items() if v is not None}
+
+
+class IpnRejectionTestCase(TestCase):
+    """
+    Locks in the IPN handler's defensive branches: which malformed, unverified,
+    or non-qualifying notifications must NOT create a Donation. The listener
+    always answers Paypal with an empty 200, so these assert on the database, not
+    the response code.
+    """
+    fixtures = ['badges']
+
+    def setUp(self):
+        User.objects.create_user('test_user', 'test_user@example.com', 'password')
+
+    def post_ipn(self, **overrides):
+        response = self.client.post(reverse('donations-ipn'), valid_ipn(**overrides))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_valid_ipn_is_saved(self):
+        # Anchors the helper: an unmodified valid payload creates one donation.
+        self.post_ipn()
+        self.assertEqual(Donation.objects.count(), 1)
+
+    @override_settings(DONATIONS_DEBUG_VERIFY_RESPONSE='INVALID')
+    def test_unverified_ipn_is_ignored(self):
+        self.post_ipn()
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_non_completed_payment_is_ignored(self):
+        self.post_ipn(payment_status='Pending')
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_non_donation_item_number_is_ignored(self):
+        self.post_ipn(item_number='999')
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_missing_txn_id_is_rejected(self):
+        self.post_ipn(txn_id=None)
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_duplicate_txn_id_is_not_double_counted(self):
+        self.post_ipn()
+        self.post_ipn()   # identical txn_id
+        self.assertEqual(Donation.objects.count(), 1)
+
+    def test_wrong_business_email_is_rejected(self):
+        self.post_ipn(business='scammer@example.com')
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_wrong_txn_type_is_rejected(self):
+        self.post_ipn(txn_type='send_money')
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_missing_amounts_are_rejected(self):
+        self.post_ipn(mc_gross=None)
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_missing_payment_date_is_rejected(self):
+        self.post_ipn(payment_date=None)
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_invalid_payment_date_is_rejected(self):
+        self.post_ipn(payment_date='not a date XYZ')
+        self.assertEqual(Donation.objects.count(), 0)
+
+
+class IpnEdgeCaseTestCase(TestCase):
+    """Valid donations whose payer details fall outside the common case."""
+    fixtures = ['badges']
+
+    def post_ipn(self, **overrides):
+        response = self.client.post(reverse('donations-ipn'), valid_ipn(**overrides))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_unknown_custom_user_saves_donation_without_user(self):
+        # 'custom' names a user who doesn't exist -> donation still recorded,
+        # just unlinked.
+        self.post_ipn(custom='ghost')
+        donation = Donation.objects.get()
+        self.assertIsNone(donation.user)
+
+    def test_test_ipn_flag_is_recorded(self):
+        User.objects.create_user('test_user', 'test_user@example.com', 'password')
+        self.post_ipn(test_ipn='1')
+        donation = Donation.objects.get()
+        self.assertTrue(donation.test_ipn)
+
+
+class DonationsPageTestCase(TestCase):
+    """The public-facing donations pages render."""
+
+    def test_index_page_renders(self):
+        response = self.client.get(reverse('donations-index'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_thanks_page_renders(self):
+        response = self.client.get(reverse('donations-thanks'))
+        self.assertEqual(response.status_code, 200)

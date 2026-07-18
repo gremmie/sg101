@@ -78,7 +78,7 @@ urlpatterns = [
 ]
 
 # Search is stubbed out: the Xapian/Haystack stack was removed and native
-# PostgreSQL full-text search is built later (Step 12). Until then both search
+# PostgreSQL full-text search will replace it later. Until then both search
 # URLs render a placeholder so existing links don't 404.
 urlpatterns += [
    url(r'^search/$',

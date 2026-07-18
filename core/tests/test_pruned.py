@@ -1,4 +1,4 @@
-"""Tests that dead/disabled code pruned in Step 4 stays gone.
+"""Tests that removed dead/disabled code stays gone.
 
 The `irc`, `legacy`, `membermap`, and `custom_search` apps (and the disabled
 Xapian/Haystack search stack) were removed. These assertions fail loudly if any
@@ -36,6 +36,6 @@ class PrunedAppsTests(TestCase):
                 reverse(name)
 
     def test_search_stub_still_serves(self):
-        # Search stays stubbed (native Postgres FTS arrives in Step 12); the URL
-        # must keep resolving so existing links don't break.
+        # Search stays stubbed until native Postgres full-text search is built;
+        # the URL must keep resolving so existing links don't break.
         self.assertEqual(self.client.get('/search/').status_code, 200)

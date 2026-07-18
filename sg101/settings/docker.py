@@ -1,8 +1,8 @@
 """
 Django settings for running the *legacy* stack inside Docker Compose.
 
-Step 1 of the modernization plan. This module is intentionally thin: it inherits
-the unmodified legacy `local` settings (so the reproduction stays faithful) and
+This module is intentionally thin: it inherits the unmodified legacy `local`
+settings (so the reproduction stays faithful) and
 only overrides the two things that differ between "everything on one box talking
 over unix sockets" and "each service in its own container talking over the Docker
 network (TCP)":
