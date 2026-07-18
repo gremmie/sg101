@@ -1,7 +1,7 @@
 """Test for the make_fixed_page management command."""
 import os.path
 import shutil
-from StringIO import StringIO
+from six import StringIO
 import tempfile
 import textwrap
 import unittest

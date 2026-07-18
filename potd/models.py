@@ -6,10 +6,7 @@ import datetime
 import os
 from PIL import ImageFile
 from PIL import Image
-try:
-   from cStringIO import StringIO
-except:
-   from StringIO import StringIO
+from io import BytesIO
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -70,7 +67,7 @@ class Photo(models.Model):
         image = parser.close()
         format = image.format
         image = scale_image(image)
-        s = StringIO()
+        s = BytesIO()
         image.save(s, format)
         thumb_name = os.path.basename(self.photo.path)
         self.thumb.save(thumb_name, ContentFile(s.getvalue()), save=False)

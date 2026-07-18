@@ -7,7 +7,7 @@ import datetime
 import glob
 import os
 import random
-import urllib
+from six.moves.urllib.parse import urlencode
 
 from django import template
 from django.conf import settings
@@ -207,7 +207,7 @@ class EncodeParamsNode(template.Node):
         for arg in self.args:
             params.extend([(arg, value) for value in querydict.getlist(arg)])
 
-        return urllib.urlencode(params)
+        return urlencode(params)
 
 
 @register.tag

@@ -1,5 +1,5 @@
 """Test for the max_user management command."""
-from StringIO import StringIO
+from six import StringIO
 import unittest
 
 from django.core.management import call_command

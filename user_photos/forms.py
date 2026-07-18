@@ -1,7 +1,7 @@
 """Forms for the user_photos application."""
 import hashlib
 import os.path
-import urlparse
+from six.moves.urllib.parse import urlsplit
 
 from django import forms
 from django.conf import settings
@@ -118,7 +118,7 @@ class HotLinkImageForm(forms.Form):
 
     def clean_url(self):
         the_url = self.cleaned_data['url']
-        self.url_parts = urlparse.urlsplit(the_url)
+        self.url_parts = urlsplit(the_url)
         if self.url_parts.scheme not in ['http', 'https']:
             raise forms.ValidationError("Invalid URL scheme")
         return the_url

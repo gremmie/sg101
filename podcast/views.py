@@ -4,7 +4,7 @@ Views for the podcast application.
 """
 import json
 import os.path
-from urlparse import urlparse
+from six.moves.urllib.parse import urlparse
 
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404

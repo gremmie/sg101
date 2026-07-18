@@ -13,7 +13,7 @@ import logging
 import os
 import re
 import signal
-import urlparse
+from six.moves.urllib.parse import urlparse
 import uuid
 
 from django.core.management.base import BaseCommand, CommandError
@@ -194,7 +194,7 @@ def replace_image_markup(match):
     new_src = None
     if src:
         try:
-            r = urlparse.urlparse(src)
+            r = urlparse(src)
         except ValueError:
             return u'{bad image}'
 
@@ -254,7 +254,7 @@ def process_html(html):
         src = src.strip() if src else ''
         if src:
             try:
-                r = urlparse.urlparse(src)
+                r = urlparse(src)
             except ValueError:
                 logger.warning("Bad url? Should not happen; skipping...")
                 continue

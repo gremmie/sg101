@@ -1,7 +1,7 @@
 """
 Tests for the donations application.
 """
-import urlparse
+from six.moves.urllib.parse import parse_qs
 from decimal import Decimal
 import datetime
 
@@ -40,7 +40,7 @@ class DonationsIpnTestCase(TestCase):
                 'password')
         user.save()
 
-        args = urlparse.parse_qs(TEST_POST_DATA_1)
+        args = parse_qs(TEST_POST_DATA_1)
         response = self.client.post(reverse('donations-ipn'), args)
 
         self.assertEqual(response.status_code, 200)
@@ -81,7 +81,7 @@ class DonationsIpnTestCase(TestCase):
                 'password')
         user.save()
 
-        args = urlparse.parse_qs(TEST_POST_DATA_2)
+        args = parse_qs(TEST_POST_DATA_2)
         response = self.client.post(reverse('donations-ipn'), args)
 
         self.assertEqual(response.status_code, 200)

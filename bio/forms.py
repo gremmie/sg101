@@ -1,10 +1,7 @@
 """
 This file contains the forms used by the bio application.
 """
-try:
-    from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+from io import BytesIO
 
 from django import forms
 from django.conf import settings
@@ -121,7 +118,7 @@ class UploadAvatarForm(forms.Form):
             # write the image data info a StringIO and then construct a
             # Django ContentFile from that. The ContentFile has no name,
             # that is why we return one ourselves explicitly.
-            s = StringIO()
+            s = BytesIO()
             self.image.save(s, self.file_type)
             return name, ContentFile(s.getvalue())
 
