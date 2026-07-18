@@ -96,7 +96,8 @@ admin `0002_logentry_remove_auto_add`, auth `0007_alter_validators…` +
 
 **Files:** 90 changed (+323/−243); most are the 1-line urlresolvers swap and the
 17 management-command conversions.
-**Not committed yet** (awaiting go-ahead to bundle). Push remains the user's.
+**Committed + pushed, CI GREEN on GitHub:** `14793f0` (the 1.11 upgrade) +
+`a637b75` (management-command smoke + scheduled-job tests, 549→554).
 **Next real-world action: Step 7** — make the code Python 2/3 compatible on
 Django 1.11 (still executing under Py2.7): `print()`, `except X as e`, octals,
 `iteritems`/`xrange`, `__unicode__`→`__str__` shim, `urllib2`→`requests`.
