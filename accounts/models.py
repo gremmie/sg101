@@ -9,24 +9,27 @@ import base64
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class IllegalUsername(models.Model):
    """model to represent the list of illegal usernames"""
    username = models.CharField(max_length=30, db_index=True)
 
-   def __unicode__(self):
+   def __str__(self):
       return self.username
 
    class Meta:
       ordering = ('username', )
 
 
+@python_2_unicode_compatible
 class IllegalEmail(models.Model):
    """model to represent the list of illegal/restricted email addresses"""
    email = models.EmailField(db_index=True)
 
-   def __unicode__(self):
+   def __str__(self):
       return self.email
 
    class Meta:
@@ -74,6 +77,7 @@ class PendingUserManager(models.Manager):
       return key
 
 
+@python_2_unicode_compatible
 class PendingUser(models.Model):
    """model for holding users while they go through the email registration cycle"""
 
@@ -85,6 +89,6 @@ class PendingUser(models.Model):
 
    objects = PendingUserManager()
 
-   def __unicode__(self):
+   def __str__(self):
       return self.username
 

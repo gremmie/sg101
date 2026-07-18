@@ -16,7 +16,7 @@ IMG_TAG = '<img src="{}" alt="thumbnail" />'
 class PhotoAdmin(admin.ModelAdmin):
     fields = ['photo', 'caption', 'description', 'user', 'potd_count']
     raw_id_fields = ['user']
-    list_display = ['__unicode__', 'thumbnail']
+    list_display = ['__str__', 'thumbnail']
     actions = ['regen_thumbnail']
     search_fields = ['caption', 'description']
 
@@ -38,7 +38,7 @@ class PhotoAdmin(admin.ModelAdmin):
 
 
 class CurrentAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'thumbnail')
+    list_display = ('__str__', 'thumbnail')
     raw_id_fields = ('potd', )
 
     def thumbnail(self, obj):

@@ -9,11 +9,13 @@ from django.contrib.auth.models import User, Group
 from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 from oembed.models import Oembed
 
 
+@python_2_unicode_compatible
 class Category(models.Model):
     """
     Forums belong to a category, whose access may be assigned to groups.
@@ -29,7 +31,7 @@ class Category(models.Model):
         ordering = ('position', )
         verbose_name_plural = 'Categories'
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -79,6 +81,7 @@ class ForumManager(models.Manager):
         return qs
 
 
+@python_2_unicode_compatible
 class Forum(models.Model):
     """
     A forum is a collection of topics.
@@ -103,7 +106,7 @@ class Forum(models.Model):
     class Meta:
         ordering = ('position', )
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def get_absolute_url(self):
@@ -169,6 +172,7 @@ class Forum(models.Model):
         flv.save()
 
 
+@python_2_unicode_compatible
 class Topic(models.Model):
     """
     A topic is a thread of discussion, consisting of a series of posts.
@@ -196,7 +200,7 @@ class Topic(models.Model):
     class Meta:
         ordering = ('-sticky', '-update_date', )
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def get_absolute_url(self):
@@ -277,6 +281,7 @@ class Topic(models.Model):
         }
 
 
+@python_2_unicode_compatible
 class Post(models.Model):
     """
     A post is an instance of a user's single contribution to a topic.
@@ -307,7 +312,7 @@ class Post(models.Model):
             return self.body
         return self.body[:limit] + '...'
 
-    def __unicode__(self):
+    def __str__(self):
         return self.summary()
 
     def save(self, *args, **kwargs):
@@ -341,13 +346,14 @@ class Post(models.Model):
         return self.body
 
 
+@python_2_unicode_compatible
 class FlaggedPost(models.Model):
     """This model represents a user flagging a post as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Post ID %s flagged by %s' % (self.post.id, self.user.username)
 
     class Meta:
@@ -357,6 +363,7 @@ class FlaggedPost(models.Model):
         return format_html('<a href="{}">Post</a>', self.post.get_absolute_url())
 
 
+@python_2_unicode_compatible
 class ForumLastVisit(models.Model):
     """
     This model records the last time a user visited a forum.
@@ -375,7 +382,7 @@ class ForumLastVisit(models.Model):
         unique_together = ('user', 'forum')
         ordering = ('-end_date', )
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Forum: %d User: %d Date: %s' % (self.forum.id, self.user.id,
                 self.end_date.strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -383,6 +390,7 @@ class ForumLastVisit(models.Model):
         return self.begin_date == self.end_date
 
 
+@python_2_unicode_compatible
 class TopicLastVisit(models.Model):
     """
     This model records the last time a user read a topic.
@@ -397,7 +405,7 @@ class TopicLastVisit(models.Model):
         unique_together = ('user', 'topic')
         ordering = ('-last_visit', )
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Topic: %d User: %d Date: %s' % (self.topic.id, self.user.id,
                 self.last_visit.strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -410,6 +418,7 @@ class TopicLastVisit(models.Model):
         self.last_visit = datetime.datetime.now()
 
 
+@python_2_unicode_compatible
 class Attachment(models.Model):
     """
     This model is a "through" table for the M2M relationship between forum
@@ -422,6 +431,6 @@ class Attachment(models.Model):
     class Meta:
         ordering = ('order', )
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Post %d, %s' % (self.post.pk, self.embed.title)
 

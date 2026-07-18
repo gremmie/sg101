@@ -9,7 +9,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
-from django.core import urlresolvers
+from django.urls import reverse
+from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 
@@ -29,6 +30,7 @@ class CommentManager(models.Manager):
         return qs
 
 
+@python_2_unicode_compatible
 class Comment(models.Model):
     """My own version of a Comment class that can attach comments to any other model."""
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -51,7 +53,7 @@ class Comment(models.Model):
     class Meta:
         ordering = ('creation_date', )
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s: %s...' % (self.user.username, self.comment[:50])
 
     def save(self, *args, **kwargs):
@@ -70,7 +72,7 @@ class Comment(models.Model):
         """
         Get a URL suitable for redirecting to the content object.
         """
-        return urlresolvers.reverse(
+        return reverse(
             "comments-url-redirect",
             args=(self.content_type_id, self.object_id)
         )
@@ -84,13 +86,14 @@ class Comment(models.Model):
     not_removed.boolean = True
 
 
+@python_2_unicode_compatible
 class CommentFlag(models.Model):
     """This model represents a user flagging a comment as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Comment ID %s flagged by %s' % (self.comment.id, self.user.username)
 
     class Meta:

@@ -12,7 +12,7 @@ class PhotoAdmin(admin.ModelAdmin):
     ordering = ['-upload_date']
     raw_id_fields = ['user']
     search_fields = ['user__username', 'user__email']
-    list_display = ['__unicode__', 'thumbnail']
+    list_display = ['__str__', 'thumbnail']
     actions = ['custom_delete']
 
     def thumbnail(self, obj):

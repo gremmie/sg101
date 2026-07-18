@@ -8,6 +8,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
 class PublicContestManager(models.Manager):
@@ -23,6 +24,7 @@ class PublicContestManager(models.Manager):
         return self.filter(creation_date__lte=now, win_date__isnull=True)
 
 
+@python_2_unicode_compatible
 class Contest(models.Model):
     """
     A model to represent contests where users sign up to win something.
@@ -49,7 +51,7 @@ class Contest(models.Model):
     class Meta:
         ordering = ['-creation_date']
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     def get_absolute_url(self):

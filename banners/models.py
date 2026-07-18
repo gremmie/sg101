@@ -5,8 +5,10 @@ Models for the banners application.
 import datetime
 
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class Campaign(models.Model):
     """
     A model to represent an ad or banner campaign.
@@ -16,7 +18,7 @@ class Campaign(models.Model):
     slug = models.SlugField()
     creation_date = models.DateTimeField(blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -37,6 +39,7 @@ def banner_upload_to(instance, filename):
     return "banners/%s/%s" % (instance.campaign.slug, filename)
 
 
+@python_2_unicode_compatible
 class Banner(models.Model):
     """
     A model to represent a banner.
@@ -47,7 +50,7 @@ class Banner(models.Model):
     description = models.CharField(max_length=128)
     creation_date = models.DateTimeField(blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.description
 
     class Meta:

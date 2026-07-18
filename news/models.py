@@ -6,6 +6,7 @@ import datetime
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.encoding import python_2_unicode_compatible
 from tagging.fields import TagField
 
 from core.markup import site_markup
@@ -15,6 +16,7 @@ from core.markup import site_markup
 NEWS_VERSION = 2
 
 
+@python_2_unicode_compatible
 class Category(models.Model):
     """News stories belong to categories"""
     title = models.CharField(max_length=64)
@@ -28,7 +30,7 @@ class Category(models.Model):
                        "stories in this category. If blank, no comment threads "
                        "will be created for stories in this category."))
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     def num_stories(self):
@@ -80,10 +82,11 @@ class StoryBase(models.Model):
         super(StoryBase, self).save(*args, **kwargs)
 
 
+@python_2_unicode_compatible
 class PendingStory(StoryBase):
     """Stories submitted by users are held pending admin approval"""
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     class Meta:
@@ -91,6 +94,7 @@ class PendingStory(StoryBase):
         verbose_name_plural = 'Pending Stories'
 
 
+@python_2_unicode_compatible
 class Story(StoryBase):
     """Model for news stories"""
     forums_topic = models.OneToOneField('forums.Topic', blank=True, null=True,
@@ -101,7 +105,7 @@ class Story(StoryBase):
     def get_absolute_url(self):
         return reverse('news-story', args=[str(self.id)])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     class Meta:

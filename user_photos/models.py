@@ -5,8 +5,10 @@ import datetime
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class Photo(models.Model):
     """This model represents data about a user uploaded photo."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -17,7 +19,7 @@ class Photo(models.Model):
     thumb_url = models.URLField(max_length=200, blank=True)
     signature = models.CharField(max_length=32, blank=True, db_index=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Photo by {} on {}'.format(self.user.username,
                                self.upload_date.strftime('%Y-%m-%d %H:%M:%S'))
 

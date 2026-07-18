@@ -17,7 +17,7 @@ class CommentAdmin(admin.ModelAdmin):
         ('Content', {'fields': ['user', 'comment']}),
         ('Metadata', {'fields': ['ip_address', 'is_public', 'is_removed']}),
     ]
-    list_display = ['__unicode__', 'content_type', 'object_id', 'ip_address',
+    list_display = ['__str__', 'content_type', 'object_id', 'ip_address',
             'creation_date', 'is_public', 'not_removed']
     list_filter = ['creation_date', 'is_public', 'is_removed']
     date_hierarchy = 'creation_date'
@@ -39,7 +39,7 @@ class CommentAdmin(admin.ModelAdmin):
 
 
 class CommentFlagAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'flag_date', 'get_comment_url')
+    list_display = ('__str__', 'flag_date', 'get_comment_url')
     actions = ('accept_flags', )
     raw_id_fields = ('user', 'comment')
 

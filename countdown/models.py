@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
 class ActiveEventManager(models.Manager):
@@ -8,6 +9,7 @@ class ActiveEventManager(models.Manager):
                 is_active=True)
 
 
+@python_2_unicode_compatible
 class Event(models.Model):
     """Model for events we are counting down for."""
     name = models.CharField(max_length=64)
@@ -18,7 +20,7 @@ class Event(models.Model):
     objects = models.Manager()
     active_objects = ActiveEventManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return u"{} on {}".format(
             self.name, self.event_date.strftime('%m/%d/%Y'))
 

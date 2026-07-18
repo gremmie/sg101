@@ -6,7 +6,7 @@ from shoutbox.models import Shout
 from shoutbox.models import ShoutFlag
 
 class ShoutAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'user', 'shout_date')
+    list_display = ('__str__', 'user', 'shout_date')
     raw_id_fields = ('user', )
     date_hierarchy = 'shout_date'
     exclude = ('html', )
@@ -15,7 +15,7 @@ class ShoutAdmin(admin.ModelAdmin):
 
 
 class ShoutFlagAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'flag_date', 'shout', 'get_shout_url')
+    list_display = ('__str__', 'flag_date', 'shout', 'get_shout_url')
     actions = ('delete_shouts', )
 
     def delete_shouts(self, request, qs):

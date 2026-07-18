@@ -12,6 +12,7 @@ from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
 from django.template.loader import render_to_string
+from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import SiteMarkup
 import bio.flags
@@ -40,6 +41,7 @@ USER_STATUS_CHOICES = (
 )
 
 
+@python_2_unicode_compatible
 class Badge(models.Model):
     """This model represents badges that users can earn."""
     image = models.ImageField(upload_to='badges')
@@ -51,7 +53,7 @@ class Badge(models.Model):
     class Meta:
         ordering = ('order', )
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def get_absolute_url(self):
@@ -77,6 +79,7 @@ def avatar_file_path(instance, filename):
     return os.path.join(settings.AVATAR_DIR, 'users', avatar_name)
 
 
+@python_2_unicode_compatible
 class UserProfile(models.Model):
     """model to represent additional information about users"""
 
@@ -108,7 +111,7 @@ class UserProfile(models.Model):
     auto_favorite = models.BooleanField(default=False)
     auto_subscribe = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.user.username
 
     class Meta:
@@ -183,13 +186,14 @@ class UserProfile(models.Model):
         return text
 
 
+@python_2_unicode_compatible
 class UserProfileFlag(models.Model):
     """This model represents a user flagging a profile as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     flag_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s's profile flagged by %s" % (self.profile.user.username,
                 self.user.username)
 
@@ -201,6 +205,7 @@ class UserProfileFlag(models.Model):
                 self.profile.get_absolute_url())
 
 
+@python_2_unicode_compatible
 class BadgeOwnership(models.Model):
     """This model represents the ownership of badges by users."""
     profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
@@ -211,7 +216,7 @@ class BadgeOwnership(models.Model):
         verbose_name_plural = "badge ownership"
         ordering = ('badge__order', )
 
-    def __unicode__(self):
+    def __str__(self):
         if self.count == 1:
             return u"%s owns 1 %s" % (self.profile.user.username,
                     self.badge.name)

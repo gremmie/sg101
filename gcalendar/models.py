@@ -9,6 +9,7 @@ from django.utils.html import format_html
 
 from core.markup import site_markup
 import forums.tools
+from django.utils.encoding import python_2_unicode_compatible
 
 
 GIG_FORUM_SLUG = "gigs"
@@ -26,6 +27,7 @@ class PendingEventManager(models.Manager):
             )
 
 
+@python_2_unicode_compatible
 class Event(models.Model):
     """Model to represent calendar events."""
 
@@ -63,7 +65,7 @@ class Event(models.Model):
     objects = models.Manager()
     pending_events = PendingEventManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.what
 
     class Meta:

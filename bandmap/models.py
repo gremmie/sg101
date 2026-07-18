@@ -6,6 +6,7 @@ import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
+from django.utils.encoding import python_2_unicode_compatible
 
 
 class BandEntryManager(models.Manager):
@@ -13,6 +14,7 @@ class BandEntryManager(models.Manager):
         return self.filter(is_approved=False).count()
 
 
+@python_2_unicode_compatible
 class BandEntry(models.Model):
     """Represents a band entry on the band map."""
     name = models.CharField(max_length=128)
@@ -34,7 +36,7 @@ class BandEntry(models.Model):
         ordering = ['name']
         verbose_name_plural = 'band map entries'
 
-    def __unicode__(self):
+    def __str__(self):
         return u"BandMap entry for {}".format(self.name)
 
     def save(self, *args, **kwargs):

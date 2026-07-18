@@ -52,7 +52,7 @@ class LinkAdmin(admin.ModelAdmin):
 
 
 class FlaggedLinkAdmin(admin.ModelAdmin):
-    list_display = ['__unicode__', 'url', 'get_link_url', 'user', 'date_flagged']
+    list_display = ['__str__', 'url', 'get_link_url', 'user', 'date_flagged']
     date_hierarchy = 'date_flagged'
     raw_id_fields = ['user']
 

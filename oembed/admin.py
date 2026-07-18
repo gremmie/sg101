@@ -15,7 +15,7 @@ class ProviderAdmin(admin.ModelAdmin):
 
 class OembedAdmin(admin.ModelAdmin):
     date_hierarchy = 'date_added'
-    list_display = ('__unicode__', 'type', 'url', 'date_added')
+    list_display = ('__str__', 'type', 'url', 'date_added')
     list_filter = ('type', )
     search_fields = ('title', )
 

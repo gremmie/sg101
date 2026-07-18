@@ -22,7 +22,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'user__first_name', 'user__last_name',
                      'user__email']
     exclude = ['profile_html', 'signature_html']
-    list_display = ['__unicode__', 'user_is_active', 'get_status_display',
+    list_display = ['__str__', 'user_is_active', 'get_status_display',
                     'status_date']
     readonly_fields = ['status', 'status_date', 'update_date']
     list_filter = ['status', ]
@@ -132,7 +132,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 class UserProfileFlagAdmin(admin.ModelAdmin):
-    list_display = ['__unicode__', 'flag_date', 'get_profile_url']
+    list_display = ['__str__', 'flag_date', 'get_profile_url']
     actions = ['accept_flags']
     raw_id_fields = ['user', 'profile']
 

@@ -7,8 +7,10 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
 from django.utils.html import format_html
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class Category(models.Model):
     """Links belong to categories"""
     title = models.CharField(max_length=64)
@@ -16,7 +18,7 @@ class Category(models.Model):
     description = models.TextField(blank=True)
     count = models.IntegerField(default=0)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     class Meta:
@@ -45,6 +47,7 @@ class LinkBase(models.Model):
         abstract = True
 
 
+@python_2_unicode_compatible
 class Link(LinkBase):
     """Model to represent a web link"""
     hits = models.IntegerField(default=0)
@@ -57,7 +60,7 @@ class Link(LinkBase):
     class Meta:
         ordering = ('title', )
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     def save(self, *args, **kwargs):
@@ -80,6 +83,7 @@ class Link(LinkBase):
         return self.description
 
 
+@python_2_unicode_compatible
 class PendingLink(LinkBase):
     """This model represents links that users submit. They must be approved by
     an admin before they become visible on the site.
@@ -87,7 +91,7 @@ class PendingLink(LinkBase):
     class Meta:
         ordering = ('date_added', )
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     def save(self, *args, **kwargs):
@@ -107,6 +111,7 @@ class FlaggedLinkManager(models.Manager):
         flagged_link.save()
 
 
+@python_2_unicode_compatible
 class FlaggedLink(models.Model):
     """Model to represent links that have been flagged as broken by users"""
     link = models.ForeignKey(Link, on_delete=models.CASCADE)
@@ -132,7 +137,7 @@ class FlaggedLink(models.Model):
                 self.link.get_absolute_url(), self.link.id)
     get_link_url.short_description = "View Link on Site"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.link.title
 
     class Meta:

@@ -16,6 +16,7 @@ from django.contrib.auth.models import User
 from django.core.validators import validate_comma_separated_integer_list
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from django.utils.encoding import python_2_unicode_compatible
 
 POTD_THUMB_WIDTH = 120
 
@@ -28,6 +29,7 @@ def scale_image(image):
     return image.resize((POTD_THUMB_WIDTH, new_height), Image.ANTIALIAS)
 
 
+@python_2_unicode_compatible
 class Photo(models.Model):
     """Model to represent a POTD"""
     photo = models.ImageField(upload_to='potd/%Y/%m/%d')
@@ -42,7 +44,7 @@ class Photo(models.Model):
     class Meta:
         ordering = ('-date_added', '-caption')
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s (%s)' % (self.caption, self.pk)
 
     def get_absolute_url(self):
@@ -115,14 +117,15 @@ class CurrentManager(models.Manager):
         return None
 
 
+@python_2_unicode_compatible
 class Current(models.Model):
     """This model simply stores the current POTD."""
     potd = models.ForeignKey(Photo, on_delete=models.CASCADE)
 
     objects = CurrentManager()
 
-    def __unicode__(self):
-        return self.potd.__unicode__()
+    def __str__(self):
+        return u'%s' % self.potd
 
     class Meta:
         verbose_name_plural = 'Current'
@@ -166,6 +169,7 @@ class SequenceManager(models.Manager):
                 s.save()
 
 
+@python_2_unicode_compatible
 class Sequence(models.Model):
     """This model stores the sequence of photos for the POTD."""
     seq = models.CharField(max_length=4096,
@@ -173,7 +177,7 @@ class Sequence(models.Model):
 
     objects = SequenceManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return u'POTD Sequence %d' % self.id
 
     class Meta:

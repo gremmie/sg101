@@ -6,6 +6,7 @@ import datetime
 
 from django.urls import reverse
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
 EXPLICIT_CHOICES = [
@@ -15,6 +16,7 @@ EXPLICIT_CHOICES = [
 ]
 
 
+@python_2_unicode_compatible
 class Channel(models.Model):
     """Model to represent the Channel properties"""
 
@@ -32,10 +34,11 @@ class Channel(models.Model):
     explicit = models.CharField(max_length=8, choices=EXPLICIT_CHOICES)
     keywords = models.CharField(max_length=255)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
 
+@python_2_unicode_compatible
 class Item(models.Model):
     """Model to represent a channel item"""
     channel = models.ForeignKey(Channel, on_delete=models.CASCADE)
@@ -57,7 +60,7 @@ class Item(models.Model):
     def get_absolute_url(self):
         return reverse('podcast-detail', args=[str(self.id)])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     class Meta:

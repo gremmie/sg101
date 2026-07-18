@@ -4,8 +4,10 @@ Models for the oembed application.
 import datetime
 
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class Provider(models.Model):
     """
     This model described an oEmbed provider.
@@ -21,10 +23,11 @@ class Provider(models.Model):
     url_regex = models.CharField(max_length=255, verbose_name='URL regex')
     format = models.IntegerField(choices=FORMAT_CHOICES)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Oembed(models.Model):
     """
     This model represents stored embedded content retrieved from an oEmbed
@@ -48,7 +51,7 @@ class Oembed(models.Model):
     html = models.TextField()
     date_added = models.DateTimeField()
 
-    def __unicode__(self):
+    def __str__(self):
         desc = self.title if self.title else self.url
         return u"<oembed {}: {}>".format(self.pk, desc)
 

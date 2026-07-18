@@ -75,7 +75,7 @@ class PostAdmin(admin.ModelAdmin):
 
 
 class FlaggedPostAdmin(admin.ModelAdmin):
-    list_display = ['__unicode__', 'flag_date', 'get_post_url']
+    list_display = ['__str__', 'flag_date', 'get_post_url']
     actions = ['accept_flags']
     raw_id_fields = ['post', 'user', ]
 

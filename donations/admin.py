@@ -8,6 +8,6 @@ from donations.models import Donation
 class DonationAdmin(admin.ModelAdmin):
     raw_id_fields = ['user']
     date_hierarchy = 'payment_date'
-    list_display = ['__unicode__', 'payer_email', 'payment_date', 'memo']
+    list_display = ['__str__', 'payer_email', 'payment_date', 'memo']
 
 admin.site.register(Donation, DonationAdmin)

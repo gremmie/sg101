@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
 from django.db.models import Q
+from django.utils.encoding import python_2_unicode_compatible
 
 
 class PollManager(models.Manager):
@@ -28,6 +29,7 @@ class PollManager(models.Manager):
                 end_date__lt=now)
 
 
+@python_2_unicode_compatible
 class Poll(models.Model):
     """Model to represent polls"""
     start_date = models.DateTimeField(db_index=True,
@@ -41,7 +43,7 @@ class Poll(models.Model):
 
     objects = PollManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.question
 
     class Meta:
@@ -87,6 +89,7 @@ class Poll(models.Model):
         return self.is_open()
 
 
+@python_2_unicode_compatible
 class Choice(models.Model):
     """Model for poll choices"""
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE)
@@ -94,5 +97,5 @@ class Choice(models.Model):
     votes = models.IntegerField(default=0)
     voters = models.ManyToManyField(User, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.choice

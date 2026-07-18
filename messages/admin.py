@@ -19,7 +19,7 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 class FlagAdmin(admin.ModelAdmin):
-    list_display = ['__unicode__', 'flag_date', 'message_link']
+    list_display = ['__str__', 'flag_date', 'message_link']
     date_hierarchy = 'flag_date'
     list_select_related = True
     readonly_fields = ['message', 'flag_date', 'comments', 'message_text']
