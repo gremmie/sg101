@@ -181,7 +181,7 @@ def forum_navigation(obj, subtitle=None):
     """
     nav_list = []
 
-    if isinstance(obj, str) or isinstance(obj, unicode):
+    if isinstance(obj, str):
         nav_list.append(dict(name=obj, url=None))
     elif isinstance(obj, Forum):
         nav_list.append(dict(name=obj.name, url=obj.get_absolute_url()))

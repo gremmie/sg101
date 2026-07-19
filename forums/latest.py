@@ -177,7 +177,7 @@ def _update_post_feeds(conn, post):
     pipeline.lpush(ALL_FORUMS_RSS_KEY, post.id)
 
     # Store reference count for the post
-    pipeline.zadd(POST_SET_KEY, 2, post.id)
+    pipeline.zadd(POST_SET_KEY, {post.id: 2})
 
     results = pipeline.execute()
 
@@ -196,7 +196,7 @@ def _update_post_feeds(conn, post):
         # Decrement reference count(s)
         pipeline = conn.pipeline()
         for post_id in post_ids:
-            pipeline.zincrby(POST_SET_KEY, post_id, -1)
+            pipeline.zincrby(POST_SET_KEY, -1, post_id)
         scores = pipeline.execute()
 
         # If any reference counts have fallen to 0, clean up:
@@ -249,7 +249,7 @@ def _update_latest_topics(conn, post):
 
     pipeline = conn.pipeline()
     pipeline.set(key, topic_json)
-    pipeline.zadd(UPDATED_TOPICS_SET_KEY, topic_score, topic_id)
+    pipeline.zadd(UPDATED_TOPICS_SET_KEY, {topic_id: topic_score})
     pipeline.zcard(UPDATED_TOPICS_SET_KEY)
     results = pipeline.execute()
 
@@ -306,7 +306,7 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
 
 
 def _deserialize_date(pubdate):
-    if isinstance(pubdate, (int, long)):
+    if isinstance(pubdate, int):
         # legacy data, fix up and watch out for timezone glitches
         new_date = datetime.datetime.utcfromtimestamp(pubdate)
         new_date.replace(tzinfo=SERVER_TZ)

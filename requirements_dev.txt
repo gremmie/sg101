@@ -1,8 +1,13 @@
+# Dev/test requirements -- Python 3.7 / Django 1.11. Installs the runtime pins
+# plus the tools needed to run the test suite and dev server. (In Docker these
+# same tools are inlined into requirements-docker.txt.)
+#
+# The old Fabric / pycrypto / ssh deploy trio lived here; it's Python-2 only and
+# belongs with the legacy /svr deploy artifacts (fabfile.py), reintroduced with
+# modern deploy tooling later.
 -r requirements.txt
-Fabric==1.4.1
-django-debug-toolbar==1.4
-mock==1.0.1
-pycrypto==2.5
-sqlparse==0.1.14
-ssh==1.7.13
-testfixtures==4.1.2
+mock==4.0.3
+testfixtures==6.18.5
+django-debug-toolbar==1.11
+sqlparse==0.2.4
+coverage<5

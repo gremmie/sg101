@@ -47,7 +47,7 @@ class Command(LabelCommand):
         # retrieve source text
         src_path = os.path.join(self.src_dir, filename)
         try:
-            with open(src_path, 'r') as f:
+            with open(src_path, 'r', encoding='utf-8') as f:
                 src_text = f.read()
         except IOError as ex:
             raise CommandError(str(ex))
@@ -60,8 +60,8 @@ class Command(LabelCommand):
         dst_path = os.path.join(self.dst_dir, '%s.html' % basename)
 
         try:
-            with open(dst_path, 'w') as f:
-                f.write(content.encode('utf-8'))
+            with open(dst_path, 'w', encoding='utf-8') as f:
+                f.write(content)
         except IOError as ex:
             raise CommandError(str(ex))
 

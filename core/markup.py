@@ -3,7 +3,7 @@ Markup related utitlities useful for the entire project.
 
 """
 import markdown as _markdown
-from django.utils.encoding import force_unicode
+from django.utils.encoding import force_text
 
 from smiley.utils import SmilifyMarkdown
 from core.mdexts.urlize import UrlizeExtension
@@ -24,7 +24,7 @@ class Markdown(object):
                                      ])
 
     def convert(self, s):
-        return clean_html(self.md.convert(force_unicode(s)))
+        return clean_html(self.md.convert(force_text(s)))
 
 
 def markdown(s):

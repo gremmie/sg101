@@ -104,8 +104,7 @@ def index(request):
             })
         cat['forums'].append(forum)
 
-    cmpdef = lambda a, b: cmp(a['cat'].position, b['cat'].position)
-    cats = sorted(cats.values(), cmpdef)
+    cats = sorted(cats.values(), key=lambda c: c['cat'].position)
 
     return render(request, 'forums/index.html', {
         'cats': cats,

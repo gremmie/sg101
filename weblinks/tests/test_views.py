@@ -37,7 +37,7 @@ class WebLinkBrowseTests(TestCase):
         response = self.client.get(reverse('weblinks-view_links',
             kwargs={'slug': self.category.slug, 'sort': 'title'}))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('The Ventures', response.content)
+        self.assertIn('The Ventures', response.content.decode())
 
     def test_view_links_accepts_each_sort(self):
         for sort in ('title', 'date', 'hits'):
@@ -104,7 +104,7 @@ class WebLinkReportTests(TestCase):
         # Anonymous gets a friendly 200 message rather than a redirect/403.
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('login', response.content)
+        self.assertIn('login', response.content.decode())
         self.assertFalse(FlaggedLink.objects.exists())
 
     def test_report_creates_flag(self):

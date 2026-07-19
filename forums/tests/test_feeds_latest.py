@@ -105,13 +105,13 @@ class ForumsFeedTests(TestCase):
         make_post(self.forum, self.user, topic_name='Combined Item')
         response = self.client.get('/feeds/forums/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Combined Item', response.content)
+        self.assertIn('Combined Item', response.content.decode())
 
     def test_forum_feed_renders(self):
         make_post(self.forum, self.user, topic_name='Forum Item')
         response = self.client.get('/feeds/forums/%s/' % self.forum.slug)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Forum Item', response.content)
+        self.assertIn('Forum Item', response.content.decode())
 
     def test_empty_feed_still_renders(self):
         response = self.client.get('/feeds/forums/')

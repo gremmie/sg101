@@ -61,7 +61,7 @@ def _zadd(key, member):
     if conn:
         ts = to_timestamp(datetime.datetime.now())
         try:
-            conn.zadd(key, ts, member)
+            conn.zadd(key, {member: ts})
         except redis.RedisError as e:
             logger.error(e)
 
@@ -233,7 +233,7 @@ def _save_stats_to_redis(conn, stats):
         max_anon_users_date=to_timestamp(stats.max_anon_users_date))
 
     try:
-        conn.hmset(CORE_STATS_KEY, fields)
+        conn.hset(CORE_STATS_KEY, mapping=fields)
         conn.expire(CORE_STATS_KEY, 4 * 60 * 60)
     except redis.RedisError as e:
         logger.error(e)

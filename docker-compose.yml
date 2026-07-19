@@ -1,17 +1,19 @@
-# Dockerized legacy SG101 dev stack (Step 1 of the modernization).
+# Dockerized SG101 dev stack (Python 3.7 / Django 1.11).
 #
 # Five services:
-#   web    - Django 1.9 dev server (the site), published on http://localhost:8000
+#   web    - Django dev server (the site), published on http://localhost:8000
 #   worker - Celery worker (background tasks)
 #   beat   - Celery beat (scheduled tasks)
 #   db     - MySQL 5.7 (holds a production snapshot)
 #   redis  - Redis (Celery broker + "who's online" + wiki cookies)
 #
-# The web/worker/beat services all run the SAME image (built from ./Dockerfile)
-# and bind-mount the repo, so editing code on the Mac is reflected live.
+# The web/worker/beat services each build from the SAME ./Dockerfile (as separate
+# images) and bind-mount the repo, so editing code on the Mac is reflected live.
+# Rebuild ALL of them with `docker compose build` (no service name) after changing
+# the Dockerfile or requirements -- `build web` alone leaves worker/beat stale.
 #
 # Common commands (see DOCKER.md for the full walkthrough):
-#   docker compose build          # build the Python 2.7 image
+#   docker compose build          # build the Python 3.7 image
 #   docker compose up             # start the whole stack
 #   docker compose up -d          # ...in the background
 #   docker compose logs -f web    # follow the web server logs

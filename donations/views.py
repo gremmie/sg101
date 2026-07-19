@@ -197,7 +197,7 @@ def process_donation(item_number, params):
     try:
         mc_gross = decimal.Decimal(params['mc_gross'])
         mc_fee = decimal.Decimal(params['mc_fee'])
-    except KeyError, decimal.InvalidOperation:
+    except (KeyError, decimal.InvalidOperation):
         logging.error('IPN: invalid/missing mc_gross or mc_fee')
         return
 

@@ -129,7 +129,7 @@ class WhosOnlineMiddlewareTestCase(TestCase):
         mock_get_ip.return_value = '127.0.0.1'
         result = self.middleware.process_response(self.request, self.response)
         self.assertEqual(result, self.response)
-        self.response.set_cookie.assert_called_once('sg101_online', '1',
+        self.response.set_cookie.assert_called_once_with('sg101_online', '1',
                                                     max_age=300)
         mock_report_visitor.assert_called_once_with('127.0.0.1')
         mock_report_user.assert_not_called()

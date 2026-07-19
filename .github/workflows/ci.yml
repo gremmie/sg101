@@ -1,7 +1,7 @@
 name: CI
 
 # Runs the existing test suite on every push/PR to the modernization branch,
-# using the SAME Docker image as local dev (Python 2.7 / Django 1.9) for parity.
+# using the SAME Docker image as local dev (Python 3.7 / Django 1.11) for parity.
 # `main` intentionally has no CI: it's preserved legacy history and predates the
 # Docker/CI setup, which live only on `modernize`.
 on:
@@ -22,7 +22,7 @@ jobs:
       - name: Seed .env from the example
         run: cp .env.example .env
 
-      - name: Build the legacy image (Py2.7 / Django 1.9)
+      - name: Build the image (Py3.7 / Django 1.11)
         run: docker compose build web
 
       # docker_test settings: sqlite DB + Redis over TCP (the `redis` service is

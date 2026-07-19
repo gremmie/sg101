@@ -5,7 +5,7 @@ Smiley classes and functions.
 from django.utils.safestring import SafeData
 from django.utils.html import conditional_escape
 
-from models import Smiley
+from smiley.models import Smiley
 
 
 class SmilifyHtml(object):

@@ -1,13 +1,13 @@
-# Running SG101 locally with Docker (legacy stack)
+# Running SG101 locally with Docker
 
-This is **Step 1** of the modernization: run the *unmodified* legacy site
-(Python 2.7 / Django 1.9 / MySQL / Redis) on your Mac inside Docker, seeded with
-a real production database snapshot. Your Mac can no longer run Python 2.7
-natively — Docker gives us a little Linux environment where it still works.
+Run the SG101 site (Python 3.7 / Django 1.11 / MySQL / Redis) on your Mac inside
+Docker, seeded with a real production database snapshot. Docker gives us a
+consistent little Linux environment that matches the target deploy platform —
+handy for a stack this far from a modern Mac's defaults.
 
 New to Docker? The only concepts you need here:
 
-- **Image** — a blueprint (built from `Dockerfile`) with Python 2.7 + all the
+- **Image** — a blueprint (built from `Dockerfile`) with Python 3.7 + all the
   app's dependencies baked in.
 - **Container** — a running instance of an image. Each service (`web`, `db`, …)
   is its own container.
@@ -34,20 +34,21 @@ New to Docker? The only concepts you need here:
 
 Neither is committed to source control.
 
-1. **`sg101/settings/secrets.json`** — SECRET_KEY + API credentials. Copy the
-   template and fill it in (for local dev, placeholder API keys are fine; the
-   `DB_*` values don't matter here — the container injects DB creds itself):
+1. **`.env`** — SECRET_KEY, DB credentials, and API keys, read from the
+   environment (12-factor config). Copy the template; the example's defaults work
+   as-is for local dev (a placeholder SECRET_KEY, `DB_*` values that match the
+   `db` service, and blank/optional API keys):
    ```
-   cp sg101/settings/secrets.json.example sg101/settings/secrets.json
+   cp .env.example .env
    ```
-   …or drop in the real `secrets.json` you already have.
+   `.env` is git-ignored; Compose loads it into the app services via `env_file:`.
 
 2. **A production DB snapshot** — put the MySQL dump in `snapshots/`, e.g.
    `snapshots/sg101.sql.gz`. (Loading it is step 4 below.)
 
 ## 2. Build the image
 
-Downloads Python 2.7 + compiles the old dependencies. The first build takes a
+Downloads Python 3.7 + installs the pinned dependencies. The first build takes a
 while (several minutes); later builds are cached.
 ```
 docker compose build
@@ -114,7 +115,7 @@ else builds on.
 
 ## How the pieces fit
 
-- **`Dockerfile`** — builds the Python 2.7 image (system libs + pip deps from
+- **`Dockerfile`** — builds the Python 3.7 image (system libs + pip deps from
   `requirements-docker.txt`).
 - **`docker-compose.yml`** — defines the five services and wires them together.
 - **`sg101/settings/docker.py`** — dev settings; points the DB and Redis at the

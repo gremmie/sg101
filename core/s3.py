@@ -2,10 +2,23 @@
 
 This module provides Amazon S3 convenience wrappers.
 
+Temporarily disabled at the Python 3 flip: it's built on the abandoned, Py2-era
+`boto` (v2) library, which is dropped from the requirements here. Media storage
+is slated to move to Cloudflare R2 via boto3 in a later step, at which point this
+module is rewritten. Until then the class still imports (so its callers import
+cleanly and their tests keep mocking it), but constructing one raises.
+
 """
-from boto.s3 import connect_to_region
-from boto.s3.connection import OrdinaryCallingFormat
-from boto.s3.key import Key
+try:
+    from boto.s3 import connect_to_region
+    from boto.s3.connection import OrdinaryCallingFormat
+    from boto.s3.key import Key
+    _BOTO_AVAILABLE = True
+except ImportError:  # boto (v2) isn't installed on Python 3 -- see module docstring
+    connect_to_region = None
+    OrdinaryCallingFormat = None
+    Key = None
+    _BOTO_AVAILABLE = False
 
 
 class S3Bucket(object):
@@ -14,6 +27,10 @@ class S3Bucket(object):
     """
     def __init__(self, access_key, secret_key, base_url, bucket_name,
                  region_name='us-west-1'):
+        if not _BOTO_AVAILABLE:
+            raise NotImplementedError(
+                "S3 storage is temporarily disabled: boto (v2) is not available "
+                "on Python 3. It will be replaced by Cloudflare R2 / boto3.")
         self.region_name = region_name
         self.conn = self._get_connection(access_key, secret_key)
         self.bucket = self.conn.get_bucket(bucket_name, validate=False)

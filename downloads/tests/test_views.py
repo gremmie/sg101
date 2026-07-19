@@ -44,7 +44,7 @@ class DownloadBrowseTests(TestCase):
         response = self.client.get(reverse('downloads-category',
             kwargs={'slug': self.category.slug, 'sort': 'title'}))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Pipeline', response.content)
+        self.assertIn('Pipeline', response.content.decode())
 
     def test_category_accepts_each_sort(self):
         for sort in ('title', 'date', 'rating', 'hits'):
@@ -113,7 +113,7 @@ class DownloadRateTests(TestCase):
         self.client.login(username='member', password='pw')
         self.client.post(self.url, {'id': self.download.id, 'rating': '4'})
         response = self.client.post(self.url, {'id': self.download.id, 'rating': '2'})
-        self.assertEqual(response.content, '-1')
+        self.assertEqual(response.content.decode(), '-1')
         self.assertEqual(VoteRecord.objects.filter(download=self.download).count(), 1)
 
 

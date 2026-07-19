@@ -67,7 +67,7 @@ class SubmitViewTestCase(NewsTestCase):
         }
         response = self.client.post(self.view_url, args, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue('Image must be accessed via https' in response.content)
+        self.assertTrue('Image must be accessed via https' in response.content.decode())
         self.assertEqual(response.redirect_chain, [])
 
         stories = list(PendingStory.objects.all())

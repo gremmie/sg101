@@ -1,7 +1,73 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-18
+**Last updated:** 2026-07-19
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 8 (flip interpreter to Python 3.7, Django 1.11) ⭐ — DONE (2026-07-19)
+
+The central milestone: SG101 runs on **Python 3** for the first time, still on the
+Django 1.11 LTS rung. **559 tests green under Py3.7, 5 skipped (S3), 84% coverage**
+via the exact CI command; live smoke green on the real production snapshot (site +
+celery worker + beat). NOT pushed yet (Brian pushes his own remotes).
+
+**Image / deps:**
+- Dockerfile `python:2.7` → `python:3.7`; dropped the Debian-archive / `pip<21` /
+  `git` / `--src` machinery (no editable git dep anymore).
+- Requirements re-pinned for Py3.7: dateutil 1.5→2.8.2, Pillow 2.7→6.2.2, lxml
+  3.4→4.9.4, bleach 1.4→3.1.5 (last line keeping the `styles=` kwarg), Markdown
+  2.5→2.6.11, docutils 0.10→0.16, ftfy→5.9, six→1.16, redis 2.10→3.5.3,
+  simplejson/requests/pytz bumps. python-memcached→1.59 (prod-only).
+- **Celery 3.1.23 → 4.4.7** (+kombu 4.6.11/billiard/amqp/vine). **Gotcha: pinned
+  `importlib-metadata==4.13.0`** — kombu 4.6's `entry_points().get()` shim breaks on
+  importlib-metadata ≥5.0's `.get()`-less `EntryPoints` (celery imported but
+  `from celery import Celery` failed via the lazy loader until pinned). Old
+  uppercase celery settings (BROKER_URL/CELERYBEAT_SCHEDULE/…) still work in
+  celery-4 compat mode — rename deferred to the celery-5 step.
+
+**Vendored django-elsewhere** in-tree (was an editable git dep): 5 `.py` + 62 static
+icons + a provenance docstring (upstream `github.com/leah/django-elsewhere`, fork
+`github.com/gremmie/django-elsewhere@c8c6f5e`; neither ships a license). Py3-patched
+(urlresolvers→django.urls, `__unicode__`, has_key). Trimmed to models+admin+data+
+static; dropped the fork's dead views/urls/example template. **Static icons matter**
+— SG101's `bio/elsewhere_links` templates reference `{% static 'elsewhere/*.png' %}`;
+an initial trim dropped them (would've broken profile icons) — caught + restored.
+No migrations (unchanged); tables come via run-syncdb, matching the prod DB.
+
+**Graceful-guarded stubs** (module imports, real op raises NotImplementedError):
+`core/s3.py` (boto2 → Cloudflare R2/boto3 at Step 15) and `gcalendar` calendar/oauth
+(apiclient/oauth2client/httplib2 → google-auth at Step 18). Public `/calendar/` and
+existing-photo display keep working; only new S3 uploads + admin Google-sync go
+inert. Their tests skip cleanly (5 S3 tests).
+
+**Runtime Py3 fixes:** redis-py 3.x — `zadd(mapping)`, `zincrby(amount, value)`,
+`hmset`→`hset(mapping)`, `decode_responses=True` (whos_online, forums.latest, wiki;
+the wiki `zadd` was a 4th one missed by the first grep). DiggPaginator: materialize
+`map()`/`range()` → lists (subscripting + the `reduce` concat). `force_unicode`→
+`force_text`; hashlib `.update()` needs bytes (wiki cookies — also kept username/
+email as str for the `#`.join so the hash bytes match the external wiki);
+`b64encode` bytes; text-mode file write (make_fixed_page); forums index
+`sorted(key=)` (bare `cmp` + positional-cmp — Step-7 batch E missed it); isinstance
+`long`/`unicode`; smiley implicit-relative import; `except (KeyError, X)`.
+
+**Tests updated for library-driven output changes** (not regressions): bleach 3.1 +
+html5lib 1.1 **alphabetize HTML attributes**; Py3.7 dicts render OpenGraph tags in
+**insertion order**; Markdown 2.6's internal `IMAGE_LINK_RE` no longer matches one
+malformed nested-bracket case (ssl_images leaves it unchanged vs `{bad image}`);
+`response.content` is bytes (decode); `__builtin__`→`builtins`; `assert_called_once`
+→`_with`; doctest `IGNORE_EXCEPTION_DETAIL` (Py3 fully-qualifies exception names);
+`decode_responses=True` in the services call asserts; uuid `.bytes` mock → bytes.
+
+**Method note / lesson:** the host runs **Python 3.14**, which accepts syntax that
+**Py3.7 rejects** (e.g. `except A, b:`) — so Step 7's host-side `python3 -m
+py_compile` gave false-green and missed a straggler. **Verify against the container
+(3.7), not the host.** Used an in-container import-probe + `compileall` to surface
+all import/syntax breakers at once instead of one-per-test-run.
+
+**Watch items forward:** celery uppercase-settings rename at the celery-5 step;
+`@python_2_unicode_compatible` becomes removable once Py2 is fully dropped;
+DOCKER.md §1 corrected to `.env` (Step-3 leftover). Step 9 (Django 1.11→2.2) is
+next; the django-elsewhere fork no longer imports urlresolvers (that Step-9 watch
+item is resolved by the vendoring).
 
 ## EXECUTION — Step 7 (Python 2/3-compatible source, still Py2.7) — DONE (2026-07-18)
 

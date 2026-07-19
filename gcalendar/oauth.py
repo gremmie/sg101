@@ -6,8 +6,26 @@ import datetime
 import logging
 import os
 
-from oauth2client.client import OAuth2WebServerFlow, FlowExchangeError
-from oauth2client.file import Storage
+# Temporarily disabled at the Python 3 flip: oauth2client is a deprecated, Py2-era
+# library, dropped from the requirements here. gcalendar's OAuth flow will be
+# rewritten against the modern google-auth libraries in a later step. Until then
+# this module still imports (so the admin imports cleanly) and
+# check_credentials_status() -- which only stats a file -- keeps working, but the
+# functions that talk to Google raise.
+try:
+    from oauth2client.client import OAuth2WebServerFlow, FlowExchangeError
+    from oauth2client.file import Storage
+    _OAUTH2CLIENT_AVAILABLE = True
+except ImportError:  # oauth2client not installed on Python 3 yet
+    OAuth2WebServerFlow = None
+    Storage = None
+
+    class FlowExchangeError(Exception):
+        """Placeholder so `except FlowExchangeError` stays valid when the real
+        oauth2client isn't installed."""
+
+    _OAUTH2CLIENT_AVAILABLE = False
+
 from django.conf import settings
 from django.core.cache import cache
 
@@ -20,6 +38,13 @@ SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 class OAuthError(Exception):
     """Base exception for errors raised by the oauth module"""
+
+
+def _require_oauth2client():
+    if not _OAUTH2CLIENT_AVAILABLE:
+        raise NotImplementedError(
+            "Google Calendar OAuth is temporarily disabled: oauth2client is not "
+            "available on Python 3. It will be rewritten against google-auth.")
 
 
 def check_credentials_status():
@@ -43,6 +68,7 @@ def get_auth_url(callback_url):
 
     """
     logger.info("get_auth_url started; callback url='%s'", callback_url)
+    _require_oauth2client()
 
     flow = OAuth2WebServerFlow(client_id=settings.GCAL_CLIENT_ID,
                                client_secret=settings.GCAL_CLIENT_SECRET,
@@ -74,6 +100,7 @@ def auth_return(request):
     If an error is encountered, an OAuthError is raised.
     """
     logger.info("auth_return called as '%s'", request.get_full_path())
+    _require_oauth2client()
 
     # Try to retrieve the flow object from the cache
     flow = cache.get(FLOW_CACHE_KEY)
@@ -110,5 +137,6 @@ def auth_return(request):
 
 def get_credentials():
     """Obtain the stored credentials if available, or None if they are not."""
+    _require_oauth2client()
     storage = Storage(settings.GCAL_CREDENTIALS_PATH)
     return storage.get()

@@ -53,7 +53,7 @@ class MiddleWareTestCase(TestCase):
 
             cookie_val = cookie.value
             try:
-                user, email, key = cookie_val.decode('utf-8').split('#')
+                user, email, key = cookie_val.split('#')
             except ValueError:
                 self.fail('invalid cookie value')
             else:
@@ -64,7 +64,7 @@ class MiddleWareTestCase(TestCase):
         self.assertEqual(self.conn.zcard(settings.WIKI_REDIS_SET), 1)
 
         h = hashlib.sha256()
-        h.update(cookie_val)
+        h.update(cookie_val.encode('utf-8'))
         member = h.hexdigest()
 
         score = self.conn.zscore(settings.WIKI_REDIS_SET, member)

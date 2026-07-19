@@ -32,7 +32,7 @@ class NewsDisplayTests(TestCase):
     def test_index_lists_stories(self):
         response = self.client.get(reverse('news-index_page'))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Front Page News', response.content)
+        self.assertIn('Front Page News', response.content.decode())
 
     def test_archive_index_renders(self):
         response = self.client.get(reverse('news-archive_index'))
@@ -52,7 +52,7 @@ class NewsDisplayTests(TestCase):
         response = self.client.get(
             reverse('news-category', kwargs={'slug': self.category.slug}))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Front Page News', response.content)
+        self.assertIn('Front Page News', response.content.decode())
 
     def test_unknown_category_is_404(self):
         response = self.client.get(
@@ -62,7 +62,7 @@ class NewsDisplayTests(TestCase):
     def test_story_page_renders(self):
         response = self.client.get(reverse('news-story', args=[self.story.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Front Page News', response.content)
+        self.assertIn('Front Page News', response.content.decode())
 
     def test_unknown_story_is_404(self):
         response = self.client.get(reverse('news-story', args=[999999]))
@@ -77,7 +77,7 @@ class NewsDisplayTests(TestCase):
         response = self.client.get(
             reverse('news-tag_page', kwargs={'tag_name': 'surf'}))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Front Page News', response.content)
+        self.assertIn('Front Page News', response.content.decode())
 
     def test_unknown_tag_is_404(self):
         response = self.client.get(

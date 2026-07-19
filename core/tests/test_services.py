@@ -11,7 +11,7 @@ class ServicesTestCase(unittest.TestCase):
         result = get_redis_connection(unix_socket_path='/tmp/redis.sock', db=14)
 
         self.assertEqual(mock_redis.mock_calls, [
-            call.StrictRedis(unix_socket_path='/tmp/redis.sock', db=14),
+            call.StrictRedis(unix_socket_path='/tmp/redis.sock', db=14, decode_responses=True),
         ])
         self.assertEqual(result, mock_redis.StrictRedis.return_value)
 
@@ -21,6 +21,6 @@ class ServicesTestCase(unittest.TestCase):
                                       unix_socket_path=None)
 
         self.assertEqual(mock_redis.mock_calls, [
-            call.StrictRedis(host='localhost', port=6379, db=14),
+            call.StrictRedis(host='localhost', port=6379, db=14, decode_responses=True),
         ])
         self.assertEqual(result, mock_redis.StrictRedis.return_value)

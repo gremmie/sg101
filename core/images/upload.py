@@ -48,7 +48,7 @@ def process_upload(user, filename):
 
 def make_key():
     """Generate a random key suitable for a filename"""
-    return b64encode(uuid.uuid4().bytes, '-_').rstrip('=')
+    return b64encode(uuid.uuid4().bytes, b'-_').rstrip(b'=').decode('ascii')
 
 
 def upload(filename, bucket, metadata=None, new_size=None, thumb_size=None):

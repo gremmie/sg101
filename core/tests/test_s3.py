@@ -5,6 +5,8 @@ from mock import call, patch, Mock
 from core.s3 import S3Bucket
 
 
+@unittest.skip("S3/boto is disabled on Python 3 until the Cloudflare R2 / boto3 "
+               "step; S3Bucket raises NotImplementedError meanwhile.")
 class S3BucketTestCase(unittest.TestCase):
     @patch('core.s3.OrdinaryCallingFormat')
     @patch('core.s3.connect_to_region')

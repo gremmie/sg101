@@ -47,7 +47,7 @@ class SiteMarkdupTestCase(TestCase):
         <p>Some text.<br>
         <a href="https://example.com">https://example.com</a><br>
         <del>deleted text</del><br>
-        <img src="/media/smiley/images/icon_sg101.gif" alt="SG101!" title="SG101!"></p>""")
+        <img alt="SG101!" src="/media/smiley/images/icon_sg101.gif" title="SG101!"></p>""")
 
     def test_site_markup_class(self):
         sm = SiteMarkup()

@@ -24,15 +24,18 @@ def cookie_value(user, now):
 
     # The key part of the cookie is just a string that would make things
     # difficult for a spoofer; something that can't be easily made up:
-    username = user.username.encode('utf-8')
-    email = user.email.encode('utf-8')
+    username = user.username
+    email = user.email
 
+    # hashlib requires bytes; encode every part as UTF-8. (username/email stay
+    # str for the '#'.join below -- the resulting value string hashes to the same
+    # bytes the external wiki computes.)
     h = hashlib.sha256()
-    h.update(username)
-    h.update(email)
-    h.update(now.isoformat())
-    h.update(''.join(random.sample(string.printable, 64)))
-    h.update(settings.SECRET_KEY)
+    h.update(username.encode('utf-8'))
+    h.update(email.encode('utf-8'))
+    h.update(now.isoformat().encode('utf-8'))
+    h.update(''.join(random.sample(string.printable, 64)).encode('utf-8'))
+    h.update(settings.SECRET_KEY.encode('utf-8'))
     key = h.hexdigest()
 
     parts = (username, email, key)
@@ -60,13 +63,13 @@ def create_wiki_session(request, response):
     # it is in our Redis set.
 
     h = hashlib.sha256()
-    h.update(value)
+    h.update(value.encode('utf-8'))
     name = h.hexdigest()
     score = time.mktime(now.utctimetuple())
     conn = get_redis_connection()
 
     try:
-        conn.zadd(settings.WIKI_REDIS_SET, score, name)
+        conn.zadd(settings.WIKI_REDIS_SET, {name: score})
     except redis.RedisError:
         logger.error("Error adding wiki cookie key")
 

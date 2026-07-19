@@ -9,9 +9,12 @@ from core.download import download_file
 class DownloadFileTestCase(unittest.TestCase):
     """Unit tests for the download_file function."""
 
-    @patch('core.download.requests')
-    def test_get_throws_exception(self, requests_mock):
-        requests_mock.get.side_effect = RuntimeError('ope')
+    # Patch only requests.get, not the whole requests module: patching the module
+    # would turn requests.RequestException into a Mock, and `except
+    # requests.RequestException` can't catch a non-exception on Python 3.
+    @patch('core.download.requests.get')
+    def test_get_throws_exception(self, get_mock):
+        get_mock.side_effect = RuntimeError('ope')
         r = None
         try:
             r = download_file('url', path='path', timeout=5.0)
@@ -21,7 +24,7 @@ class DownloadFileTestCase(unittest.TestCase):
             self.fail('Unexpected exception {}'.format(e))
 
         self.assertIsNone(r)
-        self.assertEqual(requests_mock.get.mock_calls, [
+        self.assertEqual(get_mock.mock_calls, [
             call('url', stream=True, timeout=5.0),
         ])
 
@@ -49,7 +52,7 @@ class DownloadFileTestCase(unittest.TestCase):
         stat_mock.st_size = 512
 
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             r = download_file('url', path='path', timeout=5.0)
 
         self.assertEqual(r, 'path')
@@ -72,7 +75,7 @@ class DownloadFileTestCase(unittest.TestCase):
         copy_mock.side_effect = IOError
 
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             try:
                 download_file('url', path='path', timeout=5.0)
             except IOError:
@@ -110,7 +113,7 @@ class DownloadFileTestCase(unittest.TestCase):
         tempfile_mock.mkstemp.return_value = (fd_mock, 'temp-path')
 
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             download_file('url', timeout=5.0)
 
         self.assertEqual(requests_mock.get.mock_calls, [
@@ -158,7 +161,7 @@ class DownloadFileTestCase(unittest.TestCase):
         tempfile_mock.mkstemp.return_value = (fd_mock, 'temp-path')
 
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             download_file('url', timeout=5.0)
 
         self.assertEqual(requests_mock.get.mock_calls, [

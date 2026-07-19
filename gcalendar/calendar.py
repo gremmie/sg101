@@ -6,9 +6,22 @@ with Google Calendars.
 import datetime
 import pytz
 
-import httplib2
-from apiclient.discovery import build
-from apiclient.http import BatchHttpRequest
+# Temporarily disabled at the Python 3 flip: the Google API client stack
+# (httplib2 / apiclient / oauth2client) pinned here is Py2-era and dropped from
+# the requirements. gcalendar is slated for revival with the modern google-auth
+# libraries in a later step. Until then this module still imports (so the admin
+# imports cleanly), but constructing a Calendar raises.
+try:
+    import httplib2
+    from apiclient.discovery import build
+    from apiclient.http import BatchHttpRequest
+    _GCAL_API_AVAILABLE = True
+except ImportError:  # Google API client not installed on Python 3 yet
+    httplib2 = None
+    build = None
+    BatchHttpRequest = None
+    _GCAL_API_AVAILABLE = False
+
 from django.utils.timezone import get_fixed_timezone
 
 from gcalendar.models import Event
@@ -28,6 +41,11 @@ class Calendar(object):
     DATE_TIME_TZ_FMT = DATE_TIME_FMT + 'Z'
 
     def __init__(self, calendar_id='primary', credentials=None):
+        if not _GCAL_API_AVAILABLE:
+            raise NotImplementedError(
+                "Google Calendar sync is temporarily disabled: the Google API "
+                "client stack is not available on Python 3 yet. It will be "
+                "revived with the modern google-auth libraries.")
         self.calendar_id = calendar_id
         http = httplib2.Http()
         if credentials:

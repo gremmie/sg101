@@ -33,7 +33,7 @@ class ProcessUploadTestCase(unittest.TestCase):
         current_mock.return_value = site_mock
 
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             result = process_upload(None, filename)
 
         self.assertEqual(image_mock.open.mock_calls, [
@@ -81,7 +81,7 @@ class ProcessUploadTestCase(unittest.TestCase):
     def test_s3_upload(self, image_mock, orient_mock, uuid_mock, now_mock,
                        bucket_mock, bytes_mock):
         now_mock.datetime.now.return_value = datetime.datetime(2025, 4, 20)
-        uuid_mock.uuid4().bytes = 'deadbeef'
+        uuid_mock.uuid4().bytes = b'deadbeef'
 
         filename = 'image.jpg'
         orient_mock.return_value = (True, image_mock.open)
@@ -99,7 +99,7 @@ class ProcessUploadTestCase(unittest.TestCase):
 
         user = Mock(username='pjmoto')
         open_mock = mock_open()
-        with patch('__builtin__.open', open_mock):
+        with patch('builtins.open', open_mock):
             result = process_upload(user, filename)
 
 

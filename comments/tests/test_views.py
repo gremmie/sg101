@@ -104,7 +104,7 @@ class PostCommentTestCase(TestCase):
         self.assertEqual(spam_check_mock.mock_calls, [
             call(ANY, '**Nice**'),
         ])
-        self.assertIn('<strong>Nice</strong>', response.content)
+        self.assertIn('<strong>Nice</strong>', response.content.decode())
 
         self.assertEqual(Comment.objects.count(), 1)
         comments = Comment.objects.for_object(Photo.objects.get(pk=8192))
@@ -207,7 +207,7 @@ class MarkdownPreviewTestCase(TestCase):
             '<p>Test</p>\n'
             '</body>\n'
             '</html>')
-        self.assertEqual(response.content.strip(), expected_content)
+        self.assertEqual(response.content.decode().strip(), expected_content)
 
 class MarkdownPreviewV3TestCase(TestCase):
     def setUp(self):
@@ -226,11 +226,11 @@ class MarkdownPreviewV3TestCase(TestCase):
     def test_no_data_supplied(self):
         response = self.client.post(self.post_url, data={})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, '')
+        self.assertEqual(response.content.decode(), '')
 
     def test_happy_path(self):
         response = self.client.post(self.post_url, data={
             'data': 'Test',
         })
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content.strip(), '<p>Test</p>')
+        self.assertEqual(response.content.decode().strip(), '<p>Test</p>')

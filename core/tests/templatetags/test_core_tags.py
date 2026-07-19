@@ -110,17 +110,17 @@ class OpenGraphMetaTagsTestCase(TestCase):
         rendered = self.TEMPLATE.render(Context({}))
 
         expected = """
+<meta property="og:title" content="Site" />
+
+<meta property="og:type" content="website" />
+
 <meta property="og:url" content="http://site.com" />
+
+<meta property="og:description" content="The premier community website for friends and fans of instrumental surf music. We have forums, podcasts, surf music news, an event calendar, and much more! The surf is always up at SurfGuitar101.com!" />
 
 <meta property="og:site_name" content="Site" />
 
 <meta property="fb:admins" content="100001558124013" />
-
-<meta property="og:type" content="website" />
-
-<meta property="og:description" content="The premier community website for friends and fans of instrumental surf music. We have forums, podcasts, surf music news, an event calendar, and much more! The surf is always up at SurfGuitar101.com!" />
-
-<meta property="og:title" content="Site" />
 
 <meta property="og:image" content="http://surfguitar101.com/media/podcast/podcast_logo.jpg" />
 
@@ -142,18 +142,21 @@ class OpenGraphMetaTagsTestCase(TestCase):
         template = Template('{% load core_tags %}{% open_graph_meta_tags item %}')
         rendered = template.render(Context({'item': item}))
 
+        # Python 3.7 dicts preserve insertion order, so the tags now render in the
+        # order open_graph_meta_tags builds them (title, type, url, description,
+        # site_name, fb:admins, image) rather than Python 2's hash order.
         expected = """
+<meta property="og:title" content="My Item" />
+
+<meta property="og:type" content="Article" />
+
 <meta property="og:url" content="http://example.com/item.html" />
+
+<meta property="og:description" content="Blah" />
 
 <meta property="og:site_name" content="Site" />
 
 <meta property="fb:admins" content="100001558124013" />
-
-<meta property="og:type" content="Article" />
-
-<meta property="og:description" content="Blah" />
-
-<meta property="og:title" content="My Item" />
 
 <meta property="og:image" content="http://surfguitar101.com/media/podcast/podcast_logo.jpg" />
 
