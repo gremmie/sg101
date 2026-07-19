@@ -63,6 +63,19 @@ py_compile` gave false-green and missed a straggler. **Verify against the contai
 (3.7), not the host.** Used an in-container import-probe + `compileall` to surface
 all import/syntax breakers at once instead of one-per-test-run.
 
+**Follow-up (2026-07-19, post-flip):** true-division sweep. Brian noticed
+`/messages/inbox/` rendering "46.666666666666664% used" — Py3's `/` is true
+division where Py2 floored int/int. Swept product code for the whole category and
+fixed 6 sites with `//`: `messages/views.py` (the reported percent), `forums/
+views/main.py` `_goto_post` page number, `core/images/utils.py` square-crop offsets
+(x2), **`downloads/models.py` upload-path `hex(... microsecond/1000)` — this one
+CRASHED on Py3 since `hex()` needs an int**, and two `ygroup` sync commands' page
+numbers. (Decimal/`float()`-wrapped and `x/2.0` sites left alone — unchanged
+across Py2/3.) Added `messages` test pinning inbox/outbox pct as `int` (the
+function had zero coverage, which is why the flip's suite stayed green). 560 tests.
+Lesson reinforced: Step 7 chose not to add `from __future__ import division`, so
+the flip surfaced these only via real use.
+
 **Watch items forward:** celery uppercase-settings rename at the celery-5 step;
 `@python_2_unicode_compatible` becomes removable once Py2 is fully dropped;
 DOCKER.md §1 corrected to `.env` (Step-3 leftover). Step 9 (Django 1.11→2.2) is

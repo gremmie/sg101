@@ -34,10 +34,10 @@ def downscale_image_square(image, size):
 
     (w, h) = image.size
     if w > h:
-        diff = (w - h) / 2
+        diff = (w - h) // 2
         image = image.crop((diff, 0, w - diff, h))
     elif h > w:
-        diff = (h - w) / 2
+        diff = (h - w) // 2
         image = image.crop((0, diff, w, h - diff))
     image = image.resize((size, size), Image.ANTIALIAS)
     return image

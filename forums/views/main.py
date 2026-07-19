@@ -366,7 +366,7 @@ def _goto_post(post):
 
     """
     count = post.topic.posts.filter(creation_date__lt=post.creation_date).count()
-    page = count / POSTS_PER_PAGE + 1
+    page = count // POSTS_PER_PAGE + 1
     url = (reverse('forums-topic_index', kwargs={'id': post.topic.id}) +
         '?page=%s#p%s' % (page, post.id))
     return HttpResponseRedirect(url)

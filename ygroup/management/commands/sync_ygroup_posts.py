@@ -35,7 +35,7 @@ by updating their de-normalized fields.
         for post in Post.objects.iterator():
             thread = threads[post.thread.id]
             pos = thread[1].index(post.id)
-            page = pos / ygroup.views.POSTS_PER_PAGE + 1
+            page = pos // ygroup.views.POSTS_PER_PAGE + 1
             if page == 1:
                 post.thread_url = thread[0] + '#p%d' % (post.id, )
             else:

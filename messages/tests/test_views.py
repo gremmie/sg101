@@ -105,6 +105,15 @@ class BasicTestCase(TestCase):
             response = self.client.get(reverse(view_name))
             self.assertEqual(response.status_code, 200)
 
+    def test_box_pct_used_is_int(self):
+        # The "percent used" must be a plain int, not a float; Python 3's true
+        # division would otherwise render e.g. "46.666666666666664% used".
+        for view_name, key in [('messages-inbox', 'inbox_pct'),
+                               ('messages-outbox', 'outbox_pct')]:
+            response = self.client.get(reverse(view_name))
+            self.assertEqual(response.status_code, 200)
+            self.assertIsInstance(response.context[key], int)
+
     def test_wrong_method(self):
         view_names = [
             'messages-bulk',

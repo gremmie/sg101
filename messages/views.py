@@ -45,7 +45,9 @@ def _quota_check(box_name, count, request):
         django_messages.warning(request,
             "Your %s is full. Please delete some messages." % box_name)
 
-    return 100 * count / MSG_BOX_LIMIT
+    # Floor division to return an int percent (Python 3's `/` is true division,
+    # which would render e.g. "46.666666666666664%").
+    return 100 * count // MSG_BOX_LIMIT
 
 
 def _get_page(request, qs):

@@ -39,7 +39,7 @@ def download_path(instance, filename):
     parts = ['downloads']
     parts.extend([str(p) for p in (now.year, now.month, now.day)])
     parts.append(hex((now.hour * 3600 + now.minute * 60 + now.second) * 1000 + (
-        now.microsecond / 1000))[2:])
+        now.microsecond // 1000))[2:])
     parts.append(filename)
     return os.path.join(*parts)
 

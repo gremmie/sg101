@@ -26,7 +26,7 @@ by updating their de-normalized fields.
         n = 0
         for thread in Thread.objects.iterator():
             thread.post_count = Post.objects.filter(thread=thread).count()
-            thread.page = n / ygroup.views.THREADS_PER_PAGE + 1
+            thread.page = n // ygroup.views.THREADS_PER_PAGE + 1
             thread.save()
             n += 1
             if n % 50 == 0:
