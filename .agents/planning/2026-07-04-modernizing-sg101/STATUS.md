@@ -1,7 +1,65 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-17
+**Last updated:** 2026-07-18
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 7 (Python 2/3-compatible source, still Py2.7) — DONE (2026-07-18)
+
+Dual-runtime source on Django 1.11, still **executing under Python 2.7**. Method:
+targeted manual batches (not a blanket `python-modernize`/`futurize` run — chose
+reviewable diffs over auto-injected six/`__future__` noise), each ending green +
+its own commit. **559 tests green**; **`python3 -m py_compile` clean across the
+whole app + migrations** (proves zero Py2-only *syntax* remains — the semantic
+str/bytes work is Step 8).
+
+- **Batch A** (`1f3c63a`) — trivial syntax: `print`→`print()` (+`from __future__
+  import print_function`), `except X, e:`→`except X as e:`, `raise X, "msg"`→
+  `raise X("msg")`, `0644`→`0o644`, `xrange`→`range`, `reduce`→`functools.reduce`.
+- **Batch B** (`c5bf802`) — **`__unicode__`→`@python_2_unicode_compatible`** across
+  25 models.py (rename to `__str__` + decorator, via a host transform script) and
+  11 admin.py `list_display '__unicode__'`→`'__str__'`. Also fixed a Step-6
+  straggler: `from django.core import urlresolvers` (module form the sed missed;
+  its warning had been masked by the elsewhere fork importing it first).
+- **Batch C** (`8834989`) — `.iteritems()`/`.itervalues()`→`.items()`/`.values()`
+  (small/non-hot, plain methods over six); `accounts._make_key` rewritten dual-safe
+  (`b64encode(str)`/`unicode()`/`sha1(unicode)` all need bytes on Py3) with
+  **byte-for-byte identical Py2 hash output** so registration keys don't change,
+  + new `accounts/tests/test_models.py`; `avatar_cleanup`/`dlorphan` `unicode(path,
+  'utf-8')`→decode-only-if-bytes.
+- **Batch D1** (`d614766`) — `StringIO`→`io.BytesIO` (binary image data) /
+  `six.StringIO` (Django command-output capture in tests); `urlparse`/`urlsplit`/
+  `parse_qs`/`urllib.urlencode`→`six.moves.urllib.parse`.
+- **Batch D2** (`a922552`) — network fetches. oembed/bandmap/oembed_refresh/
+  fix_news→`six.moves.urllib` (kept six.moves to preserve the `HTTPError`/`URLError`
+  types callers catch). **donations IPN `verify_request`→`requests`** per the plan:
+  besides the library swap it fixes a **latent Py3 bug** (old `response.read()`
+  returned bytes, `b'VERIFIED' != 'VERIFIED'` on Py3 → every verification would
+  have failed; `response.text` is correct on both), adds a **20s timeout** (urllib2
+  had none), and `raise_for_status()`. `hasattr(settings,…)`→`getattr(…,None)` to
+  make it testable; +3 `VerifyRequestTestCase` tests (mocked `requests.post`).
+- **Batch E** (`1e9952d`) — residual grep-sweep breakers: `sorted(cmp=…)`→
+  `sorted(key=functools.cmp_to_key(…))` (bio/flags; cmp kwarg gone in Py3);
+  `dict.values()[0]`→`list(dict.values())[0]` (forums/main, comments; dict views
+  aren't subscriptable on Py3); `json.load(encoding=)`→`io.open(encoding='utf-8')`
+  (arg removed in Py3.9; also fixes a latent locale-decode bug).
+
+**Watch items for Step 8 (the ⭐ Py3 flip):**
+- **Deep str/bytes + dict-ordering** work is Step 8's core (this step only made
+  syntax + the obvious semantics dual-safe).
+- **Celery 3.1.23 must bump** at the flip — not for Django but for Python: kombu's
+  `async` module name is a reserved word in Py3.7. Plan → celery 3→4.4 (last
+  Py2.7)→5. See [[modernizing-sg101-planning]].
+- **django-elsewhere fork** must become Py3-compatible for the flip (it's the last
+  suite deprecation warning on 1.11 via its `urlresolvers` import; on Py3 it must
+  actually run) — patch the fork + re-pin.
+- **Stub-on-flip apps** (per plan Step 8): `gcalendar` (old apiclient/oauth2client/
+  httplib2) and `core/s3.py` boto usage — Py3-incompatible libs, temporarily
+  disabled at the flip, revived at Steps 18/15.
+- **Deferred formatting pass:** run `isort` (+ maybe `black`) as its own commit
+  right after the flip (black dropped Py2; a whole-repo reformat now would bury the
+  migration). A few import-placement nits from the batch scripts are parked for it.
+- `@python_2_unicode_compatible` becomes a no-op on Py3; removable once Py2 is
+  dropped (~Step 10).
 
 ## EXECUTION — Step 6 (Django 1.9 → 1.11 LTS, still Py2.7) — DONE (2026-07-18)
 
