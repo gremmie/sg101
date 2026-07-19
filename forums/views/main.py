@@ -356,7 +356,7 @@ def quick_reply_ajax(request):
     # want to change it yet. It is expecting a single error string. Just grab
     # the first error message and use that.
     errors = form.errors.as_data()
-    msg = errors.values()[0][0].message if errors else 'Unknown error'
+    msg = list(errors.values())[0][0].message if errors else 'Unknown error'
     return HttpResponseBadRequest(msg)
 
 
