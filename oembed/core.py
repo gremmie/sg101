@@ -6,13 +6,12 @@ from __future__ import print_function
 
 from contextlib import closing
 import json
-import urllib
-import urllib2
 import gzip
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import BytesIO
+
+from six.moves.urllib.parse import urlencode
+from six.moves.urllib.request import Request, urlopen
+from six.moves.urllib.error import HTTPError
 
 
 
@@ -31,19 +30,19 @@ def get_oembed(api_endpoint, url, fmt='json', **opts):
     """
     opts['url'] = url
     opts['format'] = fmt
-    api_url = "%s?%s" % (api_endpoint, urllib.urlencode(opts))
+    api_url = "%s?%s" % (api_endpoint, urlencode(opts))
 
     headers = {
         'User-Agent': USER_AGENT,
         'Accept-Encoding': 'gzip',
     }
-    request = urllib2.Request(api_url, headers=headers)
-    with closing(urllib2.urlopen(request)) as response:
+    request = Request(api_url, headers=headers)
+    with closing(urlopen(request)) as response:
         headers = response.info()
         result = response.read()
 
     if headers.get('content-encoding') == 'gzip':
-        with closing(gzip.GzipFile(fileobj=StringIO(result))) as f:
+        with closing(gzip.GzipFile(fileobj=BytesIO(result))) as f:
             result = f.read()
 
     return json.loads(result)
@@ -53,5 +52,5 @@ if __name__ == "__main__":
         print(get_oembed("http://www.youtube.com/oembed",
                          "http://www.youtube.com/watch?v=7_IMzJldOf4",
                          scheme='https'))
-    except urllib2.HTTPError as e:
+    except HTTPError as e:
         print(e)

@@ -9,7 +9,8 @@ import datetime
 import logging
 import os.path
 import re
-import urllib2
+
+from six.moves.urllib.error import HTTPError, URLError
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -58,14 +59,14 @@ def refresh_html(providers, oembed):
                             maxwidth=settings.OEMBED_MAXWIDTH,
                             maxheight=settings.OEMBED_MAXHEIGHT,
                             scheme='https')
-    except urllib2.HTTPError as ex:
+    except HTTPError as ex:
         if 400 <= ex.code < 500:
             logger.error(u"Server could not handle request for %s: %d", oembed, ex.code)
             html = error_html(oembed)
         else:
             logger.critical(u"Server error during request for %s: %d", oembed, ex.code)
 
-    except urllib2.URLError as ex:
+    except URLError as ex:
         logger.critical(u"Failed to reach provider for %s: %s", oembed, ex.reason)
     else:
         html = result['html']

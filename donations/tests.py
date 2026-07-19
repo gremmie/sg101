@@ -5,6 +5,9 @@ from six.moves.urllib.parse import parse_qs
 from decimal import Decimal
 import datetime
 
+import requests
+from mock import Mock, patch
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -12,6 +15,7 @@ from django.urls import reverse
 from django.conf import settings
 
 from donations.models import Donation
+from donations.views import verify_request, paypal_params
 import bio.badges
 
 
@@ -274,3 +278,42 @@ class DonationsPageTestCase(TestCase):
     def test_thanks_page_renders(self):
         response = self.client.get(reverse('donations-thanks'))
         self.assertEqual(response.status_code, 200)
+
+
+# The DONATIONS_DEBUG_VERIFY_RESPONSE=None override disables the test settings'
+# short-circuit so these exercise the real requests-based verify path (which
+# replaced urllib2). requests.post is mocked so no network call happens.
+@override_settings(DONATIONS_DEBUG_VERIFY_RESPONSE=None)
+class VerifyRequestTestCase(TestCase):
+    """The PayPal IPN postback verification (donations.views.verify_request)."""
+
+    @patch('donations.views.requests.post')
+    def test_posts_payload_back_to_paypal_and_returns_text(self, post_mock):
+        post_mock.return_value = Mock(text='VERIFIED')
+
+        result = verify_request('cmd=_notify-validate&txn_id=X')
+
+        self.assertEqual(result, 'VERIFIED')
+        post_mock.assert_called_once()
+        args, kwargs = post_mock.call_args
+        # posts to the configured Paypal URL, echoing the payload verbatim as
+        # a form-urlencoded body.
+        self.assertEqual(args[0], paypal_params()[0])
+        self.assertEqual(kwargs['data'], 'cmd=_notify-validate&txn_id=X')
+        self.assertEqual(kwargs['headers']['Content-type'],
+                         'application/x-www-form-urlencoded')
+        self.assertIn('timeout', kwargs)
+
+    @patch('donations.views.requests.post')
+    def test_returns_none_on_request_exception(self, post_mock):
+        post_mock.side_effect = requests.RequestException('boom')
+        self.assertIsNone(verify_request('cmd=_notify-validate&txn_id=X'))
+
+    @patch('donations.views.requests.post')
+    def test_http_error_status_yields_none(self, post_mock):
+        # raise_for_status() escalates a 500 to a RequestException -> None,
+        # matching the old urllib2 behavior of raising on non-2xx.
+        response = Mock()
+        response.raise_for_status.side_effect = requests.HTTPError('500')
+        post_mock.return_value = response
+        self.assertIsNone(verify_request('cmd=_notify-validate'))

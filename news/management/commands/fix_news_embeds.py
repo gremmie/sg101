@@ -4,8 +4,8 @@ news stories.
 """
 from __future__ import print_function
 
-import urlparse
-from urllib2 import HTTPError
+from six.moves.urllib.parse import urlparse
+from six.moves.urllib.error import HTTPError
 
 from django.core.management.base import BaseCommand
 import lxml.html
@@ -58,7 +58,7 @@ class Command(BaseCommand):
             for param in obj.iter('param'):
                 value = param.get('value')
                 if value and value.startswith('http'):
-                    r = urlparse.urlparse(value)
+                    r = urlparse(value)
                     if (r.hostname != 'www.youtube.com' and
                         r.hostname != 'www.youtube-nocookie.com'):
                         print("Unknown source hostname:", r.hostname, ";", story.title)

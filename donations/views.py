@@ -1,10 +1,11 @@
 """
 Views for the donations application.
 """
-import urllib2
 import decimal
 import datetime
 import logging
+
+import requests
 
 from django.shortcuts import render
 from django.conf import settings
@@ -41,18 +42,22 @@ def verify_request(params):
     """
     # If we are doing localhost-type unit tests, just return whatever
     # the test wants us to...
-    if hasattr(settings, 'DONATIONS_DEBUG_VERIFY_RESPONSE'):
-        return settings.DONATIONS_DEBUG_VERIFY_RESPONSE
+    debug_response = getattr(settings, 'DONATIONS_DEBUG_VERIFY_RESPONSE', None)
+    if debug_response is not None:
+        return debug_response
 
-    req = urllib2.Request(paypal_params()[0], params)
-    req.add_header("Content-type", "application/x-www-form-urlencoded")
     try:
-        response = urllib2.urlopen(req)
-    except urllib2.URLError as ex:
+        response = requests.post(
+            paypal_params()[0],
+            data=params,
+            headers={'Content-type': 'application/x-www-form-urlencoded'},
+            timeout=20)
+        response.raise_for_status()
+    except requests.RequestException as ex:
         logging.exception('IPN: exception verifying IPN: %s', ex)
         return None
 
-    return response.read()
+    return response.text
 
 
 def index(request):

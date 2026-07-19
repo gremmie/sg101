@@ -3,8 +3,10 @@
 """
 import datetime
 import json
-import urllib
-import urllib2
+
+from six.moves.urllib.error import URLError
+from six.moves.urllib.parse import quote_plus
+from six.moves.urllib.request import urlopen
 
 from django.contrib import admin
 import django.contrib.messages as messages
@@ -52,10 +54,10 @@ class BandEntryAdmin(admin.ModelAdmin):
         base_url = "https://maps.googleapis.com/maps/api/geocode/json?address=%s"
         ok_cnt = 0
         for band in qs:
-            url = base_url % urllib.quote_plus(band.location)
+            url = base_url % quote_plus(band.location)
             try:
-                response = urllib2.urlopen(url)
-            except urllib2.URLError as ex:
+                response = urlopen(url)
+            except URLError as ex:
                 self.message_user(request, 'Error processing {}: {}'.format(
                     band.name, ex), level=messages.ERROR)
                 continue
