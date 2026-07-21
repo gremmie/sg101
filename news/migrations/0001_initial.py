@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('title', models.CharField(max_length=64)),
                 ('slug', models.SlugField(max_length=64)),
-                ('icon', models.ImageField(upload_to=b'news/categories/', blank=True)),
+                ('icon', models.ImageField(upload_to='news/categories/', blank=True)),
             ],
             options={
                 'ordering': ('title',),

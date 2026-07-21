@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='comment',
             name='ip_address',
-            field=models.GenericIPAddressField(verbose_name=b'IP Address'),
+            field=models.GenericIPAddressField(verbose_name='IP Address'),
         ),
     ]

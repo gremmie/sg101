@@ -14,13 +14,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='pendingstory',
             name='short_text',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='story',
             name='short_text',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
     ]

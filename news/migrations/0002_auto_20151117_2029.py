@@ -22,19 +22,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pendingstory',
             name='admin_content',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='pendingstory',
             name='long_markup',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='pendingstory',
             name='short_markup',
-            field=models.TextField(default=b''),
+            field=models.TextField(default=''),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -46,19 +46,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='story',
             name='admin_content',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='story',
             name='long_markup',
-            field=models.TextField(default=b'', blank=True),
+            field=models.TextField(default='', blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='story',
             name='short_markup',
-            field=models.TextField(default=b''),
+            field=models.TextField(default=''),
             preserve_default=True,
         ),
         migrations.AddField(

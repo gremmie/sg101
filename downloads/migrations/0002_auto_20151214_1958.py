@@ -14,11 +14,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='download',
             name='ip_address',
-            field=models.GenericIPAddressField(verbose_name=b'IP Address'),
+            field=models.GenericIPAddressField(verbose_name='IP Address'),
         ),
         migrations.AlterField(
             model_name='pendingdownload',
             name='ip_address',
-            field=models.GenericIPAddressField(verbose_name=b'IP Address'),
+            field=models.GenericIPAddressField(verbose_name='IP Address'),
         ),
     ]

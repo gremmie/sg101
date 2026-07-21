@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='category',
             name='groups',
-            field=models.ManyToManyField(help_text=b'If groups are assigned to this category, only members of those groups can view this category.', to='auth.Group', blank=True),
+            field=models.ManyToManyField(help_text='If groups are assigned to this category, only members of those groups can view this category.', to='auth.Group', blank=True),
         ),
         migrations.AlterField(
             model_name='forum',
@@ -24,6 +24,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='post',
             name='user_ip',
-            field=models.GenericIPAddressField(default=b'', null=True, blank=True),
+            field=models.GenericIPAddressField(default='', null=True, blank=True),
         ),
     ]
