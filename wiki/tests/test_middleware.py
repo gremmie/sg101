@@ -26,6 +26,12 @@ class MiddleWareTestCase(TestCase):
         self.conn = get_redis_connection()
         self.mw = WikiMiddleware()
 
+        # Redis outlives the per-test database rollback, and any earlier test
+        # that logs in over HTTP goes through this middleware and leaves a key
+        # behind. Start from a known-empty set so the counts below mean
+        # something regardless of what ran first.
+        self.conn.delete(settings.WIKI_REDIS_SET)
+
     def tearDown(self):
         self.conn.delete(settings.WIKI_REDIS_SET)
 
