@@ -2,8 +2,8 @@ from django.conf.urls import url, include
 from django.conf.urls.static import static
 from django.conf import settings
 from django.contrib import admin
-import django.contrib.auth.views
 from django.views.decorators.cache import cache_page
+from django.views.generic import RedirectView
 from django.views.generic import TemplateView
 
 from news.feeds import LatestNewsFeed
@@ -32,10 +32,15 @@ urlpatterns = [
 
    url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
-   url(r'^admin/password_reset/$', django.contrib.auth.views.password_reset, name='admin_password_reset'),
-   url(r'^admin/password_reset/done/$', django.contrib.auth.views.password_reset_done),
-   url(r'^reset/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', django.contrib.auth.views.password_reset_confirm),
-   url(r'^reset/done/$', django.contrib.auth.views.password_reset_complete),
+   # The admin login page offers a "Forgotten your password?" link when this
+   # name resolves. Send it to the site's own reset flow rather than running a
+   # second one: these routes used to point at a parallel set of auth views
+   # whose companion routes were never named, so the flow raised NoReverseMatch
+   # on submit, and its confirm URL still expected the pre-1.6 uidb36 format.
+   url(r'^admin/password_reset/$',
+       RedirectView.as_view(pattern_name='accounts-password_reset',
+                            permanent=False),
+       name='admin_password_reset'),
 
    url(r'^store/$',
        StoreView.as_view(),

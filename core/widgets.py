@@ -9,9 +9,10 @@ from django.urls import reverse
 
 class AutoCompleteUserInput(forms.TextInput):
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs=None, renderer=None):
         url = reverse('core-ajax_users')
-        output = super(AutoCompleteUserInput, self).render(name, value, attrs)
+        output = super(AutoCompleteUserInput, self).render(name, value, attrs,
+                                                           renderer)
         return output + mark_safe(u"""\
 <script type="text/javascript">
 $(function() {

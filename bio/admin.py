@@ -43,9 +43,11 @@ class UserProfileAdmin(admin.ModelAdmin):
         return False
 
     def get_actions(self, request):
-        # We don't want to delete a user profile; it is tied to the user object
+        # We don't want to delete a user profile; it is tied to the user object.
+        # Django drops delete_selected on its own when has_delete_permission is
+        # False, so discard it rather than assuming it is still there.
         actions = super(UserProfileAdmin, self).get_actions(request)
-        del actions['delete_selected']
+        actions.pop('delete_selected', None)
         return actions
 
     def get_status_display(self, obj):

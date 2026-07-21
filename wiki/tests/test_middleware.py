@@ -94,6 +94,8 @@ class MiddleWareTestCase(TestCase):
             self.assertEqual(cookie['domain'], settings.WIKI_COOKIE_DOMAIN)
             self.assertEqual(cookie['path'], '/')
             self.assertEqual(cookie['max-age'], 0)
-            self.assertEqual(cookie['expires'], 'Thu, 01-Jan-1970 00:00:00 GMT')
+            # Django spells the expiry per RFC 7231 ('01 Jan 1970'); it used to
+            # use the obsolete dashed form ('01-Jan-1970').
+            self.assertEqual(cookie['expires'], 'Thu, 01 Jan 1970 00:00:00 GMT')
 
         self.assertEqual(self.conn.zcard(settings.WIKI_REDIS_SET), 0)
