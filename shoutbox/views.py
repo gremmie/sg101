@@ -67,7 +67,7 @@ shout_id_re = re.compile(r'shout-(\d+)')
 def text(request):
     """This view function retrieves the text of a shout; it is used in the in-place
     editing of shouts on the shoutbox history view."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         m = shout_id_re.match(request.GET.get('id', ''))
         if m is None:
             return HttpResponseBadRequest()
@@ -82,7 +82,7 @@ def text(request):
 
 def edit(request):
     """This view accepts a shoutbox edit from the shoutbox history view."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         m = shout_id_re.match(request.POST.get('id', ''))
         if m is None:
             return HttpResponseBadRequest()
@@ -104,7 +104,7 @@ def edit(request):
 
 def delete(request):
     """This view deletes a shout. It is called by AJAX from the shoutbox history view."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         id = request.POST.get('id', None)
         if id is None or not id.isdigit():
             return HttpResponseBadRequest()
@@ -126,7 +126,7 @@ def flag(request):
     This function handles the flagging of shouts by users. This function should
     be the target of an AJAX post.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponse('Please login or register to flag a shout.')
 
     id = request.POST.get('id', None)

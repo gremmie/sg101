@@ -39,7 +39,7 @@ def can_moderate(forum, user):
 
     """
     # Get the simple cases out of the way first:
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         return False
     elif user.is_superuser:
         return True
@@ -58,7 +58,7 @@ def can_post(topic, user):
     Returns True if the user can post in the topic and False otherwise.
 
     """
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         return False
     if user.is_superuser or can_moderate(topic.forum, user):
         return True

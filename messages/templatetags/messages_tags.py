@@ -14,7 +14,7 @@ register = template.Library()
 @register.simple_tag(takes_context=True)
 def unread_messages(context):
     user = context['user']
-    if user.is_authenticated():
+    if user.is_authenticated:
         unread_count = Message.objects.unread_count(user)
     else:
         unread_count = None

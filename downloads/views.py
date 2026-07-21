@@ -190,7 +190,7 @@ def thanks(request):
 @require_POST
 def rate_download(request):
     """This function is called by AJAX to rate a download."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         id = request.POST.get('id', None)
         rating = request.POST.get('rating', None)
         if id is None or rating is None:
@@ -228,7 +228,7 @@ def request_download(request):
         { id: download-id, 'url': link-to-download }
 
     """
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         dl_id = request.POST.get('id')
         if dl_id:
             try:

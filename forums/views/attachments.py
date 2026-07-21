@@ -19,7 +19,7 @@ def fetch_attachments(request):
     attachment embed data for a given forum post.
 
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register.')
 
     post_id = request.GET.get('pid')

@@ -183,7 +183,7 @@ def report_link(request, link_id):
     """
     This function is the target of an AJAX POST to report a link as dead.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponse('Please login or register to report a broken link.')
 
     try:

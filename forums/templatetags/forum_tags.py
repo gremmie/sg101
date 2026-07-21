@@ -72,7 +72,7 @@ def current_forum_time(user):
     """
     curr_time = SERVER_TZ.localize(datetime.datetime.now())
 
-    if user.is_authenticated():
+    if user.is_authenticated:
         tz_prefs = get_time_prefs(user)
         try:
             user_tz = timezone(tz_prefs[1])
@@ -99,7 +99,7 @@ def forum_date(date, user, long_format=True, none_date_retval=u'Never'):
     fmt_index = 0 if long_format else 1
 
     date = SERVER_TZ.localize(date)
-    if user.is_authenticated():
+    if user.is_authenticated:
         tz_prefs = get_time_prefs(user)
         try:
             user_tz = timezone(tz_prefs[1])

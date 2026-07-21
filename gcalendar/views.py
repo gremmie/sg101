@@ -22,7 +22,7 @@ from gcalendar.models import Event
 
 def index(request):
     user = request.user
-    if user.is_authenticated():
+    if user.is_authenticated:
         tz = user.profile.time_zone
     else:
         tz = 'US/Pacific'
@@ -103,7 +103,7 @@ def edit_event(request, event_id):
 
 def delete_event(request):
     """This view marks an event for deletion. It is called via AJAX."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         event_id = request.POST.get('id')
         if event_id is None or not event_id.isdigit():
             return HttpResponseBadRequest()

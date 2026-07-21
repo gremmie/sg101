@@ -75,7 +75,7 @@ class ForumManager(models.Manager):
         if user.is_superuser:
             qs = self.all()
         else:
-            user_groups = user.groups.all() if user.is_authenticated() else []
+            user_groups = user.groups.all() if user.is_authenticated else []
             qs = self.filter(Q(category__groups__isnull=True) |
                     Q(category__groups__in=user_groups))
         return qs

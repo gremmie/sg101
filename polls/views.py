@@ -26,7 +26,7 @@ def get_user_choice(user, poll):
 
     """
     user_choice = None
-    if user.is_authenticated():
+    if user.is_authenticated:
         user_choices = user.choice_set.filter(poll=poll)
         if user_choices:
             user_choice = user_choices[0]

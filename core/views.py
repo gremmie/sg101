@@ -33,7 +33,7 @@ def ajax_users(request):
 
     """
     q = request.GET.get('q', None)
-    if q is None or not request.user.is_authenticated():
+    if q is None or not request.user.is_authenticated:
         return HttpResponse(json.dumps([]), content_type='application/json')
 
     limit = int(request.GET.get('limit', 10))

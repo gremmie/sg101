@@ -41,7 +41,7 @@ def enter(request):
     contest.
 
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden("Please login first")
 
     contest_id = request.POST.get('contest_id')

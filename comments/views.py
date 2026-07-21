@@ -111,7 +111,7 @@ def flag_comment(request):
     This function handles the flagging of comments by users. This function should
     be the target of an AJAX post.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register to flag a comment.')
 
     id = request.POST.get('id', None)
@@ -141,7 +141,7 @@ def markdown_preview(request):
     is assumed to be in markdown format. The HTML page is suitable for the preview
     function for a javascript editor such as markItUp.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('This service is only available to logged-in users.')
 
     data = request.POST.get('data', None)
@@ -162,7 +162,7 @@ def markdown_preview(request):
 
 @require_POST
 def markdown_preview_v3(request):
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden(
                 'This service is only available to logged-in users.')
 

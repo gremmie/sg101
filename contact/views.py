@@ -16,7 +16,7 @@ def contact_form(request):
             return redirect('contact-thanks')
     else:
         initial_data = {}
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             name = get_full_name(request.user).strip()
             if name != request.user.username:
                 name = '{} ({})'.format(name, request.user.username)

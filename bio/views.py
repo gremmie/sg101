@@ -167,7 +167,7 @@ def flag_profile(request, profile_id):
     This function handles the flagging of profiles by users. This function should
     be the target of an AJAX post.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponse('Please login or register to flag a profile.')
 
     try:

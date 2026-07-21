@@ -16,7 +16,7 @@ THRESHOLD = datetime.timedelta(days=14)
 #######################################################################
 
 def get_forum_unread_status(qs, user):
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         for forum in qs:
             forum.has_unread = False
         return
@@ -121,7 +121,7 @@ def get_topic_unread_status(forum, topics, user):
         return
 
     # This service isn't provided to unauthenticated users
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         for topic in topics:
             topic.has_unread = False
         return
@@ -174,7 +174,7 @@ def get_topic_unread_status(forum, topics, user):
 
 def get_post_unread_status(topic, posts, user):
     # This service isn't provided to unauthenticated users
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         for post in posts:
             post.unread = False
         return
@@ -212,7 +212,7 @@ def get_unread_topics(user):
     """Returns a list of topics the user hasn't read yet."""
 
     # This is only available to authenticated users
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         return []
 
     now = datetime.datetime.now()

@@ -198,7 +198,7 @@ def topic_index(request, id):
 
     last_page = page_num == paginator.num_pages
 
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         if last_page or last_post_on_page is None:
             visit_time = datetime.datetime.now()
         else:
@@ -210,13 +210,13 @@ def topic_index(request, id):
 
     can_moderate = perms.can_moderate(topic.forum, request.user)
 
-    can_reply = request.user.is_authenticated() and (
+    can_reply = request.user.is_authenticated and (
         not topic.locked or can_moderate)
 
-    is_favorite = request.user.is_authenticated() and (
+    is_favorite = request.user.is_authenticated and (
             topic in request.user.favorite_topics.all())
 
-    is_subscribed = request.user.is_authenticated() and (
+    is_subscribed = request.user.is_authenticated and (
             topic in request.user.subscriptions.all())
 
     return render(request, 'forums/topic.html', {
@@ -241,7 +241,7 @@ def topic_unread(request, id):
     """
     topic_url = reverse('forums-topic_index', kwargs={'id': id})
 
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         topic = get_object_or_404(Topic.objects.select_related('forum', 'user'), pk=id)
         try:
             tlv = TopicLastVisit.objects.get(user=request.user, topic=topic)
@@ -329,7 +329,7 @@ def quick_reply_ajax(request):
     the HTML for the new post, which the client-side script appends
     to the document.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register to post.')
 
     form = NewPostForm(request.POST)
@@ -388,7 +388,7 @@ def flag_post(request):
     This function handles the flagging of posts by users. This function should
     be the target of an AJAX post.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register to flag a post.')
 
     id = request.POST.get('id')
@@ -466,7 +466,7 @@ def delete_post(request):
     This view function allows superusers and forum moderators to delete posts.
     This function is the target of AJAX calls from the client.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login to delete a post.')
 
     id = request.POST.get('id')

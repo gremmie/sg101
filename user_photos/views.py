@@ -59,7 +59,7 @@ def upload_ajax(request):
     string error message.
 
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login to use this service')
     if not request.is_ajax() or request.method != 'POST':
         return HttpResponseNotAllowed('This method is not allowed')
@@ -97,7 +97,7 @@ def upload_ajax_v3(request):
     ret = {'error_msg': '', 'url': ''}
     status_code = 400
 
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         ret['error_msg'] = 'Please login to use this service'
         return JsonResponse(ret, status=403)
     if not request.is_ajax() or request.method != 'POST':
@@ -213,7 +213,7 @@ def hotlink_image(request):
     ret = {'error_msg': '', 'url': ''}
     status_code = 400
 
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         ret['error_msg'] = 'Please login to use this service'
         return JsonResponse(ret, status=403)
     if not request.is_ajax() or request.method != 'POST':

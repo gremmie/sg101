@@ -24,7 +24,7 @@ logger = logging.getLogger('auth')
 
 @log_auth_failures('Register')
 def register(request):
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':
@@ -44,7 +44,7 @@ def register(request):
 
 def register1(request):
     """Displays the registration code."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     return render(request, 'accounts/register1.html', {
@@ -56,7 +56,7 @@ def register1(request):
 @log_auth_failures('Register')
 def register2(request):
     """Processes the registration code and creates the user."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':
@@ -87,7 +87,7 @@ def get_code(request):
 #######################################################################
 
 def register_thanks(request):
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     return render(request, 'accounts/register_thanks.html', {
@@ -97,7 +97,7 @@ def register_thanks(request):
 #######################################################################
 
 def register_confirm(request, username, key):
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     # purge expired users
@@ -133,7 +133,7 @@ def register_confirm(request, username, key):
 
 def username_query(request):
     """This view handles forgotten username queries."""
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':

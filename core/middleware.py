@@ -21,7 +21,7 @@ class InactiveUserMiddleware(MiddlewareMixin):
     """
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        if request.user.is_authenticated() and not request.user.is_active:
+        if request.user.is_authenticated and not request.user.is_active:
             logout(request)
 
 
@@ -49,7 +49,7 @@ class WhosOnline(MiddlewareMixin):
         if not hasattr(request, 'user') or request.is_ajax():
             return response
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             if request.COOKIES.get(ONLINE_COOKIE) is None:
                 # report that we've seen the user
                 report_user(request.user.username)

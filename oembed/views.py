@@ -20,7 +20,7 @@ def fetch_media(request):
     This view returns the HTML media of an embeddable resource as
     JSON. This view is the target of an AJAX request.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register.')
 
     url = request.POST.get('q')
@@ -76,7 +76,7 @@ def fetch_saved_media(request):
     This view returns the HTML embed information for previously saved Oembed
     objects as JSON. This view is the target of an AJAX request.
     """
-    if not request.user.is_authenticated():
+    if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login or register.')
 
     embed_ids = request.GET.getlist('embeds')
