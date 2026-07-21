@@ -1,7 +1,93 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-19
+**Last updated:** 2026-07-20
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — IN PROGRESS (2026-07-20)
+
+Staged 1.11→2.0→2.1→2.2 (same doctrine as Step 6; Brian confirmed). **Rungs 1 and
+2 are done and committed; rung 3 (2.1→2.2 LTS) is next.** 567 tests green on
+**Django 2.1.15**, 5 skipped. `url()`→`path()` conversion is deliberately deferred
+to its own commit after 2.2 is green (Brian's call) — `url()` is just an alias for
+`re_path()` through 2.2, so nothing breaks meanwhile.
+
+**Prep done first, on 1.11, so each version bump stayed a clean isolated diff:**
+- **A (`226d4e6`)** — 49 `is_authenticated()` call sites across 21 files → property
+  access. `CallableBool` (which allowed both forms) is removed in 2.0. Templates
+  already used the property form.
+- **B — NO-OP.** All 85 FK/O2O calls (55 models, 30 migrations) already pass
+  `on_delete`; added back in `3fc659e` "Update to Django 1.9", predating this
+  project. **A line-based grep said 17 were missing — all were false positives from
+  wrapped definitions with `on_delete` on the continuation line.** An AST scan
+  settled it. Lesson: multi-line call signatures need AST, not grep.
+- **C (`1edcb4d`)** — the 7 function-based auth views → CBVs (deleted in 2.1).
+  Config moves from URL `kwargs` into `as_view()`; `post_*_redirect`→`success_url`.
+  **Gotcha: `success_url` is used verbatim, not through `resolve_url()`** — so
+  `LOGIN_REDIRECT_URL` (the URL *name* `'bio-me'`) needed `reverse_lazy()`, else
+  password-change would redirect to the literal string `"bio-me"` (silent, no
+  exception). `PasswordResetConfirmView` now answers the emailed link with a
+  redirect to a `set-password` placeholder route, keeping the token in the session;
+  the existing token regex already matches it, so only the test needed the extra
+  hop. antispam's `log_auth_failures` monkeypatch of `auth.views.login` (in
+  `AppConfig.ready()`) had nothing left to patch → wraps the view in `urls.py`
+  instead; **it had zero coverage**, so added `antispam/tests/test_decorators.py`
+  and **verified by mutation** that removing the wrapper fails it.
+
+**Rung 1 — 2.0.13 (`3fa865e`): zero application code changed.** Suite emitted no
+`RemovedInDjango20Warning`; `manage.py check` clean. Only the two requirements
+files (+ stale comments).
+
+**Rung 2 — 2.1.15 (`49a047e`):**
+- **`sg101/urls.py` blocked the import** — it referenced `auth.views.password_reset`
+  &c., which 2.1 deletes. Prep C only covered `accounts/urls.py`; this second set
+  was missed. **That admin flow was already broken**: its companion routes were
+  never *named*, so submitting raised `NoReverseMatch: 'password_reset_done'`
+  (verified by probe on 2.0), and its confirm URL still used the pre-1.6 `uidb36`
+  format. Resolution (Brian chose): `admin_password_reset` → `RedirectView` to the
+  site's real flow, other 3 routes deleted. Admin login keeps its "Forgotten your
+  password?" link (that template renders it only if the name resolves). New
+  `core/tests/test_urls.py` (3 tests) — nothing covered these before.
+- **`bio/admin.py` `KeyError: 'delete_selected'`** — 2.1's `get_actions()` removes
+  that action itself when `has_delete_permission` is False, so the explicit `del`
+  hit an absent key → `pop(..., None)`.
+- **`core/widgets.py`** — `Widget.render()` must accept `renderer` in 2.1. Note
+  `AutoCompleteUserInput` is **dead code** (defined, referenced nowhere, no tests;
+  orphaned when PM autocomplete was reworked) — fixed rather than pruned; deletion
+  candidate for Step 19.
+- **Cookie expiry format** — 2.1 emits RFC 7231 (`01 Jan 1970`) not the obsolete
+  dashed form; `wiki/tests/test_middleware.py` pinned the old string.
+
+**Migration-state cleanup (`c76f920`) — the big hygiene win.** `makemigrations`
+had been reporting **28 phantom `AlterField` ops** across comments/downloads/
+forums/news. Root cause: **34 Python-2 bytes literals** (`verbose_name=b'IP
+Address'`, `help_text=b'...'`, `default=b''`, `upload_to=b'...'`) frozen into
+2015-era migrations — on Py3 `b'x' != 'x'`, so those fields could never compare
+equal. The 4 apps holding such literals were *exactly* the 4 apps reporting drift.
+**Confirmed pre-existing, not caused by the upgrade: `makemigrations --check` on
+the same code under 1.11 and 2.0 produced byte-identical output.** All values are
+plain ASCII metadata and `default` is applied in Python, so rewriting alters no
+schema. After the fix, drift collapsed to **2 genuine ops**.
+- Those 2: **2.1 stopped forcing `blank=True` on `BooleanField`**, so
+  `Topic.locked`/`.sticky`'s explicit `blank=True` now serializes →
+  `forums/0003_topic_boolean_blank`. **`blank` is validation-only: `sqlmigrate`
+  emits NO SQL on MySQL.** (SQLite shows a full table rebuild, but that's SQLite
+  doing that for *any* `AlterField` — nearly wrote a wrong comment before checking
+  both backends.)
+- **`makemigrations --check` is now clean ("No changes detected") for the first
+  time in this project** — it's now usable as a CI gate.
+
+**Verified on the real prod snapshot:** migrations applied clean (Django's own
+`admin.0003_logentry_add_action_flag_choices` + `auth.0009_alter_user_last_name_max_length`,
+plus `forums.0003`); site/forums/news/podcast/links/search, both password-reset
+flows, and admin login all 200; celery worker + beat boot clean on 2.1.
+`/news/` 404 is correct and pre-existing (no `^$` pattern — the news front page is
+the site home `/`; the paginated index is `/news/date/`).
+
+**Watch items for rung 3 (2.2) and beyond:** `mysql.W002` strict-mode warning still
+environmental (Step 11); `@python_2_unicode_compatible` removable once Py2 support
+is formally dropped; celery uppercase-settings rename at the celery-5 step; the
+deferred `url()`→`path()` conversion; `AutoCompleteUserInput` dead-code deletion.
+**NOT pushed yet** — Brian pushes his own remotes.
 
 ## EXECUTION — Step 8 (flip interpreter to Python 3.7, Django 1.11) ⭐ — DONE (2026-07-19)
 
