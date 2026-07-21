@@ -1,16 +1,16 @@
 # Requirements for the Dockerized SG101 dev environment -- Python 3.7 / Django
-# 1.11. Mirrors the production pins in requirements.txt, plus the dev/test-only
+# 2.0. Mirrors the production pins in requirements.txt, plus the dev/test-only
 # tools needed to run the suite and dev server in-container.
 
 # --- Runtime (mirror of requirements.txt) ------------------------------------
-Django==1.11.29
+Django==2.0.13
 django-environ==0.4.5  # 12-factor env-var config
 django-tagging==0.5.0
 pytz==2021.1
 six==1.16.0
 
-# Celery 3.1 -> 4.4 at the Py3 flip (kombu's `async` module name is reserved on
-# Python 3.7). 4.4.7 is the last 4.x and still supports Django 1.11.
+# kombu's `async` module name is reserved on Python 3.7, so celery's 3.1 line
+# can't import there. 4.4.7 is the last 4.x release.
 celery==4.4.7
 kombu==4.6.11
 billiard==3.6.4.0
@@ -43,7 +43,7 @@ requests==2.27.1
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 mock==4.0.3
 testfixtures==6.18.5
-# debug-toolbar 1.11 supports Django 1.11 on Python 3.7; sqlparse 0.2.4 is its
+# debug-toolbar 1.11 supports Django 2.0 on Python 3.7; sqlparse 0.2.4 is its
 # SQL-panel companion.
 django-debug-toolbar==1.11
 sqlparse==0.2.4

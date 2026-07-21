@@ -1,8 +1,7 @@
-# SG101 runtime requirements -- Python 3.7 / Django 1.11 LTS.
+# SG101 runtime requirements -- Python 3.7 / Django 2.0.
 #
-# The interpreter crossed from Python 2.7 to 3.7 at the Py3 flip; Django stays on
-# the 1.11 rung until the next step. Apps whose old external libraries aren't
-# Python-3 ready are temporarily stubbed, and their dependencies dropped here:
+# Apps whose old external libraries aren't Python-3 ready are temporarily
+# stubbed, and their dependencies dropped here:
 #   boto (core/s3.py)                       -> Cloudflare R2 / boto3 later
 #   google-api-python-client / oauth2client /
 #     httplib2 / uritemplate / rsa / pyasn1 (gcalendar) -> modern google-auth later
@@ -11,15 +10,14 @@
 # the repo (the fork is tiny and frozen upstream, and needed Py3 patches), so it
 # no longer appears here.
 
-Django==1.11.29
+Django==2.0.13
 django-environ==0.4.5  # 12-factor env-var config
 django-tagging==0.5.0
 pytz==2021.1
 six==1.16.0
 
-# Celery 3.1 -> 4.4 at the Py3 flip: kombu's `async` module name is a reserved
-# word on Python 3.7, so the 3.1 line can't import there. 4.4.7 is the last 4.x
-# release and still supports Django 1.11.
+# kombu's `async` module name is a reserved word on Python 3.7, so celery's 3.1
+# line can't import there. 4.4.7 is the last 4.x release.
 celery==4.4.7
 kombu==4.6.11
 billiard==3.6.4.0
