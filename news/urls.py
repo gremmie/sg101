@@ -1,22 +1,25 @@
 """urls for the News application"""
-from django.conf.urls import url
+from django.urls import path, re_path
 
 import news.views
 
 
 urlpatterns = [
-    url(r'^date/$', news.views.index, name='news-index_page'),
-    url(r'^archive/$', news.views.archive_index, name='news-archive_index'),
-    url(r'^archive/(?P<year>\d{4})/(?P<month>\d\d?)/$',
-        news.views.archive,
-        name='news-archive_page'),
-    url(r'^categories/$', news.views.category_index, name='news-category_index'),
-    url(r'^category/(?P<slug>[\w\d-]+)/$', news.views.category, name='news-category'),
-    url(r'^email/(\d+)/$', news.views.email_story, name='news-email_story'),
-    url(r'^email/(\d+)/thanks/$', news.views.email_thanks, name='news-email_thanks'),
-    url(r'^story/(\d+)/$', news.views.story, name='news-story'),
-    url(r'^submit/$', news.views.submit, name='news-submit'),
-    url(r'^submit/thanks/$', news.views.submit_thanks, name='news-submit_thanks'),
-    url(r'^tags/$', news.views.tags, name='news-tag_index'),
-    url(r'^tag/(?P<tag_name>[^/]+)/$', news.views.tag, name='news-tag_page'),
+    path('date/', news.views.index, name='news-index_page'),
+    path('archive/', news.views.archive_index, name='news-archive_index'),
+    # Regex kept on purpose: the int converter would also match years longer
+    # than four digits and months longer than two; these fixed widths matter.
+    re_path(r'^archive/(?P<year>\d{4})/(?P<month>\d\d?)/$',
+            news.views.archive,
+            name='news-archive_page'),
+    path('categories/', news.views.category_index, name='news-category_index'),
+    path('category/<slug:slug>/', news.views.category, name='news-category'),
+    path('email/<int:story_id>/', news.views.email_story, name='news-email_story'),
+    path('email/<int:story_id>/thanks/', news.views.email_thanks,
+         name='news-email_thanks'),
+    path('story/<int:story_id>/', news.views.story, name='news-story'),
+    path('submit/', news.views.submit, name='news-submit'),
+    path('submit/thanks/', news.views.submit_thanks, name='news-submit_thanks'),
+    path('tags/', news.views.tags, name='news-tag_index'),
+    path('tag/<str:tag_name>/', news.views.tag, name='news-tag_page'),
 ]
