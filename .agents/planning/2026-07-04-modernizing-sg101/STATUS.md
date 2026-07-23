@@ -1,15 +1,14 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-22
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
-## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — IN PROGRESS (2026-07-20)
+## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — DONE (2026-07-22)
 
-Staged 1.11→2.0→2.1→2.2 (same doctrine as Step 6; Brian confirmed). **Rungs 1 and
-2 are done and committed; rung 3 (2.1→2.2 LTS) is next.** 567 tests green on
-**Django 2.1.15**, 5 skipped. `url()`→`path()` conversion is deliberately deferred
-to its own commit after 2.2 is green (Brian's call) — `url()` is just an alias for
-`re_path()` through 2.2, so nothing breaks meanwhile.
+Staged 1.11→2.0→2.1→2.2 (same doctrine as Step 6; Brian confirmed). **All four
+rungs done and committed, plus the deferred `url()`→`path()` migration — Step 9
+is complete.** Now on **Django 2.2.28**, 567 tests green, 5 skipped. **NOT pushed
+yet** — Brian pushes his own remotes.
 
 **Prep done first, on 1.11, so each version bump stayed a clean isolated diff:**
 - **A (`226d4e6`)** — 49 `is_authenticated()` call sites across 21 files → property
@@ -83,10 +82,61 @@ flows, and admin login all 200; celery worker + beat boot clean on 2.1.
 `/news/` 404 is correct and pre-existing (no `^$` pattern — the news front page is
 the site home `/`; the paginated index is `/news/date/`).
 
-**Watch items for rung 3 (2.2) and beyond:** `mysql.W002` strict-mode warning still
-environmental (Step 11); `@python_2_unicode_compatible` removable once Py2 support
-is formally dropped; celery uppercase-settings rename at the celery-5 step; the
-deferred `url()`→`path()` conversion; `AutoCompleteUserInput` dead-code deletion.
+**Rung 3 — 2.2.28 (`f3b93ac`): zero application code changed.** The only Django
+warning was a `RemovedInDjango30Warning` that *predates* the bump (dates to 2.1):
+`{% load static from staticfiles %}` is deprecated → `{% load static %}` (equivalent
+since 2.1 — the built-in tag routes through `STATICFILES_STORAGE` when staticfiles is
+installed); swept across **84 templates**. Requirements: Django→2.2.28, **`sqlparse`
+now a hard Django runtime dep** so pinned in `requirements.txt`, **django-debug-toolbar
+1.11→2.2** (1.x caps at 2.1); mysqlclient 1.4.6 already clears 2.2's raised 1.3.13
+floor. `migrate` applied Django's own `auth.0010` (Group.name 80→150) + `auth.0011`
+(proxy-perm rebuild — a no-op here, no proxy models) to the prod snapshot clean;
+`makemigrations --check` stays clean. Checked the `Meta.ordering`→`GROUP BY`
+`RemovedInDjango31Warning` (pending; only fires on `.values().annotate()` over a
+Meta.ordering model): **non-issue** — the app's only GROUP BY query
+(`donations.top_donors`) is on stock auth User (no Meta.ordering) AND already has an
+explicit `.order_by()`. Remaining suite deprecations are third-party only (bleach's
+vendored html5lib collections-ABC; kombu SelectableGroups — celery-5 step).
+
+**Docker debug-toolbar fix (`4059cb1`, separate commit):** the toolbar was silently
+hidden in Docker since Step 8 — its default gate needs `REMOTE_ADDR in INTERNAL_IPS`
+(127.0.0.1), but host→container requests arrive NAT'd from the bridge gateway
+(172.18.0.x). Fix in `docker.py`: `SHOW_TOOLBAR_CALLBACK = lambda r: DEBUG` (guarded
+on debug_toolbar installed; inert under DEBUG=False). Per `research/docker-strategy.md`
+prod WILL be Docker (same image, env-differentiated; deploy = Step 21), so this
+dev-only setting moves into the dev compose override at the split — no prod debt.
+
+**`url()`→`path()` migration (5 commits) — `django.conf.urls.url` is now GONE from the
+project** (only the non-deprecated `django.conf.urls.static.static` remains). Deferred
+until 2.2 was green (Brian's call) so the version bumps stayed clean diffs; `url()` is
+a deprecated alias of `re_path()` removed in Django 4.0, so this is a hard prereq for
+the future 4.x rung. Approach: **mixed `path()`/`re_path()`** — `path()` with typed
+converters where clean, `re_path()` only where the regex does real work. Built a
+classifier (196 routes: 136 static, 18 clean-param, 33 unnamed-`(\d+)`, 9 keep-re_path).
+Commits: `d5d39cf` news (pilot — one of each shape), `dd34403` forums (biggest, 28
+routes), `52d3b03` batch A (21 leaf apps + gcalendar's custom admin `get_urls()`),
+`21c251d` batch B (root `sg101/urls.py`). **Key gotchas:** (1) `path()` only produces
+KEYWORD captures — each unnamed `(\d+)` had to be NAMED to match the view parameter;
+**ygroup `ThreadView` reads the id positionally via `self.args[0]`, so its route MUST
+stay `re_path()` with an unnamed group** (path() would leave `self.args` empty →
+IndexError; view untouched). (2) Stock converters don't enforce width/format, so
+`\d{4}` year, `{20}` reg key, the reset token, the `user|date`/`title|date|rating|hits`
+enums, and `[\w.@+-]{1,30}` usernames all stay `re_path()` (verified: a 5-digit year is
+still rejected). (3) `<int:>` hands the view a real int (was str) — harmless for pk
+lookups. (4) comments `/cr/` points at Django's `contenttypes.shortcut` (params
+`content_type_id`, `object_id`). (5) route NAMES unchanged throughout, so
+`reverse()`/`{% url %}` callers (args= or kwargs=) all still work; djdt namespace still
+reverses after the root's DEBUG-guarded `__debug__` include moved to `path()`.
+
+**Verified across the whole step:** 567 tests green / 5 skipped on the freshly-built
+2.2.28 image; migrations apply clean to the prod snapshot; full live smoke (site,
+forums, news, podcast, links, search, feeds, admin, both password-reset flows, debug
+toolbar) all serve; celery worker + beat boot clean.
+
+**Watch items beyond Step 9:** `mysql.W002` strict-mode warning still environmental
+(Step 11); `@python_2_unicode_compatible` removable once Py2 support is formally
+dropped; celery uppercase-settings rename at the celery-5 step; `AutoCompleteUserInput`
+dead-code deletion (Step 19); bleach/kombu third-party deprecations at their deps steps.
 **NOT pushed yet** — Brian pushes his own remotes.
 
 ## EXECUTION — Step 8 (flip interpreter to Python 3.7, Django 1.11) ⭐ — DONE (2026-07-19)
