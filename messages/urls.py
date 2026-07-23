@@ -1,39 +1,39 @@
 """urls for the Messages application"""
-from django.conf.urls import url
+from django.urls import path
 from django.views.generic.base import RedirectView
 
 import messages.views
 
 
 urlpatterns = [
-    url(r'^$',
+    path('',
         RedirectView.as_view(permanent=True, url='/messages/inbox/'),
         name='messages-index'),
-    url(r'^inbox/$',
+    path('inbox/',
         messages.views.inbox,
         name='messages-inbox'),
-    url(r'^compose/$',
+    path('compose/',
         messages.views.compose,
         name='messages-compose'),
-    url(r'^outbox/$',
+    path('outbox/',
         messages.views.outbox,
         name='messages-outbox'),
-    url(r'^trash/$',
+    path('trash/',
         messages.views.trash,
         name='messages-trash'),
-    url(r'^options/$',
+    path('options/',
         messages.views.options,
         name='messages-options'),
-    url(r'^bulk/$',
+    path('bulk/',
         messages.views.bulk,
         name='messages-bulk'),
-    url(r'^undelete/$',
+    path('undelete/',
         messages.views.undelete,
         name='messages-undelete'),
-    url(r'^view/(\d+)/$',
+    path('view/<int:msg_id>/',
         messages.views.view,
         name='messages-view'),
-    url(r'^report/(\d+)/$',
+    path('report/<int:msg_id>/',
         messages.views.report,
         name='messages-report'),
 ]

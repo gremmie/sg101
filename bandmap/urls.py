@@ -1,16 +1,16 @@
 """urls for the bandmap application"""
-from django.conf.urls import url
+from django.urls import path
 
 import bandmap.views
 
 urlpatterns = [
-    url(r'^$',
+    path('',
         bandmap.views.map_view,
         name='bandmap-map'),
-    url(r'^add/$',
+    path('add/',
         bandmap.views.add_band,
         name='bandmap-add'),
-    url(r'^query/$',
+    path('query/',
         bandmap.views.query,
         name='bandmap-query'),
 ]

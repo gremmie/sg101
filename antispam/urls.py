@@ -1,9 +1,9 @@
 """URLs for the antispam application."""
-from django.conf.urls import url
+from django.urls import path
 
 import antispam.views
 
 
 urlpatterns = [
-    url(r'^suspended/$', antispam.views.suspended, name='antispam-suspended'),
+    path('suspended/', antispam.views.suspended, name='antispam-suspended'),
 ]

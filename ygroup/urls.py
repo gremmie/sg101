@@ -2,19 +2,21 @@
 urls.py - URLs for the ygroup application.
 
 """
-from django.conf.urls import url
+from django.urls import path, re_path
 
 from ygroup.views import ThreadIndexView, ThreadView, PostView
 
 
 urlpatterns = [
-    url(r'^threads/$',
+    path('threads/',
         ThreadIndexView.as_view(),
         name='ygroup-thread_index'),
-    url(r'^thread/(\d+)/$',
+    # Regex kept: ThreadView reads the id positionally (self.args[0]); path()
+    # only produces keyword captures, which would leave self.args empty.
+    re_path(r'^thread/(\d+)/$',
         ThreadView.as_view(),
         name='ygroup-thread_view'),
-    url(r'^post/(?P<pk>\d+)/$',
+    path('post/<int:pk>/',
         PostView.as_view(),
         name='ygroup-post_view'),
 ]

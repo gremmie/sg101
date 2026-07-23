@@ -2,21 +2,21 @@
 Url patterns for the contests application.
 
 """
-from django.conf.urls import url
+from django.urls import path
 
 import contests.views
 
 
 urlpatterns = [
-   url(r'^$',
+   path('',
        contests.views.ContestListView.as_view(),
        name='contests-index'),
 
-   url(r'^enter/$',
+   path('enter/',
        contests.views.enter,
        name='contests-enter'),
 
-   url(r'^c/(?P<slug>[\w-]+)/$',
+   path('c/<slug:slug>/',
        contests.views.ContestDetailView.as_view(),
        name='contests-contest'),
 ]
