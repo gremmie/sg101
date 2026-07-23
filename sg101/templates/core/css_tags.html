@@ -1,4 +1,4 @@
-{% load static from staticfiles %}
+{% load static %}
 {% for local, src in css_sources %}
    {% if local %}
       <link rel="stylesheet" href="{% static src %}" />

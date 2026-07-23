@@ -1,4 +1,4 @@
-{% load static from staticfiles %}
+{% load static %}
 {% if topic.has_unread %}<a href="{% url 'forums-topic_unread' id=topic.id %}"><img src="{% static "icons/new.png" %}" alt="New Posts" title="New Posts" class="forums-topic-icon" /></a>{% endif %}
 {% if topic.sticky %}<img src="{% static "icons/asterisk_orange.png" %}" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
 {% if topic.locked %}<img src="{% static "icons/lock.png" %}" alt="Locked" title="Locked"

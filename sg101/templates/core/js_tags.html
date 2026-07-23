@@ -1,4 +1,4 @@
-{% load static from staticfiles %}
+{% load static %}
 {% for local, src in js_sources %}
    {% if local %}
       <script src="{% static src %}"></script>
