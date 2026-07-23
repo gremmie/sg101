@@ -55,3 +55,16 @@ REDIS_DB = 0
 BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
 
 ALLOWED_HOSTS = ['*']
+
+# --- Dev-only: make the Django debug toolbar visible inside the container -----
+# The toolbar (enabled in local.py under `if DEBUG:`) gates on REMOTE_ADDR being
+# in INTERNAL_IPS. Behind Docker's bridge, host requests arrive NAT'd from the
+# gateway (172.18.0.x), never 127.0.0.1, so the toolbar stays hidden. Show it
+# whenever DEBUG is on. This is dev-only config: it self-disables under
+# DEBUG=False, and moves into the dev compose override when the prod/dev split
+# lands at the deploy step.
+if 'debug_toolbar' in INSTALLED_APPS:
+    DEBUG_TOOLBAR_CONFIG = {
+        **DEBUG_TOOLBAR_CONFIG,
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+    }
