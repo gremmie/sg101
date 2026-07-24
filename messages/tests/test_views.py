@@ -183,7 +183,7 @@ class BasicTestCase(TestCase):
         view_name = 'messages-compose'
         url = reverse(view_name)
         response = self.client.post(url, data=post_data)
-        self.assertContains(response, "You can&#39;t send a message to yourself", status_code=200)
+        self.assertContains(response, "You can&#x27;t send a message to yourself", status_code=200)
 
         qs = Message.objects.filter(sender=self.users['pj'])
         self.assertEqual(qs.count(), 0)
@@ -510,12 +510,12 @@ class BasicTestCase(TestCase):
         view_name = 'messages-report'
         url = reverse(view_name, args=[msg.pk])
         response = self.client.post(url, data={}, follow=True)
-        self.assertContains(response, "You can&#39;t report this message", status_code=200)
+        self.assertContains(response, "You can&#x27;t report this message", status_code=200)
         self.assertEqual(Flag.objects.count(), 0)
 
         self.assertTrue(self.client.login(username='richard', password='12345'))
         response = self.client.post(url, data={}, follow=True)
-        self.assertContains(response, "You can&#39;t report this message", status_code=200)
+        self.assertContains(response, "You can&#x27;t report this message", status_code=200)
         self.assertEqual(Flag.objects.count(), 0)
 
         # Test bogus report

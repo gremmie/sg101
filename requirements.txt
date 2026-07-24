@@ -1,4 +1,4 @@
-# SG101 runtime requirements -- Python 3.7 / Django 2.2 LTS.
+# SG101 runtime requirements -- Python 3.7 / Django 3.0.
 #
 # Apps whose old external libraries aren't Python-3 ready are temporarily
 # stubbed, and their dependencies dropped here:
@@ -10,7 +10,7 @@
 # the repo (the fork is tiny and frozen upstream, and needed Py3 patches), so it
 # no longer appears here.
 
-Django==2.2.28
+Django==3.0.14
 django-environ==0.4.5  # 12-factor env-var config
 django-tagging==0.5.0
 pytz==2021.1

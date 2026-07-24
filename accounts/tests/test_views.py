@@ -141,7 +141,7 @@ class RegistrationTest(TestCase):
         response = self.client.post(reverse('accounts-register'),
             self.post_vals)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "The two password fields didn&#39;t match")
+        self.assertContains(response, "The two password fields didn&#x27;t match")
 
     def test_question1(self):
         """

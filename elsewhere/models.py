@@ -2,19 +2,18 @@ from datetime import datetime
 
 from django import forms
 from django.db import models
+from django.db.models.fields import BLANK_CHOICE_DASH
 from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.template.defaultfilters import slugify
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
 
 GOOGLE_PROFILE_URL = 'http://www.google.com/s2/favicons?domain_url=%s'
 SN_CACHE_KEY = 'elsewhere_sn_data'
 IM_CACHE_KEY = 'elsewhere_im_data'
 
 
-@python_2_unicode_compatible
 class Network(models.Model):
     """ Model for storing networks. """
 
@@ -158,47 +157,62 @@ class Profile(models.Model):
         return GOOGLE_PROFILE_URL % self.url
     icon = property(_get_icon)
 
-@python_2_unicode_compatible
 class SocialNetworkProfile(Profile):
     data_manager = sn_manager
 
     user = models.ForeignKey(User, db_index=True,
                              related_name='social_network_profiles',
                              on_delete=models.CASCADE)
-    network_id = models.CharField(max_length=16, choices=data_manager.choices, db_index=True)
+    # The valid networks are dynamic data (loaded via the post_migrate hook), so
+    # the choices live on the form, not frozen onto the model field at import.
+    network_id = models.CharField(max_length=16, db_index=True)
     username = models.CharField(max_length=64)
 
     def __str__(self):
         return self.network_id
 
 class SocialNetworkForm(forms.ModelForm):
+    network_id = forms.ChoiceField()
 
     class Meta:
         model = SocialNetworkProfile
         fields = ('network_id', 'username')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate the network choices from the live data each time the form is
+        # built. They can't be set at class-definition time: this module is
+        # imported before the post_migrate hook fills the network tables, so on a
+        # fresh database the list would freeze empty.
+        self.fields['network_id'].choices = BLANK_CHOICE_DASH + sn_manager.choices
 
-@python_2_unicode_compatible
+
 class InstantMessengerProfile(Profile):
     data_manager = im_manager
 
     user = models.ForeignKey(User, db_index=True,
                              related_name='instant_messenger_profiles',
                              on_delete=models.CASCADE)
-    network_id = models.CharField(max_length=16, choices=data_manager.choices, db_index=True)
+    # Choices live on the form (dynamic data) -- see SocialNetworkProfile.
+    network_id = models.CharField(max_length=16, db_index=True)
     username = models.CharField(max_length=64)
 
     def __str__(self):
         return self.username
 
 class InstantMessengerForm(forms.ModelForm):
+    network_id = forms.ChoiceField()
 
     class Meta:
         model = InstantMessengerProfile
         fields = ('network_id', 'username')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # See SocialNetworkForm: populate choices from the live network data.
+        self.fields['network_id'].choices = BLANK_CHOICE_DASH + im_manager.choices
 
-@python_2_unicode_compatible
+
 class WebsiteProfile(models.Model):
     user = models.ForeignKey(User, db_index=True,
                              related_name='website_profiles',
