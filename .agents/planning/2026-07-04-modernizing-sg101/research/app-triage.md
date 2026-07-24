@@ -26,11 +26,11 @@ per-app `templatetags/`, template references, management commands, models.
 | messages | `/messages/` | Private messages (+purge task) | **KEEP** |
 | comments | `/comments/` | Commenting system | **KEEP** |
 | donations | `/donations/` | PayPal IPN donations | **KEEP** (modernize: `urllib2`→requests; verify PayPal IPN still supported) |
-| contests | `/contests/` | Contests | **KEEP** (VERIFY still run) |
+| contests | `/contests/` | Contests | **KEEP — confirmed 2026-07-24** |
 | contact | `/contact/` | Contact form | **KEEP** |
 | core | `/core/` | Shared utilities, middleware, S3, tasks | **KEEP** (foundational) |
-| bandmap | `/bandmap/` | Band map (mgmt cmd, templates) | **KEEP** |
-| membermap | `/member_map/` | Member map | **KEEP** (VERIFY; no tests) |
+| bandmap | `/bandmap/` | Band map (mgmt cmd, templates) | **KEEP — confirmed 2026-07-24** |
+| membermap | `/member_map/` | Member map | ~~KEEP~~ → **PRUNED in Step 4** (owner asked to include it in the prune) |
 | user_photos | `/user_photos/` | S3 photo uploads | **KEEP** (S3/boto→boto3) |
 | shoutbox | `/shout/` | Shoutbox | **KEEP** |
 | smiley | `/smiley/` | Emoticons (templatetag) | **KEEP** (used via `smiley_tags`) |
@@ -38,7 +38,7 @@ per-app `templatetags/`, template references, management commands, models.
 | gcalendar | `/calendar/` | Google Calendar events | **REVIVE** (port `apiclient`/`httplib2`/`oauth2client` → modern `google-api-python-client` v2 + `google-auth`) |
 | oembed | `/oembed/` | oEmbed media embedding | **KEEP** (VERIFY usage; likely used by forum/markup) |
 | ygroup | `/ygroup/` | Read-only Yahoo Group archive (+search) | **KEEP** (archive of historical content; `__unicode__`, `django.core.urlresolvers` to fix) |
-| countdown | *(templatetag)* | Countdown widget in `base.html` | **KEEP** (used via `countdown_tags`) |
+| countdown | *(templatetag)* | Countdown widget in `base.html` | **KEEP — confirmed 2026-07-24** (used via `countdown_tags`) |
 | banners | *(templatetag)* | Banner ads/rotation | **KEEP** (used via `banner_tags`; VERIFY still used) |
 | bulletins | *(templatetag)* | Site bulletins/announcements | **KEEP** (used via `bulletin_tags`) |
 | **irc** | `/irc/` | IRC integration | **PRUNE** (user: not used) |
@@ -59,7 +59,11 @@ per-app `templatetags/`, template references, management commands, models.
   custom_search/queued_search/queues). See `search-stack.md`.
 
 ## Still to VERIFY (ideally against a production DB snapshot)
-- `contests`, `banners`, `membermap`, `oembed` — confirm still actively used
-  (row counts / recent activity) before final keep/prune.
+- `banners`, `oembed` — confirm still actively used (row counts / recent
+  activity) before final keep/prune.
+- **Resolved 2026-07-24:** `contests`, `countdown`, and `bandmap` are **KEPT**
+  (owner decision, taken during Step 11 planning because all three hold latin1
+  tables needing transcoding — pruning would have shrunk that job, so the call
+  was forced early). `membermap` was already **pruned in Step 4**.
 - Whether anything imports from `legacy` beyond its own commands (grep clean so
   far) before deletion.

@@ -32,7 +32,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [ ] **Step 16** — Email → transactional provider
 - [ ] **Step 17** — reCAPTCHA → Cloudflare Turnstile
 - [ ] **Step 18** — Revive `gcalendar` with modern Google libraries
-- [ ] **Step 19** — Retire `wiki`/MoinMoin; verify-then-prune `contests`/`banners`/`membermap`/`oembed`
+- [ ] **Step 19** — Retire `wiki`/MoinMoin; verify-then-prune `banners`/`oembed` (`contests`/`countdown`/`bandmap` confirmed KEEP 2026-07-24; `membermap` already pruned in Step 4)
 - [ ] **Step 20** — Production hardening (gunicorn/WhiteNoise/prod compose/backups) + Cloudflare front
 - [ ] **Step 21** — Deploy to new host + cutover + fallback
 
@@ -289,8 +289,12 @@ functional test for the calendar page.
 ### Step 19: Retire `wiki`/MoinMoin; verify-then-prune peripheral apps
 **Objective:** Complete pruning per the triage.
 **Guidance:** If confirmed, archive MoinMoin content, then remove the `wiki` app,
-`WikiMiddleware`, and `wiki.tasks.expire_cookies`. Verify usage of `contests`,
-`banners`, `membermap`, `oembed` against the snapshot; keep or prune each.
+`WikiMiddleware`, and `wiki.tasks.expire_cookies`. Verify usage of `banners` and
+`oembed` against the snapshot; keep or prune each. (`contests`, `countdown`, and
+`bandmap` were **confirmed KEEP on 2026-07-24** during Step 11 planning, since
+they hold latin1 tables the Postgres conversion must transcode; `membermap` was
+already pruned in Step 4.) Also carries the deferred `elsewhere` rework —
+`post_migrate` seeding as a real data migration, and possibly `network_id`→FK.
 **Tests:** App-boot tests without `wiki`; adjust/trim tests for any pruned apps;
 suite green.
 **Demo:** Site runs cleanly without the wiki bridge; INSTALLED_APPS reflects final

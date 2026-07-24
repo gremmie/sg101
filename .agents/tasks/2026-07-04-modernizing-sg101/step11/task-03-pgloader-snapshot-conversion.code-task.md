@@ -38,11 +38,13 @@ messages_flag            user_photos_photo
 ```
 
 These must be transcoded latin1→UTF8 on load by declaring the source encoding to
-pgloader, or the result is mojibake. `messages_flag` and `user_photos_photo` are
-live, user-facing data. The other six belong to apps that `app-triage.md` lists
-as prune candidates — **confirm with the project owner whether `contests`,
-`countdown`, and `bandmap` are being kept before investing in transcoding them.**
-Pruning first would remove six of the eight problem tables.
+pgloader, or the result is mojibake.
+
+**All eight tables are in scope.** `contests`, `countdown`, and `bandmap` were
+open questions in `app-triage.md`; the project owner **confirmed on 2026-07-24
+that all three are kept**, so there is no pruning shortcut here — every latin1
+table must be transcoded correctly. `messages_flag` and `user_photos_photo` are
+the most live of the eight, but none may be treated as throwaway.
 
 There is **no `utf8mb4` anywhere**, so 4-byte characters (emoji) cannot be stored
 today. Moving to Postgres `UTF8` is a genuine capability upgrade, not just a
@@ -91,13 +93,9 @@ implementation. Read additional references as needed for context.
 ## Dependencies
 - Task 01 (running Postgres service, driver, settings)
 - The production snapshot loaded into the MySQL `db` service
-- Owner decision on `contests` / `countdown` / `bandmap` retention (affects
-  whether 6 of the 8 latin1 tables need transcoding at all)
 
 ## Implementation Approach
-1. Confirm the keep/prune status of the three triage apps before writing the
-   encoding rules.
-2. Write a first-pass pgloader command file covering schema and data; run it and
+1. Write a first-pass pgloader command file covering schema and data; run it and
    read the summary carefully.
 3. Iterate on type mappings, encoding declarations, and zero-date handling until
    the run is clean with zero unexplained rejections.
@@ -115,11 +113,12 @@ implementation. Read additional references as needed for context.
      from an empty database produces the same result
 
 2. **Latin1 Tables Transcode Correctly**
-   - Given the 8 latin1 tables (or the subset surviving the prune decision)
+   - Given all 8 latin1 tables
    - When the conversion completes
-   - Then non-ASCII characters in `messages_flag` and `user_photos_photo` render
-     correctly in Postgres, verified by comparing specific rows containing
-     non-ASCII text against the MySQL source — not by assuming
+   - Then non-ASCII characters render correctly in Postgres in **every one of
+     them**, verified by comparing specific rows containing non-ASCII text
+     against the MySQL source — not by assuming. If a table contains no
+     non-ASCII text to compare, say so explicitly rather than passing it silently
 
 3. **Sequences Are Correct**
    - Given the converted database
