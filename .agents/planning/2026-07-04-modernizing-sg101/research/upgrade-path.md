@@ -57,7 +57,7 @@ Current stack (`requirements.txt`, `requirements_dev.txt`) → modern target:
 | redis 2.10.5 | redis-py 5.x | |
 | boto 2.13 | **boto3** (or `django-storages`) | rewrite `core/s3.py` (~30 lines). Works with S3 *or* Linode/DO S3-compatible object storage |
 | Pillow 2.7 | Pillow 11.x | API mostly stable; watch `Image.ANTIALIAS`→`Resampling` |
-| mysqlclient 1.4.6 | **drop** (→ `psycopg[binary]` 3 for Postgres) or keep if staying MySQL | tied to DB decision |
+| mysqlclient 1.4.6 | **drop** (→ **`psycopg2`** for Postgres; psycopg 3 needs Django 4.2, so Step 13 at the earliest) or keep if staying MySQL | tied to DB decision |
 | python-dateutil 1.5 | 2.9 | very old→current |
 | pytz 2015.2 | `zoneinfo` (Django 4+ default) | drop pytz eventually |
 | Markdown 2.5.1 | Markdown 3.x | extension API changed |

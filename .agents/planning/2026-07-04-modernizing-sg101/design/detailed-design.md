@@ -271,7 +271,8 @@ Each is a subsystem of work with clear inputs/outputs and a "done" bar.
 
 ### C5. Database migration (MySQL → PostgreSQL)
 - **Deliver:** snapshot analysis; `pgloader` conversion; Postgres settings
-  (`psycopg` 3); data-integrity verification.
+  (**`psycopg2`** — Django 3.2 requires it; psycopg 3 needs Django 4.2, so it's a
+  Step 13 candidate); data-integrity verification.
 - **Interface:** compose `db` service switches engine; Django migrations run on PG.
 - **Done:** suite green on Postgres; row counts/data verified vs. MySQL snapshot.
 

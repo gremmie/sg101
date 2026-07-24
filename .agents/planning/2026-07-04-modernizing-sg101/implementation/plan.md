@@ -189,11 +189,16 @@ Pillow, Markdown 3, etc. as needed). Clear deprecations.
 
 ### Step 11: Migrate MySQL → PostgreSQL (on 3.2 / Py3)
 **Objective:** Switch the database engine — a deliberate, well-tested step.
-**Guidance:** Add `psycopg` 3; parameterize DB via env (Step 3). Convert a
-snapshot with **`pgloader`** (well-documented, since it's new to the user);
-address charset/utf8mb4, case-sensitivity (usernames/emails/tags — add `CITEXT`/
-constraints), sequences. Run Django migrations on Postgres. CI gains a **Postgres
-service container**.
+**Guidance:** Add **`psycopg2`** (NOT psycopg 3 — Django 3.2's PostgreSQL backend
+imports `psycopg2` and fails without it; psycopg 3 support arrives in **Django
+4.2**, so revisit at Step 13. Python 3.7 caps psycopg2 at **2.9.9**; 2.9.10
+requires ≥3.8). Parameterize DB via env (Step 3). Convert a snapshot with
+**`pgloader`** (well-documented, since it's new to the user); address
+charset/utf8mb4, case-sensitivity (usernames/emails/tags), sequences. **For
+case-insensitivity prefer `__iexact` + functional unique indexes over Django's
+`CIText`/`CICharField`/`CIEmailField`/`CITextField` — those are deprecated in
+Django 4.2 and removed in 5.1, which Steps 13/14 walk straight into.** Run Django
+migrations on Postgres. CI gains a **Postgres service container**.
 **Tests:** Full suite green on **Postgres**; data-integrity checks (row counts,
 spot content) vs. the MySQL snapshot; keep sqlite for fast unit runs but add a
 Postgres CI job.
