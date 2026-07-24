@@ -13,7 +13,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.local')
 
 app = Celery('sg101')
 
-app.config_from_object('django.conf:settings')
+# namespace='CELERY': read only CELERY_-prefixed Django settings (the modern
+# lowercase config keys with that prefix), rather than scanning every setting.
+app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 # It's useful to have a debug task laying around:

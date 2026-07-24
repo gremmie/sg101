@@ -205,9 +205,12 @@ REDIS_DB = 0
 #######################################################################
 # Celery integration & settings
 #######################################################################
-BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1'
-BROKER_POOL_LIMIT = 10
-BROKER_TRANSPORT_OPTIONS = {
+# Celery reads these via config_from_object(..., namespace='CELERY'): each name
+# has its CELERY_ prefix stripped and lowercased to the modern setting (so
+# CELERY_BROKER_URL -> broker_url, CELERY_BEAT_SCHEDULE -> beat_schedule, etc.).
+CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1'
+CELERY_BROKER_POOL_LIMIT = 10
+CELERY_BROKER_TRANSPORT_OPTIONS = {
     'fanout_prefix': True,
     'fanout_patterns': True,
 }
@@ -215,13 +218,12 @@ BROKER_TRANSPORT_OPTIONS = {
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
-CELERY_IGNORE_RESULT = True
+CELERY_TASK_IGNORE_RESULT = True
 # Set this when we want results:
 #CELERY_RESULT_BACKEND = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1&new_join=1'
-CELERY_DISABLE_RATE_LIMITS = True
-CELERY_SEND_TASK_ERROR_EMAILS = True
+CELERY_WORKER_DISABLE_RATE_LIMITS = True
 
-CELERYBEAT_SCHEDULE = {
+CELERY_BEAT_SCHEDULE = {
     "potd": {
         "task": "potd.tasks.pick_potd",
         "schedule": crontab(minute=0, hour=0),

@@ -16,14 +16,14 @@ PASSWORD_HASHERS = [
 ]
 
 # Celery should always execute tasks immediately
-CELERY_ALWAYS_EAGER = True
+CELERY_TASK_ALWAYS_EAGER = True
 
-# Use a different database in Redis for tests
+# Use a different Redis database for tests (the app's own connection; the Celery
+# broker's db is the virtual_host on CELERY_BROKER_URL below).
 REDIS_DB = 14
-CELERY_REDIS_DB = 15
 # Bare-metal default; docker_test.py overrides this to reach the `redis` service
 # over TCP (the only way tests actually run now).
-BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
+CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
 
 DATABASES = {
     'default': {

@@ -52,7 +52,7 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
 REDIS_DB = 0
 
 # Celery broker over TCP (db 1 mirrors the legacy virtual_host=1).
-BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
+CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
 
 ALLOWED_HOSTS = ['*']
 

@@ -39,4 +39,4 @@ import os
 REDIS_UNIX_SOCKET = None
 REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
-BROKER_URL = 'redis://{host}:{port}/15'.format(host=REDIS_HOST, port=REDIS_PORT)
+CELERY_BROKER_URL = 'redis://{host}:{port}/15'.format(host=REDIS_HOST, port=REDIS_PORT)
