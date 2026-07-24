@@ -63,8 +63,10 @@ urlpatterns += [
     # same route with the token replaced by the literal 'set-password' (the
     # real one moves into the session), then serves the form there. That
     # placeholder matches the token pattern below, so it needs no change.
-    # Regex kept: the token has a specific two-part length-bounded shape.
-    re_path(r'^password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
+    # Regex kept: the token has a specific two-part length-bounded shape. The
+    # hash half is 32 chars -- half of a sha256 hexdigest, Django's default token
+    # algorithm since 3.1 (it was 20 under the old sha1 default).
+    re_path(r'^password/reset/confirm/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,32})/$',
         auth_views.PasswordResetConfirmView.as_view(
             template_name='accounts/password_reset_confirm.html',
             success_url=reverse_lazy('accounts-password_reset_success'),

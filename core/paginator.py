@@ -8,8 +8,7 @@ http://blog.elsdoerfer.name/2008/03/06/yet-another-paginator-digg-style/
 import math
 from functools import reduce
 from django.core.paginator import (
-    Paginator, QuerySetPaginator, Page, InvalidPage, EmptyPage,
-    PageNotAnInteger)
+    Paginator, Page, InvalidPage, EmptyPage, PageNotAnInteger)
 
 __all__ = (
     'DiggPaginator',
@@ -284,7 +283,8 @@ class DiggPage(Page):
                             " ".join(map(str, self.main_range)),
                             " ".join(map(str, self.trailing_range))]))
 
-class QuerySetDiggPaginator(DiggPaginator, QuerySetPaginator):
+# Backwards-compatible alias; equivalent to DiggPaginator.
+class QuerySetDiggPaginator(DiggPaginator):
     pass
 
 if __name__ == "__main__":

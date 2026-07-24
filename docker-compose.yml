@@ -1,4 +1,4 @@
-# Dockerized SG101 dev stack (Python 3.7 / Django 3.0).
+# Dockerized SG101 dev stack (Python 3.7 / Django 3.1).
 #
 # Five services:
 #   web    - Django dev server (the site), published on http://localhost:8000

@@ -2,6 +2,8 @@
 Local Django settings.
 
 """
+import importlib.util
+
 from sg101.settings.base import *
 
 DATABASES = {
@@ -19,20 +21,20 @@ DATABASES = {
 WIKI_COOKIE_DOMAIN = None
 
 # Django Debug Toolbar support
-if DEBUG:
-    try:
-        import debug_toolbar
-    except ImportError:
-        pass
-    else:
-        i = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
-        MIDDLEWARE.insert(i + 1,
-                'debug_toolbar.middleware.DebugToolbarMiddleware')
-        INSTALLED_APPS.append('debug_toolbar')
-        DEBUG_TOOLBAR_CONFIG = {
-            'DISABLE_PANELS': set(),
-            'JQUERY_URL': '',
-        }
+#
+# Probe for the package with find_spec rather than importing it: debug-toolbar
+# 3.x builds its URLconf (and reads settings) at package-import time, and this
+# runs while the settings module is still being constructed -- importing it here
+# would re-enter settings loading and blow up. find_spec only locates the module.
+if DEBUG and importlib.util.find_spec('debug_toolbar') is not None:
+    i = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
+    MIDDLEWARE.insert(i + 1,
+            'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INSTALLED_APPS.append('debug_toolbar')
+    DEBUG_TOOLBAR_CONFIG = {
+        'DISABLE_PANELS': set(),
+        'JQUERY_URL': '',
+    }
 
 # Logging configuration
 

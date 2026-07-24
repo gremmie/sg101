@@ -1,4 +1,4 @@
-# SG101 image: Python 3.7 / Django 3.0.
+# SG101 image: Python 3.7 / Django 3.1.
 #
 # The interpreter crossed from Python 2.7 to 3.7 back at the Python 3 flip; the
 # Django pin then keeps advancing rung by rung as we climb the LTS ladder (now on
