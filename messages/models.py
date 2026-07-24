@@ -5,7 +5,6 @@ import datetime
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 
@@ -31,7 +30,6 @@ class MessageManager(models.Manager):
         return self.filter(receiver=user, read_date__isnull=True).count()
 
 
-@python_2_unicode_compatible
 class Message(models.Model):
     """The Message is a model for a private message between users."""
     sender = models.ForeignKey(User, related_name='sender',
@@ -93,7 +91,6 @@ class OptionsManager(models.Manager):
         return opts
 
 
-@python_2_unicode_compatible
 class Options(models.Model):
     """Options is a model for user private message options."""
     user = models.ForeignKey(User, editable=False, on_delete=models.CASCADE)
@@ -109,7 +106,6 @@ class Options(models.Model):
         verbose_name_plural = "Options"
 
 
-@python_2_unicode_compatible
 class Flag(models.Model):
     """The Flag model is used to represent when a receiver of a private message
     has flagged the message for spam or abuse.

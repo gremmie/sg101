@@ -5,7 +5,6 @@ Bulletins allow the sited admins to display and manage important notices for the
 import datetime
 from django.db import models
 from django.db.models import Q
-from django.utils.encoding import python_2_unicode_compatible
 
 
 class BulletinManager(models.Manager):
@@ -19,7 +18,6 @@ class BulletinManager(models.Manager):
                 Q(end_date__isnull=True) | Q(end_date__gte=now))
 
 
-@python_2_unicode_compatible
 class Bulletin(models.Model):
     """Model to represent site bulletins."""
     title = models.CharField(max_length=200)

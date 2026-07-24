@@ -9,13 +9,11 @@ from django.contrib.auth.models import User, Group
 from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 from oembed.models import Oembed
 
 
-@python_2_unicode_compatible
 class Category(models.Model):
     """
     Forums belong to a category, whose access may be assigned to groups.
@@ -81,7 +79,6 @@ class ForumManager(models.Manager):
         return qs
 
 
-@python_2_unicode_compatible
 class Forum(models.Model):
     """
     A forum is a collection of topics.
@@ -172,7 +169,6 @@ class Forum(models.Model):
         flv.save()
 
 
-@python_2_unicode_compatible
 class Topic(models.Model):
     """
     A topic is a thread of discussion, consisting of a series of posts.
@@ -281,7 +277,6 @@ class Topic(models.Model):
         }
 
 
-@python_2_unicode_compatible
 class Post(models.Model):
     """
     A post is an instance of a user's single contribution to a topic.
@@ -346,7 +341,6 @@ class Post(models.Model):
         return self.body
 
 
-@python_2_unicode_compatible
 class FlaggedPost(models.Model):
     """This model represents a user flagging a post as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -363,7 +357,6 @@ class FlaggedPost(models.Model):
         return format_html('<a href="{}">Post</a>', self.post.get_absolute_url())
 
 
-@python_2_unicode_compatible
 class ForumLastVisit(models.Model):
     """
     This model records the last time a user visited a forum.
@@ -390,7 +383,6 @@ class ForumLastVisit(models.Model):
         return self.begin_date == self.end_date
 
 
-@python_2_unicode_compatible
 class TopicLastVisit(models.Model):
     """
     This model records the last time a user read a topic.
@@ -418,7 +410,6 @@ class TopicLastVisit(models.Model):
         self.last_visit = datetime.datetime.now()
 
 
-@python_2_unicode_compatible
 class Attachment(models.Model):
     """
     This model is a "through" table for the M2M relationship between forum

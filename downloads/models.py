@@ -8,12 +8,10 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
 from django.template.defaultfilters import filesizeformat
-from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 
 
-@python_2_unicode_compatible
 class Category(models.Model):
     """Downloads belong to categories."""
     title = models.CharField(max_length=64)
@@ -85,7 +83,6 @@ class DownloadBase(models.Model):
         super(DownloadBase, self).save(*args, **kwargs)
 
 
-@python_2_unicode_compatible
 class PendingDownload(DownloadBase):
     """This model represents pending downloads created by users. These pending
     downloads must be approved by an admin before they turn into "real"
@@ -98,7 +95,6 @@ class PendingDownload(DownloadBase):
         return self.title
 
 
-@python_2_unicode_compatible
 class Download(DownloadBase):
     """Model to represent a download."""
     hits = models.IntegerField(default=0)
@@ -136,7 +132,6 @@ class AllowedExtensionManager(models.Manager):
         return self.values_list('extension', flat=True)
 
 
-@python_2_unicode_compatible
 class AllowedExtension(models.Model):
     """Model to represent the list of allowed file extensions."""
     extension = models.CharField(max_length=8, help_text="e.g. .txt")
@@ -150,7 +145,6 @@ class AllowedExtension(models.Model):
         ordering = ('extension', )
 
 
-@python_2_unicode_compatible
 class VoteRecord(models.Model):
     """Model to record the date that a user voted on a download."""
     download = models.ForeignKey(Download, on_delete=models.CASCADE)

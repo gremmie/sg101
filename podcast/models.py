@@ -6,7 +6,6 @@ import datetime
 
 from django.urls import reverse
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 
 EXPLICIT_CHOICES = [
@@ -16,7 +15,6 @@ EXPLICIT_CHOICES = [
 ]
 
 
-@python_2_unicode_compatible
 class Channel(models.Model):
     """Model to represent the Channel properties"""
 
@@ -38,7 +36,6 @@ class Channel(models.Model):
         return self.title
 
 
-@python_2_unicode_compatible
 class Item(models.Model):
     """Model to represent a channel item"""
     channel = models.ForeignKey(Channel, on_delete=models.CASCADE)

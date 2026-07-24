@@ -5,10 +5,8 @@ Models for the banners application.
 import datetime
 
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 
-@python_2_unicode_compatible
 class Campaign(models.Model):
     """
     A model to represent an ad or banner campaign.
@@ -39,7 +37,6 @@ def banner_upload_to(instance, filename):
     return "banners/%s/%s" % (instance.campaign.slug, filename)
 
 
-@python_2_unicode_compatible
 class Banner(models.Model):
     """
     A model to represent a banner.

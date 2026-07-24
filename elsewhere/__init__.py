@@ -12,8 +12,8 @@ Python 3 interpreter flip because the fork is tiny, frozen upstream, and needed 
 few Py3 patches -- and vendoring drops the editable-git-in-Docker machinery.
 
 Changes from upstream:
-  - Python 3: django.core.urlresolvers -> django.urls, __unicode__ ->
-    @python_2_unicode_compatible/__str__, dict.has_key() -> `in`.
+  - Python 3: django.core.urlresolvers -> django.urls, __unicode__ -> __str__,
+    dict.has_key() -> `in`.
   - Trimmed to what SG101 actually uses: models + admin + the default-network data
     + the static/ icons (referenced by SG101's bio/elsewhere_links templates). The
     fork's own views.py, urls.py, and templates/elsewhere/example.html were dropped

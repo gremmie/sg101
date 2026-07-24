@@ -10,7 +10,6 @@ from django.utils.html import format_html
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
 
 from core.markup import site_markup
 
@@ -30,7 +29,6 @@ class CommentManager(models.Manager):
         return qs
 
 
-@python_2_unicode_compatible
 class Comment(models.Model):
     """My own version of a Comment class that can attach comments to any other model."""
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -86,7 +84,6 @@ class Comment(models.Model):
     not_removed.boolean = True
 
 
-@python_2_unicode_compatible
 class CommentFlag(models.Model):
     """This model represents a user flagging a comment as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)

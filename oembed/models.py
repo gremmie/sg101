@@ -4,10 +4,8 @@ Models for the oembed application.
 import datetime
 
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 
-@python_2_unicode_compatible
 class Provider(models.Model):
     """
     This model described an oEmbed provider.
@@ -27,7 +25,6 @@ class Provider(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Oembed(models.Model):
     """
     This model represents stored embedded content retrieved from an oEmbed

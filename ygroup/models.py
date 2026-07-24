@@ -4,10 +4,8 @@ from the old Yahoo Group.
 """
 from django.urls import reverse
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 
-@python_2_unicode_compatible
 class Thread(models.Model):
     title = models.CharField(max_length=255)
     creation_date = models.DateTimeField()
@@ -27,7 +25,6 @@ class Thread(models.Model):
         return reverse('ygroup-thread_view', args=[self.pk])
 
 
-@python_2_unicode_compatible
 class Post(models.Model):
     thread = models.ForeignKey(
             Thread, null=True, blank=True,

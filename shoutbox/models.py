@@ -7,12 +7,10 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils.html import escape, urlize, format_html
-from django.utils.encoding import python_2_unicode_compatible
 
 from smiley.utils import smilify_html
 
 
-@python_2_unicode_compatible
 class Shout(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     shout_date = models.DateTimeField(blank=True)
@@ -38,7 +36,6 @@ class Shout(models.Model):
         super(Shout, self).save(*args, **kwargs)
 
 
-@python_2_unicode_compatible
 class ShoutFlag(models.Model):
     """This model represents a user flagging a shout as inappropriate."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)

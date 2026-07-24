@@ -8,7 +8,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models import Sum
-from django.utils.encoding import python_2_unicode_compatible
 
 
 class DonationManager(models.Manager):
@@ -93,7 +92,6 @@ class DonationManager(models.Manager):
         return qs
 
 
-@python_2_unicode_compatible
 class Donation(models.Model):
     """Model to represent a donation to the website."""
 

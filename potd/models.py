@@ -13,7 +13,6 @@ from django.contrib.auth.models import User
 from django.core.validators import validate_comma_separated_integer_list
 from django.core.files.base import ContentFile
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
 
 POTD_THUMB_WIDTH = 120
 
@@ -26,7 +25,6 @@ def scale_image(image):
     return image.resize((POTD_THUMB_WIDTH, new_height), Image.ANTIALIAS)
 
 
-@python_2_unicode_compatible
 class Photo(models.Model):
     """Model to represent a POTD"""
     photo = models.ImageField(upload_to='potd/%Y/%m/%d')
@@ -114,7 +112,6 @@ class CurrentManager(models.Manager):
         return None
 
 
-@python_2_unicode_compatible
 class Current(models.Model):
     """This model simply stores the current POTD."""
     potd = models.ForeignKey(Photo, on_delete=models.CASCADE)
@@ -166,7 +163,6 @@ class SequenceManager(models.Manager):
                 s.save()
 
 
-@python_2_unicode_compatible
 class Sequence(models.Model):
     """This model stores the sequence of photos for the POTD."""
     seq = models.CharField(max_length=4096,

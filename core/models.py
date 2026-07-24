@@ -2,10 +2,8 @@
 This file contains the core Models used in gpp
 """
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 
-@python_2_unicode_compatible
 class Statistic(models.Model):
     """
     This model keeps track of site statistics. Currently, the only statistic

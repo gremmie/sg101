@@ -8,7 +8,6 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils.html import format_html
 from django.contrib.sites.models import Site
-from django.utils.encoding import python_2_unicode_compatible
 
 CACHE_TIMEOUT = 60 * 60      # seconds
 
@@ -63,7 +62,6 @@ class SmileyManager(models.Manager):
         return regexes
 
 
-@python_2_unicode_compatible
 class Smiley(models.Model):
     image = models.ImageField(upload_to='smiley/images/')
     title = models.CharField(max_length=32)
