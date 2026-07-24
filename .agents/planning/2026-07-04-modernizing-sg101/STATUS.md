@@ -3,14 +3,36 @@
 **Last updated:** 2026-07-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
+## INTERLUDE — drop the `six` compatibility shim from application code (2026-07-24)
+
+Standalone cleanup between Steps 10 and 11 — Step 7 residue, not part of either. All
+17 application imports of `six` were `six.moves.urllib.{parse,request,error}` and
+`six.StringIO`, which on Python 3 alias the standard library exactly; swapped to
+`urllib.*` / `io.StringIO` and merged into each file's stdlib import group. No
+behavior change. 567 tests green on a fresh image, `check` + `makemigrations --check`
+clean, all 17 touched modules import clean.
+
+**The `six==1.16.0` pin stays** — four installed packages still require it
+(`bleach`, `html5lib`, `python-dateutil`, `python-memcached`), so removing the pin
+doesn't remove the package, it just lets it float (a rebuild without it drifted to
+1.17.0). Same reasoning as the `sqlparse` pin: transitive, but pinned for a
+reproducible build. The comment now marks it transitive-only. six leaves the image
+for good when those four are bumped or dropped — `bleach`/`html5lib` are the
+deliberately-deferred Step 10 pins (Step 13), `python-memcached` disappears at the
+memcached→Redis consolidation.
+
+**Related residue still present, deliberately not touched here:** several modules
+keep a `from __future__ import print_function` line (inert on Py3). Sweep it with
+the Step 13 deprecation backlog.
+
 ## EXECUTION — Step 10 (Django 2.2 → 3.2 LTS + Celery 5, Python 3) — DONE (2026-07-24)
 
 Staged 2.2→3.0→3.1→3.2 (same doctrine as Steps 6/9), then Celery 4.4→5.2. Now on
 **Django 3.2.25 LTS + celery 5.2.7**, still Python 3.7. **567 tests green, 5
 skipped** on the freshly-built image; `manage.py check` + `makemigrations --check`
 clean; full live smoke (site, forums, news, podcast, links, search, admin, both
-password-reset flows, debug toolbar, celery worker + beat) all serve. **NOT pushed
-yet** — Brian pushes his own remotes.
+password-reset flows, debug toolbar, celery worker + beat) all serve. **Pushed to
+`modernize`; CI green on GitHub (2026-07-24).**
 
 **Prep was a no-op for the 3.0 removals** (static scan + runtime warning capture on
 2.2 found nothing: no `django.utils.six`, no `cookie_date`/`xreadlines`, staticfiles
@@ -92,14 +114,14 @@ rendering) and belongs in its own deliberate step, not this upgrade.
 `force_text`/`ugettext_lazy`/`urlquote` (core/markup, elsewhere, messages tags), and
 passing None for middleware `get_response` (tests). elsewhere migrations/FK refactor at
 Step 11/19; `AutoCompleteUserInput` dead-code deletion (Step 19); `mysql.W002`
-strict-mode (Step 11). **NOT pushed yet** — Brian pushes his own remotes.
+strict-mode (Step 11). **Pushed; CI green (2026-07-24).**
 
 ## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — DONE (2026-07-22)
 
 Staged 1.11→2.0→2.1→2.2 (same doctrine as Step 6; Brian confirmed). **All four
 rungs done and committed, plus the deferred `url()`→`path()` migration — Step 9
-is complete.** Now on **Django 2.2.28**, 567 tests green, 5 skipped. **NOT pushed
-yet** — Brian pushes his own remotes.
+is complete.** Now on **Django 2.2.28**, 567 tests green, 5 skipped. **Pushed; CI
+green on GitHub (2026-07-22) — this cleared the whole unpushed backlog, Steps 6–9.**
 
 **Prep done first, on 1.11, so each version bump stayed a clean isolated diff:**
 - **A (`226d4e6`)** — 49 `is_authenticated()` call sites across 21 files → property
@@ -228,14 +250,14 @@ toolbar) all serve; celery worker + beat boot clean.
 (Step 11); `@python_2_unicode_compatible` removable once Py2 support is formally
 dropped; celery uppercase-settings rename at the celery-5 step; `AutoCompleteUserInput`
 dead-code deletion (Step 19); bleach/kombu third-party deprecations at their deps steps.
-**NOT pushed yet** — Brian pushes his own remotes.
+**Pushed; CI green (2026-07-22).**
 
 ## EXECUTION — Step 8 (flip interpreter to Python 3.7, Django 1.11) ⭐ — DONE (2026-07-19)
 
 The central milestone: SG101 runs on **Python 3** for the first time, still on the
 Django 1.11 LTS rung. **559 tests green under Py3.7, 5 skipped (S3), 84% coverage**
 via the exact CI command; live smoke green on the real production snapshot (site +
-celery worker + beat). NOT pushed yet (Brian pushes his own remotes).
+celery worker + beat). Pushed with the Step 9 backlog; CI green (2026-07-22).
 
 **Image / deps:**
 - Dockerfile `python:2.7` → `python:3.7`; dropped the Debian-archive / `pip<21` /
