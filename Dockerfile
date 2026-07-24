@@ -1,9 +1,9 @@
-# SG101 image: Python 3.7 / Django 3.1.
+# SG101 image: Python 3.7 / Django 3.2.
 #
 # The interpreter crossed from Python 2.7 to 3.7 back at the Python 3 flip; the
 # Django pin then keeps advancing rung by rung as we climb the LTS ladder (now on
-# the 3.x line, en route to 3.2 LTS). The exact pins live in the requirements
-# files -- this base image only fixes the Python minor.
+# 3.2 LTS). The exact pins live in the requirements files -- this base image only
+# fixes the Python minor.
 #
 # python:3.7 is EOL and frozen on Docker Hub (Debian Bullseye based). If a fresh
 # build ever can't reach Bullseye's apt mirrors, they've moved to

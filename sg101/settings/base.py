@@ -105,6 +105,11 @@ TEMPLATES = [
     },
 ]
 
+# Keep implicit primary keys as 32-bit AutoField (the existing schema); without
+# this, Django 3.2+ warns (models.W042) and would default new models to
+# BigAutoField. Revisiting the width is a deliberate schema decision for later.
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.admindocs',

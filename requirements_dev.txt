@@ -1,4 +1,4 @@
-# Dev/test requirements -- Python 3.7 / Django 3.1. Installs the runtime pins
+# Dev/test requirements -- Python 3.7 / Django 3.2 LTS. Installs the runtime pins
 # plus the tools needed to run the test suite and dev server. (In Docker these
 # same tools are inlined into requirements-docker.txt.)
 #
