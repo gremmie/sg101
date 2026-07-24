@@ -1,5 +1,5 @@
 """Common HTML related functions"""
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 import bleach
 from lxml import etree

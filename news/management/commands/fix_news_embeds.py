@@ -4,8 +4,8 @@ news stories.
 """
 from __future__ import print_function
 
-from six.moves.urllib.parse import urlparse
-from six.moves.urllib.error import HTTPError
+from urllib.parse import urlparse
+from urllib.error import HTTPError
 
 from django.core.management.base import BaseCommand
 import lxml.html

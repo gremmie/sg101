@@ -8,11 +8,9 @@ from contextlib import closing
 import json
 import gzip
 from io import BytesIO
-
-from six.moves.urllib.parse import urlencode
-from six.moves.urllib.request import Request, urlopen
-from six.moves.urllib.error import HTTPError
-
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 
 USER_AGENT = 'gremmies python oembed'

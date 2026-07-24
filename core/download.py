@@ -6,7 +6,7 @@ import mimetypes
 import os
 import shutil
 import tempfile
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 import requests
 

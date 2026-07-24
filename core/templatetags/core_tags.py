@@ -7,7 +7,7 @@ import datetime
 import glob
 import os
 import random
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 
 from django import template
 from django.conf import settings

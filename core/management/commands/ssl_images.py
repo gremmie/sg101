@@ -13,7 +13,7 @@ import logging
 import os
 import re
 import signal
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 import uuid
 
 from django.core.management.base import BaseCommand, CommandError

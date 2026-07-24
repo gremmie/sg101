@@ -1,7 +1,7 @@
 """Forms for the user_photos application."""
 import hashlib
 import os.path
-from six.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 from django import forms
 from django.conf import settings

@@ -1,7 +1,7 @@
 """
 Tests for the donations application.
 """
-from six.moves.urllib.parse import parse_qs
+from urllib.parse import parse_qs
 from decimal import Decimal
 import datetime
 

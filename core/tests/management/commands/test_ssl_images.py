@@ -1,7 +1,7 @@
 """Unit tests for the ssl_images management command."""
 import re
 import unittest
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 import mock
 from django.conf import settings

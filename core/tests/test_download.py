@@ -1,5 +1,5 @@
 import unittest
-from six.moves.urllib.parse import urlparse, ParseResult
+from urllib.parse import urlparse, ParseResult
 
 from mock import call, patch, mock_open, Mock
 

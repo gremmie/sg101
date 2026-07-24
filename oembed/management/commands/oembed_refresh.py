@@ -9,8 +9,7 @@ import datetime
 import logging
 import os.path
 import re
-
-from six.moves.urllib.error import HTTPError, URLError
+from urllib.error import HTTPError, URLError
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
