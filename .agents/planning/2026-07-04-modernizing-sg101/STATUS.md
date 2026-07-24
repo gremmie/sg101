@@ -1,7 +1,98 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
+
+## EXECUTION — Step 10 (Django 2.2 → 3.2 LTS + Celery 5, Python 3) — DONE (2026-07-24)
+
+Staged 2.2→3.0→3.1→3.2 (same doctrine as Steps 6/9), then Celery 4.4→5.2. Now on
+**Django 3.2.25 LTS + celery 5.2.7**, still Python 3.7. **567 tests green, 5
+skipped** on the freshly-built image; `manage.py check` + `makemigrations --check`
+clean; full live smoke (site, forums, news, podcast, links, search, admin, both
+password-reset flows, debug toolbar, celery worker + beat) all serve. **NOT pushed
+yet** — Brian pushes his own remotes.
+
+**Prep was a no-op for the 3.0 removals** (static scan + runtime warning capture on
+2.2 found nothing: no `django.utils.six`, no `cookie_date`/`xreadlines`, staticfiles
+tags already swept in Step 9, no removed settings). Each rung surfaced its own
+breakers instead — a good argument for the rung-by-rung method.
+
+**`python_2_unicode_compatible` removal (`bce37e7`) — prep, its own commit.** All 26
+models.py imported `django.utils.encoding.python_2_unicode_compatible`, **removed in
+3.0** (I'd mis-filed it as a 4.0 removal; the 3.0 rung caught it). It's a no-op under
+Py3 and the classes already have real `__str__`, so a scripted removal of the
+decorator + import across all 26 (the Step 9 watch-item, now forced). elsewhere's
+vendoring note updated to match.
+
+**Rung 1 — 3.0.14 (`800da53`):** two behavior changes. (1) `django.utils.html.escape()`
+now defers to stdlib `html.escape()`, rendering `'` as `&#x27;` not `&#39;` — updated
+3 test assertions (messages self-send/report, accounts password mismatch); output is
+equivalent. (2) **3.0 enforces a model field's `choices` even when the list is empty**
+(2.2 treated empty as "no choices"). The elsewhere app froze
+`SocialNetworkProfile`/`InstantMessengerProfile.network_id` choices at import time —
+*before* its `post_migrate` hook (`fill_db`) populates the network tables — so on a
+fresh DB they froze `[]` and every valid network was rejected (`ModelForm._post_clean`
+→ `instance.full_clean()` validates against the frozen model-field choices, which the
+form-field override couldn't fix). Fix: **choices are dynamic data, so move them off
+the model field and onto the form**, populated from the live data in `__init__`
+(idiomatic). No schema/migration impact (elsewhere has no migrations). **Deeper
+elsewhere modernization — real migrations + data-migration seeding, maybe
+`network_id`→FK — deferred to Step 11/19** (see the task; do NOT smuggle a schema
+refactor into an upgrade rung, and it collides with the Postgres move).
+
+**Rung 2 — 3.1.14 (`d33552d`):** debug-toolbar 2.2→3.2.4 (2.2 caps at Django 3.0).
+Three fixes. (1) `django.core.paginator.QuerySetPaginator` (a deprecated Paginator
+alias) **removed in 3.1** — `core/paginator.py` used it only as a base of
+`QuerySetDiggPaginator`, which already inherits Paginator via DiggPaginator, so dropped
+the redundant base (public name kept). (2) **3.1 defaults `DEFAULT_HASHING_ALGORITHM`
+to sha256**, so the password-reset token's hash half is now 32 chars (half a sha256
+hexdigest) not 20 (sha1) — widened the reset-confirm URL token regex `{1,20}`→`{1,32}`.
+(3) **debug-toolbar 3.x builds its URLconf — and reads settings — at package-import
+time**; `local.py` probed availability with `import debug_toolbar` *while the settings
+module was still loading*, so that settings access re-entered settings construction and
+tripped 3.1's new empty-`SECRET_KEY` check, crashing the dev server. Probe with
+`importlib.util.find_spec` instead (never executes the package). **Prod-cutover note:**
+the sha256 default invalidates old sessions/reset-tokens signed under sha1 at deploy —
+fine for the single Step-21 cutover (users re-login); the transitional
+`DEFAULT_HASHING_ALGORITHM='sha1'` exists if a rolling deploy is ever needed.
+
+**Rung 3 — 3.2.25 LTS (`6326ef5`):** two fixes. (1) 3.2 warns (`models.W042`) on every
+implicit PK and would default new models to `BigAutoField` — set
+`DEFAULT_AUTO_FIELD='django.db.models.AutoField'` in base settings to keep the existing
+32-bit integer PKs (widening is a deliberate schema call for later, not upgrade churn).
+(2) **3.2 gives the admin a catch-all view** that redirects anonymous users to login
+for any unknown `/admin/` path, so `core/tests/test_urls.py`'s "retired admin reset
+route 404s" check saw a 302 — log the test in as staff (the catch-all raises the real
+404 for authenticated users). `makemigrations --check` stays clean.
+
+**Celery 4.4→5.2 (`fd1aebd`):** celery 5.2.7 (last line on Py3.7; 5.3 needs 3.8+) +
+kombu 5.2.4/amqp 5.1.1/vine 5.0.0. **celery 5 drops the uppercase-settings compat**
+(the deferred Step-8 item), so config moved to the **`CELERY_` namespace**:
+`celery.py` uses `config_from_object(..., namespace='CELERY')` and every key renamed to
+its lowercase-with-prefix form (`CELERY_BROKER_URL`→`broker_url`,
+`CELERYBEAT_SCHEDULE`→`CELERY_BEAT_SCHEDULE`→`beat_schedule`,
+`CELERY_ALWAYS_EAGER`→`CELERY_TASK_ALWAYS_EAGER`,
+`CELERY_IGNORE_RESULT`→`CELERY_TASK_IGNORE_RESULT`,
+`CELERY_DISABLE_RATE_LIMITS`→`CELERY_WORKER_DISABLE_RATE_LIMITS`, BROKER_* keys gain the
+prefix). Dropped `CELERY_SEND_TASK_ERROR_EMAILS` (removed in celery 4) and the unused
+`CELERY_REDIS_DB`. **`pytz`→2021.3** (celery 5.2 needs ≥2021.3). **importlib-metadata
+stays capped <5.0**: kombu 5.2's entry-point shim still calls `entry_points().get()`,
+removed in importlib-metadata 5 (same class of bug as Step 8's kombu 4.6; kombu 5.3
+fixes it but needs Py3.8+). Verified worker+beat boot and every namespaced setting
+resolves to its lowercase key.
+
+**Deliberately NOT done (orthogonal to the LTS climb, left at working pins):** Pillow
+6.2.2, Markdown 2.6.11, bleach 3.1.5. Each is a real behavioral/API change (bleach 3.1
+is the last line keeping the `styles=` kwarg `core/html.py` passes; Markdown 3 changes
+rendering) and belongs in its own deliberate step, not this upgrade.
+
+**Watch items beyond Step 10:** RemovedInDjango40Warnings are the Step-13 (4.x) backlog
+— `request.is_ajax()` (user_photos/views, core/middleware), `{% ifequal %}`/
+`{% ifnotequal %}` templates, `Signal(providing_args=...)` (forums/bio signals),
+`force_text`/`ugettext_lazy`/`urlquote` (core/markup, elsewhere, messages tags), and
+passing None for middleware `get_response` (tests). elsewhere migrations/FK refactor at
+Step 11/19; `AutoCompleteUserInput` dead-code deletion (Step 19); `mysql.W002`
+strict-mode (Step 11). **NOT pushed yet** — Brian pushes his own remotes.
 
 ## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — DONE (2026-07-22)
 
