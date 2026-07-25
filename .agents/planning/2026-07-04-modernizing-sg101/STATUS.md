@@ -5,6 +5,74 @@
 
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — IN PROGRESS (started 2026-07-24)
 
+**Task order changed:** 04 runs before 02 and 03. Task 01 found that nothing can
+create a fresh database on Postgres until every app has migrations (below), so
+04 is a prerequisite, not a successor. Its own spec expected the converted
+database from 03 to diff against; the real production schema in MySQL is what
+pgloader will convert, so the audit was done there instead and gets re-verified
+against the converted tables at 03/05.
+
+### Task 04 — backfill initial migrations for the 21 unmigrated apps — DONE
+
+Initial migrations generated for all 21; **all 26 apps now have a `migrations/`
+package** and nothing relies on `run-syncdb`. No bytes-literal regression (the
+`c76f920` problem); no model changed.
+
+**The audit found no structural drift** — full report in
+`research/schema-drift-audit.md`. Method: build `sg101_frommigrations` from the
+migrations on the *same* MySQL server and diff `information_schema` against the
+production snapshot, avoiding hand-rolled cross-engine type mapping. Result:
+**0 missing columns, 0 extra columns, foreign keys identical**. That is a
+genuinely good outcome for fifteen years of hand-run `ALTER`s. The 75 column
+differences are vintage, not drift: 69 are `datetime`→`datetime(6)` (MySQL 5.6+
+microseconds — hits migrated apps and Django's own tables equally, and vanishes
+on Postgres), 1 is `char(2)`/`varchar(2)` on `bio_userprofile.country`, 2 are
+database-level defaults on `news_*.priority` that Django never emits. The 14
+extra production indexes are all a redundant index on the leading column of a
+composite unique index (old Django did that for FK columns on MySQL). **Two
+items need an owner decision:**
+
+1. **`varchar(75)` vs `varchar(254)` on 3 email columns** (`accounts_illegalemail
+   .email`, `accounts_pendinguser.email`, `podcast_channel.owner_email`) — real
+   drift. Django widened `EmailField` 75→254 in 1.8; `auth_user.email` got it
+   via Django's own migration, these three never did because their apps had no
+   migrations. Nothing at risk today (0/1/1 rows, longest 25 chars; longest
+   address in the whole database is 47) but truncation is silent. Recommend
+   widening during the conversion — pgloader copies the MySQL width, so it needs
+   an explicit step.
+2. **`auth.0012_alter_user_first_name_max_length` is unapplied** on the
+   production database (`first_name` still `varchar(30)`). Not drift and not from
+   this task — it shipped with Django 3.2 and was missed in Step 10. Left pending
+   deliberately so "faking changes nothing" stayed literally true. It's a real
+   `ALTER` on 15,227 rows; cleanest is to apply it during the conversion.
+
+**Cutover gotcha, now in the runbook:** `forums/0001_initial` has declared
+`('oembed', '__first__')` since 2015 — inert while oembed had no migrations, and
+the moment oembed got one Django's `check_consistent_history` refused **every**
+`migrate` command on the existing database (`InconsistentMigrationHistory`).
+`--fake` can't fix it (the check runs first); the one-time unlock is
+`MigrationRecorder(connection).record_applied('oembed', '0001_initial')`, safe
+because oembed's tables were verified against the models first. Any database
+carrying the old history needs the same step.
+
+**Faking changed nothing, demonstrated not asserted:** column definitions
+identical before/after (551 compared), indexes identical (261 compared), and
+across all 91 tables **the only row-count change is `django_migrations` 40 → 61**
+— exactly the 21 initials. Data intact (15,227 users / 463,221 posts / 35,692
+topics).
+
+**Both build paths agree:** on Postgres, a syncdb-built schema and a
+migrations-built one are **identical** — 0 column differences, 0 index
+differences. And a fresh Postgres database now builds from a **single plain
+`migrate`**, so task 01's phase-ordering helper (`tools/create_pg_schema.py`) and
+the clone-plus-`--keepdb` test-database dance are both **deleted**; the suite
+creates its own test database normally now. 567 tests green on Postgres and on
+sqlite.
+
+**`makemigrations --check` finally means something** — it was silently covering
+5 apps of 26. Verified clean project-wide and per-app, and **added to CI** as its
+own step with a comment recording that its coverage is now whole-project.
+
 ### Task 01 — stand up PostgreSQL and run the suite against it — DONE
 
 **Shipped:** `postgres:16` service in Compose (named volume, healthcheck, 5432 on

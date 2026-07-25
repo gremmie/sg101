@@ -113,22 +113,13 @@ DB_ENGINE=postgresql docker compose up      # or put DB_ENGINE=postgresql in .en
 **Create the schema** on the empty `postgres` service (once, or again after
 `docker compose down -v`):
 ```
-docker compose exec -e DB_ENGINE=postgresql web python tools/create_pg_schema.py
+docker compose exec -e DB_ENGINE=postgresql web python manage.py migrate
 ```
-That script exists because a plain `migrate --run-syncdb` can't build this
-schema on Postgres — most apps have no migrations, and their tables and the
-migrated ones have to be created in a specific order. Its docstring explains the
-ordering; it goes away once every app has migrations.
 
 **Run the suite against Postgres:**
 ```
-docker compose exec postgres psql -U sg101 -d postgres -c "DROP DATABASE IF EXISTS test_sg101" -c "CREATE DATABASE test_sg101 TEMPLATE sg101"
-docker compose exec web python manage.py test --settings=sg101.settings.docker_test_pg --keepdb
+docker compose exec web python manage.py test --settings=sg101.settings.docker_test_pg
 ```
-The clone-and-keepdb dance is the same story: Django builds a test database with
-one `migrate --run-syncdb` call, which Postgres rejects, so the test database is
-cloned from the schema built above instead. Once the apps have migrations this
-collapses back to a plain `manage.py test --settings=sg101.settings.docker_test_pg`.
 
 ---
 
@@ -161,8 +152,6 @@ collapses back to a plain `manage.py test --settings=sg101.settings.docker_test_
   name, and port, so the settings modules never hardcode an engine.
 - **`sg101/settings/docker_test.py`** — test settings (sqlite + Redis over TCP);
   **`docker_test_pg.py`** — the same suite against PostgreSQL.
-- **`tools/create_pg_schema.py`** — builds the schema on an empty Postgres
-  database (see section 6).
 - **`snapshots/`** — where your DB dumps live (git-ignored).
 
 ## Troubleshooting

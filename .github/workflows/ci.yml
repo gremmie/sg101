@@ -25,6 +25,17 @@ jobs:
       - name: Build the image (Py3.7 / Django 3.2)
         run: docker compose build web
 
+      # Every app has migrations now, so this gate finally covers the whole
+      # project. It used to be checking 5 apps out of 26 without saying so: a
+      # blanket makemigrations skips apps that have no migrations package, and
+      # 21 of them didn't, so their models could drift from the schema
+      # unnoticed.
+      - name: Check for missing migrations
+        run: >
+          docker compose run --rm web
+          python manage.py makemigrations --check --dry-run
+          --settings=sg101.settings.docker_test
+
       # docker_test settings: sqlite DB + Redis over TCP (the `redis` service is
       # started via depends_on). Measure coverage and print a summary.
       - name: Run test suite with coverage
