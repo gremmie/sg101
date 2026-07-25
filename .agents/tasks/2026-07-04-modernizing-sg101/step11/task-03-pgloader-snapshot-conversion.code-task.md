@@ -89,9 +89,23 @@ implementation. Read additional references as needed for context.
    can be followed at cutover without reconstructing this task's reasoning.
 8. Do not modify the MySQL snapshot in place. If pre-conversion cleanup is
    needed, script it against a copy so the original stays pristine.
+9. **Widen the three narrow email columns to match `models.py`** — owner
+   decision 2026-07-24, taken on the schema drift audit. `accounts_illegalemail
+   .email`, `accounts_pendinguser.email`, and `podcast_channel.owner_email` are
+   `varchar(75)` in production where the models say 254; Django widened
+   `EmailField` in 1.8 and these three never got it, because their apps had no
+   migrations to carry the change. pgloader derives widths from the MySQL
+   source, so this needs an explicit step or the drift carries into Postgres.
+   Prefer a hand-written `AlterField` migration re-asserting each field over a
+   pgloader `CAST` rule: it is engine-agnostic, survives a re-run of the
+   conversion, applies equally to the MySQL database if wanted, and leaves the
+   reason in the migration history. It is a no-op for `makemigrations --check`,
+   since the model state does not change. See
+   `research/schema-drift-audit.md` §2.
 
 ## Dependencies
 - Task 01 (running Postgres service, driver, settings)
+- Task 04 (every app has migrations; run before this one — see STATUS.md)
 - The production snapshot loaded into the MySQL `db` service
 
 ## Implementation Approach

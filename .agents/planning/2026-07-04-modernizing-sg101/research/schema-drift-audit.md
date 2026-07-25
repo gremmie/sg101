@@ -59,7 +59,7 @@ much as backfilled ones, and Django's own `django_migrations` and
 **Resolution:** none needed, and it does not survive the engine change —
 PostgreSQL's `timestamp with time zone` always stores microseconds.
 
-### 2. `varchar(75)` → `varchar(254)` on email columns — 3 columns. **Needs a decision.**
+### 2. `varchar(75)` → `varchar(254)` on email columns — 3 columns. **Decided: widen.**
 
 | Table | Column | Production | models.py |
 | --- | --- | --- | --- |
@@ -79,13 +79,13 @@ database is 47 (`auth_user.email`, 15,227 rows). But the failure mode is silent
 — MySQL without strict mode truncates rather than erroring — so a >75-character
 address would have been quietly cut.
 
-**Recommended resolution:** let the widening happen as part of the engine move —
-the converted tables should be `varchar(254)` to match `models.py`, since the
-conversion is building a new schema anyway. It needs an explicit step because
-pgloader derives column widths from the MySQL source, so it would carry the 75
-across. **Owner decision required:** widen during conversion (recommended), or
-correct the models down to 75 (not recommended — it contradicts Django's own
-field default and would reject legitimate addresses).
+**Resolution — decided 2026-07-24: widen to 254 during the conversion.** The
+converted tables match `models.py`, since the conversion is building a new schema
+anyway. It needs an explicit step because pgloader derives column widths from the
+MySQL source and would carry the 75 across; the mechanism is a hand-written
+`AlterField` re-asserting each field, which is engine-agnostic and leaves the
+reason in the migration history, rather than a pgloader `CAST` rule. Carried into
+task 03 as requirement 9.
 
 ### 3. `char(2)` → `varchar(2)` — 1 column. No action.
 

@@ -30,16 +30,18 @@ on Postgres), 1 is `char(2)`/`varchar(2)` on `bio_userprofile.country`, 2 are
 database-level defaults on `news_*.priority` that Django never emits. The 14
 extra production indexes are all a redundant index on the leading column of a
 composite unique index (old Django did that for FK columns on MySQL). **Two
-items need an owner decision:**
+items were escalated:**
 
 1. **`varchar(75)` vs `varchar(254)` on 3 email columns** (`accounts_illegalemail
    .email`, `accounts_pendinguser.email`, `podcast_channel.owner_email`) — real
    drift. Django widened `EmailField` 75→254 in 1.8; `auth_user.email` got it
    via Django's own migration, these three never did because their apps had no
    migrations. Nothing at risk today (0/1/1 rows, longest 25 chars; longest
-   address in the whole database is 47) but truncation is silent. Recommend
-   widening during the conversion — pgloader copies the MySQL width, so it needs
-   an explicit step.
+   address in the whole database is 47) but truncation is silent. **RESOLVED
+   2026-07-24 — Brian: widen during the conversion.** pgloader copies the MySQL
+   width, so it needs an explicit step; carried into task 03 as requirement 9,
+   via a hand-written `AlterField` rather than a pgloader `CAST` rule (engine-
+   agnostic, survives a re-run, leaves the reason in the migration history).
 2. **`auth.0012_alter_user_first_name_max_length` is unapplied** on the
    production database (`first_name` still `varchar(30)`). Not drift and not from
    this task — it shipped with Django 3.2 and was missed in Step 10. Left pending
