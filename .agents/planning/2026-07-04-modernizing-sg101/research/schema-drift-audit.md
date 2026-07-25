@@ -126,8 +126,16 @@ related to the backfill — it shipped with Django 3.2 and was missed when that
 upgrade's migrations were applied. It stays pending here deliberately, so that
 "faking changes nothing" remains literally true.
 
-**Owner decision required:** it is a real `ALTER` on 15,227 rows. Cleanest is to
-apply it as part of the conversion, when the table is being rebuilt anyway.
+**Resolution — decided 2026-07-24: apply it during the conversion**, when the
+table is being rebuilt anyway. It is a real `ALTER` on 15,227 rows. A plain
+`migrate` against the converted database picks it up, because the converted
+`django_migrations` carries the MySQL history forward — the same run that
+applies the email widening in §2. Carried into task 03 as requirement 10.
+
+That run is only consistent because the backfill happened **before** the
+conversion: `django_migrations` in MySQL now holds all 21 initials and the
+`oembed` record, so pgloader carries them across and the history check below is
+already satisfied on the Postgres side.
 
 ## Gotcha for the cutover runbook
 

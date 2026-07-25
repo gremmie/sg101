@@ -46,7 +46,12 @@ items were escalated:**
    production database (`first_name` still `varchar(30)`). Not drift and not from
    this task — it shipped with Django 3.2 and was missed in Step 10. Left pending
    deliberately so "faking changes nothing" stayed literally true. It's a real
-   `ALTER` on 15,227 rows; cleanest is to apply it during the conversion.
+   `ALTER` on 15,227 rows. **RESOLVED 2026-07-24 — Brian: apply it during the
+   conversion**, via a plain `migrate` against the converted database (task 03
+   requirement 10) — the same run that applies the email widening. That run is
+   consistent only because the backfill preceded the conversion: MySQL's
+   `django_migrations` now carries the 21 initials and the `oembed` record, so
+   pgloader brings them across.
 
 **Cutover gotcha, now in the runbook:** `forums/0001_initial` has declared
 `('oembed', '__first__')` since 2015 — inert while oembed had no migrations, and

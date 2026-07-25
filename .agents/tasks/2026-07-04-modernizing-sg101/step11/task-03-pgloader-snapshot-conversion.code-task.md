@@ -102,6 +102,15 @@ implementation. Read additional references as needed for context.
    reason in the migration history. It is a no-op for `makemigrations --check`,
    since the model state does not change. See
    `research/schema-drift-audit.md` §2.
+10. **Apply `auth.0012_alter_user_first_name_max_length`** — owner decision
+    2026-07-24. It widens `auth_user.first_name` from 30 to 150 on 15,227 rows
+    and has been pending since the Django 3.2 upgrade; the conversion is the
+    right moment, while the table is being rebuilt anyway. Mechanism: a plain
+    `migrate` against the converted database, which picks it up because the
+    converted `django_migrations` table carries the MySQL history forward.
+    Verify the resulting column is `varchar(150)` and the row count is
+    unchanged. Note that this same `migrate` run is what applies requirement 9,
+    so the two land together.
 
 ## Dependencies
 - Task 01 (running Postgres service, driver, settings)
