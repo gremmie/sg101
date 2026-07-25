@@ -77,12 +77,37 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'A user with that username already exists')
 
+    def test_existing_user_differing_case(self):
+        """
+        Ensure we can't register a case variant of an existing username.
+
+        MySQL's case-insensitive collations gave us this for free; on any
+        case-sensitive engine it takes an explicit __iexact lookup.
+
+        """
+        self.post_vals['username'] = 'EXISTING_USER'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A user with that username already exists')
+
     def test_pending_user(self):
         """
         Ensure we can't register with a pending username.
 
         """
         self.post_vals['username'] = 'pending_user'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A pending user with that username already exists')
+
+    def test_pending_user_differing_case(self):
+        """
+        Ensure we can't register a case variant of a pending username.
+
+        """
+        self.post_vals['username'] = 'PENDING_USER'
         response = self.client.post(reverse('accounts-register'),
             self.post_vals)
         self.assertEqual(response.status_code, 200)
@@ -99,12 +124,37 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'That username is not allowed')
 
+    def test_illegal_username_differing_case(self):
+        """
+        Ensure the username blocklist can't be evaded by changing case.
+
+        This is an abuse control, so a silent case-sensitivity change here
+        matters more than the duplicate-account checks around it.
+
+        """
+        self.post_vals['username'] = 'IllegalUsername'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'That username is not allowed')
+
     def test_duplicate_existing_email(self):
         """
         Ensure we can't register with a duplicate email address.
 
         """
         self.post_vals['email'] = 'existing_user@example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A user with that email address already exists')
+
+    def test_duplicate_existing_email_differing_case(self):
+        """
+        Ensure we can't register a case variant of an existing email address.
+
+        """
+        self.post_vals['email'] = 'Existing_User@Example.com'
         response = self.client.post(reverse('accounts-register'),
             self.post_vals)
         self.assertEqual(response.status_code, 200)
@@ -121,6 +171,17 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'A pending user with that email address already exists')
 
+    def test_duplicate_pending_email_differing_case(self):
+        """
+        Ensure we can't register a case variant of a pending email address.
+
+        """
+        self.post_vals['email'] = 'Pending_User@Example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A pending user with that email address already exists')
+
     def test_illegal_email(self):
         """
         Ensure we can't register with a banned email address.
@@ -131,6 +192,42 @@ class RegistrationTest(TestCase):
             self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'That email address is not allowed')
+
+    def test_illegal_email_differing_case(self):
+        """
+        Ensure the email blocklist can't be evaded by changing case.
+
+        """
+        self.post_vals['email'] = 'Illegal@Example.com'
+        response = self.client.post(reverse('accounts-register'),
+            self.post_vals)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'That email address is not allowed')
+
+    def test_confirm_registration_differing_case(self):
+        """
+        Ensure a confirmation link resolves a case variant of the username.
+
+        The emailed link carries the username as stored, so this guards
+        hand-typed and mangled links rather than the nominal path.
+
+        """
+        pending = PendingUser.objects.create(username='MixedCaseUser',
+            email='mixedcase@example.com',
+            password='pw',
+            date_joined=datetime.datetime.now(),
+            key='a' * 20)
+
+        response = self.client.get(reverse('accounts-register_confirm',
+                                           kwargs={'username': 'mixedcaseuser',
+                                                   'key': pending.key}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            PendingUser.objects.filter(username='MixedCaseUser').exists(),
+            msg='the pending user survived confirmation')
+        self.assertTrue(User.objects.filter(username='MixedCaseUser').exists(),
+                        msg='the real user was not created')
 
     def test_password_match(self):
         """
@@ -323,6 +420,48 @@ class ForgotUsernameTest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         if len(mail.outbox):
             self.assertTrue(mail.outbox[0].subject.startswith('Forgotten username'))
+            self.assertIn('The requested username is existing_user',
+                          mail.outbox[0].body)
+
+    def test_valid_email_differing_case(self):
+        """Test form submittal of a valid email address in another case."""
+        response = self.client.post(reverse('accounts-username_query'), {
+            'email': 'Existing_User@Example.com',
+            },
+            follow=True)
+
+        self.assertRedirects(response, reverse('accounts-username_sent'))
+
+        self.assertEqual(len(mail.outbox), 1)
+        if len(mail.outbox):
+            self.assertTrue(mail.outbox[0].subject.startswith('Forgotten username'))
+
+    def test_email_shared_by_two_accounts(self):
+        """Two accounts on one address get one email listing both usernames.
+
+        Thirteen addresses in the production database are held by two users
+        each, so this is reachable in the wild -- and was a 500 before the
+        lookup stopped assuming a single match. Whoever reads the mailbox owns
+        both accounts, so naming only one of them would leave them stuck on the
+        other.
+
+        """
+        u = User.objects.create_user('second_user', 'existing_user@example.com',
+                                     'pw')
+        u.save()
+
+        response = self.client.post(reverse('accounts-username_query'), {
+            'email': 'existing_user@example.com',
+            },
+            follow=True)
+
+        self.assertRedirects(response, reverse('accounts-username_sent'))
+        self.assertEqual(len(mail.outbox), 1)
+
+        body = mail.outbox[0].body
+        self.assertIn('existing_user', body)
+        self.assertIn('second_user', body)
+        self.assertIn('2 accounts', body)
 
 
 class ForgotEmailTest(TestCase):
@@ -384,3 +523,19 @@ class ForgotEmailTest(TestCase):
         # Check new password
         u = User.objects.get(username='user1')
         self.assertTrue(check_password('pw2', u.password))
+
+    def test_differing_case_email(self):
+        """A reset request in another case still finds the account.
+
+        Django's own PasswordResetForm.get_users() already looks the address up
+        with __iexact, so this holds on a case-sensitive engine without any
+        change on our side. Pinned so a later rung can't quietly drop it.
+
+        """
+        args = {'email': 'User1@Example.com'}
+        response = self.client.post(reverse('accounts-password_reset'), args,
+                follow=True)
+        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue(mail.outbox[0].subject.startswith('Password reset'))

@@ -143,7 +143,7 @@ class SearchUsersForm(forms.Form):
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
         try:
-            User.objects.get(username=username, is_active=True)
+            User.objects.get(username__iexact=username, is_active=True)
         except User.DoesNotExist:
             raise forms.ValidationError("That username does not exist.")
         return username

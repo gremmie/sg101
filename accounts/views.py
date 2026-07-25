@@ -106,7 +106,7 @@ def register_confirm(request, username, key):
 
     ip = request.META.get('REMOTE_ADDR', '?')
     try:
-        pending_user = PendingUser.objects.get(username = username)
+        pending_user = PendingUser.objects.get(username__iexact=username)
     except PendingUser.DoesNotExist:
         logger.error('Accounts register_confirm [%s]: user does not exist: %s',
                      ip, username)

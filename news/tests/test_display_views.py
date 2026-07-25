@@ -79,10 +79,35 @@ class NewsDisplayTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Front Page News', response.content.decode())
 
+    def test_tag_page_differing_case(self):
+        Tag.objects.update_tags(self.story, 'surf')
+        response = self.client.get(
+            reverse('news-tag_page', kwargs={'tag_name': 'Surf'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Front Page News', response.content.decode())
+
     def test_unknown_tag_is_404(self):
         response = self.client.get(
             reverse('news-tag_page', kwargs={'tag_name': 'nonexistent'}))
         self.assertEqual(response.status_code, 404)
+
+    def test_tagging_is_case_normalized(self):
+        """A case variant must reuse the existing tag, not create a second.
+
+        django-tagging looks tags up with get_or_create(name=...), which is
+        case-sensitive on any engine but MySQL. What saves us is
+        FORCE_LOWERCASE_TAGS, which lowercases the name first -- hence 1,006
+        tags in production with no case variants among them. Pinned here
+        because turning that setting off would quietly start splitting tags in
+        two once we are on Postgres.
+
+        """
+        Tag.objects.update_tags(self.story, 'surf')
+        Tag.objects.add_tag(self.story, 'Surf')
+
+        self.assertEqual(Tag.objects.filter(name__iexact='surf').count(), 1)
+        self.assertEqual(list(Tag.objects.values_list('name', flat=True)),
+                         ['surf'])
 
 
 class NewsEmailStoryTests(TestCase):

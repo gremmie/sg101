@@ -915,7 +915,7 @@ def posts_for_user(request, username):
     """Displays a list of posts by the given user.
     Only the forums that the requesting user can see are examined.
     """
-    target_user = get_object_or_404(User, username=username)
+    target_user = get_object_or_404(User, username__iexact=username)
     return _user_posts(request, target_user, request.user, 'Posts by %s' % username)
 
 

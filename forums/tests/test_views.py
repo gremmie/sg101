@@ -130,3 +130,26 @@ class ForumPostTestCase(TestCase):
         user = User.objects.get(username=self.username)
         profile = user.profile
         self.assertEqual(profile.forum_post_count, 3)
+
+
+class PostsForUserTestCase(TestCase):
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.user = User.objects.create_user('MixedCase', '', 'pw')
+        self.assertTrue(self.client.login(username='MixedCase', password='pw'))
+
+    def test_posts_for_user(self):
+        response = self.client.get(reverse('forums-posts_for_user',
+                                           kwargs={'username': 'MixedCase'}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_posts_for_user_differing_case(self):
+        response = self.client.get(reverse('forums-posts_for_user',
+                                           kwargs={'username': 'mixedcase'}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_posts_for_unknown_user_is_404(self):
+        response = self.client.get(reverse('forums-posts_for_user',
+                                           kwargs={'username': 'nobody'}))
+        self.assertEqual(response.status_code, 404)

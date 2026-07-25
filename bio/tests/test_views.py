@@ -171,6 +171,20 @@ class ProfileTest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+    def test_other_profile_differing_case(self):
+        # Over half of all usernames carry uppercase, so profile URLs are
+        # case-bearing; a mis-cased bookmark used to resolve and must still.
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-view_profile', kwargs={'username': 'EDDIE'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_unknown_profile_is_404(self):
+        self.client.login(username='paul', password='pw')
+        url = reverse('bio-view_profile', kwargs={'username': 'nobody'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
     def test_view_profile_as_me_redirects(self):
         self.client.login(username='paul', password='pw')
         url = reverse('bio-view_profile', kwargs={'username': 'paul'})

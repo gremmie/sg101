@@ -181,7 +181,9 @@ def tags(request):
 #######################################################################
 
 def tag(request, tag_name):
-    tag = get_object_or_404(Tag, name=tag_name)
+    # Tags are stored lowercased (FORCE_LOWERCASE_TAGS), so a mixed-case tag in
+    # the URL has to be matched without regard to case.
+    tag = get_object_or_404(Tag, name__iexact=tag_name)
     stories = TaggedItem.objects.get_by_model(
             Story.objects.defer('tags').select_related(
                 'submitter', 'category', 'forums_topic'), tag)

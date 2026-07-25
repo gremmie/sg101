@@ -81,7 +81,7 @@ def my_profile(request):
 def view_profile(request, username):
 
     user = get_object_or_404(User.objects.select_related('profile'),
-            username=username)
+            username__iexact=username)
     if user == request.user:
         return redirect('bio-me')
 

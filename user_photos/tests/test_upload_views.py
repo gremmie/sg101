@@ -194,6 +194,14 @@ class GalleryAndDetailTests(TestCase):
                          list(Photo.objects.filter(user=self.owner)))
         self.assertEqual(response.context['gallery_owner'], self.owner)
 
+    def test_gallery_owner_differing_case(self):
+        make_photo(self.owner)
+        self.client.login(username='owner', password='pw')
+        response = self.client.get(
+            reverse('user_photos-gallery', kwargs={'username': 'OWNER'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['gallery_owner'], self.owner)
+
     def test_gallery_unknown_user_is_404(self):
         self.client.login(username='owner', password='pw')
         response = self.client.get(

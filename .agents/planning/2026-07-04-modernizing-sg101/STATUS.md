@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-24
+**Last updated:** 2026-07-25
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — IN PROGRESS (started 2026-07-24)
@@ -11,6 +11,140 @@ create a fresh database on Postgres until every app has migrations (below), so
 database from 03 to diff against; the real production schema in MySQL is what
 pgloader will convert, so the audit was done there instead and gets re-verified
 against the converted tables at 03/05.
+
+### Task 02 — case-insensitive lookup parity — DONE (2026-07-25)
+
+**593 tests green (was 567) on sqlite and on Postgres**; `check` and
+`makemigrations --check` clean; both migrations applied to the real MySQL
+snapshot and verified row by row; live smoke on real data.
+
+**The audit found 14 collation-dependent lookups that matter, not 8.** Method:
+AST scan, not grep (the Step 9 lesson). Two refinements mattered — template-tag
+`register.filter(name=...)` calls are not ORM calls, and **`get_object_or_404`
+is a plain function, not an attribute call, so the first pass missed it
+entirely**. That is where four of the real findings live. Full audit in
+`research/collation-audit.md`.
+
+Beyond the eight sites the task named: `messages/forms.py:47` (PM to a
+hand-typed recipient), `accounts/views.py:109` (registration confirmation),
+`donations/views.py:183` (PayPal donation → user linking), and three
+URL-driven username lookups — `bio/views.py:83`, `forums/views/main.py:918`,
+`user_photos/views.py:142`. **7,006 of 15,227 usernames carry uppercase**, so
+those URLs are case-bearing in practice; a mis-cased profile bookmark resolves
+today and would have started 404ing. Plus `news/views.py:184`, the tag lookup.
+
+**Two corrections to the task file's framing.**
+
+1. `accounts/forms.py:243` is **`ForgotUsernameForm`, not password reset**.
+   Django's own `PasswordResetForm.get_users()` already uses `email__iexact`,
+   so password reset was engine-independent all along — pinned with a test
+   rather than fixed.
+2. **The "13 email case-collision groups" are almost all not case collisions.**
+   `GROUP BY email` on a `*_ci` column groups case-insensitively — the very
+   trap this task is about, and it produced a wrong first answer here. Forcing
+   `BINARY`: **12 groups are byte-identical duplicates** (two accounts holding
+   the same address, e.g. `Drippy`/`Hydronaught`), which exist today on MySQL,
+   are untouched by the engine change, and would defeat a *plain* unique index
+   just as surely as a case-insensitive one. **Exactly one group is a true case
+   variant** — `SurfBeat` (inactive, id 2373) vs `Joey` (active, id 2947) on
+   `eight_til_midnight@{y,Y}ahoo.com`.
+
+**Live bug found and fixed:** `ForgotUsernameForm` called `.get(email=...)`
+with no `MultipleObjectsReturned` handler, so all 13 groups got a 500 and could
+never recover a username — **today, on MySQL**. Not caused by the engine move
+and not fixed by it; fixed here because it is the same line.
+
+**Decisions (Brian, 2026-07-25):** no unique index on email (the data cannot
+satisfy one in either direction) but normalize the single genuine case variant;
+fix the forgot-username bug here; add the functional unique index on
+`LOWER(username)`; convert the tag and URL-username lookups too.
+
+**Shipped:** 12 lookups → `__iexact` across 9 files, plus two migrations in
+`accounts`. `0002` creates `CREATE UNIQUE INDEX ... ON auth_user
+(LOWER(username))`. `UniqueConstraint(Lower(...))` is Django 4.0+ and
+`auth_user` is not our model, so raw SQL in a `RunPython` is the only route on
+3.2. **The guard skips MySQL, not "everything but Postgres"** — Postgres and
+SQLite both support functional indexes, and MySQL needs none because its
+collation already makes the column's existing `UNIQUE` case-insensitive. So the
+index is exercised by the default sqlite suite as well as the Postgres one.
+`0003` lowercases addresses that collide with another account only by case:
+**exactly one row today**, verified on the snapshot (non-lowercase emails
+1043 → 1042, 15,227 users unchanged, case-variant groups 1 → 0). It **groups
+and compares in Python on purpose** — an `exclude(email=x)` would compare on
+the very engine whose semantics are in question, and on MySQL would match the
+case variants too and silently do nothing.
+
+**`FORCE_LOWERCASE_TAGS` was already `True`** (`base.py:196`) — found late,
+after an earlier grep for `TAGGING` missed it (the setting has no such prefix).
+Tag *creation* was therefore already engine-independent, and that half of the
+planned change was a no-op. Only the tag **lookup** needed `name__iexact`. The
+1,006 all-lowercase tags are that setting's doing, not the collation's.
+
+**Discrimination, and why it is better than the task assumed:** SQLite's `=` is
+case-sensitive for ASCII, so every one of these tests fails without the fix on
+**sqlite as well as Postgres**, and is vacuously green on MySQL. The fast
+default suite catches a regression here, not just the Postgres job. RED was
+verified on sqlite before any implementation landed — 17 failures, one per
+changed site.
+
+**Checked and clear** (recorded so nobody re-checks): `antispam.contains_spam`
+matches in Python, not SQL, so the other abuse control was never at risk; no
+`__contains`/`__startswith`/`__endswith` anywhere in application code; no raw
+SQL or `.extra()`; admin `search_fields` generate `__icontains`. Deliberately
+left case-sensitive: PayPal `txn_id`, md5 photo signatures, IP-to-IP
+comparisons, the oembed URL cache (case-sensitivity is *more* correct there),
+and every `slug=` lookup (all production slugs are lowercase).
+
+**Pre-existing failure surfaced, not fixed:** on **MySQL** the full suite has
+one failure, `core.tests.test_views.AjaxUsersTestCase.test_happy_path`.
+`core.views.ajax_users` has **no `ORDER BY`** and takes a `[:limit]` slice, so
+its row order is undefined; sqlite and Postgres happen to return insertion
+order and MySQL does not. Confirmed pre-existing by running the suite on
+unmodified code (567 tests, same single failure). Unrelated to collations —
+fix belongs with the search/pagination work or Step 19.
+
+**Also noted for task 03:** the Postgres dev database still carries the
+migration history from task 01, i.e. **before** the backfill — no `oembed` or
+`accounts` records at all — so `makemigrations --check` against it raises
+`InconsistentMigrationHistory`. Harmless (the suite builds its own database)
+and moot once task 03 replaces that database with the converted one.
+
+**Where the duplicate addresses came from** (asked during review, worth
+recording). The registration form has always checked — the check dates to the
+2009 initial import, and commit `892b847` (2012) reworked it from `.get()` to
+`.filter().count()` precisely because `get()` raised `MultipleObjectsReturned`
+once duplicates existed, the same defect just fixed in `ForgotUsernameForm`.
+The duplicates arrived by two routes. **`date_joined` shows a clean bulk-import
+boundary** — 4,170 accounts have a midnight (`00:00:00`) timestamp and stop at
+2011-02-24; the 11,057 after 2011-02-25 have real times. That is the phpBB →
+SG101 migration, and `legacy/management/commands/import_old_users.py`
+(deleted in Step 4, readable at tag `pre-step-4-prune`) deduplicated on
+**username only** — it never looked at the email, took `user_email` straight
+from the CSV, and preserved the old `user_id` as the Django pk. **Seven of the
+13 pairs have both accounts inside that imported set**, so they are inherited
+from the old platform. The other six (4 both-post-import, 2 mixed) were created
+while the Django check was live and must have gone through the profile-edit
+gap below. Caveat: `date_joined` records when the *account* was created, not
+when its *email* was set, and there is no audit trail — so "both imported" is
+the most economical explanation, not proof.
+
+**REVISIT — editing an email address is unverified and unchecked.** Recorded in
+`implementation/plan.md` under **Step 16** (the email step, where the
+confirm-link flow would naturally be built). `bio.forms.EditUserForm` has no
+`clean_email` and `User.email` has no `unique=True`, so any member can point
+`/profile/edit/` at an address already in use, or one they do not control, with
+no confirmation. Not a takeover path, but it can publish someone else's address
+(the profile page, member list, and every forum post render it when
+`hide_email` is unticked), it damages the other account's recovery, and a typo
+silently costs you your own password reset. Full detail and fix order in
+plan.md; note the trap that a naive uniqueness check would lock the 26 existing
+duplicate-pair members out of saving any profile edit.
+
+**Carried forward:** the 12 duplicate-address account pairs are data hygiene
+for Step 19. `detailed-design.md` and `database-migration.md` both still say
+"add `CITEXT`" — superseded by the deprecation finding, correct at close-out.
+`AGENTS.md` at the repo root is badly stale (Python 2, Django 1.8, Mercurial,
+`custom_search`).
 
 ### Task 04 — backfill initial migrations for the 21 unmigrated apps — DONE
 

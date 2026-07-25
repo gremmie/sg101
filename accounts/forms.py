@@ -87,14 +87,18 @@ class RegisterForm(forms.Form):
 
     def clean_username(self):
         username = self.cleaned_data['username']
+        # These three comparisons must ignore case: a case variant of a taken
+        # name is a duplicate account, and a case variant of a blocked name is
+        # an evaded blocklist. MySQL's case-insensitive collation used to
+        # supply that; asking for it here keeps it true on any engine.
         try:
-            User.objects.get(username=username)
+            User.objects.get(username__iexact=username)
         except User.DoesNotExist:
             try:
-                PendingUser.objects.get(username=username)
+                PendingUser.objects.get(username__iexact=username)
             except PendingUser.DoesNotExist:
                 try:
-                    IllegalUsername.objects.get(username=username)
+                    IllegalUsername.objects.get(username__iexact=username)
                 except IllegalUsername.DoesNotExist:
                     return username
                 self._validation_error("That username is not allowed.", username)
@@ -104,11 +108,12 @@ class RegisterForm(forms.Form):
     def clean_email(self):
         email = self.cleaned_data['email']
 
-        if User.objects.filter(email=email).count():
+        # Case-insensitive for the same reasons as clean_username() above.
+        if User.objects.filter(email__iexact=email).count():
             self._validation_error("A user with that email address already exists.", email)
-        elif PendingUser.objects.filter(email=email).count():
+        elif PendingUser.objects.filter(email__iexact=email).count():
             self._validation_error("A pending user with that email address already exists.", email)
-        elif IllegalEmail.objects.filter(email=email).count():
+        elif IllegalEmail.objects.filter(email__iexact=email).count():
             self._validation_error("That email address is not allowed.", email)
 
         # email is ok
@@ -237,11 +242,15 @@ class ForgotUsernameForm(forms.Form):
     email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'text'}))
 
     def save(self):
-        """Email the username associated with the email address to the user."""
+        """Email the usernames associated with the email address to the user."""
         email = self.cleaned_data['email']
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
+        # An address can belong to more than one account -- thirteen do -- so
+        # this cannot assume a single match. get() raised
+        # MultipleObjectsReturned for those users, and they could never recover
+        # a username at all. Every match is listed: whoever reads the mailbox
+        # owns all of them.
+        users = list(User.objects.filter(email__iexact=email).order_by('username'))
+        if not users:
             # nothing to do; we don't tell the user as this gives away info
             # about our database
             return
@@ -251,11 +260,12 @@ class ForgotUsernameForm(forms.Form):
 
         subject = 'Forgotten username for %s' % site.name
         msg = render_to_string('accounts/forgot_user_email.txt', {
-            'user': user,
+            'users': users,
+            'email': email,
             'site': site,
             'admin_email': admin_email,
             })
         send_mail(subject, msg, admin_email, [email])
 
         logger.info('Forgotten username email sent to {} <{}>'.format(
-            user.username, email))
+            ', '.join(u.username for u in users), email))

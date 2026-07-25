@@ -261,6 +261,15 @@ class IpnEdgeCaseTestCase(TestCase):
         donation = Donation.objects.get()
         self.assertIsNone(donation.user)
 
+    def test_custom_user_differing_case_is_linked(self):
+        # 'custom' carries the username captured when the donation was made;
+        # matching it case-sensitively would silently unlink real donations.
+        user = User.objects.create_user('Test_User', 'test_user@example.com',
+                                        'password')
+        self.post_ipn(custom='test_user')
+        donation = Donation.objects.get()
+        self.assertEqual(donation.user, user)
+
     def test_test_ipn_flag_is_recorded(self):
         User.objects.create_user('test_user', 'test_user@example.com', 'password')
         self.post_ipn(test_ipn='1')

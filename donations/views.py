@@ -180,7 +180,7 @@ def process_donation(item_number, params):
     user = None
     if 'custom' in params and params['custom']:
         try:
-            user = User.objects.get(username__exact=params['custom'])
+            user = User.objects.get(username__iexact=params['custom'])
         except User.DoesNotExist:
             pass
 

@@ -140,7 +140,7 @@ class GalleryView(ListView):
 
     def get_queryset(self):
         self.gallery_owner = get_object_or_404(get_user_model(),
-                                    username=self.kwargs['username'])
+                                    username__iexact=self.kwargs['username'])
         return Photo.objects.filter(user=self.gallery_owner).order_by('-upload_date')
 
     def get_context_data(self, **kwargs):

@@ -2,9 +2,11 @@
 Form tests for the bio application.
 
 """
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 from bio.forms import EditUserProfileForm
+from bio.forms import SearchUsersForm
 
 
 class EditUserProfileFormTestCase(TestCase):
@@ -48,4 +50,24 @@ class EditUserProfileFormTestCase(TestCase):
             'signature': "I'm cool. ![image](http://example.com/test.jpg)",
         }
         form = EditUserProfileForm(post_data)
+        self.assertFalse(form.is_valid())
+
+
+class SearchUsersFormTestCase(TestCase):
+
+    def setUp(self):
+        User.objects.create_user('BrianNeal', 'brianneal@example.com', 'pw')
+
+    def test_exact_username(self):
+        form = SearchUsersForm({'username': 'BrianNeal'})
+        self.assertTrue(form.is_valid())
+
+    def test_username_differing_case(self):
+        # Members type a name into this box; matching it case-sensitively
+        # would turn a found member into "does not exist".
+        form = SearchUsersForm({'username': 'brianneal'})
+        self.assertTrue(form.is_valid())
+
+    def test_unknown_username(self):
+        form = SearchUsersForm({'username': 'nobody'})
         self.assertFalse(form.is_valid())

@@ -44,7 +44,7 @@ class ComposeForm(forms.Form):
     def clean_receiver(self):
         receiver = self.cleaned_data['receiver']
         try:
-            self.rcvr_user = User.objects.get(username=receiver)
+            self.rcvr_user = User.objects.get(username__iexact=receiver)
         except User.DoesNotExist:
             raise forms.ValidationError("That username does not exist.")
         if self.user == self.rcvr_user:
