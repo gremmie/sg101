@@ -63,3 +63,5 @@ tools/ssg101/output
 .coverage
 coverage.xml
 htmlcov/
+tools/pgloader/logs/
+tools/pgloader/.sg101.rendered.load

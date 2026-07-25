@@ -12,6 +12,106 @@ database from 03 to diff against; the real production schema in MySQL is what
 pgloader will convert, so the audit was done there instead and gets re-verified
 against the converted tables at 03/05.
 
+### Task 03 — pgloader snapshot conversion — DONE (2026-07-25)
+
+The production snapshot now runs on PostgreSQL. **699,435 rows across 91
+tables, zero rejections**, exact row-count match on every table, and the
+converted schema differs from one Django's own migrations build by **zero
+columns** (522 compared). Repeatable from empty: the wrapper drops and
+recreates the target every run, and it was run start-to-finish five times.
+
+**Converted from the *pristine* dump, not the working database.** Brian still
+had `sg10120260712.sql.bz2` (it was in the frozen hg backup, not the git
+repo). It is loaded as a separate `sg101_pristine` database alongside the
+working one, so MySQL is only ever read — verified afterwards: 15,227 users,
+`first_name` still `varchar(30)`, 29 migration rows, untouched. That choice
+matters: the working database already had task 02's migrations applied, so
+converting it would have skipped the very steps requirements 9 and 10 ask to
+prove.
+
+**The snapshot is Django 1.8-era, not 1.9.** Brian pointed out that he had
+bumped the repo to 1.9 himself but production still runs 1.8, and the data
+agrees: the dump has `auth` at `0006` and `sites` at `0001`, and it was 1.9
+that added `auth.0007` and `sites.0002`. Cutover will start from this same
+state, so this is a true rehearsal rather than a data copy.
+
+**Four findings, three of which would have shipped silently.**
+
+1. **MySQL's `latin1` is cp1252, not ISO-8859-1.** Declaring `AS latin1` — the
+   obvious reading of the task — corrupted 8 of 1,066 `bandmap_bandentry`
+   rows: bytes `0x92`/`0x93`/`0x94`/`0x99` are printable in Windows-1252
+   (`’ “ ” ™`) but C1 controls in the ISO standard, and pgloader's `LATIN-1`
+   is the strict standard. Only rows using smart quotes were affected, which
+   is exactly how this goes unnoticed. Now `AS cp1252`, and `verify.py`
+   compares **all 84,279 text values** in those tables by md5 against MySQL's
+   own decoding so it cannot recur.
+2. **`int(11)` arrives as `bigint`.** MySQL reports precision 10 and
+   pgloader's default sends >= 10 to bigint, so **204 columns including every
+   primary key** were 64-bit where the migrations build them 32-bit — against
+   Step 10's deliberate `DEFAULT_AUTO_FIELD = AutoField`. Explicit CAST rules
+   fix it; safe because no int value anywhere exceeds 2,147,483,647.
+3. **`char(2)` is a live bug on Postgres, not vintage drift.**
+   `bio_userprofile.country` is `char(2)` in production where models.py says
+   `varchar`. The schema diff flagged it and it was nearly written off —
+   **the live smoke test is what caught it**. MySQL strips trailing spaces
+   reading CHAR, so an unset country returns `''`; PostgreSQL pads and returns
+   `'  '`, which is **truthy**, so templates guarding on `{% if
+   profile.country %}` call `flag_icon('  ')` and raise `UnboundLocalError`.
+   **12,854 of 15,227 profiles have no country set** — every one of those
+   pages 500'd until the column was cast to `varchar`.
+4. **Requirement 9's prescribed mechanism does not work.** The task says to
+   widen the three `varchar(75)` email columns with an `AlterField`
+   re-asserting the field. Both migrations reported `OK` and **changed
+   nothing**: task 04 generated `0001_initial` from the models, so it already
+   declares 254, and it was applied with `--fake-initial` against tables that
+   are really 75 — Django believes they are already wide and emits no SQL.
+   `accounts/0004` and `podcast/0002` now correct the recorded state to 75 via
+   `SeparateDatabaseAndState` (no database operation) and *then* widen, which
+   Django can see. Caught by checking the columns rather than trusting `OK`.
+
+**Also resolved:** the 4 IP columns become `inet` to match
+`GenericIPAddressField`; 370 empty strings in `forums_post.user_ip` become
+NULL (Brian's call — 636 rows were already NULL, so 1,006 total, exactly as
+predicted). The 22 `varchar_pattern_ops` indexes Django creates for prefix
+matching are missing after `--fake-initial` and pgloader has nothing to copy
+them from, so they are generated into `tools/pgloader/pattern_ops_indexes.sql`
+and applied post-conversion — without them `username__istartswith` over 15,227
+users is a sequential scan, since a plain btree cannot serve `LIKE 'prefix%'`
+under `en_US.utf8`.
+
+**Requirements 9 and 10 verified on real data:** all three email columns now
+254, `auth_user.first_name` 150, and the task 02 migrations exercised properly
+— `accounts/0002` built the functional unique index across 15,227 usernames on
+Postgres, and `accounts/0003` folded the real `Joey`/`SurfBeat` collision.
+
+**AC 4 (zero dates) is not applicable and that is a finding, not a skip.** All
+79 date/datetime/timestamp columns were probed two ways — a range comparison
+and a cast-to-text pattern match — and the database contains no `0000-00-00`
+value. The permissive `sql_mode=''` in compose is needed to *load* the dump,
+but the data is clean.
+
+**Remaining differences from a migrations-built schema, both explained:** the
+7 model-less legacy tables (`auth_message`, `core_anonlastvisit`,
+`core_userlastvisit`, `gcalendar_accesstoken`, `irc_ircchannel`,
+`mailer_message`, `membermap_mapentry`, ~1,540 rows) come across by Brian's
+decision — conversion is not the place to prune, Step 19 is. And one index,
+`forums_topic_subscribers(topic_id)`, which is served by the leading column of
+the composite unique index that is present.
+
+**Live smoke on the converted data:** home, forums index, a real topic, news,
+podcast, links, downloads, bandmap, search, calendar, a profile, and
+specifically a profile with no country set — all 200. The cp1252 band name
+renders as `Chi-Tones™`. Suite still 593 green on sqlite and Postgres;
+`check` and `makemigrations --check` clean.
+
+**Artifacts:** `tools/pgloader/{sg101.load,convert.sh,verify.py,post_convert.py,
+pattern_ops_indexes.sql}`, procedure in DOCKER.md §7.
+
+**Watch item for later:** `bio.templatetags.bio_tags.flag_icon` leaves `name`
+unbound on any unrecognised country code — a latent crash on either engine,
+not caused by the conversion, currently masked because `''` is falsy. Worth a
+fix when someone is next in that file.
+
 ### Task 02 — case-insensitive lookup parity — DONE (2026-07-25)
 
 **593 tests green (was 567) on sqlite and on Postgres**; `check` and

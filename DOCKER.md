@@ -123,6 +123,73 @@ docker compose exec web python manage.py test --settings=sg101.settings.docker_t
 
 ---
 
+## 7. Converting MySQL data to PostgreSQL
+
+This is the procedure used at cutover. It is repeatable: every run drops and
+recreates the target database, so it always starts from empty.
+
+Load the dump into MySQL first (§4), then:
+
+```
+# 1. Convert. Reads .env for credentials; override the databases as needed.
+MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/convert.sh
+
+# 2. Verify the conversion itself, BEFORE migrating (see the note below).
+docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
+    python tools/pgloader/verify.py
+
+# 3. Bring the schema up to the current migration state.
+docker compose exec -T -e DB_ENGINE=postgresql web \
+    python tools/pgloader/post_convert.py
+```
+
+Step 1 prints a summary and writes it to `tools/pgloader/logs/`; rejected rows,
+if there ever are any, land in `tools/pgloader/logs/rejects/`. **A non-zero
+error count must be explained, never waved through.**
+
+**Run `verify.py` before `post_convert.py`.** It compares every table's exact
+row count against MySQL, and `migrate` legitimately adds rows to
+`django_migrations` and `auth_permission` — run it after and those two are
+reported as expected growth rather than failures, but the comparison is no
+longer like-for-like.
+
+`verify.py` checks three things the conversion can get wrong silently: exact
+row counts per table, every text value in the eight cp1252 tables (md5 against
+MySQL's own decoding), and that every sequence sits past `MAX(pk)` so the next
+insert cannot collide.
+
+### Things worth knowing
+
+- **The source database is only read.** MySQL is untouched, so the app can be
+  pointed back at it at any time.
+- **`tools/pgloader/sg101.load` carries the type mappings**, each commented
+  with why it exists. The ones that matter: MySQL's `latin1` is really
+  **cp1252** (declaring `latin1` mangles smart quotes and trademark signs);
+  `int(11)` must be forced to 32-bit `integer` or every primary key arrives as
+  `bigint`; the IP columns become `inet`; and `bio_userprofile.country` must
+  become `varchar`, because PostgreSQL pads `char(2)` and an unset country
+  comes back as two spaces instead of empty — which is truthy, and crashes
+  every profile page for the 12,854 members who have not set one.
+- **`post_convert.py` does two things a plain `migrate` cannot.** It fakes the
+  initial migrations of the 21 apps whose tables already exist, and it first
+  records `oembed.0001_initial`, because `forums/0001_initial` has declared a
+  dependency on oembed since 2015 and Django's consistency check otherwise
+  refuses *every* migrate command. It then applies the prefix-matching indexes
+  in `pattern_ops_indexes.sql`, which Django would have created had its
+  initials not been faked.
+- **pgloader publishes an amd64 image only**, so it runs under emulation on
+  Apple Silicon. The conversion still takes well under a minute.
+- **Collation changes.** The converted database is `en_US.utf8`, where MySQL
+  used `latin1_swedish_ci`/`utf8_general_ci`. Text sorting differs — most
+  visibly `ORDER BY username` — and comparisons are now case-**sensitive**;
+  see `research/collation-audit.md` for the lookups that were adjusted.
+- **Postgres has no per-table encoding.** The eight cp1252 tables are
+  transcoded on the way in and land in a single UTF-8 database. Since nothing
+  in MySQL was `utf8mb4`, 4-byte characters (emoji) become storable for the
+  first time.
+
+---
+
 ## Everyday commands
 
 | Goal | Command |
