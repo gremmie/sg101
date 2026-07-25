@@ -223,6 +223,23 @@ Validate against the current-behavior notes documented in Step 1.
 permissions/public-only results); functional tests for the search pages.
 **Integration:** Uses Postgres from Step 11 and Celery for (re)indexing.
 **Demo:** Search the live local site and get real results across forums/news/etc.
+**FOLD IN — `core.views.ajax_users` returns an arbitrary slice** (found during
+Step 11 task 02, 2026-07-25; parked here because the user autocomplete is
+search-adjacent). The view runs
+`.values_list('username', flat=True)[:limit]` with **no `ORDER BY`**, so a
+`LIMIT 10` picks an undefined 10 of the matches — and against real data the
+match sets are large: `bri` 28, `su` 435, `a` 579, `j` 884 active users. If the
+person you want is not in the arbitrary ten, they simply never appear and the
+UI gives no hint. Postgres does not improve this and can make it less stable,
+since heap order shifts as rows are updated. **`core.tests.test_views
+.AjaxUsersTestCase.test_happy_path` currently asserts insertion order**, which
+SQL guarantees on no engine — it passes on sqlite and Postgres by query-plan
+luck and **fails on MySQL today** (confirmed pre-existing on unmodified code).
+**Fix:** add `.order_by('username')` to the view and change the test to expect
+alphabetical — one line each, the sort is free at 15k rows, and alphabetical is
+the conventional autocomplete behavior. Weakening the test to `assertCountEqual`
+is the lesser alternative if the view is to be left alone, but it leaves the
+arbitrary-ten behavior in place.
 — no native libraries, no separate search server.
 
 ---

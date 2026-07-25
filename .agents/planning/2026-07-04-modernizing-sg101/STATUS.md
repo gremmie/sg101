@@ -95,13 +95,19 @@ left case-sensitive: PayPal `txn_id`, md5 photo signatures, IP-to-IP
 comparisons, the oembed URL cache (case-sensitivity is *more* correct there),
 and every `slug=` lookup (all production slugs are lowercase).
 
-**Pre-existing failure surfaced, not fixed:** on **MySQL** the full suite has
-one failure, `core.tests.test_views.AjaxUsersTestCase.test_happy_path`.
+**Pre-existing failure surfaced, not fixed — FOLDED INTO STEP 12** (Brian's
+call, 2026-07-25; see that step in `implementation/plan.md`). On **MySQL** the
+full suite has one failure,
+`core.tests.test_views.AjaxUsersTestCase.test_happy_path`.
 `core.views.ajax_users` has **no `ORDER BY`** and takes a `[:limit]` slice, so
 its row order is undefined; sqlite and Postgres happen to return insertion
 order and MySQL does not. Confirmed pre-existing by running the suite on
-unmodified code (567 tests, same single failure). Unrelated to collations —
-fix belongs with the search/pagination work or Step 19.
+unmodified code (567 tests, same single failure). Unrelated to collations, and
+**the engine move does not fix it** — the test asserts an order SQL guarantees
+on no engine, and users typing a common prefix (`j` matches 884 active
+accounts) get an arbitrary ten with no way to tell. Parked with Step 12 because
+the autocomplete is search-adjacent; fix is `.order_by('username')` plus an
+alphabetical assertion.
 
 **Also noted for task 03:** the Postgres dev database still carries the
 migration history from task 01, i.e. **before** the backfill — no `oembed` or
