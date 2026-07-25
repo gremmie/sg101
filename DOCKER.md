@@ -1,7 +1,7 @@
 # Running SG101 locally with Docker
 
-Run the SG101 site (Python 3.7 / Django 1.11 / MySQL / Redis) on your Mac inside
-Docker, seeded with a real production database snapshot. Docker gives us a
+Run the SG101 site (Python 3.7 / Django 3.2 / MySQL or PostgreSQL / Redis) on
+your Mac inside Docker, seeded with a real production database snapshot. Docker gives us a
 consistent little Linux environment that matches the target deploy platform —
 handy for a stack this far from a modern Mac's defaults.
 
@@ -59,7 +59,9 @@ docker compose build
 ```
 docker compose up
 ```
-This starts all five services: `db`, `redis`, `web`, `worker`, `beat`. Leave it
+This starts all six services: `db` (MySQL), `postgres`, `redis`, `web`, `worker`,
+`beat`. Both databases run at once while the site is being moved from one to the
+other; the app talks to whichever `DB_ENGINE` names (see section 6). Leave it
 running in this terminal (it streams logs). Open a **second** terminal for the
 commands below. To run it in the background instead, use `docker compose up -d`.
 
@@ -87,14 +89,46 @@ would otherwise reject the old `0000-00-00` dates in the dump.
 Then reload http://localhost:8000 — you should see real forum/news content. Log
 in with a known account from the snapshot.
 
-## 5. Run the test suite (the Step 1 acceptance check)
+## 5. Run the test suite
 
-The existing tests use sqlite (fast, no snapshot needed):
+The tests use sqlite by default (fast, no snapshot needed):
 ```
 docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 Green suite in-container = the harness works. This is the baseline everything
-else builds on.
+else builds on. To run the same suite against PostgreSQL instead, see section 6.
+
+## 6. PostgreSQL
+
+The site is moving from MySQL to PostgreSQL, so the stack runs both. One
+variable decides which one the app uses:
+
+```
+DB_ENGINE=postgresql docker compose up      # or put DB_ENGINE=postgresql in .env
+```
+`mysql` is still the default. Host and port follow the engine automatically
+(`db`:3306 or `postgres`:5432), so there is nothing else to set;
+`sg101/settings/databases.py` holds the mapping.
+
+**Create the schema** on the empty `postgres` service (once, or again after
+`docker compose down -v`):
+```
+docker compose exec -e DB_ENGINE=postgresql web python tools/create_pg_schema.py
+```
+That script exists because a plain `migrate --run-syncdb` can't build this
+schema on Postgres — most apps have no migrations, and their tables and the
+migrated ones have to be created in a specific order. Its docstring explains the
+ordering; it goes away once every app has migrations.
+
+**Run the suite against Postgres:**
+```
+docker compose exec postgres psql -U sg101 -d postgres -c "DROP DATABASE IF EXISTS test_sg101" -c "CREATE DATABASE test_sg101 TEMPLATE sg101"
+docker compose exec web python manage.py test --settings=sg101.settings.docker_test_pg --keepdb
+```
+The clone-and-keepdb dance is the same story: Django builds a test database with
+one `migrate --run-syncdb` call, which Postgres rejects, so the test database is
+cloned from the schema built above instead. Once the apps have migrations this
+collapses back to a plain `manage.py test --settings=sg101.settings.docker_test_pg`.
 
 ---
 
@@ -112,16 +146,23 @@ else builds on.
 | Django shell | `docker compose exec web python manage.py shell` |
 | Run a management command | `docker compose exec web python manage.py <cmd>` |
 | MySQL prompt | `docker compose exec db mysql -uroot -prootpw sg101` |
+| PostgreSQL prompt | `docker compose exec postgres psql -U sg101 sg101` |
+| Run a command against Postgres | `docker compose exec -e DB_ENGINE=postgresql web python manage.py <cmd>` |
 
 ## How the pieces fit
 
 - **`Dockerfile`** — builds the Python 3.7 image (system libs + pip deps from
   `requirements-docker.txt`).
-- **`docker-compose.yml`** — defines the five services and wires them together.
+- **`docker-compose.yml`** — defines the six services and wires them together.
 - **`sg101/settings/docker.py`** — dev settings; points the DB and Redis at the
-  `db`/`redis` containers over the network (the legacy settings used unix
-  sockets). Selected via `DJANGO_SETTINGS_MODULE` in compose.
-- **`sg101/settings/docker_test.py`** — test settings (sqlite + Redis over TCP).
+  container services over the network (the legacy settings used unix sockets).
+  Selected via `DJANGO_SETTINGS_MODULE` in compose.
+- **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
+  name, and port, so the settings modules never hardcode an engine.
+- **`sg101/settings/docker_test.py`** — test settings (sqlite + Redis over TCP);
+  **`docker_test_pg.py`** — the same suite against PostgreSQL.
+- **`tools/create_pg_schema.py`** — builds the schema on an empty Postgres
+  database (see section 6).
 - **`snapshots/`** — where your DB dumps live (git-ignored).
 
 ## Troubleshooting
@@ -142,6 +183,6 @@ else builds on.
   lookups to happen sequentially, eliminating the stall. (If you ever see it
   return, confirm the container's `/etc/resolv.conf` has that option.)
 - **Apple Silicon note** — `db` runs the amd64 MySQL 5.7 image under emulation
-  (`platform: linux/amd64`; MySQL 5.7 has no arm64 build). The app and Redis run
-  native arm64. Emulation adds some DB overhead but is not a major factor for
-  typical pages — and it disappears entirely at Step 11 (Postgres has arm64).
+  (`platform: linux/amd64`; MySQL 5.7 has no arm64 build). Everything else,
+  Postgres included, runs native arm64. Emulation adds some DB overhead but is
+  not a major factor for typical pages, and it goes away with MySQL itself.

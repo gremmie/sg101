@@ -1,11 +1,17 @@
 # Dockerized SG101 dev stack (Python 3.7 / Django 3.2).
 #
-# Five services:
-#   web    - Django dev server (the site), published on http://localhost:8000
-#   worker - Celery worker (background tasks)
-#   beat   - Celery beat (scheduled tasks)
-#   db     - MySQL 5.7 (holds a production snapshot)
-#   redis  - Redis (Celery broker + "who's online" + wiki cookies)
+# Six services:
+#   web      - Django dev server (the site), published on http://localhost:8000
+#   worker   - Celery worker (background tasks)
+#   beat     - Celery beat (scheduled tasks)
+#   db       - MySQL 5.7 (holds a production snapshot)
+#   postgres - PostgreSQL 16 (the engine we're migrating to)
+#   redis    - Redis (Celery broker + "who's online" + wiki cookies)
+#
+# Both database services run at once while the migration is in progress: the
+# conversion reads from MySQL and writes to Postgres, and MySQL stays the
+# documented fallback until Postgres is proven. Which one the app talks to is
+# the DB_ENGINE variable (see the `environment:` block on `web`).
 #
 # The web/worker/beat services each build from the SAME ./Dockerfile (as separate
 # images) and bind-mount the repo, so editing code on the Mac is reflected live.
@@ -21,7 +27,7 @@
 #
 # Config/secrets note: SECRET_KEY, DB creds, and API keys come from the
 # git-ignored .env file (see .env.example), loaded via `env_file:` below; base.py
-# reads them from the environment. The DB/Redis topology (DB_HOST, REDIS_HOST,
+# reads them from the environment. The DB/Redis topology (DB_ENGINE, REDIS_HOST,
 # DJANGO_SETTINGS_MODULE) is set inline and consumed by sg101/settings/docker.py.
 
 services:
@@ -56,6 +62,33 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres:
+    # 16 is the version the target architecture names, and its support window
+    # (Nov 2028) outlasts every remaining rung of the Django ladder: 3.2 needs
+    # 9.6+, 5.2 needs 14+, so one server version covers the whole climb. Unlike
+    # mysql:5.7 this image has an arm64 build -- no emulation on Apple Silicon.
+    image: postgres:16
+    environment:
+      POSTGRES_DB: sg101
+      POSTGRES_USER: sg101
+      POSTGRES_PASSWORD: sg101
+      # Explicit, because it's the point of the exercise: the cluster is UTF8,
+      # so the 8 latin1 tables in the MySQL snapshot get transcoded on the way
+      # in rather than carried over as mojibake.
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Same read-only snapshot mount as `db`, for the conversion.
+      - ./snapshots:/snapshots:ro
+    ports:
+      # 5432 on the host, so you can point a GUI/CLI (or pgloader) at it.
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sg101 -d sg101"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:6
     ports:
@@ -64,11 +97,17 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
-    # Docker-topology vars (not secrets): which settings module and where the
-    # db/redis services live on the Compose network.
+    # Docker-topology vars (not secrets): which settings module, which database
+    # engine, and where the redis service lives on the Compose network.
+    #
+    # DB_ENGINE picks the database: `mysql` (the default, still the fallback) or
+    # `postgresql`. Set it in .env or the shell to flip the whole stack:
+    #     DB_ENGINE=postgresql docker compose up
+    # Host and port default to whichever service runs that engine, so this is
+    # the only knob; DB_HOST/DB_PORT still override for anything off-Compose.
     environment: &app_env
       DJANGO_SETTINGS_MODULE: sg101.settings.docker
-      DB_HOST: db
+      DB_ENGINE: ${DB_ENGINE:-mysql}
       REDIS_HOST: redis
     # Secrets + DB credentials (SECRET_KEY, DB_*, API keys) come from the
     # git-ignored .env file -- see .env.example. `environment:` above wins over
@@ -88,6 +127,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_started
 
@@ -101,6 +142,8 @@ services:
       - .:/app
     depends_on:
       db:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       redis:
         condition: service_started
@@ -118,3 +161,4 @@ services:
 
 volumes:
   db_data:
+  postgres_data:

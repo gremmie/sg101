@@ -36,19 +36,20 @@ class ForumPostTestCase(TestCase):
 
         self.assertEqual(len(response.redirect_chain), 1)
 
+        forum = Forum.objects.get(slug=forum_slug)
+        try:
+            topic = Topic.objects.get(name=topic_name)
+        except Topic.DoesNotExist:
+            self.fail("topic doesn't exist")
+
         if response.redirect_chain:
             self.assertEqual(
                 response.redirect_chain[0][0],
-                reverse('forums-new_topic_thanks', kwargs={'tid': '1'}))
+                reverse('forums-new_topic_thanks',
+                        kwargs={'tid': str(topic.pk)}))
             self.assertEqual(response.redirect_chain[0][1], 302)
 
         self.assertEqual(response.status_code, 200)
-
-        forum = Forum.objects.get(slug=forum_slug)
-        try:
-            topic = Topic.objects.get(pk=1)
-        except Topic.DoesNotExist:
-            self.fail("topic doesn't exist")
 
         self.assertEqual(topic.forum.pk, forum.pk)
         self.assertEqual(topic.user.pk, self.user.pk)
@@ -64,18 +65,15 @@ class ForumPostTestCase(TestCase):
 
         # post to the thread
         response = self.client.get(
-                reverse('forums-topic_index', kwargs={'id': '1'}))
+                reverse('forums-topic_index', kwargs={'id': str(topic.pk)}))
         self.assertEqual(response.status_code, 200)
 
         post2_body = 'test quick post'
         response = self.client.post(
                 reverse('forums-quick_reply'),
-                {'body': post2_body, 'topic_id': 1})
+                {'body': post2_body, 'topic_id': topic.pk})
         self.assertEqual(response.status_code, 200)
-        try:
-            topic = Topic.objects.get(pk=1)
-        except Topic.DoesNotExist:
-            self.fail("topic doesn't exist")
+        topic.refresh_from_db()
 
         post = topic.last_post
         self.assertFalse(post is None)
@@ -85,21 +83,19 @@ class ForumPostTestCase(TestCase):
         self.assertEqual(topic.post_count, 2)
 
         # quote last post
+        quoted_post = topic.last_post
         response = self.client.get(
-                reverse('forums-new_post', kwargs={'topic_id': 1}),
-                {'quote_id': 2})
+                reverse('forums-new_post', kwargs={'topic_id': topic.pk}),
+                {'quote_id': quoted_post.pk})
         self.assertEqual(response.status_code, 200)
 
         post3_body = 'new post 3 content'
         response = self.client.post(
-                reverse('forums-new_post', kwargs={'topic_id': 1}),
-                {'body': post3_body, 'post_id': 2},
+                reverse('forums-new_post', kwargs={'topic_id': topic.pk}),
+                {'body': post3_body, 'post_id': quoted_post.pk},
                 follow=True)
         self.assertEqual(response.status_code, 200)
-        try:
-            topic = Topic.objects.get(pk=1)
-        except Topic.DoesNotExist:
-            self.fail("topic doesn't exist")
+        topic.refresh_from_db()
 
         post = topic.last_post
         self.assertFalse(post is None)
@@ -109,20 +105,18 @@ class ForumPostTestCase(TestCase):
         self.assertEqual(topic.post_count, 3)
 
         # edit last post
+        post3 = topic.last_post
         response = self.client.get(
-                reverse('forums-edit_post', kwargs={'id': 3}))
+                reverse('forums-edit_post', kwargs={'id': post3.pk}))
         self.assertEqual(response.status_code, 200)
 
         post3_body = 'edited post 3 content'
         response = self.client.post(
-                reverse('forums-edit_post', kwargs={'id': 3}),
+                reverse('forums-edit_post', kwargs={'id': post3.pk}),
                 {'body': post3_body},
                 follow=True)
         self.assertEqual(response.status_code, 200)
-        try:
-            topic = Topic.objects.get(pk=1)
-        except Topic.DoesNotExist:
-            self.fail("topic doesn't exist")
+        topic.refresh_from_db()
 
         post = topic.last_post
         self.assertFalse(post is None)

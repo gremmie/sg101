@@ -39,8 +39,8 @@ class PollHomeTest(TestCase):
                 is_enabled=False,
                 question='Disabled Poll')
 
-        choice1 = Choice.objects.create(poll=active, choice="Yes")
-        choice2 = Choice.objects.create(poll=active, choice="Yes")
+        self.choice1 = Choice.objects.create(poll=active, choice="Yes")
+        self.choice2 = Choice.objects.create(poll=active, choice="Yes")
 
         self.username = 'test_user'
         self.pw = 'password'
@@ -155,7 +155,7 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        choice = Choice.objects.get(pk=1)
+        choice = Choice.objects.get(pk=self.choice1.pk)
         self.assertEqual(choice.votes, 0)
         self.assertTrue(self.user not in choice.voters.all())
 
@@ -163,7 +163,7 @@ class PollHomeTest(TestCase):
         poll = Poll.objects.get(question='Active Poll')
         response = self.client.post(
                 reverse('polls-vote', kwargs={'poll_id': poll.id}),
-                {'choices': 1},
+                {'choices': self.choice1.pk},
                 follow=True)
 
         self.assertEqual(len(response.redirect_chain), 1)
@@ -175,7 +175,7 @@ class PollHomeTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        choice = Choice.objects.get(pk=1)
+        choice = Choice.objects.get(pk=self.choice1.pk)
         self.assertEqual(choice.votes, 1)
         self.assertTrue(self.user in choice.voters.all())
 

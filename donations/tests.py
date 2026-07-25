@@ -50,7 +50,7 @@ class DonationsIpnTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         try:
-            d = Donation.objects.get(pk=1)
+            d = Donation.objects.get()
         except Donation.DoesNotExist:
             self.fail("Donation object was not created")
         else:
@@ -91,7 +91,7 @@ class DonationsIpnTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         try:
-            d = Donation.objects.get(pk=1)
+            d = Donation.objects.get()
         except Donation.DoesNotExist:
             self.fail("Donation object was not created")
         else:

@@ -3,6 +3,78 @@
 **Last updated:** 2026-07-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
+## EXECUTION — Step 11 (MySQL → PostgreSQL) — IN PROGRESS (started 2026-07-24)
+
+### Task 01 — stand up PostgreSQL and run the suite against it — DONE
+
+**Shipped:** `postgres:16` service in Compose (named volume, healthcheck, 5432 on
+the host, `POSTGRES_INITDB_ARGS=--encoding=UTF8`, snapshot mount) running
+*alongside* MySQL; `psycopg2==2.9.9` in both requirements files (verified as the
+last release supporting Python 3.7 — 2.9.10 requires 3.8+) built from source via
+`libpq-dev` in the Dockerfile; `sg101/settings/databases.py`, a small engine map
+so no settings module hardcodes an engine; `DB_ENGINE` (`mysql` default |
+`postgresql`) as the single switch, with host/port defaulting to the matching
+Compose service; `sg101/settings/docker_test_pg.py`; `.env.example` and DOCKER.md
+updated. **Version rationale:** PG 16 is what the target architecture names and
+its support window (Nov 2028) covers every remaining Django rung (3.2 needs 9.6+,
+5.2 needs 14+); it also has an arm64 image, so the MySQL emulation penalty is
+gone.
+
+**The finding that matters — schema creation cannot be done in one pass.**
+`migrate --run-syncdb` runs its **syncdb phase first**, and Postgres (unlike
+SQLite) requires an FK's target table to exist when the constraint is created.
+The real dependency picture: **24 columns in the 21 unmigrated apps reference
+`auth_user`** (so syncdb can't go first) and **`forums.0001_initial` references
+`oembed_oembed`** (so the migrations can't go first). Not circular — oembed has
+no FKs of its own — so ordered phases work, and `tools/create_pg_schema.py` does
+it: detach elsewhere's `post_migrate` hook (it queries its own tables on every
+migrate call), `migrate auth`, `migrate oembed --run-syncdb`, `migrate`,
+`migrate --run-syncdb`, reattach + seed. 84 tables, reproducible from empty.
+
+**Consequence for sequencing:** Django's test runner builds its test database
+with a *single* `migrate --run-syncdb` call, so it hits the same wall — the suite
+can only run on Postgres against a database cloned from the phased build
+(`CREATE DATABASE test_sg101 TEMPLATE sg101` + `--keepdb`). **Backfilling
+initial migrations for the 21 apps (task 04) is therefore a prerequisite for
+anything that creates a fresh database — including the Postgres CI job (task
+06) — not a successor to it.** Both workarounds (the script, the clone) delete
+themselves once task 04 lands.
+
+**Suite: 567 tests green on PostgreSQL** (5 skipped), and still green on sqlite.
+**8 tests had to change, all one root cause:** they relied on SQLite reusing
+rowids after a rollback, which made PKs predictable (`pk=1`, or `user.pk` ==
+`profile.pk`); Postgres sequences don't roll back, so the assumed ids were wrong.
+Fixed by using the real ids — `bandmap` (`get(pk=1)` → `first()`), `donations`
+×2 (→ `get()`, the idiom already used elsewhere in that file), `forums`
+(hardcoded topic/post ids 1–3 → the created objects' pks), `polls` ×2 (voted for
+`choices: 1`), `bio` (passed a **User** pk where the view takes a **UserProfile**
+pk — they only ever matched by coincidence), `comments` ×3. No app code changed.
+
+**Watch-item handed to tasks 03/05:** the `comments` failures traced to
+`potd.CurrentManager`/`SequenceManager` fetching their singleton row with
+`get(pk=1)`. Production holds exactly one row in each of `potd_current` and
+`potd_sequence`, both with `id = 1`, so the conversion **must preserve those
+ids** or the POTD stops working. The test now pins `Current(pk=1, ...)`.
+
+**Table diff vs. the MySQL snapshot:** 84 (PG) vs 91 (MySQL). All 84 match; the
+7 MySQL-only tables are dead legacy with no models left — `auth_message`
+(Django ≤1.3), `core_anonlastvisit`, `core_userlastvisit`, `gcalendar_accesstoken`
+(returns when gcalendar is revived), `irc_ircchannel`, `mailer_message`
+(django-mailer), `membermap_mapentry`.
+
+**Measurement for task 06 (no policy decided here):** 567 tests — **sqlite
+4.93–4.96 s**, **Postgres 6.30–6.59 s** (≈ +30 %), both in-container on the same
+machine, Postgres timed with `--keepdb` (so DB creation is excluded on that
+side). Stable across repeat runs on a reused test database.
+
+**Also verified:** MySQL path untouched (site serves the snapshot — 463,221
+forum posts, pages 200), `check` clean on both engines, `makemigrations --check`
+clean, and the site renders on Postgres against the empty schema.
+
+**Not committed yet.** Remaining Step 11 tasks: 02 (case-insensitive lookup
+parity), 03 (pgloader conversion), 04 (backfill migrations — see resequencing
+above), 05 (data-integrity verification), 06 (CI + test-DB policy).
+
 ## INTERLUDE — drop the `six` compatibility shim from application code (2026-07-24)
 
 Standalone cleanup between Steps 10 and 11 — Step 7 residue, not part of either. All

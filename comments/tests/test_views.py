@@ -24,7 +24,10 @@ class PostCommentTestCase(TestCase):
         potd1.save()
         potd2 = Photo(pk=8192, user=self.user, date_added=datetime.today())
         potd2.save()
-        current = Current(potd=potd2)
+        # potd.Current is a singleton row the app fetches by pk=1 (that is
+        # what production holds); pin it rather than rely on the id the
+        # database happens to assign.
+        current = Current(pk=1, potd=potd2)
         current.save()
 
     def test_no_ctype_or_object(self):

@@ -20,15 +20,19 @@ ENV PYTHONUNBUFFERED=1 \
 # --- System build/runtime dependencies ---------------------------------------
 #   default-libmysqlclient-dev : build mysqlclient (the 1.4.x pin has no wheel)
 #   default-mysql-client       : the `mysql` CLI, to load the DB snapshot
+#   libpq-dev                  : build psycopg2 from source (headers + pg_config)
 #   pkg-config                 : mysqlclient's build finds libmysqlclient through it
 # lxml and Pillow now install from manylinux wheels on Py3.7, so their C-library
 # -dev headers (libxml2/libxslt, libjpeg/zlib/freetype) are no longer needed.
+# No psql CLI here on purpose: the postgres service image carries a matching one
+# (`docker compose exec postgres psql ...`), and Bullseye's would be older.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         build-essential \
         default-libmysqlclient-dev \
         default-mysql-client \
+        libpq-dev \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 

@@ -27,6 +27,12 @@ vine==5.0.0
 importlib-metadata==4.13.0
 
 mysqlclient==1.4.6
+# psycopg2 (not psycopg 3): Django 3.2's PostgreSQL backend imports psycopg2 and
+# refuses to start without it -- psycopg 3 support arrives in Django 4.2. Built
+# from source (libpq-dev in the Dockerfile), not psycopg2-binary, which upstream
+# discourages for anything but a quick trial. 2.9.9 is the last release
+# supporting Python 3.7; 2.9.10 requires 3.8+.
+psycopg2==2.9.9
 redis==3.5.3            # celery 4.4 / kombu 4.6 redis transport needs >=3.2
 python-memcached==1.59  # only used by production.py CACHES; 1.59 adds Py3
 

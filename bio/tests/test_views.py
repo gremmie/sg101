@@ -232,7 +232,7 @@ class ProfileTest(TestCase):
     def test_flag_profile_get(self):
         paul = User.objects.get(username='paul')
         eddie = User.objects.get(username='eddie')
-        url = reverse('bio-flag_profile', args=[eddie.pk])
+        url = reverse('bio-flag_profile', args=[eddie.profile.pk])
 
         # not logged in, wrong request method:
         response = self.client.get(url)

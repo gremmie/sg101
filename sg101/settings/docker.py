@@ -7,7 +7,7 @@ only overrides the two things that differ between "everything on one box talking
 over unix sockets" and "each service in its own container talking over the Docker
 network (TCP)":
 
-  * the database host (MySQL is the `db` service, not a local unix socket), and
+  * the database (a service on the Docker network, not a local unix socket), and
   * Redis / the Celery broker (the `redis` service, not a local unix socket).
 
 Connection details are read from environment variables that docker-compose sets
@@ -19,29 +19,18 @@ Selected via DJANGO_SETTINGS_MODULE=sg101.settings.docker (set in compose).
 """
 import os
 
+from sg101.settings.databases import from_env
 from sg101.settings.local import *  # noqa: F401,F403
 
 
-# --- Database: talk to the `db` service over TCP -----------------------------
+# --- Database: talk to the database service over TCP -------------------------
 # The legacy local.py connects to MySQL over a unix socket; inside Compose each
-# service is a separate container, so we connect to the `db` host over the
-# network instead. Credentials come from the environment (compose sets these to
-# the same values the MySQL container is initialized with).
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'sg101'),
-        'USER': os.environ.get('DB_USER', 'sg101'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'sg101'),
-        'HOST': os.environ.get('DB_HOST', 'db'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
-        'OPTIONS': {
-            # Match the production snapshot's charset (utf8, not utf8mb4) so
-            # text renders correctly. The legacy settings set no charset.
-            'charset': 'utf8',
-        },
-    },
-}
+# service is a separate container, so we connect over the network instead.
+# $DB_ENGINE picks which service -- `mysql` (the `db` container) or `postgresql`
+# (the `postgres` container) -- while the engine migration is in flight; see
+# sg101/settings/databases.py. Credentials come from the environment (compose
+# initializes both containers with the same ones).
+DATABASES = from_env()
 
 # --- Redis / Celery: talk to the `redis` service over TCP --------------------
 # core/services.py uses a unix socket only when REDIS_UNIX_SOCKET is truthy;

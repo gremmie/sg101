@@ -69,7 +69,7 @@ class BasicTestCase(TestCase):
         self.assertRedirects(response, url)
 
         self.assertEqual(BandEntry.objects.all().count(), 1)
-        entry = BandEntry.objects.get(pk=1)
+        entry = BandEntry.objects.first()
         self.assertEqual(entry.name, post_data['name'])
         self.assertEqual(entry.user, self.user)
         self.assertEqual(entry.user, self.user)
