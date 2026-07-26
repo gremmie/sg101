@@ -88,6 +88,13 @@ everything. DOCKER.md's command table and §6 both say so now. CI is unaffected,
 since `db` never starts there, but the documented "stop and wipe the DB" would
 have half-worked on a developer's machine.
 
+**Pushed as `cf334b7`; CI green on GitHub 2026-07-26** — the first CI run on
+Postgres, which is what acceptance criterion 1 actually asked for. **It came in
+*faster* than the sqlite run before it: 1m57s against 2m18s for `3114b4f`.**
+Losing the `depends_on: db` wait for MySQL 5.7 to go healthy more than paid for
+the suite's extra 1.9s. Single runs either side, so an observation rather than a
+benchmark, but it settles any worry that the engine change slowed CI down.
+
 **Verified on this machine:** fresh `docker compose up` → 5 services, no MySQL,
 Django resolving `django.db.backends.postgresql` with no `DB_ENGINE` set
 anywhere; site serves the converted snapshot (463,221 posts, 35,692 topics,
