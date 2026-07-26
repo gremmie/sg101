@@ -12,6 +12,146 @@ database from 03 to diff against; the real production schema in MySQL is what
 pgloader will convert, so the audit was done there instead and gets re-verified
 against the converted tables at 03/05.
 
+**Tasks 01, 04, 02, 03 and 05 are done. Task 06 (CI on Postgres + the test-DB
+decision) is the last one in this step.**
+
+### Task 05 — data integrity verification — DONE (2026-07-25)
+
+The conversion is now verified rather than merely run, and **four defects that
+would have shipped were found by doing it** — all invisible to row counts, to
+the column-level schema diff, and to the test suite.
+
+**1. Every datetime in the database was 5–6 hours early.** MySQL `datetime`
+carries no offset and, with `USE_TZ` off, Django wrote local wall-clock time
+into it. Django maps `DateTimeField` to `timestamptz` on PostgreSQL, so every
+value has to be placed on the timeline as it loads, using the session
+timezone — which was the server default, UTC. Django then read them back in
+`America/Chicago`. The same ORM query returned `2006-02-26 19:24:30` on MySQL
+and `13:24:30` on Postgres, for all 1.25 million datetime values. The stored
+values really are local time and this is not an assumption: **the 02:00 hour
+is empty on every DST spring-forward day across twenty years of posts**, the
+gap only local time has. `convert.sh` now sets the timezone on the target
+database before loading and reads it from Django so the two cannot drift.
+
+**2. All 91 foreign keys were `RESTRICT`, where Django builds `NO ACTION
+DEFERRABLE INITIALLY DEFERRED`.** Django's ORM performs cascades in Python and
+lets its deletion collector remove rows in whatever order suits it, leaving
+the database to confirm consistency once, at commit. pgloader carried InnoDB's
+semantics across instead. RESTRICT is checked immediately and **cannot be
+deferred** — deferring them first was tried and changed nothing, which is what
+pointed at the action rather than the timing. Ordinary operations therefore
+failed against the converted database while working against a migrated one:
+**deleting a forum topic was enough**, because the topic's own `last_post`
+points at a post being removed in the same transaction. `post_convert.py` now
+drops and recreates all 91 with Django's semantics.
+
+**3 and 4, found by asking the question generally.** The foreign keys were
+caught by chasing a specific failure, which prompted the obvious follow-up:
+where *else* does pgloader produce a faithful conversion of MySQL rather than
+the schema Django would have built? Two more. **Every `CHECK` constraint was
+missing** — `PositiveIntegerField` and `PositiveSmallIntegerField` are plain
+integers plus a `>= 0` check on PostgreSQL, where MySQL said UNSIGNED, which
+has no equivalent to carry across; the converted database accepted a negative
+`tagging_taggeditem.object_id` and now rejects it. And **two columns kept a
+`DEFAULT 0`** from MySQL, where Django applies field defaults in Python and
+leaves the database with none. Both are repaired in `post_convert.py`, derived
+from Django's own field definitions rather than hardcoded.
+
+**That question is now a tool.** `compare_schema.py` diffs the converted
+schema against one the migrations build, across columns, indexes,
+constraints, foreign keys — action and deferrability included — defaults and
+sequence ownership. Names are deliberately excluded: pgloader's
+`idx_393735_username` against Django's
+`forums_topic_last_post_id_ed000e17_fk` would bury everything that matters.
+It reports **522 columns, 88 foreign keys and 0 unowned sequences matching**,
+with two differences understood: the redundant
+`forums_topic_subscribers(topic_id)` index, and 25 uniqueness rules Django
+declares as `UNIQUE` constraints that pgloader created as unique indexes —
+which PostgreSQL enforces identically and Django finds by introspection, so
+the tool reconciles them by columns rather than accepting them by name. It was
+tested by breaking the database on purpose — one foreign key back to RESTRICT,
+one CHECK dropped, one default restored — and it named all three and exited 1.
+
+**Everything else matches.** 91 tables, 699,435 rows, exact counts;
+`forums_post` 463,221, `forums_topic` 35,692, `auth_user` 15,227, `news_story`
+1,694. Column by column: **543 columns, 5.7M values**, checksummed on both
+engines with datetimes compared as the application sees them and NULL held
+distinct from `''`. 91 foreign keys valid, **zero orphaned rows**, enforcement
+proved by a rejected insert rather than read off the catalog. Twelve models
+dumped through Django's serializer on both engines are byte-identical. Beyond
+columns, the converted schema was compared to a migrations-built one for
+uniqueness and nullability too: the only differences are the 7 legacy
+model-less tables and the single known `forums_topic_subscribers(topic_id)`
+index.
+
+**Four differences from the source are expected, and each is pinned to a row
+count** so corruption arriving alongside one still fails: `auth_permission` and
+`django_migrations` grow when migrations are applied; `auth_user.email` differs
+in exactly 1 row (`accounts.0003` folding the case-variant address);
+`forums_post.user_ip` in exactly 370 (`''` → NULL, since `inet` has no empty
+value).
+
+**Live smoke: 35 checks, reads and writes.** The full checklist plus the pages
+this conversion put at risk — a profile with no country set, the cp1252 band
+name (`The Chi-Tones™`) coming back out of the map endpoint. Writes go through
+the running server: a forum topic, a private message and a photo were created,
+checked to display, and removed again. Both password flows work. **The Celery
+worker and beat ran all five scheduled tasks clean against the converted
+database**, and beat dispatched `max_users` on its own schedule, which the
+worker executed 23ms later; the private message raised a real `send_mail` task
+organically.
+
+**AC 6 is met in substance, not as written.** It asks for the suite green
+against the converted production database. The suite is written against an
+empty one, and 566 tests run with 27 failures and 98 errors there — every one
+of them a fixture colliding with real data: 89 unique-constraint violations
+(the fixtures create a user named `Gremmie`, who exists), 27 assertions about
+global counts (`potd` expects 3 photos and finds 575), and 9 slug collisions.
+**Zero engine-level errors** — no `DataError`, no encoding or interface
+trouble — which is the finding that matters. The pass/fail gate stays the
+clean-schema run: **593 green on Postgres and on sqlite**, `check` and
+`makemigrations --check` clean. The stale "567 tests" in the task's AC 6
+predates task 02.
+
+**Repeatable end to end.** After the scheduled tasks mutated data, the whole
+pipeline was re-run from the pristine MySQL snapshot — convert, verify,
+post_convert, verify_data, crosscheck, smoke — and every check passed again.
+`smoke.py` recovers from a previous run that died part way through, which was
+tested by planting the wreckage: an orphaned topic plus a reply that had become
+both its topic's and its forum's `last_post`. It repointed both, removed the
+content and put `forums_forum.surf-music` back to 6,685 topics / 98,449 posts
+and its original `last_post` — the source values exactly.
+
+**Order matters: verify before smoking.** Using the site writes sessions and
+raises topic view counters, so a comparison against the untouched MySQL source
+has to happen before anything browses. DOCKER.md §7 numbers the steps
+accordingly.
+
+**Artifacts:** `tools/pgloader/{verify_data.py,compare_schema.py,
+crosscheck_dumpdata.sh,smoke.py}`, additions to
+`verify.py`/`convert.sh`/`post_convert.py`, procedure in DOCKER.md §7.
+
+**Also fixed:** `verify.py` reported nonsense non-ASCII tallies. MySQL 5.7's
+`REGEXP` has no `\x` escape, so `[^\x00-\x7F]` is a class of literal
+backslash/x/digits that matches ordinary ASCII — and only on the latin1
+columns, the ones the check exists for. It claimed 931 non-ASCII values in
+`bandmap_bandentry.name` where there are 23. Now measured by byte length. The
+md5 comparison that decides pass/fail was never affected.
+
+**Watch items, neither caused by the conversion:**
+
+- **`Forum.last_post` and `Topic.last_post` are `OneToOneField(..., on_delete=
+  CASCADE)` pointing at `Post`.** Deleting the post a forum happens to point
+  at takes the forum — and every topic and post inside it — with it. Deleting
+  one scratch account proposed to cascade to **6,686 topics and 98,450
+  posts**. The app has carried `last_post_pre_delete()` for years to step
+  around this, so its own paths are safe, but a plain `User.delete()` from the
+  admin is not. Pre-existing, and worth a real fix when the forums app is next
+  open.
+- **Index names are pgloader's (`idx_393735_username`), not Django's.** Django
+  resolves indexes by introspection, so this works, but a migration written
+  against a name would not.
+
 ### Task 03 — pgloader snapshot conversion — DONE (2026-07-25)
 
 The production snapshot now runs on PostgreSQL. **699,435 rows across 91

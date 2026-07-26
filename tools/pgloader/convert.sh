@@ -45,6 +45,14 @@ PG_DB="${PG_DB:-$env_db_name}"
 : "${MYSQL_USER:?DB_USER not set in .env and MYSQL_USER not given}"
 : "${MYSQL_DB:?DB_NAME not set in .env and MYSQL_DB not given}"
 
+# The timezone the naive MySQL datetimes are written in. Read from Django so
+# the two cannot drift apart; the fallback covers running this with the web
+# container down.
+APP_TIME_ZONE="${APP_TIME_ZONE:-$(docker compose exec -T web \
+    python -c 'from django.conf import settings; print(settings.TIME_ZONE)' \
+    2>/dev/null | tr -d '\r' || true)}"
+APP_TIME_ZONE="${APP_TIME_ZONE:-America/Chicago}"
+
 NETWORK="${COMPOSE_NETWORK:-sg101_default}"
 # pgloader publishes amd64 only, so this runs under emulation on Apple
 # Silicon. It is a one-off conversion, so the penalty is acceptable; declaring
@@ -56,12 +64,24 @@ mkdir -p "$log_dir"
 log_file="$log_dir/convert-$(date +%Y%m%d-%H%M%S).log"
 
 echo "Converting mysql://${MYSQL_HOST}/${MYSQL_DB} -> postgresql://${PG_HOST}/${PG_DB}"
+echo "Naive datetimes will be read as ${APP_TIME_ZONE}"
 
 # Recreate the target. postgres is the maintenance database; you cannot drop
 # the one you are connected to.
+#
+# The timezone is set on the database, before the load, and it is not
+# cosmetic. MySQL datetime columns hold no offset, and with USE_TZ off Django
+# wrote local wall-clock time into them -- the 02:00 hour is empty on every
+# DST spring-forward day, which is the gap that only local time has. Django
+# maps DateTimeField to timestamptz on PostgreSQL, so pgloader hands those
+# naive strings to a column that must place them on the timeline, and it does
+# that using the session timezone. Left at the server default of UTC they are
+# stored as UTC instants; Django then reads them back in TIME_ZONE and every
+# datetime in the database comes out 5-6 hours early.
 docker compose exec -T postgres psql -U "$PG_USER" -d postgres \
     -c "DROP DATABASE IF EXISTS \"$PG_DB\" WITH (FORCE);" \
-    -c "CREATE DATABASE \"$PG_DB\" ENCODING 'UTF8';"
+    -c "CREATE DATABASE \"$PG_DB\" ENCODING 'UTF8';" \
+    -c "ALTER DATABASE \"$PG_DB\" SET timezone TO '$APP_TIME_ZONE';"
 
 # Fill in the {{...}} placeholders. pgloader has a --context option for this,
 # but its key lookup does not match a keyword alist in 3.6.7 -- the

@@ -138,9 +138,16 @@ def check_encoding(my, pg):
             dst = dict(fetch(pg,
                 'SELECT "%s", md5("%s") FROM "%s" WHERE "%s" IS NOT NULL'
                 % (pk, col, table, col)))
+            # Non-ASCII means "more bytes than characters once decoded".
+            # REGEXP is not an option: MySQL 5.7's engine has no \x escape,
+            # so '[^\x00-\x7F]' is a class of literal backslash/x/digits
+            # that matches ordinary ASCII -- and it does so only on the
+            # latin1 columns, the ones this check exists for.
             n_high = fetch(my,
-                'SELECT COUNT(*) FROM `%s` WHERE `%s` REGEXP %s'
-                % (table, col, "'[^\\x00-\\x7F]'"))[0][0]
+                'SELECT COUNT(*) FROM `%s` '
+                'WHERE LENGTH(CONVERT(`%s` USING utf8)) <> '
+                '      CHAR_LENGTH(CONVERT(`%s` USING utf8))'
+                % (table, col, col))[0][0]
             non_ascii += n_high
             for key, digest in src.items():
                 compared += 1

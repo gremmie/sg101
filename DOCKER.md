@@ -141,7 +141,33 @@ docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
 # 3. Bring the schema up to the current migration state.
 docker compose exec -T -e DB_ENGINE=postgresql web \
     python tools/pgloader/post_convert.py
+
+# 4. Compare the data itself, column by column, and check referential
+#    integrity. Runs after post_convert.py, unlike step 2.
+docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
+    python tools/pgloader/verify_data.py
+
+# 4b. Compare the schema against one the migrations build. Needs a reference
+#     database, which is just an empty one with migrate run against it.
+docker compose exec -T postgres psql -U sg101 -d postgres \
+    -c "DROP DATABASE IF EXISTS sg101_reference WITH (FORCE)" \
+    -c "CREATE DATABASE sg101_reference"
+docker compose exec -T -e DB_ENGINE=postgresql -e DB_NAME=sg101_reference \
+    web python manage.py migrate
+docker compose exec -T web python tools/pgloader/compare_schema.py
+
+# 5. Second opinion on the same rows, through Django's serializer.
+MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/crosscheck_dumpdata.sh
+
+# 6. Smoke the running site, reads and writes. Needs the stack up against
+#    the converted database: DB_ENGINE=postgresql docker compose up -d
+docker compose exec -T web python tools/pgloader/smoke.py
 ```
+
+**Keep steps 4 and 5 ahead of step 6.** Using the site changes the site:
+sessions get written and topic view counters go up. `smoke.py` removes the
+content it creates, but it cannot un-read a page, so a comparison against the
+untouched MySQL source has to happen before anything browses.
 
 Step 1 prints a summary and writes it to `tools/pgloader/logs/`; rejected rows,
 if there ever are any, land in `tools/pgloader/logs/rejects/`. **A non-zero
@@ -153,10 +179,34 @@ row count against MySQL, and `migrate` legitimately adds rows to
 reported as expected growth rather than failures, but the comparison is no
 longer like-for-like.
 
-`verify.py` checks three things the conversion can get wrong silently: exact
-row counts per table, every text value in the eight cp1252 tables (md5 against
-MySQL's own decoding), and that every sequence sits past `MAX(pk)` so the next
-insert cannot collide.
+What each check covers:
+
+- **`verify.py`** — three things the conversion can get wrong silently: exact
+  row counts per table, every text value in the eight cp1252 tables (md5
+  against MySQL's own decoding), and that every sequence sits past `MAX(pk)`
+  so the next insert cannot collide.
+- **`verify_data.py`** — every column of every table, by checksum, on both
+  engines: 543 columns and 5.7 million values, with datetimes compared as the
+  application sees them, `NULL` held distinct from `''`, and booleans,
+  decimals and `inet` rendered to a common form. Also checks that every
+  foreign key holds, is enforced, and is built the way Django builds it. Four
+  differences are expected and are listed with the number of rows each may
+  affect; anything beyond that count fails.
+- **`compare_schema.py`** — the converted schema against one the migrations
+  build, across columns, indexes, constraints, foreign keys (including their
+  action and deferrability), defaults and sequence ownership. This is the
+  check that catches pgloader converting MySQL faithfully but not the way
+  Django would have built it, which is where this conversion's worst problems
+  have been. Index and constraint *names* are deliberately not compared:
+  pgloader's are `idx_393735_username` where Django's are
+  `forums_topic_last_post_id_ed000e17_fk`, Django resolves them by
+  introspection, and comparing them would bury the differences that matter.
+- **`crosscheck_dumpdata.sh`** — twelve models dumped from both engines
+  through Django's own serializer and diffed, which comes at the rows from
+  outside SQL entirely.
+- **`smoke.py`** — the running site: the read checklist, both password flows,
+  the admin, and real writes (a topic, a private message, a photo), each
+  checked to display and then removed again.
 
 ### Things worth knowing
 
@@ -170,13 +220,39 @@ insert cannot collide.
   become `varchar`, because PostgreSQL pads `char(2)` and an unset country
   comes back as two spaces instead of empty — which is truthy, and crashes
   every profile page for the 12,854 members who have not set one.
-- **`post_convert.py` does two things a plain `migrate` cannot.** It fakes the
-  initial migrations of the 21 apps whose tables already exist, and it first
-  records `oembed.0001_initial`, because `forums/0001_initial` has declared a
-  dependency on oembed since 2015 and Django's consistency check otherwise
-  refuses *every* migrate command. It then applies the prefix-matching indexes
-  in `pattern_ops_indexes.sql`, which Django would have created had its
-  initials not been faked.
+- **`post_convert.py` does several things a plain `migrate` cannot.** It fakes
+  the initial migrations of the 21 apps whose tables already exist, and it
+  first records `oembed.0001_initial`, because `forums/0001_initial` has
+  declared a dependency on oembed since 2015 and Django's consistency check
+  otherwise refuses *every* migrate command. It then applies the
+  prefix-matching indexes in `pattern_ops_indexes.sql`, which Django would
+  have created had its initials not been faked. Last it repairs three things
+  pgloader leaves in a state Django would not: the foreign keys (below), the
+  `CHECK` constraints behind `PositiveIntegerField` — MySQL says UNSIGNED,
+  which has no equivalent to carry across, so nothing stopped a negative
+  value — and two leftover column defaults, which Django never sets because
+  it applies field defaults in Python. Each is derived from Django's own
+  field definitions rather than listed, and each is idempotent.
+- **Naive datetimes are read as `TIME_ZONE`, not UTC.** MySQL `datetime`
+  carries no offset and, with `USE_TZ` off, Django wrote local wall-clock time
+  into it. Django maps `DateTimeField` to `timestamptz` on PostgreSQL, so
+  every value has to be placed on the timeline as it lands, using the session
+  timezone — and at the server default of UTC the whole database ends up 5–6
+  hours early once Django reads it back in `America/Chicago`. `convert.sh`
+  sets the timezone on the target database before loading, reading it from
+  Django so the two cannot drift. That the stored values really are local time
+  is not an assumption: the 02:00 hour is empty on every DST spring-forward
+  day across twenty years of posts, which is the gap only local time has.
+- **Foreign keys are rebuilt as `NO ACTION ... DEFERRABLE INITIALLY
+  DEFERRED`.** That is how Django's schema editor makes them, and its ORM
+  depends on it — cascades happen in Python, and the deletion collector
+  removes rows in whatever order suits it, leaving the database to confirm
+  consistency once, at commit. pgloader carries InnoDB's semantics across
+  instead and writes every constraint `ON UPDATE RESTRICT ON DELETE RESTRICT`,
+  which is checked immediately and *cannot* be deferred. Left that way,
+  ordinary operations fail against a converted database while working against
+  a migrated one: deleting a forum topic is enough, because the topic's own
+  `last_post` points at a post being removed in the same transaction.
 - **pgloader publishes an amd64 image only**, so it runs under emulation on
   Apple Silicon. The conversion still takes well under a minute.
 - **Collation changes.** The converted database is `en_US.utf8`, where MySQL
