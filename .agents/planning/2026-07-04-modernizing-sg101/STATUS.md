@@ -3,6 +3,68 @@
 **Last updated:** 2026-07-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
+## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
+
+Requirements clarification only; nothing built. Q&A in `step12-idea-honing.md`
+(Q1–Q11), design in `research/search-design.md`, and the Step 12 section of
+`implementation/plan.md` rewritten to match — its earlier sketch said a
+`SearchVectorField` per model, which the design supersedes.
+
+**Process note: this ran as idea-honing only, not a full `/pdd`.** A complete PDD
+pass would have produced a second `detailed-design.md` and a second `plan.md`
+restating what the parent project already holds — the exact duplication that
+caused the `db22869` drift. So the Q&A ran, and its output folded into the
+existing `research/` and `plan.md`. Roughly 60% of PDD's value at 20% of its
+artifact weight.
+
+**The Q&A earned its keep by finding things nobody remembered.** Step 4 deleted
+the Xapian stack but left its templates, and `pre-step-4-prune` still has the
+code, so prior behavior was *recovered* rather than guessed:
+
+- **The old search sorted newest-first, not by relevance** — the tips block says
+  so and `SearchQuerySet().order_by('-pub_date')` confirms it — despite the
+  template rendering a score. Relevance ranking is therefore a change, not a
+  restoration, and had to be chosen deliberately.
+- **The three-box form was always a UI over websearch syntax.** `forms.py`
+  synthesized `terms "exact phrase" -excluded` and handed Xapian one string.
+  Collapsing to a single `websearch` box changes the interface, not the query
+  language.
+- **Search was login-gated**, and the reason is in the source: bots were hammering
+  it, with a contemporaneous comment about someone probing for SQL injection. An
+  earlier draft of the Q&A recorded search as public — **Brian corrected it**.
+- **Query logging already exists** and Brian wants it kept — one `INFO` line per
+  search with terms, models, username and IP. Recorded first as a deferred *new
+  feature*, which was wrong twice over: it exists, and it makes Q6's deferred
+  "did you mean" decidable on evidence later.
+- **`Kahunas`** — one private category, 487 topics and 19,088 posts — turned an
+  abstract permissions question into a concrete one.
+- **10,987 comments, 72% of them Photo-of-the-Day chatter**, settled the
+  comments-in-search question on data.
+- **`bigtikidude`'s 25,768 posts** set the upper bound on the author-rename
+  fan-out, which is what made the indexing strategy a real question.
+
+**Brian changed two of my recommendations, both correctly.** He asked whether
+Celery should own *all* index updates rather than the sync/async split I had
+proposed; it should — the deciding argument is failure isolation, not
+performance, since inline indexing couples a vector-building bug to posting
+itself. And he supplied the login-gate and query-logging facts above. A third
+suggestion of mine — adding a masthead search box — turned out to be proposing
+something `v3/base.html:49` has had all along.
+
+**Decisions:** relevance-ranked with newest tiebreak; single websearch box with
+the type checkboxes kept; all 8 documents including profiles at full parity;
+private categories never indexed; every write via Celery on
+`transaction.on_commit`; no typo tolerance yet; quick search restored;
+`normalization=1` plus `setweight` A/B/C; comments out; login gate only; query
+logging kept in a dedicated `search.log`.
+
+**Architecture:** one denormalized search table, one weighted `tsvector`, one GIN
+index, `ORDER BY rank, -date`, ~490k rows. Forced by relevance ordering plus
+pagination across eight document types.
+
+**Next:** generate `step12/` code-task files with `/agent-sops:code-task-generator`,
+as Step 11 had, then build them one at a time with `/agent-sops:code-assist`.
+
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — **DONE** (2026-07-24 → 2026-07-26)
 
 **All six tasks complete.** SG101 runs on PostgreSQL 16: the site, the converted

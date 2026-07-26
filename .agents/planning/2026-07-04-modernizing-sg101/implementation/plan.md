@@ -25,7 +25,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [x] **Step 10** — Upgrade Django 2.2 → 3.2 LTS (Python 3) + Celery 4.4 → 5.2 — DONE 2026-07-24, pushed, CI green. Now on **Django 3.2.25 LTS + celery 5.2.7** (Py3.7), 567 tests green / 5 skipped, `check` + `makemigrations --check` clean, full live smoke green. Staged 2.2→3.0→3.1→3.2, then celery. **The 3.0-removal prep was a no-op** (Step 9's staticfiles sweep + no `django.utils.six` left nothing to do) — each rung surfaced its own breakers instead, a good argument for the rung-by-rung method. Prep commit `bce37e7`: **`python_2_unicode_compatible` is removed in 3.0** (not 4.0 as assumed), so a scripted decorator+import removal across all 26 models (no-op under Py3, real `__str__` already present). **Rung 1 → 3.0.14 (`800da53`):** `django.utils.html.escape()` now defers to stdlib (`'`→`&#x27;`, 3 test assertions updated); **3.0 enforces a model field's `choices` even when empty**, and elsewhere's `network_id` froze `[]` at import time — before its `post_migrate` hook seeds the tables — rejecting every valid network on a fresh DB → choices moved off the model onto the form, populated live in `__init__`. **Rung 2 → 3.1.14 (`d33552d`):** `QuerySetPaginator` removed (redundant base dropped from `core/paginator.py`); `DEFAULT_HASHING_ALGORITHM` now sha256 → reset-token URL regex widened `{1,20}`→`{1,32}`; debug-toolbar 2.2→3.2.4, whose import-time settings access re-entered settings construction and crashed dev boot → probe with `importlib.util.find_spec`, never `import`. **Rung 3 → 3.2.25 LTS (`6326ef5`):** `DEFAULT_AUTO_FIELD='django.db.models.AutoField'` (keep 32-bit PKs; widening is a deliberate schema call, not upgrade churn); 3.2's admin catch-all view redirects anon users on unknown `/admin/` paths, so the retired-route test logs in as staff. **Celery 5 (`fd1aebd`):** uppercase-settings compat is gone → `config_from_object(namespace='CELERY')` + every key renamed; pytz→2021.3; importlib-metadata stays <5.0 (kombu 5.2's `entry_points().get()` shim). Pillow/Markdown/bleach deliberately left at working pins. **Deferred out:** elsewhere migrations/FK refactor → Step 11/19; RemovedInDjango40 cleanups (is_ajax, ifequal, providing_args, force_text/ugettext_lazy/urlquote) → Step 13.
 - [x] **Interlude** — Drop the `six` shim from application code (2026-07-24). Not a step; Step 7 residue cleared between Steps 10 and 11. All 17 application imports were `six.moves.urllib.{parse,request,error}` / `six.StringIO`, which alias the stdlib exactly on Py3 → `urllib.*` / `io.StringIO`, merged into each file's stdlib import group. No behavior change; 567 tests green, `check` + `makemigrations --check` clean. **The `six==1.16.0` pin stays** — bleach, html5lib, python-dateutil, and python-memcached still require it, so removing the pin only lets it float (drifted to 1.17.0 on a test rebuild); pinned for reproducibility like sqlparse, and now commented as transitive-only. six leaves the image when those four are bumped/dropped (Step 13; python-memcached at the memcached→Redis consolidation).
 - [x] **Step 11** — Migrate MySQL → PostgreSQL (on 3.2 / Py3) — **DONE 2026-07-26**. Six code tasks at `.agents/tasks/2026-07-04-modernizing-sg101/step11/`, all complete: the site, its converted production data, and the test suite now all run on **PostgreSQL 16**. **Task order changed: 04 ran before 02/03** — task 01 proved that nothing can create a fresh Postgres database until every app has migrations, so the backfill is a prerequisite, not a successor. **Task 01:** `postgres:16` alongside MySQL, `psycopg2==2.9.9`, `DB_ENGINE` switch via `sg101/settings/databases.py`. **Task 04:** initial migrations for the 21 syncdb-era apps — all 26 now have them, no structural drift found, and `makemigrations --check` finally covers the whole project (it had been silently covering 5 apps of 26). **Task 02:** 12 collation-dependent lookups → `__iexact` across 9 files plus two `accounts` migrations (functional unique index on `LOWER(username)`; normalize the one genuine email case variant); the lookup audit is `research/collation-audit.md`. **Task 03:** pgloader conversion of the *pristine* 1.8-era snapshot — **699,435 rows, 91 tables, zero rejections**, repeatable from empty; four findings, three of which would have shipped silently (MySQL's `latin1` is really **cp1252**; `int(11)` lands as `bigint` unless cast, against Step 10's deliberate 32-bit `AutoField`; `char(2)` pads on PG and crashes the profile page for the 12,854 members with no country set). **Task 05:** verification, which found **four more defects invisible to row counts, column diffs and the suite** — every datetime 5–6h early (naive MySQL local time loaded into `timestamptz` as UTC), all 91 FKs `RESTRICT` where Django needs `NO ACTION DEFERRABLE INITIALLY DEFERRED`, every `CHECK` constraint missing, two stray column defaults. The lesson, now embodied in `compare_schema.py`: **pgloader converts MySQL faithfully ≠ pgloader builds what Django would build.** **Task 06:** CI runs the suite on Postgres using the same Compose services as local dev; **the deferred test-database question is settled — Postgres everywhere, the sqlite path retired** (measured: 593 tests, 9.1s on PG vs 7.2s on sqlite — ~1.9s, and sqlite could never cover Step 12's FTS at all); Compose now defaults to Postgres with MySQL behind a `mysql` profile, kept because the cutover converts a fresh snapshot the same way. Full detail for every task in STATUS.md.
-- [ ] **Step 12** — Build PostgreSQL full-text search (restore `/search/`)
+- [ ] **Step 12** — Build PostgreSQL full-text search (restore `/search/`) — **DESIGNED 2026-07-26, not yet built.** Requirements clarified in `step12-idea-honing.md` (Q1–Q11), design in `research/search-design.md`. Shape: **one denormalized search table** (not per-model `SearchVectorField`s — relevance ordering plus pagination across 8 document types forces it), relevance-ranked with newest as tiebreak, **single websearch-syntax box** replacing the three keyword/exact/exclude inputs the old form was already synthesizing into that same syntax, all index writes **via Celery on `transaction.on_commit`**, **login required** (anti-bot, carried forward), **private categories never indexed** (`Kahunas`: 487 topics / 19,088 posts), query logging kept in its own `search.log`. Recovered rather than remembered: the old search was **date-ordered, not relevance-ordered**, and the surviving templates + `pre-step-4-prune` tag documented the form, the index fields, the login gate and the log line. Deferred additively: `pg_trgm` "did you mean", comments, private-category search, rate limiting, sort toggle.
 - [ ] **Step 13** — Upgrade Django 3.2 → 4.2 (Python 3)
 - [ ] **Step 14** — Upgrade Django 4.2 → 5.2 LTS (Python 3.12) ⭐ target reached
 - [ ] **Step 15** — Media → Cloudflare R2 (boto3)
@@ -217,15 +217,48 @@ strict-mode warning disappears with the engine.
 ### Step 12: Build PostgreSQL full-text search (restore `/search/`)
 **Objective:** Replace the removed Xapian search with native Postgres FTS —
 restoring search functionality for the first time since it was stubbed.
-**Guidance:** Add `SearchVectorField` + GIN indexes to the searchable models
-(forum topics/posts, bios, news, weblinks, podcast, downloads, ygroup); implement
-the `/search/` and `/search/ajax/` views with `SearchQuery`/`SearchRank`;
-maintain vectors via `save()`/signals or a periodic Celery task; delete the stub.
-Validate against the current-behavior notes documented in Step 1.
-**Tests:** New search tests (indexing on create/update, query relevance,
-permissions/public-only results); functional tests for the search pages.
-**Integration:** Uses Postgres from Step 11 and Celery for (re)indexing.
-**Demo:** Search the live local site and get real results across forums/news/etc.
+**Guidance:** **Designed 2026-07-26 — see `research/search-design.md` for the
+build, and `step12-idea-honing.md` (Q1–Q11) for the reasoning and the rejected
+alternatives.** Headlines, which supersede this section's earlier sketch:
+
+- **One denormalized search table**, not a `SearchVectorField` per model (the
+  earlier guidance). Forced by the combination of relevance ordering and
+  pagination across eight document types: a blended global ordering can't be
+  assembled by merging eight per-model querysets in Python.
+- **Relevance-ranked**, newest as tiebreak — the old search was date-ordered.
+  `setweight` A=title / B=body / C=author, and
+  `SearchRank(..., normalization=Value(1))`. Weights are baked into the stored
+  vector (changing them means a full reindex); normalization is query-time.
+- **Single search box** using `search_type='websearch'`, replacing the three
+  keyword/exact/exclude inputs — which the old form was already synthesizing into
+  exactly that syntax before handing it to Xapian. Type checkboxes stay, all
+  checked by default. The masthead box at `v3/base.html:49` already fits.
+- **All index writes via Celery**, queued with `transaction.on_commit` — never
+  inline in `save()`, so an indexing bug can't break posting. A username change
+  fans out to every document embedding that author (up to 25,768 rows).
+- **Login required** (carried forward — it exists because bots were hammering
+  search), and **private categories are never indexed** (`Kahunas`: 487 topics,
+  19,088 posts, unfindable even for members who may read them — deliberate).
+- **Query logging is kept**, existing behavior, moved to its own `search.log`
+  handler mirroring `auth.log`.
+- Restore the forums' duplicate-topic quick search; delete the stub; rename the
+  `haystack_*` routes.
+- Deferred, all additive: "did you mean" (`pg_trgm`), comments in the index,
+  private-category search, rate limiting, a relevance/newest sort toggle.
+
+**Tests:** Indexing on create/update/delete; that private-category content never
+enters the index (both directions — a category becoming private must lose its
+rows); query relevance and the weighting; the websearch syntax paths (phrase,
+exclusion); login gate; the quick-search endpoint; functional tests for the
+search page. Q4's exclusion and Q5's `on_commit` queueing are the two places
+where a silent bug is most likely and most costly.
+**Integration:** Uses Postgres from Step 11 and Celery for (re)indexing. Every
+searchable app already has migrations thanks to Step 11 task 04 — four of the
+seven (`bio`, `weblinks`, `podcast`, `ygroup`) were syncdb-era until then, which
+was the argument for doing that backfill inside Step 11.
+**Demo:** Search the live local site and get real, relevance-ranked results
+across forums/news/links, with highlighted snippets and a working duplicate-topic
+check on the new-topic form.
 **FOLD IN — `core.views.ajax_users` returns an arbitrary slice** (found during
 Step 11 task 02, 2026-07-25; parked here because the user autocomplete is
 search-adjacent). The view runs
