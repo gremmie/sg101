@@ -1,17 +1,19 @@
 # Dockerized SG101 dev stack (Python 3.7 / Django 3.2).
 #
-# Six services:
+# Five services by default:
 #   web      - Django dev server (the site), published on http://localhost:8000
 #   worker   - Celery worker (background tasks)
 #   beat     - Celery beat (scheduled tasks)
-#   db       - MySQL 5.7 (holds a production snapshot)
-#   postgres - PostgreSQL 16 (the engine we're migrating to)
+#   postgres - PostgreSQL 16 (the site's database)
 #   redis    - Redis (Celery broker + "who's online" + wiki cookies)
 #
-# Both database services run at once while the migration is in progress: the
-# conversion reads from MySQL and writes to Postgres, and MySQL stays the
-# documented fallback until Postgres is proven. Which one the app talks to is
-# the DB_ENGINE variable (see the `environment:` block on `web`).
+# Plus `db` (MySQL 5.7), which no longer starts on its own: it sits behind the
+# `mysql` profile, because the only thing that still needs it is converting a
+# production snapshot, which reads from MySQL and writes to Postgres. Start it
+# when you need it:
+#     docker compose --profile mysql up
+# Which engine the app talks to is the DB_ENGINE variable (see the `environment:`
+# block on `web`); pointing it back at `mysql` needs that profile too.
 #
 # The web/worker/beat services each build from the SAME ./Dockerfile (as separate
 # images) and bind-mount the repo, so editing code on the Mac is reflected live.
@@ -35,6 +37,10 @@ services:
     image: mysql:5.7
     # mysql:5.7 ships amd64 only; run it under emulation on Apple Silicon.
     platform: linux/amd64
+    # Opt-in. The site runs on Postgres now, so this starts only for a snapshot
+    # conversion (or to point the app back at MySQL): `--profile mysql`.
+    profiles:
+      - mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
       MYSQL_DATABASE: sg101
@@ -63,10 +69,11 @@ services:
       retries: 10
 
   postgres:
-    # 16 is the version the target architecture names, and its support window
-    # (Nov 2028) outlasts every remaining rung of the Django ladder: 3.2 needs
-    # 9.6+, 5.2 needs 14+, so one server version covers the whole climb. Unlike
-    # mysql:5.7 this image has an arm64 build -- no emulation on Apple Silicon.
+    # The site's database. 16 is the version the target architecture names, and
+    # its support window (Nov 2028) outlasts every remaining rung of the Django
+    # ladder: 3.2 needs 9.6+, 5.2 needs 14+, so one server version covers the
+    # whole climb. Unlike mysql:5.7 this image has an arm64 build -- no
+    # emulation on Apple Silicon.
     image: postgres:16
     environment:
       POSTGRES_DB: sg101
@@ -100,14 +107,14 @@ services:
     # Docker-topology vars (not secrets): which settings module, which database
     # engine, and where the redis service lives on the Compose network.
     #
-    # DB_ENGINE picks the database: `mysql` (the default, still the fallback) or
-    # `postgresql`. Set it in .env or the shell to flip the whole stack:
-    #     DB_ENGINE=postgresql docker compose up
+    # DB_ENGINE picks the database: `postgresql` (the default) or `mysql`, which
+    # needs its service started as well:
+    #     DB_ENGINE=mysql docker compose --profile mysql up
     # Host and port default to whichever service runs that engine, so this is
     # the only knob; DB_HOST/DB_PORT still override for anything off-Compose.
     environment: &app_env
       DJANGO_SETTINGS_MODULE: sg101.settings.docker
-      DB_ENGINE: ${DB_ENGINE:-mysql}
+      DB_ENGINE: ${DB_ENGINE:-postgresql}
       REDIS_HOST: redis
     # Secrets + DB credentials (SECRET_KEY, DB_*, API keys) come from the
     # git-ignored .env file -- see .env.example. `environment:` above wins over
@@ -124,9 +131,10 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    # `db` is deliberately absent: it lives behind the `mysql` profile, and a
+    # dependency on it would drag it into every `up` and make the app wait for a
+    # database it no longer uses.
     depends_on:
-      db:
-        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -141,8 +149,6 @@ services:
     volumes:
       - .:/app
     depends_on:
-      db:
-        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:

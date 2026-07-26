@@ -1,19 +1,136 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-25
+**Last updated:** 2026-07-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
-## EXECUTION — Step 11 (MySQL → PostgreSQL) — IN PROGRESS (started 2026-07-24)
+## EXECUTION — Step 11 (MySQL → PostgreSQL) — **DONE** (2026-07-24 → 2026-07-26)
 
-**Task order changed:** 04 runs before 02 and 03. Task 01 found that nothing can
+**All six tasks complete.** SG101 runs on PostgreSQL 16: the site, the converted
+production data, the test suite, and CI. MySQL remains in the Compose file
+behind a profile, as the source the cutover conversion reads from.
+
+**Task order changed:** 04 ran before 02 and 03. Task 01 found that nothing can
 create a fresh database on Postgres until every app has migrations (below), so
 04 is a prerequisite, not a successor. Its own spec expected the converted
 database from 03 to diff against; the real production schema in MySQL is what
-pgloader will convert, so the audit was done there instead and gets re-verified
+pgloader will convert, so the audit was done there instead and got re-verified
 against the converted tables at 03/05.
 
-**Tasks 01, 04, 02, 03 and 05 are done. Task 06 (CI on Postgres + the test-DB
-decision) is the last one in this step.**
+### Task 06 — CI on Postgres + the test-database decision — DONE (2026-07-26)
+
+**The suite runs on PostgreSQL from here on, everywhere, and the sqlite path is
+gone.** This was the question Step 11 deliberately deferred until there was real
+data, so it was measured first, on 593 tests, in-container, on one machine:
+
+| | Django-reported | wall clock |
+|---|---|---|
+| sqlite (cold) | 5.17–5.22 s | 7.21–7.27 s |
+| PostgreSQL (cold) | ~6.9 s | 9.11–9.17 s |
+| PostgreSQL (`--keepdb`) | 6.82 s | 8.30–8.33 s |
+
+**The whole price is ~1.9 s on a 7-second suite (+27%)** — much less than the
+plan assumed when it proposed keeping sqlite for local runs. Two details worth
+recording: `--keepdb` does nothing for sqlite (its test database is in-memory
+already), and it saves Postgres only ~0.85 s, so building the schema from 26
+apps' migrations is nearly free. Task 01's earlier figures (4.93 s / 6.30 s) were
+567 tests and timed Postgres with `--keepdb`, which flattered it; these are
+cold-to-cold and comparable.
+
+Against those two seconds: Step 12 is Postgres full-text search — `SearchVector`,
+GIN, `SearchQuery`, `SearchRank` — **none of which exist on sqlite**, so a split
+policy would have left the entire search implementation untestable locally and
+its tests needing `skipUnless` guards to keep a sqlite run green. And task 04
+established that schema drift between build paths is a live risk in this
+codebase, precisely the class of bug a sqlite suite cannot see. One engine, one
+schema, from the developer's terminal through to CI.
+
+**No test needed changing.** The suite was already engine-portable: no
+`connection.vendor` branches, no `skipUnless`, nothing engine-specific — task 01
+had already flushed out the sqlite-shaped assumptions (predictable pks, courtesy
+of rowids that roll back where Postgres sequences do not).
+
+- `docker_test.py` now **is** the Postgres test settings; `docker_test_pg.py` is
+  deleted rather than kept as an alias, so there is only one name to type.
+- `test.py` no longer names a database, matching `base.py` — the module that runs
+  the tests picks the engine, which is what `databases.py` was built for. Its
+  sqlite `legacy_alter_table` shim went too: it existed for Django 1.9's schema
+  editor and has been dead since Step 10.
+
+**CI runs the identical command against the Compose `postgres` service**, not a
+GitHub-hosted service container, keeping the parity the workflow was built on.
+`docker compose run --rm web` starts `postgres` and waits on its healthcheck via
+`depends_on`. Coverage measurement and artifact upload are unchanged: 593 tests,
+5 skipped, **85% coverage**.
+
+**One real snag, caught locally rather than in CI:** a leftover test database
+makes Django *prompt* before dropping it, and a prompt with no terminal is an
+`EOFError`, not a wait — the run dies before a single test executes. CI now
+passes `--noinput`. A fresh CI checkout would not have hit it; a re-run against a
+warm volume, or any developer who had once used `--keepdb`, would.
+
+**Compose defaults to Postgres, and MySQL moved behind a `mysql` profile.** The
+`db` service is *kept* — the cutover converts a fresh production snapshot the
+same way, and that procedure needs a MySQL source, so it cannot go until then —
+but it no longer starts with the stack, and `web`/`worker` no longer `depends_on`
+it. Leaving that dependency in place would have dragged an amd64-emulated MySQL
+into every `up` and made the app block on the healthcheck of a database it no
+longer uses (and CI wait for it on every run). `docker compose up` is five
+services on Postgres; `docker compose --profile mysql up` is the conversion
+stack. `.env.example` ships `DB_ENGINE=postgresql`.
+
+**A profile filters `down` as well as `up`, which is the one sharp edge.** Found
+by noticing the `db` container had been up 8 days *through* a `docker compose
+down` — and that the same `down` had reported "Network sg101_default Resource is
+still in use", which was this, unread at the time. A plain `docker compose down
+-v` removes `postgres_data`, leaves `db_data` and a running MySQL container, and
+then cannot remove the network; `docker compose --profile mysql down -v` takes
+everything. DOCKER.md's command table and §6 both say so now. CI is unaffected,
+since `db` never starts there, but the documented "stop and wipe the DB" would
+have half-worked on a developer's machine.
+
+**Verified on this machine:** fresh `docker compose up` → 5 services, no MySQL,
+Django resolving `django.db.backends.postgresql` with no `DB_ENGINE` set
+anywhere; site serves the converted snapshot (463,221 posts, 35,692 topics,
+15,227 users; home and forums 200); `check` and `makemigrations --check` clean;
+593 tests green through the exact CI invocation.
+
+**DOCKER.md rewritten** for the new default: five services, the schema-creation
+and snapshot paths, the test command with the policy and its cost stated, a new
+§6 on MySQL and engine switching, the `--profile mysql` requirement threaded
+through the §7 conversion procedure, and a `no such service: db` troubleshooting
+entry for the profile's one sharp edge.
+
+**Also corrected at close-out:** `detailed-design.md` and `database-migration.md`
+both still recommended `CITEXT`, which task 02's deprecation finding superseded
+(deprecated in Django 4.2, removed in 5.1 — Steps 13/14 walk into it). Both now
+point at the `__iexact` + functional-index approach that actually landed.
+
+#### Carried forward out of Step 11
+
+Nothing here was forgotten; each has a destination.
+
+- **`elsewhere`: real migrations + data-migration seeding, and `network_id` →
+  FK → Step 19.** Task 04 gave the app an initial migration like the other 20,
+  which is all Postgres required. The deeper rework — seeding the network tables
+  from a data migration instead of the `post_migrate` hook, and making
+  `network_id` a real foreign key — is app modernization, not an engine switch,
+  and the plan's "Step 11 or 19" is hereby settled as **19**.
+- **The 7 model-less legacy tables → Step 19** (`auth_message`,
+  `core_anonlastvisit`, `core_userlastvisit`, `gcalendar_accesstoken`,
+  `irc_ircchannel`, `mailer_message`, `membermap_mapentry`, ~1,540 rows). They
+  came across deliberately: conversion is not the place to prune.
+- **The 12 duplicate-email account pairs → Step 19** (data hygiene; note the trap
+  that a naive uniqueness check locks those 26 members out of profile edits).
+- **`bio_tags.flag_icon` leaves `name` unbound on an unrecognised country code**
+  — a latent crash on either engine, masked because `''` is falsy. Not scheduled;
+  fix when someone is next in that file.
+- **`forums_topic_subscribers(topic_id)`** is redundant with the leading column
+  of the composite unique index. Cosmetic; no destination.
+- **`AGENTS.md` at the repo root is badly stale** (Python 2, Django 1.8,
+  Mercurial, `custom_search`) → Step 19, or sooner if it starts misleading
+  someone.
+- **Resolved by the engine switch, needing no further work:** the environmental
+  `mysql.W002` strict-mode warning is simply gone.
 
 ### Task 05 — data integrity verification — DONE (2026-07-25)
 

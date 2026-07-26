@@ -56,10 +56,9 @@ json.dump(rows, sys.stdout, indent=2, sort_keys=True, default=str)
 status=0
 for model in "${MODELS[@]}"; do
     for engine in mysql postgresql; do
-        # Both engines are named explicitly. The container may already have
-        # DB_ENGINE set -- it does whenever the stack was brought up against
-        # Postgres -- and relying on the default would then read the MySQL
-        # half out of Postgres.
+        # Both engines are named explicitly. The container already has
+        # DB_ENGINE set -- Compose sets it, and it is postgresql by default --
+        # so relying on the default would read the MySQL half out of Postgres.
         if [ "$engine" = mysql ]; then
             env_args=(-e DB_ENGINE=mysql -e "DB_NAME=$MYSQL_DB")
         else

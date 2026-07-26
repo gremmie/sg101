@@ -53,7 +53,9 @@ flowchart LR
     truncation.
   - Case-sensitivity: MySQL default collations are case-insensitive; Postgres is
     case-sensitive. Audit uniqueness (usernames, emails, slugs, tags) — add
-    `CITEXT` or case-insensitive constraints where the app assumed CI behavior.
+    ~~`CITEXT` or~~ case-insensitive constraints where the app assumed CI
+    behavior. (**Settled in Step 11 task 02: `__iexact` + a functional unique
+    index on `LOWER(username)`, not `CITEXT` — see below.**)
   - Booleans/tinyint, auto-increment→serial/identity, `GROUP BY` strictness,
     implicit ordering differences.
   - `AUTO_INCREMENT` gaps / PK sequences reset post-load.
@@ -109,8 +111,16 @@ but `messages_flag` and `user_photos_photo` are live.
 
 **Case-sensitivity:** every collation is case-**insensitive** (`*_ci`), so the
 app currently gets CI comparisons on usernames/emails/tags for free. Postgres is
-case-sensitive → **confirmed need** for `CITEXT`/CI constraints on those columns
+case-sensitive → **confirmed need** for CI handling on those columns
 at Step 11 (as flagged above).
+
+**Resolved in Step 11 task 02 (2026-07-25), and *not* with `CITEXT`.** Django's
+`CIText`/`CICharField`/`CIEmailField` are deprecated in 4.2 and removed in 5.1 —
+Steps 13/14 walk straight into that — so adopting them here would have been work
+with a scheduled expiry date. What landed instead: 12 collation-dependent lookups
+converted to `__iexact` across 9 files, plus a functional unique index on
+`LOWER(username)` and normalization of the one genuine email case variant. The
+full audit is `research/collation-audit.md`.
 
 **Decision:** findings support the plan of record — **migrate to PostgreSQL**
 (the data is ORM-portable, the search stack is being dropped anyway, and utf8mb4

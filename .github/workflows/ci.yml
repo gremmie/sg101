@@ -1,7 +1,10 @@
 name: CI
 
 # Runs the existing test suite on every push/PR to the modernization branch,
-# using the SAME Docker image as local dev (Python 3.7 / Django 3.2) for parity.
+# using the SAME Docker image and services as local dev (Python 3.7 / Django 3.2
+# / PostgreSQL 16) for parity -- the `postgres` service comes from
+# docker-compose.yml rather than a GitHub-hosted service container, so CI and a
+# developer's laptop run the identical database.
 # `main` intentionally has no CI: it's preserved legacy history and predates the
 # Docker/CI setup, which live only on `modernize`.
 on:
@@ -17,8 +20,9 @@ jobs:
       - uses: actions/checkout@v5
 
       # docker-compose loads .env via env_file, exactly like a fresh dev
-      # checkout; seed it from the committed example (dummy SECRET_KEY + sqlite
-      # means no real secrets are needed).
+      # checkout; seed it from the committed example (a dummy SECRET_KEY and the
+      # throwaway credentials the `postgres` service initializes itself with, so
+      # no real secrets are needed).
       - name: Seed .env from the example
         run: cp .env.example .env
 
@@ -36,12 +40,18 @@ jobs:
           python manage.py makemigrations --check --dry-run
           --settings=sg101.settings.docker_test
 
-      # docker_test settings: sqlite DB + Redis over TCP (the `redis` service is
-      # started via depends_on). Measure coverage and print a summary.
+      # docker_test settings: PostgreSQL + Redis over TCP, both started via
+      # web's depends_on (and Postgres waited on by its healthcheck). The suite
+      # runs on the engine the site runs on, so engine-specific behavior --
+      # full-text search above all -- is actually covered. Measure coverage and
+      # print a summary.
+      #
+      # --noinput because a leftover test database makes Django prompt before
+      # dropping it, and a prompt with no terminal is an EOFError, not a wait.
       - name: Run test suite with coverage
         run: >
           docker compose run --rm web
-          sh -c "coverage run --source='.' manage.py test --settings=sg101.settings.docker_test
+          sh -c "coverage run --source='.' manage.py test --noinput --settings=sg101.settings.docker_test
           && coverage report
           && coverage xml"
 

@@ -324,7 +324,10 @@ not new schema:
 - **DB engine port (MySQL→Postgres):** verify on snapshot — table
   charset/collation (**utf8 vs utf8mb4**: check for 4-byte/emoji truncation),
   **case-sensitivity** differences (MySQL CI collations vs. Postgres CS — audit
-  uniqueness on usernames/emails/slugs/tags, add `CITEXT`/constraints as needed),
+  uniqueness on usernames/emails/slugs/tags; ~~add `CITEXT`~~ **done in Step 11
+  task 02 with `__iexact` + functional unique indexes on `LOWER()`, because
+  `CIText`/`CICharField` are deprecated in Django 4.2 and removed in 5.1, which
+  Steps 13/14 walk straight into**),
   boolean/tinyint, auto-increment→identity/sequences (reset after load). Tooling:
   **`pgloader`** for bulk, Django `dumpdata`/`loaddata` for verification.
 - **Search index data:** Xapian index is derived/disposable; no data migration —

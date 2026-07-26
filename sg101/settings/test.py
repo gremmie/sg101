@@ -1,6 +1,8 @@
 """
-Settings to use when running tests. Uses sqlite for speed.
+Test tuning shared by every way of running the suite.
 
+Names no database, exactly as base.py names none: the module that runs the tests
+picks the engine (see `docker_test`, and `databases.py` for the mapping).
 """
 import logging
 
@@ -24,13 +26,6 @@ REDIS_DB = 14
 # Bare-metal default; docker_test.py overrides this to reach the `redis` service
 # over TCP (the only way tests actually run now).
 CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'dev.db',
-    },
-}
 
 # For unit-testing the Donations module w/o using the Paypal sandbox
 DONATIONS_DEBUG_VERIFY_RESPONSE = 'VERIFIED'

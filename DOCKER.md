@@ -1,6 +1,6 @@
 # Running SG101 locally with Docker
 
-Run the SG101 site (Python 3.7 / Django 3.2 / MySQL or PostgreSQL / Redis) on
+Run the SG101 site (Python 3.7 / Django 3.2 / PostgreSQL 16 / Redis) on
 your Mac inside Docker, seeded with a real production database snapshot. Docker gives us a
 consistent little Linux environment that matches the target deploy platform —
 handy for a stack this far from a modern Mac's defaults.
@@ -37,14 +37,16 @@ Neither is committed to source control.
 1. **`.env`** — SECRET_KEY, DB credentials, and API keys, read from the
    environment (12-factor config). Copy the template; the example's defaults work
    as-is for local dev (a placeholder SECRET_KEY, `DB_*` values that match the
-   `db` service, and blank/optional API keys):
+   `postgres` service, and blank/optional API keys):
    ```
    cp .env.example .env
    ```
    `.env` is git-ignored; Compose loads it into the app services via `env_file:`.
 
 2. **A production DB snapshot** — put the MySQL dump in `snapshots/`, e.g.
-   `snapshots/sg101.sql.gz`. (Loading it is step 4 below.)
+   `snapshots/sg101.sql.gz`. Production still runs MySQL, so a snapshot is a
+   MySQL dump and getting it into the site's PostgreSQL database means converting
+   it (sections 4 and 7 below).
 
 ## 2. Build the image
 
@@ -59,16 +61,30 @@ docker compose build
 ```
 docker compose up
 ```
-This starts all six services: `db` (MySQL), `postgres`, `redis`, `web`, `worker`,
-`beat`. Both databases run at once while the site is being moved from one to the
-other; the app talks to whichever `DB_ENGINE` names (see section 6). Leave it
-running in this terminal (it streams logs). Open a **second** terminal for the
-commands below. To run it in the background instead, use `docker compose up -d`.
+This starts five services: `postgres`, `redis`, `web`, `worker`, `beat`. The app
+runs on PostgreSQL with nothing to configure. MySQL (`db`) is **not** among them
+— it sits behind an opt-in profile now that only the snapshot conversion needs
+it (see section 6). Leave this running in this terminal (it streams logs). Open a
+**second** terminal for the commands below. To run it in the background instead,
+use `docker compose up -d`.
 
-The site is now at **http://localhost:8000** — but it has no data until you load
-the snapshot.
+The site is now at **http://localhost:8000** — but the database is empty until
+you load a snapshot.
+
+**Create the schema** on an empty `postgres` service, if you are not loading a
+snapshot (once, or again after `docker compose down -v`):
+```
+docker compose exec web python manage.py migrate
+```
 
 ## 4. Load the production snapshot
+
+The snapshot is a **MySQL** dump and the site's database is PostgreSQL, so this
+is two steps: load the dump into the `db` service, then convert it (section 7).
+`db` only runs when you ask for it:
+```
+docker compose --profile mysql up -d db
+```
 
 MySQL data persists in a Docker volume (`db_data`), so you only do this once
 (again after `docker compose down -v`). The snapshot is mounted read-only inside
@@ -86,39 +102,56 @@ The ~460k-post dump takes a minute or two. It loads cleanly because the `db`
 service runs with 5.5-style `sql_mode=` (empty) — MySQL 5.7's default strict mode
 would otherwise reject the old `0000-00-00` dates in the dump.
 
-Then reload http://localhost:8000 — you should see real forum/news content. Log
-in with a known account from the snapshot.
+Now **convert it to PostgreSQL** — section 7. Then reload
+http://localhost:8000 and you should see real forum/news content; log in with a
+known account from the snapshot.
 
 ## 5. Run the test suite
 
-The tests use sqlite by default (fast, no snapshot needed):
 ```
 docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
-Green suite in-container = the harness works. This is the baseline everything
-else builds on. To run the same suite against PostgreSQL instead, see section 6.
+No snapshot needed — Django builds a throwaway `test_sg101` database from the
+migrations and drops it again. 593 tests, about 9 seconds.
 
-## 6. PostgreSQL
+**The suite runs on PostgreSQL, the same engine the site runs on.** It used to
+run on sqlite, which was roughly two seconds faster; that is the whole of what
+the change costs, and it buys a suite that can see engine-specific behavior. Two
+things made it the obvious call: full-text search is Postgres-only, so a portable
+suite could not cover the search implementation at all, and this project has
+already had an app's migrations drift from the schema it runs against without a
+test noticing. There is no sqlite path any more — one engine, one schema, from
+your terminal through to CI, which runs this exact command.
 
-The site is moving from MySQL to PostgreSQL, so the stack runs both. One
-variable decides which one the app uses:
+If a previous run left a test database behind, Django asks before dropping it;
+add `--noinput` to answer yes, or `--keepdb` to reuse it and save a second.
+
+## 6. MySQL, and switching engines
+
+PostgreSQL is the default and needs no configuration. MySQL is still in the
+Compose file for one reason — a production snapshot is a MySQL dump, so the
+conversion needs somewhere to read from — and it stays until the real cutover,
+which converts a fresh snapshot the same way. It does not start on its own:
 
 ```
-DB_ENGINE=postgresql docker compose up      # or put DB_ENGINE=postgresql in .env
-```
-`mysql` is still the default. Host and port follow the engine automatically
-(`db`:3306 or `postgres`:5432), so there is nothing else to set;
-`sg101/settings/databases.py` holds the mapping.
-
-**Create the schema** on the empty `postgres` service (once, or again after
-`docker compose down -v`):
-```
-docker compose exec -e DB_ENGINE=postgresql web python manage.py migrate
+docker compose --profile mysql up          # the whole stack, MySQL included
+docker compose --profile mysql up -d db    # just MySQL, alongside a running stack
 ```
 
-**Run the suite against Postgres:**
+To point the **app** back at MySQL, name the engine and start its service:
 ```
-docker compose exec web python manage.py test --settings=sg101.settings.docker_test_pg
+DB_ENGINE=mysql docker compose --profile mysql up
+```
+Host and port follow the engine automatically (`db`:3306 or `postgres`:5432), so
+`DB_ENGINE` is the only knob; `sg101/settings/databases.py` holds the mapping,
+and `DB_HOST`/`DB_PORT` override it for a database outside Compose.
+
+**A profile is a filter on both ends: `docker compose down` will not stop `db`
+either.** A plain `down -v` removes `postgres_data` and leaves `db_data` and a
+running MySQL container behind — which then holds the network open. To take the
+whole thing down, name the profile:
+```
+docker compose --profile mysql down -v
 ```
 
 ---
@@ -128,7 +161,14 @@ docker compose exec web python manage.py test --settings=sg101.settings.docker_t
 This is the procedure used at cutover. It is repeatable: every run drops and
 recreates the target database, so it always starts from empty.
 
-Load the dump into MySQL first (§4), then:
+Both databases have to be running, so bring the stack up with the `mysql`
+profile and load the dump into MySQL first (§4):
+
+```
+docker compose --profile mysql up -d
+```
+
+Then:
 
 ```
 # 1. Convert. Reads .env for credentials; override the databases as needed.
@@ -139,8 +179,7 @@ docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
     python tools/pgloader/verify.py
 
 # 3. Bring the schema up to the current migration state.
-docker compose exec -T -e DB_ENGINE=postgresql web \
-    python tools/pgloader/post_convert.py
+docker compose exec -T web python tools/pgloader/post_convert.py
 
 # 4. Compare the data itself, column by column, and check referential
 #    integrity. Runs after post_convert.py, unlike step 2.
@@ -152,15 +191,14 @@ docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
 docker compose exec -T postgres psql -U sg101 -d postgres \
     -c "DROP DATABASE IF EXISTS sg101_reference WITH (FORCE)" \
     -c "CREATE DATABASE sg101_reference"
-docker compose exec -T -e DB_ENGINE=postgresql -e DB_NAME=sg101_reference \
-    web python manage.py migrate
+docker compose exec -T -e DB_NAME=sg101_reference web python manage.py migrate
 docker compose exec -T web python tools/pgloader/compare_schema.py
 
 # 5. Second opinion on the same rows, through Django's serializer.
 MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/crosscheck_dumpdata.sh
 
-# 6. Smoke the running site, reads and writes. Needs the stack up against
-#    the converted database: DB_ENGINE=postgresql docker compose up -d
+# 6. Smoke the running site, reads and writes. Needs the stack up against the
+#    converted database, which is what `docker compose up -d` now gives you.
 docker compose exec -T web python tools/pgloader/smoke.py
 ```
 
@@ -273,36 +311,41 @@ What each check covers:
 | Build / rebuild the image | `docker compose build` |
 | Start everything (foreground) | `docker compose up` |
 | Start in background | `docker compose up -d` |
+| Start MySQL too (conversion) | `docker compose --profile mysql up -d` |
 | Stop (keep the DB data) | `docker compose down` |
 | Stop **and wipe the DB** | `docker compose down -v` |
+| Stop / wipe **including MySQL** | `docker compose --profile mysql down [-v]` |
 | Follow web logs | `docker compose logs -f web` |
 | A shell inside the web container | `docker compose exec web bash` |
 | Django shell | `docker compose exec web python manage.py shell` |
 | Run a management command | `docker compose exec web python manage.py <cmd>` |
-| MySQL prompt | `docker compose exec db mysql -uroot -prootpw sg101` |
+| Run the tests | `docker compose exec web python manage.py test --settings=sg101.settings.docker_test` |
 | PostgreSQL prompt | `docker compose exec postgres psql -U sg101 sg101` |
-| Run a command against Postgres | `docker compose exec -e DB_ENGINE=postgresql web python manage.py <cmd>` |
+| MySQL prompt (needs the profile) | `docker compose exec db mysql -uroot -prootpw sg101` |
 
 ## How the pieces fit
 
 - **`Dockerfile`** — builds the Python 3.7 image (system libs + pip deps from
   `requirements-docker.txt`).
-- **`docker-compose.yml`** — defines the six services and wires them together.
+- **`docker-compose.yml`** — defines the services and wires them together: five
+  by default, plus `db` (MySQL) behind the `mysql` profile.
 - **`sg101/settings/docker.py`** — dev settings; points the DB and Redis at the
   container services over the network (the legacy settings used unix sockets).
   Selected via `DJANGO_SETTINGS_MODULE` in compose.
 - **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
   name, and port, so the settings modules never hardcode an engine.
-- **`sg101/settings/docker_test.py`** — test settings (sqlite + Redis over TCP);
-  **`docker_test_pg.py`** — the same suite against PostgreSQL.
+- **`sg101/settings/docker_test.py`** — test settings (PostgreSQL + Redis over
+  TCP), used by both local runs and CI.
 - **`snapshots/`** — where your DB dumps live (git-ignored).
 
 ## Troubleshooting
 
 - **`docker: command not found`** — Docker Desktop isn't installed or running.
-- **`web` can't reach the database** — the `db` container is still initializing
-  on first start; `web` waits for its healthcheck, but a snapshot load must wait
-  too. Give it a few seconds and retry.
+- **`web` can't reach the database** — the `postgres` container is still
+  initializing on first start; `web` waits for its healthcheck, but a snapshot
+  load must wait too. Give it a few seconds and retry.
+- **`no such service: db`** — MySQL is behind a profile now; add
+  `--profile mysql` to the command (see section 6).
 - **A dependency fails to compile during `build`** — expected occasionally with
   20-year-old pins; we resolve these faithful-first (bump the patch version only
   if a pin truly can't build). Note the failing package and we'll address it.
