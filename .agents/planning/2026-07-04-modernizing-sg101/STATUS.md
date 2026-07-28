@@ -62,8 +62,56 @@ logging kept in a dedicated `search.log`.
 index, `ORDER BY rank, -date`, ~490k rows. Forced by relevance ordering plus
 pagination across eight document types.
 
-**Next:** generate `step12/` code-task files with `/agent-sops:code-task-generator`,
-as Step 11 had, then build them one at a time with `/agent-sops:code-assist`.
+**Eight code-task files generated 2026-07-27** at
+`.agents/tasks/2026-07-04-modernizing-sg101/step12/`: 01 search app +
+`SearchDocument` + document registry, 02 reindex command + ~490k backfill, 03
+Celery incremental indexing + private-category exclusion, 04 view/form/templates
++ ranking + `search.log`, 05 forums quick search, 06 the `ajax_users` ordering
+fold-in, 07 verification against production data, 08 weekly reconcile sweep. Task
+02 runs before 03 deliberately — a populated index exercises all eight registry
+entries against real data and gives tasks 04/07 something to develop against.
+
+**Second design revision (2026-07-27): the weekly reconcile sweep is taken after
+all** — the design had offered and declined it. Brian asked what one would cost,
+noting that manual reindexing was what Haystack/Xapian required anyway. The
+decisive question was **whether a reconcile has to reindex everything: it does
+not.** Comparing sets and timestamps in SQL computes no vectors, so **cost tracks
+the drift found, not the corpus** — measured, scanning `id, update_date` across
+all 463,222 forum posts (94% of the corpus, 417 MB table) takes **170 ms**, and
+the full eight-type sweep should be low single-digit seconds. Two enabling facts
+that weren't in view when it was first declined: **seven of eight documents carry
+a `db_index=True` `update_date`** (so *stale* is detectable, not just *missing*;
+the eighth, `ygroup.Post`, is a frozen archive needing none), and **nothing in
+the codebase bulk-updates an indexed model** (no `.update()`/`bulk_create`/
+`bulk_update` across the seven apps — the one `.update()` hit is `ForumLastVisit`,
+unindexed), so signals really do see every application write. **Built as
+reporting only, repairing nothing** — task 03's indexing is supposed to make
+drift impossible and the sweep tests that claim rather than masking it; it also
+reports private-category rows separately, those being a privacy defect rather
+than staleness. **Consequence: `indexed_at` lands on `SearchDocument` in task 01**
+(adding it later = migration + 490k-row backfill). Also noted for task 03:
+registering a `post_delete` receiver on `forums.Post` disables Django's
+fast-delete path, so bulk deletes get slower but correct.
+
+**Design revised during task generation (2026-07-27): the author-rename fan-out
+is gone.** Brian had second thoughts on it, which prompted checking what can
+actually trigger a rename — and the answer reframed the problem. **`username` is
+immutable**: written once at activation (`accounts/utils.py:20`), no form edits
+it, only an admin can change one. **`first_name`/`last_name` are the only
+user-editable author text**, via `bio.EditUserForm`. So the entire 25,768-row
+cascade traced to one pair of form fields — and it was reachable by an ordinary
+user editing their own profile, which meant "notice the rename, run the reindex
+command" had nothing to notice with. Measured: **2,937 of 15,227 members (19%)
+have a full name at all**; `bigtikidude` has both a full name and those 25,768
+posts. **Decision: full names are indexed only on the `bio.UserProfile`
+document**, where a rename rebuilds one row; content documents keep `username` at
+weight C. No fan-out task, no batching trigger, no test surface for it. This is a
+*narrower* cut than the all-or-nothing alternative Q5 rejected — find-a-member-
+by-real-name still works through profiles; find-posts-by-real-name does not.
+Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
+
+**Next:** build the tasks one at a time with `/agent-sops:code-assist`, starting
+with 01.
 
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — **DONE** (2026-07-24 → 2026-07-26)
 

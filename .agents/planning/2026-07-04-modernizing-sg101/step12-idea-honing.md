@@ -200,12 +200,82 @@ behavior for free: transaction rolls back, no task fires.
 
 **Accepted cost:** a downed worker means a silently stale index, where the
 synchronous version would have kept working. A periodic reconcile sweep on beat
-was offered and not taken; revisit if it ever bites.
+was offered and not taken; revisit if it ever bites. — **Revisited and reversed
+2026-07-27; see the second Q5 addendum below.**
 
 Considered and rejected: the original sync/async split (instant findability, no
 worker dependency, but two paths and posting coupled to indexing), and moving
 author names out of the document (dissolves the rename cascade entirely, but
 breaks the documented "`SurferDood101 Gnarly` in one box" behavior Q3 kept).
+
+### Q5 addendum — the rename fan-out is gone (revised 2026-07-27)
+
+Brian raised second thoughts on the fan-out during task generation, which sent me
+to check what can actually *trigger* a rename. The answer reframed the question:
+
+- **`username` is immutable.** Written once, at activation
+  (`accounts/utils.py:20`). No form edits it — `bio.SearchUsersForm` is a lookup,
+  not an edit — so only an admin can change one, and the admin is Brian.
+- **`first_name` / `last_name` are the only user-editable author text**, via
+  `bio.EditUserForm` (`bio/forms.py:26`).
+
+So the whole 25,768-row cascade traced to one pair of form fields. Measured
+against the snapshot: **2,937 of 15,227 members (19%) have a full name at all**,
+284 of them posted in the last two years — and `bigtikidude` has both a full name
+and those 25,768 posts, so the upper bound was real and reachable *by an ordinary
+user editing their own profile*. That last part is what decided it: the fallback
+of "notice the rename, run the reindex command" has nothing to notice with.
+
+**Decision: index full names only on the `bio.UserProfile` document.** Content
+documents keep `username` at weight C; the profile document carries username and
+full name at A. A name change rebuilds one row through the ordinary
+`reindex_document` path. No fan-out task, no batching trigger, no test surface.
+
+This is a *narrower* cut than the alternative Q5 rejected above, which was
+all-or-nothing — it removes author names from content documents while keeping
+find-a-member-by-real-name working through profiles. That variant wasn't on the
+table when Q5 was answered.
+
+**Accepted cost:** forum posts are findable by handle, not by the author's real
+name. Additive later, at the price of reinstating the fan-out.
+
+### Q5 addendum 2 — the reconcile sweep is taken after all (revised 2026-07-27)
+
+Also raised by Brian during task generation: what would a weekly reconcile job
+cost? He noted that manual reindexing was what Haystack/Xapian required, so a
+periodic sweep would be parity rather than a new burden.
+
+The question that mattered turned out to be **whether a reconcile has to reindex
+everything.** It does not, and that reframes the cost entirely. A reconcile
+compares sets and timestamps in SQL — source rows with no index row, index rows
+with no source, and rows whose `indexed_at` predates the source's `update_date`.
+It computes no vectors. **Its cost scales with the drift it finds, not the size
+of the corpus**, so a healthy system does essentially no work.
+
+Measured, against the real data: scanning `id, update_date` for all 463,222
+forum posts — the dominant term, 94% of the corpus, in a 417 MB table — takes
+**170 ms**. The full eight-type sweep is a handful of anti-joins; expect low
+single-digit seconds. Weekly is free.
+
+Two facts made this available, neither of which was in view when the sweep was
+first declined:
+
+- **Seven of eight documents carry a `db_index=True` `update_date`**, so *stale*
+  is detectable, not just *missing*. The eighth, `ygroup.Post`, has no
+  modification timestamp — and needs none, being a frozen archive.
+- **Nothing in the codebase bulk-updates an indexed model.** A check across the
+  seven relevant apps found no `.update()`, `bulk_create` or `bulk_update`
+  against any indexed model, so signals genuinely see every application write
+  today. The sweep is what would notice if that ever changed.
+
+**Decision: take it, as a reporting job that repairs nothing.** Task 03's
+incremental indexing is supposed to make drift impossible; the sweep exists to
+find out whether that holds. Auto-repair would mask exactly the bugs worth
+finding, and is a small change later once the numbers are known. It turns the
+accepted cost above — *silently* stale — into merely stale.
+
+**Consequence for task 01:** `SearchDocument` needs an `indexed_at` column from
+the start. Adding it afterwards means a migration plus a backfill over 490k rows.
 
 Tests are unaffected either way — `CELERY_TASK_ALWAYS_EAGER` is already set.
 
@@ -462,7 +532,7 @@ deploy step, not something to do piecemeal here.
 | 2 | Search form | Single box, `websearch` syntax; type checkboxes kept, all checked by default |
 | 3 | What's searchable | All 8 documents; member profiles at full parity |
 | 4 | Private content | Private categories not indexed at all |
-| 5 | Index freshness | **All updates via Celery**, queued on `transaction.on_commit` |
+| 5 | Index freshness | **All updates via Celery**, queued on `transaction.on_commit`; full names indexed on profiles only, so there is **no rename fan-out** (revised 2026-07-27) |
 | 6 | Typo tolerance | Skipped for now; additive later |
 | 7 | Forums quick search | Restored, reusing the existing fragment template |
 | 8 | Score scaling | `normalization=1` (÷ `1+log(len)`) + `setweight` A/B/C |

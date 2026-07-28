@@ -234,8 +234,19 @@ alternatives.** Headlines, which supersede this section's earlier sketch:
   exactly that syntax before handing it to Xapian. Type checkboxes stay, all
   checked by default. The masthead box at `v3/base.html:49` already fits.
 - **All index writes via Celery**, queued with `transaction.on_commit` — never
-  inline in `save()`, so an indexing bug can't break posting. A username change
-  fans out to every document embedding that author (up to 25,768 rows).
+  inline in `save()`, so an indexing bug can't break posting. **No rename
+  fan-out** (revised 2026-07-27): `username` is immutable (written once at
+  activation) and full names are indexed only on the `bio.UserProfile` document,
+  so a profile rename rebuilds one row. Embedding full names in content
+  documents would have made one profile edit rebuild up to 25,768 rows, and only
+  19% of members set a full name at all.
+- **A weekly reconcile sweep on Beat** (revised 2026-07-27 — originally
+  declined). It compares sets and timestamps in SQL rather than rebuilding
+  vectors, so its cost tracks the drift it finds, not the corpus: the dominant
+  term, scanning `id, update_date` across all 463,222 posts, measures 170 ms.
+  **Reports only, repairs nothing** — task 03's indexing is supposed to make
+  drift impossible, and the sweep is how that claim gets tested rather than
+  assumed. Requires an `indexed_at` column on the search table from day one.
 - **Login required** (carried forward — it exists because bots were hammering
   search), and **private categories are never indexed** (`Kahunas`: 487 topics,
   19,088 posts, unfindable even for members who may read them — deliberate).

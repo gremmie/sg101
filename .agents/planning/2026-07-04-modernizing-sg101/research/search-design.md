@@ -55,6 +55,10 @@ masthead search box at `v3/base.html:49`.
 | 10 | Abuse defence | Login gate only; rate limiting deferred |
 | 11 | Query logging | Kept — existing behavior, moved to a dedicated `search.log` |
 
+**Revised 2026-07-27, after Q5:** author **full names** are indexed only on the
+`bio.UserProfile` document, not on content documents, which removes the
+author-rename fan-out entirely. See §3, "Index maintenance".
+
 ---
 
 ## 3. Architecture
@@ -81,8 +85,6 @@ flowchart TD
     A & B & C & D & E & F & G & H -->|"post_save / post_delete<br/>transaction.on_commit"| Q["Celery task<br/>reindex_document(ct, pk)"]
     Q -->|"skips private categories"| T[("SearchDocument<br/>tsvector + GIN index")]
 
-    R["User.save()<br/>username / full name changed"] -->|"fan-out task"| Q
-
     U(["Member<br/>(login required)"]) --> V["/search/ view"]
     V -->|"SearchQuery(websearch)<br/>SearchRank(normalization=1)"| T
     T -->|"ORDER BY rank, -date"| W["Blended results<br/>+ SearchHeadline snippets"]
@@ -101,6 +103,7 @@ One row per indexed document:
 | `summary` | From the model's existing `search_summary` |
 | `url` | From `get_absolute_url`, so results render without touching source tables |
 | `date` | The document's own date, for the recency tiebreak |
+| `indexed_at` | When this row was last rebuilt — the reconcile sweep's watermark |
 
 Denormalizing title/summary/url means a result page renders from this table
 alone — no N+1 fan-out across eight models to display ten rows.
@@ -113,7 +116,11 @@ alone — no N+1 fan-out across eight models to display ten rows.
 |---|---|
 | **A** | Title / topic name |
 | **B** | Body / description |
-| **C** | Author username and full name |
+| **C** | Author **username** (not full name — see below) |
+
+On the `bio.UserProfile` document the author *is* the document, so username and
+full name both sit at **A**, with location, occupation, interests, profile text
+and linked sites at **B**.
 
 Ranking is `SearchRank(vector, query, normalization=Value(1))` — divide by
 `1 + log(document length)` — so a long forum post does not outrank a tight news
@@ -137,12 +144,49 @@ transaction commits, read a row that does not exist yet, and index nothing. That
 failure is intermittent and load-dependent. Queueing on commit also gives correct
 rollback behavior for free.
 
-Author names are embedded in each document (that is how "search by author"
-works), so a username or full-name change invalidates every document that embeds
-it — up to **25,768 rows** for the heaviest poster. That fan-out is its own task.
+**There is no author-rename fan-out, by construction** (revised 2026-07-27 —
+supersedes Q5's "a rename is its own task"). Two facts settle it:
 
-Accepted cost: a downed worker means a silently stale index. A periodic reconcile
-sweep was considered and not taken.
+- **`username` is immutable.** It is written exactly once, at account activation
+  (`accounts/utils.py:20`). No form anywhere edits it; only an admin can, and
+  the admin is the site owner, who can run the reindex command.
+- **`first_name` / `last_name` are user-editable** via `bio.EditUserForm`, and
+  they are the *only* mutable author text — which is why they are indexed **only
+  on the `bio.UserProfile` document**, never on posts, topics, news, downloads
+  or links. A name change therefore rebuilds exactly **one row**, handled by the
+  same `reindex_document` path as any other edit.
+
+Had full names stayed embedded in content documents, one profile edit by
+`bigtikidude` would have rebuilt **25,768 rows**, triggered by an ordinary
+user-facing form — so the "we'll notice and re-run the command" fallback would
+not have held. Dissolving the cascade beat managing it.
+
+**Accepted cost:** forum posts are findable by author *handle*, not by the
+author's real name. Only 2,937 of 15,227 members (19%) have a full name set at
+all, and finding *people* by real name still works through the profile document.
+Additive later if wanted: it needs the embedding plus a batched fan-out task.
+
+A downed worker means a stale index. **A weekly reconcile sweep was originally
+declined and is now taken** (revised 2026-07-27), because measuring it changed
+the picture: a reconcile does not have to rebuild anything.
+
+It compares sets and timestamps in SQL — missing rows, orphaned rows, and rows
+whose `indexed_at` predates the source's `update_date` — so **its cost scales
+with the drift it finds, not with the corpus**. The dominant term, scanning
+`id, update_date` across all 463,222 forum posts, measures **170 ms**; the full
+eight-type sweep should land in the low single-digit seconds. Weekly is free.
+
+Two facts made the timestamp comparison available: seven of the eight documents
+carry a `db_index=True` `update_date`, and the eighth, `ygroup.Post`, is a frozen
+archive that cannot drift. `SearchDocument` therefore carries an `indexed_at`
+column from the start — adding it later would mean a migration plus a backfill
+over 490k rows.
+
+**It reports; it does not repair.** Task 03's incremental indexing is supposed to
+make drift impossible, and the sweep exists to find out whether that holds.
+Auto-repair would mask exactly the bugs worth finding, and becomes a small change
+once there is evidence. It also reports any index row pointing into a private
+category separately, since that is a privacy defect rather than staleness.
 
 ### Access and exclusions
 
@@ -194,6 +238,7 @@ private category above.
 | Private-category search | Would need an access key per row and a per-user query filter | Additive column + backfill |
 | Rate limiting | Login gate may be sufficient now that queries are milliseconds | An afternoon at the view |
 | Sort toggle (relevance/newest) | Both orderings fall out of the same query | Form field + query branch |
+| Finding posts by author's *real* name | Embedding it in content documents brings back a 25,768-row rename fan-out for a field only 19% of members set | Embed at weight C + a batched fan-out task on `bio.EditUserForm` saves |
 
 ---
 
