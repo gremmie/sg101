@@ -162,6 +162,20 @@ decision on its own. Cost: one column beyond the design doc's table, `author`.
 - **`ygroup.Post.poster` is now indexed** at weight C. The old index ignored it;
   it costs nothing on a frozen archive and gives those posts an author.
 
+**Storage measured and accepted (Brian asked whether the table duplicates data —
+it does).** ~196 MB of source text copied into `summary`, a tsvector at ~110% of
+the text it covers, plus a GIN index, against a 544 MB database: the search table
+roughly doubles it. **Kept as built, revisit only if it becomes a problem.** The
+proportion is the point — the vector and GIN are unavoidable in any Postgres FTS
+design, and **Xapian already held the same text copy**, on local disk outside
+MySQL, which is the persistent-disk hosting constraint this step dissolves. The
+one place this goes further than Haystack is storing title/url/date, which Haystack
+refetched per result (`result.object` at `search.html:91`); that is what buys a
+single-query results page. Escape hatch if it ever matters: drop `summary`, fetch
+result objects for snippets and highlight in Python, Haystack-style — which also
+puts the weight-B text back to `Value()` literals. Full numbers in
+`search-design.md` §5.
+
 **Pending cleanup, deferred to the end of Step 12** (Brian spotted the dead code
 during task 01): the models' now-unused search-display methods. **Not done yet
 because task 04 rewrites `search.html` / `search_ajax.html`, which are what still

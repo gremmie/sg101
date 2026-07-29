@@ -267,6 +267,30 @@ private category above.
 | Rate limiting | Login gate may be sufficient now that queries are milliseconds | An afternoon at the view |
 | Sort toggle (relevance/newest) | Both orderings fall out of the same query | Form field + query branch |
 | Finding posts by author's *real* name | Embedding it in content documents brings back a 25,768-row rename fan-out for a field only 19% of members set | Embed at weight C + a batched fan-out task on `bio.EditUserForm` saves |
+| Shrinking the index by dropping the stored `summary` | Measured 2026-07-28 and **accepted**: the search table roughly doubles the database. Revisit only if it becomes a problem | Drop the column, fetch result objects to render snippets, highlight in Python — and the weight-B text leaves the row, so the vector goes back to `Value()` literals |
+
+### What the index actually costs (measured 2026-07-28)
+
+Brian asked whether the search table duplicates data. It does, and the numbers are:
+**~196 MB** of source text copied into `summary` (164 MB of it forum post bodies,
+29 MB Yahoo Group), a tsvector running **~110% of the text it covers**, and a GIN
+index over that — against a **544 MB** database today.
+
+Two things keep it in proportion. **The tsvector and its GIN index are unavoidable
+in any Postgres FTS design** — that *is* the index; only the text copy is
+duplication a different design could avoid. And **Xapian was doing the same thing**,
+outside MySQL: each `search_indexes.py` declared
+`text = CharField(document=True, use_template=True)`, rendering
+`search/indexes/<app>/<model>_text.txt` into a blob Xapian stored and indexed on
+local disk. That file-based copy is the persistent-disk hosting constraint Postgres
+FTS dissolves — the copy now lives in the database, backed up with it and
+transactional.
+
+Where this goes further than Haystack: Haystack did **not** store title, url or
+date. `search.html:91` renders `result.object.search_title`, and `result.object` is
+a lazy fetch back to MySQL once per result; highlighting was Python-side too
+(`{% highlight %}`, line 94). Storing those four small columns is what makes a
+results page a single query instead of an N+1 across up to eight models.
 
 ---
 
