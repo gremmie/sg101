@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-28
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -110,8 +110,80 @@ weight C. No fan-out task, no batching trigger, no test surface for it. This is 
 by-real-name still works through profiles; find-posts-by-real-name does not.
 Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
-**Next:** build the tasks one at a time with `/agent-sops:code-assist`, starting
-with 01.
+## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
+
+**Task 01 — the `search` app, `SearchDocument`, and the document registry —
+DONE 2026-07-28.** 25 new tests, 618 green, `check` and `makemigrations --check`
+clean. `django.contrib.postgres` and `search` added to `INSTALLED_APPS`.
+
+**The design decision this task settled: the vector is built from the row's own
+columns.** `title` (A), `summary` (B) and `author` (C) hold the text to be
+indexed, and `search_vector` is a function of the three. The alternative —
+keeping `search_title()`/`search_summary()` for display and passing the index
+text in from Python as `Value()` literals — was walked through with Brian in
+detail and rejected on "keep it standard and simple" grounds: **column-derived is
+the pattern in the Django FTS docs**, and the literals variant is the unusual one.
+Notably, the argument I had led with (a weight or config retune becomes one
+`UPDATE`) **Brian discounted** — he does not expect to retune weights or leave
+`'english'` — which was correct, and it left the idiom argument carrying the
+decision on its own. Cost: one column beyond the design doc's table, `author`.
+
+**Consequences, all accepted and recorded in `search-design.md` §3:**
+- `search_title`/`search_summary` go unused except on `bio.UserProfile`. They do
+  not survive weighting — `forums.Topic`/`Post` embed the username *and* a
+  formatted date in their titles, which would put the author at A instead of C
+  and make `2020` match half the forum at top weight.
+- Result lines get composed by task 04's template from `title` + `author` +
+  `date`, uniformly across the eight types. A forum topic loses "; 3 posts";
+  news, links, downloads and podcasts gain a visible author. **Brian explicitly
+  did not want byte-identical parity with the Xapian result lines.**
+- Defining `summary` as *what should be indexed* closed three parity gaps
+  `search_summary()` had: `news` regains `tags`, `weblinks` regains `url`, `bio`
+  sheds the username/full name that belong at A — which also dissolves the
+  "display summary is the index blob" gotcha the task file flagged.
+
+**Found while building, all verified against the converted production data:**
+- **Body text is often rendered HTML, so it gets stripped on the way in.** All
+  1,694 news stories store HTML in `short_text`/`long_text` — and 989 of them are
+  version 0, with no markup source to index instead. 8,392 of 21,032 Yahoo Group
+  posts likewise, plus ~1,100 forum posts. Since this text is both indexed and
+  snippet source, tags would otherwise show up in both places.
+- **Django emits a redundant btree on `content_type_id`**, duplicating the unique
+  constraint's leading column. `db_index=False` on the FK; two indexes on the
+  table, the GIN and the unique.
+- **Nothing indexes `date`.** `ORDER BY rank, -date` sorts on a computed
+  expression first, so the sort runs over the matched set regardless.
+- **`title` must be a `TextField`.** A profile's is `"username (Full Name)"`,
+  which can reach 453 chars, and overflowing a varchar is a `DataError` on
+  PostgreSQL rather than the silent truncation MySQL used to do.
+- **`bio.UserProfile` has no natural date**; `user.date_joined` is used — stable
+  and meaning "member since", where `update_date` would let the most recently
+  edited profile win every relevance tie.
+- **`ygroup.Post.poster` is now indexed** at weight C. The old index ignored it;
+  it costs nothing on a frozen archive and gives those posts an author.
+
+**Pending cleanup, deferred to the end of Step 12** (Brian spotted the dead code
+during task 01): the models' now-unused search-display methods. **Not done yet
+because task 04 rewrites `search.html` / `search_ajax.html`, which are what still
+reference them** — `result.object.search_title` at `search.html:91` and
+`search_ajax.html:7`, `search_summary` at `search.html:94` — so until it lands the
+true dead set is a guess. The sweep is 6 `search_title()` + 8 `search_summary()`
++ the 8 recovered index templates under `sg101/templates/search/indexes/` (whose
+only remaining caller is `bio.UserProfile.search_summary()`; the other seven are
+already unreferenced), as one commit, once `documents.py` is unambiguously the
+authority on what gets indexed. **Two must survive it:**
+`bio.UserProfile.search_title()`, used by the registry, and
+**`podcast.Item.search_title()`, which is not search code at all** — it feeds the
+social-sharing tag at `templates/podcast/detail.html:79`, and a naive sweep would
+break the podcast detail page.
+
+Task 01 also supplies `SearchDocument.objects.index_object(obj)` — one
+`update_or_create` for the values, one `UPDATE` for the vector. The task said to
+write no rows *automatically*, but acceptance criterion 6 needs idempotent
+reindexing demonstrable now, and tasks 02 (batching) and 03 (Celery) should wrap
+one implementation rather than each growing their own.
+
+**Next:** task 02, the reindex management command and the ~490k-row backfill.
 
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — **DONE** (2026-07-24 → 2026-07-26)
 

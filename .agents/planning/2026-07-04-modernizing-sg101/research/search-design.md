@@ -99,14 +99,40 @@ One row per indexed document:
 |---|---|
 | `content_type` + `object_id` | What this row indexes (generic pointer to the source) |
 | `search_vector` | Weighted `tsvector`, **GIN-indexed** |
-| `title` | From the model's existing `search_title` |
-| `summary` | From the model's existing `search_summary` |
+| `title` | The document's **weight A** text, and the result heading |
+| `summary` | The document's **weight B** text, and the snippet source |
+| `author` | The document's **weight C** text |
 | `url` | From `get_absolute_url`, so results render without touching source tables |
 | `date` | The document's own date, for the recency tiebreak |
 | `indexed_at` | When this row was last rebuilt — the reconcile sweep's watermark |
 
 Denormalizing title/summary/url means a result page renders from this table
 alone — no N+1 fan-out across eight models to display ten rows.
+
+**Revised 2026-07-28, building task 01: the three text columns hold the text to
+be *indexed*, and the vector is a function of them** — `setweight(to_tsvector(
+title),'A') || ... (summary),'B') || ... (author),'C')`. This is the pattern in
+the Django FTS docs; passing the text in from Python as `Value()` literals is the
+variant off the beaten path. It costs one column beyond the sketch above
+(`author`) and means a vector can be rebuilt from this table alone.
+
+The models' existing `search_title` / `search_summary` therefore go unused, except
+on `bio.UserProfile` where `search_title()` already returns the wanted A text.
+They do not survive contact with weighting: `forums.Topic` and `forums.Post` embed
+the username *and* a formatted date in their title, which would put the author at
+A instead of C and tokenize `12-Jan-2020` into every post's high-weight terms, so
+`2020` would match half the forum. Result lines are composed instead by the
+template from `title` + `author` + `date`, uniformly for all eight types — a forum
+topic loses its "; 3 posts", while news, links, downloads and podcasts gain a
+visible author. Byte-identical parity with the Xapian result lines was explicitly
+not a requirement.
+
+Defining `summary` as *what should be indexed* also closes three gaps that
+`search_summary()` had: `news` regains its `tags`, `weblinks` regains its `url`,
+and `bio` sheds the username and full name that belong at A. HTML is stripped
+from body text on the way in — every news story stores rendered HTML rather than
+the markup it came from, as does 40% of the Yahoo Group archive, and this text is
+both indexed and shown in snippets.
 
 ### Weighting and ranking
 
@@ -129,7 +155,9 @@ headline on bulk alone.
 **Know which knob is which.** Normalization is a *query-time* argument: revising
 it is a one-line change. Weights are baked into the stored vector: changing those
 requires recomputing every row. Get the weights right first; tune normalization
-freely afterwards.
+freely afterwards. (Since task 01 built the vector from the row's own columns,
+that recompute is one `UPDATE` over the search table rather than a re-read of
+eight source models — but it is still 490k rows either way.)
 
 ### Index maintenance
 

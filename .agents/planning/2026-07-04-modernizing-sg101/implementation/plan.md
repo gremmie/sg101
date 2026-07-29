@@ -229,6 +229,11 @@ alternatives.** Headlines, which supersede this section's earlier sketch:
   `setweight` A=title / B=body / C=author, and
   `SearchRank(..., normalization=Value(1))`. Weights are baked into the stored
   vector (changing them means a full reindex); normalization is query-time.
+  **Built 2026-07-28 (task 01):** the three weight bands are three columns on the
+  search row — `title`, `summary`, `author` — and the vector is a function of
+  them, which is the pattern in the Django FTS docs. The models' `search_title` /
+  `search_summary` go unused as a result; they embed the author and a formatted
+  date in the title, which weighting cannot accommodate.
 - **Single search box** using `search_type='websearch'`, replacing the three
   keyword/exact/exclude inputs — which the old form was already synthesizing into
   exactly that syntax before handing it to Xapian. Type checkboxes stay, all
