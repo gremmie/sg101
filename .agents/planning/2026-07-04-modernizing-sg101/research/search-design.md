@@ -300,8 +300,16 @@ results page a single query instead of an N+1 across up to eight models.
   `</fieldset>` and `</div>` sit inside the `{% else %}` branch, so neither closes
   when there *are* results.
 - Routes are still named `haystack_search` / `haystack_search_ajax`, after a
-  library that no longer exists. Renaming touches `v3/base.html` (twice),
-  `base.html`, and any `reverse()` callers.
+  library that no longer exists. **Corrected 2026-07-28 — the rename is wider than
+  first recorded: 8 references across 6 templates**, not the three named here.
+  `v3/base.html` (lines 49 and 154), `base.html:61`, `navbar.html:7`,
+  `bio/members.html:10`, `ygroup/thread_list.html:10`,
+  `ygroup/v3/thread_list.html:10`, plus the 2 definitions in `sg101/urls.py`.
+- **`search.html` is already latently broken** (found 2026-07-28). Its second line
+  is `{% load highlight %}` — `haystack.templatetags.highlight` — and haystack left
+  `requirements.txt` and `INSTALLED_APPS` in Step 4, so rendering the template
+  raises `TemplateSyntaxError` today. Harmless only because the view is still the
+  stub and nothing renders it. `{% highlight %}` is what `SearchHeadline` replaces.
 - Checkbox labels and order, recovered verbatim: Forum Topics, Forum Posts, News
   Stories, User Profiles, Links, Downloads, Podcasts, Yahoo Group Archives.
 - Validation: an empty query is rejected with "Please supply some search terms".
