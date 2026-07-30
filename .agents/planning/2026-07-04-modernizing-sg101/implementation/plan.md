@@ -233,7 +233,9 @@ alternatives.** Headlines, which supersede this section's earlier sketch:
   search row — `title`, `summary`, `author` — and the vector is a function of
   them, which is the pattern in the Django FTS docs. The models' `search_title` /
   `search_summary` go unused as a result; they embed the author and a formatted
-  date in the title, which weighting cannot accommodate.
+  date in the title, which weighting cannot accommodate. **Backfilled 2026-07-29
+  (task 02):** `manage.py reindex_search` built 518,595 documents in 1m17s — 29k
+  more than the ~490k estimated here, which left out the Yahoo Group archive.
 - **Single search box** using `search_type='websearch'`, replacing the three
   keyword/exact/exclude inputs — which the old form was already synthesizing into
   exactly that syntax before handing it to Xapian. Type checkboxes stay, all
@@ -255,6 +257,9 @@ alternatives.** Headlines, which supersede this section's earlier sketch:
 - **Login required** (carried forward — it exists because bots were hammering
   search), and **private categories are never indexed** (`Kahunas`: 487 topics,
   19,088 posts, unfindable even for members who may read them — deliberate).
+  **Task 02 put the exclusion in the registry's querysets**, so "the objects to
+  index" is one definition the bulk path, the stale-row sweep and task 03's
+  per-object check all share, and a category becoming private drops out of it.
 - **Query logging is kept**, existing behavior, moved to its own `search.log`
   handler mirroring `auth.log`.
 - Restore the forums' duplicate-topic quick search; delete the stub; rename the

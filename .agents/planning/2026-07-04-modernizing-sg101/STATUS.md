@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-29
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -112,9 +112,74 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
-**Task 01 — the `search` app, `SearchDocument`, and the document registry —
-DONE 2026-07-28.** 25 new tests, 618 green, `check` and `makemigrations --check`
-clean. `django.contrib.postgres` and `search` added to `INSTALLED_APPS`.
+### Task 02 — the reindex command and the backfill — DONE (2026-07-29)
+
+**`manage.py reindex_search` exists and the index is populated: 518,595
+documents, built in 1m17s.** 17 new tests, 635 green, `check` and
+`makemigrations --check` clean.
+
+**The backfill, measured against the converted snapshot:**
+
+| Document | Rows | Build | Rebuild |
+|---|---|---|---|
+| `forums.post` | 444,134 | 1:04 | 3:53 |
+| `forums.topic` | 35,206 | 0:03 | 0:15 |
+| `ygroup.post` | 21,032 | 0:06 | 0:14 |
+| `bio.userprofile` | 15,227 | 0:02 | 0:07 |
+| `news.story` | 1,694 | 0:01 | 0:01 |
+| `downloads.download` | 716 | <1s | <1s |
+| `weblinks.link` | 571 | <1s | <1s |
+| `podcast.item` | 15 | <1s | <1s |
+| **Total** | **518,595** | **1:17** | **4:32** |
+
+Counts match the source tables exactly, less private content: 35,693 − 487
+topics and 463,222 − 19,088 posts. The search table is **881 MB** with its GIN
+index, against a 544 MB database — the doubling task 01 predicted, now measured.
+
+**The corpus is 518,595, not the ~490k every planning document says.** The
+estimate omitted the Yahoo Group archive (21,032) and rounded the rest down. No
+consequence beyond the number itself; task 07 should compare against 518,595.
+
+**A rebuild costs 3.5× a build (4:32 vs 1:17), and that is the update path, not
+the CASE statement.** Re-running writes the same values to rows that already
+exist: every row is rewritten and every GIN entry churned, where the first run
+inserted into an index that started empty. It only shows up on `forums.post`
+(1:04 → 3:53), the one type whose rows carry large `summary` text. Left alone —
+this is a maintenance command run when the weights change or the worker was
+down, and five minutes is not a number worth optimizing against.
+
+**Private-category exclusion lives in the registry's querysets, not in the
+command.** `TopicDocument`/`PostDocument.get_queryset()` filter on
+`category__groups__isnull=True`, which makes "the objects to index" one
+definition that the bulk path, the stale-row pass and (next) task 03's
+per-object check all read from. The payoff is that a category *becoming*
+private needs no special handling: its topics and posts simply leave the
+queryset, and the end-of-type sweep deletes rows the queryset no longer yields.
+Verified against `Kahunas` in the real data by SQL join, not by row count —
+zero index rows reference any of its 487 topics or 19,088 posts.
+
+**`iterator()` silently drops `prefetch_related` on Django 3.2** (the support
+landed in 4.1), which would have turned `bio.UserProfile`'s
+`user__website_profiles` into a query per row over 15,227 profiles — invisible,
+since the results would still be correct. Documents now declare
+`prefetch = (...)` and the command applies it per batch with
+`prefetch_related_objects()`, so both the batched path and the single-object
+path prefetch properly.
+
+**Shape of the command:** `--model app.model` (repeatable) for a selective
+rebuild, `--batch-size` (default 1000), one transaction per batch, four queries
+per batch regardless of batch contents — read the existing rows, `bulk_create`,
+`bulk_update`, then one `UPDATE` that builds the vectors server-side from the
+columns just written. Rows are matched by `(content_type, object_id)` and
+updated in place, so a run is safe to repeat; a re-run of the full snapshot left
+the row count at 518,595 with no duplicates. A full run also drops rows whose
+content type is no longer registered. `order_by()` clears the model's `Meta`
+ordering — a sweep does not care what order it walks the table in, and sorting
+444k rows to ignore the result is pure cost.
+
+### Task 01 — the search app, the document model, and the registry — DONE (2026-07-28)
+
+**25 new tests, 618 green, `check` and `makemigrations --check` clean.** `django.contrib.postgres` and `search` added to `INSTALLED_APPS`.
 
 **The design decision this task settled: the vector is built from the row's own
 columns.** `title` (A), `summary` (B) and `author` (C) hold the text to be
@@ -197,7 +262,7 @@ write no rows *automatically*, but acceptance criterion 6 needs idempotent
 reindexing demonstrable now, and tasks 02 (batching) and 03 (Celery) should wrap
 one implementation rather than each growing their own.
 
-**Next:** task 02, the reindex management command and the ~490k-row backfill.
+**Next:** task 03, Celery incremental indexing and the privacy boundary on write.
 
 ## EXECUTION — Step 11 (MySQL → PostgreSQL) — **DONE** (2026-07-24 → 2026-07-26)
 
