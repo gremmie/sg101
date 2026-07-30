@@ -65,9 +65,15 @@ class Document:
 
     model = None
 
+    # Lookups the bulk indexer re-applies to each batch by hand. iterator()
+    # drops prefetch_related, so a queryset that declares one would issue a
+    # query per row over the whole table; declaring it here instead lets the
+    # single-object path and the batched path each prefetch correctly.
+    prefetch = ()
+
     def get_queryset(self):
         """The objects of this type to index."""
-        return self.model._default_manager.all()
+        return self.model._default_manager.all().prefetch_related(*self.prefetch)
 
     def title(self, obj):
         """Weight A text, and the result page's heading."""
@@ -104,7 +110,13 @@ class TopicDocument(Document):
     model = Topic
 
     def get_queryset(self):
-        return super().get_queryset().select_related('user')
+        # A category with groups assigned is visible only to their members, so
+        # its topics stay out of the index entirely -- there is no per-user
+        # filter at query time to keep them from being found. Privacy is a
+        # property of the category, not of the topic, and it can be revoked:
+        # a category that becomes public is picked up by the next reindex.
+        return super().get_queryset().select_related('user').filter(
+                forum__category__groups__isnull=True)
 
     def title(self, obj):
         return obj.name
@@ -124,7 +136,9 @@ class PostDocument(Document):
     model = Post
 
     def get_queryset(self):
-        return super().get_queryset().select_related('topic', 'user')
+        # Excluded for the same reason a private topic is; see TopicDocument.
+        return super().get_queryset().select_related('topic', 'user').filter(
+                topic__forum__category__groups__isnull=True)
 
     def title(self, obj):
         return obj.topic.name
@@ -166,10 +180,10 @@ class StoryDocument(Document):
 @register
 class UserProfileDocument(Document):
     model = UserProfile
+    prefetch = ('user__website_profiles',)
 
     def get_queryset(self):
-        return super().get_queryset().select_related('user').prefetch_related(
-                'user__website_profiles')
+        return super().get_queryset().select_related('user')
 
     def title(self, obj):
         # On a profile the author is the document, so username and full name
