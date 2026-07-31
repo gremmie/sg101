@@ -17,7 +17,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
 from django.contrib.postgres.search import SearchVectorField
+from django.db import IntegrityError
 from django.db import models
+from django.db import transaction
 
 
 # The text search configuration. 'english' stems and drops stop words. Band and
@@ -38,26 +40,59 @@ SEARCH_VECTOR = (
 
 class SearchDocumentManager(models.Manager):
 
-    def index_object(self, obj):
+    def index_object(self, obj, read_at=None):
         """
         Creates or updates the search document for obj, and returns it.
 
-        Two statements: the column values, then the vector built from them.
+        read_at is when obj's field values were read from the database, and
+        defaults to now. It becomes the row's indexed_at, and a row already
+        built from a *later* read is left alone.
+
+        That guard is what keeps two tasks for the same object from settling on
+        the older of their two snapshots. They routinely exist: editing a
+        profile saves auth.User and bio.UserProfile in one request, and both
+        map to the same document, so every profile edit queues this twice. The
+        worker runs several processes, so the two can interleave -- and without
+        the guard, the one that read first can write last and leave the index
+        holding pre-edit text that nothing would ever notice, since it stamps
+        indexed_at as it goes and so looks perfectly fresh to the reconcile
+        sweep.
+
+        The bulk path in search.indexer deliberately has no such guard: a
+        reindex is the repair tool, and it has to be able to overwrite a row
+        however fresh that row claims to be.
 
         """
         # Deferred so that importing search.models does not drag in the models
         # of all seven searchable apps.
         from search.documents import document_for_model
 
-        values = document_for_model(obj._meta.model).build(obj)
-        values['indexed_at'] = datetime.datetime.now()
+        if read_at is None:
+            read_at = datetime.datetime.now()
 
-        doc, _ = self.update_or_create(
-                content_type=ContentType.objects.get_for_model(obj),
-                object_id=obj.pk,
-                defaults=values)
-        self.filter(pk=doc.pk).update(search_vector=SEARCH_VECTOR)
-        return doc
+        values = document_for_model(obj._meta.model).build(obj)
+        values['indexed_at'] = read_at
+
+        content_type = ContentType.objects.get_for_model(obj)
+        rows = self.filter(content_type=content_type, object_id=obj.pk)
+
+        if not rows.filter(indexed_at__lt=read_at).update(**values):
+            if rows.exists():
+                # A fresher read got here first; its row stands.
+                return rows.first()
+            try:
+                # atomic() so that losing the insert race leaves a usable
+                # transaction behind rather than an aborted one.
+                with transaction.atomic():
+                    self.create(content_type=content_type, object_id=obj.pk,
+                                **values)
+            except IntegrityError:
+                # Another task created the row between the update and here,
+                # which means it read at least as recently as we did.
+                return rows.first()
+
+        rows.update(search_vector=SEARCH_VECTOR)
+        return rows.first()
 
 
 class SearchDocument(models.Model):

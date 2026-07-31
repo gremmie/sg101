@@ -93,3 +93,72 @@ class IndexObjectTestCase(TestCase):
         before = datetime.datetime.now()
         doc = SearchDocument.objects.index_object(self.make_topic('Jaguar setup'))
         self.assertGreaterEqual(doc.indexed_at, before)
+
+
+class StaleWriteTestCase(TestCase):
+    """
+    Two tasks for one object can run at once, so the older read must lose.
+
+    Editing a profile queues this twice -- auth.User and bio.UserProfile are
+    one page but two saves, both mapping to the same document -- and the worker
+    runs several processes. Whichever task read the source first has the older
+    snapshot, and it must not be allowed to write it over a newer one just by
+    finishing last.
+
+    """
+    def setUp(self):
+        self.user = User.objects.create_user('kahuna', 'jeff@example.com', 'pw')
+        self.forum = Forum.objects.create(
+                category=Category.objects.create(name='Main', slug='main'),
+                name='Surf Music', slug='surf-music')
+        self.topic = Topic.objects.create(forum=self.forum, user=self.user,
+                                          name='Jaguar setup')
+
+    def row(self):
+        return SearchDocument.objects.get()
+
+    def test_a_stale_read_does_not_overwrite_a_fresher_row(self):
+        # What the slow task read, before the edit.
+        stale_read = datetime.datetime.now()
+        stale_copy = Topic.objects.get(pk=self.topic.pk)
+
+        # The edit, and the task that read it, both land first.
+        self.topic.name = 'Jazzmaster setup'
+        self.topic.save()
+        SearchDocument.objects.index_object(self.topic)
+        self.assertEqual(self.row().title, 'Jazzmaster setup')
+
+        # Now the slow one finishes, still holding the pre-edit name.
+        SearchDocument.objects.index_object(stale_copy, read_at=stale_read)
+
+        self.assertEqual(self.row().title, 'Jazzmaster setup')
+
+    def test_a_stale_read_does_not_roll_indexed_at_backwards(self):
+        # The reconcile sweep reads indexed_at, so a dropped write must not
+        # leave the row looking older than the data actually in it.
+        stale_read = datetime.datetime.now()
+        stale_copy = Topic.objects.get(pk=self.topic.pk)
+        fresh = SearchDocument.objects.index_object(self.topic)
+
+        SearchDocument.objects.index_object(stale_copy, read_at=stale_read)
+
+        self.assertEqual(self.row().indexed_at, fresh.indexed_at)
+
+    def test_a_fresher_read_still_overwrites(self):
+        # The guard must not block ordinary updates.
+        SearchDocument.objects.index_object(self.topic)
+
+        self.topic.name = 'Jazzmaster setup'
+        self.topic.save()
+        SearchDocument.objects.index_object(self.topic)
+
+        self.assertEqual(self.row().title, 'Jazzmaster setup')
+
+    def test_a_stale_read_still_creates_a_missing_row(self):
+        # Nothing to lose to: an old read is better than no row at all.
+        SearchDocument.objects.all().delete()
+
+        SearchDocument.objects.index_object(
+                self.topic, read_at=datetime.datetime(2020, 1, 1))
+
+        self.assertEqual(self.row().title, 'Jaguar setup')

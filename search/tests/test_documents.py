@@ -3,6 +3,7 @@
 import datetime
 import re
 
+from django.contrib.auth.models import Group
 from django.contrib.auth.models import User
 from django.test import TestCase
 
@@ -20,6 +21,7 @@ from news.models import Story
 from podcast.models import Channel
 from podcast.models import Item
 from search.documents import all_documents
+from search.documents import document_for_model
 from search.models import SearchDocument
 from weblinks.models import Category as LinkCategory
 from weblinks.models import Link
@@ -87,16 +89,19 @@ class DocumentTestCase(TestCase):
                 long_markup='A jaguar through a blackface amp.',
                 tags='surfabilly')
 
+        # is_public is an admin's approval and defaults to False, so a link or
+        # download only reaches the index once it has been granted.
         self.link = Link.objects.create(
                 category=LinkCategory.objects.create(title='Bands', slug='bands'),
                 title='The Ventures', url='http://ventures.example.com/',
-                description='Official band site.', user=self.user)
+                description='Official band site.', user=self.user,
+                is_public=True)
 
         self.download = Download.objects.create(
                 category=DownloadCategory.objects.create(title='Tabs', slug='tabs'),
                 title='Pipeline tab', description='Tablature for Pipeline.',
                 file='downloads/pipeline.txt', user=self.user,
-                ip_address='127.0.0.1')
+                ip_address='127.0.0.1', is_public=True)
 
         channel = Channel.objects.create(
                 title='SG101 Podcast', link='http://example.com/', language='en',
@@ -163,6 +168,52 @@ class RegistryTestCase(DocumentTestCase):
             with self.subTest(model=model.__name__):
                 doc = SearchDocument.objects.index_object(obj)
                 self.assertEqual(doc.content_object, obj)
+
+
+class VisibilityTestCase(DocumentTestCase):
+    """
+    The documents' querysets are the index's access rules.
+
+    Every one of these keeps out content a member cannot reach on the site
+    anyway, so a hit for one would either 404 on click or show what an admin
+    has not approved.
+
+    """
+    def test_a_private_categorys_topics_and_posts_are_not_indexable(self):
+        self.topic.forum.category.groups.add(Group.objects.create(name='Kahunas'))
+
+        self.assertNotIn(self.topic, document_for_model(Topic).get_queryset())
+        self.assertNotIn(self.post, document_for_model(Post).get_queryset())
+
+    def test_an_unapproved_link_is_not_indexable(self):
+        self.link.is_public = False
+        self.link.save()
+
+        self.assertNotIn(self.link, document_for_model(Link).get_queryset())
+
+    def test_an_unapproved_download_is_not_indexable(self):
+        self.download.is_public = False
+        self.download.save()
+
+        self.assertNotIn(self.download,
+                         document_for_model(Download).get_queryset())
+
+    def test_a_deactivated_members_profile_is_not_indexable(self):
+        self.user.is_active = False
+        self.user.save()
+
+        self.assertNotIn(self.profile,
+                         document_for_model(UserProfile).get_queryset())
+
+    def test_the_types_without_a_visibility_rule_index_everything(self):
+        # The recorded finding in this module's docstring, asserted: news,
+        # podcast and the Yahoo Group archive have nothing to filter on, so
+        # their querysets must match their tables.
+        for model in (Story, Item, YgroupPost):
+            with self.subTest(model=model.__name__):
+                document = document_for_model(model)
+                self.assertEqual(document.get_queryset().count(),
+                                 model.objects.count())
 
 
 class WeightTestCase(DocumentTestCase):

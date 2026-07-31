@@ -112,6 +112,283 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
+### Task 03 — incremental indexing through Celery — DONE (2026-07-30)
+
+**The index now maintains itself from ordinary site activity.** 44 new tests,
+679 green, `check` and `makemigrations --check` clean. New: `search/tasks.py`,
+`search/receivers.py`, `search/apps.py`, `search/indexer.py`; `search/tests/
+test_receivers.py` and `test_tasks.py`.
+
+**End to end on the running stack with real data:** a forum post became
+findable **0.61s** after being posted, through the real worker and Redis, and
+its rows were gone **0.73s** after the topic was deleted.
+
+**THE DEFECT THIS TASK FOUND: three of the eight documents were indexing
+content the site does not show.** Requirement 6 asked for the other seven
+documents' visibility rules to be confirmed rather than assumed, and the
+assumption was wrong. Task 01 built every queryset from `_default_manager.all()`
+and only `forums.Topic`/`Post` narrowed it. Measured in the backfilled index:
+
+| Document | Rule that was missing | Rows wrongly indexed |
+|---|---|---|
+| `downloads.Download` | `is_public` (an admin's approval) | **43** of 716 |
+| `weblinks.Link` | `is_public` | **57** of 571 |
+| `bio.UserProfile` | `user__is_active` | **1,637** of 15,227 |
+
+The downloads case is the worst of the three: `downloads-details` is
+`get_object_or_404(Download.public_objects, ...)`, so each of those 43 would
+have produced a search hit that **404s on click** while showing the title and
+description of something an admin has not approved. The 1,637 profiles are
+deactivated accounts, which are mostly spammers — `bio/views.py:40` already
+keeps them out of the member list that exists for finding people.
+
+The profile exclusion was the one product call in the three, since it also makes
+a *resigned* member unfindable rather than only a spammer. **Confirmed by Brian
+2026-07-30: "deactivated users can be removed from the index."**
+
+**All three rules were recovered from the pruned stack rather than invented** —
+`pre-step-4-prune`'s `downloads/search_indexes.py` and `weblinks/search_indexes.py`
+both used `index_queryset() → Model.public_objects.all()`, and `bio`'s used
+`UserProfile.objects.filter(user__is_active=True)`. The old
+`QueuedSignalProcessor` went further and had an `enqueue_public_save` that
+enqueued a *delete* when `is_public` was false, "in case the flag just went from
+True to False". Same lesson as Q1–Q11: the old behavior is in the repo, and
+checking beats remembering.
+
+Fixed in the registry querysets, where task 02 put the private-category filter,
+so the per-object task inherits all four rules for free. Index repaired with
+`reindex_search --model` for the three types: **1,737 rows removed, corpus now
+516,858**. Verified by SQL join that zero non-public downloads, non-public
+links, deactivated profiles or `Kahunas` rows remain. The remaining three
+documents genuinely have no rule (`news.Story`, `downloads.Download` and
+`weblinks.Link` keep unapproved submissions in separate `Pending*` models;
+`podcast.Item` has no flag; `ygroup.Post` is a frozen archive) — recorded in
+`search/documents.py`'s docstring so it need not be re-derived, and asserted by
+`test_the_types_without_a_visibility_rule_index_everything`.
+
+**REQUIREMENT 8 IS MOOT, AND MEASURING SAID SO.** The task file warned that
+attaching `post_delete` to `forums.Post` disables Django's fast-delete path.
+It was already disabled: `forums/receivers.py` has connected `on_post_delete` to
+`Post` and `Topic` for years, and `downloads.Download`/`weblinks.Link` likewise.
+Confirmed directly — `Collector.can_fast_delete(Post.objects.all())` is `False`
+with the search receivers disconnected. Timed on the biggest topic in the
+snapshot (**7,649 posts**) inside a rolled-back transaction:
+
+| | Wall clock | on_commit callbacks |
+|---|---|---|
+| Without the search receivers | 105.65s | 7,650 |
+| With them | 106.51s | 15,300 |
+
+**CORRECTED 2026-07-30 — that +0.86s is not the production cost.** The
+measurement wrapped `_delete_topic` in `transaction.atomic()` so it could be
+rolled back, which made `in_atomic_block` true, so the callbacks were *appended
+to a list* rather than run. In production nothing wraps that view
+(`ATOMIC_REQUESTS` is unset and `save_base` opens no transaction for a model
+without parents), so each callback **executes immediately** and publishes for
+real. Measured separately: **0.402 ms per publish** to the local Redis, so 7,649
+posts is **~3.1s**, or **~3%** on top of the 105.65s baseline. The 0.86s figure
+was the cost of building and registering 7,650 partials, nothing more.
+
+The conclusion is unchanged: 3s on a 105-second operation is still noise, and
+the path was already dominated by the app's own per-post work
+(`post.attachments.clear()` in a loop, plus a topic and forum recount save per
+post). So **a delete queues one task per object rather than batching them.** A
+batcher would have to hold pending ids on the connection and clear them on
+rollback, and Django 3.2 has no `on_rollback` hook to do it with — a subtle leak
+in the path where bugs are silent, bought for 3% of an admin action nobody runs.
+(That 105s is pre-existing and not ours; worth a look if the forums are ever
+open for other reasons.)
+
+**The general lesson, which cost me a wrong number: a rolled-back transaction is
+not a neutral harness for measuring `on_commit` work.** Wrapping something in
+`atomic()` to undo it changes the very behavior under test — it converts
+immediate execution into list appends. Measure the deferred work separately, as
+above.
+
+**Both privacy directions verified on real data**, on the smallest public
+category (`SurfGuitar101.com Site Specific`, 337 topics / 7,991 posts) so that
+genuinely private content was never indexed to test the test: assigning a group
+**purged 8,328 rows in 1.1s**, removing it **restored all 8,328 in 2.1s**, and
+the category finished byte-for-byte where it started. `reindex_category` needs
+no idea which direction the change went — it indexes what the documents still
+yield for the category and drops the rows of everything they no longer do, which
+covers both.
+
+**`transaction.on_commit` is what the tests actually assert.** Under
+`CELERY_TASK_ALWAYS_EAGER` a `delay()` called straight from a handler would
+index *immediately*, so the test asserts the row is **absent inside** the
+`captureOnCommitCallbacks` block and present after it — a test that only checked
+the end state would pass either way. A companion test rolls an atomic block back
+and asserts zero callbacks were left registered. **Note the corollary: ordinary
+`TestCase` tests never run on_commit callbacks at all**, so the other 600 tests
+in the suite are untouched by indexing — the blast radius of this change on the
+existing suite was one test module (see below).
+
+**`instance.pk` is read in the delete handler, not in the callback.** The
+collector sets it to `None` when the delete finishes, which is before the commit
+that runs the callback — capturing it at signal time is not a style preference.
+
+**WHY `on_commit` MATTERS HERE, since the member-facing paths have no
+transaction to wait for** (Brian asked, 2026-07-30, and the first answer —
+future-proofing — undersold it). `ATOMIC_REQUESTS` is unset and `save_base`
+opens no transaction for a model without parents, so a member posting to the
+forums publishes the task immediately; `on_commit` defers nothing there. **But
+the Django admin wraps both `changeform_view` and `delete_view` in
+`transaction.atomic`, and the admin is where a category's groups are edited.**
+That is the privacy boundary, inside a real transaction. Without `on_commit`,
+making `Kahunas` private would: insert the m2m row uncommitted → fire
+`m2m_changed` → publish `reindex_category` → the worker reads the category on
+another connection, cannot see the uncommitted row under READ COMMITTED, judges
+the category public, and **indexes all 487 topics and 19,088 posts** → the admin
+transaction then commits. Silent, no error, and nothing fixes it until someone
+reindexes by hand. The same race runs the other way through `delete_view` (a row
+re-indexed just before its object is deleted, left orphaned) and through
+`auth.User` (a deactivation the worker cannot see yet, so the spammer's profile
+stays searchable). One uniform rule, free when there is no transaction and
+correct when there is; "queue on commit unless we think there is no transaction"
+is not verifiable at a call site.
+
+**THE OUT-OF-ORDER RACE — FOUND, THEN FIXED (Brian asked 2026-07-30 whether
+autocommit lets indexing run at the wrong time, then asked for it closed).** The
+fix is an optimistic guard in `SearchDocument.objects.index_object`: `read_at` is
+taken **before** the source is read, becomes the row's `indexed_at`, and the
+write is `WHERE indexed_at < read_at`, so a row already built from a later read
+is left alone. Either interleaving now yields the fresher snapshot. Falls back to
+an insert when there is no row, inside `atomic()` so that losing the insert race
+to a concurrent task leaves a usable transaction rather than an aborted one.
+Proven by removing the guard and watching
+`StaleWriteTestCase.test_a_stale_read_does_not_overwrite_a_fresher_row` and
+`..._does_not_roll_indexed_at_backwards` go red. **The bulk path in
+`search/indexer.py` deliberately keeps no guard** — a reindex is the repair tool
+and must be able to overwrite a row however fresh that row claims to be.
+
+Everything below is the analysis that led there, kept because the reasoning
+matters more than the conclusion.
+
+A
+member posting is safe *because* there is no transaction: in autocommit the
+INSERT commits as it executes, and `post_save` fires after it, so the row is
+durable before the task is published. The real hazard is **two tasks for the
+same object processed out of order** — the worker runs at concurrency 10, so
+tasks queued a millisecond apart land in different child processes.
+`bio.edit_profile` is the case, and the duplicate is **unconditional**: the
+edit-profile page is one form over two models — `first_name`, `last_name` and
+`email` live on `auth.User`, everything else on `bio.UserProfile` — so every
+valid POST saves both rows (`ModelForm.save()` does not diff), and each save
+queues `reindex_document(UserProfile, 42)`. If the first reads the profile
+before the second's save commits but writes after the second has written, the
+index keeps the pre-edit text. The redundant task is therefore 100% of profile
+edits; only the stale *outcome* needs the unlucky interleave — which is what
+tipped the decision from "record it" to "fix it": a race run on every profile
+edit is a different proposition from one run incidentally. **Task 08's reconcile sweep cannot see this** —
+the stale write stamps `indexed_at = now`, so the row looks fresh against the
+source's `update_date`. Needs an unlucky interleave in a ~1ms window; self-heals
+on the next edit of that profile; `reindex_search --model bio.userprofile` is
+the manual remedy. **Fixed, as above** — the read-timestamp option; the
+alternative considered was locking the index row and reading the source *inside*
+the lock, which is also correct and needs no clock, but costs a row lock on every
+write and still needs insert-race handling for a brand-new object, so it buys a
+lock for nothing.
+
+**The delete case is immune, and by design rather than luck.** `_delete_topic`
+saves the topic (queueing a reindex) and then deletes it (queueing a removal);
+if those are processed out of order and the reindex lands last, it looks the
+topic up in the document's queryset, does not find it, and **deletes the row**
+instead of recreating it. A late reindex for a vanished object cleans up after
+itself. Only the case where both tasks find the object present — a profile edit
+— can settle on stale data.
+
+**Rejected: the old stack's content-update signals.** `forums/signals.py` and
+`bio/signals.py` still ship `topic_content_update`, `post_content_update` and
+`profile_content_update`, which the Xapian processor used instead of `post_save`
+so that saves changing no text (`profile.save(content_update=False)`, which fires
+on every forum post to bump `forum_post_count`) did not reindex. Not adopted:
+those are sent by hand from a handful of call sites, and one that someone forgets
+to add is an index that goes quietly stale — the exact failure this task exists
+to prevent. `post_save` cannot be bypassed. The cost is two extra cheap tasks per
+post (the topic's row and the author's profile row) at 134 posts a month.
+
+**Three senders beyond the eight models, all for the same reason** — the
+searchable object is never saved when the thing that changed is, so `post_save`
+on the document's own model cannot see it. `forums.Category` (its groups decide
+whether the topics and posts may be indexed at all) is the one the task file
+asked for; the other two came out of checking:
+
+- **`post_save` on `User`.** A profile document holds the full name at weight A
+  and is indexed only while the account is active, and *both of those live on
+  `User`*, which the auth admin edits on its own. The site's own
+  `bio.edit_profile` saves the profile too, so the member-facing path was
+  already covered, but an admin rename or deactivation from `/admin/auth/user/`
+  rebuilt nothing. Skips `created` (bio's receiver creates the profile, which
+  queues its own reindex) and `update_fields == {'last_login'}`, every login.
+- **`post_save`/`post_delete` on `elsewhere.WebsiteProfile`** (added 2026-07-30
+  at Brian's prompting — see the content-update-signal note below). A member's
+  website links are indexed at weight B, name and url, exactly as the old
+  `userprofile_text.txt` template had them, but they live in their own model, so
+  adding or removing one never saves the profile whose document holds them. 549
+  rows across 377 members. Verified live through the worker on the vendored
+  `elsewhere` fork: adding a link reached the profile's `summary` and deleting
+  it took the link back out.
+
+**THE CONTENT-UPDATE SIGNALS: two are load-bearing, one is dead, and the dead
+one found the gap above.** Brian asked whether the signals he had built for
+Haystack should come out now or later. Checking who receives them:
+
+- **`topic_content_update` / `post_content_update` are NOT search code and must
+  stay.** `forums/latest.py:94` and `:324` have live `@receiver`s — the Redis
+  "latest posts" datastore behind the RSS feeds, covered by
+  `forums/tests/test_feeds_latest.py`. Search was only ever their *second*
+  consumer.
+- **`profile_content_update` is dead**: sent from `bio/models.py:140` and
+  `bio/views.py:236`, received by nobody since Step 4 pruned `custom_search`.
+  Step 4 removed the receiver and left the signal and both senders standing.
+- **But `bio/views.py:236` sends it when a member edits their website links** —
+  i.e. the dead signal was an accurate note that the profile's *indexed* content
+  can change without the profile being saved. That is what prompted the
+  `WebsiteProfile` handler. It was fixed with `post_save`/`post_delete` on the
+  model rather than by connecting to the signal, because the signal fires from
+  that one view only and would miss an admin edit.
+- **Decision: `profile_content_update` and its two senders go in the
+  end-of-Step-12 prune**, with the 6 `search_title()`, 8 `search_summary()` and
+  8 `templates/search/indexes/*.txt` — one coherent "remove what the old search
+  left behind" commit, once task 04 has settled what is actually dead. The
+  `content_update` kwarg on `UserProfile.save()` stays regardless: it also gates
+  `update_date`, the markup conversion and the avatar cache delete.
+
+**CARRIED OUT TO STEP 21: pin the celery worker's concurrency explicitly.**
+`docker-compose.yml` runs `celery -A sg101 worker -l info` with no
+`--concurrency`, so the prefork pool defaults to the host's CPU count — one
+worker node, **10 child processes** on the dev Mac today (verified via `celery
+inspect stats`), and whatever the deploy VM has tomorrow. That number was never
+chosen by anyone, and it is the number that decides whether two tasks for the
+same object can run at once — the thing `indexed_at`'s guard defends against. It
+is not a throughput question at 134 posts a month. Recorded in `plan.md`'s Step
+21 section too. **Brian asked to revisit this at deploy time, 2026-07-30.**
+
+**KNOWN GAP, deliberate: moving a `Forum` between categories does not reindex.**
+It is the same privacy boundary, but detecting it needs the old category, and a
+`pre_save` probe would cost a query on **every** forum save — and `forums/
+receivers.py` saves the forum on every post. The remedy is
+`reindex_search --model forums.topic --model forums.post` after an admin moves a
+forum. **Owner decision, Brian 2026-07-30: accepted — moving a forum between
+categories is "very very rare" and he will run the reindex by hand.** So this
+is settled, not a deferred item; nothing downstream needs to pick it up. Also unhandled:
+`m2m_changed` with `action='post_clear'` from the *group* side, where Django has
+already forgotten which categories were attached; nothing in the admin clears
+from that side.
+
+**Task 02's batching is now shared, not duplicated** (requirement 5): `batched`,
+`index_batch`, `index_queryset` and `discard_stale` moved out of the management
+command into **`search/indexer.py`**, which the command and `reindex_category`
+both call. `discard_stale` grew a `scope` argument so a caller working on one
+category does not sweep the whole type.
+
+**One test outside the search app needed changing:** `bio/tests/test_receivers.py`
+sends `post_save` by hand with `namedtuple` stand-ins that have no `pk`, to
+exercise bio's badge handlers. It already disconnected three other apps'
+receivers by `dispatch_uid` for the same reason; it now disconnects
+`search.receivers` for `Link`, `Download` and `Story` too.
+
 ### Task 02 — the reindex command and the backfill — DONE (2026-07-29)
 
 **`manage.py reindex_search` exists and the index is populated: 518,595

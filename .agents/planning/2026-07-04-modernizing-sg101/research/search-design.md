@@ -172,6 +172,30 @@ transaction commits, read a row that does not exist yet, and index nothing. That
 failure is intermittent and load-dependent. Queueing on commit also gives correct
 rollback behavior for free.
 
+**Added 2026-07-30: the hook is `post_save`, not the app's own content-update
+signals.** `forums/signals.py` and `bio/signals.py` still ship
+`topic_content_update`, `post_content_update` and `profile_content_update`, which
+the old `QueuedSignalProcessor` used in place of `post_save` so that saves
+changing no text did not reindex — `profile.save(content_update=False)` fires on
+every forum post to bump `forum_post_count`. Not adopted: those signals are sent
+by hand from a handful of call sites, and one that someone forgets to add is an
+index that goes quietly stale, which is the failure this design exists to
+prevent. `post_save` cannot be bypassed. The cost is two extra cheap tasks per
+post at 134 posts a month.
+
+Three senders go beyond the eight searchable models, each because the searchable
+object is never saved when the thing that changed is: `forums.Category` (its
+groups decide whether its content may be indexed), `User` (a profile document's
+weight-A full name and its `is_active` gate both live there, and the auth admin
+edits it alone), and `elsewhere.WebsiteProfile` (a member's website links are
+indexed at weight B but live in their own model).
+
+Note that `forums`' `topic_content_update` and `post_content_update` are **not**
+search code and stay: `forums/latest.py` receives both for the Redis latest-posts
+datastore behind the RSS feeds. Only `bio`'s `profile_content_update` was
+search-only, and it has had no receiver since Step 4 — it goes in the
+end-of-Step-12 prune with the other Xapian residue.
+
 **There is no author-rename fan-out, by construction** (revised 2026-07-27 —
 supersedes Q5's "a rename is its own task"). Two facts settle it:
 
@@ -226,6 +250,27 @@ category separately, since that is a privacy defect rather than staleness.
   even for the members allowed to read them. Deliberate; revisitable additively.
 - A category's privacy is **not fixed**: one that becomes private must have its
   rows removed, and one that becomes public must gain them.
+
+**Added 2026-07-30, building task 03: private categories are not the only
+exclusion, and the other three were being missed.** Each document's queryset
+carries whatever rule decides its model is visible on the site at all, since
+search must not surface what a member cannot otherwise reach:
+
+| Document | Rule | Was wrongly indexed |
+|---|---|---|
+| `forums.Topic`, `forums.Post` | the category's groups | — (task 02) |
+| `weblinks.Link` | `is_public`, an admin's approval | 57 of 571 |
+| `downloads.Download` | `is_public` | 43 of 716 |
+| `bio.UserProfile` | the user's `is_active` | 1,637 of 15,227 |
+
+`news.Story`, `podcast.Item` and `ygroup.Post` have no such rule: the first
+keeps unapproved submissions in a separate `PendingStory` model, the second has
+no flag of any kind, and the third is a frozen archive. All three rules that
+were missing had been in the old Xapian indexes (`Model.public_objects` and
+`UserProfile.objects.filter(user__is_active=True)`), so they were recovered
+rather than invented. The downloads case was the sharpest: `downloads-details`
+is `get_object_or_404(Download.public_objects, ...)`, so an unapproved download
+in the index is a search hit that 404s on click.
 
 ### Logging
 

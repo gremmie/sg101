@@ -12,6 +12,23 @@ written once at account activation, but first_name/last_name are editable
 through bio.EditUserForm -- and embedding those in content documents would make
 a single profile edit rebuild every row that member ever wrote.
 
+Each document's get_queryset() also carries whatever rule decides that its
+model's rows are visible on the site at all, since search must not surface what
+a member cannot otherwise reach. All eight were checked; four have such a rule:
+
+    forums.Topic, forums.Post  the category's groups (a gated category)
+    weblinks.Link              is_public, an admin's approval
+    downloads.Download         is_public, likewise
+    bio.UserProfile            the user's is_active
+
+The other three have none, and the reasons will not change quietly: a news.Story
+is approved by existing, since unapproved submissions are a separate PendingStory
+model and nothing on the Story itself gates it; podcast.Item has no flag of any
+kind and is admin-entered; ygroup.Post is a frozen 2010 archive that nothing
+writes to. All three are read unfiltered by their own views. Note that downloads
+and weblinks have a Pending model too, but unlike news they *also* keep is_public
+on the approved row, which is the flag that matters here.
+
 """
 import html
 
@@ -71,9 +88,37 @@ class Document:
     # single-object path and the batched path each prefetch correctly.
     prefetch = ()
 
+    # The lookup path from this model to the forums.Category whose privacy
+    # governs it, for the types where one does. It both filters private
+    # content out of get_queryset() below and tells the task that reacts to a
+    # category's groups changing which objects to rebuild.
+    category_path = None
+
     def get_queryset(self):
-        """The objects of this type to index."""
-        return self.model._default_manager.all().prefetch_related(*self.prefetch)
+        """
+        The objects of this type to index.
+
+        This is the one definition of what belongs in the index. Everything
+        reads it: the bulk rebuild, the sweep that removes rows the queryset
+        no longer yields, and the per-object task, which indexes an object if
+        this queryset still contains it and deletes its row otherwise. An
+        object that becomes unindexable therefore needs no special handling
+        anywhere -- it simply stops being yielded.
+
+        """
+        queryset = self.model._default_manager.all().prefetch_related(
+                *self.prefetch)
+
+        if self.category_path:
+            # A category with groups assigned is visible only to their members,
+            # so its content stays out of the index entirely -- there is no
+            # per-user filter at query time to keep it from being found.
+            # Privacy is a property of the category, not of the content, and it
+            # can be revoked in either direction at any time from the admin.
+            queryset = queryset.filter(
+                    **{self.category_path + '__groups__isnull': True})
+
+        return queryset
 
     def title(self, obj):
         """Weight A text, and the result page's heading."""
@@ -108,15 +153,10 @@ class Document:
 @register
 class TopicDocument(Document):
     model = Topic
+    category_path = 'forum__category'
 
     def get_queryset(self):
-        # A category with groups assigned is visible only to their members, so
-        # its topics stay out of the index entirely -- there is no per-user
-        # filter at query time to keep them from being found. Privacy is a
-        # property of the category, not of the topic, and it can be revoked:
-        # a category that becomes public is picked up by the next reindex.
-        return super().get_queryset().select_related('user').filter(
-                forum__category__groups__isnull=True)
+        return super().get_queryset().select_related('user')
 
     def title(self, obj):
         return obj.name
@@ -134,11 +174,10 @@ class TopicDocument(Document):
 @register
 class PostDocument(Document):
     model = Post
+    category_path = 'topic__forum__category'
 
     def get_queryset(self):
-        # Excluded for the same reason a private topic is; see TopicDocument.
-        return super().get_queryset().select_related('topic', 'user').filter(
-                topic__forum__category__groups__isnull=True)
+        return super().get_queryset().select_related('topic', 'user')
 
     def title(self, obj):
         return obj.topic.name
@@ -183,7 +222,13 @@ class UserProfileDocument(Document):
     prefetch = ('user__website_profiles',)
 
     def get_queryset(self):
-        return super().get_queryset().select_related('user')
+        # Deactivated accounts are spammers and resignations, and bio hides
+        # them from the member list it offers for finding people
+        # (bio/views.py:40). The old Xapian index filtered on the same flag.
+        # Note that a deactivation reaches this through the profile: marking a
+        # spammer saves the profile as well as the user.
+        return super().get_queryset().select_related('user').filter(
+                user__is_active=True)
 
     def title(self, obj):
         # On a profile the author is the document, so username and full name
@@ -212,7 +257,11 @@ class LinkDocument(Document):
     model = Link
 
     def get_queryset(self):
-        return super().get_queryset().select_related('user')
+        # A link is submitted by a member and stays invisible until an admin
+        # approves it; is_public is that approval. Every browse view reads
+        # Link.public_objects, which is this same filter.
+        return super().get_queryset().select_related('user').filter(
+                is_public=True)
 
     def title(self, obj):
         return obj.title
@@ -234,7 +283,12 @@ class DownloadDocument(Document):
     model = Download
 
     def get_queryset(self):
-        return super().get_queryset().select_related('user')
+        # Approval, as on a link -- and here an unapproved row is worse than
+        # a stale result: downloads-details is get_object_or_404 against
+        # Download.public_objects, so indexing one produces a search hit that
+        # 404s on click.
+        return super().get_queryset().select_related('user').filter(
+                is_public=True)
 
     def title(self, obj):
         return obj.title

@@ -16,6 +16,7 @@ import downloads.receivers
 from news.models import Story
 from potd.models import Photo
 import potd.receivers
+import search.receivers
 from weblinks.models import Link
 import weblinks.receivers
 
@@ -23,6 +24,9 @@ import weblinks.receivers
 FakeDonation = namedtuple('FakeDonation', ['is_anonymous', 'user'])
 FakeUserObject = namedtuple('FakeUserObject', ['user'])
 FakeStory = namedtuple('FakeStory', ['submitter'])
+
+# The models these tests fake a save of that are also searchable.
+SEARCHABLE = (Link, Download, Story)
 
 
 class ReceiverTestCase(TestCase):
@@ -37,6 +41,11 @@ class ReceiverTestCase(TestCase):
         post_save.disconnect(sender=Download, dispatch_uid='downloads.receivers')
         post_save.disconnect(sender=Photo, dispatch_uid='potd.receivers')
 
+        # These tests send post_save by hand with stand-in objects that have
+        # no pk, so the search indexer has nothing to queue for.
+        for sender in SEARCHABLE:
+            post_save.disconnect(sender=sender, dispatch_uid='search.receivers')
+
     def tearDown(self):
         post_save.connect(weblinks.receivers.on_link_save, sender=Link,
                           dispatch_uid='weblinks.receivers')
@@ -44,6 +53,10 @@ class ReceiverTestCase(TestCase):
                           dispatch_uid='downloads.receivers')
         post_save.connect(potd.receivers.on_photo_save, sender=Photo,
                           dispatch_uid='potd.receivers')
+
+        for sender in SEARCHABLE:
+            post_save.connect(search.receivers.queue_reindex, sender=sender,
+                              dispatch_uid='search.receivers')
 
     def test_profile_creation(self):
         profile = UserProfile.objects.get(user=self.user)
