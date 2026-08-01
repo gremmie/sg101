@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-07-29
+**Last updated:** 2026-08-01
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -111,6 +111,104 @@ by-real-name still works through profiles; find-posts-by-real-name does not.
 Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
+
+### Task 04 — the search page, restored — DONE (2026-08-01)
+
+**`/search/` works again, for the first time since Step 4 stubbed it.** 64 new
+tests, 743 green, `check` and `makemigrations --check` clean. Commit `2622943`.
+New: `search/query.py` (the read path, as `search/indexer.py` is the write
+path), `search/forms.py`, `search/views.py`, `search/urls.py`, and four test
+modules including `test_xss.py`.
+
+**Verified end to end against the real 516,858-document index**, not only in
+tests: ranked blended results, working snippets, and a 470,846-hit exclusion
+query answered in 0.13s.
+
+**THE DEFECT THIS TASK FOUND, ONE: ts_rank cannot rank a query that excludes
+anything.** The moment a tsquery holds a negated term, `ts_rank` returns
+`6.3092975e-21` — the same constant for every row, regardless of length or where
+the match fell. So `reverb -fender` came back ordered by nothing but the date
+tiebreak, across all 38,340 of its hits, while looking perfectly normal. This
+matters more than it sounds because requirement 7 has the tips block actively
+*teaching* `-exclusion`: the one syntax we advertise was the one that silently
+turned ranking off.
+
+Fixed by ranking against the query with its exclusions stripped
+(`search.query.positive_terms`) while filtering keeps the whole query. Confirmed
+on real data — a title hit now leads at 0.4027 where every row previously tied.
+**Brian chose this over documenting the limitation or dropping the syntax from
+the tips.**
+
+**THE DEFECT THIS TASK FOUND, TWO: the obvious way to render a snippet is
+stored XSS.** `SearchHeadline` returns the summary with the match wrapped, and
+PostgreSQL escapes none of the text around it — so `{{ result.headline|safe }}`,
+which is what the annotation invites, publishes stored input as HTML.
+
+The summaries genuinely contain live markup. `body_text()` is
+`html.unescape(strip_tags(...))`, so a stored `&lt;` — which is how every
+`news.Story` and much of the ygroup archive holds a typed angle bracket —
+survives `strip_tags` and then *unescapes into a real tag*. `ts_headline` drops
+some tags but by no means all: `<img src=x onerror=alert(1)>` comes back through
+it **intact**, verified in psql.
+
+Fixed by having the database mark hits with sentinels that escaping cannot
+touch (`[[[hl]]]`), escaping in Python, and inserting the real markup after.
+Residual and deliberate: a member who types the sentinel earns themselves a
+highlight `<span>` and nothing else, since the replacement is a fixed literal —
+pinned by a test. `test_xss.py` covers both stored and reflected paths by
+asserting **every tag in a result row is one the template wrote**, which is the
+assertion that works; an earlier substring blocklist produced nine false alarms
+on payloads that were inert text.
+
+**THE FRV-1 TIP WAS XAPIAN'S PROBLEM, NOT POSTGRES'S.** The task file said to
+leave the claim alone for task 07 to judge. One query settled it: `FRV-1`
+returns **2,024** documents, while the tip's advice to search `FRV 1` instead
+returns **114**. PostgreSQL splits the token into `'frv'` and `'-1'` at adjacent
+positions and reads the query as a phrase over them; `surf-music` indexes as the
+compound *and* both halves; `A/B` survives whole. The apology became a tip that
+says the true thing, with two behavioral tests behind it.
+
+**BRIAN REVERSED REQUIREMENT 1 AND AC4.** They specified all eight boxes checked
+on render, reasoning that it made the implicit "none means all" convention
+visible. He asked for them to start **unchecked**, matching the old site, so a
+member picks their areas rather than being handed a whole-site search. The
+submit-nothing-means-everything rule stays: a browser sends nothing for an
+untouched checkbox group, so the masthead box — which posts a bare `q` — is
+indistinguishable from a form nobody touched, and both have to mean everything.
+Consequence worth knowing: unchecked boxes do not *force* a choice, they only
+stop suggesting one.
+
+**Two errors in the task file, corrected:** it says "eight callers across seven
+templates" and then lists seven references across six files — seven is right,
+and `haystack_search_ajax` has **zero** callers, nothing reverses it anywhere.
+And "delete the `FixedView` stub" cannot mean the class, which still serves
+about/colophon/privacy/tos; it means the two stub routes. The quick-search route
+keeps its placeholder until task 05 supplies the view, and
+`core/tests/test_pruned.py` was narrowed to assert that rather than the search
+page.
+
+**Still deferred: the models' `search_title`/`search_summary` methods.** Task 01
+parked this until task 04 settled what was dead, and it is still not settled —
+`search_ajax.html:7` renders `result.object.search_title` until task 05 rewrites
+it, and `podcast.Item.search_title()` must survive regardless (social sharing,
+`podcast/detail.html:79`). Also untouched: `fixed/colophon.html` still credits
+Haystack and xapian-haystack in prose, and the dead Xapian index templates in
+`sg101/templates/search/indexes/` remain, cited by `search/documents.py` as the
+provenance of its field lists.
+
+**Task 09 came out of reviewing this one.** Measuring `reverb` showed 95% of its
+54,065 hits are forum posts, which buries the 243 news stories — so the member
+is being asked to pre-filter without evidence of where their answer lives. Per-
+type counts beside each checkbox would supply it, and the single-table index
+makes them a `GROUP BY` over a query already running. Costed at **+0.9%** if the
+facets replace the paginator's `COUNT(*)` (they sum to it), **+36%** if merely
+added alongside. Two traps found while prototyping, both yielding plausible
+wrong numbers rather than errors: an uncleared `order_by` puts the ordering
+columns in the `GROUP BY` and returns 1 for every type, and grouping on
+`content_type__model` merges `forums.Post` with `ygroup.Post`. Both are written
+into the task file.
+
+**Next:** task 05, the forums' duplicate-topic quick search.
 
 ### Task 03 — incremental indexing through Celery — DONE (2026-07-30)
 
