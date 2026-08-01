@@ -45,11 +45,14 @@ from ygroup.models import Post as YgroupPost
 
 
 _registry = {}
+_keys = {}
 
 
 def register(cls):
     """Registers a Document subclass as the entry for its model."""
-    _registry[cls.model] = cls()
+    document = cls()
+    _registry[cls.model] = document
+    _keys[document.key] = document
     return cls
 
 
@@ -61,6 +64,22 @@ def document_for_model(model):
 def all_documents():
     """Returns every registered Document."""
     return list(_registry.values())
+
+
+def document_choices():
+    """
+    The searchable types as (key, label) pairs, in registry order.
+
+    This is what the search form's checkboxes are built from. Registry order is
+    the order the old form listed them in, which the checkboxes keep.
+
+    """
+    return [(document.key, document.label) for document in all_documents()]
+
+
+def document_for_key(key):
+    """Returns the Document a search form's type key names."""
+    return _keys[key]
 
 
 def body_text(*parts):
@@ -82,6 +101,14 @@ class Document:
 
     model = None
 
+    # What this type is called on the search page: label names the checkbox
+    # that includes it, result_label prefixes each of its result rows. Both are
+    # spelled out rather than taken from the model's verbose_name, because
+    # forums.Post and ygroup.Post are both "post" and a blended result list has
+    # to tell them apart.
+    label = None
+    result_label = None
+
     # Lookups the bulk indexer re-applies to each batch by hand. iterator()
     # drops prefetch_related, so a queryset that declares one would issue a
     # query per row over the whole table; declaring it here instead lets the
@@ -93,6 +120,18 @@ class Document:
     # content out of get_queryset() below and tells the task that reacts to a
     # category's groups changing which objects to rebuild.
     category_path = None
+
+    @property
+    def key(self):
+        """
+        How a search URL names this type, as `app_label.model`.
+
+        The old search form used these same values, so a ?models= URL saved or
+        linked back when it was running still selects what it used to.
+
+        """
+        return '%s.%s' % (self.model._meta.app_label,
+                          self.model._meta.model_name)
 
     def get_queryset(self):
         """
@@ -153,6 +192,8 @@ class Document:
 @register
 class TopicDocument(Document):
     model = Topic
+    label = 'Forum Topics'
+    result_label = 'Forum Topic'
     category_path = 'forum__category'
 
     def get_queryset(self):
@@ -174,6 +215,8 @@ class TopicDocument(Document):
 @register
 class PostDocument(Document):
     model = Post
+    label = 'Forum Posts'
+    result_label = 'Forum Post'
     category_path = 'topic__forum__category'
 
     def get_queryset(self):
@@ -195,6 +238,8 @@ class PostDocument(Document):
 @register
 class StoryDocument(Document):
     model = Story
+    label = 'News Stories'
+    result_label = 'News Story'
 
     def get_queryset(self):
         return super().get_queryset().select_related('submitter')
@@ -219,6 +264,8 @@ class StoryDocument(Document):
 @register
 class UserProfileDocument(Document):
     model = UserProfile
+    label = 'User Profiles'
+    result_label = 'User Profile'
     prefetch = ('user__website_profiles',)
 
     def get_queryset(self):
@@ -255,6 +302,8 @@ class UserProfileDocument(Document):
 @register
 class LinkDocument(Document):
     model = Link
+    label = 'Links'
+    result_label = 'Link'
 
     def get_queryset(self):
         # A link is submitted by a member and stays invisible until an admin
@@ -281,6 +330,8 @@ class LinkDocument(Document):
 @register
 class DownloadDocument(Document):
     model = Download
+    label = 'Downloads'
+    result_label = 'Download'
 
     def get_queryset(self):
         # Approval, as on a link -- and here an unapproved row is worse than
@@ -306,6 +357,8 @@ class DownloadDocument(Document):
 @register
 class ItemDocument(Document):
     model = Item
+    label = 'Podcasts'
+    result_label = 'Podcast'
 
     def title(self, obj):
         return obj.title
@@ -323,6 +376,8 @@ class ItemDocument(Document):
 @register
 class YgroupPostDocument(Document):
     model = YgroupPost
+    label = 'Yahoo Group Archives'
+    result_label = 'Yahoo Group Archive'
 
     def title(self, obj):
         return obj.title

@@ -1,23 +1,8 @@
 {% extends 'v3/base.html' %}
-{% load highlight %}
 {% load core_tags %}
-{% load static %}
 {% block title %}Search{% endblock %}
 {% block content %}
 <h2>Search <i class="fi-magnifying-glass"></i></h2>
-{% if query_parser_error %}
-<div class="alert callout">
-   <p>
-   <i class="fi-alert size-36"></i>
-   Your search query could not be processed. This may happen because you've
-   included terms like AND, OR, or NOT. These terms are not necessary.
-   </p>
-   <p>
-   If you continue to have problems with this error, please
-   <a href="{% url 'contact-form' %}?subject=Search%20Help">contact us</a>.
-   </p>
-</div>
-{% endif %}
 <form id="search-form" method="get" action=".">
    <fieldset class="fieldset">
    <legend>Find content with:</legend>
@@ -27,22 +12,6 @@
          <div class="columns">
             <label for="{{ form.q.id_for_label }}">{{ form.q.label }}
                {{ form.q }}
-            </label>
-         </div>
-      </div>
-      {{ form.exact.errors }}
-      <div class="row">
-         <div class="columns">
-            <label for="{{ form.exact.id_for_label }}">{{ form.exact.label }}
-               {{ form.exact }}
-            </label>
-         </div>
-      </div>
-      {{ form.exclude.errors }}
-      <div class="row">
-         <div class="columns">
-            <label for="{{ form.exclude.id_for_label }}">{{ form.exclude.label }}
-               {{ form.exclude }}
             </label>
          </div>
       </div>
@@ -75,7 +44,7 @@
    </div>
 </form>
 
-{% if form.is_valid and not query_parser_error %}
+{% if form.is_valid %}
 <h3>Search results <small>Page {{ page.number }} of {{ page.paginator.num_pages }}</small></h3>
 
    {% if page.paginator.count %}
@@ -88,10 +57,10 @@
    <dl class="search-results">
    {% for result in page.object_list %}
       <dt>
-      {{ result.verbose_name }}: <a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a> ({{ result.score }})
+      {{ result.result_label }}: <a href="{{ result.url }}">{{ result.title }}</a>
       </dt>
       <dd>
-         {% highlight result.object.search_summary with query css_class "highlight" max_length 200 %}
+         {{ result.highlighted }}
       </dd>
    {% endfor %}
    </dl>
@@ -103,11 +72,11 @@
    <ul class="pagination text-center" role="navigation" aria-label="Pagination">
       <li class="pagination-previous
          {% if not page.has_previous %}disabled{% endif %}">
-            {% if page.has_previous %}<a href="?{% encode_params request.GET 'q' 'exact' 'exclude' 'models' %}&amp;page={{ page.previous_page_number }}">{% endif %}Previous Page{% if page.has_previous %}</a>{% endif %}
+            {% if page.has_previous %}<a href="?{% encode_params request.GET 'q' 'models' %}&amp;page={{ page.previous_page_number }}">{% endif %}Previous Page{% if page.has_previous %}</a>{% endif %}
       </li>
       <li class="pagination-next
          {% if not page.has_next %}disabled{% endif %}">
-            {% if page.has_next %}<a href="?{% encode_params request.GET 'q' 'exact' 'exclude' 'models' %}&amp;page={{ page.next_page_number }}">{% endif %}Next Page{% if page.has_next %}</a>{% endif %}
+            {% if page.has_next %}<a href="?{% encode_params request.GET 'q' 'models' %}&amp;page={{ page.next_page_number }}">{% endif %}Next Page{% if page.has_next %}</a>{% endif %}
       </li>
    </ul>
    {% endif %}
@@ -116,17 +85,16 @@
 <div class="primary callout">
    <h5><i class="fi-info"></i> Search Tips</h5>
    <ul>
-     <li>To perform a search, type your search query in the text boxes and check which areas of the site you wish to search.</li>
-     <li>The three text boxes will be AND-ed together. You can omit two of the text boxes.</li>
+     <li>Type your search into the box and check which areas of the site you wish to search.</li>
+     <li>Results come back best match first. Words found in a title count for more than the same words found in a post body.</li>
+     <li>Several words find content containing all of them &mdash; <em>fender jaguar</em> finds pages with both.</li>
+     <li>Put quotes around words that belong together: <em>"surf music"</em> finds that phrase, not the two words scattered apart.</li>
+     <li>Put a minus sign in front of a word to leave it out: <em>reverb -fender</em> finds reverb pages that don't mention Fender.</li>
      <li>You can search multiple areas of the site at the same time by checking more than one box.</li>
-     <li>To search forum thread titles, check <em>Forum Topics</em>.</li>
-     <li>To search forum thread post bodies, check <em>Forum Posts</em>.</li>
-     <li>Our search engine removes punctuation when building its index. Thus, for example, a search query of
-      <em>FRV-1</em> will not produce any results. Instead, it is better to search for <em>FRV 1</em> or even
-      just <em>FRV</em>.</li>
+     <li>To search forum thread titles, check <em>Forum Topics</em>. To search the posts themselves, check <em>Forum Posts</em>.</li>
+     <li>Model numbers and hyphenated names work as written &mdash; search <em>FRV-1</em> or <em>A/B box</em> and you'll get what you asked for.</li>
       <li>Most content is searchable by author. For example, to find all forum threads by the user <em>SurferDood101</em>
-      where the title contains <em>Gnarly</em>, your search term (to be placed in the first text box) would be <em>SurferDood101 Gnarly</em>.</li>
-      <li>Search results are displayed newest first.</li>
+      where the title contains <em>Gnarly</em>, your search would be <em>SurferDood101 Gnarly</em>.</li>
    </ul>
 </div>
 {% endif %}

@@ -76,22 +76,11 @@ urlpatterns = [
    path('polls/', include('polls.urls')),
    path('potd/', include('potd.urls')),
    path('profile/', include('bio.urls')),
+   path('search/', include('search.urls')),
    path('shout/', include('shoutbox.urls')),
    path('smiley/', include('smiley.urls')),
    path('user_photos/', include('user_photos.urls')),
    path('ygroup/', include('ygroup.urls')),
-]
-
-# Search is stubbed out: the Xapian/Haystack stack was removed and native
-# PostgreSQL full-text search will replace it later. Until then both search
-# URLs render a placeholder so existing links don't 404.
-urlpatterns += [
-   path('search/',
-       FixedView.as_view(title='About', content_template='fixed/about.html'),
-       name='haystack_search'),
-   path('search/ajax/',
-       FixedView.as_view(title='About', content_template='fixed/about.html'),
-       name='haystack_search_ajax'),
 ]
 
 # For serving media files in development only:

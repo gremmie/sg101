@@ -7,7 +7,7 @@
 {% block content %}
 <h2>Yahoo Group Archives &raquo; Page {{ page_obj.number }}</h2>
 <p>
-SurfGuitar101.com began as a Yahoo Group on October 31, 2001. It ran until August, 2007 when this site officially replaced it. On these pages you'll find the archived messages of our original group. You can also search through these messages via our <a href="{% url 'haystack_search' %}">search page</a>.
+SurfGuitar101.com began as a Yahoo Group on October 31, 2001. It ran until August, 2007 when this site officially replaced it. On these pages you'll find the archived messages of our original group. You can also search through these messages via our <a href="{% url 'search' %}">search page</a>.
 </p>
 {% include "ygroup/pagination.html" %}
 <table>

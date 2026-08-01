@@ -20,12 +20,24 @@ from django.contrib.postgres.search import SearchVectorField
 from django.db import IntegrityError
 from django.db import models
 from django.db import transaction
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
 
 # The text search configuration. 'english' stems and drops stop words. Band and
 # song names are a large share of queries and not all of them are English, so
 # 'simple' is the alternative if stemming turns out to hurt more than it helps.
 SEARCH_CONFIG = 'english'
+
+# What ts_headline wraps the matched words in. Deliberately not HTML: a summary
+# is plain text that may well contain angle brackets -- body_text() unescapes
+# what it strips tags from, so a post reading "a < b", or one quoting markup,
+# arrives here literally -- and PostgreSQL does not escape the text it wraps.
+# Marking that output safe directly would publish stored input as HTML. So the
+# database marks the hits with sentinels no escaping will touch, and the
+# property below escapes first and inserts the markup after.
+HEADLINE_START = '[[[hl]]]'
+HEADLINE_STOP = '[[[/hl]]]'
 
 # The stored vector, as a function of the row's own columns. Weights are baked
 # into a tsvector, so revising them means recomputing every row -- but since the
@@ -140,3 +152,25 @@ class SearchDocument(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def result_label(self):
+        """What this document's type is called on a result row."""
+        from search.documents import document_for_model
+
+        return document_for_model(self.content_type.model_class()).result_label
+
+    @property
+    def highlighted(self):
+        """
+        The snippet for a result row, with the matched words marked up.
+
+        Reads the `headline` annotation search.query adds, so it is only
+        available on rows that came from a search.
+
+        """
+        escaped = escape(self.headline)
+        return mark_safe(
+                escaped.replace(escape(HEADLINE_START),
+                                '<span class="highlight">')
+                       .replace(escape(HEADLINE_STOP), '</span>'))

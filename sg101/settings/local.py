@@ -80,6 +80,16 @@ LOGGING = {
             'backupCount': 5,
             'encoding': 'utf-8',
         },
+        'search': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'filename': os.path.join(PROJECT_PATH, 'logs', 'search.log'),
+            'mode': 'a',
+            'maxBytes': 2 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+        },
         'mail_admins': {
             'class': 'django.utils.log.AdminEmailHandler',
             'level': 'ERROR',
@@ -97,6 +107,13 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
             'handlers': ['auth'],
+        },
+        # propagate: False keeps every executed search out of sg101.log, which
+        # the root logger would otherwise collect.
+        'search': {
+            'level': 'INFO',
+            'propagate': False,
+            'handlers': ['search'],
         },
         'MARKDOWN': {
             'level': 'WARNING',

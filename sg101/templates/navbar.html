@@ -4,7 +4,7 @@
    <li>Welcome, <a href="{% url 'bio-me' %}">{{ user.username }}</a></li>
    <li><a href="{% url 'forums-index' %}">Forums</a></li>
    <li>{% unread_messages %}</li>
-   <li><a href="{% url 'haystack_search' %}">Search</a></li>
+   <li><a href="{% url 'search' %}">Search</a></li>
    <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
    {% else %}
    <li>

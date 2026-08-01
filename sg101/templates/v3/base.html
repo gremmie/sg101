@@ -46,7 +46,7 @@
          </ul>
       </div>
       <div class="top-bar-right">
-         <form id="top-search" method="get" action="{% url 'haystack_search' %}">
+         <form id="top-search" method="get" action="{% url 'search' %}">
             <ul class="menu">
                <li><input type="search" placeholder="Search" name="q"></li>
                <li><button type="submit" class="button" form="top-search">Search</button></li>
@@ -151,7 +151,7 @@
                   </li>
                   <li><a href="#">Site</a>
                      <ul class="menu vertical">
-                        <li><a href="{% url 'haystack_search' %}">Search</a></li>
+                        <li><a href="{% url 'search' %}">Search</a></li>
                         <li><a href="{% url 'contact-form' %}">Contact</a></li>
                         <li><a href="{% url 'contests-index' %}">Contests</a></li>
                         <li><a href="{% url 'donations-index' %}">Donations</a></li>

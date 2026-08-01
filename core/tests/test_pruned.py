@@ -35,7 +35,9 @@ class PrunedAppsTests(TestCase):
             with self.assertRaises(NoReverseMatch):
                 reverse(name)
 
-    def test_search_stub_still_serves(self):
-        # Search stays stubbed until native Postgres full-text search is built;
-        # the URL must keep resolving so existing links don't break.
-        self.assertEqual(self.client.get('/search/').status_code, 200)
+    def test_quick_search_stub_still_serves(self):
+        # The search page itself is no longer stubbed -- it runs on Postgres
+        # full-text search now, and search/tests/test_views.py covers it. The
+        # forums' duplicate-topic quick search is still waiting on its view, so
+        # its URL must keep resolving.
+        self.assertEqual(self.client.get('/search/ajax/').status_code, 200)
