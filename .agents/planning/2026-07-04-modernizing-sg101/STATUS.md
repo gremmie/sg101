@@ -112,6 +112,60 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
+### Task 06 — the `ajax_users` ordering fix — DONE (2026-08-01)
+
+**Two tests added, one corrected; 761 green**, `check` clean. Commits `c87fc27`
+(the fix) and `a95f2c3` (a dead-code deletion it uncovered).
+
+**THE ENGINE CHANGE IS WHAT MADE THIS REAL, AND MEASURING SHOWED WHY.** The task
+recorded that the view takes a `LIMIT`ed slice with no `ORDER BY`. What it did not
+say is that on MySQL the results were alphabetical *anyway*: `username__istartswith`
+compiles to `username LIKE 'x%'`, which MySQL answers with a **range scan on the
+unique `username` index** (`type: range`, `key: username`, confirmed by `EXPLAIN`
+against the still-running MySQL container), and an index range scan returns rows
+in key order. Brian spotted this from the other end — he compared against the
+live site and got the same results he was getting from the fix.
+
+PostgreSQL cannot inherit that accident. Django compiles the same lookup to
+`UPPER(username::text) LIKE UPPER(...)`, a function of the column that the plain
+btree cannot serve, so the plan is a **Seq Scan** and the order is heap order:
+
+| | first five for `bri` |
+|---|---|
+| MySQL (production today) | Brian, Brian-C, Brian123_surf, brianblaut, Briandean335 |
+| Postgres, no `ORDER BY` | brianeharmonjr, Brian-C, bridgeman, Briantime, brianmckenna1111 |
+| Postgres, with the fix | Brian, Brian123_surf, Brian_66, brianblaut, Brian-C |
+
+So this was not tidying a theoretical wart: it restores behavior MySQL had been
+providing for free and Postgres had quietly stopped providing at the migration.
+Ordering under `en_US.utf8` is linguistic rather than ASCII, which is the better
+reading for a member-facing list — mixed case interleaves instead of every
+capitalized name sorting ahead of the lowercase ones.
+
+**Both ordering tests were verified to fail with the `order_by` removed**, per the
+task's own acceptance criterion 2 — the point being that the old test passed by
+query-plan luck, so a replacement that did the same would be no better.
+
+**The autocomplete's third "caller" turned out not to exist.** `messages/forms.py`
+and `bio/forms.py` wire it; `core/widgets.py`'s `AutoCompleteUserInput` looked like
+a third but had no importers at all. History dated its death exactly: it lost the
+member search on **2016-04-22** (`4d208c0`) and the private message form on
+**2016-10-23** (`a2d6c5e`), each replaced by a CSS class the site's own JavaScript
+binds — superseded deliberately, twice, then never deleted. **Deleted here**
+(`a95f2c3`) rather than waiting for Step 19; the three forward-pointers to that
+step are marked resolved above.
+
+**Deferred to Step 20, with numbers:** every keystroke seq-scans all 15,227 users.
+A functional index on `UPPER(username)` turns that into a bitmap index scan —
+**2.7 ms → 0.48 ms** on the worst realistic prefix — but it needs
+`varchar_pattern_ops`, and neither existing index on the column covers it,
+including the `lower(username)` unique index from Step 11, which still seq-scans a
+prefix `LIKE` at 3.3 ms. All measured in rolled-back transactions. Not done now
+because 2.7 ms is invisible and a third index on one column is a tuning decision,
+not a correctness one.
+
+**Next:** task 07, verification against production data.
+
 ### Task 05 — the forums' duplicate-topic quick search — DONE (2026-08-01)
 
 **The last stubbed search route is gone.** 17 new tests, 759 green, `check` and
@@ -1468,7 +1522,7 @@ rendering) and belongs in its own deliberate step, not this upgrade.
 `{% ifnotequal %}` templates, `Signal(providing_args=...)` (forums/bio signals),
 `force_text`/`ugettext_lazy`/`urlquote` (core/markup, elsewhere, messages tags), and
 passing None for middleware `get_response` (tests). elsewhere migrations/FK refactor at
-Step 11/19; `AutoCompleteUserInput` dead-code deletion (Step 19); `mysql.W002`
+Step 11/19; `AutoCompleteUserInput` dead-code deletion (~~Step 19~~ done 2026-08-01, Step 12 task 06); `mysql.W002`
 strict-mode (Step 11). **Pushed; CI green (2026-07-24).**
 
 ## EXECUTION — Step 9 (Django 1.11 → 2.2 LTS, Python 3) — DONE (2026-07-22)
@@ -1520,7 +1574,9 @@ files (+ stale comments).
 - **`core/widgets.py`** — `Widget.render()` must accept `renderer` in 2.1. Note
   `AutoCompleteUserInput` is **dead code** (defined, referenced nowhere, no tests;
   orphaned when PM autocomplete was reworked) — fixed rather than pruned; deletion
-  candidate for Step 19.
+  candidate for Step 19. **Deleted 2026-08-01 during Step 12 task 06**, which was
+  already in `core/views.py` for the autocomplete's ordering; history showed it
+  had been dead since 2016-10-23.
 - **Cookie expiry format** — 2.1 emits RFC 7231 (`01 Jan 1970`) not the obsolete
   dashed form; `wiki/tests/test_middleware.py` pinned the old string.
 
@@ -1604,7 +1660,8 @@ toolbar) all serve; celery worker + beat boot clean.
 **Watch items beyond Step 9:** `mysql.W002` strict-mode warning still environmental
 (Step 11); `@python_2_unicode_compatible` removable once Py2 support is formally
 dropped; celery uppercase-settings rename at the celery-5 step; `AutoCompleteUserInput`
-dead-code deletion (Step 19); bleach/kombu third-party deprecations at their deps steps.
+dead-code deletion (~~Step 19~~ done 2026-08-01, Step 12 task 06);
+bleach/kombu third-party deprecations at their deps steps.
 **Pushed; CI green (2026-07-22).**
 
 ## EXECUTION — Step 8 (flip interpreter to Python 3.7, Django 1.11) ⭐ — DONE (2026-07-19)
