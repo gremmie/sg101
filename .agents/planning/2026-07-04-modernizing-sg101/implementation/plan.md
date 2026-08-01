@@ -312,6 +312,12 @@ arbitrary-ten behavior in place.
 **Guidance:** Address 4.0/4.1/4.2 changes (`USE_TZ` defaults, `zoneinfo` replacing
 pytz, `django.conf.urls.url` fully removed, `CSRF_TRUSTED_ORIGINS` scheme).
 Continue dep bumps. Clear deprecations.
+**Watch the Pillow bump:** `Image.ANTIALIAS` was removed in Pillow 10, and seven
+non-test call sites still use it — `core/images/utils.py:42`,
+`core/images/upload.py` (four), `potd/models.py:25`, plus
+`core/management/commands/ssl_images.py:101`. It's `Image.Resampling.LANCZOS`
+now. Nothing fails until Pillow crosses 10, and then thumbnailing breaks
+everywhere at once.
 **Tests:** Suite green on Postgres; smoke checklist.
 **Demo:** Site on Django 4.2 / Py3 with working search.
 
@@ -322,6 +328,19 @@ dependency alignment; clear all deprecations.
 **Tests:** Full suite green on Django 5.2 / Py3.12 / Postgres; smoke checklist.
 **Demo:** SG101 running on the **target stack (Django 5.2 LTS, Python 3.12,
 PostgreSQL)** locally with real data and working search.
+**Also unlocks — a local venv for editor tooling.** Everything runs in Docker on
+3.7, so there's no venv on the host and an editor language server (pyright, via
+ALE) can't resolve a single third-party import. Tried on 2026-07-31 against the
+current pins and abandoned: `Django==3.2.25` and the rest of `requirements.txt`
+install fine on a modern Python, but four pins predate its wheels and want C
+libraries and build tooling to compile — `mysqlclient` (needs `mysql_config`),
+`Pillow==6.2.2`, `lxml==4.9.4`, `psycopg2==2.9.9`. Once this step's dependency
+alignment moves those, `pip install -r requirements_dev.txt` into a host venv
+should just work. Two notes for when it does: `django-stubs` is not optional —
+without it pyright flags every `Model.objects` and every field access, because
+both are runtime-generated descriptors — and naming the venv `.venv` in the repo
+root is what makes ALE find it with no configuration, so it needs a `.gitignore`
+and `.dockerignore` entry to stay out of git and out of the `.:/app` bind mount.
 
 ---
 
@@ -332,6 +351,13 @@ PostgreSQL)** locally with real data and working search.
 **Guidance:** Rewrite `core/s3.py` for `boto3` (or `django-storages`) with R2's
 custom `endpoint_url`; move `USER_PHOTOS_*` to env-configured R2; bulk-copy
 existing local media to the bucket; update `USER_IMAGES_SOURCES`.
+**One live Py2 leftover to fix here:** `gen_key()` in
+`core/management/commands/ssl_images.py:110` reads
+`base64.b64encode(uuid.uuid4().bytes, '-_').rstrip('=')` — on Python 3
+`altchars` must be `bytes`, and `b64encode` returns `bytes`, so the `str`
+argument to `rstrip` is a second `TypeError` behind the first. `upload_image`
+calls it at line 123, so the whole S3 upload path is dead until both are fixed.
+The Step 8 `boto` stub is why nothing has hit it yet.
 **Tests:** Upload/serve/delete tests against a mock/localstack or a test bucket;
 functional photo-upload journey re-enabled.
 **Demo:** Upload a user photo → stored in R2 → served (via Cloudflare, zero egress).
