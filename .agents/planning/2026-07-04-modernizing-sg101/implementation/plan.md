@@ -318,6 +318,28 @@ non-test call sites still use it — `core/images/utils.py:42`,
 `core/management/commands/ssl_images.py:101`. It's `Image.Resampling.LANCZOS`
 now. Nothing fails until Pillow crosses 10, and then thumbnailing breaks
 everywhere at once.
+**Revisit the `MARKDOWN` logger and how often Markdown is constructed.** Both
+live in the same place and the Markdown bump is when someone will be looking at
+them.
+
+The logger entry in `local.py` and `production.py` dates from 2014 (`bdc8901`),
+when Markdown logged at INFO every time it loaded an extension. Upstream fixed
+that — 2.6.11 has no `.info()` calls left and those messages are `debug()` now —
+so the original reason is gone. It is not dead config, though: `local.py` sets
+the root logger to DEBUG and `docker.py` inherits it, so removing the entry
+there puts **four records into `sg101.log` for every render**. In
+`production.py`, where root is INFO, it does nothing at all. Keep it in local,
+and treat the production copy as symmetry rather than function. The logger name
+is still `MARKDOWN` as of 3.10.3, so no bump silently disconnects it.
+
+Those four records per render are the symptom of something worth fixing on its
+own: `core/markup.py:32` builds a fresh `markdown.Markdown` for every call,
+re-importing and re-registering three extensions each time, so the cost scales
+with traffic instead of being paid once at startup. `SiteMarkup` does the same.
+Caching the instance is the obvious move — measure it first, and note that a
+`Markdown` instance carries per-conversion state (`reset()` exists for this
+reason), so a cached one must be reset between conversions or made thread-local
+rather than shared naively.
 **Tests:** Suite green on Postgres; smoke checklist.
 **Demo:** Site on Django 4.2 / Py3 with working search.
 
