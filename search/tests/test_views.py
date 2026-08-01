@@ -225,7 +225,7 @@ class SearchRoutesTestCase(TestCase):
         self.assertEqual(reverse('search'), '/search/')
 
     def test_the_ajax_route_keeps_its_url(self):
-        self.assertEqual(reverse('search_ajax'), '/search/ajax/')
+        self.assertEqual(reverse('search_topics'), '/search/topics/')
 
     def test_no_haystack_route_names_remain(self):
         from django.urls import NoReverseMatch

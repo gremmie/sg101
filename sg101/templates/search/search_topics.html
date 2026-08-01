@@ -4,7 +4,7 @@
 {% if page.object_list %}
 <ul>
    {% for result in page.object_list %}
-      <li><a href="{{ result.object.get_absolute_url }}">{{ result.object.search_title }}</a></li>
+      <li><a href="{{ result.url }}">{{ result.title }}</a></li>
    {% endfor %}
 </ul>
 
@@ -12,12 +12,17 @@
    <p>
    First page of results shown. There are {{ page.paginator.num_pages }} pages of results total.
    For more results, visit the
-   <a href="/search/?{% encode_params request.GET 'q' 'models' %}">search page</a>.
+   {% comment %}
+   models is pinned rather than forwarded from the request: this endpoint
+   searches topics whatever the caller asked for, so the full search page has
+   to open on topics too.
+   {% endcomment %}
+   <a href="{% url 'search' %}?{% encode_params request.GET 'q' %}&amp;models=forums.topic">search page</a>.
    </p>
    {% endif %}
    <p><input type="button" id="hide-search-results" value="Hide" /></p>
 {% else %}
    <p>No results found for <em>{{ query }}</em>.</p>
+{% endif %}
 </fieldset>
 </div>
-{% endif %}

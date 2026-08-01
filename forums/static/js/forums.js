@@ -299,13 +299,12 @@ $(document).ready(function() {
       searchBusy.toggle();
 
       $.ajax({
-         url: '/search/ajax/',
+         // Searches forum topics only; the endpoint decides that, not us.
+         url: '/search/topics/',
          type: 'GET',
          data: {
-            q : text,
-            models : 'forums.topic'
+            q : text
          },
-         traditional: true,
          dataType: 'html',
          success: function (data, textStatus) {
             topicSearchButton.removeAttr('disabled');

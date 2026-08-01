@@ -4,6 +4,10 @@ The `irc`, `legacy`, `membermap`, and `custom_search` apps (and the disabled
 Xapian/Haystack search stack) were removed. These assertions fail loudly if any
 of them get reintroduced -- e.g. an app slipped back into INSTALLED_APPS, or a
 URL include resurrected.
+
+Search is the one thing that came back, rebuilt on PostgreSQL rather than
+resurrected: both its URLs serve real views again, covered by the `search` app's
+own tests. Only `custom_search` itself has to stay gone.
 """
 from django.apps import apps
 from django.conf import settings
@@ -34,10 +38,3 @@ class PrunedAppsTests(TestCase):
         for name in ['irc-main', 'membermap-index']:
             with self.assertRaises(NoReverseMatch):
                 reverse(name)
-
-    def test_quick_search_stub_still_serves(self):
-        # The search page itself is no longer stubbed -- it runs on Postgres
-        # full-text search now, and search/tests/test_views.py covers it. The
-        # forums' duplicate-topic quick search is still waiting on its view, so
-        # its URL must keep resolving.
-        self.assertEqual(self.client.get('/search/ajax/').status_code, 200)
