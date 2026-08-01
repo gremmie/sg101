@@ -9,11 +9,18 @@ placeholder.
 Fix the pre-existing markup bug in the fragment template while restoring it.
 
 ## Background
-This is not a general-purpose AJAX search. It is one narrow feature: as a member
-types a new topic title, `forums/static/js/forums.js:302` posts it to
-`/search/ajax/` restricted to `forums.topic`, and the matches render inline so the
-poster can see whether their question already exists. It is the one place on the
-site where search prevents work rather than merely finding things.
+This is not a general-purpose AJAX search. It is one narrow feature: a member
+writing a new topic clicks the "Quick Search" button beside the title field
+(`sg101/templates/forums/show_form.html:10`), `forums/static/js/forums.js:293`
+sends the title to `/search/ajax/` restricted to `forums.topic`, and the matches
+render inline so the poster can see whether their question already exists. It is
+the one place on the site where search prevents work rather than merely finding
+things.
+
+**It fires on a button click, not while typing.** `forums.js` binds only
+`topicSearchButton.click(...)` — there is no `keyup` or `input` handler anywhere
+in the file. That makes each request a deliberate act by a member, which is why
+it is worth logging.
 
 **What survived Step 4 and should be reused, not rewritten:**
 - `forums/static/js/forums.js` around lines 291–321 — the button handler, the
@@ -49,8 +56,13 @@ implementation. Read additional references as needed for context.
 1. Implement the view behind `/search/ajax/`, reusing the same query machinery as
    task 04 restricted to `forums.Topic`, and returning the existing fragment
    template.
-2. Keep the URL path exactly `/search/ajax/` — the JavaScript hardcodes it. Rename
-   only the route name, in step with task 04.
+2. ~~Keep the URL path exactly `/search/ajax/` — the JavaScript hardcodes it.~~
+   **Superseded by the owner, 2026-08-01.** The constraint existed only because
+   the JavaScript hardcodes the path — and once it is being edited anyway to stop
+   sending `models`, that reason dissolves. The endpoint moved to
+   **`/search/topics/`** (route `search_topics`), which names what it does rather
+   than how it is called. `forums.js:301` is the only caller in the codebase, so
+   the change is contained.
 3. Apply the same login gate as the main search view. The new-topic form is
    already members-only, so this should be a no-op in practice, but the endpoint
    must not be independently reachable by anonymous clients.
@@ -58,7 +70,18 @@ implementation. Read additional references as needed for context.
    is well-formed in both the results and no-results branches.
 5. Handle an empty or whitespace-only title without erroring — the JS can fire on
    a partially typed field.
-6. Do not modify `forums.js` beyond what is strictly required; it works.
+6. ~~Do not modify `forums.js` beyond what is strictly required; it works.~~
+   **Relaxed by the owner, 2026-08-01.** The JavaScript no longer sends
+   `models: 'forums.topic'`, because the view does not read it — the type is
+   fixed in the view, not negotiated with the caller, and there is no intention
+   of offering quick searches over the other document types. Sending a parameter
+   that is ignored implies an interface that does not exist. The edit stays
+   confined to the `$.ajax` call: the url, the dropped `models` key, and
+   `traditional: true`, which existed only to serialize it.
+   **Consequence to handle:** the fragment's "visit the search page" link built
+   its query string by forwarding `q` *and* `models` from the request. With
+   nothing to forward, that link would silently widen to all eight types, so it
+   now pins `models=forums.topic` itself.
 
 ## Dependencies
 - Task 01 (the model), task 02 (a populated index), task 04 (the shared query

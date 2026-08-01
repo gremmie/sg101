@@ -112,6 +112,74 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
+### Task 05 — the forums' duplicate-topic quick search — DONE (2026-08-01)
+
+**The last stubbed search route is gone.** 17 new tests, 759 green, `check` and
+`makemigrations --check` clean. Commit `06b61f9`. New: `search.views.search_topics`
+and `search/tests/test_quick_search.py`; `search_ajax.html` renamed to
+`search_topics.html`. Exercised from the real new-topic form on the running
+stack, not only in tests.
+
+**BRIAN SUPERSEDED TWO REQUIREMENTS, AND THE REASONING GENERALIZES.** The task
+said to keep the path at `/search/ajax/` *because the JavaScript hardcodes it*,
+and not to touch `forums.js` beyond the minimum. He observed that the view forces
+`forums.Topic` anyway, so the JS sending `models=forums.topic` advertises an
+interface that does not exist — and once the JS is being edited to drop it, the
+only argument for freezing the path has evaporated. **The constraint was
+self-justifying**: "don't change the path because a caller hardcodes it" holds
+only while that caller is not already being changed. So the endpoint is
+`/search/topics/` (route `search_topics`), naming what it does rather than how it
+is called, and the JS sends a bare `q`. He has no plans to offer quick searches
+over the other seven types, which is now recorded in the view rather than implied.
+
+**The trap in dropping `models`:** the fragment's "visit the search page" link
+built its query string by forwarding `q` *and* `models` from the request. With
+nothing left to forward it would have silently widened the full search page to
+all eight types. It pins `models=forums.topic` itself now — which is more correct
+regardless, since the link should describe what was searched rather than echo the
+caller. Caught before shipping; pinned by a test.
+
+**THE MARKUP BUG WAS REAL AND PRE-DATED THE PRUNE.** `</fieldset>` and `</div>`
+sat inside the `{% else %}` branch, so neither closed when there *were* results —
+precisely the case a member sees when the feature works. Fixed, and the test was
+**verified to fail against the old markup** rather than merely pass against the
+new; the no-results test correctly still passes, that branch never being broken.
+
+**A BUG I INTRODUCED AND BRIAN CAUGHT IN THE BROWSER:** Django's `{# #}` is
+**single-line only**. A three-line one is not a comment at all and renders
+verbatim, so an explanatory note appeared on the page. `{% comment %}` is the
+multi-line form. The instructive part is the test: the one written to catch it
+*passed against the broken template*, because the comment lives inside
+`{% if page.paginator.num_pages > 1 %}` and the test indexed a single topic, so
+the block never rendered. Only checking that the regression test actually fails
+against the bug exposed it. It now indexes 25 and asserts no `{#`/`{%`/`{{`
+survives in either branch.
+
+**Quick searches are logged, marked.** An earlier draft skipped logging on the
+grounds that the check fires while a member types — **Brian corrected this: it is
+an explicit button click**, `forums.js` binds only `topicSearchButton.click(...)`
+with no `keyup` or `input` handler anywhere. So each request is deliberate and
+worth recording, and the line reads `Forum topics quick search: <q> by <user>
+[<ip>]` — distinct from a real search, because it records what a member was about
+to post rather than what they went looking for. The task file's Background said
+"as a member types a new topic title", which is where the error came from; it has
+been corrected in place.
+
+**`core/tests/test_pruned.py` lost its search assertion entirely.** Both search
+URLs now serve real views, so "the stub still serves" has no subject; the module
+docstring notes that search is the one pruned thing that came back, rebuilt rather
+than resurrected.
+
+**THE DEAD-METHOD PRUNE IS NOW UNBLOCKED.** Nothing outside the models defines or
+calls `search_title`/`search_summary` except two live callers:
+`search/documents.py:283` needs `bio.UserProfile.search_title()`, and
+`podcast/detail.html:79` needs `podcast.Item.search_title()` for social sharing.
+The other 14 methods across `forums`, `news`, `ygroup`, `downloads` and `weblinks`
+are dead, and **no test references any of them**. Left for the end-of-Step-12
+prune as planned.
+
+**Next:** task 06, the `core.views.ajax_users` ordering fix.
+
 ### Task 04 — the search page, restored — DONE (2026-08-01)
 
 **`/search/` works again, for the first time since Step 4 stubbed it.** 64 new
