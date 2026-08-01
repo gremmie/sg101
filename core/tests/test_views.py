@@ -37,9 +37,27 @@ class AjaxUsersTestCase(TestCase):
         User.objects.create_user('abdel', '', 'pw')
 
     def test_happy_path(self):
+        # Alphabetical, not the order they were created in -- which is what
+        # this used to assert, and what no engine ever promised.
         response = self.client.get(self.url, {'q': 'ab'})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), ['abe', 'abdul', 'abdel'])
+        self.assertEqual(response.json(), ['abdel', 'abdul', 'abe'])
+
+    def test_the_limit_takes_the_alphabetically_first_matches(self):
+        # The defect this ordering fixes. A prefix can match hundreds of
+        # members, so which few a LIMIT returns has to be decided by something
+        # rather than left to the query plan.
+        for name in ['abner', 'abbot', 'abacus']:
+            User.objects.create_user(name, '', 'pw')
+
+        response = self.client.get(self.url, {'q': 'ab', 'limit': 3})
+        self.assertEqual(response.json(), ['abacus', 'abbot', 'abdel'])
+
+    def test_inactive_users_are_still_excluded(self):
+        User.objects.create_user('abzz', '', 'pw')
+        User.objects.filter(username='abzz').update(is_active=False)
+        response = self.client.get(self.url, {'q': 'ab'})
+        self.assertNotIn('abzz', response.json())
 
     def test_unauthenticated_case(self):
         self.client.logout()

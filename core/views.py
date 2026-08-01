@@ -37,8 +37,12 @@ def ajax_users(request):
         return HttpResponse(json.dumps([]), content_type='application/json')
 
     limit = int(request.GET.get('limit', 10))
+    # order_by before the slice, or the limit takes an arbitrary few of the
+    # matches: a single letter matches hundreds of members, and SQL promises
+    # nothing about which rows a LIMIT returns without an ORDER BY.
     users = User.objects.filter(is_active=True,
-            username__istartswith=q).values_list('username', flat=True)[:limit]
+            username__istartswith=q).order_by('username').values_list(
+                    'username', flat=True)[:limit]
     return HttpResponse(json.dumps(list(users)), content_type='application/json')
 
 
