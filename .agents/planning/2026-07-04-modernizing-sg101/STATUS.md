@@ -112,6 +112,74 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
+### Task 08 — the weekly index reconcile sweep — DONE (2026-08-02)
+
+**19 tests, 780 green**, `check` and `makemigrations --check` clean. New:
+`search/reconcile.py`, `search/management/commands/reconcile_search.py`,
+`search/tests/test_reconcile.py`; `search.tasks.reconcile_index` and a Beat entry
+at Sunday 03:30. Reports drift, repairs nothing.
+
+**THE TRAP, AND IT IS THE ORM'S DEFAULT SPELLING.** `missing` reads naturally as
+`indexable.exclude(pk__in=rows.values('object_id'))`. That compiles to
+`NOT IN (subquery)`, which PostgreSQL **cannot** answer with an anti-join —
+three-valued logic means one NULL would change the result, so it materializes the
+subquery and rechecks per row. **It had not finished after five minutes on
+forums.Post and had to be cancelled from `pg_stat_activity`.** `~Exists(...)`
+compiles to `NOT EXISTS` and the same check runs in **567 ms**. Recorded in the
+module docstring, because the fast spelling is the less obvious one and someone
+will eventually "simplify" it back.
+
+**Baseline against the full index: clean, 8 types, 2.6 s** (2.32 s of query time).
+`forums.post` is 2.2 s of that; every other type is single-digit milliseconds.
+Per-check on forums.post: missing 567 ms, orphaned 705 ms, deleted 72 ms, stale
+882 ms. **No sequential scan of `forums_post` in any plan.** The staleness check
+*is* a nested loop — 444k correlated lookups — but each is an index scan on
+`search_document_unique_source` at 0.001 ms, which is the right plan rather than
+a degradation, and three spellings (correlated `Subquery`, `Exists` from the
+source side, `Exists` from the index side) all landed within 750–805 ms.
+
+**`get_task_logger()` would have sent the report to the wrong file.** Celery
+reparents the logger it returns onto `celery.task`, so `search.tasks`'s existing
+lines do **not** reach `logs/search.log`. The sweep uses
+`logging.getLogger('search')` — the same name `search/views.py` uses — so its
+findings interleave with the query lines, which is what the task asked for.
+Verified in the file, not assumed: INFO on a clean run, WARNING per drifting type.
+
+**Proved on real data, and the interesting part is what did *not* self-heal.**
+Stopped the worker; edited post 484428 through `save()` (queueing a task nobody
+was draining) and deleted the index row for link 580 outright. The sweep reported
+exactly those two and nothing else — `1 (484428) stale`, `1 (580) missing`. On
+restarting the worker, **the queued task survived in Redis and repaired the post
+by itself**, while the lost row stayed missing until `reindex_search` was run by
+hand. That distinction is the argument for the job existing: the drift that
+matters is the drift no queued task will ever fix. Snapshot restored afterwards
+(update_date put back, weblinks reindexed, sweep clean).
+
+**Orphans are split into deleted vs still-present, which the task did not ask
+for.** An index row can fail two ways — its source is gone, or its source exists
+but is no longer indexable — and one count merges them. The second is exactly
+what task 03's backfill found in production (43 unapproved downloads, 57 links,
+1,637 deactivated profiles), so a sweep that cannot name that class would miss
+the defect this codebase has actually had. One extra `~Exists` against the
+unfiltered manager, ~72 ms on the largest type.
+
+**Every test was mutation-checked**, per the lesson from task 05 that a
+regression test which passes against the bug is worthless. Six mutations — each
+detection blinded in turn, the deleted/excluded split collapsed, and a write
+injected into the sweep — and **each was caught by its intended test**. Worth
+noting: the injected write was caught **only** by
+`test_the_sweep_issues_no_write_statements`, not by the before/after state
+comparison, because the mutation wrote to a row matching nothing. Both tests
+earn their place.
+
+**`ygroup.Post` is detected, not hardcoded.** `tracks_updates()` reads
+`_meta.get_fields()` rather than naming the model, so the archive's lack of an
+`update_date` cannot silently become a special case that outlives the reason
+for it. Missing and orphaned are still checked for it.
+
+**Next:** task 09, per-type result counts — which task 07 recommended as the fix
+for cross-type burial.
+
 ### Task 07 — search verification against production data — DONE (2026-08-02)
 
 **No code changed and no reindex is needed.** A verification pass, not a feature:
