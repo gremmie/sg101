@@ -110,7 +110,99 @@ weight C. No fan-out task, no batching trigger, no test surface for it. This is 
 by-real-name still works through profiles; find-posts-by-real-name does not.
 Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
-## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
+## EXECUTION — Step 12 (PostgreSQL full-text search) — **COMPLETE 2026-08-02**
+
+All nine tasks done. `/search/` is restored on native PostgreSQL full-text
+search, with no Haystack, no Xapian and no third-party search package: an eight
+type index of 516,858 documents, incremental maintenance from signals through
+Celery, a weekly sweep that reports drift, the forums' duplicate-topic quick
+search, and per-type result counts. 798 tests green.
+
+**Deferred out of Step 12, each with its measurement attached:** the
+Misirlou/Miserlou spelling split, needing a synonym dictionary or `pg_trgm`
+(Step 20); a `UPPER(username)` functional index for the member autocomplete,
+2.7 ms → 0.48 ms (Step 20); and the dead-method prune of `search_title` /
+`search_summary`, where `podcast.Item.search_title()` must survive because it
+feeds social sharing rather than search.
+
+**Next: Step 13** — the `RemovedInDjango40` cleanups deferred from Step 10.
+
+### Task 09 — per-type result counts — DONE (2026-08-02)
+
+**18 tests, 798 green**, `check` and `makemigrations --check` clean. New
+`search/tests/test_counts.py`; `search/query.py` split; `SearchForm.show_counts`;
+`CountedPaginator` in `search/views.py`. **This is the last of Step 12's nine
+tasks.**
+
+**It closes the loop on task 07.** That pass measured `backing track` burying the
+first of 115 matching downloads at rank #47. The same search now renders
+`Downloads (115)` beside `Forum Posts (2,830)`, so the member sees where the
+answer lives instead of paging through five screens of forum chatter. The
+recommendation task 07 made is now the thing that shipped.
+
+**The change is the split in `search/query.py`; everything else is
+presentation.** `matching_documents(query)` is the match set with no type filter
+and no order. `search_documents(query, keys)` filters, ranks and orders it for
+the page; `type_counts(query)` groups the same set without filtering. The counts
+must come from the *unfiltered* set — otherwise narrowing to News Stories zeroes
+every other count and destroys the only information that makes narrowing an
+informed choice. Verified: a search narrowed to Downloads still shows
+`Forum Posts (47,004)`.
+
+**Counts verified against reality rather than against constants**, because both
+known failure modes return plausible numbers. For six queries × all eight types,
+every facet equals what that query returns with only that type checked —
+including the collision the task flagged: `reverb` gives 47,004 forum posts and
+4,539 archive posts, which merge to the 51,543 that grouping on
+`content_type__model` would have reported as a single number for both.
+
+**Cost reproduces the task's estimate once measured properly.** Medians of seven
+runs, warm, against the full 516,858-document index:
+
+| query | hits | count + page | facets + page | delta |
+|---|---:|---:|---:|---:|
+| `surf` | 156,517 | 0.159s | 0.161s | **+0.9%** |
+| `reverb` | 54,065 | 0.129s | 0.130s | **+1.3%** |
+| `-fender` | 470,846 | 0.192s | 0.197s | **+2.5%** |
+| `backing track` | 3,481 | 0.009s | 0.009s | −1.4% |
+
+And the arrangement the task warns against — facets *added* to the paginator's
+`COUNT` rather than replacing it — costs **+36.6%** and **+40.7%** on the first
+two. A single un-repeated run had earlier put `reverb` at +8.7%; that was noise,
+and worth re-measuring rather than reporting.
+
+**A search still issues two index statements, not three**, asserted in the tests
+and confirmed on the live page: one `GROUP BY` for the facets, one for the page.
+The paginator is handed its total instead of counting, since the facets sum to
+it. `CountedPaginator` works because `Paginator.count` is a `cached_property`,
+which is a *non-data* descriptor, so an instance attribute shadows it.
+
+**THE MUTATION TESTING MISLED ME FIRST TIME, AND THE REASON IS WORTH KEEPING.**
+Two mutations "passed" — removing the `.order_by()` guard, and aggregating over
+the ranked queryset — suggesting the tests had no teeth. Neither mutation
+actually reproduced the trap. It needs *both* conditions at once: an ordered
+source **and** no `.order_by()` to clear it. With both applied the documented
+failure appears exactly as described — **every count comes back as 1** on the
+live index — and **eight tests catch it**, including
+`test_no_count_comes_back_as_one`, which exists for precisely that. The lesson is
+that a mutation which does not reproduce the bug proves nothing about the test,
+and reads identically to one that does.
+
+**A consequence worth recording honestly: the `.order_by()` is defensive, not
+load-bearing.** The counts aggregate over `matching_documents()`, which carries
+no ordering, so removing the guard changes nothing *today*. It earns its keep
+only if someone later rebuilds the counts from `search_documents()` — which is
+what its comment says, and why it stays.
+
+**Counts are folded into the choice labels** rather than passed to the template
+beside them, because a Django template cannot index a dict by a variable without
+a filter written for the purpose, and the checkbox loop already renders
+`choice_label`. The template's only change is `|intcomma` on the headline hit
+count, which had been reading `54065 hits` next to `Forum Posts (47,004)`.
+
+**Nothing else moved:** ranking, the login gate, query logging, page size, page
+links and the out-of-range 404 are untouched, and the landing page renders labels
+with no counts and issues no counts query.
 
 ### Task 08 — the weekly index reconcile sweep — DONE (2026-08-02)
 
