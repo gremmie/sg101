@@ -93,11 +93,18 @@ def search_documents(query, keys):
             .filter(content_type__in=content_types.values())
             .filter(search_vector=tsquery)
             .annotate(
-                # normalization=1 divides by 1 + log(document length), so a
-                # 900-word forum post does not outrank a tight news headline on
-                # bulk alone. It is a query-time argument, unlike the A/B/C
-                # weights baked into the stored vector, and so is cheap to
-                # revise.
+                # normalization=1 divides by 1 + log(document length). What that
+                # buys is a tiebreak: ts_rank alone scores every document whose
+                # title matches the query almost identically -- eight rows
+                # titled "Sundazed Music" all come back 0.9910322 -- so without
+                # it the ordering of a large result set collapses onto the date.
+                # The cost is that the tiebreak is brevity, and topics carry no
+                # summary at all, so they win it structurally; weblinks and
+                # downloads place well below their worth on broad queries. That
+                # is a volume problem between types rather than a ranking error
+                # within one, and the per-type result counts are what address
+                # it. It is a query-time argument, unlike the A/B/C weights
+                # baked into the stored vector, and so is cheap to revise.
                 rank=SearchRank(F('search_vector'), ranked,
                                 normalization=Value(1)),
                 headline=SearchHeadline('summary', ranked,
