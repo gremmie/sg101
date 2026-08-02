@@ -23,6 +23,8 @@ from search.documents import document_for_model
 from search.indexer import discard_stale
 from search.indexer import index_queryset
 from search.models import SearchDocument
+from search.reconcile import log_report
+from search.reconcile import reconcile
 
 
 logger = get_task_logger(__name__)
@@ -106,6 +108,24 @@ def reindex_category(category_id):
         removed = discard_stale(document, scope=scope)
         logger.info("category %s: %s %d indexed, %d removed", category_id,
                     document.model._meta.label_lower, indexed, removed)
+
+
+@shared_task(**RETRY)
+def reconcile_index():
+    """
+    Compares the index against its source tables and reports what it finds.
+
+    Runs weekly from Beat. Everything above keeps the index current from site
+    activity, and none of it can say so: a worker that was down, a task that was
+    lost, a flushed broker or a snapshot reloaded underneath the site all leave
+    an index that is quietly wrong and looks exactly like one that is right.
+    This is the job that breaks that silence.
+
+    It reports and repairs nothing, deliberately -- see search.reconcile. The
+    remedy for anything it finds is reindex_search, run by hand.
+
+    """
+    log_report(reconcile())
 
 
 def document_for_content_type(content_type_id):

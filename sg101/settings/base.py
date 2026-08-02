@@ -246,6 +246,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "wiki.tasks.expire_cookies",
         "schedule": crontab(minute=0, hour=2),
     },
+    # Reports drift between the search index and the models it indexes; repairs
+    # nothing. Weekly is generous for a job whose cost is a few seconds, and the
+    # interval can be tightened freely if it ever finds anything.
+    "reconcile_search_index": {
+        "task": "search.tasks.reconcile_index",
+        "schedule": crontab(minute=30, hour=3, day_of_week='sunday'),
+    },
 }
 
 #######################################################################
