@@ -112,6 +112,100 @@ Recorded in the Q5 addendum, `search-design.md` §3, and `plan.md`.
 
 ## EXECUTION — Step 12 (PostgreSQL full-text search) — **IN PROGRESS**
 
+### Task 07 — search verification against production data — DONE (2026-08-02)
+
+**No code changed and no reindex is needed.** A verification pass, not a feature:
+34 queries against all 516,858 documents, timings, plans, and one real ranking
+defect. Full write-up in `research/search-verification.md`; the load-bearing
+findings are below. 761 tests still green — nothing here touched the suite.
+
+**`normalization=Value(1)` is a document-length sort in disguise, and the comment
+in `search/query.py` justifying it is wrong in both halves.** It reads "so a
+900-word forum post does not outrank a tight news headline on bulk alone."
+`ts_rank` does not reward bulk — eight documents matching `Sundazed Music` in
+their titles all score `0.9910322` at `normalization=0`, whether they are 0 or
+677 characters long. And the tight document here is not a news headline: it is
+`forums.topic`, whose summary is **exactly zero characters** because a topic
+document *is* its title. Measured average vector lengths: topic **71** bytes,
+weblink 318, download 373, post 480, podcast item **1,635**. So normalization is
+not protecting brevity from bulk — it is *manufacturing* an ordering where
+`ts_rank` saw a tie, and that ordering is length, ascending. The clean
+demonstration is a forum topic and a weblink carrying byte-identical titles: same
+weight-A match, and the weblink places fifth at `0.2678` against the topic's
+`0.4955` solely because it has a 96-character description.
+
+**The cost is that categorical queries bury the curated types — exactly
+backwards.** `backing track` → first download at **#47** (of 115 matching);
+`Treble Spankers` → first weblink at **#36**; `space surf podcast` → the podcast
+item at **#29**; `surf guitar tabs` → first weblink at **#26**. Specific queries
+are fine: `Ali Baba backing track` and `Link Wray Creepy tablature` both put the
+download at #1. `space surf podcast` compounds two causes — podcast titles are
+literally "Episode 7" with the show name in the summary at weight B, so the forum
+posts *announcing* the episode carry "Space Surf" at weight A and outrank the
+episode itself.
+
+**Kept `normalization=1` anyway, and this is the judgement to revisit if Brian
+disagrees.** `normalization=0` lifts that download from #47 to #2, but over the
+20-query comparison the top-10 type mix goes topic **121 → 5** and post 71 → 177:
+it rescues 11 curated rows by all but eliminating thread titles, which are the
+site's natural navigational answer. **The recommended fix is task 09** — per-type
+counts let a member searching `backing track` click `Downloads (115)` directly,
+and the burial is a *volume* problem between types (444,134 posts vs 673
+downloads), not a ranking error within one. If a per-type boost is wanted anyway,
+the measured magnitude is **≈1.21×** and it is query-time, so cheap to try.
+
+**`'english'` stays, decisively.** Band names here are overwhelmingly plural
+nouns and stemming unifies them (`ventur`, `bombora`, `tornado`); it also folds
+surfing/surfed/surf, tabs/tab, and **silently fixes the typo `reverbe` → all
+54,065 reverb documents**, which `'simple'` returns nothing for. `'simple'` would
+index the stop words (a `the` lexeme covering most of the table) and manufacture
+junk (`Satan's Pilgrims` → a bare `s`). Contamination from the worst-case stem
+was measured, not assumed: of 11,534 documents matching `ventur`, **10,990
+(95.3%) contain the literal "Ventures"**. No reindex.
+
+**The `FRV-1` limitation is gone — but the design's stated reason for it is
+wrong, and the difference is visible.** `FRV-1` finds **2,024** against the old
+tips' `FRV 1` workaround at **114** (18×). The design said the parser "emits both
+the whole hyphenated token and its parts" — true for letter–letter (`surf-rock`
+also emits `surf`, `rock`), **false for word–digit**: `FRV-1` parses as an
+asciiword plus a *signed integer* `-1`, and websearch makes them adjacent
+(`'frv' <-> '-1'`). It works because it is a phrase match on an adjacency, not
+because a compound token is indexed. Two consequences: a document written `FRV 1`
+will never match a query for `FRV-1` (`1` and `-1` are different lexemes), and
+`surf-rock` finds **1,328** where `surf rock` finds **14,993**, because the
+hyphenated query demands the compound token. Correct behavior, but hyphenating
+*narrows*. The tips block needed no edit — task 04 retired the apology early —
+and every other claim in it was re-verified, including `A/B box` (89 hits, `a/b`
+survives as one `file` token) and author search.
+
+**Performance: the GIN index is used in every plan** (`Bitmap Index Scan on
+search_sear_search__b5d516_gin`), no sequential scan anywhere, index scan for the
+worst term returning 166,388 rows in **7.9 ms**. Warm medians, counting the
+paginator `COUNT` and the top-10 slice separately because a page pays both:
+typical queries **1.3–10 ms**, worst case `surf` (156,517 hits, 30% of the
+corpus) **159 ms**, `"surf music"` **168 ms**. Incidental confirmation from the
+plans: `ts_headline` projects in a `Result` node *above* the sort, so it runs for
+ten rows rather than 156,517 — because `rank` is the sort key and `headline` is
+not.
+
+**The rate-limiting deferral stands, but not for the reason the design gave.**
+"A GIN lookup should be milliseconds" holds for typical queries and is off by two
+orders of magnitude for the broadest ones — one core saturates at roughly **6
+req/s** of `?q=surf`. What actually carries the load is that `/search/` is
+login-gated, the defence adopted after bots were killing the site. **If that gate
+is ever relaxed, rate limiting has to be reconsidered in the same change.**
+
+**Deferred to Step 20 with numbers: Misirlou / Miserlou.** The site's signature
+tune is split across two spellings and neither query finds the other — 1,416
+documents match `misirlou`, 2,131 match `miserlou`, **only 148 match both**. The
+misspelling is the *more* common form on the site. Either spelling reaches at
+most 63% of the ~3,400 documents about the song. Stemming does not bridge it and
+`'simple'` would not either; it needs a synonym dictionary (config change + full
+reindex) or `pg_trgm` similarity as a low-result fallback. Real features, not
+tuning.
+
+**Next:** task 08, the index reconcile sweep.
+
 ### Task 06 — the `ajax_users` ordering fix — DONE (2026-08-01)
 
 **Two tests added, one corrected; 761 green**, `check` clean. Commits `c87fc27`
