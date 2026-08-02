@@ -12,13 +12,24 @@ when the weights change; nothing here computes a vector or writes a row. Every
 check is one query that compares sets or timestamps in the database, so the cost
 scales with the drift found rather than with the size of the corpus.
 
-The one thing to be careful of when changing these queries: they must be
-anti-joins. Spelling `missing` as `exclude(pk__in=rows.values('object_id'))` is
-the obvious thing and produces `NOT IN (subquery)`, which PostgreSQL cannot
-answer with an anti-join -- three-valued logic means a single NULL would change
-the result, so it materializes the subquery and rechecks it per row. That form
-had not finished after five minutes on forums.Post. `~Exists(...)` compiles to
-`NOT EXISTS` and runs in under a second.
+The one thing to be careful of when changing these queries: they must be spelled
+`~Exists(...)`, which compiles to `NOT EXISTS` and which PostgreSQL answers with
+a real anti-join node. The obvious alternative,
+`exclude(pk__in=rows.values('object_id'))`, produces `NOT IN (subquery)` and is
+a trap that hides from every cheap way of finding it.
+
+PostgreSQL will not turn `NOT IN` into an anti-join, because `x NOT IN (1, NULL)`
+is NULL rather than false and an anti-join cannot express that. What it does
+instead depends on size, which is the dangerous part. Up to work_mem it hashes
+the subquery once and filters against the hash, which is linear and perfectly
+fast -- so seven of the eight types here, the whole test suite, and any table
+small enough to reason about all take that path and look fine. Past work_mem
+the hash is abandoned for a Materialize that is rescanned for every outer row:
+444,134 posts against 444,134 index rows, which had not finished after five
+minutes and had to be cancelled from pg_stat_activity.
+
+So this is not a slow query that shows up in review or in tests. It is a fast
+query everywhere except the one type that is 86% of the corpus.
 
 """
 import logging
