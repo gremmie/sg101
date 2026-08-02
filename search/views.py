@@ -11,6 +11,7 @@ from core.functions import get_page
 from core.paginator import DiggPaginator
 from search.forms import SearchForm
 from search.query import search_documents
+from search.query import type_counts
 
 
 RESULTS_PER_PAGE = 20
@@ -18,6 +19,23 @@ RESULTS_PER_PAGE = 20
 # Its own logger, writing its own file, so that what members search for stays
 # readable without sg101.log's traffic around it.
 logger = logging.getLogger('search')
+
+
+class CountedPaginator(DiggPaginator):
+    """
+    A paginator told its total rather than left to go and count.
+
+    The per-type counts sum to the number of results, so the COUNT(*) the
+    paginator would issue is a second pass over the set the counts have already
+    walked. Handing it the total keeps a search at two queries instead of three.
+
+    Paginator.count is a cached_property, which is a non-data descriptor, so
+    assigning the instance attribute is what shadows it.
+
+    """
+    def __init__(self, object_list, per_page, count, **kwargs):
+        super().__init__(object_list, per_page, **kwargs)
+        self.count = count
 
 
 @login_required
@@ -41,9 +59,18 @@ def search(request):
         logger.info('Search: %s in %s by %s [%s]', query, keys,
                     request.user.username, get_ip(request))
 
-        paginator = DiggPaginator(search_documents(query, keys),
-                                  RESULTS_PER_PAGE, body=5, tail=2, margin=3,
-                                  padding=2)
+        # Counted over the query alone, with no type filter, so that each
+        # number answers "how many would checking this box give me" rather than
+        # changing according to what is checked now. Narrowing to one type would
+        # otherwise zero every other count and take away the thing that makes
+        # narrowing an informed choice.
+        counts = type_counts(query)
+        form.show_counts(counts)
+
+        paginator = CountedPaginator(search_documents(query, keys),
+                                     RESULTS_PER_PAGE,
+                                     sum(counts[key] for key in keys),
+                                     body=5, tail=2, margin=3, padding=2)
         try:
             the_page = paginator.page(get_page(request.GET))
         except InvalidPage:

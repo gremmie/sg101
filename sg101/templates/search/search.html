@@ -1,5 +1,5 @@
 {% extends 'v3/base.html' %}
-{% load core_tags %}
+{% load core_tags humanize %}
 {% block title %}Search{% endblock %}
 {% block content %}
 <h2>Search <i class="fi-magnifying-glass"></i></h2>
@@ -49,7 +49,7 @@
 
    {% if page.paginator.count %}
    <p class="size-21">
-      <strong>{{ page.paginator.count }} hit{{ page.paginator.count|pluralize }}</strong>
+      <strong>{{ page.paginator.count|intcomma }} hit{{ page.paginator.count|pluralize }}</strong>
    </p>
    {% endif %}
 

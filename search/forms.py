@@ -1,5 +1,6 @@
 """Forms for the search application."""
 from django import forms
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 from search.documents import document_choices
 
@@ -42,3 +43,21 @@ class SearchForm(forms.Form):
         """
         keys = self.cleaned_data['models']
         return keys or [key for key, _ in document_choices()]
+
+    def show_counts(self, counts):
+        """
+        Puts each type's number of matches beside its checkbox.
+
+        The counts are folded into the choice labels rather than passed to the
+        template alongside them, because a Django template cannot index a dict
+        by a variable without a filter written for that purpose, and the
+        checkbox loop already renders `choice_label`.
+
+        Only called once a search has run. On the landing page the labels stay
+        as they are: a count of nothing is not information, and rendering
+        "Downloads (0)" before anyone has searched would suggest it is.
+
+        """
+        self.fields['models'].choices = [
+                (key, '%s (%s)' % (label, intcomma(counts[key])))
+                for key, label in document_choices()]

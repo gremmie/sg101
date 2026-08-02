@@ -10,9 +10,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.search import SearchHeadline
 from django.contrib.postgres.search import SearchQuery
 from django.contrib.postgres.search import SearchRank
+from django.db.models import Count
 from django.db.models import F
 from django.db.models import Value
 
+from search.documents import all_documents
 from search.documents import document_for_key
 from search.models import HEADLINE_START
 from search.models import HEADLINE_STOP
@@ -68,6 +70,61 @@ def positive_terms(query):
     return ' '.join(terms)
 
 
+def matching_documents(query):
+    """
+    Returns every document matching query, of any type and in no order.
+
+    The match set, separated from what is done with it. The result page filters
+    this by type, ranks it and orders it; the per-type counts group the same set
+    without filtering, because a count has to say how many results checking a
+    box *would* give, which the box being unchecked must not change.
+
+    """
+    tsquery = SearchQuery(query, search_type='websearch', config=SEARCH_CONFIG)
+    return SearchDocument.objects.filter(search_vector=tsquery)
+
+
+def content_types_for(documents):
+    """Returns the ContentTypes of these documents, in their order."""
+    content_types = ContentType.objects.get_for_models(
+            *[document.model for document in documents])
+    return [content_types[document.model] for document in documents]
+
+
+def type_counts(query):
+    """
+    Returns how many documents of each type match query, in registry order.
+
+    Keyed by the form's `app_label.model` values, so the caller can pair each
+    count with the checkbox that selects it, and carrying a zero for the types
+    nothing matched -- a type that vanishes from the list when it has no hits
+    tells a member less than one that says nothing is there.
+
+    """
+    documents = all_documents()
+    keys = {content_type.pk: document.key for document, content_type
+            in zip(documents, content_types_for(documents))}
+
+    counts = {document.key: 0 for document in documents}
+    rows = (matching_documents(query)
+            .filter(content_type__in=keys)
+            # order_by() clears any ordering before the aggregate, and is not
+            # optional. GROUP BY takes the ordering columns with it, so an
+            # ordered queryset grouped this way puts rank and date into the
+            # grouping, every row becomes its own group, and every count comes
+            # back as 1 -- a wrong answer that looks like a plausible one.
+            .order_by()
+            # Grouped by content_type rather than content_type__model, because
+            # forums.Post and ygroup.Post are both named "post" and grouping on
+            # the name silently merges them into a single count.
+            .values('content_type')
+            .annotate(total=Count('pk')))
+
+    for row in rows:
+        counts[keys[row['content_type']]] = row['total']
+    return counts
+
+
 def search_documents(query, keys):
     """
     Returns the search documents matching query, best first.
@@ -78,20 +135,16 @@ def search_documents(query, keys):
     deliberate change rather than restored behavior.
 
     """
-    tsquery = SearchQuery(query, search_type='websearch', config=SEARCH_CONFIG)
     ranked = SearchQuery(positive_terms(query), search_type='websearch',
                          config=SEARCH_CONFIG)
 
     documents = [document_for_key(key) for key in keys]
-    content_types = ContentType.objects.get_for_models(
-            *[document.model for document in documents])
 
-    return (SearchDocument.objects
+    return (matching_documents(query)
             # select_related because every result row names its own type, and
             # the label for that comes through content_type.
             .select_related('content_type')
-            .filter(content_type__in=content_types.values())
-            .filter(search_vector=tsquery)
+            .filter(content_type__in=content_types_for(documents))
             .annotate(
                 # normalization=1 divides by 1 + log(document length). What that
                 # buys is a tiebreak: ts_rank alone scores every document whose
