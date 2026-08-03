@@ -1,5 +1,0 @@
-{{ object.title|safe }}
-{{ object.author|safe }}
-{{ object.subtitle|safe }}
-{{ object.summary|safe }}
-{{ object.keywords|safe }}

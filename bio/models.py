@@ -11,11 +11,9 @@ from django.conf import settings
 from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
-from django.template.loader import render_to_string
 
 from core.markup import SiteMarkup
 import bio.flags
-from bio.signals import notify_profile_content_update
 
 
 # These are the secondary user status enumeration values. 
@@ -118,11 +116,9 @@ class UserProfile(models.Model):
         """
         Custom profile save() function.
         If content_update is True (default), then it is assumed that major
-        fields are being updated and that the profile_content_update signal
-        should be signalled. When content_update is False, the update_date is
-        not updated, expensive markup conversions are not performed, and the
-        signal is not signalled. This is useful for updating the
-        forum_post_count, for example.
+        fields are being updated. When content_update is False, the update_date
+        is not updated and expensive markup conversions are not performed. This
+        is useful for updating the forum_post_count, for example.
 
         """
         content_update = kwargs.pop('content_update', True)
@@ -135,9 +131,6 @@ class UserProfile(models.Model):
             cache.delete('avatar_' + self.user.username)
 
         super(UserProfile, self).save(*args, **kwargs)
-
-        if content_update:
-            notify_profile_content_update(self)
 
     def get_absolute_url(self):
         return reverse('bio-view_profile', kwargs={'username': self.user.username})
@@ -176,11 +169,6 @@ class UserProfile(models.Model):
         if full_name:
             return u"%s (%s)" % (self.user.username, full_name)
         return self.user.username
-
-    def search_summary(self):
-        text = render_to_string('search/indexes/bio/userprofile_text.txt',
-                {'object': self});
-        return text
 
 
 class UserProfileFlag(models.Model):

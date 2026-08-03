@@ -75,10 +75,9 @@ class Item(models.Model):
         super(Item, self).save(*args, **kwargs)
 
     def search_title(self):
+        # Despite the name, this is the title the detail page hands to social
+        # sharing; the search index builds its own from the row's columns.
         return "%s: %s" % (self.title, self.subtitle)
-
-    def search_summary(self):
-        return u"\n".join((self.subtitle, self.summary, self.keywords))
 
     def ogp_tags(self):
         """

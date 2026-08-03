@@ -121,12 +121,6 @@ class Story(StoryBase):
             return max(0, self.forums_topic.post_count - 1)
         return 0
 
-    def search_title(self):
-        return self.title
-
-    def search_summary(self):
-        return u"\n".join((self.short_text, self.long_text))
-
     def ogp_tags(self):
         """
         Returns a dict of Open Graph Protocol meta tags.

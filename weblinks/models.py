@@ -73,12 +73,6 @@ class Link(LinkBase):
     def get_absolute_url(self):
         return reverse('weblinks-link_detail', args=[str(self.pk)])
 
-    def search_title(self):
-        return self.title
-
-    def search_summary(self):
-        return self.description
-
 
 class PendingLink(LinkBase):
     """This model represents links that users submit. They must be approved by

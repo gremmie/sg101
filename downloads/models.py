@@ -120,12 +120,6 @@ class Download(DownloadBase):
         self.average_score = total_score / self.total_votes
         return self.average_score
 
-    def search_title(self):
-        return self.title
-
-    def search_summary(self):
-        return self.description
-
 
 class AllowedExtensionManager(models.Manager):
     def get_extension_list(self):

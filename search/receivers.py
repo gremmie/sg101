@@ -12,13 +12,13 @@ first, read a row that does not exist yet, and index nothing -- an intermittent
 failure that depends on load and leaves no trace. Queueing on commit also gets
 rollback right for free: the transaction rolls back, the callback never runs.
 
-Content is indexed on post_save rather than on the forums' and bio's own
-topic_content_update / post_content_update / profile_content_update signals,
-which the search stack this replaces listened to so that saves changing no text
-did not reindex. Those are sent from a handful of call sites by hand; one that
-someone forgets to add is an index that goes quietly stale, and post_save cannot
-be bypassed. A save that changes nothing searchable costs one task and one
-UPDATE, and the forums take about 134 posts a month.
+Content is indexed on post_save rather than on the forums' own
+topic_content_update / post_content_update signals, which the search stack this
+replaces listened to so that saves changing no text did not reindex. Those are
+sent from a handful of call sites by hand; one that someone forgets to add is an
+index that goes quietly stale, and post_save cannot be bypassed. A save that
+changes nothing searchable costs one task and one UPDATE, and the forums take
+about 134 posts a month.
 
 Three of the senders below are not searchable models themselves. A forum
 category decides whether its topics and posts may be indexed at all; a User

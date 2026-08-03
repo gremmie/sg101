@@ -5,12 +5,13 @@ Each entry supplies the text for the three weight bands -- title (A), summary
 (B) and author (C) -- along with the url and date a result page displays. The
 vector itself is built from those columns by SearchDocument.
 
-The field lists come from the index templates the old Xapian/Haystack stack left
-behind in sg101/templates/search/indexes/, with one deliberate change: author
-full names are indexed only on the profile document. A username is immutable,
-written once at account activation, but first_name/last_name are editable
-through bio.EditUserForm -- and embedding those in content documents would make
-a single profile edit rebuild every row that member ever wrote.
+The field lists come from the index templates of the old Xapian/Haystack stack,
+which the pre-step-4-prune tag holds alongside the search_indexes.py classes that
+rendered them. One deliberate change: author full names are indexed only on the
+profile document. A username is immutable, written once at account activation,
+but first_name/last_name are editable through bio.EditUserForm -- and embedding
+those in content documents would make a single profile edit rebuild every row
+that member ever wrote.
 
 Each document's get_queryset() also carries whatever rule decides that its
 model's rows are visible on the site at all, since search must not surface what
@@ -250,8 +251,8 @@ class StoryDocument(Document):
     def summary(self, obj):
         # short_text/long_text hold rendered HTML for every story in the
         # archive; the markup they came from exists only for stories saved
-        # since news version 2. tags were indexed by the old stack, though
-        # search_summary() leaves them out.
+        # since news version 2. tags were indexed by the old stack's template,
+        # though the model method beside it left them out.
         return body_text(obj.short_text, obj.long_text, obj.tags)
 
     def author(self, obj):
@@ -316,8 +317,8 @@ class LinkDocument(Document):
         return obj.title
 
     def summary(self, obj):
-        # The url was indexed by the old stack but is absent from
-        # search_summary(). Description leads so snippets open on prose.
+        # The url was indexed by the old stack's template but absent from the
+        # model method beside it. Description leads so snippets open on prose.
         return body_text(obj.description, obj.url)
 
     def author(self, obj):

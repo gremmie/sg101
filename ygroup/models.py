@@ -47,9 +47,3 @@ class Post(models.Model):
 
     def get_absolute_url(self):
         return reverse('ygroup-post_view', kwargs={'pk': str(self.pk)})
-
-    def search_title(self):
-        return self.title
-
-    def search_summary(self):
-        return self.msg

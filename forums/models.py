@@ -248,18 +248,6 @@ class Topic(models.Model):
         except Post.DoesNotExist:
             self.last_post = None
 
-    def search_title(self):
-        if self.post_count == 1:
-            post_text = "1 post"
-        else:
-            post_text = "%d posts" % self.post_count
-
-        return u"%s by %s; %s (%s)" % (self.name, self.user.username, post_text,
-                self.creation_date.strftime('%d-%b-%Y'))
-
-    def search_summary(self):
-        return u''
-
     def ogp_tags(self):
         """
         Returns a dict of Open Graph Protocol meta tags.
@@ -332,13 +320,6 @@ class Post(models.Model):
     def touch(self):
         """Call this function to indicate the post has been edited."""
         self.update_date = datetime.datetime.now()
-
-    def search_title(self):
-        return u"%s by %s (%s)" % (self.topic.name, self.user.username,
-                self.creation_date.strftime('%d-%b-%Y'))
-
-    def search_summary(self):
-        return self.body
 
 
 class FlaggedPost(models.Model):

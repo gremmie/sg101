@@ -25,7 +25,6 @@ from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
-from bio.signals import notify_profile_content_update
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 from core.functions import get_page
@@ -222,18 +221,12 @@ def edit_elsewhere(request):
         elif new_data.get('delete-sn-form') or new_data.get('delete-im-form') or new_data.get('delete-w-form'):
             delete_id = request.POST['delete_id']
 
-            update_occurred = True
             if new_data.get('delete-sn-form'):
                 request.user.social_network_profiles.get(id=delete_id).delete()
             elif new_data.get('delete-im-form'):
                 request.user.instant_messenger_profiles.get(id=delete_id).delete()
             elif new_data.get('delete-w-form'):
                 request.user.website_profiles.get(id=delete_id).delete()
-            else:
-                update_occurred = False
-
-            if update_occurred:
-                notify_profile_content_update(request.user.profile)
 
             return redirect(request.path)
 
