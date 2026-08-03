@@ -34,7 +34,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [ ] **Step 18** — Revive `gcalendar` with modern Google libraries
 - [ ] **Step 19** — Retire `wiki`/MoinMoin; verify-then-prune `banners`/`oembed` (`contests`/`countdown`/`bandmap` confirmed KEEP 2026-07-24; `membermap` already pruned in Step 4)
 - [ ] **Step 20** — Production hardening (gunicorn/WhiteNoise/prod compose/backups) + Cloudflare front
-- [ ] **Step 21** — Deploy to new host + cutover + fallback
+- [ ] **Step 21** — Deploy to new host + cutover + fallback. **Tail item: retire the MySQL conversion chain, gated on decommissioning the old box** — not on the site looking fine, because while the old box stays warm a DNS flip makes its MySQL authoritative again and any second roll-forward is another convert-and-verify. Preconditions: tag the cutover commit (`verify_data.py`'s canonicalization is worth keeping findable) and archive the final snapshot (git restores the tooling; nothing restores the data). Out: `mysqlclient` + the Dockerfile's MySQL apt packages, the `db` service and `mysql` profile, `verify.py` / `verify_data.py` / `convert.sh` / `sg101.load` / `crosscheck_dumpdata.sh`, `DOCKER.md` §6–§7, and the four keep-this comments added 2026-08-02, which become wrong at exactly that moment. Stays: `compare_schema.py` (psycopg2 only — compares a converted schema against a Django-built one, useful beyond MySQL).
 
 ---
 
@@ -615,6 +615,53 @@ out of order**, which is the concurrency the search index's `indexed_at` guard
 exists to survive. Pin it in the prod compose so the value is visible and
 reviewable, and so a one-core host does not quietly serialise everything while a
 later resize quietly stops doing so.
+**Tail item — retire the MySQL conversion chain, gated on the decommission.**
+Everything MySQL in this project exists to convert a production snapshot and then
+verify the conversion. When the old box is decommissioned there is no MySQL
+source left anywhere, and the whole chain becomes dead at one identifiable
+moment. Do it then, as one change.
+
+**The gate is the decommission, not "the site looks fine."** While the old box
+stays warm the rollback is live: flip DNS back and its MySQL is authoritative
+again, which makes any second roll-forward another convert-and-verify. Deleting
+the chain during the fallback window removes the tooling for the retry it exists
+to support. So this waits out the ~1–2 weeks above, and goes with the
+decommission itself.
+
+**Two preconditions, because one of these is not recoverable.** Tag the cutover
+commit, the way `pre-step-4-prune` holds the old search stack — `verify_data.py`'s
+canonicalization encodes real knowledge about how a MySQL→Postgres port goes
+wrong quietly (naive datetimes needing a timezone to be placed on the timeline,
+booleans losing their sense, decimal scale, NULL becoming empty string), and that
+should stay findable rather than resident. Then **archive the final snapshot**.
+Git can reconstitute the tooling; nothing can reconstitute the data once the old
+server is gone, and a data question six months later needs the dump far more than
+it needs the scripts.
+
+**What comes out** — narrower than it looks, since only two files actually bind
+the driver:
+
+- `mysqlclient` from `requirements.txt` and `requirements-docker.txt`, and
+  `default-libmysqlclient-dev` / `default-mysql-client` / `pkg-config` from the
+  Dockerfile. These exist for `tools/pgloader/verify.py` and `verify_data.py`,
+  the only two files that `import MySQLdb`.
+- The `db` service and the `mysql` profile from `docker-compose.yml`.
+- The MySQL-sourced tooling: `verify.py`, `verify_data.py`, `convert.sh`,
+  `sg101.load`, `crosscheck_dumpdata.sh`. Note that `convert.sh` and `sg101.load`
+  read MySQL through pgloader rather than the driver, so they are dead by loss of
+  source, not by loss of dependency.
+- `DOCKER.md` §6 (MySQL, and switching engines) and §7 (Converting MySQL data to
+  PostgreSQL) — the largest piece, and the one most likely to be left behind.
+- **The four comments added 2026-08-02** to the requirements files, Dockerfile
+  and compose, which argue for keeping this chain. They are correct until this
+  moment and wrong immediately after, and they will read persuasively either way.
+
+**What stays:** `compare_schema.py` imports only psycopg2 and compares a
+converted database against a Django-built reference, both Postgres. It answers
+"does this schema match what the migrations would build," which outlives MySQL
+entirely. `post_convert.py` and `smoke.py` are Django-only; judge them on their
+own merit rather than sweeping them up with the driver.
+
 **Tests:** Post-deploy smoke checklist on the new host; monitor logs/error mail.
 **Integration:** Final wiring of the whole system onto real infrastructure.
 **Demo:** SurfGuitar101.com serving live traffic on **Django 5.2 / Python 3.12 /
