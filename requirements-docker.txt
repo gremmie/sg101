@@ -26,6 +26,15 @@ vine==5.0.0
 # this but needs Python 3.8+).
 importlib-metadata==4.13.0
 
+# mysqlclient is NOT here for Django -- the site runs on PostgreSQL and nothing
+# points the ORM back at MySQL. It is here so this image can run
+# tools/pgloader/verify.py and verify_data.py, which import MySQLdb to read the
+# MySQL source and the converted PostgreSQL side by side; verify.py's header says
+# to run it "inside the web container, which has both drivers", and this pin is
+# what makes that true. The mysql CLI loads the dump and pgloader converts it --
+# only the verification needs the driver. Dropping it leaves a conversion
+# unverifiable rather than broken, and neither tool is in the test suite, so
+# nothing would go red. See requirements.txt for the longer note.
 mysqlclient==1.4.6
 # psycopg2 (not psycopg 3): Django 3.2's PostgreSQL backend imports psycopg2 and
 # refuses to start without it -- psycopg 3 support arrives in Django 4.2. Built

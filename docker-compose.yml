@@ -9,7 +9,9 @@
 #
 # Plus `db` (MySQL 5.7), which no longer starts on its own: it sits behind the
 # `mysql` profile, because the only thing that still needs it is converting a
-# production snapshot, which reads from MySQL and writes to Postgres. Start it
+# production snapshot, which reads from MySQL and writes to Postgres -- and then
+# verifying that conversion, since tools/pgloader/verify.py and verify_data.py
+# compare both engines and default MYSQL_HOST to this service. Start it
 # when you need it:
 #     docker compose --profile mysql up
 # Which engine the app talks to is the DB_ENGINE variable (see the `environment:`
@@ -38,7 +40,9 @@ services:
     # mysql:5.7 ships amd64 only; run it under emulation on Apple Silicon.
     platform: linux/amd64
     # Opt-in. The site runs on Postgres now, so this starts only for a snapshot
-    # conversion (or to point the app back at MySQL): `--profile mysql`.
+    # conversion and its verification (or to point the app back at MySQL):
+    # `--profile mysql`. Keep it: the cutover converts a fresh snapshot, and
+    # verifying that needs this service as the side to compare against.
     profiles:
       - mysql
     environment:

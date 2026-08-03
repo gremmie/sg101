@@ -22,6 +22,13 @@ ENV PYTHONUNBUFFERED=1 \
 #   default-mysql-client       : the `mysql` CLI, to load the DB snapshot
 #   libpq-dev                  : build psycopg2 from source (headers + pg_config)
 #   pkg-config                 : mysqlclient's build finds libmysqlclient through it
+# The two MySQL entries look like leftovers now that the site runs on PostgreSQL.
+# They are not: converting a production snapshot loads the dump with the `mysql`
+# CLI, and tools/pgloader/verify.py + verify_data.py then compare both engines
+# through MySQLdb, which is what mysqlclient needs these headers to build. That
+# comparison is the only thing that catches a conversion which silently shifted
+# or dropped data, and it runs from this image. See the mysqlclient note in
+# requirements.txt before removing either one.
 # lxml and Pillow now install from manylinux wheels on Py3.7, so their C-library
 # -dev headers (libxml2/libxslt, libjpeg/zlib/freetype) are no longer needed.
 # No psql CLI here on purpose: the postgres service image carries a matching one

@@ -37,6 +37,17 @@ vine==5.0.0
 # this but needs Python 3.8+).
 importlib-metadata==4.13.0
 
+# mysqlclient is NOT here for Django -- the site runs on PostgreSQL and nothing
+# points the ORM back at MySQL. It is here because tools/pgloader/verify.py and
+# verify_data.py import MySQLdb: they read the MySQL source and the converted
+# PostgreSQL side by side to check that a conversion did not lose or shift
+# anything. The mysql CLI loads the dump and pgloader does the converting;
+# neither needs this driver, and only the verification does. Removing it would
+# leave a conversion unverifiable rather than failing outright -- and since those
+# tools are not part of the test suite, nothing would go red. That matters most
+# at the production cutover, which converts a fresh snapshot under a maintenance
+# window. The 1.4.x line has no wheel, so it builds from source; see the
+# Dockerfile for the two apt packages that lets it.
 mysqlclient==1.4.6
 # psycopg2 (not psycopg 3): Django 3.2's PostgreSQL backend imports psycopg2 and
 # refuses to start without it -- psycopg 3 support arrives in Django 4.2. Built
