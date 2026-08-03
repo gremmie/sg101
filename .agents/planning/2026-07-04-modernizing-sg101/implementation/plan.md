@@ -26,8 +26,8 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [x] **Interlude** — Drop the `six` shim from application code (2026-07-24). Not a step; Step 7 residue cleared between Steps 10 and 11. All 17 application imports were `six.moves.urllib.{parse,request,error}` / `six.StringIO`, which alias the stdlib exactly on Py3 → `urllib.*` / `io.StringIO`, merged into each file's stdlib import group. No behavior change; 567 tests green, `check` + `makemigrations --check` clean. **The `six==1.16.0` pin stays** — bleach, html5lib, python-dateutil, and python-memcached still require it, so removing the pin only lets it float (drifted to 1.17.0 on a test rebuild); pinned for reproducibility like sqlparse, and now commented as transitive-only. six leaves the image when those four are bumped/dropped (Step 13; python-memcached at the memcached→Redis consolidation).
 - [x] **Step 11** — Migrate MySQL → PostgreSQL (on 3.2 / Py3) — **DONE 2026-07-26**. Six code tasks at `.agents/tasks/2026-07-04-modernizing-sg101/step11/`, all complete: the site, its converted production data, and the test suite now all run on **PostgreSQL 16**. **Task order changed: 04 ran before 02/03** — task 01 proved that nothing can create a fresh Postgres database until every app has migrations, so the backfill is a prerequisite, not a successor. **Task 01:** `postgres:16` alongside MySQL, `psycopg2==2.9.9`, `DB_ENGINE` switch via `sg101/settings/databases.py`. **Task 04:** initial migrations for the 21 syncdb-era apps — all 26 now have them, no structural drift found, and `makemigrations --check` finally covers the whole project (it had been silently covering 5 apps of 26). **Task 02:** 12 collation-dependent lookups → `__iexact` across 9 files plus two `accounts` migrations (functional unique index on `LOWER(username)`; normalize the one genuine email case variant); the lookup audit is `research/collation-audit.md`. **Task 03:** pgloader conversion of the *pristine* 1.8-era snapshot — **699,435 rows, 91 tables, zero rejections**, repeatable from empty; four findings, three of which would have shipped silently (MySQL's `latin1` is really **cp1252**; `int(11)` lands as `bigint` unless cast, against Step 10's deliberate 32-bit `AutoField`; `char(2)` pads on PG and crashes the profile page for the 12,854 members with no country set). **Task 05:** verification, which found **four more defects invisible to row counts, column diffs and the suite** — every datetime 5–6h early (naive MySQL local time loaded into `timestamptz` as UTC), all 91 FKs `RESTRICT` where Django needs `NO ACTION DEFERRABLE INITIALLY DEFERRED`, every `CHECK` constraint missing, two stray column defaults. The lesson, now embodied in `compare_schema.py`: **pgloader converts MySQL faithfully ≠ pgloader builds what Django would build.** **Task 06:** CI runs the suite on Postgres using the same Compose services as local dev; **the deferred test-database question is settled — Postgres everywhere, the sqlite path retired** (measured: 593 tests, 9.1s on PG vs 7.2s on sqlite — ~1.9s, and sqlite could never cover Step 12's FTS at all); Compose now defaults to Postgres with MySQL behind a `mysql` profile, kept because the cutover converts a fresh snapshot the same way. Full detail for every task in STATUS.md.
 - [x] **Step 12** — Build PostgreSQL full-text search (restore `/search/`) — **DONE 2026-08-02**. All nine tasks complete; `/search/` is restored on native PostgreSQL full-text search with no Haystack, no Xapian and no third-party search package — an eight-type index of 516,858 documents, incremental maintenance from signals through Celery, a weekly sweep that reports drift, the forums' duplicate-topic quick search, and per-type result counts. **798 tests green.** Nine task files at `.agents/tasks/2026-07-04-modernizing-sg101/step12/` — task 09 was added 2026-08-01 out of task 04's review. **Task 01** (2026-07-28, `f342415`): the `search` app, `SearchDocument` and the document registry — the vector is built from the row's own columns (`title` A / `summary` B / `author` C), so it is rebuildable from the search table alone. **Task 02** (2026-07-29, `9573d8e`): `manage.py reindex_search` and the backfill — **518,595 documents in 1m17s**, 881 MB with the GIN index; the private-category exclusion lives in the registry's querysets. **Task 03** (2026-07-30): incremental indexing through Celery on `transaction.on_commit`, and the privacy boundary on write — a post is findable **0.61s** after being posted, and a category's 8,328 rows purge in 1.1s and restore in 2.1s when its groups change. Task 03 also **found and fixed a real defect**: three documents were indexing content the site does not show (43 unapproved downloads, whose detail pages 404; 57 unapproved links; 1,637 deactivated members' profiles), all three rules recovered from `pre-step-4-prune`'s `search_indexes.py` — corpus corrected to **516,858**. **Task 04** (2026-08-01, `2622943`): the search page itself — the single-box form, relevance ranking, snippets, pagination, the login gate, the route rename off the dead `haystack_*` names, and query logging in its own `search.log`. 64 tests, 743 green. **Found two defects the design had not anticipated**: `ts_rank` returns one constant (`6.3e-21`) for any query containing an exclusion, so `reverb -fender` was ordered by nothing but the date tiebreak across all 38,340 hits — ranking now runs against the query with its exclusions stripped, while filtering keeps the whole one; and rendering a `SearchHeadline` directly would have been **stored XSS**, since `body_text()` unescapes what it strips tags from and `ts_headline` passes `<img src=x onerror=…>` through intact. **Brian reversed requirement 1 / AC4**: the type checkboxes start unchecked, as on the old site, though "none checked" must still mean "search everything" because the masthead box posts a bare `q` and is indistinguishable from an untouched form. The **FRV-1 tip was retired ahead of task 07** — it was Xapian's limitation, and `FRV-1` now finds 2,024 documents against the old advice's 114. **Task 05** (2026-08-01, `06b61f9`): the forums' duplicate-topic quick search, the last stubbed search route. 17 tests, 759 green. **Brian superseded two of the task's requirements** — the endpoint moved from `/search/ajax/` to **`/search/topics/`** and `forums.js` stopped sending `models=forums.topic`, because the view forces the type anyway and a parameter nobody reads advertises an interface that does not exist. The instruction to freeze the path existed only because the JavaScript hardcoded it, which stops being a reason the moment that JavaScript is being edited. Fixed the pre-existing markup bug (`</fieldset>`/`</div>` closed only in the no-results branch) and pinned `models=forums.topic` into the fragment's overflow link, which had been forwarding it from the request and would otherwise have quietly widened to all eight types. Checks are logged as `Forum topics quick search:` — **Brian corrected the assumption that this fires while typing; it is an explicit button click**, so each one is deliberate. **Task 06** (2026-08-01, `c87fc27`): the `ajax_users` member-autocomplete ordering fix, 761 green — **MySQL had been alphabetical by accident** (a range scan on the unique username index returns rows in key order), and Postgres cannot inherit that, because `istartswith` compiles to `UPPER(username::text) LIKE …`, a function of the column, so it seq-scans and returns heap order. The omission was invisible until the engine changed. Also deleted `core/widgets.py`, dead since 2016. **Task 07** (2026-08-02, `18bc237`): verification against production data, no reindex, findings in `research/search-verification.md`. **`normalization=Value(1)` is a document-length sort in disguise** and the comment justifying it was wrong in both halves — `ts_rank` does not reward bulk, and the "tight" document is not a news headline but `forums.topic`, whose summary is exactly 0 characters. Kept anyway, because `normalization=Value(0)` fixes the burial of curated types but swings the top-ten type mix from 121 topics/71 posts to 5/177; the real fix was task 09. `'english'` stays decisively (stemming turns the typo `reverbe` into 54,065 hits; worst-case stem contamination measured at 4.7%). The GIN index is used everywhere, typical 1.3–10 ms, worst case `surf` at 159 ms — so the rate-limiting deferral stands, but on the strength of the **login gate**, not the design's "should be milliseconds"; relaxing that gate requires rate limiting in the same change. **Task 08** (2026-08-02, `cf51dc5`): the weekly reconcile sweep — `search/reconcile.py`, `manage.py reconcile_search`, `search.tasks.reconcile_index`, Beat at Sunday 03:30. It **reports drift and repairs nothing**, which is the point: stopping the worker and hand-editing a post proved that a *queued* task survives Redis and self-repairs, while a *lost* row stays missing until someone reindexes. 19 tests, 780 green. **The trap:** the natural `exclude(pk__in=…)` compiles to `NOT IN (subquery)`, which Postgres cannot anti-join — it **did not finish in five minutes** on `forums.Post`; `~Exists` gives `NOT EXISTS` and 567 ms. **Task 09** (2026-08-02, `0327ec5`): per-type result counts, closing task 07's loop — `backing track` had buried the first of 115 downloads at rank 47 and now shows `Downloads (115)` beside `Forum Posts (2,830)`. 18 tests, 798 green. **They are nearly free only because they replace the paginator's `COUNT`**: the count and the `GROUP BY` do identical work below the aggregate, and that bitmap heap scan is ~95% of the cost, so replacing is +0.9–2.5% while adding alongside runs the scan twice at +36.6%. **The end-of-Step-12 prune, done 2026-08-02:** the 14 dead `search_title`/`search_summary` methods across seven models, leaving `bio.UserProfile.search_title()` (which `search/documents.py` calls) and `podcast.Item.search_title()` (social sharing, now commented as such since the name no longer tells the truth); and `bio`'s `profile_content_update` signal with its two senders, dead since Step 4 removed `custom_search` — `bio/signals.py` is deleted, and the profile document stays current through `post_save`/`post_delete` in `search/receivers.py` regardless. Not pruned: `forums`' `topic_content_update`/`post_content_update`, which `forums/latest.py` still receives for the RSS latest-posts datastore. The eight Haystack-era `sg101/templates/search/indexes/*_text.txt` went too — their last Python reference left with `bio`'s `search_summary()`, and the provenance they carried is better served by `pre-step-4-prune`, which holds the templates *and* the seven `search_indexes.py` classes that rendered them. Requirements clarified in `step12-idea-honing.md` (Q1–Q11), design in `research/search-design.md`. Shape: **one denormalized search table** (not per-model `SearchVectorField`s — relevance ordering plus pagination across 8 document types forces it), relevance-ranked with newest as tiebreak, **single websearch-syntax box** replacing the three keyword/exact/exclude inputs the old form was already synthesizing into that same syntax, all index writes **via Celery on `transaction.on_commit`**, **login required** (anti-bot, carried forward), **private categories never indexed** (`Kahunas`: 487 topics / 19,088 posts), query logging kept in its own `search.log`. Recovered rather than remembered: the old search was **date-ordered, not relevance-ordered**, and the surviving templates + `pre-step-4-prune` tag documented the form, the index fields, the login gate and the log line. Deferred additively: `pg_trgm` "did you mean", comments, private-category search, rate limiting, sort toggle.
-- [ ] **Step 13** — Upgrade Django 3.2 → 4.2 (Python 3)
-- [ ] **Step 14** — Upgrade Django 4.2 → 5.2 LTS (Python 3.12) ⭐ target reached
+- [ ] **Step 13** — Python 3.7 → 3.10, then Django 3.2 → 4.2. **The interpreter moves first and is not optional** — Django 4.0 requires Python 3.8+, so the step cannot begin on the frozen `python:3.7` image; Step 14 used to own the Python move and cannot, being downstream of the rung that needs it. **3.10 rather than the 3.8 minimum**, because it is the only version Django 3.2 *and* everything through 5.2 support, which lets the interpreter move alone with `Django==3.2.25` untouched before any Django rung starts. **Measured 2026-08-02: the interpreter move costs exactly one dependency bump, and not one of the four this plan expected.** Every pin installs unmodified on `python:3.10` — `Pillow==6.2.2`, `mysqlclient==1.4.6`, `psycopg2==2.9.9` and `lxml==4.9.4` all build cp310 wheels from sdist. The real breaker is at import: **`bleach==3.1.5` cannot import on 3.10** (`cannot import name 'Mapping' from 'collections'`), so the long-deferred bleach bump becomes the gate. It is small — the pin comment calls 3.1.5 "the last line keeping the `styles=` kwarg," but both `_CLEAN_PROFILES` entries pass `[]` and neither allows a `style` attribute, so the kwarg is redundant twice over and modern bleach's default already does what it asks for. **Pillow is therefore decoupled from the interpreter**, and its `Image.ANTIALIAS` removal (7 call sites) should be its own change on its own evidence.
+- [ ] **Step 14** — Upgrade Django 4.2 → 5.2 LTS (Python 3.10 → 3.12) ⭐ target reached
 - [ ] **Step 15** — Media → Cloudflare R2 (boto3)
 - [ ] **Step 16** — Email → transactional provider
 - [ ] **Step 17** — reCAPTCHA → Cloudflare Turnstile
@@ -307,17 +307,91 @@ arbitrary-ten behavior in place.
 
 ## Phase D — Finish the ladder
 
-### Step 13: Upgrade Django 3.2 → 4.2 (Python 3)
+### Step 13: Python 3.7 → 3.10, then Django 3.2 → 4.2
 **Objective:** Traverse to 4.2 (a pass-through — EOL, so we don't rest here long).
-**Guidance:** Address 4.0/4.1/4.2 changes (`USE_TZ` defaults, `zoneinfo` replacing
-pytz, `django.conf.urls.url` fully removed, `CSRF_TRUSTED_ORIGINS` scheme).
-Continue dep bumps. Clear deprecations.
-**Watch the Pillow bump:** `Image.ANTIALIAS` was removed in Pillow 10, and seven
-non-test call sites still use it — `core/images/utils.py:42`,
-`core/images/upload.py` (four), `potd/models.py:25`, plus
-`core/management/commands/ssl_images.py:101`. It's `Image.Resampling.LANCZOS`
+**The interpreter moves first, and it is not optional: Django 4.0 requires Python
+3.8+**, so nothing in this step can start on the frozen `python:3.7` image. Step
+14 used to own the Python move; it cannot, because it comes after the rung that
+already needs it.
+
+**Go to 3.10, not to the 3.8 minimum.** 3.10 is the only version that Django 3.2
+*and* everything through 5.2 both support, which is what lets the interpreter
+move alone — bump the base image with `Django==3.2.25` untouched, get the suite
+green, and only then start 4.0 → 4.1 → 4.2 with the interpreter held fixed. That
+keeps one variable per rung, which is the discipline that has surfaced the real
+breakers in every upgrade step so far. 3.8 would buy a second interpreter move
+later; 3.12 is not reachable as a solo move at all, since Django 3.2 tops out at
+3.10 (support added in 3.2.9, so the current pin already has it).
+
+| Django | Python |
+| --- | --- |
+| 3.2 | 3.6 – 3.10 |
+| 4.0 | 3.8 – 3.10 |
+| 4.1 | 3.8 – 3.11 |
+| 4.2 | 3.8 – 3.12 |
+| 5.2 | 3.10 – 3.13 |
+
+**Measured 2026-08-02, before writing any of this down: the interpreter move
+costs exactly one dependency bump, and it is not any of the four this plan
+expected.** Every pin in `requirements-docker.txt` installs unmodified on
+`python:3.10` given the Dockerfile's existing apt packages — including all four
+that Step 14's venv note called blockers. `Pillow==6.2.2`, `mysqlclient==1.4.6`,
+`psycopg2==2.9.9` and `lxml==4.9.4` all build from sdist and produce cp310
+wheels. The prediction that they would not was wrong, and it was wrong in the
+direction that would have oversized this step.
+
+Installing is not importing, though, and that is where the one real breaker
+lives: **`bleach==3.1.5` fails to import on 3.10** — `cannot import name
+'Mapping' from 'collections'`, the ABC aliases that 3.10 finally removed. Every
+other third-party package imports clean. So the bleach bump this plan has been
+deferring since Step 10 stops being a nice-to-have and becomes the gate on the
+interpreter.
+
+**And the bleach bump is far smaller than its pin comment claims.** The comment
+in both requirements files calls 3.1.5 "the last line keeping the `styles=`
+kwarg `core/html.py` passes," which reads as though a real allowlist is at
+stake. It is not: `_CLEAN_PROFILES` has two profiles and **both pass `[]`**, and
+neither one allows a `style` attribute in the first place, so the kwarg is
+redundant twice over. Modern bleach replaced `styles=` with a `css_sanitizer`
+object and strips all CSS when none is given — which is already the behavior
+here. The work is deleting the kwarg and the now-empty third tuple element, plus
+the two `core/tests/test_html.py` assertions that name it (lines 95 and 106).
+Worth knowing while in there: bleach was archived upstream in 2023 in favor of
+`nh3`. Not a decision for this step, but the last time anyone will be reading
+this code closely for a while.
+
+**The Pillow bump is now decoupled from the interpreter**, since 6.2.2 runs on
+3.10. It still has to happen eventually, and the trap is unchanged: `Image.ANTIALIAS`
+was removed in Pillow 10, and seven non-test call sites still use it —
+`core/images/utils.py:42`, `core/images/upload.py` (four), `potd/models.py:25`,
+plus `core/management/commands/ssl_images.py:101`. It's `Image.Resampling.LANCZOS`
 now. Nothing fails until Pillow crosses 10, and then thumbnailing breaks
-everywhere at once.
+everywhere at once. Do it as its own change, on its own evidence, rather than
+smuggling it into the interpreter rung.
+
+**Suggested order:**
+1. Base image `python:3.7` → `python:3.10`, Django pinned at 3.2.25, bleach
+   bumped because it must be. Suite green. This is the whole interpreter risk,
+   isolated.
+2. The `RemovedInDjango40` backlog while still on 3.2, where the warnings are
+   warnings and not errors: 17 `ifequal`, 7 `is_ajax`, 3 `providing_args`,
+   2 `force_text`, 2 `urlquote`, 1 `ugettext`, and the 32 inert
+   `from __future__` lines.
+3. Django 4.0, 4.1, 4.2 as three rungs (`USE_TZ` defaults, `zoneinfo` replacing
+   pytz, `django.conf.urls.url` fully removed, `CSRF_TRUSTED_ORIGINS` scheme).
+4. Remaining dependency alignment. Two caps lift with the interpreter and are
+   worth collecting here: `psycopg2` was held at 2.9.9 because 2.9.10 needs
+   ≥3.8 (Step 11), and `celery`/`kombu` were held at the 5.2 line because 5.3
+   needs ≥3.8 (Step 10) — which is also what forces the `importlib-metadata<5`
+   cap, since kombu 5.3 fixes the `entry_points().get()` shim that cap exists
+   for. Also revisit psycopg 3, which Django supports from 4.2 (Step 11).
+
+**Also settle `mysqlclient` here.** It builds on 3.10, so nothing forces the
+question — but the only thing that still needs it is the `mysql` Compose
+profile, kept since Step 11 so the cutover can convert a fresh snapshot the same
+way. If that path is still wanted, the pin stays and costs nothing; if it isn't,
+this is the cheapest moment to drop the pin, the two apt packages, and the
+profile together.
 **Revisit the `MARKDOWN` logger and how often Markdown is constructed.** Both
 live in the same place and the Markdown bump is when someone will be looking at
 them.
@@ -343,22 +417,31 @@ rather than shared naively.
 **Tests:** Suite green on Postgres; smoke checklist.
 **Demo:** Site on Django 4.2 / Py3 with working search.
 
-### Step 14: Upgrade Django 4.2 → 5.2 LTS (Python 3.12) ⭐
+### Step 14: Upgrade Django 4.2 → 5.2 LTS (Python 3.10 → 3.12) ⭐
 **Objective:** Reach the target end-state.
-**Guidance:** Move base image to **Python 3.12**; bump Django to 5.2 LTS; final
-dependency alignment; clear all deprecations.
+**Guidance:** Bump Django to 5.2 LTS; move the base image from **3.10 to 3.12**;
+final dependency alignment; clear all deprecations. **Step 13 now owns the
+interpreter's first move** (3.7 → 3.10), because Django 4.0 requires 3.8+ and
+this step comes after it. What is left here is a second, smaller hop: 5.2
+supports 3.10 through 3.13, so the Django bump and the 3.12 move are independent
+and can be done in either order — or the 3.12 move can be skipped entirely if
+3.10 is good enough, since it is supported for the whole 5.2 LTS window.
 **Tests:** Full suite green on Django 5.2 / Py3.12 / Postgres; smoke checklist.
 **Demo:** SG101 running on the **target stack (Django 5.2 LTS, Python 3.12,
 PostgreSQL)** locally with real data and working search.
-**Also unlocks — a local venv for editor tooling.** Everything runs in Docker on
-3.7, so there's no venv on the host and an editor language server (pyright, via
-ALE) can't resolve a single third-party import. Tried on 2026-07-31 against the
-current pins and abandoned: `Django==3.2.25` and the rest of `requirements.txt`
-install fine on a modern Python, but four pins predate its wheels and want C
-libraries and build tooling to compile — `mysqlclient` (needs `mysql_config`),
-`Pillow==6.2.2`, `lxml==4.9.4`, `psycopg2==2.9.9`. Once this step's dependency
-alignment moves those, `pip install -r requirements_dev.txt` into a host venv
-should just work. Two notes for when it does: `django-stubs` is not optional —
+**Also unlocks — a local venv for editor tooling.** Everything ran in Docker on
+3.7, so there was no venv on the host and an editor language server (pyright,
+via ALE) could not resolve a single third-party import. Tried on 2026-07-31 and
+abandoned on the belief that four pins would not build on a modern Python —
+`mysqlclient`, `Pillow==6.2.2`, `lxml==4.9.4`, `psycopg2==2.9.9`. **Measured
+2026-08-02: that was wrong.** All four build on 3.10 from sdist with the apt
+packages the Dockerfile already installs, and the whole pin set installs
+unmodified; the one package that genuinely breaks is `bleach==3.1.5`, and it
+breaks on *import*, not on build. So the venv is not gated on this step's
+dependency alignment at all — it needs Step 13's interpreter move, the bleach
+bump, and `mysql_config` on the host for `mysqlclient` (or dropping that pin,
+which Step 13 also raises). Two notes for when it happens: `django-stubs` is not
+optional —
 without it pyright flags every `Model.objects` and every field access, because
 both are runtime-generated descriptors — and naming the venv `.venv` in the repo
 root is what makes ALE find it with no configuration, so it needs a `.gitignore`

@@ -172,7 +172,51 @@ Worth noting that this tag is a full-repo snapshot, not the templates-only tree
 it can appear to be — `git ls-tree` scopes to the shell's current directory, so
 running it from inside a subdirectory silently answers a narrower question.
 
-**Next: Step 13** — the `RemovedInDjango40` cleanups deferred from Step 10.
+**Next: Step 13** — **Python 3.7 → 3.10 first, then Django 3.2 → 4.2**, carrying
+the `RemovedInDjango40` cleanups deferred from Step 10.
+
+## PLANNING — Step 13 resequenced interpreter-first (2026-08-02)
+
+The step was written as a pure Django traversal, with the Python move sitting in
+Step 14. That cannot work: **Django 4.0 requires Python 3.8+**, so the first rung
+of Step 13 is unreachable from the frozen `python:3.7` image, and Step 14 is
+downstream of the rung that needs the interpreter it owns.
+
+**3.10 is the waypoint**, not the 3.8 minimum. It is the only version supported
+by Django 3.2 *and* by everything through 5.2, which is what lets the interpreter
+move by itself with `Django==3.2.25` untouched — one variable per rung, the
+discipline that has found the real breaker in every upgrade step so far. 3.8
+would buy a second interpreter move later; 3.12 cannot be a solo move at all,
+since Django 3.2 tops out at 3.10.
+
+**The measurement, taken before the plan was rewritten rather than after.** The
+expectation — stated to Brian in the same conversation — was that the interpreter
+would force several dependency bumps, because Step 14's venv note had identified
+four pins that "predate modern wheels and want C libraries to compile":
+`mysqlclient`, `Pillow==6.2.2`, `lxml==4.9.4`, `psycopg2==2.9.9`. **All four
+build fine on `python:3.10`**, from sdist, with nothing beyond the apt packages
+the Dockerfile already installs, and the entire pin set installs unmodified. The
+prediction was wrong, and wrong in the direction that would have oversized the
+step. Guessing at build outcomes reads exactly like knowing them; the difference
+took one `docker run`.
+
+**Installing is not importing, and that is where the one real breaker is:
+`bleach==3.1.5` cannot be imported on 3.10** — `cannot import name 'Mapping'
+from 'collections'`, the ABC aliases 3.10 removed. Every other third-party
+package imports clean (`debug_toolbar` "fails" only by wanting
+`DJANGO_SETTINGS_MODULE`, which is not a version problem). So the bleach bump
+deferred since Step 10 is now the gate on the interpreter — and it is much
+smaller than its own pin comment implies. That comment calls 3.1.5 "the last
+line keeping the `styles=` kwarg `core/html.py` passes," which sounds like a
+real CSS allowlist is at stake; in fact **both `_CLEAN_PROFILES` entries pass
+`[]`**, and neither allows a `style` attribute anyway, so the kwarg is redundant
+twice over and modern bleach's no-`css_sanitizer` default already strips exactly
+what it asks to strip. The change is deleting the kwarg, the empty third tuple
+element, and two assertions in `core/tests/test_html.py`.
+
+**Consequence worth carrying:** Pillow is now decoupled from the interpreter, so
+the `Image.ANTIALIAS` removal across its seven call sites should be its own
+change on its own evidence rather than a passenger on the 3.10 move.
 
 ### Task 09 — per-type result counts — DONE (2026-08-02)
 
