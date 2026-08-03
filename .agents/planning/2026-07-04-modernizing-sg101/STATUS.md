@@ -120,10 +120,57 @@ search, and per-type result counts. 798 tests green.
 
 **Deferred out of Step 12, each with its measurement attached:** the
 Misirlou/Miserlou spelling split, needing a synonym dictionary or `pg_trgm`
-(Step 20); a `UPPER(username)` functional index for the member autocomplete,
-2.7 ms → 0.48 ms (Step 20); and the dead-method prune of `search_title` /
-`search_summary`, where `podcast.Item.search_title()` must survive because it
-feeds social sharing rather than search.
+(Step 20); and a `UPPER(username)` functional index for the member autocomplete,
+2.7 ms → 0.48 ms (Step 20).
+
+### The end-of-Step-12 prune — DONE (2026-08-02)
+
+798 tests green (unchanged — nothing in the suite referenced any of it), `check`
+and `makemigrations --check` clean.
+
+**The 14 dead `search_title` / `search_summary` methods**, across `forums.Topic`,
+`forums.Post`, `news.Story`, `ygroup.Post`, `downloads.Download`,
+`weblinks.Link`, `podcast.Item` and `bio.UserProfile`. Two survive, for reasons
+that are not symmetrical: `bio.UserProfile.search_title()` is genuinely search
+code, called by `search/documents.py` because on a profile the author *is* the
+document, so username and full name both belong at weight A. `podcast.Item.
+search_title()` is not — `podcast/detail.html` hands it to social sharing, and
+it now carries a comment saying so, because after this prune the name is the
+only thing suggesting otherwise.
+
+**`bio`'s `profile_content_update` signal and its two senders**
+(`UserProfile.save()` and the link-delete branch of `edit_elsewhere`), dead since
+Step 4 removed `custom_search`. `bio/signals.py` held nothing else and is
+deleted. The profile document does not depend on it: `search/receivers.py`
+already connects `post_save` on `User` and `UserProfile`, and both `post_save`
+and `post_delete` on `elsewhere.WebsiteProfile` — which is exactly the path the
+removed call sat beside in that view. Removing the sender from
+`edit_elsewhere` also stranded its `update_occurred` flag, whose `else` branch
+was unreachable anyway (the guard tests the same three POST keys the body does),
+so both went with it.
+
+Two follow-on edits the prune forced, each a comment that had come to name
+something no longer in the tree: `search/receivers.py`'s docstring listed
+`profile_content_update` among the signals the old stack listened to, and two
+`search/documents.py` comments cited `search_summary()` as the thing that *left
+a field out* — provenance for indexing `tags` on news and `url` on weblinks. The
+distinction those comments draw is still real, so they now name the old stack's
+template and the model method beside it rather than a method by name.
+
+**Not pruned:** `forums`' `topic_content_update` / `post_content_update`.
+`forums/latest.py` still receives both for the RSS latest-posts datastore.
+
+**Also pruned, on Brian's call:** `sg101/templates/search/indexes/`, the eight
+Haystack-era `*_text.txt` templates. The last Python reference to any of them
+went with `bio.UserProfile.search_summary()`. The reason to hesitate was that
+`search/documents.py` cited the directory as the recorded provenance of the
+field choices, and two field-level comments lean on it — but **the tag holds
+them**: `pre-step-4-prune` has all eight templates *and* the seven
+`search_indexes.py` classes that rendered them, so the pointer now names the tag
+and a reader following it gets strictly more than the orphaned directory offered.
+Worth noting that this tag is a full-repo snapshot, not the templates-only tree
+it can appear to be — `git ls-tree` scopes to the shell's current directory, so
+running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13** — the `RemovedInDjango40` cleanups deferred from Step 10.
 
