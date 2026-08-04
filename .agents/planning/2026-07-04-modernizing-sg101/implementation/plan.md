@@ -369,7 +369,29 @@ Worth knowing while in there: bleach was archived upstream in 2023 in favor of
 `nh3`. Not a decision for this step, but the last time anyone will be reading
 this code closely for a while.
 
-**The Pillow bump is now decoupled from the interpreter**, since 6.2.2 runs on
+**CORRECTION 2026-08-03, from executing task 01: Pillow was NOT decoupled, and
+the claim above that bleach is the only breaker is wrong.** `Pillow==6.2.2`
+installs on 3.10 and imports on 3.10 — and then **aborts the interpreter at
+shutdown**: `free(): invalid pointer`, exit 134, reproduced on both arm64 and
+amd64, so CI and production would both have hit it. `from PIL import Image`
+followed by nothing else is enough. This is the failure mode the "installing is
+not importing" note was reaching for and still didn't catch, because **importing
+is not exiting**: the import prints no error, the work succeeds, and the process
+dies on the way out. Anything that imports PIL and returns — a Celery worker, a
+management command, a shell `&&` chain — fails on a signal while looking
+correct. Task 01 therefore had to move Pillow after all, to **9.5.0**: quiet on
+3.10, still has `Image.ANTIALIAS`, and ships a cp310 wheel so the sdist build
+and its libjpeg hazard go away entirely.
+
+**What survives of the decoupling claim** is the part that matters for
+sequencing: the `ANTIALIAS` removal is still its own change, because 9.5.0 keeps
+the constant. Task 07 now starts from 9.5.0 rather than 6.2.2 and is otherwise
+unchanged. The measurement lesson is the general one: *installs* was checked,
+then *imports* was checked, and **exit status** was the third thing nobody
+thought to check.
+
+**The original (now superseded) reasoning:** the Pillow bump is decoupled from
+the interpreter, since 6.2.2 runs on
 3.10. It still has to happen eventually, and the trap is unchanged: `Image.ANTIALIAS`
 was removed in Pillow 10, and seven non-test call sites still use it —
 `core/images/utils.py:42`, `core/images/upload.py` (four), `potd/models.py:25`,

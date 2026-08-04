@@ -175,6 +175,125 @@ running it from inside a subdirectory silently answers a narrower question.
 **Next: Step 13** — **Python 3.7 → 3.10 first, then Django 3.2 → 4.2**, carrying
 the `RemovedInDjango40` cleanups deferred from Step 10.
 
+## Step 13 task 01 — Python 3.7 → 3.10 — DONE 2026-08-03
+
+Base image on `python:3.10` with `Django==3.2.25` untouched. **802 tests green**
+(798 + 4, see below), `check` and `makemigrations --check` clean, live smoke
+green. Cold build 26s vs the 3.7 image's 30s. Built from sdist: `mysqlclient`,
+`psycopg2`, `ftfy`, `repoze.timeago`, `coverage`; everything else came from
+wheels, **including Pillow and lxml**.
+
+**Two dependency bumps, not the one the plan predicted.**
+
+`bleach==3.1.5 → 6.4.0` was the expected gate, and it behaved exactly as
+written up: import-time `cannot import name 'Mapping' from 'collections'`. The
+`styles=` removal was as small as the plan argued. **Verified rather than
+asserted**: a 19-case adversarial corpus (script tags, event handlers, inline
+CSS, `javascript:` hrefs, entities, malformed markup) run through both profiles
+on 3.7/bleach-3.1.5-with-`styles=[]` and on 3.10/bleach-6.4.0-without-it came
+back **byte-identical across all 38 outputs** — only the version banner differs.
+6.4.0 is the final release; upstream archived bleach in 2023 for `nh3`.
+
+**`Pillow==6.2.2 → 9.5.0`, which the plan said would not be necessary — this is
+the real finding.** 6.2.2 installs on 3.10 *and imports* on 3.10, and then
+**aborts the interpreter at shutdown**: `free(): invalid pointer`, exit 134.
+Reproduced on arm64 and, under emulation, on **amd64 — so CI and production
+would both have hit it**. `from PIL import Image` and nothing else is enough to
+trigger it; oddly, doing real image work first sometimes exits clean, which is
+what makes it easy to miss. Impact is that any process importing PIL and
+returning normally dies on a signal: a Celery worker looks crashed to its
+supervisor, a management command fails a shell's `&&`. 9.5.0 is quiet, ships a
+cp310 wheel, and **keeps `Image.ANTIALIAS`** — so task 07 still owns the
+`ANTIALIAS` removal, now starting from 9.5.0 instead of 6.2.2, with the
+DeprecationWarning at all 7 sites making that work visible.
+
+**The measurement lesson generalizes past this project.** The 2026-08-02 pass
+checked *installs*. A follow-up caught that **installing is not importing**
+(bleach). This task found the third rung: **importing is not exiting.** The
+import is silent, the work succeeds, and the process dies on the way out — so a
+probe that ends in `print('ok')` reports success on a build that is broken.
+Check the exit status, not the output.
+
+**The libjpeg hazard the task file warned about did not fire, and the reason is
+worth keeping.** 6.2.2's sdist build *did* find libjpeg on the 3.10 base
+(`features.check('jpg')` was True), so the predicted silent-codec-loss never
+happened — but only by luck of what the Debian base ships. Moving to 9.5.0
+removes the exposure properly, since it installs from a wheel and never
+compiles. The Dockerfile comment now names the check instead of asserting the
+outcome. Also corrected there: the base is **Trixie**, not Bullseye, so the
+`archive.debian.org` note and the "Bullseye's psql would be older" aside are
+both gone, along with the `pip<24.1` cap.
+
+**A pre-existing test bug surfaced while editing those exact lines.**
+`core/tests/test_html.py` had **two methods both named `test_comments`** — the
+second shadowed the first, so the `comments` profile assertion had never run.
+Renamed to `test_news`, which is what it always was. That plus three new
+behavioral tests (disallowed tags, style attribute, event handler) is the
+798 → 802 delta. One of the three failed on first write and **the code was
+right**: `strip=True` drops the tag and keeps its text, so
+`<script>alert(1)</script>` yields the inert string `alert(1)`, identical on
+old and new bleach. The assertion was corrected to the real behavior.
+
+**Pillow 6 → 9 audit, prompted by Brian asking what a three-major-version jump
+could break that no test would catch. Answer: exactly one thing, and it did.**
+The whole PIL surface the non-test code touches was diffed across 6.2.2 and
+9.5.0 against a byte-identical fixture — `Image.open`, `thumbnail`, `resize`,
+the four `transpose` constants, `ImageFile.Parser`, `_getexif`, JPEG re-save,
+truncation and corrupt-input handling, and CMYK/grayscale/progressive/palette/
+16-bit/LA modes.
+
+**`thumbnail()` pixel output changed. Nothing else did, and nothing broke.**
+
+| Size | max channel Δ | mean Δ | pixels differing |
+|---|---|---|---|
+| 120×120 | 25/255 | 0.74 | 23.3% |
+| 64×64 | 9/255 | 0.63 | 33.3% |
+| 32×32 | 7/255 | 0.63 | 49.7% |
+
+Sub-perceptual, on a deliberately harsh fixture (high-frequency noise; real
+photos drift less). **`resize()` was byte-identical** — so this touches
+`core/images/upload.py:96,104,138,146` and `ssl_images.py:101`, and not
+`potd`/`utils`. No test could have caught it: the image tests mock PIL
+wholesale, which is the same blind spot that makes the six `ANTIALIAS`
+assertions useless.
+
+**Two causes, and the obvious one is only half the story.** `reducing_gap`
+(Pillow 7.0, a `reduce()` pre-pass) accounts for 64×64 and 32×32 — passing
+`reducing_gap=None` restores the old hash there. It does **not** account for
+120×120, where default and `reducing_gap=None` agree and both differ from 6.2.2.
+Worth remembering before attributing a future shift to `reducing_gap`.
+
+**Verified unchanged**, which is the more useful half of the result: `_getexif()`
+still present and returning the orientation tag, so `orient_image` still rotates
+uploads; all four `transpose()` constants byte-identical; `ImageFile.Parser`
+identical including `.format`; JPEG re-save byte-identical; `MAX_IMAGE_PIXELS`
+unchanged; truncated files rejected identically at 90% and 50%; and CMYK,
+progressive, 16-bit and palette images all still round-trip. `Image.open()` now
+raises `UnidentifiedImageError` rather than bare `OSError` on garbage — it
+subclasses `OSError` and `bio/forms.py:94` catches `IOError`, so it is still
+caught, and the only way to break it is to narrow that clause.
+
+**Consequence for task 07, applied:** its AC4 said thumbnails should come back
+"byte-identical or near it, since `ANTIALIAS` aliased `LANCZOS`." The premise is
+right and the test is wrong — the rename cannot move a pixel, but a version jump
+can and just did, so a hash check fails for reasons that do not matter. AC4 now
+asks for a **tolerance** (max channel Δ ≤ 25/255, mean ≤ 1.0 — the band this
+jump produced) and requirement 5 says measure perceptually rather than by hash.
+
+**A related find on the same question, also folded into task 07:** `.format` is
+`None` after `crop()`/`resize()` (new objects) but survives `thumbnail()` (in
+place). `potd/models.py:66` and `bio/forms.py:98` each capture the format one
+line *before* the scale to work around it, with no comment saying why — and the
+ANTIALIAS edits land right beside both. That is the likeliest source of the
+past PNG/JPEG trouble Brian mentioned: it presents as one format breaking and
+the other not, depending purely on which helper the path used.
+
+**Smoke note, so the next person doesn't repeat it:** `/news/` 404s because
+**there is no such route** — `news/urls.py` mounts only subpaths (`date/`,
+`archive/`, `categories/`, `tags/`, `story/<id>/`, …) and has no empty pattern,
+so the 404 is correct. The news app was then smoked properly at `/news/date/`,
+`/news/archive/`, `/news/categories/` and `/news/tags/`, all 200.
+
 ## PLANNING — Step 13 task files generated, and four plan corrections (2026-08-03)
 
 Eight task files in `.agents/tasks/2026-07-04-modernizing-sg101/step13/`:
