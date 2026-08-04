@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, committed
+## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
 **On Django 4.0.10 / Python 3.10. 811 tests green (unchanged), `check` and
 `makemigrations --check` clean, smoke green.**
