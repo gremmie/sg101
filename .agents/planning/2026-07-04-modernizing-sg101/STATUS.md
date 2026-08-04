@@ -172,8 +172,104 @@ Worth noting that this tag is a full-repo snapshot, not the templates-only tree
 it can appear to be — `git ls-tree` scopes to the shell's current directory, so
 running it from inside a subdirectory silently answers a narrower question.
 
-**Next: Step 13** — **Python 3.7 → 3.10 first, then Django 3.2 → 4.2**, carrying
-the `RemovedInDjango40` cleanups deferred from Step 10.
+**Next: Step 13 task 03** — the Django 4.0 rung, which also decides `USE_TZ`.
+
+## Step 13 task 02 — the RemovedInDjango40 backlog — DONE 2026-08-03, committed
+
+Cleared on Django 3.2.25 where every one of these is still a warning. **811 tests
+green** (802 + 9 new), `check` and `makemigrations --check` clean, and the suite
+passes with **`RemovedInDjango40Warning` promoted to an error**. 50 files,
++124/−67.
+
+The mechanical part went as written: 19 `ifequal`/`ifnotequal` tags, the seven
+pure renames (`providing_args`, `force_text`→`force_str`,
+`urlquote`→`urllib.parse.quote`, `ugettext_lazy`→`gettext_lazy`), the four
+`is_ajax` guards, and all 32 `from __future__` lines. Three things were not as
+written.
+
+**The inventory was missing an item, and it is the one that would have broken
+task 03.** Running the suite with the warning promoted to an error surfaced
+**`Passing None for the middleware get_response argument`** — 11 tests across
+`core/tests/test_middleware.py` (×2) and `wiki/tests/test_middleware.py`, all
+constructing middleware bare. Django 3.2's `MiddlewareMixin` carries the comment
+`# RemovedInDjango40Warning: when the deprecation ends, replace with: def
+__init__(self, get_response):`, so in 4.0 it becomes a **required positional
+argument** and a bare `WhosOnline()` is a `TypeError` at construction.
+
+**Why no grep would have found it:** every other item in this task is an
+app-code API *usage* with a name to search for. This one is a test-construction
+pattern, triggered by the **absence** of an argument. Nothing in the source text
+says "deprecated." It exists only in tests because Django's own handler always
+passes the real next-link as `get_response`; production was never affected. The
+fix passes `lambda request: HttpResponse()` — never invoked, since these tests
+drive `process_response`/`process_view` directly, and commented as such. **This
+is the argument for running the deprecation gate as a real gate rather than a
+formality**, and for doing it on a stable rung: had it waited, task 03 would have
+opened with 11 broken tests pooled in with 4.0's genuine breakers.
+
+**`ifequal` is 19 lines across 7 files, not 17 across 6.** The plan's grep
+searched `ifequal`, and **`ifnotequal` does not contain it as a substring** —
+neither does `endifnotequal` contain `endifequal` — so
+`sg101/templates/bio/members.html` was invisible to the count. Worth remembering
+as a grep shape, not just a miscount.
+
+**The `is_ajax` swap is a pure refactor, contrary to the task file's warning.**
+Django 3.2's method is *literally* `self.META.get('HTTP_X_REQUESTED_WITH') ==
+'XMLHttpRequest'`, and `request.headers` is an `HttpHeaders`
+(`CaseInsensitiveMapping`) built from META by stripping `HTTP_` and mapping
+`_`→`-`. Same key, same comparison. The removal rationale — that the method
+detects jQuery rather than AJAX — is a statement about the *method's* honesty,
+not about the replacement's equivalence. That design concern is real but
+**pre-existing and unchanged**: all three photo endpoints are driven by jQuery
+Form Plugin's `ajaxForm()` through `$.ajax`, which sets the header. A future
+port to `fetch()` breaks those guards, but it would have broken them under
+`is_ajax()` too. Noted in the helper's docstring so whoever modernizes that JS
+trips over it. The helper lives in `core/functions.py` beside `get_ip(request)` —
+same shape, same module both callers already import from — rather than repeating
+the magic string four times.
+
+**`from __future__`: migrations included** (16 app files + 16 migrations). On
+Python 3 `unicode_literals` is definitionally a no-op, so the edit cannot change
+migration behavior, and the suite rebuilds the test DB from scratch on every run,
+applying all of them. Leaving 16 behind would make every future sweep re-triage
+the same 32 hits.
+
+**AC6 exposed a coverage gap that had nothing to do with this change.** Dropping
+`created=` from a `notify_*` helper left the suite green across 297 forums+search
+tests. The receivers in `forums/latest.py` read `kwargs['created']` directly and
+the helpers send with **`send_robust`, which swallows the resulting `KeyError`** —
+so a dropped argument costs a queued Celery task and reports nothing. Added four
+tests pinning which task each helper reaches; both mutations now caught.
+(`providing_args` itself was never the risk: it appears **3 times in all of
+`dispatcher.py`** — signature, `is not None` check, warning text — and is never
+stored or read. Django's own words: "purely documentational.")
+
+**Two dead templates converted anyway.** `core/pagination_query.html` has **zero
+references anywhere**, and `ygroup/pagination.html` is reachable only from
+`ygroup/thread.html`/`thread_list.html`, which the views bypass in favor of the
+`v3/` variants. Converted so they cannot fail a later grep, but no test exercises
+them — which is why the conversion was verified by rendering old-vs-new directly
+(38 comparisons, 0 differences, harness mutation-checked) rather than by the
+suite. Prune candidates for Step 19/20.
+
+**Two findings left alone, both pre-existing.** `tools/filter_posts.py` and
+`tools/translate_yahoo_group.py` are **still Python 2** — `print` statements,
+they do not compile on Py3 (verified against HEAD, so not caused here). One-time
+historical import scripts; prune candidates. And the **Django 4.1 backlog is
+exactly one item**: `django-tagging` sets `default_app_config`, which aborts at
+`django.setup()` under a 4.1 gate. It is site-packages, so it is a dependency
+bump for task 04/06.
+
+**Two process traps, each of which cost a run and produced convincing garbage.**
+`manage.py test` under a wrapper script needs
+`os.environ['DJANGO_SETTINGS_MODULE'] = ...` — **`setdefault` is a no-op**
+because the container already exports `sg101.settings.docker`, so `django.setup()`
+binds dev settings before `--settings` can apply, and the debug toolbar produces
+**58 failures / 351 errors** that look exactly like the noise recorded at Step 12
+task 07. Separately, **zsh does not word-split unquoted parameters**: a
+`$TEST_LABELS` variable holding three labels is passed as one bogus label, so
+baseline and all three mutants failed *identically* — a mutation run that proves
+nothing while looking like it proved something.
 
 ## Step 13 task 01 — Python 3.7 → 3.10 — DONE 2026-08-03, PUSHED, CI GREEN
 
