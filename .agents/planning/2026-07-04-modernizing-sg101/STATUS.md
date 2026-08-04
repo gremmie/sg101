@@ -175,11 +175,14 @@ running it from inside a subdirectory silently answers a narrower question.
 **Next: Step 13** — **Python 3.7 → 3.10 first, then Django 3.2 → 4.2**, carrying
 the `RemovedInDjango40` cleanups deferred from Step 10.
 
-## Step 13 task 01 — Python 3.7 → 3.10 — DONE 2026-08-03
+## Step 13 task 01 — Python 3.7 → 3.10 — DONE 2026-08-03, PUSHED, CI GREEN
 
 Base image on `python:3.10` with `Django==3.2.25` untouched. **802 tests green**
 (798 + 4, see below), `check` and `makemigrations --check` clean, live smoke
-green. Cold build 26s vs the 3.7 image's 30s. Built from sdist: `mysqlclient`,
+green. Cold build 26s vs the 3.7 image's 30s. `cc0ea88` (code) + `27d8bc6`
+(planning); **CI green on the first run against the 3.10 image**, which also
+settled the one thing local work could not: the Pillow abort had been reproduced
+on x86_64 only under emulation, and CI is the real thing. Built from sdist: `mysqlclient`,
 `psycopg2`, `ftfy`, `repoze.timeago`, `coverage`; everything else came from
 wheels, **including Pillow and lxml**.
 
