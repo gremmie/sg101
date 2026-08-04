@@ -7,9 +7,14 @@ from lxml import etree
 from django.conf import settings
 
 
-# Each entry in the _CLEAN_PROFILES dict is a profile name -> 3-tuple pair. The
-# tuple consists of (allowed_tags_list, allowed_attributes_dict,
-# allowed_styles_list)
+# Each entry in the _CLEAN_PROFILES dict is a profile name -> 2-tuple pair. The
+# tuple consists of (allowed_tags_list, allowed_attributes_dict).
+#
+# There used to be a third element, an allowed-styles list handed to bleach's
+# styles= kwarg. Both profiles held it empty and neither allows a style
+# attribute through in the first place, so it never had anything to permit;
+# bleach strips all inline CSS by default, which is what the empty list was
+# asking for anyway.
 #
 _CLEAN_PROFILES = {
     'comments': (
@@ -22,7 +27,6 @@ _CLEAN_PROFILES = {
             'a': ['href'],
             'img': ['src', 'alt', 'title'],
         },
-        [],
     ),
     'news': (
         [
@@ -37,7 +41,6 @@ _CLEAN_PROFILES = {
             'a': ['href'],
             'img': ['src', 'alt', 'title', 'width', 'height'],
         },
-        [],
     ),
 }
 
@@ -48,10 +51,10 @@ def clean_html(text, profile='comments'):
     if not text:
         return text
 
-    tags, attrs, styles = _CLEAN_PROFILES[profile]
+    tags, attrs = _CLEAN_PROFILES[profile]
 
-    return bleach.clean(text, tags=tags, attributes=attrs, styles=styles,
-        strip=True, strip_comments=True)
+    return bleach.clean(text, tags=tags, attributes=attrs, strip=True,
+        strip_comments=True)
 
 
 class ImageCheckError(Exception):

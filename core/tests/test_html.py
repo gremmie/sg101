@@ -91,18 +91,33 @@ class CleanHtmlTestCase(unittest.TestCase):
         result = clean_html(text)
         self.assertEqual(clean_mock.mock_calls, [
             call('Lorem ipsum', tags=_CLEAN_PROFILES['comments'][0],
-                 attributes=_CLEAN_PROFILES['comments'][1],
-                 styles=_CLEAN_PROFILES['comments'][2], strip=True,
+                 attributes=_CLEAN_PROFILES['comments'][1], strip=True,
                  strip_comments=True),
         ])
 
     @patch('core.html.bleach.clean')
-    def test_comments(self, clean_mock):
+    def test_news(self, clean_mock):
         text = ' Lorem ipsum '
         result = clean_html(text, profile='news')
         self.assertEqual(clean_mock.mock_calls, [
             call('Lorem ipsum', tags=_CLEAN_PROFILES['news'][0],
-                 attributes=_CLEAN_PROFILES['news'][1],
-                 styles=_CLEAN_PROFILES['news'][2], strip=True,
+                 attributes=_CLEAN_PROFILES['news'][1], strip=True,
                  strip_comments=True),
         ])
+
+    def test_strips_disallowed_tags(self):
+        # strip=True drops the tag and keeps its text, which lands in the
+        # output as inert content rather than as script.
+        self.assertEqual(clean_html('<script>alert(1)</script>hi'),
+                         'alert(1)hi')
+
+    def test_strips_style_attribute(self):
+        # Neither profile allows style=, and there is no styles= kwarg any more
+        # telling bleach which declarations to keep. Inline CSS goes.
+        self.assertEqual(clean_html('<p style="color:red">x</p>'),
+                         '<p>x</p>')
+
+    def test_strips_event_handler(self):
+        self.assertEqual(
+            clean_html('<img src="https://example.com/a.png" onerror="alert(1)">'),
+            '<img src="https://example.com/a.png">')

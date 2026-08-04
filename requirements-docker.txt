@@ -45,9 +45,21 @@ psycopg2==2.9.9
 redis==3.5.3            # celery 4.4 / kombu 4.6 redis transport needs >=3.2
 python-memcached==1.59  # only used by production.py CACHES; 1.59 adds Py3
 
-Pillow==6.2.2
+# Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
+# at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64
+# and arm64. It is a use-after-free in the C extension's teardown against a
+# CPython it predates by two years, and it means any process that imports PIL
+# and exits normally dies on a signal: a worker looks like it crashed, a
+# management command fails a shell's error check. 9.5.0 is quiet and is the last
+# release that still has Image.ANTIALIAS, which 7 call sites use -- replacing
+# those is its own change, so this pin stops one version short of needing it.
+Pillow==9.5.0
 lxml==4.9.4
-bleach==3.1.5           # last line keeping the styles= kwarg core/html.py passes
+# bleach 3.1.5 could not import on Python 3.10 (it read Mapping out of
+# collections), so it moved with the interpreter. 6.4.0 is the final release --
+# upstream archived bleach in 2023 in favor of nh3 -- so this pin is at the end
+# of the line rather than behind it.
+bleach==6.4.0
 html5lib==1.1
 Markdown==2.6.11
 docutils==0.16

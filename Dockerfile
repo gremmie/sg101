@@ -1,16 +1,16 @@
-# SG101 image: Python 3.7 / Django 3.2.
+# SG101 image: Python 3.10 / Django 3.2.
 #
-# The interpreter crossed from Python 2.7 to 3.7 back at the Python 3 flip; the
-# Django pin then keeps advancing rung by rung as we climb the LTS ladder (now on
-# 3.2 LTS). The exact pins live in the requirements files -- this base image only
-# fixes the Python minor.
+# The interpreter crossed from Python 2.7 to 3.7 at the Python 3 flip, and from
+# 3.7 to 3.10 when Django 4.0 -- which needs 3.8+ -- came into range. The Django
+# pin then keeps advancing rung by rung as we climb the LTS ladder. The exact
+# pins live in the requirements files; this base image only fixes the Python
+# minor.
 #
-# python:3.7 is EOL and frozen on Docker Hub (Debian Bullseye based). If a fresh
-# build ever can't reach Bullseye's apt mirrors, they've moved to
-# archive.debian.org -- repoint apt there (git history has the Buster recipe from
-# the Python 2.7 image this replaced).
+# 3.10 is the waypoint rather than the 3.8 minimum because it is the only version
+# supported by Django 3.2 *and* by everything through 5.2, which is what let the
+# interpreter move by itself with the Django pin untouched.
 
-FROM python:3.7
+FROM python:3.10
 
 # Don't buffer stdout/stderr (so logs show up immediately) and don't write .pyc.
 ENV PYTHONUNBUFFERED=1 \
@@ -29,10 +29,15 @@ ENV PYTHONUNBUFFERED=1 \
 # comparison is the only thing that catches a conversion which silently shifted
 # or dropped data, and it runs from this image. See the mysqlclient note in
 # requirements.txt before removing either one.
-# lxml and Pillow now install from manylinux wheels on Py3.7, so their C-library
-# -dev headers (libxml2/libxslt, libjpeg/zlib/freetype) are no longer needed.
-# No psql CLI here on purpose: the postgres service image carries a matching one
-# (`docker compose exec postgres psql ...`), and Bullseye's would be older.
+# lxml and Pillow install from manylinux wheels on 3.10, so their C-library -dev
+# headers (libxml2/libxslt, libjpeg/zlib/freetype) are not needed. Check that
+# again after either pin moves: a version with no wheel for this interpreter
+# falls back to an sdist build, and Pillow's will quietly succeed without
+# libjpeg and produce a build that imports fine and cannot open a JPEG. `python
+# -c "from PIL import features; print(features.check('jpg'))"` answers it.
+# No psql CLI here on purpose: the postgres service image carries one matched to
+# the server (`docker compose exec postgres psql ...`), so a second client here
+# would only be a version to keep in step.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -43,8 +48,7 @@ RUN set -eux; \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
-# pip 24.1+ drops Python 3.7; cap it so `--upgrade` stays on the 3.7 line.
-RUN pip install --upgrade "pip<24.1"
+RUN pip install --upgrade pip
 
 WORKDIR /app
 
