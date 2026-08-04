@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django.core.cache import cache
 from django.contrib.auth.models import User
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.template.defaultfilters import slugify
 from django.urls import reverse
 

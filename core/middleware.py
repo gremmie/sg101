@@ -7,7 +7,7 @@ from django.contrib.auth import logout
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 
-from core.functions import get_ip
+from core.functions import get_ip, is_ajax
 from core.whos_online import report_user, report_visitor
 
 
@@ -46,7 +46,7 @@ class WhosOnline(MiddlewareMixin):
         # the auth middleware got a chance to run. If this is the case, just
         # bail out. We also ignore AJAX requests.
 
-        if not hasattr(request, 'user') or request.is_ajax():
+        if not hasattr(request, 'user') or is_ajax(request):
             return response
 
         if request.user.is_authenticated:

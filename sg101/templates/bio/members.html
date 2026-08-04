@@ -43,8 +43,8 @@ date they joined the site.
          <td>{{ u.profile.location }}</td>
          <td>{{ u.date_joined|date:"N d, Y" }}</td>
          <td>
-            {% ifnotequal user u %}<a href="{% send_pm_url u.username %}">
-               <i class="fi-comment size-21" title="Send private message"></i></a>{% endifnotequal %}
+            {% if user != u %}<a href="{% send_pm_url u.username %}">
+               <i class="fi-comment size-21" title="Send private message"></i></a>{% endif %}
             {% if not u.profile.hide_email %}<a href="mailto:{{ u.email }}">
                <i class="fi-mail size-21" title="Send Email"></i></a>{% endif %}
          </td>

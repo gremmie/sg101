@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 
+from core.functions import is_ajax
 from user_photos.forms import HotLinkImageForm, UploadForm
 from user_photos.models import Photo
 from user_photos.s3 import delete_photos
@@ -61,7 +62,7 @@ def upload_ajax(request):
     """
     if not request.user.is_authenticated:
         return HttpResponseForbidden('Please login to use this service')
-    if not request.is_ajax() or request.method != 'POST':
+    if not is_ajax(request) or request.method != 'POST':
         return HttpResponseNotAllowed('This method is not allowed')
 
     ret = {'success': False, 'msg': '', 'url': ''}
@@ -100,7 +101,7 @@ def upload_ajax_v3(request):
     if not request.user.is_authenticated:
         ret['error_msg'] = 'Please login to use this service'
         return JsonResponse(ret, status=403)
-    if not request.is_ajax() or request.method != 'POST':
+    if not is_ajax(request) or request.method != 'POST':
         ret['error_msg'] = 'This method is not allowed'
         return JsonResponse(ret, status=405)
 
@@ -216,7 +217,7 @@ def hotlink_image(request):
     if not request.user.is_authenticated:
         ret['error_msg'] = 'Please login to use this service'
         return JsonResponse(ret, status=403)
-    if not request.is_ajax() or request.method != 'POST':
+    if not is_ajax(request) or request.method != 'POST':
         ret['error_msg'] = 'This method is not allowed'
         return JsonResponse(ret, status=405)
 

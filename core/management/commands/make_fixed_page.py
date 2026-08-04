@@ -10,7 +10,6 @@ This command reads input files from the directory PROJECT_PATH/fixed and writes
 the HTML output to PROJECT_PATH/templates/fixed.
 
 """
-from __future__ import with_statement
 import os.path
 import glob
 

@@ -8,11 +8,11 @@ Page 1 of 1
 {% endif %}
 {% for num in page_obj.page_range %}
 {% if num %}
-{% ifequal num page_obj.number %}
+{% if num == page_obj.number %}
 <li class="current">{{ num }}</li>
 {% else %}
 <li class="page"><a href="./?page={{ num }}" title="Go to page {{ num }}">{{ num }}</a></li>
-{% endifequal %}
+{% endif %}
 {% else %}
 <li>&hellip;</li>
 {% endif %}

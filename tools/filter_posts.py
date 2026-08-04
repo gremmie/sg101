@@ -3,7 +3,6 @@ filter_posts.py - A script to filter out posts that have no parent topic in the
 new database. 
 
 """
-from __future__ import with_statement
 import csv
 import optparse
 import sys

@@ -1,5 +1,4 @@
 """This module contains routines for downloading files."""
-from __future__ import print_function
 
 import logging
 import mimetypes

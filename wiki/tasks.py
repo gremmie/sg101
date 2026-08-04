@@ -2,7 +2,6 @@
 Celery tasks for the wiki app.
 
 """
-from __future__ import absolute_import
 
 import datetime
 import logging

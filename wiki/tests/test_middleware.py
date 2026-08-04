@@ -24,7 +24,7 @@ class MiddleWareTestCase(TestCase):
         self.user = User.objects.create_user(u'Sérgio', u'test@example.com',
                 u'password')
         self.conn = get_redis_connection()
-        self.mw = WikiMiddleware()
+        self.mw = WikiMiddleware(lambda request: HttpResponse())
 
         # Redis outlives the per-test database rollback, and any earlier test
         # that logs in over HTTP goes through this middleware and leaves a key

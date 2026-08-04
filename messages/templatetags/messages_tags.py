@@ -2,9 +2,10 @@
 Template tags for the messages application.
 
 """
+from urllib.parse import quote
+
 from django import template
 from django.urls import reverse
-from django.utils.http import urlquote
 
 from messages.models import Message
 
@@ -28,4 +29,4 @@ def unread_messages(context):
 @register.simple_tag
 def send_pm_url(username):
     """Returns the URL to send a PM to a given username"""
-    return reverse('messages-compose') + '?to={}'.format(urlquote(username))
+    return reverse('messages-compose') + '?to={}'.format(quote(username))

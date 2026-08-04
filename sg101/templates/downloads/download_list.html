@@ -9,16 +9,16 @@
 
 {% if page.object_list %}
 <ul class="menu">
-   <li{% ifequal s "title" %} class="active"{% endifequal %}>
+   <li{% if s == "title" %} class="active"{% endif %}>
       <a href="{% url 'downloads-category' slug=category.slug sort="title" %}">Title</a>
    </li>
-   <li{% ifequal s "date" %} class="active"{% endifequal %}>
+   <li{% if s == "date" %} class="active"{% endif %}>
       <a href="{% url 'downloads-category' slug=category.slug sort="date" %}">Date</a>
    </li>
-   <li{% ifequal s "rating" %} class="active"{% endifequal %}>
+   <li{% if s == "rating" %} class="active"{% endif %}>
       <a href="{% url 'downloads-category' slug=category.slug sort="rating" %}">Rating</a>
    </li>
-   <li{% ifequal s "hits" %} class="active"{% endifequal %}>
+   <li{% if s == "hits" %} class="active"{% endif %}>
       <a href="{% url 'downloads-category' slug=category.slug sort="hits" %}">Hits</a>
    </li>
 </ul>

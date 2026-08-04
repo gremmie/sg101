@@ -131,6 +131,16 @@ def get_ip(request):
     return ip
 
 
+def is_ajax(request):
+    """Returns True if the request was made by our client-side Javascript.
+
+    jQuery sets this header on every XHR it sends, and jQuery is what drives
+    the site's asynchronous forms. Note this only detects requests made that
+    way: a hand-rolled fetch() would have to set the header itself.
+    """
+    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+
 def get_page(qdict):
     """Attempts to retrieve the value for "page" from the given query dict and
     return it as an integer. If the key cannot be found or converted to an

@@ -7,7 +7,6 @@ How to import:
 mysqlimport --fields-optionally-enclosed-by=\" --fields-terminated-by=, --fields-escaped-by="" --lines-terminated-by="\r\n" --user=root --password --local --default-character-set=utf8 sg101_yahoo_group /path/to/post.csv
 
 """
-from __future__ import with_statement
 import csv
 import optparse
 import datetime

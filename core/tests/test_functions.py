@@ -5,7 +5,7 @@ from django.http.request import HttpRequest
 from mock import call, patch, mock_open, Mock
 
 from core.functions import (TemporaryFile, remove_file, send_mail, email_admins,
-    email_managers, get_full_name, copyright_str, get_ip, get_page,
+    email_managers, get_full_name, copyright_str, get_ip, get_page, is_ajax,
     quote_message)
 
 
@@ -171,6 +171,36 @@ class GetIpTestCase(unittest.TestCase):
         self.request.META['HTTP_X_FORWARDED_FOR'] = '$%#!'
         ip = get_ip(self.request)
         self.assertIsNone(ip)
+
+
+class IsAjaxTestCase(unittest.TestCase):
+    def setUp(self):
+        self.request = HttpRequest()
+
+    def test_no_header(self):
+        self.assertFalse(is_ajax(self.request))
+
+    def test_header_present(self):
+        self.request.META['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest'
+        self.assertTrue(is_ajax(self.request))
+
+    def test_other_value_is_not_ajax(self):
+        self.request.META['HTTP_X_REQUESTED_WITH'] = 'fetch'
+        self.assertFalse(is_ajax(self.request))
+
+    def test_value_is_case_sensitive(self):
+        self.request.META['HTTP_X_REQUESTED_WITH'] = 'xmlhttprequest'
+        self.assertFalse(is_ajax(self.request))
+
+    def test_matches_the_meta_key_it_replaced(self):
+        """The header lookup must read the same value the removed
+        HttpRequest.is_ajax() read out of META."""
+        for value in ['XMLHttpRequest', 'xmlhttprequest', 'fetch', '', None]:
+            request = HttpRequest()
+            if value is not None:
+                request.META['HTTP_X_REQUESTED_WITH'] = value
+            old = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+            self.assertEqual(is_ajax(request), old, msg=repr(value))
 
 
 class GetPageTestCase(unittest.TestCase):

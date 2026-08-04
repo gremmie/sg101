@@ -2,7 +2,6 @@
 Celery tasks for the core application.
 
 """
-from __future__ import absolute_import
 
 import django.core.mail
 from celery import shared_task

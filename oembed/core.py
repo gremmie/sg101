@@ -2,7 +2,6 @@
 This module contains core functionality for the oembed application.
 
 """
-from __future__ import print_function
 
 from contextlib import closing
 import json

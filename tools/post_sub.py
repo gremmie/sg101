@@ -11,7 +11,6 @@ LINES TERMINATED BY '\r\n';
 SHOW WARNINGS;
 
 """
-from __future__ import with_statement
 import csv
 import re
 import optparse

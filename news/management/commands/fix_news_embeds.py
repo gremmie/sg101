@@ -2,7 +2,6 @@
 Custom management command to find and fix the old YouTube <object> embeds in the
 news stories.
 """
-from __future__ import print_function
 
 from urllib.parse import urlparse
 from urllib.error import HTTPError

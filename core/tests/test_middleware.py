@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
+from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from mock import patch, Mock
 
@@ -13,7 +14,9 @@ class InactiveUserMiddlewareTestCase(TestCase):
         self.user = User.objects.create_user(username='pjmoto',
                                              email='member33@example.com',
                                              password='secret')
-        self.middleware = InactiveUserMiddleware()
+        # These tests call the middleware hooks directly, so get_response is
+        # never invoked; it just has to be there.
+        self.middleware = InactiveUserMiddleware(lambda request: HttpResponse())
 
     @patch('core.middleware.logout')
     def test_does_nothing_for_unauthed_user(self, mock_logout):
@@ -43,7 +46,7 @@ class WhosOnlineMiddlewareTestCase(TestCase):
         self.user = User.objects.create_user(username='pjmoto',
                                              email='member33@example.com',
                                              password='secret')
-        self.middleware = WhosOnline()
+        self.middleware = WhosOnline(lambda request: HttpResponse())
         self.response = Mock()
 
     @patch('core.middleware.report_visitor')

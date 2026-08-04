@@ -5,7 +5,6 @@ A management command to export a forum topic by rendering it through a given
 template.
 
 """
-from __future__ import with_statement
 import re
 
 from django.conf import settings

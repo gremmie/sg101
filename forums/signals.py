@@ -10,14 +10,14 @@ import django.dispatch
 #   sender - the topic model instance 
 #   created - True if the topic is new, False if updated
 
-topic_content_update = django.dispatch.Signal(providing_args=['created'])
+topic_content_update = django.dispatch.Signal()
 
 # This signal is sent when a post has had its textual content (body) changed.
 # The provided arguments are: 
 #   sender - the post model instance 
 #   created - True if the post is new, False if updated
 
-post_content_update = django.dispatch.Signal(providing_args=['created'])
+post_content_update = django.dispatch.Signal()
 
 
 def notify_new_topic(topic):

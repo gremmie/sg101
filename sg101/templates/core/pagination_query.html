@@ -5,11 +5,11 @@
 {% endif %}
 {% for num in page.page_range %}
 {% if num %}
-{% ifequal num page.number %}
+{% if num == page.number %}
 <li class="current">{{ num }}</li>
 {% else %}
 <li class="page"><a href="../{{ num }}/?query={{ query }}" title="Go to page {{ num }}">{{ num }}</a></li>
-{% endifequal %}
+{% endif %}
 {% else %}
 <li>&hellip;</li>
 {% endif %}
