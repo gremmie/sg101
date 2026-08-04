@@ -1,11 +1,12 @@
-# Requirements for the Dockerized SG101 dev environment -- Python 3.7 / Django
-# 3.2 LTS. Mirrors the production pins in requirements.txt, plus the dev/test-only
+# Requirements for the Dockerized SG101 dev environment -- Python 3.10 / Django
+# 4.0. Mirrors the production pins in requirements.txt, plus the dev/test-only
 # tools needed to run the suite and dev server in-container.
 
 # --- Runtime (mirror of requirements.txt) ------------------------------------
-Django==3.2.25
+Django==4.0.10
 django-environ==0.4.5  # 12-factor env-var config
-django-tagging==0.5.0
+# django-tagging is vendored into the repo as `tagging/` -- see the note in
+# requirements.txt and in tagging/__init__.py.
 pytz==2021.3
 # six is a transitive dependency only -- see the note in requirements.txt.
 six==1.16.0

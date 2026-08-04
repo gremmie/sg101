@@ -172,7 +172,143 @@ Worth noting that this tag is a full-repo snapshot, not the templates-only tree
 it can appear to be — `git ls-tree` scopes to the shell's current directory, so
 running it from inside a subdirectory silently answers a narrower question.
 
-**Next: Step 13 task 03** — the Django 4.0 rung, which also decides `USE_TZ`.
+**Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, committed
+
+**On Django 4.0.10 / Python 3.10. 811 tests green (unchanged), `check` and
+`makemigrations --check` clean, smoke green.**
+
+**The rung itself cost exactly one breaker, and it was a dependency, not the
+application.** Task 02's backlog work paid off: not one `ifequal`, `is_ajax`,
+`providing_args`, `force_text`, `urlquote` or `ugettext_lazy` surfaced, and
+`django.conf.urls.url` was confirmed free as predicted. The single failure was
+`django-tagging==0.5.0` importing `smart_text`, removed in 4.0 — and it fails at
+*import*, so `django.setup()` aborts and nothing runs at all until it is fixed.
+That is worth noting as a shape: a rung can look catastrophic (zero tests
+runnable) and be three lines.
+
+### `USE_TZ`: decided on evidence, and the plan was wrong about which release forces it
+
+**Set to `False` explicitly** in `sg101/settings/base.py`, with the conversion
+scheduled as new **task 09** (see below).
+
+**The database was never the problem.** Measured across the whole history: a
+2006 post the app reads as `19:24:30` is stored as `2006-02-27 01:24:30 UTC`;
+the 2011 and 2026 samples line up the same way. Django sets the connection's
+`TimeZone` to `TIME_ZONE` while `USE_TZ` is off, so PostgreSQL puts every naive
+value on the real timeline. **Turning `USE_TZ` on is a settings change, not a
+data migration** — luck the PostgreSQL move bought, since MySQL's offsetless
+`datetime` would have forced rewriting every column.
+
+**The application is the problem**, which is why it is deferred: 79 naive
+builders (75 `datetime.now()`, 3 `utcnow()`, 1 `datetime.today()`, and **zero**
+uses of `timezone.now()`), 3 `pytz.localize()` calls that break outright, and
+8 lines of month/year rollup in `donations`/`news` that would silently file a
+7pm-Chicago record under the next month. Cross-cutting behavior work does not
+belong on a version rung.
+
+**Two corrections to the task file and plan, both from reading 4.0's source
+rather than trusting the write-up:**
+
+1. **The `USE_TZ` default flips in 5.0, not 4.0.** 4.0 only *warns*, and only
+   while the setting is unset (`conf/__init__.py:205`) — so setting it silences
+   the warning outright.
+2. **`USE_L10N`'s default *does* flip in 4.0** (`global_settings.USE_L10N` is
+   `True`), and nothing in the plan mentioned it. **Measured rather than
+   assumed, and it is a no-op here**: with `USE_I18N = False` and
+   `LANGUAGE_CODE = 'en-us'`, every format constant is unchanged except
+   `DATETIME_INPUT_FORMATS`, which only *widens* (adds date-only `%Y-%m-%d`),
+   and numbers render identically because `USE_THOUSAND_SEPARATOR` is off.
+   **Deliberately left unset** — setting it buys nothing and adds a
+   `RemovedInDjango50Warning`, since the setting is itself deprecated in 4.0.
+
+Verified by diffing a characterization script (storage, ORM values, and output
+rendered through the real `forum_date`/`current_forum_time` tags for both an
+anonymous visitor and a user on `US/Pacific`) before and after: **byte-identical
+except `USE_L10N` and the wall clock.** No repeat of Step 11 task 05's 5–6 hour
+shift.
+
+### django-tagging is vendored — the fix was 3 lines, the decision was not
+
+0.5.0 is the final release (upstream stopped 2018) and it breaks on 4.0
+(`smart_text`) and again on 4.1 (`default_app_config`). Brian's call: **vendor
+now, explore replacements later.** Copied in as `tagging/` under its original
+package name, so the app label, its three migrations and their tables all still
+match — verified: 1,006 tags and 4,561 tagged items intact, `TaggingConfig`
+still auto-detected without `default_app_config`, and `/news/story/1831/`
+renders its three tag links. Its own `tests/` (1,371 of 3,020 lines) is **not**
+vendored: it ships its own `settings.py` and `urls.py`, and `manage.py test`
+would discover and fail it.
+
+**Retirement is scheduled into Step 19**, beside the deferred `elsewhere`
+rework. Surface is fully mapped and small — only `news` uses it. `django-taggit`
+is the like-for-like, but **a Postgres `ArrayField` is the more interesting
+candidate**: the `TaggedItem` join table and its content-type indirection exist
+to support tagging *any* model, and this site tags exactly one. Also noted for
+that step: `sg101/templates/fixed/colophon.html:14` credits django-tagging with
+a long-dead `code.google.com` link, on a live page.
+
+### pytz: all 17 sites audited, all deferred — and the audit found a 93.6% problem
+
+Full register in `research/pytz-audit.md`. **The plan had `zoneinfo` pencilled
+against the 4.1 rung; that sequencing is wrong** — nothing forces it (the app
+uses pytz *directly*, not through Django, so no rung breaks), and while `USE_TZ`
+is `False` the `localize()` idiom is correct and load-bearing rather than
+legacy. Converting before task 09 means converting twice. **Moved to task 09.**
+
+**The finding that matters: `zoneinfo` cannot resolve the timezone names 93.6%
+of users have stored.** `tools/tz.py` built the profile dropdown from
+`pytz.common_timezones`, which carries legacy names a stock slim image's tzdata
+does not — `ZoneInfo('US/Pacific')` raises. **14,248 of 15,227 profiles** are on
+one of those 17 names, `US/Pacific` alone being 12,619. And
+`forum_tags.py:33` hardcodes `DEFAULT_TZ = timezone('US/Pacific')` at *module
+level*, so a naive swap raises at import and the forums stop rendering for
+everyone, not just the 93.6%. The PyPI **`tzdata`** package fixes all of it
+(486 → 599 zones available) — **and the lesson under that is the durable one:
+`zoneinfo` reads the host's tzdata while pytz bundles its own**, so swapping
+makes timezone correctness depend on image packaging that can differ between
+dev, CI and the Step 21 deploy host, with no test that would catch it.
+
+Two more, both measured: **`pytz.NonExistentTimeError` has no `zoneinfo`
+equivalent** — on 2:30 AM of a spring-forward date pytz raises and `zoneinfo`
+silently returns `-06:00`, so `forums/latest.py:317` currently *detects* the DST
+gap and a swap deletes that detection invisibly. And **`zoneinfo` raises two
+exception types for bad zone names**, so a one-to-one port of
+`except pytz.UnknownTimeZoneError` turns path-shaped input like
+`'../etc/passwd'` (a `ValueError`, not `ZoneInfoNotFoundError`) into an
+unhandled 500 on a user-controlled field in `bio/forms.py`.
+
+### `CSRF_TRUSTED_ORIGINS` is genuinely free
+
+Not merely absent from the repo: no settings module defines *or reads* it, the
+chain is `production.py` → `base.py` with **no local-override escape hatch**,
+and `env.read_env()` feeds a fixed key set (DB creds, `SECRET_KEY`, AWS, GCal,
+reCAPTCHA) that does not include it. So there is no mechanism by which
+production could be setting it, and 4.0's new scheme requirement costs nothing.
+
+### New task 09 — turn `USE_TZ` on
+
+Written this rung, scheduled **last in Step 13, on 4.2, with no version bump in
+flight**. Django 5.0 flips the default, so Step 14 cannot start with it open,
+and pooling timezone semantics with a version bump is exactly what the
+one-variable-per-rung discipline exists to prevent. It also inherits the pytz
+work. All measurements above are carried into the task file so nothing needs
+re-deriving — with an instruction to re-measure anyway, since tasks 04–08 land
+in between.
+
+### Noted, deliberately not fixed here
+
+`core/functions.py:120` emits `DeprecationWarning: invalid escape sequence '\d'`
+— a missing raw-string prefix that predates this work and is unrelated to 4.0.
+It becomes a `SyntaxError` in a future Python. Left alone to keep every fix in
+this rung attributable to it; it is noise in the deprecation gate until someone
+takes it.
+
+**The 4.1 backlog is 9 apps, not 1.** Task 02 recorded `default_app_config` as a
+single item (`django-tagging`); running 4.0 with warnings visible names
+**antispam, bio, downloads, forums, messages, potd, weblinks, wiki** as well.
+Vendoring tagging already cleared its one, so **8 remain for task 04.**
 
 ## Step 13 task 02 — the RemovedInDjango40 backlog — DONE 2026-08-03, committed
 
