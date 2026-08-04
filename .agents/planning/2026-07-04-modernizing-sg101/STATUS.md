@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-01
+**Last updated:** 2026-08-03
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -174,6 +174,69 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13** — **Python 3.7 → 3.10 first, then Django 3.2 → 4.2**, carrying
 the `RemovedInDjango40` cleanups deferred from Step 10.
+
+## PLANNING — Step 13 task files generated, and four plan corrections (2026-08-03)
+
+Eight task files in `.agents/tasks/2026-07-04-modernizing-sg101/step13/`:
+01 Python 3.10 base image (+ the forced bleach bump), 02 the `RemovedInDjango40`
+backlog, 03/04/05 the Django 4.0 → 4.1 → 4.2 rungs one apiece, 06 dependency
+alignment, 07 Pillow/ANTIALIAS, 08 Markdown. Brian settled three scope calls
+during generation: **three separate rung tasks** rather than one traversal (the
+one-variable-per-rung discipline, and how Step 10 was actually executed);
+**Pillow and Markdown stay in Step 13** rather than drifting to Step 14; and
+**`USE_TZ` gets investigated and decided inside the 4.0 task**, not pinned
+blindly nor split out.
+
+**Generating the files re-counted the plan's inventory against the tree, and
+four things came back different.** Recording them because a task file is where
+a wrong number becomes wasted work:
+
+- **`is_ajax` is 4 sites, not 7.** Three of the seven grep hits are in
+  `forums/templatetags/forum_tags.py:117,125`, where `is_ajax` is a **parameter
+  name on the `show_form` tag** — nothing to do with the removed `HttpRequest`
+  method. The real four are `core/middleware.py:49` and
+  `user_photos/views.py:64,103,219`. Worth noticing that **three of the four
+  guard POST endpoints**, so this is an access-control change wearing a
+  refactor's clothes: get the header check wrong and photo upload breaks rather
+  than degrades. Also `providing_args` is **2**, not 3 (`forums/signals.py:13,20`).
+- **`django.conf.urls.url` costs nothing** — zero usages. The one `conf.urls`
+  import is `conf.urls.static.static` (`sg101/urls.py:1`), never removed; 89
+  modules already use `django.urls`. That rung item can come off the list.
+- **The Markdown bump is the biggest single item in Step 13, and the plan had
+  it as a footnote to the logger question.** Both custom extensions use the
+  pre-3.0 API and cannot load on 3.x: `extendMarkdown(self, md, md_globals)`,
+  `md.inlinePatterns.add('del', tag, '>not_strong')`, registry item assignment,
+  and `markdown.util.etree`. The `'>not_strong'` relative placement has **no
+  numeric equivalent** in `Registry.register()`, so the priority has to be
+  re-derived from output. These render `---struck---` and all site autolinking
+  on every post, and a mis-registered pattern **does not raise** — it silently
+  stops working.
+- **The six `ANTIALIAS` test assertions cannot catch the `ANTIALIAS` bug.** Four
+  of them assert against `image_mock.ANTIALIAS`, and a `Mock` returns any
+  attribute asked of it, so they stay green against a Pillow that removed the
+  constant. The bump's real deliverable is a test on a real `PIL.Image`, seen to
+  fail before the swap. Same lesson as Step 12's template comment: **a
+  regression test that has not been watched to fail proves nothing.**
+
+**One new risk, not a correction.** `USE_TZ` **is not set anywhere in
+`sg101/settings/`** — `base.py` has `TIME_ZONE = 'America/Chicago'` (line 28)
+and `CELERY_TIMEZONE` (line 220), and nothing else. So the site runs on Django's
+`False` default, naive datetimes, against the `timestamptz` columns Step 11
+created — the same seam **Step 11 task 05 found every datetime 5–6 hours early
+in**. Task 03 has to characterize what the columns hold before choosing, and set
+it explicitly either way so a later default flip cannot move it silently. pytz
+is genuinely entangled too: 17 sites across 6 modules, including
+`pytz.NonExistentTimeError` and `pytz.common_timezones`, neither of which
+`zoneinfo` has an equivalent for, plus user-supplied zone validation in
+`bio/forms.py`.
+
+**And one caveat on the 2026-08-02 measurement below.** "Builds from sdist" is
+not "installs from a wheel." The Dockerfile dropped the image/XML `-dev` headers
+because Py3.7 got manylinux wheels; a source build on 3.10 needs those libraries
+to link against, and **Pillow built without `libjpeg-dev` builds clean, imports
+clean, and fails on the first JPEG.** The measurement said the pins install — it
+did not say the resulting Pillow can decode anything. Task 01 verifies codec
+support explicitly.
 
 ## PLANNING — Step 13 resequenced interpreter-first (2026-08-02)
 
