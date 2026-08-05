@@ -220,13 +220,10 @@ class MoveTopicForm(forms.Form):
           queryset=Forum.objects.none())
 
     def __init__(self, user, *args, **kwargs):
-        hide_label = kwargs.pop('hide_label', False)
         required = kwargs.pop('required', True)
         super(MoveTopicForm, self).__init__(*args, **kwargs)
         self.fields['forums'].queryset = \
             Forum.objects.forums_for_user(user).order_by('name')
-        if hide_label:
-            self.fields['forums'].label = ''
         self.fields['forums'].required = required
 
 

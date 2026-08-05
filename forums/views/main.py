@@ -721,13 +721,13 @@ def mod_forum(request, slug):
                 _bulk_delete(forum, topic_ids)
                 return HttpResponseRedirect(url)
             elif request.POST.get('move'):
-                form = MoveTopicForm(request.user, request.POST, hide_label=True)
+                form = MoveTopicForm(request.user, request.POST)
                 if form.is_valid():
                     _bulk_move(topic_ids, forum, form.cleaned_data['forums'])
                     return HttpResponseRedirect(url)
 
     if form is None:
-        form = MoveTopicForm(request.user, hide_label=True)
+        form = MoveTopicForm(request.user)
 
     return render(request, 'forums/mod_forum.html', {
         'forum': forum,

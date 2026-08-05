@@ -94,7 +94,10 @@ class GetCommentFormTestCase(TestCase):
     TEMPLATE = Template(
         '{% load comment_tags %}'
         '{% get_comment_form for photo as form %}'
-        '{{ form }}'
+        # as_table rather than a bare {{ form }}: the assertions below only
+        # look for the fields, but naming the style keeps this rendering the
+        # same markup after Django changes what an unqualified form renders as.
+        '{{ form.as_table }}'
         )
 
     def setUp(self):

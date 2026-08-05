@@ -51,7 +51,12 @@
    <input type="submit" value="Toggle Lock" name="lock" />
    <input type="submit" value="Delete" name="delete" /><br />
    <input type="submit" value="Move To:" name="move" />
-   {{ form }}
+   {% comment %}
+   The one field, rendered directly: this control bar is not a table, and a
+   whole-form render puts the field in one -- table rows the browser then
+   discards, and a div once that becomes the default.
+   {% endcomment %}
+   {{ form.forums.errors }}{{ form.forums }}
    <input type="hidden" name="page" value="{{ page.number }}" />
 </div>
 </form>

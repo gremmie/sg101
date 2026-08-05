@@ -1,4 +1,4 @@
-# Dev/test requirements -- Python 3.7 / Django 3.2 LTS. Installs the runtime pins
+# Dev/test requirements -- Python 3.10 / Django 4.1. Installs the runtime pins
 # plus the tools needed to run the test suite and dev server. (In Docker these
 # same tools are inlined into requirements-docker.txt.)
 #
@@ -9,7 +9,8 @@
 mock==4.0.3
 testfixtures==6.18.5
 # debug-toolbar 2.2 caps at Django 3.0; 3.2.x supports Django 2.2-3.2 (and stays
-# on the Python 3.6+ line the frozen 3.7 image needs).
+# on the Python 3.6+ line). It still loads and runs on this rung; the pin moves
+# with the rest of the stack at the dependency-alignment step.
 django-debug-toolbar==3.2.4
 # sqlparse is now pulled in as a runtime dep via -r requirements.txt (Django 2.2
 # requires it); debug-toolbar's SQL panel uses it too.

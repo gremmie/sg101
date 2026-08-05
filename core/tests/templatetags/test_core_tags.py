@@ -253,9 +253,12 @@ class SlideshowImagesTestCase(TestCase):
 
 
 class PostBoxTestCase(TestCase):
-    TEMPLATE = Template('{% load core_tags %}{% post_box form %}')
+    # The tag takes one field, which is what every caller passes it -- see
+    # news/submit_news.html, which supplies this very one.
+    TEMPLATE = Template('{% load core_tags %}{% post_box field %}')
 
     def test_render(self):
-        form = AddNewsForm()
-        rendered = self.TEMPLATE.render(Context({'form': form}))
+        field = AddNewsForm()['short_markup']
+        rendered = self.TEMPLATE.render(Context({'field': field}))
         self.assertIn('div class="v3-editor"', rendered)
+        self.assertIn('<textarea', rendered)

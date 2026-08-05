@@ -1,9 +1,9 @@
 # Requirements for the Dockerized SG101 dev environment -- Python 3.10 / Django
-# 4.0. Mirrors the production pins in requirements.txt, plus the dev/test-only
+# 4.1. Mirrors the production pins in requirements.txt, plus the dev/test-only
 # tools needed to run the suite and dev server in-container.
 
 # --- Runtime (mirror of requirements.txt) ------------------------------------
-Django==4.0.10
+Django==4.1.13
 django-environ==0.4.5  # 12-factor env-var config
 # django-tagging is vendored into the repo as `tagging/` -- see the note in
 # requirements.txt and in tagging/__init__.py.
@@ -78,7 +78,9 @@ requests==2.27.1
 mock==4.0.3
 testfixtures==6.18.5
 # debug-toolbar 2.2 caps at Django 3.0; 3.2.x supports Django 2.2-3.2 and stays on
-# the Python 3.6+ line. Its SQL panel uses sqlparse, pinned in the runtime block.
+# the Python 3.6+ line. Past its supported Django range here but still loading and
+# panelling correctly; the pin moves at the dependency-alignment step. Its SQL
+# panel uses sqlparse, pinned in the runtime block.
 django-debug-toolbar==3.2.4
 # Coverage for the CI report (and local use). <5 keeps a lighter, well-tested
 # line that's fine on Python 3.7.

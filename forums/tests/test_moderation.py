@@ -173,6 +173,37 @@ class ModForumBulkTests(TestCase):
                                     'move': '1', 'forums': str(self.other_forum.id)})
         self.assertEqual(Topic.objects.get(pk=self.t1.id).forum, self.other_forum)
 
+    def test_the_move_control_is_a_bare_select(self):
+        """
+        The control bar renders the destination field and nothing that belongs
+        to a table, since the bar is a <div>. Whole-form rendering would supply
+        the wrapper, and which wrapper it supplies changes between releases.
+
+        """
+        self.client.login(username='admin', password='pw')
+        controls = self._controls(self.client.get(self.url))
+        self.assertIn('<select name="forums"', controls)
+        for markup in ['<tr', '<th', '<td', '<div', '<label']:
+            self.assertNotIn(markup, controls)
+
+    def test_a_move_with_no_destination_shows_the_error(self):
+        """The field error has to survive rendering the field on its own."""
+        self.client.login(username='admin', password='pw')
+        response = self.client.post(self.url, {'topic_ids': [str(self.t1.id)],
+                                               'move': '1'})
+        self.assertEqual(response.status_code, 200)
+        controls = self._controls(response)
+        self.assertIn('errorlist', controls)
+        self.assertIn('This field is required.', controls)
+        self.assertEqual(Topic.objects.get(pk=self.t1.id).forum, self.forum)
+
+    def _controls(self, response):
+        """Returns the markup inside the moderator control bar."""
+        html = response.content.decode('utf-8')
+        opening = '<div class="forum-mod-controls">'
+        start = html.index(opening) + len(opening)
+        return html[start:html.index('</div>', start)]
+
 
 class SpammerToolTests(TestCase):
     fixtures = ['forums.json']
