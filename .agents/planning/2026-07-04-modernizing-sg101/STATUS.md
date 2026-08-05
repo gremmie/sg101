@@ -373,7 +373,77 @@ alignment; pulling it forward would have put two variables in this rung.
 `requirements_dev.txt` still had a `Python 3.7 / Django 3.2 LTS` header, missed
 by tasks 01 and 03, which both updated the other two requirements files. Fixed.
 
+### Carried into task 05: two items in the admin header override
+
+Found after the rung closed, by comparing the running admin against production
+side by side — see the dashboard fix below, which came out of the same look.
+Both live in `sg101/templates/admin/base_site.html`, and both are consequences
+of its `{% block branding %}` override replacing Django's version wholesale.
+
+1. **4.2 — the admin login page loses the light/dark theme toggle.** 4.2 adds
+   `{% include "admin/color_theme_toggle.html" %}` inside `base_site.html`'s
+   `branding` block, guarded on `user.is_anonymous`. Our override supplies its
+   own `branding` and would drop it. **Only the login page is affected**:
+   logged-in staff get the toggle from `userlinks` in `base.html`, which we do
+   not override. Verified by reading Django's own `base_site.html` and
+   `base.html` at 4.2.30.
+2. **5.0 — `site-name` stops being a heading.** 5.0 changes branding from
+   `<h1 id="site-name">` to `<div id="site-name">` for accessibility: the
+   page's `<h1>` is meant to be the content title, not the site name. Our
+   override still emits `<h1 id="site-name">`. Not a 4.2 item; recorded here
+   so it is not rediscovered at Step 14.
+
+**The dashboard mechanism itself is safe the whole way.**
+`{% block nav-global %}`, which `base_site.html` uses to hang the moderation
+dashboard in the header, still exists in the same place inside
+`{% block header %}` in **4.2.30, 5.0.14, 5.1.15 and 5.2.17** — checked by
+grepping each release's `admin/base.html`, not assumed.
+
 **Next: Step 13 task 05** — the Django 4.2 rung.
+
+## Admin dashboard layout fix — DONE 2026-08-04, `1b968a4` (own commit, not part of a rung)
+
+**The moderation dashboard had been rendering at the far right of the admin
+header, level with the user tools, instead of on its own row under the
+branding. It has been that way since Step 10.** Brian caught it by putting a
+production screenshot beside the modernization site; the suite could not see it
+and neither could a version bump.
+
+Django's `#header` became `display: flex` with `justify-content: space-between`
+in **3.2** (confirmed absent in 1.9.13, present in 3.2.25), which turns
+branding, user tools and whatever `nav-global` adds into three flex items
+spread across one row. **The wrapper was a `<div class="clear">`** — exactly
+right under the floated header 1.9 shipped, and completely inert here, because
+**floats and clears do not apply to a flex item**. So it rode through four
+rungs unremarked.
+
+Fixed by giving the wrapper its own id and a full-width flex basis, with the
+header allowed to wrap — the same intent expressed in the layout model the
+admin now uses. The rule sits after `base.css` in the cascade at equal
+specificity (`#header` vs `#header`), so it wins on source order; verified from
+the served page rather than assumed.
+
+Three tests in `core/tests/test_admin.py`, each verified to fail on the fault
+it names. **The third needed a second attempt, and the reason is the recurring
+one:** the first mutation flipped an inner per-count `{% if %}` that the outer
+"is anything pending at all" condition makes unreachable, so the suite stayed
+green and looked like a test without teeth. Mutating the outer guard reproduced
+the fault and the test caught it. Also worth keeping: asserting on
+`dashboard-list` alone cannot work, because `#dashboard-list` is a selector in
+the stylesheet above and is on every admin page whether or not anything is
+pending — the assertion has to name the rendered element.
+
+**Confirmed in the browser, since a layout fix verified only by markup is not
+verified.** It now renders on its own row beneath the branding as production
+does, inset by the 40px of header padding modern Django adds where 1.9 had it
+flush left. 816 tests green.
+
+**Not a defect, and worth recording so it is not chased:** production showed
+`News: 1` where the local site showed only `Calendar: 29`. Local
+`PendingStory.objects.count()` is 0 against 29 event requests — the snapshot
+simply predates that submission. The dashboard hides a zero by design.
+
+## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
 ## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
