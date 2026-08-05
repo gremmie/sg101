@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 04 — the Django 4.1 rung — DONE 2026-08-04
+## Step 13 task 04 — the Django 4.1 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
 **On Django 4.1.13 / Python 3.10. 813 tests green (811 + 2 new), 85% coverage,
 `check` and `makemigrations --check` clean, smoke green.**
@@ -418,7 +418,7 @@ grepping each release's `admin/base.html`, not assumed.
 
 **Next: Step 13 task 05** — the Django 4.2 rung.
 
-## Admin dashboard layout fix — DONE 2026-08-04, `1b968a4` (own commit, not part of a rung)
+## Admin dashboard layout fix — DONE 2026-08-04, `1b968a4` (own commit, not part of a rung), PUSHED, CI GREEN
 
 **The moderation dashboard had been rendering at the far right of the admin
 header, level with the user tools, instead of on its own row under the
