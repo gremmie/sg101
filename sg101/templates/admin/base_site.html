@@ -4,6 +4,17 @@
 
 {% block extrastyle %}
 <style type="text/css">
+   /* The admin header is a flex row of branding, user tools and whatever
+      nav-global adds, so the dashboard would otherwise sit at the far right
+      end of that row. Wrapping it onto a full-width line of its own is what
+      puts it back under the branding. It cannot be done by clearing a float:
+      a flex item ignores clear. */
+   #header {
+      flex-wrap: wrap;
+   }
+   #dashboard {
+      flex-basis: 100%;
+   }
    #dashboard-list {
       padding: 0;
    }

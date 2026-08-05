@@ -1,6 +1,6 @@
 {% if user.is_staff %}
 {% if flagged_posts or flagged_comments or flagged_profiles or event_requests or new_stories or new_downloads or new_links or flagged_shouts or broken_links or flagged_msgs or new_bands %}
-<div class="clear">
+<div id="dashboard">
 <ul id="dashboard-list">
 {% if flagged_posts %}
 <li><a href="/admin/forums/flaggedpost/">Posts</a>: {{ flagged_posts }}</li>
