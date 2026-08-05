@@ -383,10 +383,27 @@ of its `{% block branding %}` override replacing Django's version wholesale.
 1. **4.2 — the admin login page loses the light/dark theme toggle.** 4.2 adds
    `{% include "admin/color_theme_toggle.html" %}` inside `base_site.html`'s
    `branding` block, guarded on `user.is_anonymous`. Our override supplies its
-   own `branding` and would drop it. **Only the login page is affected**:
-   logged-in staff get the toggle from `userlinks` in `base.html`, which we do
-   not override. Verified by reading Django's own `base_site.html` and
-   `base.html` at 4.2.30.
+   own `branding` and would drop it.
+
+   **To be clear about what "anonymous" means here, because the phrasing
+   invites the wrong reading:** nobody browses the admin anonymously. The one
+   admin page an anonymous visitor sees is the **login form** at
+   `/admin/login/` — `admin/login.html` extends `admin/base_site.html`, and
+   `base.html` renders `{% block header %}` for anyone not in a popup, with no
+   reference to authentication. What *is* gated is `usertools`, on
+   `has_permission`. Confirmed by fetching `/admin/login/` anonymously from the
+   running site: branding header present, `#user-tools` absent. That is exactly
+   why 4.2 ships the toggle **twice** — in `userlinks` for logged-in staff, and
+   in `branding` for the one page where `userlinks` does not render. So the
+   loss is real but small: a theme toggle on the login screen.
+
+   **Also worth knowing before someone reads a status code wrong:** `/admin/`
+   answers **302 → `/admin/login/?next=/admin/`**, not 200. Task 04's smoke
+   recorded 200 for an anonymous curl — that was the **debug toolbar's
+   Redirects Panel** rendering a page in place of the 302, a dev-only artifact
+   of `INTERCEPT_REDIRECTS`. And `docker_test` settings answer the bare test
+   client **400**, since `ALLOWED_HOSTS` has no `testserver` outside the real
+   runner.
 2. **5.0 — `site-name` stops being a heading.** 5.0 changes branding from
    `<h1 id="site-name">` to `<div id="site-name">` for accessibility: the
    page's `<h1>` is meant to be the content title, not the site name. Our
