@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-03
+**Last updated:** 2026-08-04
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,207 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 13 task 04 — the Django 4.1 rung — DONE 2026-08-04
+
+**On Django 4.1.13 / Python 3.10. 813 tests green (811 + 2 new), 85% coverage,
+`check` and `makemigrations --check` clean, smoke green.**
+
+**The rung cost zero breakers. Not one test failed on the bump** — the suite was
+811 green on 4.1.13 before a single line of application code was touched. That
+is the second recorded no-op in this project (Step 10's prep rung was the
+first), and it is worth stating plainly rather than burying: the expensive part
+of this rung was *verification*, not repair.
+
+### The 8-app `default_app_config` worklist was already dead
+
+Task 03 handed this rung eight apps still carrying `default_app_config`
+(antispam, bio, downloads, forums, messages, potd, weblinks, wiki). **All eight
+were already inert on 4.1 before the lines came out.** Django has auto-detected
+a single `AppConfig` subclass in `apps.py` since 3.2, and every one of the eight
+has exactly one. Verified by probing `apps.get_app_configs()` on 4.1 *before*
+the removal, and again after: byte-identical, all eight resolving to their own
+config class. So the lines were deleted as dead text, not as a fix.
+
+**This is the failure shape to remember, because it is silent.** 4.1 does not
+error on `default_app_config`; it stops reading it. Had any of the eight kept
+its config somewhere other than `apps.py`, or had a second `AppConfig` subclass
+in the file, the app would have silently fallen back to a bare `AppConfig`,
+`ready()` would never run, and its signal receivers would never register. No
+exception, no warning — just a site that quietly stops maintaining its own
+denormalized state. The probe is what settles it; a green suite does not.
+
+**And a green suite really would not have, for three of the eight.** Mutation-
+tested each app by neutering its `ready()` — the exact effect of the config not
+loading:
+
+| app | suite verdict with `ready()` neutered |
+|---|---|
+| bio | FAILED (154 errors) |
+| forums | FAILED (2 failures, 1 error) |
+| antispam | FAILED (2 failures) |
+| wiki | FAILED (1 failure) |
+| **downloads** | **OK — not caught** |
+| **potd** | **OK — not caught** |
+| **weblinks** | **OK — not caught** |
+
+The three uncaught ones are not trivia: `downloads` and `weblinks` maintain the
+denormalized `Category.count` and delete the uploaded file when a row goes;
+`potd` inserts and removes photos from the current sequence. Nothing in 813
+tests notices if that wiring disappears. **Recorded as a coverage gap, not
+fixed here** — it is a pre-existing hole this rung happened to measure, and
+filling it is not a version bump. Watch item for Step 19.
+
+### The one deprecation, and why it was worth fixing rather than deferring
+
+`RemovedInDjango50Warning: the "default.html" templates for forms and formsets
+will be removed` — 5.0 makes `div.html` the default for an unqualified
+`{{ form }}`. Three call sites, and **the interesting part is that only one was
+production code**:
+
+1. `sg101/templates/forums/mod_forum.html` — real. The moderator control bar.
+2. `core/tests/templatetags/test_core_tags.py` — a test passing a whole *form*
+   to `{% post_box %}`, a tag whose every production caller passes one *field*
+   (`add_form.short_markup`, `compose_form.message`, …). The test was exercising
+   an input shape that never occurs; it passed because it only asserted on a
+   wrapper div. Now passes `AddNewsForm()['short_markup']`, and also asserts the
+   textarea it is supposed to be wrapping.
+3. `comments/tests/test_templatetags.py` — a test-only template string rendering
+   `{{ form }}`. Its assertions xpath for fields and are wrapper-agnostic, so it
+   became `{{ form.as_table }}`: same markup today, and stable when the default
+   changes underneath it.
+
+**`mod_forum.html` was rendering table rows into a `<div>`.** Confirmed against
+the real snapshot rather than assumed — `{{ form }}` emitted
+`<tr><th></th><td>…<select>…</select></td></tr>` inside `<div class="forum-mod-
+controls">`, markup the browser's parser discards down to the bare `<select>`,
+which is why it has always looked right. `MoveTopicForm` was even constructed
+with a `hide_label=True` kwarg whose whole job was blanking a label so this
+would look acceptable. Under 5.0 the same line becomes a real `<div>` with a
+real `<label>` — a visible layout change in a control bar.
+
+Fixed by rendering the field the bar actually wants:
+`{{ form.forums.errors }}{{ form.forums }}`, matching the idiom already used in
+`show_form.html`, `contact_form.html` and `messages/options.html`. `hide_label`
+went with it (no label is rendered now, so nothing is left to hide) — it had
+exactly two callers, both here. **The errors half is not decoration:** the
+whole-form render was displaying "This field is required." when a moderator hits
+"Move To:" with no destination picked, and rendering the field alone would have
+silently dropped it.
+
+Two tests added, and **each was mutation-tested against the fault it names**:
+reverting to `{{ form }}` fails `test_the_move_control_is_a_bare_select` only;
+dropping `.errors` fails `test_a_move_with_no_destination_shows_the_error` only.
+Neither test catches the other's mutation, so both earn their place.
+
+**The first version of the fix shipped a bug that the new test caught
+immediately: `{# … #}` is a single-line comment token.** A multi-line `{# #}`
+does not comment anything out — the whole thing rendered into the page as
+literal text. `{% comment %}` is the multi-line form.
+
+### The deprecation gate was lying, and had been giving a clean bill of health
+
+**`python -W error::django.utils.deprecation.RemovedInDjango50Warning` is
+silently ignored.** Python cannot resolve a dotted category path there and
+prints `Invalid -W option ignored: invalid module name` — one line, to stderr,
+before the test output. A full suite ran **813 green under that flag with the
+deprecation still present in the tree**, and it looked exactly like a pass.
+
+Caught only by deliberately re-running the gate against a *known* deprecation
+(the un-fixed template) and noticing it did not fire. **A gate has to be proven
+to fail before a pass from it means anything** — the same lesson as task 01's
+`print('ok')` probe on an interpreter that aborted at exit, now in its warning-
+filter form.
+
+**The recipe that works on this rung:**
+
+```
+python -W error::PendingDeprecationWarning manage.py test --noinput \
+    --settings=sg101.settings.docker_test
+```
+
+`RemovedInDjango50Warning` subclasses `PendingDeprecationWarning` on 4.1, the
+builtin name resolves, and nothing else in the tree raises one (everything else
+deprecated here — Pillow's ANTIALIAS, kombu, pkg_resources, the `assertEquals`
+calls — is a plain `DeprecationWarning`). Verified to fail on the un-fixed
+template and to pass on the fixed one. **On 4.2 this changes**: Django promotes
+`RemovedInDjango50Warning` to a `DeprecationWarning` subclass, so task 05 needs
+`-W error::DeprecationWarning` plus ignores for the third-party noise — and must
+re-prove the gate fires before trusting it.
+
+### Search: byte-identical, measured before and after on production data
+
+The task named the search app as the thing to watch, since it is the only code
+talking to `django.contrib.postgres` and Step 12 spent nine tasks fixing what
+its output should be. **Nothing moved.**
+
+A probe captured 16 queries on 4.0.10 before the bump and replayed them on
+4.1.13 — per-query total, all 8 per-type counts, and the **top-20 rows with
+`rank` to 10 decimal places**, plus the exclusion-stripped query string. The two
+JSON captures compare **exactly equal**. The queries are Step 12 task 07's
+measured set, and every recorded figure reproduced (`reverb` 54,065; `surf rock`
+14,993 vs `surf-rock` 1,328; `ventur` 11,534; `FRV-1` 2,024; `A/B box` 89),
+which is also what says the probe is measuring the real index.
+
+- **Exclusion ranking still meaningful.** `reverb -fender` returns 38,340 rows
+  across 5 distinct ranks in the top 20 — not the constant score that Step 12
+  task 04 found looks entirely normal from the outside.
+- **Per-type counts still sum to the total** on all 16 queries, and none
+  collapses to 1. On the rendered page, `backing track` shows
+  `Downloads (115)` beside `Forum Posts (2,830)`, summing to the `3,481 hits`
+  headline — exactly what task 09 shipped.
+- **Headline escaping holds.** 302 headlines drawn from real rows whose stored
+  summary contains `<`: the only tag rendered in any of them is `span`, the one
+  the code writes. Snippets for 6 queries are byte-identical across 4.0 and 4.1,
+  40 highlight spans among them, still only `span`.
+
+**One thing that looks alarming in a smoke and is not:** the top hits for
+`backing track` render *empty* snippets, and the raw `[[[hl]]]` sentinel appears
+in the page source. Both are expected. The top rows are `forums.topic`, whose
+document summary is zero characters by design (a topic *is* its title, per task
+07), so `ts_headline` has nothing to highlight; and the sentinel occurrences are
+inside the **debug toolbar's SQL panel**, printing the query text, not in a
+result row.
+
+### Forms: 23 cases, measured against 4.0 rather than trusted
+
+4.1 tightened form and model validation, and this site's most bespoke code is in
+its forms — so a green suite was not accepted as the answer. A probe binds the
+four forms the task names (registration, profile edit, private message, calendar
+event) plus `MoveTopicForm`, with valid **and** invalid input across 23 cases,
+and reports `is_valid()`, the full `errors.as_json()`, and the field list. Run
+on 4.1.13, then on 4.0.10 in a throwaway `docker compose run --rm` container
+with Django downgraded in place: **all 23 identical**, same verdicts, same error
+codes, same messages.
+
+The constraint-validation change 4.1 brought has essentially no surface here:
+the tree contains exactly one `UniqueConstraint` (`search.SearchDocument`'s
+`content_type`/`object_id`), which has no ModelForm, and **no application code
+calls `full_clean()` anywhere**. The `LOWER(username)` uniqueness from Step 11
+is a raw functional index, not a `Meta` constraint, so it is untouched by this.
+
+**Two probe cases initially failed for reasons that were not Django** — the
+registration form carries an antispam question (`question1`), and `country`
+takes lowercase ISO codes (`us`, not `US`). Worth noting because both looked
+like findings for a moment, and an A/B probe whose "valid" case is not actually
+valid quietly tests only the reject path.
+
+### Not needed, with the reason
+
+`CSRF_COOKIE_MASKED` — 4.1's transitional setting exists for a site running 4.0
+and 4.1 instances side by side during a rollout. This site deploys once, at the
+end, at 5.2 (R14/R15), so there is no window in which two versions serve the
+same cookies. Deliberately not set.
+
+`django-debug-toolbar==3.2.4` is past its supported Django range (2.2–3.2) but
+loads and panels correctly on 4.1 — verified by the SQL panel rendering the
+search query. Its bump belongs to task 06, with the rest of the dependency
+alignment; pulling it forward would have put two variables in this rung.
+
+`requirements_dev.txt` still had a `Python 3.7 / Django 3.2 LTS` header, missed
+by tasks 01 and 03, which both updated the other two requirements files. Fixed.
+
+**Next: Step 13 task 05** — the Django 4.2 rung.
 
 ## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
