@@ -25,12 +25,64 @@ destination.
   — relevant given task 03's `USE_TZ` work and the six pytz modules.
 - **`index_together` deprecated** in favor of `Meta.indexes`. The `search` app
   from Step 12 adds a GIN index; confirm how it is declared.
+- **The admin's light/dark theme toggle**, which 4.2 introduces and this project
+  will partly lose. See the dedicated section below.
+
+**The admin header override, carried in from task 04.**
+`sg101/templates/admin/base_site.html` overrides `{% block branding %}`, and 4.2
+adds `{% include "admin/color_theme_toggle.html" %}` *inside* Django's own
+`branding` block, guarded on `user.is_anonymous`. Replacing that block wholesale
+therefore drops the toggle.
+
+**Scope it correctly before deciding what to do.** Nobody browses the admin
+anonymously; the one admin page an anonymous visitor sees is the **login form**
+at `/admin/login/`, because `admin/login.html` extends `admin/base_site.html`
+and `base.html` renders `{% block header %}` without reference to
+authentication. What *is* gated is `usertools`, on `has_permission`. That is
+exactly why 4.2 ships the toggle twice — in `userlinks` for signed-in staff
+(inherited fine, since this project does not override that block) and in
+`branding` for the one page where `userlinks` does not render. **So the loss is
+a theme toggle on the admin login screen, and nothing more.** Verified on 4.1 by
+fetching `/admin/login/` anonymously: branding header present, `#user-tools`
+absent.
+
+The fix, if taken, is one line inside the existing `branding` override. Confirm
+the include path against the installed 4.2 rather than trusting this file.
+
+**Two status codes in this area mislead**, both established in task 04:
+`/admin/` answers **302 → `/admin/login/?next=/admin/`**, and a **200** seen
+there is the debug toolbar's Redirects Panel standing in for the redirect, which
+only happens under DEBUG. Separately, `docker_test` settings answer a bare test
+client **400**, because `ALLOWED_HOSTS` has no `testserver` outside the real
+runner. Do not read either as a fault.
+
+Not this rung, but adjacent and easy to fix in the same visit if the file is
+already open: **5.0 changes branding from `<h1 id="site-name">` to
+`<div id="site-name">`** for accessibility, and this override still emits the
+`<h1>`. That belongs to Step 14; note it, do not pre-empt it.
 
 **On deprecation warnings.** 4.2 is where warnings for 5.x removals begin
 appearing. Do **not** clear them here — collect them. Step 14 owns the 5.2 move
 and should inherit a written inventory the way task 02 inherited Step 10's. A
 recorded list is the deliverable; a cleared list is scope creep into the next
 step.
+
+**The filter this task needs is NOT the one task 04 used, and a wrong filter
+fails silently.** Task 04 found that
+`-W error::django.utils.deprecation.RemovedInDjango50Warning` is **discarded** —
+Python cannot resolve a dotted category path there, prints one stderr line
+(`Invalid -W option ignored: invalid module name`) and carries on with no filter
+at all. A full suite then ran **813 green with a live deprecation in the tree**,
+output identical to a genuine pass. Task 04's working form was
+`-W error::PendingDeprecationWarning`, because `RemovedInDjango50Warning`
+subclasses `PendingDeprecationWarning` on 4.1.
+
+**That stops being true here.** On 4.2 Django promotes `RemovedInDjango50Warning`
+to a `DeprecationWarning` subclass, so the 4.1 filter will match nothing and
+report a clean run. Derive the right filter for 4.2, and — regardless of which
+you pick — **prove the gate fires before trusting a pass**: introduce a known
+deprecation, confirm it errors, then remove it. An inventory collected through a
+disabled filter is an empty file that looks like good news.
 
 **The Step 13 smoke checklist.** This rung closes the step, so the verification
 is the step's, not just the rung's. Everything below has been broken at least
@@ -47,6 +99,10 @@ once by an earlier step in this project, which is why each is named:
   reconcile sweep
 - Calendar, profile edit with a non-default timezone, private messages,
   downloads, the podcast feed
+- **The admin, looked at rather than merely loaded**: the moderation dashboard
+  on its own row beneath the branding (restored in `1b968a4` after four rungs
+  at the wrong end of a flex header), and the theme toggle on `/admin/login/`.
+  Both are header rendering, which no test sees and a version bump moves.
 
 ## Reference Documentation
 **Required:**
@@ -71,11 +127,16 @@ implementation. Read additional references as needed for context.
 4. Confirm how the search app's GIN index is declared and migrate off
    `index_together` if it is used anywhere.
 5. **Collect the 5.x deprecation warnings into a written inventory for Step 14.
-   Do not clear them.**
-6. Run the full Step 13 smoke checklist above against a running site, not only
+   Do not clear them.** Derive the correct `-W` filter for 4.2 and **prove it
+   fires on a known deprecation before recording anything** — see the warning
+   above; the 4.1 filter reports a clean run here whether or not one is.
+6. Decide the admin theme toggle on `/admin/login/`: restore it inside the
+   existing `branding` override, or record the decision not to. Either is
+   acceptable; silently losing it is not.
+7. Run the full Step 13 smoke checklist above against a running site, not only
    the test suite.
-7. `check`, `check --deploy` and `makemigrations --check` clean; suite green.
-8. Update STATUS and the plan's Step 13 checklist line together. **Both** — the
+8. `check`, `check --deploy` and `makemigrations --check` clean; suite green.
+9. Update STATUS and the plan's Step 13 checklist line together. **Both** — the
    2026-08-02 cleanup found `plan.md`'s Step 12 line stale while STATUS said
    complete.
 
@@ -120,19 +181,30 @@ implementation. Read additional references as needed for context.
    - Then results, ordering, per-type counts and headline escaping match the
      behavior Step 12 established
 
-5. **5.x Deprecations Inventoried, Not Cleared**
+5. **5.x Deprecations Inventoried, Not Cleared — Through a Gate Proven to Fire**
    - Given Django 4.2
    - When deprecation warnings are collected
-   - Then a written inventory exists for Step 14, and the warnings themselves
-     remain in place
+   - Then a written inventory exists for Step 14, the warnings themselves remain
+     in place, **and the filter used was demonstrated to fail on a known
+     deprecation before the inventory was recorded** — an empty inventory is
+     only meaningful if the gate that produced it has been seen to work
 
-6. **Suite Green and Checks Clean**
+6. **The Admin Header Is Decided, Not Drifted**
+   - Given Django 4.2, whose `branding` block carries the theme toggle for
+     anonymous users
+   - When `/admin/login/` is fetched anonymously and the admin index is viewed
+     as staff
+   - Then the login page either has the theme toggle or a recorded decision that
+     it does not, and the moderation dashboard still renders on its own row
+     beneath the branding
+
+7. **Suite Green and Checks Clean**
    - Given Django 4.2
    - When the suite runs with `--settings=sg101.settings.docker_test`
    - Then all tests pass, and `check`, `check --deploy` and
      `makemigrations --check` are clean
 
-7. **Planning Docs Agree**
+8. **Planning Docs Agree**
    - Given the completed rung
    - When `STATUS.md` and `implementation/plan.md` are compared
    - Then both reflect the same state of Step 13, with neither left stale
