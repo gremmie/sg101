@@ -351,6 +351,33 @@ and clearing a cache must not touch those. `python-memcached` dropped from both
 requirements files; **six is now required by html5lib and python-dateutil only**
 (bleach released it at task 01) — a figure task 06 wanted measured.
 
+**What the swap costs, examined afterwards rather than assumed** (Brian asked
+whether one Redis doing three jobs has side effects):
+
+- **`cache.clear()` is `FLUSHDB`** — read out of Django 4.2's backend, not
+  guessed. It wipes the whole selected database, and db 0 holds 17 keys right
+  now (`whos_online:*`, `forums:updated_topics:*`, `forums:rss:*`,
+  `wiki_cookie_keys`), of which **five of six sampled carry `ttl=-1`**. That is
+  kept state, not cache. Sharing a database would have made one `clear()`
+  destructive; db 2 is what makes it safe.
+- **Eviction is the one real gap, and the obvious fix is wrong.** Redis ships
+  `maxmemory 0` / `noeviction`, so it is unbounded and refuses writes when full,
+  where memcached evicted LRU by design. But **`maxmemory-policy` is server-wide,
+  not per-database**, so `allkeys-lru` would evict broker messages and the kept
+  db 0 keys. **`volatile-lru`** is right, since only TTL-carrying keys are
+  eligible and every Django cache key has a TTL while the db 0 keys mostly do
+  not. **Scheduled into Step 21**, not done here: the entire cache is ten
+  `cache.set` sites and six `{% cache %}` fragments, and Redis was using
+  **1.15 MB**.
+- **Failure mode goes from soft to hard.** Django's Redis backend has no
+  exception swallowing — the only `try:` in it is int-vs-pickle deserialization —
+  so an outage 500s where `python-memcached` returned misses and a slow page.
+  Redis was already load-bearing for db 0, so this widens an existing single
+  point of failure rather than creating one; recorded for Step 21 as an argument
+  for monitoring Redis rather than merely running it.
+- **Persistence is a small gain**: the cache survives a restart where memcached
+  started cold, bounded by the same short timeouts.
+
 `check --deploy` is otherwise clean, leaving one warning: `security.W001`, no
 `SecurityMiddleware`. **Deliberately not fixed** — adding it trades one warning
 for several (`W004`, `W008`, and friends fire once the middleware is present and

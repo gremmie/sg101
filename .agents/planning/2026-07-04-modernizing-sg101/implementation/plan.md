@@ -34,7 +34,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [ ] **Step 18** — Revive `gcalendar` with modern Google libraries
 - [ ] **Step 19** — Retire `wiki`/MoinMoin; verify-then-prune `banners`/`oembed` (`contests`/`countdown`/`bandmap` confirmed KEEP 2026-07-24; `membermap` already pruned in Step 4)
 - [ ] **Step 20** — Production hardening (gunicorn/WhiteNoise/prod compose/backups) + Cloudflare front
-- [ ] **Step 21** — Deploy to new host + cutover + fallback. **Tail item: retire the MySQL conversion chain, gated on decommissioning the old box** — not on the site looking fine, because while the old box stays warm a DNS flip makes its MySQL authoritative again and any second roll-forward is another convert-and-verify. Preconditions: tag the cutover commit (`verify_data.py`'s canonicalization is worth keeping findable) and archive the final snapshot (git restores the tooling; nothing restores the data). Out: `mysqlclient` + the Dockerfile's MySQL apt packages, the `db` service and `mysql` profile, `verify.py` / `verify_data.py` / `convert.sh` / `sg101.load` / `crosscheck_dumpdata.sh`, `DOCKER.md` §6–§7, and the four keep-this comments added 2026-08-02, which become wrong at exactly that moment. Stays: `compare_schema.py` (psycopg2 only — compares a converted schema against a Django-built one, useful beyond MySQL).
+- [ ] **Step 21** — Deploy to new host + cutover + fallback. **Carried in 2026-08-05: bound Redis's memory and set `maxmemory-policy volatile-lru`** — one Redis now serves the cache (db 2), the broker (db 1) and the site's kept state (db 0), and the policy is server-wide, so `allkeys-lru` would evict broker messages and kept keys; `volatile-lru` evicts only the TTL-carrying cache keys. Also: the Redis cache backend fails hard where memcached failed soft. **Tail item: retire the MySQL conversion chain, gated on decommissioning the old box** — not on the site looking fine, because while the old box stays warm a DNS flip makes its MySQL authoritative again and any second roll-forward is another convert-and-verify. Preconditions: tag the cutover commit (`verify_data.py`'s canonicalization is worth keeping findable) and archive the final snapshot (git restores the tooling; nothing restores the data). Out: `mysqlclient` + the Dockerfile's MySQL apt packages, the `db` service and `mysql` profile, `verify.py` / `verify_data.py` / `convert.sh` / `sg101.load` / `crosscheck_dumpdata.sh`, `DOCKER.md` §6–§7, and the four keep-this comments added 2026-08-02, which become wrong at exactly that moment. Stays: `compare_schema.py` (psycopg2 only — compares a converted schema against a Django-built one, useful beyond MySQL).
 
 ---
 
@@ -815,6 +815,38 @@ out of order**, which is the concurrency the search index's `indexed_at` guard
 exists to survive. Pin it in the prod compose so the value is visible and
 reviewable, and so a one-core host does not quietly serialise everything while a
 later resize quietly stops doing so.
+**Carried in from Step 13 task 05 (2026-08-05): set Redis's memory bound, and set
+it to `volatile-lru`.** That task moved the production cache off memcached (its
+Django backend was removed in 4.1) onto Redis, which means **one Redis server now
+does three jobs**: the Django cache on db 2, the Celery broker on db 1, and the
+application's own kept state on db 0 — who's-online, the forums' latest-post
+lists and RSS caches, the wiki's cookie set.
+
+memcached evicted LRU by design; Redis ships `maxmemory 0` with
+`maxmemory-policy noeviction`, so it is unbounded and, when it does fill,
+**refuses writes rather than evicting**. A cache wants the opposite.
+
+**The subtlety that makes the obvious setting wrong: `maxmemory-policy` is
+server-wide, not per-database.** `allkeys-lru` would let Redis evict Celery
+messages and the site's kept keys to make room for cached fragments.
+**`volatile-lru` is the correct choice here**, because it only evicts keys
+carrying a TTL: every Django cache key has one (the `TIMEOUT` is 600 and every
+`cache.set` in the codebase passes an explicit timeout), while the db 0 keys
+mostly do not — measured 2026-08-05, five of six sampled read `ttl=-1`. So the
+cache is evictable and the kept state is not, which is the behaviour memcached
+gave for free by being a separate process.
+
+Not urgent, and deliberately not done mid-ladder: the whole cache is a handful of
+keys and Redis was using **1.15 MB** when this was measured. It matters when the
+site is on a VM with a real memory ceiling, which is here.
+
+**Also worth knowing at cutover:** Django's Redis cache backend does not swallow
+connection errors the way `python-memcached` did, so a Redis outage now returns
+500s where it used to mean cache misses and a slow site. Redis was already
+load-bearing for the db 0 state above, so this widens an existing single point of
+failure rather than adding one — but it is an argument for Redis being monitored
+on the new host, not just running.
+
 **Tail item — retire the MySQL conversion chain, gated on the decommission.**
 Everything MySQL in this project exists to convert a production snapshot and then
 verify the conversion. When the old box is decommissioned there is no MySQL
