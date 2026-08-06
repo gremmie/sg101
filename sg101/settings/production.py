@@ -48,10 +48,16 @@ TEMPLATES[0]['OPTIONS']['loaders'] = [
     )),
 ]
 
+# Redis, not memcached: Django dropped the python-memcached backend, and the
+# host already runs Redis for the Celery broker and for the application data in
+# core/services.py, so caching here retires a service rather than replacing one.
+# Its own database, because clearing the cache must not touch what the site
+# keeps in Redis permanently -- db 0 holds who's-online, the forums' latest-post
+# lists and the wiki's cookies, and db 1 is the broker.
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': 'unix:/var/run/memcached/memcached.sock',
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'unix://' + REDIS_UNIX_SOCKET + '?db=2',
         'TIMEOUT': 600,
         'KEY_PREFIX': 'sg101',
     },

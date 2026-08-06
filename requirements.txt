@@ -18,9 +18,9 @@ django-environ==0.4.5  # 12-factor env-var config
 # its migrations and tables are untouched. See tagging/__init__.py.
 pytz==2021.3
 # six is no longer imported by the application -- it uses the Python 3 standard
-# library directly (urllib.parse/request/error, io.StringIO). It's still pulled in
-# transitively by bleach, html5lib, python-dateutil, and python-memcached, so the
-# pin stays for a reproducible build; drop it when those four are gone or bumped.
+# library directly (urllib.parse/request/error, io.StringIO). It is still pulled
+# in transitively, so the pin stays for a reproducible build; drop it when the
+# last package requiring it is gone or bumped.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (used internally to
 # split/format SQL). It installs automatically with Django; pinned here so the
@@ -61,8 +61,11 @@ mysqlclient==1.4.6
 # The 2.9.9 pin dates from the Python 3.7 cap (2.9.10 requires 3.8+), which no
 # longer binds.
 psycopg2==2.9.9
-redis==3.5.3            # celery 4.4 / kombu 4.6 redis transport needs >=3.2
-python-memcached==1.59  # only used by production.py CACHES; 1.59 adds Py3
+# redis-py is the client for three things now: the application's own Redis use,
+# the Celery broker transport, and Django's built-in Redis cache backend
+# (which needs >= 3.0). No django-redis package is involved -- that backend
+# has been part of Django since 4.0.
+redis==3.5.3
 
 # Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
 # at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64

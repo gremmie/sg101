@@ -45,8 +45,11 @@ mysqlclient==1.4.6
 # The 2.9.9 pin dates from the Python 3.7 cap (2.9.10 requires 3.8+), which no
 # longer binds.
 psycopg2==2.9.9
-redis==3.5.3            # celery 4.4 / kombu 4.6 redis transport needs >=3.2
-python-memcached==1.59  # only used by production.py CACHES; 1.59 adds Py3
+# redis-py is the client for three things now: the application's own Redis use,
+# the Celery broker transport, and Django's built-in Redis cache backend
+# (which needs >= 3.0). No django-redis package is involved -- that backend
+# has been part of Django since 4.0.
+redis==3.5.3
 
 # Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
 # at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64
