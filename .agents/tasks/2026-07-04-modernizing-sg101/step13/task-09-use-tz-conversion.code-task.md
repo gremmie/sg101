@@ -180,6 +180,17 @@ implementation. Read additional references as needed for context.
    reconcile sweep's `indexed_at` comparisons all cross this seam.
 8. `check` and `makemigrations --check` clean; suite green.
 
+## Before You Begin
+Take a database snapshot: `tools/pg_snapshot.sh dump <label>`. It costs 8
+seconds and 128 MB, and it is what turns an accidental deletion into a restore
+rather than an afternoon. Added after Step 13 task 05 deleted a forum and its
+4,626 topics through a `Forum.last_post` cascade -- see DOCKER.md section 8.
+
+**And when you delete forum content, use `tools/pgloader/smoke.py`'s
+`delete_topic()` rather than writing your own.** `Forum.last_post` is a
+`OneToOneField` with `on_delete=CASCADE` pointing the wrong way: deleting the
+post a forum points at takes the forum, and every topic and post in it, with it.
+
 ## Dependencies
 - Task 05 (Django 4.2 — run this on the LTS, not mid-ladder)
 - Tasks 04/05's pytz → `zoneinfo` decisions, which determine how much of the

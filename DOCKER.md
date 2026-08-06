@@ -304,6 +304,75 @@ What each check covers:
 
 ---
 
+## 8. PostgreSQL snapshots, and getting data back
+
+The MySQL service is a fallback of a sort — it holds the original production
+dump, and forum data has been recovered from it. But recovering that way means a
+full pgloader conversion, or a hand-written cross-engine copy that has to get
+column types, booleans and the naive-datetime-into-`timestamptz` seam right. A
+PostgreSQL snapshot restores into a target that already has the right types.
+
+```bash
+tools/pg_snapshot.sh dump                 # snapshots/sg101-<timestamp>.dump
+tools/pg_snapshot.sh dump pre-task-06     # ... with a label, for a checkpoint
+tools/pg_snapshot.sh list
+```
+
+**Take one before anything that writes to the database** — a rung, a migration,
+a conversion, a script you have just written. Measured on the current snapshot:
+**8 seconds and 128 MB**, which is cheap enough that there is no reason not to.
+
+**The search index is dumped without its data.** It is two thirds of the
+database (1.1 GB of 1.7 GB) and it is derived, so a snapshot carries the schema
+and you rebuild the contents. A stale index would be worse than an empty one:
+`reconcile_search` would report drift you have to think about, instead of a
+rebuild you can just run.
+
+### Restoring everything
+
+```bash
+tools/pg_snapshot.sh restore sg101-20260805-191413-pre-task-06.dump
+docker compose exec web python manage.py reindex_search     # ~1m35s
+docker compose exec web python manage.py reconcile_search   # expect "clean"
+```
+
+This replaces the database, so it asks you to type its name first. It stops
+`web`/`worker`/`beat` before restoring — they hold connections, and those
+connections block the drops — and starts them again afterwards. A full round
+trip is about a minute, plus the index rebuild.
+
+### Restoring part of it
+
+Usually what you want is some rows back, not the database back. Restore into a
+scratch database alongside the real one, then copy rows across:
+
+```bash
+tools/pg_snapshot.sh scratch <file> forums_forum forums_topic forums_post
+```
+
+Both databases are in the same cluster, so piping `\copy` between them moves
+rows with every column type intact. The command prints the recipe. Two things to
+watch, both of which have bitten:
+
+- **Order matters when rows point at each other.** `forums_forum.last_post_id`
+  and `forums_topic.last_post_id` reference posts, so load the posts first and
+  fill those columns afterwards.
+- **Reset the sequences** with `setval()` before anything inserts, or the next
+  insert collides.
+
+### Why this exists
+
+On 2026-08-05 a scratch script deleted a forum, and with it 4,626 topics and
+24,107 posts. `Forum.last_post` is a `OneToOneField` with `on_delete=CASCADE`
+pointing the wrong way: **deleting the post a forum points at deletes the
+forum**, and everything inside it. `tools/pgloader/smoke.py` guards this in
+`delete_topic()`; a second script written without that guard did not.
+
+Recovery took an hour through MySQL. With a snapshot it would have been a
+`scratch` restore and one `\copy`. Note that a snapshot only helps if it is
+older than the damage — which is the argument for taking one at the start of a
+session rather than when something looks wrong.
+
 ## Everyday commands
 
 | Goal | Command |
@@ -321,6 +390,10 @@ What each check covers:
 | Run a management command | `docker compose exec web python manage.py <cmd>` |
 | Run the tests | `docker compose exec web python manage.py test --settings=sg101.settings.docker_test` |
 | PostgreSQL prompt | `docker compose exec postgres psql -U sg101 sg101` |
+| Snapshot the database | `tools/pg_snapshot.sh dump [label]` |
+| List snapshots | `tools/pg_snapshot.sh list` |
+| Restore the whole database | `tools/pg_snapshot.sh restore <file>` |
+| Restore a table to pick rows from | `tools/pg_snapshot.sh scratch <file> [table...]` |
 | MySQL prompt (needs the profile) | `docker compose exec db mysql -uroot -prootpw sg101` |
 
 ## How the pieces fit
@@ -336,7 +409,8 @@ What each check covers:
   name, and port, so the settings modules never hardcode an engine.
 - **`sg101/settings/docker_test.py`** — test settings (PostgreSQL + Redis over
   TCP), used by both local runs and CI.
-- **`snapshots/`** — where your DB dumps live (git-ignored).
+- **`snapshots/`** — where your DB dumps live, both the MySQL production dumps
+  and the PostgreSQL snapshots `tools/pg_snapshot.sh` writes (git-ignored).
 
 ## Troubleshooting
 

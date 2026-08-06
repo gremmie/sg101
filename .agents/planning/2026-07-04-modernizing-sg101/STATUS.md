@@ -174,6 +174,57 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## PostgreSQL snapshots — `tools/pg_snapshot.sh`, added 2026-08-05
+
+Brian's suggestion, after a scratch script deleted a forum during task 05 and
+recovery ran through MySQL for an hour. `dump` / `list` / `restore` / `scratch`,
+documented in DOCKER.md §8, with a "take one first" note added to the four
+remaining Step 13 task files.
+
+**The whole round trip was exercised, not just written**, because an untested
+restore is not a restore:
+
+| step | measured |
+|---|---|
+| `dump` | **8 s**, **128 MB** (database is 1,681 MB) |
+| `restore` (full) | ~1 min, every row count identical afterwards |
+| `reindex_search` | **1 m 35 s**, back to 516,858 documents |
+| `reconcile_search` | clean |
+| `smoke.py` after | 35/35 |
+
+**The search index is dumped schema-only** (`--exclude-table-data`). It is
+**1,104 MB of the 1,681 MB database** — two thirds — and it is derived. A stale
+index is worse than an empty one, since `reconcile_search` would then report
+drift to reason about rather than a rebuild to run.
+
+**Custom format (`-Fc`) is the point**, not compression: it lets `pg_restore`
+pull individual tables out of the archive. But a whole-table restore into a live
+table collides on the rows still there, so the useful shape is `scratch` —
+restore the tables into a scratch database beside the real one and `\copy` rows
+across. Both databases sit in the same cluster, so that pipe carries every column
+type intact, which is exactly what the cross-engine copy had to reconstruct by
+hand. **Verified end to end** into a throwaway table: 5 rows, timestamps intact
+with their offsets.
+
+**Two things found while building it:**
+
+- **`./snapshots` is mounted read-only into the `postgres` container**, so a dump
+  cannot be written from inside it. Dumps stream out over `exec -T` stdout;
+  restores read from the mount, which read-only permits.
+- **Do not `source .env` to read two values out of it.** The file holds a
+  `SECRET_KEY` containing `$8`, and sourcing under `set -u` aborts on it — the
+  script would also be running whatever else the file contains as shell. It
+  reads the two keys with `sed` instead.
+
+**A full restore stops `web`/`worker`/`beat` first** — they hold connections and
+those block the drops `--clean` performs — and starts them again after. It also
+asks for the database name to be typed, since it is not reversible.
+
+**The limitation worth stating plainly: a snapshot only helps if it is older than
+the damage.** Today's deletion went unnoticed for an hour, and a snapshot taken
+on noticing would have captured the loss. Hence the note in the task files: take
+one at the start, not when something looks wrong.
+
 ## Step 13 task 05 — the Django 4.2 rung — DONE 2026-08-05, NOT YET PUSHED
 
 **On Django 4.2.30 / Python 3.10. 821 tests green (816 + 5 new), `check`,
