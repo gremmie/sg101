@@ -174,6 +174,316 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 13 task 05 — the Django 4.2 rung — DONE 2026-08-05, NOT YET PUSHED
+
+**On Django 4.2.30 / Python 3.10. 821 tests green (816 + 5 new), `check`,
+`check --deploy` and `makemigrations --check` clean, the full Step 13 smoke
+checklist run against the live stack.** This rung closes the Django half of
+Step 13; the 5.2 climb is Step 14.
+
+### The rung cost three breakers, and none of them was application code
+
+1. **`sqlparse==0.2.4` blocked the install outright.** 4.2 raised its floor to
+   0.3.1 and pip refused to resolve, so the bump failed before a single test
+   ran — the same shape as task 01's bleach gate. Taken to **0.5.5**, current.
+   Nothing in the project imports sqlparse; its two consumers are Django itself
+   and the debug toolbar's SQL panel, and **0.4.4 and 0.5.5 produce
+   byte-identical output** through `debug_toolbar.panels.sql.utils.reformat_sql`
+   on a probe statement, both exiting 0, so the newer pin costs nothing.
+2. **The vendored `tagging` fork, at the one place it reaches into Django's SQL
+   compiler.** 4.2 made `WhereNode.as_sql()` **raise `FullResultSet` instead of
+   returning empty SQL** when a WHERE matches everything, and
+   `usage_for_queryset()` compiles `queryset.query.where` by hand. An unfiltered
+   queryset is exactly what a tag cloud produces, so `/news/tags/` 500'd. Fixed
+   by catching it and spelling "matches everything" as "add no extra criteria".
+3. **`MemcachedCache` in `production.py`** — see below; it had been broken since
+   4.1 and nothing caught it.
+
+**A latent defect found beside breaker 2, and the interesting part is why it was
+invisible.** `usage_for_model(filters=...)` calls `queryset.query.add_filter(f)`
+with a single `(lookup, value)` tuple; `Query.add_filter()` has taken **two
+arguments since 4.0**, so that path has raised `TypeError` since task 03's rung.
+Nothing noticed because **the entire project calls the filters path zero times** —
+`news/views.py` and `tagging/fields.py` are the only callers and neither passes
+filters. Fixed alongside, with `news/tests/test_tag_queries.py` (3 tests) giving
+the fork its own regression cover at exactly the two points modern Django moved
+under it. Both fixes mutation-verified: reverting the guard errors the two
+unfiltered tests, reverting the arity errors the filtered one.
+
+### The deprecation gate, and the trap that was predicted for this rung
+
+Task 04 warned that its working filter would stop working here. **It does, and
+the demonstration is worth keeping.** On 4.2 Django re-parents its warnings:
+
+| warning | 4.1 base class | 4.2 base class |
+|---|---|---|
+| `RemovedInDjango50Warning` | `PendingDeprecationWarning` | **`DeprecationWarning`** |
+| `RemovedInDjango51Warning` | — | `PendingDeprecationWarning` |
+
+So `-W error::PendingDeprecationWarning` — correct on 4.1 — now catches only the
+5.1 half. **Measured, not reasoned about:** a probe module touching
+`django.utils.timezone.utc` (a live `RemovedInDjango50Warning`) runs **`OK`**
+under task 04's filter. That is the third time this project has met a gate that
+certifies whatever it is pointed at.
+
+The working gate for 4.2 needs **both** categories, plus message-based ignores
+for third-party noise:
+
+```
+python -W error::DeprecationWarning -W error::PendingDeprecationWarning \
+  -W 'ignore:SelectableGroups dict interface is deprecated:DeprecationWarning' \
+  -W 'ignore:pkg_resources is deprecated as an API:DeprecationWarning' \
+  -W 'ignore:Deprecated call to:DeprecationWarning' \
+  -W 'ignore:ANTIALIAS is deprecated:DeprecationWarning' \
+  manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+**Ignore by message, not by module.** `-W ignore::DeprecationWarning:pkg_resources`
+does nothing: the module field is matched against the frame the warning is
+*attributed* to after `stacklevel`, not the file it is raised in, so the obvious
+spelling silently fails to bind and the run keeps aborting. The message field is
+unambiguous.
+
+**Both halves were proven to fire before anything was recorded**: the
+`timezone.utc` probe raises `RemovedInDjango50Warning` as an error, and
+`STATICFILES_STORAGE` temporarily re-added to `docker_test` raises
+`RemovedInDjango51Warning` as an error.
+
+**The inventory for Step 14 is EMPTY, and that is a real result rather than an
+absent one.** 821 tests pass under the proven gate. A static sweep for the known
+5.0/5.1 removals backs it up, since a suite only covers what it exercises:
+`length_is` and `ifequal` (0 in templates), `make_random_password`,
+`get_storage_class`, `assertQuerysetEqual`/`assertFormsetError`,
+`CryptPasswordHasher`, `CIText`/`CICharField`, the transitional div form
+renderers, `USE_L10N`, `index_together` and `django.utils.timezone.utc` — **all
+zero**. `USE_TZ` is set explicitly (task 03), so 5.0's default flip is inert.
+
+### What the gate caught that the assertions cannot
+
+Once the filter worked, the first run failed **17 tests on Pillow's
+`ANTIALIAS`** — the deprecation task 07 exists to clear. Task 01 established
+that the **six `ANTIALIAS` assertions cannot fail on this bug** because they
+assert against a `Mock` attribute. So the gate sees the thing the tests are
+structurally blind to, which is an argument for keeping it in CI rather than
+running it once a rung. Ignored here by message; task 07 removes the cause.
+
+Two Python-level deprecations were cleared rather than collected, both being
+removals in **3.12** — the interpreter Step 14 targets — and both otherwise
+forcing the gate to be loosened:
+
+- `assertEquals` → `assertEqual`, **21 sites across 5 test files** (removed in
+  3.12; 14 distinct warnings in a run).
+- `core/functions.py:120` `'(\d{1,3}...)'` → a raw string. One site, found by
+  compiling the whole tree with warnings on, since it is emitted at **compile**
+  time and a cached `.pyc` hides it.
+
+### `production.py` had been unimportable since 4.1, and only `check --deploy` says so
+
+**Django 4.1 removed `MemcachedCache`** — verified by listing the backend
+module's exports on 4.0.10 (present) and 4.1.13 (gone) rather than trusting the
+release notes. So `sg101/settings/production.py` has raised
+`InvalidCacheBackendError` on import for a rung and a half. **Nothing loads
+production settings**: not the suite, not the dev stack, not CI, and
+`core/tests/test_settings.py` boots `docker_test`. It surfaced here only because
+this task's acceptance criteria name `check --deploy`.
+
+**Brian's call: Redis now**, pulling R21's memcached→Redis consolidation forward
+rather than moving to `PyMemcacheCache` and doing work on a service the plan
+intends to delete. It costs **no new dependency** — `django.core.cache.backends.
+redis.RedisCache` has been in Django since 4.0 (so the design's "via
+`django-redis`" is out of date) and `redis` is already pinned. Verified both
+halves: the pinned **redis-py 3.5.3 round-trips a dict through Django 4.2's
+cache backend** against the live server, and the production `LOCATION` string
+parses to a `UnixDomainSocketConnection` on **db 2** — its own database, because
+db 0 holds who's-online, the forums' latest-post lists and the wiki's cookies,
+and clearing a cache must not touch those. `python-memcached` dropped from both
+requirements files; **six is now required by html5lib and python-dateutil only**
+(bleach released it at task 01) — a figure task 06 wanted measured.
+
+`check --deploy` is otherwise clean, leaving one warning: `security.W001`, no
+`SecurityMiddleware`. **Deliberately not fixed** — adding it trades one warning
+for several (`W004`, `W008`, and friends fire once the middleware is present and
+the `SECURE_*` settings are not), which is production hardening and belongs with
+the deploy work, not a version rung.
+
+### Settings work done deliberately rather than waiting for a failure
+
+- **`STORAGES` adopted.** `STATICFILES_STORAGE` was the only superseded storage
+  setting (no `DEFAULT_FILE_STORAGE` anywhere), and it **was** warning —
+  confirmed by loading production settings under `-W always` and reading
+  `RemovedInDjango51Warning` before changing anything. Both keys are written
+  out even though `default` is Django's own choice, since `STORAGES` replaced a
+  pair of settings and writing only the half that differs hides where uploads
+  go; that entry is what moves at the object-storage step. Resolved backends
+  are unchanged after the swap.
+- **`django.utils.timezone.utc`**: zero usages.
+- **`index_together`**: zero, repo-wide including migrations. The search app's
+  GIN index is already declared as `Meta.indexes = [GinIndex(...)]`.
+
+### The admin theme toggle: restored, and the header verified end to end
+
+4.2's `base_site.html` puts `{% include "admin/color_theme_toggle.html" %}`
+inside `branding` behind `{% if user.is_anonymous %}` — read out of the
+installed 4.2, not assumed. Our override replaced that block wholesale, so the
+toggle was being dropped on `/admin/login/`. **Restored**, guarded the same way,
+with a comment saying why the block has an anonymous branch at all.
+
+Two tests in `core/tests/test_admin.py`, both mutation-verified: the login page
+carries the toggle (fails when the include is removed again — the regression
+itself), and a signed-in page carries **exactly one** (fails when the guard is
+dropped, which would double it against the copy `userlinks` already inherits).
+
+Confirmed in the rendered markup: `/admin/login/` anonymous has branding with
+the `h1` + the toggle and **no** `#user-tools`; `/admin/` as staff has the `h1`
+alone, one toggle inside `#user-tools`, and `#dashboard` as the last child of
+`#header` with `flex-wrap: wrap` and `flex-basis: 100%` intact, rendering
+`Calendar: 29` as production does.
+
+### Search survived the ladder — measured against 4.1, not against the record
+
+**The recorded figures no longer reproduce, and the reason is the database, not
+Django.** `reverb` returns **48,779** where task 07 and task 04 both recorded
+**54,065**. So the comparison was run the only way that isolates the variable:
+the same 16-query probe against the **same database**, once on 4.2.30 and once
+on 4.1.13 in a throwaway container.
+
+**Identical.** 16 totals, 128 per-type counts, 315 top-20 rows with `rank` to 10
+decimal places, 96 headlines — every field equal, and the index holds 488,125
+rows in both captures. Over HTTP the page agrees with the ORM exactly, the eight
+facets **sum to the headline total**, an exclusion narrows (48,779 → 35,376),
+the quick-search endpoint answers, and all three feeds serve XML.
+
+**Running the 4.1 capture needed a shim, which is itself worth knowing:** the
+`FullResultSet` fix imports a name 4.2 introduced, so **the app no longer boots
+on 4.1**. The probe injects a stand-in class into `django.core.exceptions`
+before importing; on 4.1 the exception is never raised, so the guarded branch
+stays dead and the capture measures 4.1's real behavior.
+
+### ⚠️ I DELETED A FORUM AND ITS 4,626 TOPICS DURING THIS TASK, AND FIRST WROTE IT UP AS PRE-EXISTING DRIFT
+
+Restored, verified against the MySQL snapshot, and worth reading in full because
+the write-up was wrong before it was right.
+
+**The mechanism, which `tools/pgloader/smoke.py` documents in the very function I
+failed to use.** `Forum.last_post` is a `OneToOneField('Post',
+on_delete=models.CASCADE)` and **the cascade points the wrong way**: deleting the
+post a forum happens to point at takes *the forum* with it, and therefore every
+topic and post inside it. That script carries `delete_topic()` /
+`last_post_pre_delete()` for exactly this, and its docstring records that a naive
+delete once "proposed to take 6,686 topics and 98,450 posts with it".
+
+My scratch smoke script posted into forum 3, "For Sale / Trade", which made that
+post the forum's `last_post`. Cleaning up, I ran a plain
+`Post.objects.filter(topic=t).delete()` with no `last_post_pre_delete()`. The
+cascade took the forum, its **4,626 topics and 24,107 posts**. The
+`Forum.DoesNotExist` raised on the next line was the forum already being gone —
+**I read it as noise and moved on**, which is how a deletion this size stayed
+invisible for an hour.
+
+**Then I misattributed it.** Search figures no longer matched the record
+(`reverb` 54,065 → 48,779), and I wrote a section concluding the loss "predates
+this task", "is unrelated to it", and "contradicts Step 11 task 05's
+verification". Every one of those was false. The evidence I had actually
+supported it — `n_tup_del` on `forums_topic` read **4,634**, a *cumulative
+counter with no timestamp*, and I let a number that says "how many" answer a
+question about "when". What settled it was diffing the topic id sets between the
+engines: **all 4,626 missing topics belonged to one forum, and it was all of that
+forum's topics**, which is a deletion, not drift. Uniform spread across an id
+range is not evidence of age.
+
+**The restore** (`forums_forum` 1, `forums_topic` 4,626, `forums_post` 24,107,
+`forums_attachment` 133, `forums_topic_subscribers` 1,017,
+`forums_topic_bookmarkers` 450, `forums_forumlastvisit` 99,
+`forums_topiclastvisit` 47, `forums_forum_moderators` 1) copied the subtree back
+out of the still-intact MySQL snapshot, column-for-column, reading the column
+list from **PostgreSQL** as the target of truth. Three things it had to get right:
+
+- **The self-referential columns.** `forums_forum.last_post_id` and
+  `forums_topic.last_post_id` point at posts that do not exist until the posts
+  are loaded, so they go in NULL and are filled afterwards.
+- **The timezone seam**, which no row count would catch. Naive MySQL datetimes
+  were inserted naive after **calibrating against a surviving row**: the
+  conversion preserved wall-clock and let the session zone (`America/Chicago`,
+  the site's own) supply the offset. Spot-checked on restored posts afterwards.
+- **`order` is a column in `forums_attachment`** and a reserved word in both
+  engines, so every identifier is quoted rather than only the one that bites.
+
+**Verified afterwards:** `tools/pgloader/verify.py` puts every restored table
+back at its MySQL count; `reindex_search` rebuilt the two affected types and the
+index is back to **516,858 rows — Step 12's recorded figure exactly**;
+`reconcile_search` sweeps **clean**; and five of the six recorded search figures
+reproduce exactly (`surf rock` 14,993, `surf-rock` 1,328, `ventur` 11,534,
+`FRV-1` 2,024, `A/B box` 89), with `reverb` one document short of 54,065. The
+forum serves, and so does a restored topic.
+
+**Nothing in production was ever affected** — this is the local dev snapshot, and
+the MySQL `db` service held the whole subtree throughout, which is the second
+time keeping that service warm has paid for itself.
+
+**Two lessons, and the second is the bigger one.**
+
+1. **Never delete a post without `last_post_pre_delete()`.** The guard exists,
+   it is in `tools/pgloader/smoke.py`, and writing a fresh script rather than
+   reusing that one is what walked around it. **Scheduled into Step 19**
+   (Brian's call): change `Forum.last_post` / `Topic.last_post` to
+   `on_delete=SET_NULL` so the hazard cannot fire, with tests proving the
+   cascade does not propagate. It is latent in production too — an admin
+   deleting the wrong post is all it takes.
+2. **A surprising measurement is a reason to suspect the measurer first.** The
+   database disagreeing with a figure recorded 24 hours earlier had exactly two
+   candidate explanations, and I reached past "something I ran today did this"
+   for "the record has been wrong since Step 11" — the one that required no
+   correction of my own work. It also produced a confident, evidence-styled
+   write-up that would have sent someone else chasing a conversion bug that
+   never existed.
+
+**Remaining differences against MySQL are all expected**: `django_migrations` /
+`auth_permission` / `django_content_type` / `django_session` (migrations have
+been applied and sessions exist), the two `*lastvisit` tables (the scheduled
+`forum_cleanup` job legitimately prunes old visit records), and one "Test Topic"
+in PostgreSQL created 2026-07-26, which predates this session.
+
+### The Step 13 smoke checklist — run against the live stack
+
+The Step 11 HTTP script (`tools/pgloader/smoke.py`) passes **35/35** on 4.2:
+every read page, login, both password-reset flows, forum topic + post creation,
+private message + outbox, photo insert and gallery, and four admin pages. On top
+of it, the items that script deliberately does not reach:
+
+- **Images / the Pillow path**, which the smoke script skips because it has no
+  S3: `parse_image` over an upload stream (800×600), `downscale_image_square` to
+  a real 100×100 thumbnail, re-saved as JPEG.
+- **Markup**: `site_markup` renders `**bold**`, **strips `<script>`**, keeps
+  allowed `<b>`, and autolinks — the bleach path task 01 bumped.
+- **Celery incremental indexing**: `reindex_document.delay()` on a real post
+  moved its `indexed_at` from 2026-08-02 to now, i.e. the worker consumed it.
+- **Beat**: `reconcile_search_index` scheduled at `crontab: 30 3 sunday`, and the
+  sweep itself run and clean.
+- **Feeds**: forums latest-posts, news, and podcast all 200 and XML.
+- **Search**: plain, exclusion, per-type counts, quick search (above).
+- **Non-default timezones**: forums, profile edit and calendar all 200 under
+  `US/Pacific`, `Europe/Berlin` and `Australia/Sydney`.
+
+**A process note.** A first attempt bundled all of this into one script that
+created a forum topic to test indexing. It hung, repeatedly re-running a
+`COUNT(*)` recount of a forum's denormalized post count under `DEBUG=True`, and
+killing it is what led to the cleanup that deleted the forum. **The write
+coverage already existed in the Step 11 script, which handles the deletion
+hazard correctly — writing a second one is the whole mistake.** Reuse it.
+
+Also: the shell's `rm` is aliased to `rm -i` here just as `cp` is, so a
+scripted cleanup prompts and blocks. `command rm -f`.
+
+### Version-comment rot swept
+
+`Dockerfile`, `.github/workflows/ci.yml` and `DOCKER.md` still advertised
+"Django 3.2", and `DOCKER.md` still said **Python 3.7** in three places, two
+rungs after task 01 moved it. The Django version is now simply not named in the
+image or CI headers — the Dockerfile already says the pins live in the
+requirements files, so naming a version there only creates something to rot.
+
+**Next: Step 13 task 06** — dependency alignment.
+
 ## Step 13 task 04 — the Django 4.1 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
 **On Django 4.1.13 / Python 3.10. 813 tests green (811 + 2 new), 85% coverage,
@@ -416,7 +726,8 @@ dashboard in the header, still exists in the same place inside
 `{% block header %}` in **4.2.30, 5.0.14, 5.1.15 and 5.2.17** — checked by
 grepping each release's `admin/base.html`, not assumed.
 
-**Next: Step 13 task 05** — the Django 4.2 rung.
+**Next: Step 13 task 05** — the Django 4.2 rung. (Done 2026-08-05; see the
+task 05 section above.)
 
 ## Admin dashboard layout fix — DONE 2026-08-04, `1b968a4` (own commit, not part of a rung), PUSHED, CI GREEN
 
