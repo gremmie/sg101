@@ -1,4 +1,4 @@
-# SG101 runtime requirements -- Python 3.10 / Django 4.1.
+# SG101 runtime requirements -- Python 3.10 / Django 4.2.
 #
 # Apps whose old external libraries aren't Python-3 ready are temporarily
 # stubbed, and their dependencies dropped here:
@@ -10,7 +10,7 @@
 # the repo (the fork is tiny and frozen upstream, and needed Py3 patches), so it
 # no longer appears here.
 
-Django==4.1.13
+Django==4.2.30
 django-environ==0.4.5  # 12-factor env-var config
 # django-tagging is no longer installed from PyPI: 0.5.0 is the final release
 # (upstream stopped in 2018) and it does not import on Django 4.0, so it is
@@ -24,8 +24,9 @@ pytz==2021.3
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (used internally to
 # split/format SQL). It installs automatically with Django; pinned here so the
-# build stays reproducible.
-sqlparse==0.2.4
+# build stays reproducible. Django 4.2 raised its floor to 0.3.1, so this is a
+# real constraint now and not only a reproducibility pin.
+sqlparse==0.5.5
 
 # Celery 5.2 is the last line that supports Python 3.7 (5.3 requires 3.8+). The
 # uppercase settings compat is gone in celery 5, so the config moved to the
@@ -52,11 +53,13 @@ importlib-metadata==4.13.0
 # window. The 1.4.x line has no wheel, so it builds from source; see the
 # Dockerfile for the two apt packages that lets it.
 mysqlclient==1.4.6
-# psycopg2 (not psycopg 3): Django 3.2's PostgreSQL backend imports psycopg2 and
-# refuses to start without it -- psycopg 3 support arrives in Django 4.2. Built
-# from source (libpq-dev in the Dockerfile), not psycopg2-binary, which upstream
-# discourages for anything but a quick trial. 2.9.9 is the last release
-# supporting Python 3.7; 2.9.10 requires 3.8+.
+# psycopg2 (not psycopg 3): Django gained psycopg 3 support in 4.2, so the
+# driver is now a live choice rather than a fixed one -- but swapping it is its
+# own change on its own evidence, not a passenger on a version bump, so it stays
+# put for now. Built from source (libpq-dev in the Dockerfile), not
+# psycopg2-binary, which upstream discourages for anything but a quick trial.
+# The 2.9.9 pin dates from the Python 3.7 cap (2.9.10 requires 3.8+), which no
+# longer binds.
 psycopg2==2.9.9
 redis==3.5.3            # celery 4.4 / kombu 4.6 redis transport needs >=3.2
 python-memcached==1.59  # only used by production.py CACHES; 1.59 adds Py3

@@ -17,7 +17,7 @@ class ForumsTasksTestCase(TestCase):
 
         new_post_task.s(42).apply()
 
-        self.assertEquals(latest_mock.mock_calls, [
+        self.assertEqual(latest_mock.mock_calls, [
             call.process_new_post(42),
         ])
 
@@ -26,7 +26,7 @@ class ForumsTasksTestCase(TestCase):
 
         updated_post_task.s(42).apply()
 
-        self.assertEquals(latest_mock.mock_calls, [
+        self.assertEqual(latest_mock.mock_calls, [
             call.process_updated_post(42),
         ])
 
@@ -35,7 +35,7 @@ class ForumsTasksTestCase(TestCase):
 
         new_topic_task.s(42).apply()
 
-        self.assertEquals(latest_mock.mock_calls, [
+        self.assertEqual(latest_mock.mock_calls, [
             call.process_new_topic(42),
         ])
 
@@ -44,6 +44,6 @@ class ForumsTasksTestCase(TestCase):
 
         updated_topic_task.s(42).apply()
 
-        self.assertEquals(latest_mock.mock_calls, [
+        self.assertEqual(latest_mock.mock_calls, [
             call.process_updated_topic(42),
         ])

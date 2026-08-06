@@ -1,4 +1,4 @@
-# SG101 image: Python 3.10 / Django 3.2.
+# SG101 image: Python 3.10.
 #
 # The interpreter crossed from Python 2.7 to 3.7 at the Python 3 flip, and from
 # 3.7 to 3.10 when Django 4.0 -- which needs 3.8+ -- came into range. The Django

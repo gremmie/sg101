@@ -25,7 +25,19 @@ DATABASES = {
 CONN_MAX_AGE = 1200
 
 STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+# Both backends are named explicitly even though 'default' is Django's own
+# choice: STORAGES replaced a pair of standalone settings, so writing only the
+# half that differs would hide where user uploads go. That entry is what moves
+# when media goes to object storage.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+}
 
 # Used cached template loader
 del TEMPLATES[0]['APP_DIRS']

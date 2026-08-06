@@ -20,7 +20,7 @@ class UserStatsTaskTestCase(TestCase):
 
         task = user_stats_task.s(1).apply()
 
-        self.assertEquals(redis_mock.mock_calls, [
+        self.assertEqual(redis_mock.mock_calls, [
             call.incr('accounts:user_count'),
             call.set('accounts:user_count', 1),
             call.pipeline(),

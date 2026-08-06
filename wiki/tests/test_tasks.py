@@ -18,7 +18,7 @@ class ExpireCookiesTaskTestCase(TestCase):
 
         task = expire_cookies.s().apply()
 
-        self.assertEquals(redis.mock_calls, [
+        self.assertEqual(redis.mock_calls, [
             call.zcard('wiki_cookie_keys'),
             call.zremrangebyscore('wiki_cookie_keys', 0.0, ANY),
         ])

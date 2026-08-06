@@ -3,6 +3,7 @@ Models and managers for tagging.
 """
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FullResultSet
 from django.db import connection
 from django.db import models
 from django.utils.encoding import smart_str
@@ -155,8 +156,8 @@ class TagManager(models.Manager):
             filters = {}
 
         queryset = model._default_manager.filter()
-        for f in filters.items():
-            queryset.query.add_filter(f)
+        for lookup, value in filters.items():
+            queryset.query.add_filter(lookup, value)
         usage = self.usage_for_queryset(queryset, counts, min_count)
 
         return usage
@@ -175,7 +176,13 @@ class TagManager(models.Manager):
         Passing a value for ``min_count`` implies ``counts=True``.
         """
         compiler = queryset.query.get_compiler(using=queryset.db)
-        where, params = compiler.compile(queryset.query.where)
+        try:
+            where, params = compiler.compile(queryset.query.where)
+        except FullResultSet:
+            # An unfiltered queryset has a WHERE clause that matches every row.
+            # Compiling it used to yield empty SQL; it now raises instead, and
+            # "matches everything" is spelled here as "add no extra criteria".
+            where, params = '', []
         extra_joins = ' '.join(compiler.get_from_clause()[0][1:])
 
         if where:

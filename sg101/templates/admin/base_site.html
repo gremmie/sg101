@@ -31,6 +31,14 @@
 
 {% block branding %}
 <h1 id="site-name">{% trans 'SurfGuitar101.com Site Administration' %}</h1>
+{# The light/dark toggle is rendered twice by the admin: once in userlinks for #}
+{# signed-in staff, which this template inherits untouched, and once here for  #}
+{# everyone else. Overriding branding drops that second copy, and the one page #}
+{# it covers is the login form -- the only admin page an anonymous visitor     #}
+{# ever sees.                                                                  #}
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
 {% endblock %}
 
 {% block nav-global %}{% admin_dashboard user %}{% endblock %}

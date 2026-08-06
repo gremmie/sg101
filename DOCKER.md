@@ -1,13 +1,13 @@
 # Running SG101 locally with Docker
 
-Run the SG101 site (Python 3.7 / Django 3.2 / PostgreSQL 16 / Redis) on
+Run the SG101 site (Python 3.10 / Django 4.2 / PostgreSQL 16 / Redis) on
 your Mac inside Docker, seeded with a real production database snapshot. Docker gives us a
 consistent little Linux environment that matches the target deploy platform —
 handy for a stack this far from a modern Mac's defaults.
 
 New to Docker? The only concepts you need here:
 
-- **Image** — a blueprint (built from `Dockerfile`) with Python 3.7 + all the
+- **Image** — a blueprint (built from `Dockerfile`) with Python 3.10 + all the
   app's dependencies baked in.
 - **Container** — a running instance of an image. Each service (`web`, `db`, …)
   is its own container.
@@ -50,7 +50,7 @@ Neither is committed to source control.
 
 ## 2. Build the image
 
-Downloads Python 3.7 + installs the pinned dependencies. The first build takes a
+Downloads Python 3.10 + installs the pinned dependencies. The first build takes a
 while (several minutes); later builds are cached.
 ```
 docker compose build
@@ -325,7 +325,7 @@ What each check covers:
 
 ## How the pieces fit
 
-- **`Dockerfile`** — builds the Python 3.7 image (system libs + pip deps from
+- **`Dockerfile`** — builds the Python 3.10 image (system libs + pip deps from
   `requirements-docker.txt`).
 - **`docker-compose.yml`** — defines the services and wires them together: five
   by default, plus `db` (MySQL) behind the `mysql` profile.

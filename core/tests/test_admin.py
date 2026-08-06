@@ -115,3 +115,33 @@ class ModerationDashboardTests(TestCase):
         html = self.client.get(reverse('admin:index')).content.decode('utf-8')
         self.assertNotIn('<ul id="dashboard-list">', html)
         self.assertNotIn('<div id="dashboard">', html)
+
+
+class AdminBrandingTests(TestCase):
+    """
+    The site's `branding` block override, and what Django puts in its own.
+
+    Overriding a block replaces it wholesale, so anything Django later adds to
+    its version silently disappears -- 4.2 put the light/dark theme toggle in
+    `branding` for anonymous visitors, and the one admin page an anonymous
+    visitor reaches is the login form.
+
+    """
+    def test_the_login_page_offers_the_theme_toggle(self):
+        html = self.client.get(reverse('admin:login')).content.decode('utf-8')
+
+        self.assertIn('SurfGuitar101.com Site Administration', html)
+        self.assertIn('theme-toggle', html)
+
+    def test_a_signed_in_page_shows_exactly_one_toggle(self):
+        """
+        The toggle is inherited from `userlinks` once staff are signed in, so
+        the anonymous copy must not double up on it.
+
+        """
+        User.objects.create_superuser('admin', 'admin@example.com', 'pw')
+        self.assertTrue(self.client.login(username='admin', password='pw'))
+
+        html = self.client.get(reverse('admin:index')).content.decode('utf-8')
+
+        self.assertEqual(html.count('class="theme-toggle"'), 1)

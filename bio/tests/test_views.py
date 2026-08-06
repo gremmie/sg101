@@ -296,8 +296,8 @@ class EditElsewhereTestCase(TestCase):
         })
         self.assertRedirects(response, self.url)
         user_networks = self.user.social_network_profiles.all()
-        self.assertEquals(user_networks.count(), 1)
-        self.assertEquals(user_networks[0].network_id, 'catster')
+        self.assertEqual(user_networks.count(), 1)
+        self.assertEqual(user_networks[0].network_id, 'catster')
 
     def test_add_instant_messenger(self):
         response = self.client.post(self.url, {
@@ -307,8 +307,8 @@ class EditElsewhereTestCase(TestCase):
         })
         self.assertRedirects(response, self.url)
         user_networks = self.user.instant_messenger_profiles.all()
-        self.assertEquals(user_networks.count(), 1)
-        self.assertEquals(user_networks[0].network_id, 'aim')
+        self.assertEqual(user_networks.count(), 1)
+        self.assertEqual(user_networks[0].network_id, 'aim')
 
     def test_add_website(self):
         response = self.client.post(self.url, {
@@ -318,42 +318,42 @@ class EditElsewhereTestCase(TestCase):
         })
         self.assertRedirects(response, self.url)
         websites = self.user.website_profiles.all()
-        self.assertEquals(websites.count(), 1)
-        self.assertEquals(websites[0].name, 'pjmoto.com')
-        self.assertEquals(websites[0].url, 'https://example.com/pjmoto')
+        self.assertEqual(websites.count(), 1)
+        self.assertEqual(websites[0].name, 'pjmoto.com')
+        self.assertEqual(websites[0].url, 'https://example.com/pjmoto')
 
     def test_delete_social_network(self):
         profile = SocialNetworkProfile(user=self.user, network_id='catster',
                                        username='pjmoto')
         profile.save()
-        self.assertEquals(self.user.social_network_profiles.count(), 1)
+        self.assertEqual(self.user.social_network_profiles.count(), 1)
         response = self.client.post(self.url, {
             'delete_id': profile.id,
             'delete-sn-form': 'Delete',
         })
         self.assertRedirects(response, self.url)
-        self.assertEquals(self.user.social_network_profiles.count(), 0)
+        self.assertEqual(self.user.social_network_profiles.count(), 0)
 
     def test_delete_instant_messenger(self):
         profile = InstantMessengerProfile(user=self.user, network_id='aim',
                                           username='pjmoto')
         profile.save()
-        self.assertEquals(self.user.instant_messenger_profiles.count(), 1)
+        self.assertEqual(self.user.instant_messenger_profiles.count(), 1)
         response = self.client.post(self.url, {
             'delete_id': profile.id,
             'delete-im-form': 'Delete',
         })
         self.assertRedirects(response, self.url)
-        self.assertEquals(self.user.instant_messenger_profiles.count(), 0)
+        self.assertEqual(self.user.instant_messenger_profiles.count(), 0)
 
     def test_delete_website(self):
         profile = WebsiteProfile(user=self.user, name='pjmoto.com',
                                  url='https://example.com/pjmoto')
         profile.save()
-        self.assertEquals(self.user.website_profiles.count(), 1)
+        self.assertEqual(self.user.website_profiles.count(), 1)
         response = self.client.post(self.url, {
             'delete_id': profile.id,
             'delete-w-form': 'Delete',
         })
         self.assertRedirects(response, self.url)
-        self.assertEquals(self.user.website_profiles.count(), 0)
+        self.assertEqual(self.user.website_profiles.count(), 0)

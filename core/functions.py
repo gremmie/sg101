@@ -117,7 +117,7 @@ def copyright_str():
     return 'Copyright (C) %s, SurfGuitar101.com' % year_range
 
 
-IP_PAT = re.compile('(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
+IP_PAT = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
 
 def get_ip(request):
     """Returns the IP from the request or None if it cannot be retrieved."""

@@ -22,7 +22,7 @@ class CoreTasksTestCase(TestCase):
         kwargs = {'a': 1, 'b': 2, 'c':3}
         send_mail.s(**kwargs).apply()
 
-        self.assertEquals(email_mock.mock_calls, [
+        self.assertEqual(email_mock.mock_calls, [
             call(**kwargs),
             call().send(),
         ])
@@ -51,6 +51,6 @@ class CoreTasksTestCase(TestCase):
 
         max_users.s().apply()
 
-        self.assertEquals(whos_online_mock.mock_calls, [
+        self.assertEqual(whos_online_mock.mock_calls, [
             call.max_users(),
         ])

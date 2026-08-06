@@ -1,8 +1,8 @@
 name: CI
 
 # Runs the existing test suite on every push/PR to the modernization branch,
-# using the SAME Docker image and services as local dev (Python 3.10 / Django 3.2
-# / PostgreSQL 16) for parity -- the `postgres` service comes from
+# using the SAME Docker image and services as local dev (Python 3.10 /
+# PostgreSQL 16) for parity -- the `postgres` service comes from
 # docker-compose.yml rather than a GitHub-hosted service container, so CI and a
 # developer's laptop run the identical database.
 # `main` intentionally has no CI: it's preserved legacy history and predates the
@@ -26,7 +26,7 @@ jobs:
       - name: Seed .env from the example
         run: cp .env.example .env
 
-      - name: Build the image (Py3.10 / Django 3.2)
+      - name: Build the image
         run: docker compose build web
 
       # Every app has migrations now, so this gate finally covers the whole
