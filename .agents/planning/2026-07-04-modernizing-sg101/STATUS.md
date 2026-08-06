@@ -176,6 +176,11 @@ running it from inside a subdirectory silently answers a narrower question.
 
 ## PostgreSQL snapshots — `tools/pg_snapshot.sh`, added 2026-08-05
 
+Shipped with the rung: `d482413` (4.2), `dfe53b4` (Redis cache), `d153249`
+(planning), `efc8605` (this tool), `0961ad5` (the Step 21 Redis note) — **all
+pushed to `modernize`, CI green on GitHub 2026-08-05**, the first CI run on
+Django 4.2.
+
 Brian's suggestion, after a scratch script deleted a forum during task 05 and
 recovery ran through MySQL for an hour. `dump` / `list` / `restore` / `scratch`,
 documented in DOCKER.md §8, with a "take one first" note added to the four
@@ -225,7 +230,7 @@ the damage.** Today's deletion went unnoticed for an hour, and a snapshot taken
 on noticing would have captured the loss. Hence the note in the task files: take
 one at the start, not when something looks wrong.
 
-## Step 13 task 05 — the Django 4.2 rung — DONE 2026-08-05, NOT YET PUSHED
+## Step 13 task 05 — the Django 4.2 rung — DONE 2026-08-05, PUSHED, CI GREEN
 
 **On Django 4.2.30 / Python 3.10. 821 tests green (816 + 5 new), `check`,
 `check --deploy` and `makemigrations --check` clean, the full Step 13 smoke
