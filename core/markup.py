@@ -24,6 +24,12 @@ class Markdown(object):
                                      ])
 
     def convert(self, s):
+        # A Markdown parser accumulates state -- reference definitions and
+        # stashed raw HTML -- and convert() does not clear it. Resetting here is
+        # what makes an instance safe to hold on to and use for more than one
+        # document; without it a `[label]: url` definition in one post resolves
+        # a `[label]` in the next one converted by the same object.
+        self.md.reset()
         return clean_html(self.md.convert(force_str(s)))
 
 

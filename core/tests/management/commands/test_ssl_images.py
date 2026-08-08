@@ -13,6 +13,7 @@ from PIL import Image
 from core.management.commands.ssl_images import html_check
 from core.management.commands.ssl_images import process_post, process_html
 from core.management.commands.ssl_images import PHOTO_MAX_SIZE, resize_image
+from core.management.commands.ssl_images import IMAGE_LINK_RE, IMAGE_REF_RE
 from core.tests.images.imagemakers import jpeg_bytes, png_bytes
 import core.management.commands.ssl_images
 
@@ -531,3 +532,35 @@ class ResizeImageTestCase(unittest.TestCase):
         path = self._write('junk.jpg', b'not an image at all')
 
         self.assertFalse(resize_image(path))
+
+
+class ImagePatternTestCase(unittest.TestCase):
+    """The capture groups replace_image_markup() indexes into.
+
+    These patterns came from `markdown.inlinepatterns` until Markdown 3.0
+    replaced its regex link parsing with code, at which point the command had to
+    keep its own copies. Nothing about group 1 and group 8 is self-evident, and
+    getting them wrong raises IndexError deep inside a substitution callback, so
+    the contract is pinned here.
+    """
+
+    def test_alt_text_and_source_group_numbers(self):
+        m = IMAGE_LINK_RE.search('![alt text](http://example.com/x.jpg "a title")')
+
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), 'alt text')
+        self.assertEqual(m.group(8), 'http://example.com/x.jpg "a title"')
+
+    def test_source_group_without_a_title(self):
+        m = IMAGE_LINK_RE.search('![](http://example.com/x.jpg)')
+
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), '')
+        self.assertEqual(m.group(8), 'http://example.com/x.jpg')
+
+    def test_reference_style_images_are_recognized(self):
+        self.assertIsNotNone(IMAGE_REF_RE.search('![alt text][ref]'))
+        self.assertIsNone(IMAGE_REF_RE.search('![alt text](http://example.com/x.jpg)'))
+
+    def test_a_link_is_not_an_image(self):
+        self.assertIsNone(IMAGE_LINK_RE.search('[a link](http://example.com/)'))

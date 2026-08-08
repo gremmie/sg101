@@ -62,7 +62,10 @@ lxml==4.9.4
 # of the line rather than behind it.
 bleach==6.4.0
 html5lib==1.1
-Markdown==2.6.11
+# The site's markup engine. The two extensions in core/mdexts/ are written
+# against the 3.x extension API (extendMarkdown(md), Registry.register with a
+# numeric priority), so they do not load on 2.x.
+Markdown==3.10.3
 docutils==0.16
 ftfy==5.9
 simplejson==3.17.6

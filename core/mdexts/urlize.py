@@ -39,34 +39,37 @@ Positive examples:
 >>> md = markdown.Markdown(extensions=[UrlizeExtension()])
 
 >>> md.convert('http://example.com/')
-u'<p><a href="http://example.com/">http://example.com/</a></p>'
+'<p><a href="http://example.com/">http://example.com/</a></p>'
 
->>> md.convert('go to http://example.com')
-u'<p>go to <a href="http://example.com">http://example.com</a></p>'
+>>> md.reset().convert('go to http://example.com')
+'<p>go to <a href="http://example.com">http://example.com</a></p>'
 
->>> md.convert('example.com')
-u'<p><a href="http://example.com">example.com</a></p>'
+>>> md.reset().convert('example.com')
+'<p><a href="http://example.com">example.com</a></p>'
 
->>> md.convert('example.net')
-u'<p><a href="http://example.net">example.net</a></p>'
+>>> md.reset().convert('example.net')
+'<p><a href="http://example.net">example.net</a></p>'
 
->>> md.convert('www.example.us')
-u'<p><a href="http://www.example.us">www.example.us</a></p>'
+>>> md.reset().convert('www.example.us')
+'<p><a href="http://www.example.us">www.example.us</a></p>'
 
->>> md.convert('(www.example.us/path/?name=val)')
-u'<p>(<a href="http://www.example.us/path/?name=val">www.example.us/path/?name=val</a>)</p>'
+>>> md.reset().convert('(www.example.us/path/?name=val)')
+'<p>(<a href="http://www.example.us/path/?name=val">www.example.us/path/?name=val</a>)</p>'
 
->>> md.convert('go to <http://example.com> now!')
-u'<p>go to <a href="http://example.com">http://example.com</a> now!</p>'
+>>> md.reset().convert('go to <http://example.com> now!')
+'<p>go to <a href="http://example.com">http://example.com</a> now!</p>'
 
 Negative examples:
 
->>> md.convert('del.icio.us')
-u'<p>del.icio.us</p>'
+>>> md.reset().convert('del.icio.us')
+'<p>del.icio.us</p>'
 
 """
+import xml.etree.ElementTree as etree
 
-import markdown
+from markdown.extensions import Extension
+from markdown.inlinepatterns import InlineProcessor
+from markdown.util import AtomicString
 
 # Global Vars
 URLIZE_RE = '(%s)' % '|'.join([
@@ -76,10 +79,17 @@ URLIZE_RE = '(%s)' % '|'.join([
     r'[^(<\s]+\.(?:com|net|org)\b',
 ])
 
-class UrlizePattern(markdown.inlinepatterns.Pattern):
+# The priority Markdown gives its own `autolink`, which this replaces. Keeping
+# the number means the pattern runs exactly where the built-in did: after the
+# link and image patterns, so `[text](url)` and `![alt](url)` still win, and
+# before `automail`.
+AUTOLINK_PRIORITY = 120
+
+
+class UrlizeInlineProcessor(InlineProcessor):
     """ Return a link Element given an autolink (`http://example/com`). """
-    def handleMatch(self, m):
-        url = m.group(2)
+    def handleMatch(self, m, data):
+        url = m.group(1)
 
         if url.startswith('<'):
             url = url[1:-1]
@@ -92,20 +102,21 @@ class UrlizePattern(markdown.inlinepatterns.Pattern):
             else:
                 url = 'http://' + url
 
-        el = markdown.util.etree.Element("a")
+        el = etree.Element("a")
         el.set('href', url)
-        el.text = markdown.util.AtomicString(text)
-        return el
+        el.text = AtomicString(text)
+        return el, m.start(0), m.end(0)
 
-class UrlizeExtension(markdown.Extension):
+class UrlizeExtension(Extension):
     """ Urlize Extension for Python-Markdown. """
 
-    def extendMarkdown(self, md, md_globals):
-        """ Replace autolink with UrlizePattern """
-        md.inlinePatterns['autolink'] = UrlizePattern(URLIZE_RE, md)
+    def extendMarkdown(self, md):
+        """ Replace autolink with UrlizeInlineProcessor """
+        md.inlinePatterns.register(UrlizeInlineProcessor(URLIZE_RE, md),
+                                   'autolink', AUTOLINK_PRIORITY)
 
-def makeExtension(configs=None):
-    return UrlizeExtension(configs=configs)
+def makeExtension(**kwargs):
+    return UrlizeExtension(**kwargs)
 
 if __name__ == "__main__":
     import doctest

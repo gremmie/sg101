@@ -20,7 +20,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from lxml import etree
 import lxml.html
-import markdown.inlinepatterns
 from PIL import Image
 import requests
 
@@ -36,9 +35,20 @@ from news.models import Story
 LOGFILE = os.path.join(settings.PROJECT_PATH, 'logs', 'ssl_images.log')
 logger = logging.getLogger(__name__)
 
-IMAGE_LINK_RE = re.compile(markdown.inlinepatterns.IMAGE_LINK_RE,
-                           re.DOTALL | re.UNICODE)
-IMAGE_REF_RE = re.compile(markdown.inlinepatterns.IMAGE_REFERENCE_RE,
+# Markdown's image patterns, in the form Markdown itself used through 2.x.
+# Markdown 3.0 rewrote link parsing to match brackets in code instead of with a
+# regex, so `markdown.inlinepatterns.IMAGE_LINK_RE` is now just the r'\!\['
+# opener and there is nothing left to borrow. This command reads Markdown source
+# rather than rendering it, so it keeps the patterns it has always used --
+# including their group numbering, which replace_image_markup() indexes into.
+_NOBRACKET = r'[^\]\[]*'
+_BRK = (r'\[(' + (_NOBRACKET + r'(\[') * 6 + (_NOBRACKET + r'\])*') * 6 +
+        _NOBRACKET + r')\]')
+
+IMAGE_LINK_RE = re.compile(
+    r'\!' + _BRK + r'\s*\(\s*(<.*?>|([^"\)\s]+\s*"[^"]*"|[^\)\s]*))\s*\)',
+    re.DOTALL | re.UNICODE)
+IMAGE_REF_RE = re.compile(r'\!' + _BRK + r'\s?\[([^\]]*)\]',
                           re.DOTALL | re.UNICODE)
 
 SG101_HOSTS = set(['www.surfguitar101.com', 'surfguitar101.com'])
