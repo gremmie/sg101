@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-07
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,259 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 13 task 06 — dependency alignment — DONE 2026-08-07, NOT YET PUSHED
+
+**823 tests green (821 + 2 new), 86% coverage, `check` / `check --deploy` /
+`makemigrations --check` clean, Celery verified end to end against the live
+stack, full site smoke.** Still Django 4.2.30 / Python 3.10 — no version of
+either moved. Final set: **celery 5.6.3, kombu 5.6.2, billiard 4.2.4, amqp
+5.3.1, vine 5.1.0, redis-py 6.4.0, psycopg2 2.9.12, debug-toolbar 6.3.0,
+coverage 7.15.4**; `importlib-metadata` gone.
+
+### The cap that did not exist, and the one nobody had written down
+
+**`importlib-metadata==4.13.0` was already inert, and had been since task 01.**
+The pin existed because kombu 5.2's entry-point shim calls
+`entry_points().get()`, which importlib-metadata 5+ dropped. But the shim reads
+
+```python
+try:
+    from importlib import metadata as importlib_metadata
+except ImportError:
+    import importlib_metadata
+```
+
+and on Python 3.10 the first branch **succeeds**. The pinned backport was
+installed and never imported — `'importlib_metadata' in sys.modules` is `False`
+after importing celery and kombu, measured rather than reasoned about. So the
+cap came out as dead weight, not as a fix.
+
+Which raises the real question the pin was hiding: `.get()` was reaching the
+**standard library's** `SelectableGroups`, which is deprecated on 3.10 and
+**removed in 3.12**. The kombu bump is a Step 14 prerequisite that happened to
+be filed under Step 13. Nothing here would have failed today.
+
+**The link the task file did not have: kombu drags redis-py.** kombu's redis
+extra asks for `>= 4.5.2`; we were on 3.5.3. Its *runtime* guard only checks
+`>= 3.2.0`, so nothing would have raised — but kombu 5.6 does
+
+```python
+try:
+    from redis import CredentialProvider, sentinel
+except ImportError:
+    sentinel = None
+    CredentialProvider = None
+```
+
+and on 3.5.3 the missing `CredentialProvider` (added in redis-py 4.4) takes
+`sentinel` down **with** it. Sentinel support would have switched itself off and
+said nothing. Brian chose the current line over the task file's 5.3, taking
+redis-py 3.5.3 → 6.4.0 so the whole chain is collected here rather than
+discovered at the interpreter move.
+
+redis-py serves three consumers and all three were verified, not assumed:
+Django's cache backend (`cache.set`/`get` round trip), the application datastore
+(`forums.latest.get_stats()` → 35,209 topics / 444,136 posts; `StrictRedis` is
+still an alias, `type(conn).__name__` is `Redis`), and the broker.
+
+### Celery end to end, on the image that shipped
+
+Queued through the real broker and watched, twice — once after the celery chain
+and again after the last rebuild, because "verified" should mean verified on
+what ships:
+
+- `search.tasks.reindex_document` succeeded in 0.02s; the document's
+  `indexed_at` moved from 2026-08-05 to now.
+- `search.tasks.reconcile_index` succeeded in 2.7s and wrote
+  `Index reconcile: 8 types in 2.7s, clean` to **`logs/search.log`** — the file
+  the sweep targets by using `logging.getLogger('search')` rather than
+  `get_task_logger()`, which reparents onto `celery.task` and misses it.
+- Beat's schedule loads with all six entries, `reconcile_search_index` at
+  `30 3 * * sunday`.
+- Worker registers all 16 tasks and connects to `redis://redis:6379/1`.
+
+### The deprecation gate lost an ignore, which is the point of running it
+
+Task 05's gate carried `-W 'ignore:SelectableGroups dict interface is
+deprecated:DeprecationWarning'`. **Re-run without it: 821 green.** kombu 5.6
+removed the cause, so the ignore is retired rather than inherited. The gate
+still binds — dropping the `pkg_resources` ignore in the same run aborted the
+suite at import (docutils 0.16 reaches `pkg_resources`), which is the check that
+distinguishes a gate that passed from a gate that was switched off.
+
+Working gate on 4.2, now three ignores instead of four:
+
+```
+python -W error::DeprecationWarning -W error::PendingDeprecationWarning \
+  -W 'ignore:pkg_resources is deprecated as an API:DeprecationWarning' \
+  -W 'ignore:Deprecated call to:DeprecationWarning' \
+  -W 'ignore:ANTIALIAS is deprecated:DeprecationWarning' \
+  manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+### psycopg 3: evaluated, declined, and the reason is structural
+
+Django has supported psycopg 3 since 4.2, which is what made the question
+askable here, and Step 11 explicitly deferred it to this point. **Declined for
+now — because it would not be a swap.** `tools/pgloader/verify.py`,
+`verify_data.py` and `compare_schema.py` import `psycopg2` directly. psycopg2
+therefore stays in the image whatever Django uses, so adopting psycopg 3 means
+running **two** PostgreSQL drivers rather than a newer one. Against that: the
+application imports no driver at all (all access is the ORM plus
+`django.contrib.postgres`), so nothing in the tree is asking for psycopg 3's
+features, and this site's load is not where its gains show. The natural moment
+is the 5.2 rung, where the backend is a release more settled and the pgloader
+tools may be retiring with the MySQL box and taking psycopg2 with them.
+
+psycopg2 went to **2.9.12** instead. A driver bump gets its own evidence: the
+three live search queries were re-run under **2.9.9** in a throwaway container
+against the same database, and totals and all eight per-type counts came back
+identical (`reverb` 54,063; `dick dale` 12,766; `backing track` 3,481). Two of
+those counts sit one below the Step 12 record — the point of the back-comparison
+is that it shows the difference predates the driver rather than leaving that as
+an assumption.
+
+### The defect the toolbar bump exposed: importing a settings module reconfigures the running one
+
+debug-toolbar 3.2.4 → 6.3.0 turned the suite **105 errors** red:
+`Model class debug_toolbar.models.HistoryEntry doesn't declare an explicit
+app_label and isn't in an application in INSTALLED_APPS`.
+
+The toolbar was not at fault. `search/tests/test_views.py` imports
+`sg101.settings.local` and `.production` to read their `LOGGING` dicts, and
+**`from base import *` binds base's own list and dict objects**, so:
+
+- `local.py` did `MIDDLEWARE.insert(...)` and `INSTALLED_APPS.append(...)`
+- `production.py` did `del TEMPLATES[0]['APP_DIRS']` and assigned into
+  `TEMPLATES[0]['OPTIONS']`
+
+Each edited the configuration of the **already-running** settings module.
+Proven directly: `settings.MIDDLEWARE is local.MIDDLEWARE` → `True`, and the
+toolbar's middleware appears in the live `settings.MIDDLEWARE` the moment the
+module is imported. Every test that ran afterwards then loaded
+`debug_toolbar.middleware` — harmless while the toolbar had no models, fatal
+once 6.x shipped one, because appending to the `INSTALLED_APPS` *list* does not
+register anything with an app registry that was populated at `django.setup()`.
+The list says yes and the registry says no.
+
+**This is the more interesting half: `production.py`'s version was contaminating
+the suite silently and still is not a test failure.** Deleting `APP_DIRS` and
+installing the cached loader mid-run leaves templates resolving, so it changed
+how every subsequent test loaded templates without anything going red. It was
+found only by looking for siblings of the defect that did fail.
+
+`local.py` is fixed by rebinding copies (`MIDDLEWARE = list(MIDDLEWARE)`,
+`INSTALLED_APPS + [...]`), covered by a new test in `core/tests/test_settings.py`
+that reloads each module so the assertion faces a real import rather than a
+sys.modules cache hit, and **mutation-verified**: restoring the in-place edit
+fails it twice.
+
+**`production.py`'s block was deleted outright instead — Brian asked why it was
+still deleting `APP_DIRS`, and the answer is that it should not have been.** The
+five lines dropped `APP_DIRS` and named the cached loader by hand, reproducing
+what Django already does for itself. `Engine.__init__` appends the
+app-directories loader when `APP_DIRS` is on and, `if not debug`, wraps the
+result in `cached.Loader`; `DEBUG = False` sits ten lines above the block.
+Measured rather than argued: both engines built and their loader chains compared
+—
+
+```
+auto  (APP_DIRS=True, debug=False): cached.Loader([filesystem.Loader, app_directories.Loader])
+hand  (production.py as written) : cached.Loader([filesystem.Loader, app_directories.Loader])
+identical: True
+```
+
+— and the real production engine re-checked after the deletion, giving the same
+chain. **The `del` was never an independent decision**: Django raises
+`ImproperlyConfigured("app_dirs must not be set when loaders is defined.")`, so
+deleting `APP_DIRS` was simply the price of hand-specifying `loaders`. Remove the
+`loaders`, and the reason to delete `APP_DIRS` goes with it. The one semantic
+difference — the explicit form caches regardless of `DEBUG`, the automatic form
+ties caching to it — has no daylight here, since `DEBUG = False` is hardcoded in
+the same file.
+
+So `production.py` now performs **no in-place mutation at all**, which is a
+better outcome than making its mutation safe: the `deepcopy` and `import copy`
+went with the block. A second test that asserted production had no `APP_DIRS` and
+did have its cached `loaders` was deleted too — it existed to prove the copying
+had not skipped the edits, and with no edits left there is nothing for it to
+prove. `production.py` stays in the surviving test's module list regardless,
+because the property belongs to the package rather than to whichever module
+currently edits something.
+
+**Dead configuration that reproduces a framework default is invisible in review**
+— it reads as deliberate tuning, and the only way to tell is to build both and
+compare.
+
+**Follow-up deferred to Step 19 (Brian's call, 2026-08-07), rather than growing
+this task's diff.** The copy fix removes the defect but leaves the awkwardness
+that produced it: two ~95-line `LOGGING` dicts differing in six values, and a
+test that imports a whole deployment settings module to read one of them.
+Scheduled there: extract `LOGGING` into `sg101/settings/logging_config.py`
+(following `databases.py`, which is already a side-effect-free module the
+deployment settings call), and move the search-logging assertions onto
+`core/tests/test_settings.py`'s existing `_run()` subprocess helper — verified
+here that production settings load standalone with no env help, so nothing
+blocks it. **The trap recorded with it:** repointing that test at the shared
+`logging_config` module would stop it proving `production.py` uses it, which is
+the property it exists for. The isolation should come from the subprocess, not
+from changing what is asserted. Full write-up in the Step 19 section of plan.md.
+
+### AC6 — mysqlclient survived
+
+Confirmed present and still commented at all four points of use: the pin in both
+requirements files, `default-libmysqlclient-dev` + `default-mysql-client` in the
+Dockerfile, and the `mysql` Compose profile. Untouched by this task.
+
+### Also
+
+- **debug-toolbar 6.3.0 smoked in the running dev server**, not just imported:
+  the panels render and `render_panel` answers 200 for SQL/Timer/Settings/
+  Headers. Note 6.x renamed the query parameter `store_id` → `request_id`; a
+  probe using the old name 500s with `KeyError: 'request_id'`, which looks like
+  a broken toolbar and is a broken probe.
+- **coverage 7.15.4 runs CI's exact sequence** (`coverage run --source='.'` →
+  `report` → `xml`). Reported total moved 85% → 86%; the 2 new tests are part of
+  that, the rest is coverage 7 measuring differently.
+- `/wiki/` answers 404 and correctly so — the app is middleware-only and has no
+  `urls.py`, the same shape as the pre-existing `/news/` 404.
+
+### Also scheduled into Step 21 (2026-08-07): how the dev-only settings split
+
+Asked while reviewing the toolbar block: will the eventual debug Docker config
+stop adding the toolbar conditionally? Yes — and `research/docker-strategy.md`
+already names the dev override as its owner. **But it separately records "one
+image, env-driven config… same image runs dev and prod", and the two cannot both
+hold**: one image means the prod image either carries `django-debug-toolbar` or
+it does not (today's is built from `requirements-docker.txt`, which includes it;
+`requirements.txt` does not). Nothing connected those two principles until now.
+
+Recommended into Step 21: a **multi-target Dockerfile**, which keeps the parity
+the strategy wants while letting a dev-only settings module assume its packages
+exist and drop the `if DEBUG and find_spec(...)` guard entirely. **Neither half
+of that guard protects production today** — `production.py` imports `base.py`
+directly and never goes through `local.py`; the probe exists for a bare-metal dev
+install missing `requirements_dev.txt`. Recorded with two warnings: do the whole
+inheritance chain in one pass (both modules still declare MySQL, below), and
+preserve the toolbar's measured `MIDDLEWARE` position, which a reorganization
+that rebuilds the list from scratch would quietly lose.
+
+### Found, not fixed — `production.py` still declares MySQL
+
+`sg101/settings/production.py:16` and `local.py:11` still set
+`'ENGINE': 'django.db.backends.mysql'` with a `unix_socket` option, five steps
+after the site moved to PostgreSQL. Nothing loads production settings, which is
+exactly how task 05's dead `MemcachedCache` survived a rung and a half, and
+`check --deploy` does not catch it because mysqlclient is installed and the
+setting is merely wrong rather than unimportable. **Left alone deliberately** —
+repointing production at a database is a deploy decision, not a dependency edit,
+and Step 21 owns the deploy settings. Scheduling it there is the recommendation.
+
+`check --deploy` otherwise reports only the pre-existing `security.W001`
+(no `SecurityMiddleware`), which is Step 20/21 hardening and predates this task.
+
+**Next: Step 13 task 07** — Pillow and `ANTIALIAS`.
 
 ## PostgreSQL snapshots — `tools/pg_snapshot.sh`, added 2026-08-05
 
