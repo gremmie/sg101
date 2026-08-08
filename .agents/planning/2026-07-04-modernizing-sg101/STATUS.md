@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08
+## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08, PUSHED, CI GREEN
 
 **`Markdown==2.6.11` → `3.10.3`. 872 tests green (853 + 19), `check` and
 `makemigrations --check` clean, site + worker + beat smoked on the production
