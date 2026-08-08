@@ -161,6 +161,9 @@ LOGGING = {
             'propagate': False,
             'handlers': ['search'],
         },
+        # Symmetry with local.py, where this entry does real work. Here it
+        # changes nothing: Markdown's per-render chatter is DEBUG and the root
+        # logger below is at INFO, so those records are dropped either way.
         'MARKDOWN': {
             'level': 'WARNING',
             'propagate': False,

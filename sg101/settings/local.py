@@ -130,6 +130,10 @@ LOGGING = {
             'propagate': False,
             'handlers': ['search'],
         },
+        # Markdown logs a DEBUG record per extension as it builds a parser --
+        # four of them, and core.markup builds one per render. This entry is
+        # what keeps them out of sg101.log, which the root logger below collects
+        # at DEBUG.
         'MARKDOWN': {
             'level': 'WARNING',
             'propagate': False,
