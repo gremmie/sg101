@@ -174,7 +174,137 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 07 — Pillow and `ANTIALIAS` — DONE 2026-08-08, NOT YET PUSHED
+## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08
+
+**`Markdown==2.6.11` → `3.10.3`. 872 tests green (853 + 19), `check` and
+`makemigrations --check` clean, site + worker + beat smoked on the production
+snapshot.** Still Django 4.2.30 / Python 3.10. 3.10.3 requires Python >= 3.10,
+which we are on, and stays valid through Step 14's 3.12; taking the current line
+follows the precedent tasks 06 and 07 set.
+
+### The two extensions ported, and a third consumer nobody had listed
+
+`extendMarkdown(self, md)`, `Registry.register(obj, name, priority)`,
+`SimpleTagInlineProcessor` in place of `SimpleTagPattern`, `InlineProcessor`'s
+`handleMatch(self, m, data) -> (el, start, end)` contract, and
+`xml.etree.ElementTree` in place of the removed `markdown.util.etree`. The
+capture group also moves: the pre-3.0 `Pattern` wrapped every regex in
+`^(.*?)…(.*)$`, so urlize read the URL from group 2; an `InlineProcessor`
+compiles the pattern as given and it is group 1.
+
+**`core/management/commands/ssl_images.py` was the finding.** It borrowed
+`markdown.inlinepatterns.IMAGE_LINK_RE` and `IMAGE_REFERENCE_RE` and indexed
+groups 1 and 8 out of them. **Markdown 3.0 replaced regex link parsing with code
+that matches brackets by hand, so both constants are now just `\!\[`** — 14
+tests failed with `IndexError: no such group`. The command reads Markdown source
+and never used the parser, so it now owns the patterns, rebuilt in the generated
+form 2.x used (`_NOBRACKET`/`_BRK`) and **verified byte-identical to 2.6.11's
+strings**, which is what preserves the group numbering the substitution callback
+depends on. Pinned by 4 new tests, because the failure mode is an IndexError
+raised inside an `re.sub` callback.
+
+### The priority was re-derived from output, and the band is wider than the number
+
+`'>not_strong'` has no numeric equivalent, so every corpus post containing `---`
+(1,516 of them) was rendered at 35 different priorities and diffed against the
+2.6.11 baseline. **Anything in 61..119 reproduces the archive exactly.** Above
+`autolink` (120) the pattern strikes through URLs containing two runs of three
+hyphens *and* corrupts the href with a stash placeholder
+(`http://example.com/aklzzwxh:0000c`); at or below `em_strong` (60) the emphasis
+processors claim the hyphens first — 2 posts change, both guitar tablature.
+65 is the slot `'>not_strong'` named and sits inside the band.
+
+**The first version of that comment named `html` (90) and `entity` (80) as the
+constraint. The measurement says they are not** — 95 renders identically to 65.
+Reasoned-from-the-priority-list and measured disagreed, and only one of them was
+right.
+
+### 76 of 6001 real documents render differently, and none of it is the port
+
+Baseline captured BEFORE the bump: 4,752 forum posts (stratified — 1,500
+containing `---`, 1,500 URL-shaped, 1,500 spread by id, the 300 longest), 549
+comments, 700 news stories, through the real `site_markup()` pipeline.
+**98.73% byte-identical.**
+
+**A control run settled attribution.** The same corpus rendered by stock Markdown
+with neither extension loaded flags **exactly the same 62 post ids** — set
+equality, not just the same count. Every difference is upstream's; zero is
+attributable to the port. (The control has to skip Django entirely: 2.6.11 cannot
+import the ported extensions, and `django.setup()` imports them through
+`bio.models`.)
+
+**Archive-wide rate, from a uniform random 20,000-post sample: 0.33%, about 1 in
+300** (~1,500 posts of 463k). The stratified corpus's 1.3% is not the archive
+rate — it over-samples `---` on purpose. Three classes:
+
+1. **80% is Markdown 3.3's emphasis conformance fix** — `**bold **`, with a space
+   before the closing run, is now literal text. The newest podcast playlist post
+   contains one.
+2. **`---` alone on a line inside a paragraph now becomes `<hr>`** instead of
+   being swallowed by the inline `---del---` pattern spanning lines under DOTALL.
+   Block processors run before inline patterns, so no priority can change this.
+3. **2 malformed `![alt](url` with no closing paren** now render as an `<img>`
+   whose src absorbs the rest of the paragraph. 3.x is more permissive here.
+
+**Stored HTML is untouched** — `Post.save()` renders to `self.html`, so a post
+only picks up the new rendering when it is edited. Brian's call: accept and
+record, don't chase it.
+
+### Caching the parser: measured, and NOT done
+
+The plan framed this as an optimization worth making. The numbers say otherwise,
+and the decision is recorded here so it is not re-opened as an oversight.
+
+| | |
+|---|---|
+| build the parser | 0.047 ms |
+| a typical `site_markup()` call | 0.737 ms — the build is **6.4%** |
+| renders per day | ~36 (12 posts/day, rendered at save and again by the feed serializer) |
+| what caching buys | **~6 ms/day**; the busiest day in site history, 0.18 s |
+
+**Markdown rendering is a write path, not a page-view path.** Nothing renders
+Markdown to serve a page; `Post.save()` stores the HTML.
+
+**Dev measurements point at the wrong half.** `SiteMarkup()` also builds the
+smiley regex set, which is 0.023 ms against dev's LocMemCache but **0.128 ms
+against Redis — 2.7x the parser build**. Dev has no `CACHES` setting at all, so
+it silently profiles a different application than production.
+
+**The state trap is real and was reproduced, not just cited:** one instance, two
+documents, and a `[secret]: http://…` definition in the first resolves a
+`[secret][]` in the second — one post's content appearing inside another's.
+
+**What shipped instead: `Markdown.convert()` now calls `reset()` first** — 0.0002
+ms, 0.1% of a conversion — which makes an instance safe to *hold*, without anyone
+holding one yet. That leaves the door open where caching would actually pay: a
+bulk re-render of the archive is ~19% construction overhead, and such a job can
+now build one `SiteMarkup()` and loop it. Two tests cover it; dropping the
+`reset()` fails one.
+
+### The MARKDOWN logger: load-bearing in local, inert in production
+
+Measured on 3.10.3: **4 DEBUG records per parser construction, 0 per convert**,
+logger still named `MARKDOWN`. Since the parser is not cached, that is 4 per
+render. `local.py`'s root is DEBUG, so removing the entry would put them in
+`sg101.log` — a 100 KB rotating handler with 10 backups, which would push real
+messages out. `production.py`'s root is INFO, so those records are dropped with
+or without the entry: **inert, kept for symmetry**. Both copies now say which
+case they are. **Coupling worth remembering: cache the parser process-wide and
+the 4 records become 4 per process, and local.py's entry can go too.**
+
+### Also
+
+`makeExtension(configs=None)` → `makeExtension(**kwargs)`; the old signature and
+`DelExtension(configs)` positional both break on 3.x's `Extension(**kwargs)`.
+Neither is reached by the app, which passes instances. The urlize module's
+doctests had been asserting Python 2 `u'…'` reprs and nothing ran them; they now
+pass under `python -m doctest` (10 tests), with `md.reset()` between examples for
+the same reason the app resets.
+
+**Next: Step 13 task 09** — `USE_TZ`, which closes Step 13. Take
+`tools/pg_snapshot.sh dump` first.
+
+## Step 13 task 07 — Pillow and `ANTIALIAS` — DONE 2026-08-08, PUSHED, CI GREEN
 
 **`Pillow==9.5.0` → `12.3.0`. 853 tests green (824 + 29), `check` and
 `makemigrations --check` clean, 7/7 live upload smoke against the production
