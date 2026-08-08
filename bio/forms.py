@@ -95,6 +95,10 @@ class UploadAvatarForm(forms.Form):
                 raise forms.ValidationError("Please upload a valid image. "
                     "The file you uploaded was either not an image or a "
                     "corrupted image.")
+            # Stash the format now, while the image is still the one parse_image()
+            # opened. save() downscales through downscale_image_square(), whose
+            # crop()/resize() return new images with .format set to None, so by
+            # then there is nothing left to read it from.
             self.file_type = self.image.format
         return f
 

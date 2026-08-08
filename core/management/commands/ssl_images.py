@@ -98,7 +98,7 @@ def resize_image(img_path):
     if image.size > PHOTO_MAX_SIZE:
         logger.info('Resizing from %s to %s', image.size, PHOTO_MAX_SIZE)
         try:
-            image.thumbnail(PHOTO_MAX_SIZE, Image.ANTIALIAS)
+            image.thumbnail(PHOTO_MAX_SIZE, Image.Resampling.LANCZOS)
             image.save(img_path)
         except IOError as ex:
             logger.error("Error resizing image from %s: %s", img_path, ex)

@@ -40,7 +40,7 @@ class DownscaleTestCase(unittest.TestCase):
         result = utils.downscale_image_square(self.image, 25)
 
         self.assertEqual(result,
-                         self.image.resize((25, 25), Image.ANTIALIAS))
+                         self.image.resize((25, 25), Image.Resampling.LANCZOS))
 
     def test_downscale_wider(self):
         self.image.size = (500, 400)
@@ -48,7 +48,7 @@ class DownscaleTestCase(unittest.TestCase):
 
         self.assertEqual(self.image.mock_calls, [
             call.crop((50, 0, 450, 400)),
-            call.crop().resize((100, 100), Image.ANTIALIAS),
+            call.crop().resize((100, 100), Image.Resampling.LANCZOS),
         ])
         self.assertEqual(result, self.image.crop().resize())
 
@@ -58,7 +58,7 @@ class DownscaleTestCase(unittest.TestCase):
 
         self.assertEqual(self.image.mock_calls, [
             call.crop((0, 50, 400, 450)),
-            call.crop().resize((100, 100), Image.ANTIALIAS),
+            call.crop().resize((100, 100), Image.Resampling.LANCZOS),
         ])
         self.assertEqual(result, self.image.crop().resize())
 

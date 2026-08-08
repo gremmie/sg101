@@ -2,11 +2,17 @@
 Form tests for the bio application.
 
 """
+from io import BytesIO
+
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from PIL import Image
 
 from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
+from bio.forms import UploadAvatarForm
+from core.tests.images.imagemakers import jpeg_bytes, png_bytes
 
 
 class EditUserProfileFormTestCase(TestCase):
@@ -71,3 +77,60 @@ class SearchUsersFormTestCase(TestCase):
     def test_unknown_username(self):
         form = SearchUsersForm({'username': 'nobody'})
         self.assertFalse(form.is_valid())
+
+
+class UploadAvatarFormTestCase(TestCase):
+    """Avatar downscaling against real image bytes.
+
+    clean_avatar_file() stashes self.file_type = image.format while the image
+    is still the one it opened, because save() then scales through
+    downscale_image_square(), whose crop()/resize() hand back new images with
+    .format of None. Move that capture into save() and there is nothing left to
+    read the format from, so these tests fail -- which is the point of them.
+
+    """
+
+    def _saved(self, name, data):
+        upload = SimpleUploadedFile(name, data)
+        form = UploadAvatarForm({}, {'avatar_file': upload})
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+        filename, content = form.save()
+        image = Image.open(BytesIO(content.read()))
+        image.load()
+        return filename, image
+
+    def test_downscales_a_jpeg_avatar(self):
+        filename, image = self._saved('avatar.jpg', jpeg_bytes(size=(400, 300)))
+
+        self.assertEqual(filename, 'avatar.jpg')
+        self.assertEqual(image.format, 'JPEG')
+        self.assertEqual(image.size, (100, 100))
+
+    def test_downscales_a_png_avatar_and_keeps_its_alpha(self):
+        filename, image = self._saved('avatar.png', png_bytes(size=(400, 300)))
+
+        self.assertEqual(filename, 'avatar.png')
+        self.assertEqual(image.format, 'PNG')
+        self.assertEqual(image.size, (100, 100))
+        self.assertEqual(image.mode, 'RGBA')
+        alpha = image.getchannel('A').getextrema()
+        self.assertLess(alpha[0], alpha[1])
+
+    def test_rejects_a_file_that_is_not_an_image(self):
+        upload = SimpleUploadedFile('avatar.png', b'not an image')
+        form = UploadAvatarForm({}, {'avatar_file': upload})
+
+        self.assertFalse(form.is_valid())
+
+    def test_small_avatar_is_returned_unchanged(self):
+        data = png_bytes(size=(50, 50))
+        upload = SimpleUploadedFile('small.png', data)
+        form = UploadAvatarForm({}, {'avatar_file': upload})
+
+        self.assertTrue(form.is_valid(), form.errors)
+        filename, content = form.save()
+
+        self.assertEqual(filename, 'small.png')
+        self.assertIs(content, upload)

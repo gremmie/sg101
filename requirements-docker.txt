@@ -50,15 +50,11 @@ psycopg2==2.9.12
 # only because of them -- see requirements.txt for what 3.5.3 silently cost.
 redis==6.4.0
 
-# Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
-# at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64
-# and arm64. It is a use-after-free in the C extension's teardown against a
-# CPython it predates by two years, and it means any process that imports PIL
-# and exits normally dies on a signal: a worker looks like it crashed, a
-# management command fails a shell's error check. 9.5.0 is quiet and is the last
-# release that still has Image.ANTIALIAS, which 7 call sites use -- replacing
-# those is its own change, so this pin stops one version short of needing it.
-Pillow==9.5.0
+# Pillow 10 removed Image.ANTIALIAS; the 7 call sites now name
+# Image.Resampling.LANCZOS, the same filter under its own name. The used PIL
+# surface and the thumbnail output are both unchanged from 9.5.0 through 12.3.0
+# -- see requirements.txt for what was diffed and how.
+Pillow==12.3.0
 lxml==4.9.4
 # bleach 3.1.5 could not import on Python 3.10 (it read Mapping out of
 # collections), so it moved with the interpreter. 6.4.0 is the final release --

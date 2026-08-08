@@ -1,13 +1,19 @@
 """Unit tests for the ssl_images management command."""
+import os
 import re
+import shutil
+import tempfile
 import unittest
 from urllib.parse import urlparse
 
 import mock
 from django.conf import settings
+from PIL import Image
 
 from core.management.commands.ssl_images import html_check
 from core.management.commands.ssl_images import process_post, process_html
+from core.management.commands.ssl_images import PHOTO_MAX_SIZE, resize_image
+from core.tests.images.imagemakers import jpeg_bytes, png_bytes
 import core.management.commands.ssl_images
 
 
@@ -470,3 +476,58 @@ class ProcessHtmlTestCase(unittest.TestCase):
             <a href="http://example.com/zzz.png">Image</a>
             It's cool.</p>"""
         self.assertEqual(result, expected)
+
+
+class ResizeImageTestCase(unittest.TestCase):
+    """resize_image() against real files on disk.
+
+    This command rewrites images in place, and nothing else in the suite
+    reaches its thumbnail() call -- reverting the resampling constant here left
+    201 tests green while the command itself would raise AttributeError on the
+    first oversized image it touched.
+
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _write(self, name, data):
+        path = os.path.join(self.tmpdir, name)
+        with open(path, 'wb') as f:
+            f.write(data)
+        return path
+
+    def test_oversized_image_is_resized_in_place(self):
+        path = self._write('big.jpg', jpeg_bytes(size=(1000, 800)))
+
+        self.assertTrue(resize_image(path))
+
+        image = Image.open(path)
+        self.assertEqual(image.size, (660, 528))
+        self.assertLessEqual(image.size, PHOTO_MAX_SIZE)
+
+    def test_oversized_png_keeps_its_format(self):
+        path = self._write('big.png', png_bytes(size=(1000, 800)))
+
+        self.assertTrue(resize_image(path))
+
+        image = Image.open(path)
+        self.assertEqual(image.size, (660, 528))
+        self.assertEqual(image.format, 'PNG')
+
+    def test_small_image_is_left_alone(self):
+        data = jpeg_bytes(size=(320, 240))
+        path = self._write('small.jpg', data)
+
+        self.assertTrue(resize_image(path))
+
+        with open(path, 'rb') as f:
+            self.assertEqual(f.read(), data)
+
+    def test_unreadable_file_reports_failure(self):
+        path = self._write('junk.jpg', b'not an image at all')
+
+        self.assertFalse(resize_image(path))

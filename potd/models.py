@@ -22,7 +22,7 @@ def scale_image(image):
         return image
     scale_factor = float(POTD_THUMB_WIDTH) / w
     new_height = int(scale_factor * h)
-    return image.resize((POTD_THUMB_WIDTH, new_height), Image.ANTIALIAS)
+    return image.resize((POTD_THUMB_WIDTH, new_height), Image.Resampling.LANCZOS)
 
 
 class Photo(models.Model):
@@ -63,6 +63,10 @@ class Photo(models.Model):
         for chunk in self.photo.chunks():
             parser.feed(chunk)
         image = parser.close()
+        # Capture the format BEFORE scaling and keep it for the save below.
+        # scale_image() calls resize(), which returns a new image whose .format
+        # is None -- only in-place helpers like thumbnail() carry it over. Move
+        # this line after the scale and every thumbnail save loses its format.
         format = image.format
         image = scale_image(image)
         s = BytesIO()

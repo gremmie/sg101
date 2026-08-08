@@ -86,15 +86,22 @@ psycopg2==2.9.12
 # with it -- silently, to None. kombu's own extra asks for >= 4.5.2, < 6.5.
 redis==6.4.0
 
-# Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
-# at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64
-# and arm64. It is a use-after-free in the C extension's teardown against a
-# CPython it predates by two years, and it means any process that imports PIL
-# and exits normally dies on a signal: a worker looks like it crashed, a
-# management command fails a shell's error check. 9.5.0 is quiet and is the last
-# release that still has Image.ANTIALIAS, which 7 call sites use -- replacing
-# those is its own change, so this pin stops one version short of needing it.
-Pillow==9.5.0
+# Pillow 10 removed Image.ANTIALIAS, the resampling constant 7 call sites used;
+# they now name Image.Resampling.LANCZOS, which is the same filter -- ANTIALIAS
+# had been an alias for it, both enum value 1, so the rename cannot move a pixel
+# and 13 thumbnail outputs stayed byte-identical across it.
+#
+# The whole PIL surface this project touches was diffed from 9.5.0 through
+# 12.3.0 and is unchanged: the 5 transpose constants orient_image() names (which
+# 9.4 un-deprecated), ImageFile.Parser, _getexif(), MAX_IMAGE_PIXELS, the JPEG /
+# PNG / GIF / WebP round-trips, and UnidentifiedImageError still subclassing
+# OSError so bio/forms.py's `except IOError` keeps catching it. Thumbnail output
+# is byte-identical to 9.5.0 as well -- the drift measured over 6.2.2 -> 9.5.0
+# did not recur.
+#
+# Wheels are manylinux and carry their own codecs, so the Dockerfile still needs
+# no libjpeg/zlib headers; features.check('jpg') is what proves that per build.
+Pillow==12.3.0
 lxml==4.9.4
 # bleach 3.1.5 could not import on Python 3.10 (it read Mapping out of
 # collections), so it moved with the interpreter. 6.4.0 is the final release --

@@ -40,10 +40,10 @@ class ProcessUploadTestCase(unittest.TestCase):
             call(filename),
             call.save(filename),
             call(filename),
-            call().thumbnail((660, 720), image_mock.ANTIALIAS),
+            call().thumbnail((660, 720), image_mock.Resampling.LANCZOS),
             call().save(filename),
             call(filename),
-            call().thumbnail((120, 120), image_mock.ANTIALIAS),
+            call().thumbnail((120, 120), image_mock.Resampling.LANCZOS),
             call().save(bytes_mock(), format=image.format),
         ])
         orient_mock.assert_called_with(image_mock.open())
@@ -107,10 +107,10 @@ class ProcessUploadTestCase(unittest.TestCase):
             call(filename),
             call.save(filename),
             call(filename),
-            call().thumbnail((660, 720), image_mock.ANTIALIAS),
+            call().thumbnail((660, 720), image_mock.Resampling.LANCZOS),
             call().save(filename),
             call(filename),
-            call().thumbnail((120, 120), image_mock.ANTIALIAS),
+            call().thumbnail((120, 120), image_mock.Resampling.LANCZOS),
             call().save(bytes_mock(), format=image.format),
         ])
         orient_mock.assert_called_with(image_mock.open())

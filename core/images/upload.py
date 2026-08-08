@@ -93,7 +93,7 @@ def upload(filename, bucket, metadata=None, new_size=None, thumb_size=None):
         image = Image.open(filename)
         if image.size > new_size:
             logger.debug('Resizing from {} to {}'.format(image.size, new_size))
-            image.thumbnail(new_size, Image.ANTIALIAS)
+            image.thumbnail(new_size, Image.Resampling.LANCZOS)
             image.save(filename)
 
     # Create thumbnail if necessary
@@ -101,7 +101,7 @@ def upload(filename, bucket, metadata=None, new_size=None, thumb_size=None):
     if thumb_size:
         logger.debug('Creating thumbnail {}'.format(thumb_size))
         image = Image.open(filename)
-        image.thumbnail(thumb_size, Image.ANTIALIAS)
+        image.thumbnail(thumb_size, Image.Resampling.LANCZOS)
         thumb = BytesIO()
         image.save(thumb, format=image.format)
 
@@ -135,7 +135,7 @@ def _process_local_upload(filename, new_size=None, thumb_size=None):
         image = Image.open(filename)
         if image.size > new_size:
             logger.debug('Resizing from {} to {}'.format(image.size, new_size))
-            image.thumbnail(new_size, Image.ANTIALIAS)
+            image.thumbnail(new_size, Image.Resampling.LANCZOS)
             image.save(filename)
 
     # Create thumbnail if necessary
@@ -143,7 +143,7 @@ def _process_local_upload(filename, new_size=None, thumb_size=None):
     if thumb_size:
         logger.debug('Creating thumbnail {}'.format(thumb_size))
         image = Image.open(filename)
-        image.thumbnail(thumb_size, Image.ANTIALIAS)
+        image.thumbnail(thumb_size, Image.Resampling.LANCZOS)
         thumb = BytesIO()
         image.save(thumb, format=image.format)
 
