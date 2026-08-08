@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-07
+**Last updated:** 2026-08-08
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -174,7 +174,126 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 06 — dependency alignment — DONE 2026-08-07, NOT YET PUSHED
+## Step 13 task 07 — Pillow and `ANTIALIAS` — DONE 2026-08-08, NOT YET PUSHED
+
+**`Pillow==9.5.0` → `12.3.0`. 853 tests green (824 + 29), `check` and
+`makemigrations --check` clean, 7/7 live upload smoke against the production
+snapshot.** Still Django 4.2.30 / Python 3.10. The seven non-test call sites and
+the **seven** test assertions (the task file said six — it missed
+`core/tests/images/test_utils.py:61`) now name `Image.Resampling.LANCZOS`.
+
+**12.3.0 was Brian's call from three candidates that all measured clean.**
+10.4.0, 11.3.0 and 12.3.0 each ship a cp310 wheel and each passed every probe
+identically, so the choice was low-risk in all directions; the current line
+matches the precedent task 06 set with celery.
+
+### The measurement replaced the changelog review, and disagreed with the plan
+
+**The whole used PIL surface was diffed empirically across 9.5.0 / 10.4.0 /
+11.3.0 / 12.3.0.** The surface is small enough to enumerate exhaustively —
+`Image.open`, `save`, `thumbnail`, `resize`, `crop`, `transpose`, `_getexif`,
+`ImageFile.Parser`, `.format`, the five transpose constants, `MAX_IMAGE_PIXELS`
+— and **it is identical across all four versions** except `ANTIALIAS` itself,
+which goes at 10. The 10.0/11.0/12.0 release notes were then read against that
+list and added nothing: every removal (`im.category`, `PyAccess`,
+`ImageFile.raise_oserror`, `ImageMath.eval`, the BGR modes) lands outside it.
+
+**The five transpose constants `orient_image()` names are NOT a follow-on
+item.** Pillow 9.1 deprecated them along with `ANTIALIAS`, but **9.4
+un-deprecated them**; only `ANTIALIAS` stayed condemned, because it was a
+duplicate name for `LANCZOS` rather than a constant in its own right. Verified
+by probing each one for a `DeprecationWarning` on 9.5.0, where only `ANTIALIAS`
+warns.
+
+**AC4's tolerance was never needed: thumbnail output is byte-identical.** 13
+outputs (JPEG/PNG/GIF through the four upload sizes, the potd resize, the avatar
+crop+resize, and the EXIF-oriented path) matched 9.5.0 exactly on all three
+candidate versions. **The drift the task file documented over 6.2.2 → 9.5.0 did
+not recur** — it was a one-time consequence of `reducing_gap` (Pillow 7.0) and
+whatever else moved in that span, not an every-major event. A control run
+pinned this down: **same Pillow 9.5.0, constant renamed, 13/13 byte-identical**,
+which is what isolates a version jump from the rename. `ANTIALIAS` *is*
+`Resampling.LANCZOS` (both enum value 1), so the rename provably cannot move a
+pixel — but proving it costs one run and turns an argument into a measurement.
+
+### The coverage hole was real, larger than predicted, and is the actual deliverable
+
+The task file predicted the four `image_mock.ANTIALIAS` assertions could not
+fail. **Two findings sharpen that:**
+
+**(1) The blindness needs a *consistent* revert to show itself.** Reverting only
+`core/images/upload.py` fails — but only because the mock assertion then
+disagrees with the code, which catches a test/code mismatch, not PIL's removal.
+Revert the assertions to match, as anyone doing a genuine revert would, and
+**41 tests run green on Pillow 12.3.0 while a real upload raises
+`AttributeError`.** A mutation has to reproduce the fault the way it would
+actually arrive.
+
+**(2) `ssl_images.resize_image()` had no test at all** — 201 tests stayed green
+with its constant reverted. It is a management command that rewrites images in
+place, and nothing in the suite reached its `thumbnail()` call. This was not on
+the task file's list.
+
+**Closed with 29 tests that run real bytes through real PIL**, in four places:
+`core/tests/images/test_real_images.py` (new, incl. a real `process_upload()`
+through `_process_local_upload`), `potd/tests/test_models.py` (new — POTD had no
+model tests), a `ResizeImageTestCase` in the ssl_images tests, and an
+`UploadAvatarFormTestCase` in `bio/tests/test_forms.py`. Builders live in
+`core/tests/images/imagemakers.py`. **All five mutations now fail**: the
+constant in `utils.py`, in `upload.py` *with* its assertions, in `potd`, in
+`ssl_images`, and either `.format` capture moved below its scale.
+
+### The `.format` captures are now commented and covered
+
+`potd/models.py:66` and `bio/forms.py:98` capture `image.format` one line before
+a `resize()`/`crop()`, because those return new images with `.format` of `None`
+while in-place `thumbnail()` keeps it. Both now say so, and moving either below
+its scale fails a test with `ValueError: unknown file extension:` — the failure
+the ordering exists to prevent. The contract itself is asserted directly in
+`FormatAfterScalingTestCase`, so a future Pillow that changes it is caught at
+the source rather than through two apps' save paths.
+
+### Considered and dismissed
+
+**The decompression-bomb tightening in Pillow 10** looked like a live hazard:
+`Image.DecompressionBombError` does **not** subclass `OSError`, so
+`bio/forms.py`'s `except IOError` would not catch it. It is unreachable —
+Django's `forms.ImageField` opens and verifies the upload first and turns any
+exception into a `ValidationError`, demonstrated by feeding the form an image
+over a lowered `MAX_IMAGE_PIXELS` and getting the ordinary "not a valid image"
+error. Pre-existing either way; `MAX_IMAGE_PIXELS` is unchanged since 9.5.0.
+
+**No Dockerfile change.** Its comment already says to re-check codecs whenever
+the Pillow pin moves, because an sdist fallback builds cleanly without libjpeg
+and fails on the first JPEG. Re-checked: 12.3.0 installs from a manylinux cp310
+wheel and `features.check()` reports jpg/zlib/webp/libtiff/jpg_2000/freetype2
+all present on the built image.
+
+### Traps hit while doing this
+
+**`git checkout <file>` to undo a mutation discards uncommitted work.** Used it
+to revert three mutations and silently lost the real `ANTIALIAS` swap in
+`upload.py`, `utils.py` and `test_upload.py` along with them. Undo a mutation
+with the reverse edit, not with git, while the change itself is unstaged.
+
+**The `-W` gate trap landed again, in a new form.** Task 04 recorded that an
+invalid `-W` value is printed to stderr and discarded; here the same thing
+happened because a *shell variable* holding several `-W` flags expands as one
+argument (`too many fields (max 5)`). The suite then reported OK with a
+deliberately injected deprecation live in the process. Both halves were
+re-proven afterwards — the gate raising on a synthetic PIL deprecation, and the
+`pkg_resources` message-ignore actually binding — before the clean result was
+believed.
+
+**`cp` is aliased to `cp -i` here, like `rm`.** A restore-from-backup blocked ten
+minutes at an `overwrite?` prompt with no visible output. Use `command cp`.
+
+**Next: Step 13 task 08** — Markdown, which the plan still under-rates: both
+`core/mdexts/` extensions use the pre-3.0 API and `'>not_strong'` has no numeric
+equivalent, so priorities must be re-derived from output, and a mis-registered
+pattern does not raise.
+
+## Step 13 task 06 — dependency alignment — DONE 2026-08-07, PUSHED, CI GREEN
 
 **823 tests green (821 + 2 new), 86% coverage, `check` / `check --deploy` /
 `makemigrations --check` clean, Celery verified end to end against the live
