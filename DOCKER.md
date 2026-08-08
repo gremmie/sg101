@@ -112,7 +112,7 @@ known account from the snapshot.
 docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 No snapshot needed — Django builds a throwaway `test_sg101` database from the
-migrations and drops it again. 593 tests, about 9 seconds.
+migrations and drops it again. 853 tests, about 13 seconds.
 
 **The suite runs on PostgreSQL, the same engine the site runs on.** It used to
 run on sqlite, which was roughly two seconds faster; that is the whole of what
@@ -125,6 +125,32 @@ your terminal through to CI, which runs this exact command.
 
 If a previous run left a test database behind, Django asks before dropping it;
 add `--noinput` to answer yes, or `--keepdb` to reuse it and save a second.
+
+### Smoke-testing image uploads
+
+```
+docker compose exec web python /app/tools/image_smoke.py
+```
+
+Uploads real JPEGs and PNGs — including an RGBA one and a JPEG carrying EXIF
+orientation — through the avatar, user-photo and photo-of-the-day views, checks
+what came back out of storage, and deletes everything it made. Run it after a
+Pillow bump or any change under `core/images/`.
+
+The suite mocks PIL and storage in most places and runs against a throwaway
+database, so it cannot tell you an upload works on *this* deployment. This can,
+and that gap is not hypothetical: a resampling constant was once reverted with
+its own mock assertions and 41 tests stayed green over an upload path that
+raised on the first real image.
+
+**It writes to whatever database the settings point at** — in dev, the converted
+production snapshot. It creates a scratch user, uploads as them, and removes it
+all in a `finally`, checking afterwards that the user is gone. Take a snapshot
+first anyway (section 8). Don't point it at production.
+
+It forces the user-photo upload down its local-storage branch, since the S3
+branch wants live credentials and a real bucket. Both run the same PIL code, so
+the image handling is covered either way — the S3 code itself is not.
 
 ## 6. MySQL, and switching engines
 
