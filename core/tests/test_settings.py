@@ -12,10 +12,13 @@ environment without disturbing the already-configured test process. DOTENV_PATH
 points read_env() at a nonexistent file, so the environment we pass is the only
 source of config.
 """
+import copy
+import importlib
 import os
 import subprocess
 import sys
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 
@@ -64,3 +67,37 @@ class EnvVarSettingsTests(SimpleTestCase):
         self.assertNotEqual(code, 0)
         self.assertIn('ImproperlyConfigured', err)
         self.assertIn('SECRET_KEY', err)
+
+
+class SettingsImportIsolationTests(SimpleTestCase):
+    """Importing a settings module must not reconfigure the running one.
+
+    `from base import *` binds base's own mutable objects, so a module that
+    edits MIDDLEWARE, INSTALLED_APPS or TEMPLATES in place edits them for
+    whatever configuration is already live. Both `local` and `production` once
+    did, and the suite imports both to read their LOGGING dicts, so local.py's
+    insert spliced the debug toolbar's middleware into every test that ran after
+    it -- harmless until debug-toolbar shipped a model, then 105 errors from an
+    app the registry never saw. production.py's version edited TEMPLATES, which
+    changed how every later test loaded templates and never failed anything.
+
+    Both are covered because the property belongs to the whole package, not to
+    whichever module currently happens to edit something.
+
+    Each module is reloaded so the assertion faces a real import rather than
+    sys.modules handing back a module some earlier test already ran.
+    """
+    MODULES = ['sg101.settings.local', 'sg101.settings.production']
+
+    def live_settings(self):
+        return (list(settings.MIDDLEWARE),
+                list(settings.INSTALLED_APPS),
+                copy.deepcopy(settings.TEMPLATES))
+
+    def test_importing_deployment_settings_leaves_the_live_ones_alone(self):
+        before = self.live_settings()
+        for name in self.MODULES:
+            with self.subTest(settings=name):
+                sys.modules.pop(name, None)
+                importlib.import_module(name)
+                self.assertEqual(self.live_settings(), before)

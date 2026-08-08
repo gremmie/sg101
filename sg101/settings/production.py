@@ -39,14 +39,13 @@ STORAGES = {
     },
 }
 
-# Used cached template loader
-del TEMPLATES[0]['APP_DIRS']
-TEMPLATES[0]['OPTIONS']['loaders'] = [
-    ('django.template.loaders.cached.Loader', (
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    )),
-]
+# No template-loader block here on purpose. This used to drop APP_DIRS and name
+# the cached loader by hand, which Django builds by itself: with no explicit
+# `loaders`, it appends the app-directories loader when APP_DIRS is on and wraps
+# the result in the cached loader whenever debug is off. DEBUG is False above, so
+# the two produce the same chain -- verified equal on 4.2, not assumed. Setting
+# `loaders` was also what forced the APP_DIRS deletion, since Django refuses both
+# at once.
 
 # Redis, not memcached: Django dropped the python-memcached backend, and the
 # host already runs Redis for the Celery broker and for the application data in
