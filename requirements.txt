@@ -19,8 +19,12 @@ django-environ==0.4.5  # 12-factor env-var config
 pytz==2021.3
 # six is no longer imported by the application -- it uses the Python 3 standard
 # library directly (urllib.parse/request/error, io.StringIO). It is still pulled
-# in transitively, so the pin stays for a reproducible build; drop it when the
-# last package requiring it is gone or bumped.
+# in transitively, so the pin stays for a reproducible build: unpinning would not
+# remove the package, only let it float, as a rebuild once demonstrated by
+# drifting to 1.17.0. Two requirers are left, down from four -- html5lib 1.1 and
+# python-dateutil 2.8.2. bleach dropped six when it moved to 6.4.0 for Python
+# 3.10, and python-memcached left with the memcached cache. Drop this when the
+# other two are gone or bumped.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (used internally to
 # split/format SQL). It installs automatically with Django; pinned here so the
@@ -28,18 +32,20 @@ six==1.16.0
 # real constraint now and not only a reproducibility pin.
 sqlparse==0.5.5
 
-# Celery 5.2 is the last line that supports Python 3.7 (5.3 requires 3.8+). The
-# uppercase settings compat is gone in celery 5, so the config moved to the
+# The uppercase settings compat is gone in celery 5, so the config moved to the
 # CELERY_ namespace -- see sg101/celery.py and sg101/settings.
-celery==5.2.7
-kombu==5.2.4
-billiard==3.6.4.0
-amqp==5.1.1
-vine==5.0.0
-# kombu 5.2's entry-point shim still calls entry_points().get(); importlib-metadata
-# 5+ returns a .get()-less EntryPoints, so cap it on the 4.x line (kombu 5.3 fixes
-# this but needs Python 3.8+).
-importlib-metadata==4.13.0
+#
+# The 5.2 line was held down by Python 3.7. What made moving it necessary rather
+# than merely possible: kombu 5.2 reads its transport registry through
+# entry_points().get(), and the standard library removed that dict interface in
+# Python 3.12. It still works here -- 3.10 answers with a deprecated
+# SelectableGroups -- so the failure would have surfaced at the interpreter move,
+# not now.
+celery==5.6.3
+kombu==5.6.2
+billiard==4.2.4
+amqp==5.3.1
+vine==5.1.0
 
 # mysqlclient is NOT here for Django -- the site runs on PostgreSQL and nothing
 # points the ORM back at MySQL. It is here because tools/pgloader/verify.py and
@@ -53,19 +59,32 @@ importlib-metadata==4.13.0
 # window. The 1.4.x line has no wheel, so it builds from source; see the
 # Dockerfile for the two apt packages that lets it.
 mysqlclient==1.4.6
-# psycopg2 (not psycopg 3): Django gained psycopg 3 support in 4.2, so the
-# driver is now a live choice rather than a fixed one -- but swapping it is its
-# own change on its own evidence, not a passenger on a version bump, so it stays
-# put for now. Built from source (libpq-dev in the Dockerfile), not
-# psycopg2-binary, which upstream discourages for anything but a quick trial.
-# The 2.9.9 pin dates from the Python 3.7 cap (2.9.10 requires 3.8+), which no
-# longer binds.
-psycopg2==2.9.9
+# psycopg2, not psycopg 3, and that is now a decision rather than a leftover:
+# Django gained psycopg 3 support in 4.2, and this project looked at taking it
+# and declined for the moment. The reason is that it would not be a swap. The
+# three tools/pgloader/ scripts import psycopg2 directly and are what verify the
+# production cutover, so psycopg2 stays in the image either way; adopting
+# psycopg 3 means running two PostgreSQL drivers rather than a newer one. The
+# gain is real but small for this site's load, and it keeps better than it
+# spends: the next Django upgrade meets a psycopg 3 backend a release more
+# settled, by which time the pgloader tools may have retired with the MySQL box
+# and taken the second driver with them.
+#
+# Built from source (libpq-dev in the Dockerfile), not psycopg2-binary, which
+# upstream discourages for anything but a quick trial. The old 2.9.9 pin dated
+# from the Python 3.7 cap (2.9.10 requires 3.8+), which no longer binds.
+psycopg2==2.9.12
 # redis-py is the client for three things now: the application's own Redis use,
 # the Celery broker transport, and Django's built-in Redis cache backend
 # (which needs >= 3.0). No django-redis package is involved -- that backend
 # has been part of Django since 4.0.
-redis==3.5.3
+#
+# It moved off 3.5.3 with celery/kombu, which is the only reason it moved at all.
+# kombu's runtime guard only asks for >= 3.2.0, so 3.5.3 would not have raised;
+# but kombu 5.6 does `from redis import CredentialProvider, sentinel` under one
+# try/except, and on 3.5.3 the missing CredentialProvider took `sentinel` down
+# with it -- silently, to None. kombu's own extra asks for >= 4.5.2, < 6.5.
+redis==6.4.0
 
 # Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
 # at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64

@@ -8,24 +8,23 @@ django-environ==0.4.5  # 12-factor env-var config
 # django-tagging is vendored into the repo as `tagging/` -- see the note in
 # requirements.txt and in tagging/__init__.py.
 pytz==2021.3
-# six is a transitive dependency only -- see the note in requirements.txt.
+# six is a transitive dependency only, now down to two requirers (html5lib and
+# python-dateutil) -- see the note in requirements.txt.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (and also powers
 # debug-toolbar's SQL panel below). Django 4.2 requires >= 0.3.1.
 sqlparse==0.5.5
 
-# Celery 5.2 is the last line that supports Python 3.7 (5.3 requires 3.8+). The
-# uppercase settings compat is gone in celery 5, so the config moved to the
-# CELERY_ namespace -- see sg101/celery.py and sg101/settings.
-celery==5.2.7
-kombu==5.2.4
-billiard==3.6.4.0
-amqp==5.1.1
-vine==5.0.0
-# kombu 5.2's entry-point shim still calls entry_points().get(); importlib-metadata
-# 5+ returns a .get()-less EntryPoints, so cap it on the 4.x line (kombu 5.3 fixes
-# this but needs Python 3.8+).
-importlib-metadata==4.13.0
+# The uppercase settings compat is gone in celery 5, so the config moved to the
+# CELERY_ namespace -- see sg101/celery.py and sg101/settings. The 5.2 line was
+# held down by Python 3.7; kombu 5.2 reads its transport registry through
+# entry_points().get(), which the standard library removed in 3.12 -- see the
+# longer note in requirements.txt.
+celery==5.6.3
+kombu==5.6.2
+billiard==4.2.4
+amqp==5.3.1
+vine==5.1.0
 
 # mysqlclient is NOT here for Django -- the site runs on PostgreSQL and nothing
 # points the ORM back at MySQL. It is here so this image can run
@@ -37,19 +36,19 @@ importlib-metadata==4.13.0
 # unverifiable rather than broken, and neither tool is in the test suite, so
 # nothing would go red. See requirements.txt for the longer note.
 mysqlclient==1.4.6
-# psycopg2 (not psycopg 3): Django gained psycopg 3 support in 4.2, so the
-# driver is now a live choice rather than a fixed one -- but swapping it is its
-# own change on its own evidence, not a passenger on a version bump, so it stays
-# put for now. Built from source (libpq-dev in the Dockerfile), not
-# psycopg2-binary, which upstream discourages for anything but a quick trial.
-# The 2.9.9 pin dates from the Python 3.7 cap (2.9.10 requires 3.8+), which no
-# longer binds.
-psycopg2==2.9.9
+# psycopg2, not psycopg 3 -- deferred deliberately, because the pgloader
+# verification tools import psycopg2 directly and so adopting psycopg 3 would add
+# a second driver rather than replace one. See the longer note in
+# requirements.txt. Built from source
+# (libpq-dev in the Dockerfile), not psycopg2-binary. The old 2.9.9 pin dated
+# from the Python 3.7 cap (2.9.10 requires 3.8+), which no longer binds.
+psycopg2==2.9.12
 # redis-py is the client for three things now: the application's own Redis use,
 # the Celery broker transport, and Django's built-in Redis cache backend
 # (which needs >= 3.0). No django-redis package is involved -- that backend
-# has been part of Django since 4.0.
-redis==3.5.3
+# has been part of Django since 4.0. It moved off 3.5.3 with celery/kombu and
+# only because of them -- see requirements.txt for what 3.5.3 silently cost.
+redis==6.4.0
 
 # Pillow 6.2.2 installed and imported fine on 3.10 and then aborted the process
 # at interpreter shutdown -- "free(): invalid pointer", exit 134, on both amd64
@@ -82,11 +81,10 @@ requests==2.27.1
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 mock==4.0.3
 testfixtures==6.18.5
-# debug-toolbar 2.2 caps at Django 3.0; 3.2.x supports Django 2.2-3.2 and stays on
-# the Python 3.6+ line. Past its supported Django range here but still loading and
-# panelling correctly; the pin moves at the dependency-alignment step. Its SQL
-# panel uses sqlparse, pinned in the runtime block.
-django-debug-toolbar==3.2.4
-# Coverage for the CI report (and local use). <5 keeps a lighter, well-tested
-# line that's fine on Python 3.7.
-coverage<5
+# 6.3.0 is the newest debug-toolbar that still supports Django 4.2 -- 7.0 requires
+# Django >= 5.2, so this pin moves again at the 5.2 rung and not before. It had
+# been running past its supported Django range since 3.2.x. Its SQL panel uses
+# sqlparse, pinned in the runtime block.
+django-debug-toolbar==6.3.0
+# Coverage for the CI report (and local use). The <5 cap was for Python 3.7.
+coverage==7.15.4

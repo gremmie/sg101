@@ -8,10 +8,12 @@
 -r requirements.txt
 mock==4.0.3
 testfixtures==6.18.5
-# debug-toolbar 2.2 caps at Django 3.0; 3.2.x supports Django 2.2-3.2 (and stays
-# on the Python 3.6+ line). It still loads and runs on this rung; the pin moves
-# with the rest of the stack at the dependency-alignment step.
-django-debug-toolbar==3.2.4
-# sqlparse is now pulled in as a runtime dep via -r requirements.txt (Django 2.2
-# requires it); debug-toolbar's SQL panel uses it too.
-coverage<5
+# debug-toolbar had been running two Django versions past its supported range
+# since 3.2.x (which claims Django 2.2-3.2). 6.3.0 is the newest release that
+# still supports Django 4.2: 7.0 requires Django >= 5.2, so this pin moves again
+# at the 5.2 rung and not before. Its SQL panel uses sqlparse, pinned in the
+# runtime block via -r requirements.txt.
+django-debug-toolbar==6.3.0
+# coverage was held under 5 for the Python 3.7 line; 7.x needs 3.9+ and runs the
+# same `coverage run --source='.' / report / xml` sequence CI already invokes.
+coverage==7.15.4
