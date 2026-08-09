@@ -3,6 +3,18 @@
 Taken 2026-08-04 during Step 13 task 03 (the Django 4.0 rung), on Django 4.0.10
 / Python 3.10 / pytz 2021.3.
 
+> **RE-MEASURED 2026-08-08, and the headline finding below no longer holds.**
+> The section "The finding that changes the shape of the work" reported that
+> `zoneinfo` could not resolve the names 93.6% of profiles have stored. On the
+> image as it stands today **that number is zero** — 0 of 439 `common_timezones`
+> and 0 of 15,227 profiles fail to resolve. It is kept below as written, because
+> the reason it changed is the useful part; the correction follows it under
+> "What changed, and why it is not yet safe". **Read both before scoping task
+> 09: the hardest-looking item in this audit is already solved, and what remains
+> is one line of `requirements.txt`.** The other two hard cases —
+> `NonExistentTimeError` and the `common_timezones` list — are untouched by this
+> and still stand.
+
 ## Verdict
 
 **All 17 sites are deferred, and they should move with the `USE_TZ` conversion
@@ -85,6 +97,49 @@ Whether to *also* migrate the 14,248 stored names to canonical ones
 makes it unnecessary; doing it anyway would retire a deprecated naming scheme,
 but it rewrites user data to fix something that is not broken.
 
+## What changed, and why it is not yet safe (re-measured 2026-08-08)
+
+**The `tzdata` package is already installed, so every name resolves today.**
+Measured on the current image, against the production snapshot:
+
+| | audit, 2026-08-04 | 2026-08-08 |
+| --- | --- | --- |
+| `common_timezones` unresolvable by `zoneinfo` | 17 of 439 | **0 of 439** |
+| profiles on an unresolvable name | 14,248 of 15,227 | **0 of 15,227** |
+| `zoneinfo.available_timezones()` | 486 | 599 |
+
+All 95 distinct stored values resolve, `US/Pacific` included.
+
+**Nobody decided this. `pip show tzdata` reports `Required-by: kombu`,** so it
+arrived with task 06's celery 5.6.3 / kombu 5.6.2 bump on 2026-08-07 — three
+days after this audit was written, as a transitive dependency of a change about
+something else entirely. The remedy this file recommends was applied by
+accident.
+
+**It rests on nothing we control.** The base image's own tzdata does not carry
+the backward names at all — `/usr/share/zoneinfo/US` does not exist, and
+`zoneinfo` finds `US/Pacific` only by falling back to the `tzdata` package on
+`sys.path`. Nothing in `requirements.txt` asks for it. If kombu ever drops the
+dependency, 12,619 profiles stop resolving, and the failure arrives as a
+`ZoneInfoNotFoundError` from a template tag rather than as a failed build.
+
+**This is not a live risk today**, because the code still calls pytz and pytz
+bundles its own copy of the database. It becomes load-bearing at the moment
+task 09 switches to `zoneinfo`.
+
+**So the action is one line: pin `tzdata` in `requirements.txt` as a direct
+dependency**, commented as the timezone database rather than a celery detail,
+as the first commit of task 09. That converts the largest-looking item in this
+audit into a declared dependency. A test asserting that every name in the
+timezone dropdown resolves — and that the dropdown covers all 95 values already
+stored — is what keeps it that way when tzdata updates.
+
+**The lesson stands and gets sharper.** The original note said swapping to
+`zoneinfo` makes timezone correctness depend on the host image's tzdata
+packaging. It now also depends on the *dependency graph*, which moves under you
+between tasks. A finding about the environment has a shelf life; this one lasted
+three days.
+
 ## The other two hard cases
 
 ### `pytz.NonExistentTimeError` — `forums/latest.py:317`
@@ -134,14 +189,14 @@ validator on a user-controlled field should be most careful with.
 | 3 | `forums/latest.py:317` | `except pytz.NonExistentTimeError` | **hard** — no equivalent; decide DST-gap behavior |
 | 4 | `forums/templatetags/forum_tags.py:6` | `from pytz import timezone, UnknownTimeZoneError` | defer — follows 5–7 |
 | 5 | `forum_tags.py:32` | `SERVER_TZ = timezone(TIME_ZONE)` | defer to task 09; deleted with `USE_TZ` |
-| 6 | `forum_tags.py:33` | `DEFAULT_TZ = timezone('US/Pacific')` | **hard** — unresolvable name at module import; needs `tzdata` |
+| 6 | `forum_tags.py:33` | `DEFAULT_TZ = timezone('US/Pacific')` | needs `tzdata` — **satisfied since 2026-08-07, pin it** |
 | 7 | `forum_tags.py:73,101` | `SERVER_TZ.localize(...)` | correct while `USE_TZ` is off; task 09 deletes both |
-| 8 | `forum_tags.py:78,105` | `timezone(profile.time_zone)` | needs `tzdata` — reads the 93.6% names |
+| 8 | `forum_tags.py:78,105` | `timezone(profile.time_zone)` | needs `tzdata` — reads the 93.6% names; **satisfied, pin it** |
 | 9 | `tools/tz.py:5` | `import pytz` | defer — follows 10–11 |
 | 10 | `tools/tz.py:14` | `pytz.common_timezones` (grouping) | **hard** — no curated equivalent; 439 vs 486, and the sets differ both ways |
 | 11 | `tools/tz.py:23` | `pytz.common_timezones` (choices) | **hard** — same; this is what populated the 14,248 profiles |
 | 12 | `bio/forms.py:12` | `import pytz` | defer — follows 13–14 |
-| 13 | `bio/forms.py:58` | `pytz.timezone(tz)` on user input | needs `tzdata` |
+| 13 | `bio/forms.py:58` | `pytz.timezone(tz)` on user input | needs `tzdata` — **satisfied, pin it** |
 | 14 | `bio/forms.py:59` | `except pytz.UnknownTimeZoneError` | **hard** — must catch `ValueError` too, or 500 on bad input |
 | 15 | `gcalendar/forms.py:5,165,166` | same validation shape | same as 13–14 |
 | 16 | `gcalendar/calendar.py:7,154,155` | same validation shape | same as 13–14 |
