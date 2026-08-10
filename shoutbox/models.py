@@ -1,11 +1,11 @@
 """
 Models for the shoutbox application.
 """
-import datetime
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import escape, urlize, format_html
 
 from smiley.utils import smilify_html
@@ -30,7 +30,7 @@ class Shout(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            self.shout_date = datetime.datetime.now()
+            self.shout_date = timezone.now()
         self.html = urlize(smilify_html(escape(self.shout)), trim_url_limit=15,
                 nofollow=True)
         super(Shout, self).save(*args, **kwargs)

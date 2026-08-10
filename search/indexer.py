@@ -13,11 +13,11 @@ that do, then have PostgreSQL build the vectors in place. The vector is a
 function of the columns just written, so it never travels over the wire.
 
 """
-import datetime
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import prefetch_related_objects
+from django.utils import timezone
 
 from search.models import SEARCH_VECTOR
 from search.models import SearchDocument
@@ -53,7 +53,7 @@ def index_batch(document, content_type, batch):
                                          object_id__in=object_ids)
     existing = dict(rows.values_list('object_id', 'pk'))
 
-    now = datetime.datetime.now()
+    now = timezone.now()
     create, update = [], []
     for obj in batch:
         values = document.build(obj)

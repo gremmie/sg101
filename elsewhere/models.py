@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django import forms
 from django.db import models
 from django.db.models.fields import BLANK_CHOICE_DASH
@@ -8,6 +6,7 @@ from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from django.template.defaultfilters import slugify
 from django.urls import reverse
+from django.utils import timezone
 
 GOOGLE_PROFILE_URL = 'http://www.google.com/s2/favicons?domain_url=%s'
 SN_CACHE_KEY = 'elsewhere_sn_data'
@@ -124,7 +123,7 @@ class Profile(models.Model):
     data_manager = None
 
     date_added = models.DateTimeField(_('date added'), auto_now_add=True)
-    date_verified = models.DateTimeField(_('date verified'), default=datetime.now)
+    date_verified = models.DateTimeField(_('date verified'), default=timezone.now)
     is_verified = models.BooleanField(default=False)
 
     class Meta:

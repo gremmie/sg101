@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import check_password
+from django.utils import timezone
 
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
@@ -29,7 +30,7 @@ class RegistrationTest(TestCase):
         PendingUser.objects.create(username='pending_user',
             email='pending_user@example.com',
             password='pw',
-            date_joined=datetime.datetime.now(),
+            date_joined=timezone.now(),
             key='key')
 
         IllegalUsername.objects.create(username='illegalusername')
@@ -215,7 +216,7 @@ class RegistrationTest(TestCase):
         pending = PendingUser.objects.create(username='MixedCaseUser',
             email='mixedcase@example.com',
             password='pw',
-            date_joined=datetime.datetime.now(),
+            date_joined=timezone.now(),
             key='a' * 20)
 
         response = self.client.get(reverse('accounts-register_confirm',
@@ -338,7 +339,7 @@ class RegistrationTest(TestCase):
             self.fail("PendingUser was not created")
 
         self.assertEqual(pending.email, 'test@example.com')
-        self.assertTrue(datetime.datetime.now() - pending.date_joined <
+        self.assertTrue(timezone.now() - pending.date_joined <
                 datetime.timedelta(minutes=1))
         self.assertTrue(check_password('my_password', pending.password))
 
@@ -369,7 +370,7 @@ class RegistrationTest(TestCase):
 
         user = User.objects.get(username=pending.username)
         self.assertEqual(user.email, pending.email)
-        now = datetime.datetime.now()
+        now = timezone.now()
         delta = datetime.timedelta(seconds=10)
         self.assertTrue(now - user.last_login < delta)
         self.assertTrue(now - user.date_joined < delta)

@@ -1,7 +1,7 @@
-import datetime
 import logging
 
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 logger = logging.getLogger('auth')
@@ -25,7 +25,7 @@ def create_new_user(pending_user, ip=None, admin_activation=False):
     new_user.is_staff = False
     new_user.is_active = True
     new_user.is_superuser = False
-    new_user.last_login = datetime.datetime.now()
+    new_user.last_login = timezone.now()
     new_user.date_joined = new_user.last_login
 
     new_user.save()

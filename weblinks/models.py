@@ -1,11 +1,11 @@
 """
 This module contains the models for the weblinks application.
 """
-import datetime
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
+from django.utils import timezone
 from django.utils.html import format_html
 
 
@@ -63,10 +63,10 @@ class Link(LinkBase):
     def save(self, *args, **kwargs):
         if not self.pk:
             if not self.date_added:
-                self.date_added = datetime.datetime.now()
+                self.date_added = timezone.now()
             self.update_date = self.date_added
         else:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
 
         super(Link, self).save(*args, **kwargs)
 
@@ -86,10 +86,10 @@ class PendingLink(LinkBase):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.date_added = datetime.datetime.now()
+            self.date_added = timezone.now()
             self.update_date = self.date_added
         else:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
 
         super(PendingLink, self).save(*args, **kwargs)
 

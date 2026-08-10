@@ -1,9 +1,9 @@
 """Antispam utility functions other apps can use."""
-import datetime
 import logging
 import textwrap
 
 from django.core.cache import cache
+from django.utils import timezone
 
 from antispam import SPAM_PHRASE_KEY
 from antispam.models import SpamPhrase
@@ -62,7 +62,7 @@ def suspend_user(user):
     user.save()
     profile = user.profile
     profile.status = STA_SUSPENDED
-    profile.status_date = datetime.datetime.now()
+    profile.status_date = timezone.now()
     profile.save(content_update=False)
     logging.info("User suspended: %s", user.username)
 
@@ -79,7 +79,7 @@ def deactivate_spammer(user):
 
     profile = user.profile
     profile.status = STA_SPAMMER
-    profile.status_date = datetime.datetime.now()
+    profile.status_date = timezone.now()
     profile.reset()
     if profile.avatar:
         profile.avatar.delete(save=False)

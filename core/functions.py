@@ -1,6 +1,5 @@
 """This file houses various core utility functions"""
 from contextlib import contextmanager
-import datetime
 import logging
 import os
 import re
@@ -9,6 +8,7 @@ import tempfile
 from django.contrib.sites.models import Site
 from django.conf import settings
 import django.core.mail
+from django.utils import timezone
 
 from .tasks import send_mail as send_mail_task
 
@@ -108,7 +108,10 @@ def get_full_name(user):
 BASE_YEAR = 2010
 
 def copyright_str():
-    curr_year = datetime.datetime.now().year
+    # localtime(), not now(): now() is UTC, which turns over the new year six
+    # hours early, so the footer would advertise the next year from the evening
+    # of December 31st.
+    curr_year = timezone.localtime().year
     if curr_year == BASE_YEAR:
         year_range = str(BASE_YEAR)
     else:

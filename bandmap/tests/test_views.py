@@ -8,6 +8,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from bandmap.models import BandEntry
 
@@ -63,7 +64,7 @@ class BasicTestCase(TestCase):
             'lat': '42.0',
             'lon': '-23.5',
         }
-        now = datetime.datetime.now()
+        now = timezone.now()
         delta_t = datetime.timedelta(seconds=1)
         response = self.client.post(url, data=post_data, follow=True)
         self.assertRedirects(response, url)
@@ -90,7 +91,7 @@ class QueryTestCase(TestCase):
         self.user = User.objects.create_user(
             username='pj', email='pj@example.com', password='top_secret')
 
-        now = datetime.datetime.now()
+        now = timezone.now()
 
         kwargs = {
             'name': 'Test Band 1',

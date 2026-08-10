@@ -18,6 +18,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
+from django.utils import timezone
 
 from bio.models import UserProfile
 from downloads.models import Download
@@ -140,7 +141,7 @@ class ReconcileTestCase(DocumentTestCase):
     def test_a_source_edited_after_indexing_is_reported_stale(self):
         # update() rather than save(), so no reindex is queued -- the state a
         # worker outage leaves behind.
-        later = datetime.datetime.now() + datetime.timedelta(hours=1)
+        later = timezone.now() + datetime.timedelta(hours=1)
         Post.objects.filter(pk=self.post.pk).update(
                 body='Rewritten while the worker was down.', update_date=later)
 
@@ -154,7 +155,7 @@ class ReconcileTestCase(DocumentTestCase):
         self.assertEqual(report.orphaned.count, 0)
 
     def test_a_source_edited_before_indexing_is_not_stale(self):
-        earlier = datetime.datetime.now() - datetime.timedelta(hours=1)
+        earlier = timezone.now() - datetime.timedelta(hours=1)
         Post.objects.filter(pk=self.post.pk).update(update_date=earlier)
 
         self.assertEqual(self.report_for(Post).stale.count, 0)
@@ -215,7 +216,7 @@ class ReconcileTestCase(DocumentTestCase):
         Download.objects.filter(pk=self.download.pk).update(is_public=False)
         YgroupPost.objects.filter(pk=self.ygroup_post.pk).delete()
         self.topic.forum.category.groups.add(Group.objects.create(name='Kahunas'))
-        later = datetime.datetime.now() + datetime.timedelta(hours=1)
+        later = timezone.now() + datetime.timedelta(hours=1)
         Topic.objects.filter(pk=self.topic.pk).update(update_date=later)
 
         before = set(SearchDocument.objects.values_list('pk', 'indexed_at'))

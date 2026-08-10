@@ -7,13 +7,14 @@ import datetime
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from polls.models import Poll, Choice
 
 
 class PollHomeTest(TestCase):
 
     def setUp(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         Poll.objects.all().delete()
 
         past = now - datetime.timedelta(7)

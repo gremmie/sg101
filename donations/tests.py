@@ -4,6 +4,7 @@ Tests for the donations application.
 from urllib.parse import parse_qs
 from decimal import Decimal
 import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 from mock import Mock, patch
@@ -13,6 +14,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.conf import settings
+from django.utils import timezone
 
 from donations.models import Donation
 from donations.views import verify_request, paypal_params
@@ -68,7 +70,7 @@ class DonationsIpnTestCase(TestCase):
             self.assertEqual(d.memo, '')
             self.assertEqual(d.payer_status, 'verified')
             self.assertEqual(d.payment_date,
-                    datetime.datetime(2011, 1, 21, 4, 14, 8))
+                    timezone.make_aware(datetime.datetime(2011, 1, 21, 4, 14, 8)))
 
             # user should have got a badge for donating
             p = user.profile
@@ -109,7 +111,7 @@ class DonationsIpnTestCase(TestCase):
             self.assertEqual(d.memo, '')
             self.assertEqual(d.payer_status, 'unverified')
             self.assertEqual(d.payment_date,
-                    datetime.datetime(2011, 1, 16, 5, 40, 33))
+                    timezone.make_aware(datetime.datetime(2011, 1, 16, 5, 40, 33)))
 
             # user should not have got a badge for donating
             p = user.profile
@@ -326,3 +328,53 @@ class VerifyRequestTestCase(TestCase):
         response.raise_for_status.side_effect = requests.HTTPError('500')
         post_mock.return_value = response
         self.assertIsNone(verify_request('cmd=_notify-validate'))
+
+
+class MonthBoundaryTestCase(TestCase):
+    """
+    A donation made in the evening on the last day of a month is already the
+    1st in UTC. Which month it is reported under therefore depends on the
+    timezone the query reads it in, and nothing about getting that wrong is
+    loud: the totals are simply short by one donation.
+    """
+    def setUp(self):
+        # 7pm Chicago on the last day of January; 01:00 UTC on February 1st.
+        self.chicago = ZoneInfo('America/Chicago')
+        self.donation = Donation.objects.create(
+                txn_id='boundary-1', txn_type='web_accept',
+                mc_gross=Decimal('20.00'), mc_fee=Decimal('1.00'),
+                payment_date=datetime.datetime(2026, 1, 31, 19, 0,
+                                               tzinfo=self.chicago))
+
+    def test_the_donation_is_stored_in_the_next_utc_month(self):
+        """Guard the premise: if this row is not actually across the boundary,
+        every other test here passes without proving anything."""
+        stored = self.donation.payment_date.astimezone(datetime.timezone.utc)
+        self.assertEqual((stored.year, stored.month, stored.day), (2026, 2, 1))
+
+    def test_monthly_stats_files_it_under_january(self):
+        gross, net, donations = Donation.objects.monthly_stats(year=2026,
+                                                               month=1)
+        self.assertEqual(gross, Decimal('20.00'))
+        self.assertEqual(len(donations), 1)
+
+    def test_monthly_stats_does_not_file_it_under_february(self):
+        gross, net, donations = Donation.objects.monthly_stats(year=2026,
+                                                               month=2)
+        self.assertEqual(len(donations), 0)
+
+    def test_the_month_does_not_follow_an_activated_timezone(self):
+        """The rollup is about the site's calendar, not the viewer's. With a
+        per-user timezone activated -- which is one obvious way to render
+        times, and what the middleware approach would have done -- an
+        unpinned lookup silently reports this donation in February."""
+        for name in ['UTC', 'US/Pacific', 'Australia/Sydney']:
+            with self.subTest(tz=name), timezone.override(name):
+                _, _, donations = Donation.objects.monthly_stats(year=2026,
+                                                                 month=1)
+                self.assertEqual(len(donations), 1)
+
+    def test_monthly_goal_pct_uses_the_same_month(self):
+        with timezone.override('UTC'):
+            pct = Donation.objects.monthly_goal_pct(year=2026, month=1)
+        self.assertEqual(pct, 20)   # (20.00 - 1.00) / 94.00

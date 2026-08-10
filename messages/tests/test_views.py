@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.core import mail
+from django.utils import timezone
 
 import messages
 from messages.models import Message, Options, Flag
@@ -190,7 +191,7 @@ class BasicTestCase(TestCase):
 
     def test_message_cycle(self):
         # pj sends message to eddie
-        now = datetime.datetime.now()
+        now = timezone.now()
         post_data = {
             'receiver': 'eddie',
             'subject': 'Mr. Moto Demo',
@@ -455,7 +456,7 @@ class BasicTestCase(TestCase):
 
     def test_read_permission(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         # pj sends a PM to richard
         post_data = {
             'receiver': 'richard',
@@ -533,7 +534,7 @@ class BasicTestCase(TestCase):
         post_data = {
             'comments': 'This is abuse!',
         }
-        now = datetime.datetime.now()
+        now = timezone.now()
         response = self.client.post(url, data=post_data, follow=True)
         self.assertContains(response, "Message reported", status_code=200)
 
@@ -571,7 +572,7 @@ class BasicTestCase(TestCase):
 
         # pj deletes a message so we can make sure we are testing inbox full
         msg = Message.objects.filter(receiver=self.users['eddie']).last()
-        msg.sender_delete_date = datetime.datetime.now()
+        msg.sender_delete_date = timezone.now()
         msg.save()
         self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
         self.assertEqual(Message.objects.outbox(self.users['pj']).count(),
@@ -601,7 +602,7 @@ class BasicTestCase(TestCase):
 
         # eddie deletes a message so we can make sure we are testing outbox full
         msg = Message.objects.filter(receiver=self.users['eddie']).last()
-        msg.read_date = datetime.datetime.now()
+        msg.read_date = timezone.now()
         msg.receiver_delete_date = msg.read_date
         msg.save()
         self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)

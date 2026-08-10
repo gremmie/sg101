@@ -13,6 +13,7 @@ import bio.models
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
 from forums.models import Forum, Post, Topic
 
@@ -74,9 +75,9 @@ class ModTopicActionTests(TestCase):
 
     def test_split_selected_posts_to_new_topic(self):
         topic = make_topic(self.forum, self.author, name='Original')
-        add_post(topic, self.author, when=datetime.datetime.now() - 3 * DAY)
-        reply2 = add_post(topic, self.author, when=datetime.datetime.now() - 2 * DAY)
-        reply3 = add_post(topic, self.author, when=datetime.datetime.now() - 1 * DAY)
+        add_post(topic, self.author, when=timezone.now() - 3 * DAY)
+        reply2 = add_post(topic, self.author, when=timezone.now() - 2 * DAY)
+        reply3 = add_post(topic, self.author, when=timezone.now() - 1 * DAY)
 
         response = self.client.post(
             reverse('forums-mod_topic_split', args=[topic.id]),
@@ -91,9 +92,9 @@ class ModTopicActionTests(TestCase):
 
     def test_split_at_moves_post_and_following(self):
         topic = make_topic(self.forum, self.author, name='Original')
-        add_post(topic, self.author, when=datetime.datetime.now() - 3 * DAY)
-        reply2 = add_post(topic, self.author, when=datetime.datetime.now() - 2 * DAY)
-        add_post(topic, self.author, when=datetime.datetime.now() - 1 * DAY)
+        add_post(topic, self.author, when=timezone.now() - 3 * DAY)
+        reply2 = add_post(topic, self.author, when=timezone.now() - 2 * DAY)
+        add_post(topic, self.author, when=timezone.now() - 1 * DAY)
 
         response = self.client.post(
             reverse('forums-mod_topic_split', args=[topic.id]),

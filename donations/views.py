@@ -12,6 +12,7 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 
@@ -213,6 +214,14 @@ def process_donation(item_number, params):
     except ValueError:
         logging.error('IPN: invalid payment_date "%s"', params['payment_date'])
         return
+
+    # PayPal sends the zone as a trailing abbreviation ("PST"/"PDT"), which the
+    # line above throws away, so what was parsed is a Pacific wall clock. It has
+    # always then been recorded as if it were TIME_ZONE, which is what
+    # make_aware() continues to do here -- deliberately, because every donation
+    # on file was stored that way and a report that mixed the two conventions
+    # would be worse than one that is uniformly a couple of hours off.
+    payment_date = timezone.make_aware(payment_date)
 
     try:
         donation = Donation(

@@ -7,7 +7,6 @@ images to https. It does this by rewriting the markup:
       an S3 bucket. The src attribute is replaced with the new S3 URL.
 """
 import base64
-import datetime
 import json
 import logging
 import os
@@ -18,6 +17,7 @@ import uuid
 
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.utils import timezone
 from lxml import etree
 import lxml.html
 from PIL import Image
@@ -331,7 +331,7 @@ class Command(BaseCommand):
                 help="optional socket timeout (secs)")
 
     def handle(self, *args, **options):
-        time_started = datetime.datetime.now()
+        time_started = timezone.now()
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)
 
@@ -430,7 +430,7 @@ class Command(BaseCommand):
                 model.save(**save_kwargs)
             count += 1
 
-        time_finished = datetime.datetime.now()
+        time_finished = timezone.now()
         elapsed = time_finished - time_started
         logger.info("ssl_images exiting; number of objects: %d; elapsed: %s",
                     count, elapsed)

@@ -1,11 +1,11 @@
 """Models for the bandmap application.
 
 """
-import datetime
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 
 class BandEntryManager(models.Manager):
@@ -39,7 +39,7 @@ class BandEntry(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.date_submitted:
-            self.date_submitted = datetime.datetime.now()
+            self.date_submitted = timezone.now()
         html = render_to_string('bandmap/balloon.html', {'band': self})
         self.html = html.strip().replace('\n', '')
         super(BandEntry, self).save(*args, **kwargs)

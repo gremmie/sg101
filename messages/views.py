@@ -2,9 +2,9 @@
 Views for the messages application.
 
 """
-import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.contrib import messages as django_messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -199,7 +199,7 @@ def view(request, msg_id):
 
         if msg.receiver == request.user:
             if msg.read_date is None:
-                msg.read_date = datetime.datetime.now()
+                msg.read_date = timezone.now()
                 msg.save()
         else:
             initial_data['receiver'] = msg.receiver.username
@@ -260,7 +260,7 @@ def _delete_pms(request, pm_ids):
     """
     user = request.user
     msgs = Message.objects.filter(id__in=pm_ids)
-    now = datetime.datetime.now()
+    now = timezone.now()
 
     count = 0
     for msg in msgs:

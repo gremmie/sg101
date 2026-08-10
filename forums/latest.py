@@ -53,14 +53,10 @@ response cycle.
 import datetime
 import json
 import logging
-import time
 
 import dateutil.parser
-from django.conf import settings
 from django.dispatch import receiver
 from django.template.loader import render_to_string
-from django.utils.timezone import get_default_timezone, make_aware
-import pytz
 import redis
 
 from forums.signals import post_content_update, topic_content_update
@@ -75,8 +71,6 @@ MAX_POSTS = 50
 
 # This controls how many updated topics we track
 MAX_UPDATED_TOPICS = 50
-
-SERVER_TZ = pytz.timezone(settings.TIME_ZONE)
 
 # Redis key names:
 POST_COUNT_KEY = "forums:public_post_count"
@@ -236,7 +230,11 @@ def _update_latest_topics(conn, post):
     """
     # serialize topic attributes
     topic_id = post.topic.id
-    topic_score = int(time.mktime(post.creation_date.timetuple()))
+    # timestamp(), not time.mktime(timetuple()): timetuple() discards the
+    # offset and mktime() reads the remainder as container-local time, so the
+    # score was only ever right when the container's clock happened to agree
+    # with TIME_ZONE. _deserialize_topic_date() is the other half of this.
+    topic_score = int(post.creation_date.timestamp())
 
     topic_content = {
         'title': post.topic.name,
@@ -306,19 +304,15 @@ def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):
 
 
 def _deserialize_date(pubdate):
-    if isinstance(pubdate, int):
-        # legacy data, fix up and watch out for timezone glitches
-        new_date = datetime.datetime.utcfromtimestamp(pubdate)
-        new_date.replace(tzinfo=SERVER_TZ)
-
-        tz = get_default_timezone()
-        try:
-            make_aware(new_date, tz)
-        except pytz.NonExistentTimeError:
-            new_date += datetime.timedelta(hours=1)
-        return new_date
-
     return dateutil.parser.parse(pubdate)
+
+
+def _deserialize_topic_date(score):
+    """Turn an updated-topic score back into the instant it was taken from."""
+    # The tz argument is what makes this the inverse of the timestamp() call in
+    # _update_latest_topics(); without it the value comes back naive and in
+    # whatever zone the container is set to.
+    return datetime.datetime.fromtimestamp(score, datetime.timezone.utc)
 
 
 @receiver(topic_content_update, dispatch_uid='forums.latest_posts')
@@ -445,7 +439,7 @@ def get_latest_topics(num):
     topics = []
     for s in json_list:
         item = json.loads(s)
-        item['date'] = datetime.datetime.fromtimestamp(item['date'])
+        item['date'] = _deserialize_topic_date(item['date'])
         topics.append(item)
 
     return topics

@@ -10,13 +10,13 @@ reindex rather than an outage.
 The signal handlers in search.receivers are what queue these, always on commit.
 
 """
-import datetime
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.contrib.contenttypes.models import ContentType
 from django.db import InterfaceError
 from django.db import OperationalError
+from django.utils import timezone
 
 from search.documents import all_documents
 from search.documents import document_for_model
@@ -60,7 +60,7 @@ def reindex_document(content_type_id, object_id):
     # Taken before the read, not after: it is how fresh this task's data is,
     # and index_object compares it against what the row already holds so that
     # a task which read early cannot overwrite one that read late.
-    read_at = datetime.datetime.now()
+    read_at = timezone.now()
 
     obj = document.get_queryset().filter(pk=object_id).first()
     if obj is None:

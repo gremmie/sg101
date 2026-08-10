@@ -1,7 +1,6 @@
 """
 This file contains the automatic admin site definitions for the downloads models.
 """
-import datetime
 import os.path
 
 from django.contrib import admin
@@ -11,6 +10,7 @@ from downloads.models import Download
 from downloads.models import Category
 from downloads.models import AllowedExtension
 from downloads.models import VoteRecord
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -54,7 +54,7 @@ class PendingDownloadAdmin(admin.ModelAdmin):
                     html=pending_dl.html,
                     file=pending_dl.file,
                     user=pending_dl.user,
-                    date_added=datetime.datetime.now(),
+                    date_added=timezone.now(),
                     ip_address=pending_dl.ip_address,
                     hits=0,
                     average_score=0.0,

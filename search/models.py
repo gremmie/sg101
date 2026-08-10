@@ -10,7 +10,6 @@ global ordering cannot be assembled by querying eight models and merging in
 Python -- page 2 would mean fetching every match from every model first.
 
 """
-import datetime
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -20,6 +19,7 @@ from django.contrib.postgres.search import SearchVectorField
 from django.db import IntegrityError
 from django.db import models
 from django.db import transaction
+from django.utils import timezone
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
@@ -80,7 +80,7 @@ class SearchDocumentManager(models.Manager):
         from search.documents import document_for_model
 
         if read_at is None:
-            read_at = datetime.datetime.now()
+            read_at = timezone.now()
 
         values = document_for_model(obj._meta.model).build(obj)
         values['indexed_at'] = read_at

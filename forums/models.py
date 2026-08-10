@@ -1,11 +1,11 @@
 """
 Models for the forums application.
 """
-import datetime
 
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User, Group
+from django.utils import timezone
 from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
@@ -163,7 +163,7 @@ class Forum(models.Model):
             except ForumLastVisit.DoesNotExist:
                 flv = ForumLastVisit(user=user, forum=self)
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         flv.begin_date = now
         flv.end_date = now
         flv.save()
@@ -230,7 +230,7 @@ class Topic(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            now = datetime.datetime.now()
+            now = timezone.now()
             self.creation_date = now
             self.update_date = now
 
@@ -300,7 +300,7 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            self.creation_date = datetime.datetime.now()
+            self.creation_date = timezone.now()
             self.update_date = self.creation_date
 
         self.html = kwargs.pop('html', None)
@@ -319,7 +319,7 @@ class Post(models.Model):
 
     def touch(self):
         """Call this function to indicate the post has been edited."""
-        self.update_date = datetime.datetime.now()
+        self.update_date = timezone.now()
 
 
 class FlaggedPost(models.Model):
@@ -388,7 +388,7 @@ class TopicLastVisit(models.Model):
         super(TopicLastVisit, self).save(*args, **kwargs)
 
     def touch(self):
-        self.last_visit = datetime.datetime.now()
+        self.last_visit = timezone.now()
 
 
 class Attachment(models.Model):

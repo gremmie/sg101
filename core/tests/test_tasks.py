@@ -7,6 +7,7 @@ import datetime
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
+from django.utils import timezone
 from mock import call, patch
 
 import forums.unread
@@ -39,7 +40,7 @@ class CoreTasksTestCase(TestCase):
         cat = Category.objects.create(name='Cat', slug='cat')
         forum = Forum.objects.create(category=cat, name='Forum', slug='forum')
         user = User.objects.create_user('u', '', 'pw')
-        stale = (datetime.datetime.now() - forums.unread.THRESHOLD * 2
+        stale = (timezone.now() - forums.unread.THRESHOLD * 2
                  - datetime.timedelta(days=1))
         flv = ForumLastVisit.objects.create(user=user, forum=forum,
                                             begin_date=stale, end_date=stale)

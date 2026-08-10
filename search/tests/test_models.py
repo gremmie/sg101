@@ -5,6 +5,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.db import connection
 from django.test import TestCase
+from django.utils import timezone
 
 from forums.models import Category
 from forums.models import Forum
@@ -90,7 +91,7 @@ class IndexObjectTestCase(TestCase):
         self.assertEqual(SearchDocument.objects.count(), 2)
 
     def test_indexed_at_records_when_the_row_was_built(self):
-        before = datetime.datetime.now()
+        before = timezone.now()
         doc = SearchDocument.objects.index_object(self.make_topic('Jaguar setup'))
         self.assertGreaterEqual(doc.indexed_at, before)
 
@@ -119,7 +120,7 @@ class StaleWriteTestCase(TestCase):
 
     def test_a_stale_read_does_not_overwrite_a_fresher_row(self):
         # What the slow task read, before the edit.
-        stale_read = datetime.datetime.now()
+        stale_read = timezone.now()
         stale_copy = Topic.objects.get(pk=self.topic.pk)
 
         # The edit, and the task that read it, both land first.
@@ -136,7 +137,7 @@ class StaleWriteTestCase(TestCase):
     def test_a_stale_read_does_not_roll_indexed_at_backwards(self):
         # The reconcile sweep reads indexed_at, so a dropped write must not
         # leave the row looking older than the data actually in it.
-        stale_read = datetime.datetime.now()
+        stale_read = timezone.now()
         stale_copy = Topic.objects.get(pk=self.topic.pk)
         fresh = SearchDocument.objects.index_object(self.topic)
 
@@ -159,6 +160,6 @@ class StaleWriteTestCase(TestCase):
         SearchDocument.objects.all().delete()
 
         SearchDocument.objects.index_object(
-                self.topic, read_at=datetime.datetime(2020, 1, 1))
+                self.topic, read_at=timezone.make_aware(datetime.datetime(2020, 1, 1)))
 
         self.assertEqual(self.row().title, 'Jaguar setup')

@@ -22,6 +22,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
 from forums.models import (Forum, ForumLastVisit, Post, Topic,
                            TopicLastVisit)
@@ -29,7 +30,7 @@ from forums.unread import (get_forum_unread_status, get_post_unread_status,
                            get_topic_unread_status, get_unread_topics)
 
 
-NOW = datetime.datetime.now()
+NOW = timezone.now()
 DAY = datetime.timedelta(days=1)
 
 

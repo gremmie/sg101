@@ -7,6 +7,7 @@ import datetime
 import logging
 
 from django.db import IntegrityError
+from django.utils import timezone
 
 from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
 
@@ -21,7 +22,7 @@ def get_forum_unread_status(qs, user):
             forum.has_unread = False
         return
 
-    now = datetime.datetime.now()
+    now = timezone.now()
     min_date = now - THRESHOLD
 
     # retrieve ForumLastVisit records in one SQL query
@@ -126,7 +127,7 @@ def get_topic_unread_status(forum, topics, user):
             topic.has_unread = False
         return
 
-    now = datetime.datetime.now()
+    now = timezone.now()
 
     # Get the ForumLastVisit record
     try:
@@ -215,7 +216,7 @@ def get_unread_topics(user):
     if not user.is_authenticated:
         return []
 
-    now = datetime.datetime.now()
+    now = timezone.now()
 
     # Obtain list of forums the user can view
     forums = Forum.objects.forums_for_user(user)

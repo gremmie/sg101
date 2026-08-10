@@ -1,14 +1,13 @@
 """Middleware for wiki integration.
 
 """
-import datetime
 import hashlib
 import logging
 import random
 import string
-import time
 
 from django.conf import settings
+from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 import redis
 
@@ -49,7 +48,7 @@ def create_wiki_session(request, response):
     Updates the Redis set so the Wiki can verify the cookie.
 
     """
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
     value = cookie_value(request.user, now)
     response.set_cookie(settings.WIKI_COOKIE_NAME,
             value=value,
@@ -65,7 +64,10 @@ def create_wiki_session(request, response):
     h = hashlib.sha256()
     h.update(value.encode('utf-8'))
     name = h.hexdigest()
-    score = time.mktime(now.utctimetuple())
+    # timestamp(), not mktime(utctimetuple()): mktime reads its argument as
+    # container-local time, so the score was only correct while the host
+    # clock agreed with UTC. expire_cookies() computes its cutoff the same way.
+    score = int(now.timestamp())
     conn = get_redis_connection()
 
     try:

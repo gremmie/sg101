@@ -8,8 +8,9 @@ import decimal
 
 from django.core.management.base import LabelCommand, CommandError
 from django.db.models import Sum
+from django.utils import timezone
 
-from donations.models import Donation
+from donations.models import Donation, in_month
 
 ROW_FMT = '%10s %7s %7s'
 
@@ -26,7 +27,7 @@ class Command(LabelCommand):
         except ValueError:
             raise CommandError("invalid year")
 
-        today = datetime.date.today()
+        today = timezone.localdate()
         if year < 2011 or year > today.year:
             raise CommandError("invalid year")
 
@@ -40,10 +41,8 @@ class Command(LabelCommand):
         total_net = decimal.Decimal()
 
         for month in range(1, max_month + 1):
-            r = Donation.objects.filter(
-                    payment_date__year=year,
-                    payment_date__month=month).aggregate(
-                            Sum('mc_gross'), Sum('mc_fee'))
+            r = in_month(Donation.objects, year, month).aggregate(
+                    Sum('mc_gross'), Sum('mc_fee'))
 
             gross, fee = r['mc_gross__sum'], r['mc_fee__sum']
 

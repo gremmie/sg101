@@ -9,6 +9,7 @@ import base64
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils import timezone
 
 
 class IllegalUsername(models.Model):
@@ -44,7 +45,7 @@ class PendingUserManager(models.Manager):
       temp_user = User()
       temp_user.set_password(password)
 
-      now = datetime.datetime.now()
+      now = timezone.now()
       pending_user = self.model(None,
             username,
             email,
@@ -58,7 +59,7 @@ class PendingUserManager(models.Manager):
 
 
    def purge_expired(self):
-      expire_time = datetime.datetime.now() - datetime.timedelta(days=1)
+      expire_time = timezone.now() - datetime.timedelta(days=1)
       expired_pending_users = self.filter(date_joined__lt=expire_time)
       expired_pending_users.delete()
 
@@ -78,7 +79,7 @@ class PendingUser(models.Model):
    username = models.CharField(max_length=30, db_index=True, unique=True)
    email = models.EmailField()
    password = models.CharField(max_length=128)
-   date_joined = models.DateTimeField(default=datetime.datetime.now, db_index=True)
+   date_joined = models.DateTimeField(default=timezone.now, db_index=True)
    key = models.CharField(max_length=20)
 
    objects = PendingUserManager()

@@ -17,6 +17,7 @@ from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.db.models import F
 
@@ -42,6 +43,11 @@ from forums.latest import get_latest_topic_ids
 
 TOPICS_PER_PAGE = 50
 POSTS_PER_PAGE = 20
+
+# Stand-in for "this user has never visited this topic", compared against real
+# visit times. datetime.min is naive, and a naive value cannot be compared with
+# an aware one at all -- it raises rather than sorting wrongly.
+_NEVER_VISITED = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
 FEED_BASE = '/feeds/forums/'
 FORUM_FEED = FEED_BASE + '%s/'
 
@@ -200,7 +206,7 @@ def topic_index(request, id):
 
     if request.user.is_authenticated:
         if last_page or last_post_on_page is None:
-            visit_time = datetime.datetime.now()
+            visit_time = timezone.now()
         else:
             visit_time = last_post_on_page.creation_date
         _update_last_visit(request.user, topic, visit_time)
@@ -343,7 +349,7 @@ def quick_reply_ajax(request):
         post.unread = True
         post.attach_list = post.attachments.all()
         _bump_post_count(request.user)
-        _update_last_visit(request.user, form.topic, datetime.datetime.now())
+        _update_last_visit(request.user, form.topic, timezone.now())
 
         return render(request, 'forums/display_post.html', {
             'post': post,
@@ -592,7 +598,7 @@ def new_post(request, topic_id):
                 form.attach_proc.save_attachments(post)
 
                 _bump_post_count(request.user)
-                _update_last_visit(request.user, topic, datetime.datetime.now())
+                _update_last_visit(request.user, topic, timezone.now())
                 return HttpResponseRedirect(post.get_absolute_url())
         else:
             quote_id = request.GET.get('quote')
@@ -749,7 +755,7 @@ def catchup_all(request):
             user=request.user,
             topic__forum__id__in=forum_ids).delete()
 
-    now = datetime.datetime.now()
+    now = timezone.now()
     ForumLastVisit.objects.filter(user=request.user,
             forum__in=forum_ids).update(begin_date=now, end_date=now)
 
@@ -1039,7 +1045,7 @@ def _update_last_visit(user, topic, visit_time):
     Does the bookkeeping for the last visit status for the user to the
     topic/forum.
     """
-    now = datetime.datetime.now()
+    now = timezone.now()
     try:
         flv = ForumLastVisit.objects.get(user=user, forum=topic.forum)
     except ForumLastVisit.DoesNotExist:
@@ -1053,7 +1059,8 @@ def _update_last_visit(user, topic, visit_time):
         try:
             tlv = TopicLastVisit.objects.get(user=user, topic=topic)
         except TopicLastVisit.DoesNotExist:
-            tlv = TopicLastVisit(user=user, topic=topic, last_visit=datetime.datetime.min)
+            tlv = TopicLastVisit(user=user, topic=topic,
+                                 last_visit=_NEVER_VISITED)
 
         if visit_time > tlv.last_visit:
             tlv.last_visit = visit_time

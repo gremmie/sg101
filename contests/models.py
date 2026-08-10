@@ -3,11 +3,11 @@ Models for the contest application.
 
 """
 import random
-import datetime
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
+from django.utils import timezone
 
 
 class PublicContestManager(models.Manager):
@@ -19,7 +19,7 @@ class PublicContestManager(models.Manager):
         return super(PublicContestManager, self).get_queryset().filter(is_public=True)
 
     def get_current_contests(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.filter(creation_date__lte=now, win_date__isnull=True)
 
 
@@ -57,7 +57,7 @@ class Contest(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.creation_date:
-            self.creation_date = datetime.datetime.now()
+            self.creation_date = timezone.now()
 
         super(Contest, self).save(*args, **kwargs)
 
@@ -66,7 +66,7 @@ class Contest(models.Model):
         Returns True if the contest is still active.
 
         """
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.creation_date <= now < self.end_date
 
     def can_enter(self):
@@ -99,7 +99,7 @@ class Contest(models.Model):
 
         winners = list(User.objects.filter(pk__in=winner_ids))
         self.winners.add(*winners)
-        self.win_date = datetime.datetime.now()
+        self.win_date = timezone.now()
 
     def ogp_tags(self):
         """

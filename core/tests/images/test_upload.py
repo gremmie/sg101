@@ -69,7 +69,7 @@ class ProcessUploadTestCase(unittest.TestCase):
 
     @patch('core.images.upload.BytesIO')
     @patch('core.images.upload.S3Bucket')
-    @patch('core.images.upload.datetime')
+    @patch('core.images.upload.timezone')
     @patch('core.images.upload.uuid')
     @patch('core.images.upload.orient_image')
     @patch('core.images.upload.Image')
@@ -80,7 +80,7 @@ class ProcessUploadTestCase(unittest.TestCase):
     @patch('core.images.upload.settings.USER_PHOTOS_ACCESS_KEY', new='access-key')
     def test_s3_upload(self, image_mock, orient_mock, uuid_mock, now_mock,
                        bucket_mock, bytes_mock):
-        now_mock.datetime.now.return_value = datetime.datetime(2025, 4, 20)
+        now_mock.localtime.return_value = datetime.datetime(2025, 4, 20)
         uuid_mock.uuid4().bytes = b'deadbeef'
 
         filename = 'image.jpg'

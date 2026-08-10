@@ -2,26 +2,26 @@
 Models for the Polls application.
 
 """
-import datetime
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class PollManager(models.Manager):
     """Manager for the Poll model"""
 
     def get_current_polls(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.filter(
                 Q(is_enabled=True),
                 Q(start_date__lte=now),
                 Q(end_date__isnull=True) | Q(end_date__gte=now))
 
     def get_old_polls(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.filter(
                 is_enabled=True,
                 end_date__isnull=False,
@@ -80,7 +80,7 @@ class Poll(models.Model):
     total_votes = property(_total_votes)
 
     def is_open(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.start_date <= now and (not self.end_date or now <= self.end_date)
 
     def can_comment_on(self):

@@ -15,6 +15,7 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from downloads.models import Category as DownloadCategory
 from downloads.models import Download
@@ -61,7 +62,8 @@ class TypeCountsTestCase(TestCase):
             SearchDocument.objects.index_object(YgroupPost.objects.create(
                     title='Reverb thread %d' % n, poster='wahini',
                     msg='Old reverb talk',
-                    creation_date=datetime.datetime(2005, 3, 1, 12, 0)))
+                    creation_date=timezone.make_aware(
+                            datetime.datetime(2005, 3, 1, 12, 0))))
 
         # One download, and nothing at all for the remaining types.
         SearchDocument.objects.index_object(Download.objects.create(

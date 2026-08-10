@@ -2,12 +2,12 @@
 Unit tests for the comments app template tags.
 
 """
-from datetime import datetime
 
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.contenttypes.models import ContentType
 from django.template import Context, Template
 from django.test import TestCase
+from django.utils import timezone
 from lxml import html
 
 from comments.models import Comment
@@ -24,7 +24,7 @@ class GetCommentCountTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
 
         content_type = ContentType.objects.get(app_label='potd', model='photo')
@@ -49,7 +49,7 @@ class GetCommentListTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
 
         content_type = ContentType.objects.get(app_label='potd', model='photo')
@@ -103,7 +103,7 @@ class GetCommentFormTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
 
     def test_renders_comment_form(self):
@@ -121,7 +121,7 @@ class RenderCommentFormTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
 
     def test_renders_comment_form(self):
@@ -155,7 +155,7 @@ class RenderCommentFormV3TestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
 
     def test_renders_comment_form(self):
@@ -190,7 +190,7 @@ class RenderCommentListTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.user.save()
-        self.photo = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        self.photo = Photo(pk=4096, user=self.user, date_added=timezone.now())
         self.photo.save()
         content_type = ContentType.objects.get(app_label='potd', model='photo')
         c = Comment(content_type=content_type, object_id=self.photo.pk,

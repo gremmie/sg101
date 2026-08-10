@@ -4,7 +4,6 @@ The image can be resized and a thumbnail can be generated and uploaded as well.
 
 """
 from base64 import b64encode
-import datetime
 import logging
 from io import BytesIO
 import os
@@ -14,6 +13,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.utils import timezone
 from PIL import Image
 
 from .utils import orient_image
@@ -30,7 +30,9 @@ def process_upload(user, filename):
                 new_size=settings.USER_PHOTOS_MAX_SIZE,
                 thumb_size=settings.USER_PHOTOS_THUMB_SIZE)
     else:
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # localtime(), so the stamp stays in TIME_ZONE as it always has -- this
+        # string is written into the object's S3 metadata and carries no zone.
+        now = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
         metadata = {'user': user.username, 'date': now}
 
         bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,

@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.utils import timezone
 
 from mock import call, patch, Mock
 
@@ -67,7 +68,7 @@ class AntispamUtilsCase(TestCase):
         profile.signature = 'I spammed you!'
         profile.save()
 
-        now=datetime.datetime.now()
+        now=timezone.now()
 
         # create a poll item to comment on
         poll = Poll(start_date=now,
@@ -106,10 +107,9 @@ class AntispamUtilsCase(TestCase):
         self.assertFalse(profile.signature_html)
         self.assertEqual(profile.status, STA_SPAMMER)
 
-        status_date = datetime.date(year=profile.status_date.year,
-                month=profile.status_date.month,
-                day=profile.status_date.day)
-        self.assertEqual(status_date, datetime.date.today())
+        # Both sides UTC: status_date is aware now, and date.today() would be
+        # the container's local date, which only agrees by coincidence.
+        self.assertEqual(profile.status_date.date(), timezone.now().date())
 
         self.assertEqual(Comment.objects.filter(user=user).count(), 0)
         self.assertEqual(WebsiteProfile.objects.filter(user=user).count(), 0)

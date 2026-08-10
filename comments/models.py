@@ -1,11 +1,11 @@
 """
 Models for the comments application.
 """
-import datetime
 
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
@@ -56,7 +56,7 @@ class Comment(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            self.creation_date = datetime.datetime.now()
+            self.creation_date = timezone.now()
 
         self.html = kwargs.pop('html', None)
         if self.html is None:

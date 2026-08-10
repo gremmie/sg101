@@ -1,7 +1,7 @@
-from datetime import datetime
 import unittest
 
 from django.http.request import HttpRequest
+from django.utils import timezone
 from mock import call, patch, mock_open, Mock
 
 from core.functions import (TemporaryFile, remove_file, send_mail, email_admins,
@@ -139,7 +139,7 @@ class GetFullNameTestCase(unittest.TestCase):
 class CopyrightStrTestCase(unittest.TestCase):
     def test_year_range(self):
         result = copyright_str()
-        now = datetime.now()
+        now = timezone.now()
         expected = 'Copyright (C) 2010 - {}, SurfGuitar101.com'.format(now.year)
         self.assertEqual(result, expected)
 

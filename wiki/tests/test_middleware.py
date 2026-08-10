@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.http import HttpResponse
 from django.conf import settings
+from django.utils import timezone
 
 from core.services import get_redis_connection
 from wiki.middleware import WikiMiddleware
@@ -74,8 +75,9 @@ class MiddleWareTestCase(TestCase):
         member = h.hexdigest()
 
         score = self.conn.zscore(settings.WIKI_REDIS_SET, member)
-        now = datetime.datetime.utcnow()
-        session_start = datetime.datetime.fromtimestamp(score)
+        now = timezone.now()
+        session_start = datetime.datetime.fromtimestamp(
+                score, datetime.timezone.utc)
         self.assertLess(now - session_start, datetime.timedelta(seconds=2))
 
         session_member = request.session.get(SESSION_SET_MEMBER)

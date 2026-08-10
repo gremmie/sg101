@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from django import template
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.utils import timezone
 
 import repoze.timeago
 
@@ -128,10 +129,6 @@ def open_graph_meta_tags(item=None):
     return {'props': props}
 
 
-# A somewhat ugly hack until we decide if we should be using UTC time
-# everywhere or not.
-repoze.timeago._NOW = datetime.datetime.now
-
 @register.filter(name='elapsed')
 def elapsed(timestamp):
     """
@@ -146,6 +143,14 @@ def elapsed(timestamp):
         7 days ago
 
     """
+    # repoze.timeago measures against datetime.utcnow(), so it wants a naive UTC
+    # value. This module used to repoint that at datetime.now() to match the
+    # naive TIME_ZONE values the ORM returned -- correct only while the host
+    # clock agreed with TIME_ZONE. The values are aware now, so convert and let
+    # it be.
+    if timestamp is not None and timezone.is_aware(timestamp):
+        timestamp = timestamp.astimezone(
+                datetime.timezone.utc).replace(tzinfo=None)
     return repoze.timeago.get_elapsed(timestamp)
 elapsed.is_safe = True
 

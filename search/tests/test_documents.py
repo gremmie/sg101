@@ -6,6 +6,7 @@ import re
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from elsewhere.models import WebsiteProfile
 
@@ -119,7 +120,7 @@ class DocumentTestCase(TestCase):
         self.ygroup_post = YgroupPost.objects.create(
                 title='Old thread', poster='wahini',
                 msg='<p>Anyone have a spare <i>tank</i>?</p>',
-                creation_date=datetime.datetime(2005, 3, 1, 12, 0))
+                creation_date=timezone.make_aware(datetime.datetime(2005, 3, 1, 12, 0)))
 
         self.objects = {
             Topic: self.topic,

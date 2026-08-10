@@ -3,11 +3,11 @@ Models for the downloads application.
 """
 import os
 
-import datetime
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db import models
 from django.template.defaultfilters import filesizeformat
+from django.utils import timezone
 
 from core.markup import site_markup
 
@@ -33,7 +33,7 @@ def download_path(instance, filename):
     clashes. Uses the current microsecond also to make the directory name
     harder to guess.
     """
-    now = datetime.datetime.now()
+    now = timezone.now()
     parts = ['downloads']
     parts.extend([str(p) for p in (now.year, now.month, now.day)])
     parts.append(hex((now.hour * 3600 + now.minute * 60 + now.second) * 1000 + (
@@ -72,10 +72,10 @@ class DownloadBase(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.date_added = datetime.datetime.now()
+            self.date_added = timezone.now()
             self.update_date = self.date_added
         else:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
 
         self.html = kwargs.pop('html', '')
         if not self.html and self.description:

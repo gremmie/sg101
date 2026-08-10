@@ -2,10 +2,11 @@
 Unit tests for the bulletin app template tags.
 
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.template import Context, Template
 from django.test import TestCase
+from django.utils import timezone
 
 from bulletins.models import Bulletin
 
@@ -15,7 +16,7 @@ class BulletinTemplatetagsTestCase(TestCase):
     TEMPLATE = Template('{% load bulletin_tags %} {% current_bulletins %}')
 
     def setUp(self):
-        now = datetime.now()
+        now = timezone.now()
         bulletins = [
             Bulletin(title='All Points', text='No end date',
                      start_date=now - timedelta(days=3)),

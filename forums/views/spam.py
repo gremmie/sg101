@@ -1,7 +1,6 @@
 """
 This module contains views for dealing with spam and spammers.
 """
-import datetime
 import logging
 import textwrap
 
@@ -11,6 +10,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from forums.models import Post
 import forums.permissions as perms
@@ -31,7 +31,7 @@ def promote_stranger(user):
     profile = user.profile
     if user.is_active and profile.status == bio.models.STA_STRANGER:
         profile.status = bio.models.STA_ACTIVE
-        profile.status_date = datetime.datetime.now()
+        profile.status_date = timezone.now()
         profile.save(content_update=False)
 
 

@@ -2,9 +2,9 @@
 Models for the banners application.
 
 """
-import datetime
 
 from django.db import models
+from django.utils import timezone
 
 
 class Campaign(models.Model):
@@ -24,7 +24,7 @@ class Campaign(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.creation_date:
-            self.creation_date = datetime.datetime.now()
+            self.creation_date = timezone.now()
 
         super(Campaign, self).save(*args, **kwargs)
 
@@ -55,6 +55,6 @@ class Banner(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.creation_date:
-            self.creation_date = datetime.datetime.now()
+            self.creation_date = timezone.now()
 
         super(Banner, self).save(*args, **kwargs)

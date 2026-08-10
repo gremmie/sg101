@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.template import Context, Template
 from django.test import TestCase
+from django.utils import timezone
 from mock import call, patch, Mock
 
 from news.forms import AddNewsForm
@@ -51,8 +52,9 @@ class MaxUsersTestCase(TestCase):
 
     @patch('core.templatetags.core_tags.get_stats')
     def test_renders_with_status(self, mock_get_stats):
-        mock_get_stats.return_value = Mock(max_users=42,
-                                           max_users_date=datetime(2025, 6, 28))
+        mock_get_stats.return_value = Mock(
+                max_users=42,
+                max_users_date=timezone.make_aware(datetime(2025, 6, 28)))
         rendered = self.TEMPLATE.render(Context({}))
         self.assertIn(
                 'The most registered users ever online was '
@@ -168,22 +170,22 @@ class ElapsedFilterTestCase(TestCase):
     TEMPLATE = Template('{% load core_tags %}{{ some_date|elapsed }}')
 
     def test_renders_very_recent(self):
-        some_date = datetime.now()
+        some_date = timezone.now()
         rendered = self.TEMPLATE.render(Context({'some_date': some_date}))
         self.assertEqual(rendered, 'seconds ago')
 
     def test_renders_minutes_ago(self):
-        some_date = datetime.now() - timedelta(minutes=5)
+        some_date = timezone.now() - timedelta(minutes=5)
         rendered = self.TEMPLATE.render(Context({'some_date': some_date}))
         self.assertEqual(rendered, '5 minutes ago')
 
     def test_renders_hours_ago(self):
-        some_date = datetime.now() - timedelta(hours=5)
+        some_date = timezone.now() - timedelta(hours=5)
         rendered = self.TEMPLATE.render(Context({'some_date': some_date}))
         self.assertEqual(rendered, '5 hours ago')
 
     def test_renders_days_ago(self):
-        some_date = datetime.now() - timedelta(days=5)
+        some_date = timezone.now() - timedelta(days=5)
         rendered = self.TEMPLATE.render(Context({'some_date': some_date}))
         self.assertEqual(rendered, '5 days ago')
 
@@ -192,7 +194,7 @@ class BirthdayBlockTestCase(TestCase):
     TEMPLATE = Template('{% load core_tags %}{% birthday_block %}')
 
     def setUp(self):
-        now = datetime.now()
+        now = timezone.now()
         u1 = User.objects.create_user('paul', '', 'pw')
         u1.save()
         u1.profile.birthday = date(1946, now.month, 4)

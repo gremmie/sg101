@@ -5,7 +5,6 @@ This command is currently designed to fix up SSL mixed content issues. In the
 future it would be nice to rework this command to refresh oEmbed objects if they
 are older than some date.
 """
-import datetime
 import logging
 import os.path
 import re
@@ -13,6 +12,7 @@ from urllib.error import HTTPError, URLError
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.utils import timezone
 
 from oembed.core import get_oembed
 from oembed.models import Oembed
@@ -80,7 +80,7 @@ class Command(BaseCommand):
     help = "Refresh oEmbed objects by requesting new data from providers"""
 
     def handle(self, *args, **options):
-        time_started = datetime.datetime.now()
+        time_started = timezone.now()
         _setup_logging()
         logger.info("Starting; arguments received: %s", options)
 
@@ -91,6 +91,6 @@ class Command(BaseCommand):
             if 'https:' not in oembed.html:
                 refresh_html(providers, oembed)
 
-        time_finished = datetime.datetime.now()
+        time_finished = timezone.now()
         elapsed = time_finished - time_started
         logger.info("Finished; elapsed time: %s", elapsed)

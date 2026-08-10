@@ -3,8 +3,12 @@ Views for the News application.
 """
 
 import datetime
+from zoneinfo import ZoneInfo
+
 from django.conf import settings
+from django.db.models.functions import ExtractMonth, ExtractYear
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
@@ -64,7 +68,14 @@ def index(request):
 #######################################################################
 
 def archive_index(request):
-    dates = Story.objects.dates('date_submitted', 'month', order='DESC')
+    # dates() reads the active timezone, and it reads it when the queryset is
+    # evaluated -- which would be inside the template, long after any override
+    # here had exited. Hence the list(): the months are resolved in TIME_ZONE
+    # now, while the zone is still named. See in_month() in donations/models.py
+    # for the same problem solved the other way.
+    with timezone.override(settings.TIME_ZONE):
+        dates = list(Story.objects.dates('date_submitted', 'month',
+                                         order='DESC'))
     return render(request, 'news/archive_index.html', {
         'title': 'News Archive',
         'dates': dates,
@@ -75,8 +86,13 @@ def archive_index(request):
 #######################################################################
 
 def archive(request, year, month):
-    stories = Story.objects.defer('tags').filter(date_submitted__year=year,
-            date_submitted__month=month).select_related(
+    # tzinfo, not the active zone: this queryset is paginated, so it is
+    # evaluated well after this function returns.
+    site_tz = ZoneInfo(settings.TIME_ZONE)
+    stories = Story.objects.defer('tags').annotate(
+            _year=ExtractYear('date_submitted', tzinfo=site_tz),
+            _month=ExtractMonth('date_submitted', tzinfo=site_tz),
+        ).filter(_year=year, _month=month).select_related(
                 'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
     page = get_page(request.GET)

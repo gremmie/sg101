@@ -4,8 +4,9 @@ Tests for the contests application's template tags.
 """
 from django.template import Context, Template
 from django.test import TestCase
+from django.utils import timezone
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from contests.models import Contest
 from contests.templatetags.contest_tags import latest_contests_block
@@ -13,7 +14,7 @@ from contests.templatetags.contest_tags import latest_contests_block
 
 class ContestsTemplateTagsTestCase(TestCase):
     def setUp(self):
-        now = datetime.now()
+        now = timezone.now()
         then = now - timedelta(days=3)
         end = now + timedelta(days=30)
         contests = [

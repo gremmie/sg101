@@ -3,9 +3,9 @@ forum_cleanup.py - A management command to cleanup forum model objects. Right
 now this entails deleting old forum and topic last visit records.
 
 """
-import datetime
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from forums.models import ForumLastVisit, TopicLastVisit
 import forums.unread
@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         threshold = now - forums.unread.THRESHOLD * 2
 
         # delete old topic last visit records

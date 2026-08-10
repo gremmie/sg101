@@ -2,10 +2,11 @@
 Tests for accounts.utils module.
 
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 from mock import call, patch, Mock
 
 from accounts.models import PendingUser
@@ -30,7 +31,7 @@ class AccountUtilsTestCase(TestCase):
         self.assertTrue(pjmoto.is_active)
         self.assertFalse(pjmoto.is_superuser)
 
-        now = datetime.now()
+        now = timezone.now()
         delta = timedelta(days=0, seconds=5)
         self.assertTrue(now - pjmoto.last_login < delta)
         self.assertTrue(now - pjmoto.date_joined < delta)

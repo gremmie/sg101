@@ -1,13 +1,13 @@
 """Admin definitions for the bandmap application.
 
 """
-import datetime
 import json
 from urllib.error import URLError
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 
 from django.contrib import admin
+from django.utils import timezone
 import django.contrib.messages as messages
 
 from bandmap.models import BandEntry
@@ -31,7 +31,7 @@ class BandEntryAdmin(admin.ModelAdmin):
 
         """
         count = qs.count()
-        now = datetime.datetime.now()
+        now = timezone.now()
         for band in qs:
             if not band.is_approved:
                 if band.date_approved is None:

@@ -2,7 +2,6 @@
 Views for the polls application.
 
 """
-import datetime
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -10,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.db.models import F
 
@@ -38,7 +38,7 @@ def get_user_choice(user, poll):
 def poll_index(request):
 
     # Do some stuff manually to avoid cascading hits to the database
-    now = datetime.datetime.now()
+    now = timezone.now()
     qs = Poll.objects.filter(is_enabled=True)
     poll_dict = {}
     current_polls = []
@@ -68,7 +68,7 @@ def poll_index(request):
 
 def poll_detail(request, poll_id):
     poll = get_object_or_404(Poll, pk=poll_id)
-    if not poll.is_enabled or poll.start_date > datetime.datetime.now():
+    if not poll.is_enabled or poll.start_date > timezone.now():
         raise Http404
 
     total_votes, choices = poll.results()

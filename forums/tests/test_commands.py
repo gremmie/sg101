@@ -10,13 +10,14 @@ import datetime
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 
 import forums.unread
 from forums.models import (Category, Forum, ForumLastVisit, Topic,
                            TopicLastVisit)
 
 
-NOW = datetime.datetime.now()
+NOW = timezone.now()
 
 
 class ForumCleanupCommandTests(TestCase):

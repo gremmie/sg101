@@ -1,10 +1,10 @@
 """Models for the user_photos application."""
 
-import datetime
 
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 
 
 class Photo(models.Model):
@@ -26,6 +26,6 @@ class Photo(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.upload_date:
-            self.upload_date = datetime.datetime.now()
+            self.upload_date = timezone.now()
         super(Photo, self).save(*args, **kwargs)
 

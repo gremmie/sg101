@@ -1,10 +1,10 @@
 """Models for the messages application."""
 
-import datetime
 
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from core.markup import site_markup
 
@@ -65,7 +65,7 @@ class Message(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            self.send_date = datetime.datetime.now()
+            self.send_date = timezone.now()
 
         self.html = kwargs.pop('html', '')
         if not self.html and self.message:
@@ -122,6 +122,6 @@ class Flag(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            self.flag_date = datetime.datetime.now()
+            self.flag_date = timezone.now()
         super(Flag, self).save(*args, **kwargs)
 

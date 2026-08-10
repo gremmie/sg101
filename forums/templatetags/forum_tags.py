@@ -1,11 +1,10 @@
 """
 Template tags for the forums application.
 """
-import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pytz import timezone, UnknownTimeZoneError
 from django import template
-from django.conf import settings
+from django.utils import timezone
 
 from forums.models import Forum
 from forums.models import Topic
@@ -29,8 +28,10 @@ DATE_FMT_12 = (
     "%s %s" % (TIME_FMT_12, SHORT_DATE_FMT),    # short format
 )
 
-SERVER_TZ = timezone(settings.TIME_ZONE)
-DEFAULT_TZ = timezone('US/Pacific')
+# Where to render times for a user whose stored zone name is unusable. This is
+# a "backward" name that only the tzdata package carries -- see the note on the
+# tzdata pin in requirements.txt.
+DEFAULT_TZ = ZoneInfo('US/Pacific')
 
 
 @register.inclusion_tag('forums/last_post_info.html', takes_context=True)
@@ -58,10 +59,18 @@ def post_edit_button(post, user, can_moderate):
 def get_time_prefs(user):
     """
     Return the supplied user's time preferences in the form of a 2-tuple:
-        (use_24_time, time_zone_name)
+        (time zone to display in, use_24_time)
     """
     profile = user.profile
-    return profile.use_24_time, profile.time_zone
+    try:
+        user_tz = ZoneInfo(profile.time_zone)
+    except (ZoneInfoNotFoundError, ValueError):
+        # Two exception types, not one: ZoneInfo raises ZoneInfoNotFoundError
+        # for a name it does not know, but ValueError for anything empty or
+        # path-shaped. time_zone is a free-text column older than the form
+        # validation in front of it, so both are reachable.
+        user_tz = DEFAULT_TZ
+    return user_tz, profile.use_24_time
 
 
 @register.simple_tag
@@ -70,25 +79,22 @@ def current_forum_time(user):
     This tag displays the current forum time, adjusted by the user's
     time zone preferences.
     """
-    curr_time = SERVER_TZ.localize(datetime.datetime.now())
-
     if user.is_authenticated:
-        tz_prefs = get_time_prefs(user)
-        try:
-            user_tz = timezone(tz_prefs[1])
-        except UnknownTimeZoneError:
-            user_tz = DEFAULT_TZ
-        curr_time = curr_time.astimezone(user_tz)
-        fmt = TIME_FMT_24 if tz_prefs[0] else TIME_FMT_12
+        user_tz, use_24_time = get_time_prefs(user)
+        fmt = TIME_FMT_24 if use_24_time else TIME_FMT_12
     else:
-        fmt = TIME_FMT_12
+        user_tz, fmt = None, TIME_FMT_12
+
+    # localtime(x, None) renders in the current timezone, which is TIME_ZONE --
+    # the same thing anonymous visitors saw when this converted by hand.
+    curr_time = timezone.localtime(timezone.now(), user_tz)
 
     return 'The current time is %s. All times shown are %s.' % (
             curr_time.strftime(fmt), curr_time.strftime('%Z%z'))
 
 
 @register.simple_tag
-def forum_date(date, user, long_format=True, none_date_retval=u'Never'):
+def forum_date(date, user, long_format=True, none_date_retval='Never'):
     """
     This tag displays an arbitrary datetime, adjusted by the user's
     time zone preferences.
@@ -96,21 +102,15 @@ def forum_date(date, user, long_format=True, none_date_retval=u'Never'):
     if date is None:
         return none_date_retval
 
-    fmt_index = 0 if long_format else 1
-
-    date = SERVER_TZ.localize(date)
     if user.is_authenticated:
-        tz_prefs = get_time_prefs(user)
-        try:
-            user_tz = timezone(tz_prefs[1])
-        except UnknownTimeZoneError:
-            user_tz = DEFAULT_TZ
-        date = date.astimezone(user_tz)
-        fmt = DATE_FMT_24 if tz_prefs[0] else DATE_FMT_12
+        user_tz, use_24_time = get_time_prefs(user)
+        fmt = DATE_FMT_24 if use_24_time else DATE_FMT_12
     else:
-        fmt = DATE_FMT_12
+        user_tz, fmt = None, DATE_FMT_12
 
-    return date.strftime(fmt[fmt_index])
+    date = timezone.localtime(date, user_tz)
+
+    return date.strftime(fmt[0 if long_format else 1])
 
 
 @register.inclusion_tag('forums/show_form.html')

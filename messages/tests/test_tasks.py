@@ -2,10 +2,10 @@
 Unit tests for the messages application tasks.
 
 """
-import datetime
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from messages.models import Message, Options, Flag
 from messages.tasks import purge_messages
@@ -16,7 +16,7 @@ class PurgeMessagesTaskTestCase(TestCase):
     fixtures = ['messages_test_users.json']
 
     def setUp(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         pj = User.objects.get(username='pj')
         eddie = User.objects.get(username='eddie')
         pm = Message(sender=pj,

@@ -6,6 +6,7 @@ import datetime
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from contests.models import Contest
 
@@ -18,17 +19,17 @@ class ContestTestCase(TestCase):
                 slug='test',
                 description='test',
                 is_public=False,
-                end_date=datetime.datetime.now() + datetime.timedelta(days=30))
+                end_date=timezone.now() + datetime.timedelta(days=30))
 
         c.save()
 
         self.assertTrue(c.creation_date)
-        self.assertTrue(datetime.datetime.now() - c.creation_date <
+        self.assertTrue(timezone.now() - c.creation_date <
                 datetime.timedelta(seconds=1))
 
     def test_is_active(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now + datetime.timedelta(days=7)
         end = start + datetime.timedelta(days=30)
 
@@ -67,7 +68,7 @@ class ContestTestCase(TestCase):
 
     def test_can_enter(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now + datetime.timedelta(days=7)
         end = start + datetime.timedelta(days=30)
 
@@ -141,7 +142,7 @@ class ContestTestCase(TestCase):
 
     def test_pick_winners(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
 
@@ -165,7 +166,7 @@ class ContestTestCase(TestCase):
 
         c.pick_winners()
 
-        self.assertTrue(datetime.datetime.now() - c.win_date <
+        self.assertTrue(timezone.now() - c.win_date <
                 datetime.timedelta(seconds=1))
 
         winners = list(c.winners.all())
@@ -174,7 +175,7 @@ class ContestTestCase(TestCase):
 
     def test_pick_winners2(self):
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
 
@@ -198,7 +199,7 @@ class ContestTestCase(TestCase):
 
         c.pick_winners()
 
-        self.assertTrue(datetime.datetime.now() - c.win_date <
+        self.assertTrue(timezone.now() - c.win_date <
                 datetime.timedelta(seconds=1))
 
         winners = list(c.winners.all())

@@ -2,16 +2,16 @@
 Bulletins allow the sited admins to display and manage important notices for the website.
 """
 
-import datetime
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class BulletinManager(models.Manager):
     """Manager for the Bulletin model."""
 
     def get_current(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         return self.filter(
                 Q(is_enabled=True),
                 Q(start_date__lte=now),

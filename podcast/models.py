@@ -2,10 +2,10 @@
 Models for the podcast application.
 
 """
-import datetime
 
 from django.urls import reverse
 from django.db import models
+from django.utils import timezone
 
 
 EXPLICIT_CHOICES = [
@@ -68,10 +68,10 @@ class Item(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             if not self.pubdate:
-                self.pubdate = datetime.datetime.now()
+                self.pubdate = timezone.now()
             self.update_date = self.pubdate
         else:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
         super(Item, self).save(*args, **kwargs)
 
     def search_title(self):

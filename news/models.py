@@ -1,11 +1,11 @@
 """
 Models for the news application.
 """
-import datetime
 
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from tagging.fields import TagField
 
 from core.markup import site_markup
@@ -63,10 +63,10 @@ class StoryBase(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.date_submitted = datetime.datetime.now()
+            self.date_submitted = timezone.now()
             self.update_date = self.date_submitted
         else:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
 
         if self.version >= 2:
             self.short_text = kwargs.pop('short_text', '')
@@ -111,7 +111,7 @@ class Story(StoryBase):
 
     def can_comment_on(self):
         # Only used for version 0 stories
-        now = datetime.datetime.now()
+        now = timezone.now()
         delta = now - self.date_submitted
         return self.allow_comments and delta.days < 30
 

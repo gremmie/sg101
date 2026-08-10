@@ -2,7 +2,6 @@
 Models for the Photo Of The Day (POTD) application.
 
 """
-import datetime
 import os
 from PIL import ImageFile
 from PIL import Image
@@ -13,6 +12,7 @@ from django.contrib.auth.models import User
 from django.core.validators import validate_comma_separated_integer_list
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from django.utils import timezone
 
 POTD_THUMB_WIDTH = 120
 
@@ -48,7 +48,7 @@ class Photo(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.generate_thumb()
-            self.date_added = datetime.datetime.now()
+            self.date_added = timezone.now()
 
         super(Photo, self).save(*args, **kwargs)
 

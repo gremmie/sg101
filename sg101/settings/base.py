@@ -27,29 +27,23 @@ INTERNAL_IPS = ['127.0.0.1']
 # system time zone.
 TIME_ZONE = 'America/Chicago'
 
-# The site stores and manipulates naive datetimes in TIME_ZONE. This is set
-# explicitly rather than inherited: Django's default changes to True in 5.0,
-# and an unset value would silently change this site's behavior at that
-# upgrade.
+# Datetimes are stored and manipulated as aware UTC, and rendered in TIME_ZONE
+# (or in the viewer's own zone, in the forums). Application code builds them
+# with django.utils.timezone.now(), never datetime.now().
 #
-# The database is not the obstacle. DateTimeField maps to timestamptz on
-# PostgreSQL, and the columns already hold correct absolute instants -- a post
-# reading 15:40:53 to the application is stored as 20:40:53 UTC, because Django
-# sets the connection's TimeZone to TIME_ZONE and PostgreSQL places the naive
-# value on the timeline with it. Turning USE_TZ on would hand the same instants
-# back as aware UTC datetimes and templates would render them in TIME_ZONE, so
-# no stored value needs rewriting.
+# No stored value was rewritten to get here. DateTimeField maps to timestamptz
+# on PostgreSQL, so the columns already held correct absolute instants: while
+# USE_TZ was off Django set the connection's TimeZone to TIME_ZONE and
+# PostgreSQL placed each naive value onto the timeline with it. Switching the
+# connection to UTC hands the same instants back as aware datetimes.
 #
-# The application code is the obstacle. 79 call sites build naive datetimes
-# with datetime.now() and compare or store them, the forums' per-user timezone
-# display calls SERVER_TZ.localize() on values that come out of the ORM --
-# which raises outright once those values arrive already aware -- and the
-# donations and news month rollups would resolve in UTC, quietly filing an
-# evening record under the following month. Turning this on is a cross-cutting
-# behavior change with its own testing, not a passenger on a version bump. It
-# is scheduled as its own change, to land before the Django 5.0 upgrade that
-# forces it.
-USE_TZ = False
+# One thing to know when reading date queries: a lookup like __month has to
+# pick a zone before it can decide which calendar month an instant falls in,
+# and it uses the *active* timezone. Nothing activates one, so it resolves in
+# TIME_ZONE -- but the donations and news rollups pin it explicitly rather than
+# depend on that, because an activate() call anywhere would otherwise re-file
+# an evening record under the following month with nothing raised.
+USE_TZ = True
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html

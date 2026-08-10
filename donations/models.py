@@ -1,13 +1,35 @@
 """
 Models for the donations application.
 """
-import datetime
 import decimal
+from zoneinfo import ZoneInfo
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models import Sum
+from django.db.models.functions import ExtractMonth, ExtractYear
+from django.utils import timezone
+
+
+def in_month(qs, year, month):
+    """
+    Narrow a Donation queryset to one calendar month, read in TIME_ZONE.
+
+    An instant only has a month once you say where you are standing, and a
+    plain payment_date__month lookup reads it in whatever timezone happens to
+    be active. That is TIME_ZONE today, because nothing activates one -- but a
+    donation made at 7pm on the 31st is already the 1st in UTC, so if anything
+    ever did activate a different zone, a donation would quietly move into the
+    next month's report with nothing raised. Naming the zone settles it, and
+    unlike a timezone.override() block it cannot be outlived by a lazy
+    queryset: the zone is compiled into the SQL, not read when it runs.
+    """
+    site_tz = ZoneInfo(settings.TIME_ZONE)
+    return qs.annotate(
+            _payment_year=ExtractYear('payment_date', tzinfo=site_tz),
+            _payment_month=ExtractMonth('payment_date', tzinfo=site_tz),
+        ).filter(_payment_year=year, _payment_month=month)
 
 
 class DonationManager(models.Manager):
@@ -25,14 +47,13 @@ class DonationManager(models.Manager):
             'net': total net donations
             'donations': list of donation objects
         """
-        today = datetime.date.today()
+        today = timezone.localdate()
         if year is None:
             year = today.year
         if month is None:
             month = today.month
 
-        qs = self.filter(payment_date__year=year,
-                payment_date__month=month,
+        qs = in_month(self, year, month).filter(
                 test_ipn=settings.DONATIONS_DEBUG).order_by(
                         'payment_date').select_related('user')
 
@@ -55,13 +76,13 @@ class DonationManager(models.Manager):
         If limit is True, the return value is limited to 100.
 
         """
-        today = datetime.datetime.today()
+        today = timezone.localdate()
         if year is None:
             year = today.year
         if month is None:
             month = today.month
 
-        r = self.filter(payment_date__year=year, payment_date__month=month).aggregate(
+        r = in_month(self, year, month).aggregate(
                 Sum('mc_gross'), Sum('mc_fee'))
 
         gross, fee = r['mc_gross__sum'], r['mc_fee__sum']

@@ -1,10 +1,10 @@
 """
 This file contains the admin definitions for the bio application.
 """
-import datetime
 
 from django.contrib import admin
 
+from django.utils import timezone
 import django.contrib.auth.models
 import django.contrib.auth.admin
 
@@ -60,7 +60,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         profiles to 'status'. Updates the status_date.  Sets the is_active
         field to True if the status is STA_ACTIVE and False otherwise.
         """
-        now = datetime.datetime.now()
+        now = timezone.now()
         for profile in qs:
             profile.user.is_active = (status == bio.models.STA_ACTIVE or
                     status == bio.models.STA_STRANGER)

@@ -2,12 +2,12 @@
 Contains models for the bio application.
 I would have picked profile for this application, but that is already taken, apparently.
 """
-import datetime
 import os.path
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.utils import timezone
 from django.utils.html import format_html
 from django.core.cache import cache
 from django.urls import reverse
@@ -71,7 +71,7 @@ def avatar_file_path(instance, filename):
     if not ext:
         ext = '.jpg'
     avatar_name = "{}{}{}".format(instance.user.username,
-            datetime.datetime.utcnow().strftime('%S%f'), ext)
+            timezone.now().strftime('%S%f'), ext)
     return os.path.join(settings.AVATAR_DIR, 'users', avatar_name)
 
 
@@ -124,7 +124,7 @@ class UserProfile(models.Model):
         content_update = kwargs.pop('content_update', True)
 
         if content_update:
-            self.update_date = datetime.datetime.now()
+            self.update_date = timezone.now()
             sm = SiteMarkup()
             self.profile_html = sm.convert(self.profile_text)
             self.signature_html = sm.convert(self.signature)

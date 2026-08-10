@@ -8,6 +8,7 @@ import json
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 
 from contests.models import Contest
 
@@ -26,7 +27,7 @@ class NoConstestsTestCase(TestCase):
 class ConstestsTestCase(TestCase):
 
     def setUp(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
 
@@ -65,7 +66,7 @@ class ContestEntryTestCase(TestCase):
         self.assertTrue(self.client.login(username=self.username,
             password=self.pw))
 
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now - datetime.timedelta(days=7)
         end = now + datetime.timedelta(days=3)
 
@@ -106,7 +107,7 @@ class ContestEntryTestCase(TestCase):
 class NoPublicConstestsTestCase(TestCase):
 
     def setUp(self):
-        now = datetime.datetime.now()
+        now = timezone.now()
         start = now - datetime.timedelta(days=7)
         end = start - datetime.timedelta(days=3)
 

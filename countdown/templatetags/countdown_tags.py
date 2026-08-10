@@ -1,7 +1,7 @@
 """Template tags for the countdown application."""
-import datetime
 
 from django import template
+from django.utils import timezone
 
 from countdown.models import Event
 
@@ -12,7 +12,7 @@ register = template.Library()
 @register.simple_tag(takes_context=True)
 def countdown_events(context):
     """This tag renders a countdown to upcoming events."""
-    now = datetime.datetime.now()
+    now = timezone.now()
 
     results = []
     for event in Event.active_objects.all():

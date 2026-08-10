@@ -4,8 +4,8 @@ authenticated users ("users") and non-authenticated visitors ("visitors").
 """
 import datetime
 import logging
-import time
 
+from django.utils import timezone
 import redis
 
 from core.services import get_redis_connection
@@ -46,10 +46,16 @@ def _get_connection():
 
 def to_timestamp(dt):
     """
-    Turn the supplied datetime object into a UNIX timestamp integer.
+    Turn the supplied aware datetime object into a UNIX timestamp integer.
 
     """
-    return int(time.mktime(dt.timetuple()))
+    # datetime.timestamp(), not time.mktime(dt.timetuple()): timetuple() drops
+    # the offset and mktime() reads what is left as container-local time, which
+    # gave a self-consistent but absolutely wrong epoch. Only relative order
+    # ever mattered here, so the old scores were harmless -- but they are on a
+    # different footing than the new ones, so members written before this
+    # change age out of the window instead of being seen as recent.
+    return int(dt.timestamp())
 
 
 def _zadd(key, member):
@@ -59,7 +65,7 @@ def _zadd(key, member):
     """
     conn = _get_connection()
     if conn:
-        ts = to_timestamp(datetime.datetime.now())
+        ts = to_timestamp(timezone.now())
         try:
             conn.zadd(key, {member: ts})
         except redis.RedisError as e:
@@ -76,7 +82,7 @@ def _zrangebyscore(key):
     """
     conn = _get_connection()
     if conn:
-        now = datetime.datetime.now()
+        now = timezone.now()
         min = to_timestamp(now - MAX_AGE)
         max = to_timestamp(now)
         try:
@@ -127,7 +133,7 @@ def _tick(conn):
         (zcard users, zcard visitors)
 
     """
-    cutoff = to_timestamp(datetime.datetime.now() - MAX_AGE)
+    cutoff = to_timestamp(timezone.now() - MAX_AGE)
 
     try:
         pipeline = conn.pipeline(transaction=False)
@@ -154,7 +160,7 @@ def max_users():
         return
 
     num_users, num_visitors = _tick(conn)
-    now = datetime.datetime.now()
+    now = timezone.now()
 
     stats = get_stats(conn)
     update = False
@@ -202,14 +208,17 @@ def get_stats(conn=None):
             logger.error(e)
 
         if stats:
+            # The tz argument is what makes these the inverse of to_timestamp():
+            # without it fromtimestamp() returns a naive container-local value,
+            # which is not what was written and not what a DateTimeField wants.
             return Statistic(
                 id=1,
                 max_users=int(stats['max_users']),
                 max_users_date=datetime.datetime.fromtimestamp(
-                    float(stats['max_users_date'])),
+                    float(stats['max_users_date']), datetime.timezone.utc),
                 max_anon_users=int(stats['max_anon_users']),
                 max_anon_users_date=datetime.datetime.fromtimestamp(
-                    float(stats['max_anon_users_date'])))
+                    float(stats['max_anon_users_date']), datetime.timezone.utc))
 
     try:
         stats = Statistic.objects.get(pk=1)

@@ -1,6 +1,5 @@
 """Tests for the reindex_search management command."""
 
-import datetime
 
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import User
@@ -10,6 +9,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
+from django.utils import timezone
 
 from forums.models import Category
 from forums.models import Forum
@@ -99,8 +99,8 @@ class ReindexTestCase(DocumentTestCase):
         SearchDocument.objects.create(
                 content_type=ContentType.objects.get_for_model(User),
                 object_id=self.user.pk, title='Not a document', url='/',
-                date=datetime.datetime.now(),
-                indexed_at=datetime.datetime.now())
+                date=timezone.now(),
+                indexed_at=timezone.now())
 
         reindex()
 

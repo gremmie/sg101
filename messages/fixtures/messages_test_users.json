@@ -9,12 +9,12 @@
         "is_active": true, 
         "is_superuser": false, 
         "is_staff": false, 
-        "last_login": "2014-09-06T15:15:04", 
+        "last_login": "2014-09-06T15:15:04-05:00", 
         "groups": [], 
         "user_permissions": [], 
         "password": "",
         "email": "pj@example.com", 
-        "date_joined": "2006-02-25T00:00:00"
+        "date_joined": "2006-02-25T00:00:00-06:00"
     }
 },
 {
@@ -27,12 +27,12 @@
         "is_active": true, 
         "is_superuser": false, 
         "is_staff": false, 
-        "last_login": "2014-09-01T16:33:54", 
+        "last_login": "2014-09-01T16:33:54-05:00", 
         "groups": [], 
         "user_permissions": [], 
         "password": "",
         "email": "eddie@example.com", 
-        "date_joined": "2006-02-28T00:00:00"
+        "date_joined": "2006-02-28T00:00:00-06:00"
     }
 },
 {
@@ -45,12 +45,12 @@
         "is_active": true, 
         "is_superuser": false, 
         "is_staff": false, 
-        "last_login": "2014-09-06T15:15:04", 
+        "last_login": "2014-09-06T15:15:04-05:00", 
         "groups": [], 
         "user_permissions": [], 
         "password": "",
         "email": "richard@example.com", 
-        "date_joined": "2006-02-25T00:00:00"
+        "date_joined": "2006-02-25T00:00:00-06:00"
     }
 }
 ]

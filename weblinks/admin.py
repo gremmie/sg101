@@ -1,7 +1,7 @@
 """This file contains the automatic admin site definitions for the weblinks models"""
-import datetime
 
 from django.contrib import admin
+from django.utils import timezone
 from weblinks.models import Category
 from weblinks.models import PendingLink
 from weblinks.models import Link
@@ -27,7 +27,7 @@ class PendingLinkAdmin(admin.ModelAdmin):
                     url=pending_link.url,
                     description=pending_link.description,
                     user=pending_link.user,
-                    date_added=datetime.datetime.now(),
+                    date_added=timezone.now(),
                     hits=0,
                     is_public=True)
             link.save()

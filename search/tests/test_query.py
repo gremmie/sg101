@@ -4,6 +4,7 @@ import datetime
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from forums.models import Category
 from forums.models import Forum
@@ -132,18 +133,18 @@ class SearchDocumentsTestCase(TestCase):
         older = self.index_story('Reverb explained')
         newer = self.index_post('Chat', 'Just a passing mention of reverb.')
         SearchDocument.objects.filter(pk=older.pk).update(
-                date=datetime.datetime(2001, 1, 1))
+                date=timezone.make_aware(datetime.datetime(2001, 1, 1)))
         SearchDocument.objects.filter(pk=newer.pk).update(
-                date=datetime.datetime(2026, 1, 1))
+                date=timezone.make_aware(datetime.datetime(2026, 1, 1)))
         self.assertEqual(self.titles('reverb')[0], 'Reverb explained')
 
     def test_equal_scores_break_towards_the_newer_document(self):
         first = self.index_topic('Reverb')
         second = self.index_topic('Reverb')
         SearchDocument.objects.filter(pk=first.pk).update(
-                date=datetime.datetime(2001, 1, 1))
+                date=timezone.make_aware(datetime.datetime(2001, 1, 1)))
         SearchDocument.objects.filter(pk=second.pk).update(
-                date=datetime.datetime(2026, 1, 1))
+                date=timezone.make_aware(datetime.datetime(2026, 1, 1)))
         results = list(search_documents('reverb', self.ALL_KEYS))
         self.assertEqual([row.pk for row in results], [second.pk, first.pk])
 

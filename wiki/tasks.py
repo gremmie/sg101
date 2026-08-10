@@ -5,10 +5,10 @@ Celery tasks for the wiki app.
 
 import datetime
 import logging
-import time
 
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 import redis
 
 from core.services import get_redis_connection
@@ -25,9 +25,9 @@ def expire_cookies():
     authentication.
 
     """
-    now = datetime.datetime.utcnow()
+    now = timezone.now()
     cutoff = now - datetime.timedelta(seconds=settings.WIKI_COOKIE_AGE)
-    min_score = time.mktime(cutoff.utctimetuple())
+    min_score = int(cutoff.timestamp())
 
     conn = get_redis_connection()
 

@@ -1,9 +1,9 @@
 """
 Models for the oembed application.
 """
-import datetime
 
 from django.db import models
+from django.utils import timezone
 
 
 class Provider(models.Model):
@@ -54,7 +54,7 @@ class Oembed(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.date_added = datetime.datetime.now()
+            self.date_added = timezone.now()
 
         super(Oembed, self).save(*args, **kwargs)
 

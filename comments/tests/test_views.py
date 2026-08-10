@@ -2,12 +2,13 @@
 Unit tests for the comments app views.
 
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 from mock import ANY, call, patch
 
 from comments.models import Comment, CommentFlag
@@ -20,9 +21,9 @@ class PostCommentTestCase(TestCase):
         self.user.save()
         self.client.login(username='pjmoto', password='pw')
         self.post_url = reverse('comments-post')
-        potd1 = Photo(pk=4096, user=self.user, date_added=datetime.today())
+        potd1 = Photo(pk=4096, user=self.user, date_added=timezone.now())
         potd1.save()
-        potd2 = Photo(pk=8192, user=self.user, date_added=datetime.today())
+        potd2 = Photo(pk=8192, user=self.user, date_added=timezone.now())
         potd2.save()
         # potd.Current is a singleton row the app fetches by pk=1 (that is
         # what production holds); pin it rather than rely on the id the
@@ -119,7 +120,7 @@ class PostCommentTestCase(TestCase):
         self.assertEqual(comment.comment, '**Nice**')
         self.assertIn('<strong>Nice</strong>', comment.html)
 
-        now = datetime.now()
+        now = timezone.now()
         delta = timedelta(seconds=1)
         self.assertGreater(comment.creation_date, now - delta)
         self.assertLess(comment.creation_date, now + delta)
@@ -171,7 +172,7 @@ class FlagCommentTestCase(TestCase):
         self.assertEqual(flag.user, self.user)
         self.assertEqual(flag.comment.pk, c.pk)
 
-        now = datetime.now()
+        now = timezone.now()
         delta = timedelta(seconds=1)
         self.assertGreater(flag.flag_date, now - delta)
         self.assertLess(flag.flag_date, now + delta)
