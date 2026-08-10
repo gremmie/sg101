@@ -17,6 +17,16 @@ django-environ==0.4.5  # 12-factor env-var config
 # vendored into the repo as `tagging/` -- same package name and app label, so
 # its migrations and tables are untouched. See tagging/__init__.py.
 pytz==2021.3
+# The IANA timezone database, as a package. zoneinfo reads the *host's* tzdata
+# and falls back to this package on sys.path; pytz bundled its own copy, so this
+# only started mattering when the timezone code moved to zoneinfo. It is not
+# optional here: the base image ships no "backward" names -- there is no
+# /usr/share/zoneinfo/US at all -- and 12,619 of 15,227 profiles are stored as
+# US/Pacific. Without this package they raise ZoneInfoNotFoundError out of a
+# template tag. It was already being installed as a transitive dependency of
+# kombu; it is pinned directly because nothing should make this site's timezone
+# correctness a detail of the celery dependency graph.
+tzdata==2026.3
 # six is no longer imported by the application -- it uses the Python 3 standard
 # library directly (urllib.parse/request/error, io.StringIO). It is still pulled
 # in transitively, so the pin stays for a reproducible build: unpinning would not
