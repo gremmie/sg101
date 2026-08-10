@@ -174,7 +174,17 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 13 task 09 — `USE_TZ` — DONE 2026-08-09, NOT YET COMMITTED (awaiting review)
+## Step 13 task 09 — `USE_TZ` — DONE 2026-08-09, PUSHED, CI GREEN
+
+Five commits: `7b01ad0` (pin tzdata + dropdown test), `d19ffcc` (zoneinfo
+validators), `1d67f63` (the `USE_TZ` conversion), `f06d85b` (port `tools/tz.py`,
+drop pytz), `13f45cd` (planning). **Each was verified in isolation** — staged, the
+remainder stashed so the tree was genuinely HEAD-plus-that-commit, suite run —
+rather than only at the end: 874 / 875 / 884 green respectively. `1d67f63` was
+deliberately verified with pytz still installed, which is what makes `f06d85b`
+separable, and `f06d85b` was verified with the package **uninstalled** rather than
+merely unpinned. **First CI run on `USE_TZ = True`, and the first build where
+`tzdata` is a declared dependency instead of a kombu side effect.**
 
 **`USE_TZ = True`. 884 tests green (872 + 12), green again with
 `-W error::RuntimeWarning`, `check` / `check --deploy` / `makemigrations --check`
