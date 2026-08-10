@@ -7,7 +7,6 @@ Django==4.2.30
 django-environ==0.4.5  # 12-factor env-var config
 # django-tagging is vendored into the repo as `tagging/` -- see the note in
 # requirements.txt and in tagging/__init__.py.
-pytz==2021.3
 # The IANA timezone database. Required, not incidental -- the base image carries
 # no "backward" zone names and most profiles are stored under one. See the note
 # in requirements.txt.

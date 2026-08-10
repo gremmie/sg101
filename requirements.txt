@@ -16,7 +16,6 @@ django-environ==0.4.5  # 12-factor env-var config
 # (upstream stopped in 2018) and it does not import on Django 4.0, so it is
 # vendored into the repo as `tagging/` -- same package name and app label, so
 # its migrations and tables are untouched. See tagging/__init__.py.
-pytz==2021.3
 # The IANA timezone database, as a package. zoneinfo reads the *host's* tzdata
 # and falls back to this package on sys.path; pytz bundled its own copy, so this
 # only started mattering when the timezone code moved to zoneinfo. It is not
