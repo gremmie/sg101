@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-08
+**Last updated:** 2026-08-09
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,199 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 13 task 09 — `USE_TZ` — DONE 2026-08-09, NOT YET COMMITTED (awaiting review)
+
+**`USE_TZ = True`. 884 tests green (872 + 12), green again with
+`-W error::RuntimeWarning`, `check` / `check --deploy` / `makemigrations --check`
+clean, full smoke on the production snapshot, and a before/after characterization
+showing no displayed time moved.** Still Django 4.2.30 / Python 3.10. **This
+closes Step 13.**
+
+**No stored value was rewritten**, as predicted. The 4.0-rung measurement was
+re-taken on 4.2 first and held exactly: `forums_post` pk=1 / 200000 / 484428 come
+back as the same instants, now aware — `2006-02-26 19:24:30` naive became
+`2006-02-27 01:24:30+00:00`. The `timestamptz` columns from Step 11 are what made
+this a settings change instead of a data migration.
+
+### The task file's central premise was wrong, and it inverted the risk
+
+The file says the month/year rollups "resolve in UTC" if nothing is activated, so
+an evening donation would file under the following month. **Measured: they
+resolve in `TIME_ZONE`.** Django's `TimezoneMixin.get_tzname()` uses
+`timezone.get_current_timezone_name()`, and `get_current_timezone()` is
+`getattr(_active, "value", get_default_timezone())` — with nothing activated the
+default *is* `TIME_ZONE`. Compiled SQL, all three cases:
+
+| state | emitted |
+| --- | --- |
+| nothing activated | `EXTRACT(MONTH FROM payment_date AT TIME ZONE America/Chicago)` |
+| `activate('US/Pacific')` | `... AT TIME ZONE US/Pacific` |
+| after `deactivate()` | `... AT TIME ZONE America/Chicago` |
+
+So the five rollups were **already correct** at the moment of the flip, and the
+real hazard is the opposite of the one described: they silently follow *any*
+zone that gets activated. Which made the display decision load-bearing, because
+the task file's own suggestion — activate the user's timezone in middleware —
+is precisely what would have broken them. A Pacific reader and a Chicago reader
+would have seen different monthly donation totals.
+
+**Brian chose explicit `timezone.localtime(date, user_tz)` in the tag** over
+middleware activation. Nothing activates a timezone anywhere in the project.
+Worth recording that the middleware option also buys less than it looks: the
+`use_24_time` preference means `forum_date` has to exist either way, so the tag
+does not disappear, it only loses one argument.
+
+### The rollups are pinned anyway, and `override()` was the wrong tool
+
+`in_month(qs, year, month)` in `donations/models.py` annotates with
+`ExtractYear`/`ExtractMonth(tzinfo=ZoneInfo(settings.TIME_ZONE))`; `news/views.py`
+does the same inline for the archive page. **The zone is compiled into the SQL,
+which matters because these querysets are lazy** — `archive()`'s result is handed
+to a paginator and evaluated long after the view returns, so a
+`timezone.override()` block would have exited before the query ran and pinned
+nothing. `archive_index()` is the exception and shows the seam: `dates()` has no
+`tzinfo` parameter, so it uses `override()` **plus `list()`** to force evaluation
+while the zone is still named.
+
+**Nine donations sit on a month boundary** (SQL, against the snapshot: their UTC
+month differs from their Chicago month). All nine still file under the Chicago
+month, and every sampled monthly gross/net/count is byte-identical before and
+after.
+
+Boundary tests added for both apps, and **mutation-verified the right way**: with
+the pinning reverted they fail only under an activated zone, which is honest —
+unpinned is correct until something activates. Each test case also carries a
+premise guard asserting the row really does straddle the boundary, so it cannot
+pass vacuously.
+
+### The `RuntimeWarning` gate is as good as the task file promised
+
+`-W error::RuntimeWarning` turns Django's "received a naive datetime while time
+zone support is active" into a hard failure. **Proven to fire before being
+trusted**, then run: **148 errors on the first pass, worked down to 0.** It found
+things no grep would have — 131 naive-into-ORM warnings, 11 `ValueError`s, 5
+naive/aware `TypeError`s — and the shape of the list was instructive: 108 of the
+148 came from `search`, which turned out to be **11 datetime literals** in test
+fixtures multiplied across the setUps that build them.
+
+Conversions: **79 naive builders in application code** (75 `datetime.now()`, 3
+`utcnow()`, 1 `today()`) as the file predicted, plus test code, for **134 call
+sites across 63 files**. Scripted, then swept with pyflakes for the 42 orphaned
+`import datetime` lines. **Four sites were deliberately excluded from the script
+because `timezone.now()` is UTC and would be wrong**: the copyright year
+(`localtime().year`, or the footer rolls over at 6pm on 31 December), the S3
+metadata stamp, and both "current month" defaults in `donations/models.py`
+(`localdate()`).
+
+**Two callable defaults the call-site sweep could not see**, because they are
+references rather than calls: `PendingUser.date_joined` and `elsewhere`'s two
+`date_verified` fields, all `default=datetime.now`. Two metadata-only migrations
+(`accounts.0005`, `elsewhere.0002`); `sqlmigrate` prints `(no-op)` for both.
+
+### `pytz` is gone from the project, and two of the audit's three hard cases dissolved
+
+`tzdata==2026.3` pinned directly in both requirements files, per the audit's
+re-measurement. **`pytz==2021.3` removed entirely** — verified on a `--no-cache`
+rebuild that the image no longer contains it and `US/Pacific` still resolves.
+
+- **`common_timezones` (audit sites 10–11, "hard")** — not a runtime dependency at
+  all. The dropdown is a **static committed asset**, `static/js/timezone.js`,
+  generated once from pytz 2010 data by `tools/tz.py`, which **has been Python 2
+  and therefore unrunnable since the Step 8 flip** (`iterkeys()`, `print`
+  statement). Ported to Py3 + `zoneinfo` on Brian's call; the JS deliberately
+  **not** regenerated, since that changes which names users can pick.
+  Measured: all **401** names it offers resolve, and all **95** distinct stored
+  profile values are among them.
+- **`NonExistentTimeError` (site 3, "hard — no equivalent")** — deleted rather
+  than solved. It lived in the `isinstance(pubdate, int)` branch of
+  `forums.latest._deserialize_date`, added by the 2019 "Daylight savings time
+  fix" in the same commit that changed the *write* format from an int timestamp
+  to `.isoformat()` — a shim for reading entries the previous deploy had left in
+  Redis. Live Redis holds **0** int pubdates. And inside that branch both
+  `new_date.replace(tzinfo=...)` and `make_aware(new_date, tz)` **discard their
+  return values**, so it returned a naive UTC wall clock and the `except` was
+  testing it against a *Chicago* DST gap. Brian's call: delete the branch.
+- **The one real case survived**: `ZoneInfo` raises `ZoneInfoNotFoundError` for an
+  unknown name but **`ValueError`** for path-shaped input. All three validators
+  (`bio/forms.py`, `gcalendar/forms.py`, `gcalendar/calendar.py`) catch both.
+  Mutation-verified: with only the narrow `except`, the form **accepts**
+  `'../etc/passwd'` and four other tests error out — exactly the 500 the audit
+  predicted.
+
+### Three latent bugs found in passing, all of the same shape
+
+Each was code that only worked when the host clock agreed with `TIME_ZONE` —
+true on the production box, false in the UTC container, and false on any
+container-based deploy.
+
+1. **`whos_online.to_timestamp()`** and **`forums.latest`'s topic score** both did
+   `int(time.mktime(dt.timetuple()))`. `timetuple()` drops the offset and
+   `mktime()` reads the remainder as container-local, giving a self-consistent
+   but absolutely wrong epoch. Both now `.timestamp()`, with their
+   `fromtimestamp()` counterparts given `datetime.timezone.utc` so they are
+   actual inverses. Only `whos_online` has a transition effect: members written
+   before this age out within `MAX_AGE` (15 min).
+2. **The `elapsed` filter.** `core_tags.py` carried
+   `repoze.timeago._NOW = datetime.datetime.now` under the comment *"A somewhat
+   ugly hack until we decide if we should be using UTC time everywhere or not."*
+   That decision is this task, so the hack is gone and the conversion happens at
+   the filter boundary. **A correction: this was first written up as a live
+   production bug, which was wrong** — measured against the library's default
+   `utcnow` rather than the patched `_NOW`. With the patch, production (TZ
+   Chicago) was correct and only the UTC dev container showed "5 hours ago". The
+   new code is right regardless of host clock, which is what Step 21 needs.
+3. **PayPal IPN discards the timezone.** `payment_date[:-4]` strips `" PST"` and
+   parses the rest, so a Pacific wall clock is recorded as `TIME_ZONE` — all
+   **1,421** donations are 2 hours early. `make_aware()` preserves that
+   convention **deliberately**: correcting new rows alone would leave two
+   conventions in one column with nothing marking which is which. **Scheduled
+   into Step 19** with the measurements (5 rows would change month, 0 would
+   change year).
+
+### The feeds now carry `+0000`, and the check that missed it
+
+Django's syndication framework (`views.py:208`) does
+`if pubdate and is_naive(pubdate): pubdate = make_aware(pubdate, get_default_timezone())`.
+The old `-0500`/`-0600` offsets were a side effect of the values being *naive*;
+aware values pass through as `+0000`. **Same instant, different representation** —
+`13:35:43 +0000` is `08:35:43 -0500`. Brian's call: leave it.
+
+**Found by Brian spot-checking production against the local site, and it exposed
+a hole in the characterization.** The script captured `/feeds/forums/` and not
+`/feeds/news/`, and the forums feed reported "identical" **because it replays
+pubdates out of the Redis cache** — stale entries written by the old code. It
+exercised nothing. Confirmed by writing one post through the real signal path:
+the new entry serializes as `...+00:00` and renders `+0000` while the cached ones
+still render `-0500`, so **a single feed can carry both offsets** during the
+rollover after deploy. `/feeds/news/` is now in the script, with a note saying
+which of the two feeds is the honest one.
+
+Two incidental finds while doing that: the dev Redis held **three orphaned
+`forums:post:*` entries** for posts deleted by earlier scratch runs, which the
+feed was still advertising; and **`latest.py`'s module docstring describes a
+delete-from-Redis path that does not exist in the code** — posts linger until
+they age out by reference count. Not acted on.
+
+### Honest notes
+
+- **AC5 is not met on its literal wording.** It asks that
+  `forums/templatetags/forum_tags.py` end up "net smaller"; it is **196 lines
+  before and after**. The logic did shrink (153 → 144 non-comment lines, and the
+  hand-rolled `SERVER_TZ.localize(...).astimezone(...)` is gone in favour of
+  `timezone.localtime`), but the comments explaining it consumed the gain.
+- **13 datetime strings across 4 test fixtures** got explicit offsets, computed
+  per-date so DST is right (`-06:00` in winter, `-05:00` in summer) rather than a
+  blanket suffix.
+- **Zero new pyflakes findings** across the tree (103 → 100; the three that went
+  are `tools/tz.py`, which could not be *parsed* on Python 3 before).
+- The `AT TIME ZONE` note in `base.py` replaces the deferral comment, per AC8.
+
+**Step 13 is COMPLETE.** Next: **Step 14** — Django 4.2 → 5.2 LTS, Python 3.10 →
+3.12. Its 5.x deprecation inventory was measured empty during task 05, backed by
+a static sweep. Note that task 05's warning-gate lesson applies again: 5.0 will
+re-parent its deprecation warnings, so the gate filter must be re-proven to fire
+before it is trusted.
 
 ## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08, PUSHED, CI GREEN
 
@@ -1355,8 +1548,6 @@ flush left. 816 tests green.
 `News: 1` where the local site showed only `Calendar: 29`. Local
 `PendingStory.objects.count()` is 0 against 29 event requests — the snapshot
 simply predates that submission. The dashboard hides a zero by design.
-
-## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
 ## Step 13 task 03 — the Django 4.0 rung — DONE 2026-08-04, PUSHED, CI GREEN
 
