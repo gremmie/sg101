@@ -1,8 +1,8 @@
 """
 Forms for the gcalendar application.
 """
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import datetime
-import pytz
 from django import forms
 
 from core.html import ImageCheckError
@@ -162,8 +162,10 @@ class EventEntryForm(forms.ModelForm):
     def clean_time_zone(self):
         tz = self.cleaned_data['time_zone']
         try:
-            pytz.timezone(tz)
-        except pytz.UnknownTimeZoneError:
+            ZoneInfo(tz)
+        except (ZoneInfoNotFoundError, ValueError):
+            # ValueError covers empty and path-shaped input; see the same
+            # validator in bio/forms.py.
             raise forms.ValidationError("Invalid timezone.")
         return tz
 

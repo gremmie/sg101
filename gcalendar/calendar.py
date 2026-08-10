@@ -3,8 +3,8 @@ This file contains the calendar class wich abstracts the Google API for working
 with Google Calendars.
 
 """
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import datetime
-import pytz
 
 # Temporarily disabled at the Python 3 flip: the Google API client stack
 # (httplib2 / apiclient / oauth2client) pinned here is Py2-era and dropped from
@@ -151,10 +151,12 @@ class Calendar(object):
             s = d.strftime(self.DATE_TIME_FMT)
         else:
             try:
-                tz = pytz.timezone(tz_name)
-            except pytz.UnknownTimeZoneError:
+                tz = ZoneInfo(tz_name)
+            except (ZoneInfoNotFoundError, ValueError):
+                # ValueError covers empty and path-shaped input; see the same
+                # validator in bio/forms.py.
                 raise CalendarError('Invalid time zone: %s' % tz_name)
-            local = tz.localize(d)
+            local = d.replace(tzinfo=tz)
             zulu = local.astimezone(get_fixed_timezone(0))
             s = zulu.strftime(self.DATE_TIME_TZ_FMT)
 

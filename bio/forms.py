@@ -1,6 +1,7 @@
 """
 This file contains the forms used by the bio application.
 """
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from io import BytesIO
 
 from django import forms
@@ -9,7 +10,6 @@ from django.core.files.base import ContentFile
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-import pytz
 
 from bio.models import UserProfile
 from core.html import image_check
@@ -47,7 +47,7 @@ class EditUserProfileForm(forms.ModelForm):
             'use_24_time', 'auto_favorite', 'auto_subscribe')
 
     def clean_time_zone(self):
-        """Ensure the timezone is valid and will work with pytz.
+        """Ensure the timezone is valid and will work with ZoneInfo.
 
         A blank (empty) value is allowed.
         """
@@ -55,8 +55,13 @@ class EditUserProfileForm(forms.ModelForm):
         tz = self.cleaned_data['time_zone'].strip()
         if tz:
             try:
-                pytz.timezone(tz)
-            except pytz.UnknownTimeZoneError:
+                ZoneInfo(tz)
+            except (ZoneInfoNotFoundError, ValueError):
+                # Both, not just the obvious one: ZoneInfo raises
+                # ZoneInfoNotFoundError for a name it does not know, but
+                # ValueError for anything path-shaped like '../etc/passwd'.
+                # This field is posted by users, so catching only the first
+                # would turn a bad value into a 500 instead of a form error.
                 raise forms.ValidationError('Invalid timezone')
 
         return tz

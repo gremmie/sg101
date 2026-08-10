@@ -29,6 +29,16 @@ class EditUserProfileFormTestCase(TestCase):
         form = EditUserProfileForm(post_data)
         self.assertFalse(form.is_valid())
 
+    def test_path_shaped_timezone_is_a_validation_error(self):
+        """ZoneInfo answers path-shaped input with ValueError, not
+        ZoneInfoNotFoundError. Catching only the latter would turn each of
+        these into a 500 on a field anyone can post to."""
+
+        for tz in ['../etc/passwd', '/etc/passwd', '..', 'a/../../b']:
+            with self.subTest(tz=tz):
+                form = EditUserProfileForm({'time_zone': tz})
+                self.assertFalse(form.is_valid())
+
     def test_blank_timezone(self):
 
         form = EditUserProfileForm({})
