@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-09
+**Last updated:** 2026-08-12
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,100 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## PLANNING — Step 14 task files generated, and what measuring first changed (2026-08-12)
+
+Six task files in `.agents/tasks/2026-07-04-modernizing-sg101/step14/`:
+01 Python 3.12 base image, 02/03/04 the Django 5.0 → 5.1 → 5.2 rungs one apiece,
+05 dependency alignment, 06 the host venv for editor tooling. Two scope calls
+settled during generation: **the interpreter moves first and alone** (task 01,
+with `Django==4.2.30` held), which repeats Step 13's shape because 3.12 is again
+the version supported by both the Django we are on and the Django we are going
+to; and **the venv is in scope as task 06**, written last so it can be cut
+without touching the rest.
+
+**The files were scoped against measurements rather than against the plan's
+predictions, and four things came back different.**
+
+- **The 3.12 move has no dependency breaker — the opposite of Step 13's
+  interpreter move, where `bleach` was the gate.** The whole pin set, runtime
+  and dev together, was run up all three rungs of this project's ladder on
+  `python:3.12-slim` with Django held at 4.2.30: every pin **installs**, 29
+  modules **import** with zero failures, and every probe process **exits 0**.
+  `Pillow==12.3.0` reports `features.check('jpg') is True`. Only `ftfy`,
+  `simplejson` and `repoze.timeago` fall back to an sdist build, all
+  successfully. The reason it is free is that Step 13 task 06 aligned the
+  dependencies to the *current* line rather than to the minimum that worked —
+  the bill for 3.12 was paid there. **Caveat carried into the task file:** the
+  probe used the slim image plus the Dockerfile's four apt packages by hand, and
+  the real image is the full `python:3.12` on a different Debian base, so the
+  ladder gets re-run in the actual build rather than inherited.
+- **`mysqlclient==1.4.6` still builds on 3.12, and the interesting part is
+  why.** 3.12 removed `distutils` and the images stopped seeding `setuptools` —
+  `python:3.12-slim` has none — yet the 2019 sdist builds anyway, because pip's
+  PEP 517 build isolation installs `setuptools` into a throwaway build
+  environment. Recorded in the task file so nobody "fixes" a future build
+  failure by adding a global `setuptools` pin and hiding the real cause.
+- **Two pins are dead weight, and one of them has been for a step and a half.**
+  `html5lib==1.1` and `simplejson==3.17.6` each have **zero requirers and zero
+  imports** — they appear nowhere but the two requirements files. `html5lib` was
+  orphaned when **bleach dropped it at 6.4.0 during Step 13 task 01** and nobody
+  noticed, because an orphaned pin installs perfectly well. Dropping it also
+  halves `six`: the comment at `requirements.txt:29-36` names two remaining
+  requirers, and only `python-dateutil` (required by celery) would be left, so
+  **six still does not leave the image** — the comment has to say that rather
+  than the pin quietly going stale. (`html5lib` also survives in
+  `templates/fixed/colophon.html:15` beside `python-memcached` and Haystack,
+  both long gone — that page is Step 20's.)
+- **5.1's `Model.save()` positional-argument deprecation is a non-item here, and
+  the grep is what misleads.** Searching for positional `.save(` returns ten
+  hits and **every one is `PIL.Image.save()` or `FieldFile.save()`** —
+  `bio/forms.py:131`, `core/images/upload.py:108,150`, `potd/models.py:73`, four
+  in `core/tests/images/imagemakers.py`, and `bio/views.py:148`'s
+  `avatar.save(name, avatar, save=False)`. Neither signature is affected.
+  Written down so the count is not re-derived into the wrong conclusion.
+- **5.0's form-renderer default change has zero surface**, which sharpens the
+  inherited "inventory is empty" claim. All six whole-form renders are explicit
+  (`{{ form.as_p }}` in five templates, `{{ form.as_table }}` in
+  `forums/mod_split_topic.html`), and explicit renderers are unaffected by
+  `default.html` becoming `div.html`. The one `as_table` is correctly wrapped in
+  a `<table>` at line 15 — **not** a repeat of the `mod_forum.html` defect task
+  04 fixed, where `<tr>` markup was being emitted into a `<div>`.
+
+**The vendored `tagging` fork is threaded through all three rung tasks as the
+first place to look.** It is the only code in the tree reaching into Django's
+private SQL-compiler API — `tagging/models.py:178-186` calls
+`queryset.query.get_compiler()`, `compiler.compile(queryset.query.where)` and
+`compiler.get_from_clause()`, then string-builds raw SQL — and it has broken on
+**two of the last three rungs** (`smart_text` at 4.0, `FullResultSet` at 4.2).
+Upstream is dead, so there is nothing to pull. **Nothing but the news tag cloud
+reaches it**, so each rung task requires reaching that page on real data rather
+than accepting a green suite.
+
+**The gate discipline is written into tasks 02, 03 and 04 as an explicit
+prove-it-fires-first requirement**, with the re-parenting schedule and all three
+past failures named. 5.0 re-parents `RemovedInDjango51Warning` to
+`DeprecationWarning` and introduces `RemovedInDjango60Warning` as a
+`PendingDeprecationWarning`, so the 4.2 gate's *shape* should carry over — which
+is exactly what was believed the last two times. Task 02 also has to **delete
+the ignores whose causes are gone** (`ANTIALIAS`, removed by task 07;
+`SelectableGroups`, impossible on 3.12) and demonstrate they are dead rather
+than keep them, since dead config that reproduces something already true is
+invisible in review.
+
+**Also confirmed while scoping:** Django 5.2 is at **5.2.17**, the rungs are
+**5.0.14** and **5.1.15**, and **debug-toolbar 7.1.0** is out (7.0 is the
+release requiring Django ≥ 5.2, which `requirements_dev.txt:11-15` already names
+as this rung's trigger). Django 6.0/6.1 now exist and are out of scope — but 6.0
+requires Python 3.12+, so task 01 lands the interpreter that a future step would
+need, and task 04 owes a written 6.0 deprecation inventory as its handoff.
+
+**Task 06's premise re-checked against the host:** `mysql_config` and
+`pg_config` are both absent, Homebrew is present, and the host default
+interpreter is **Python 3.14.2** via asdf — so the venv has to be built on 3.12
+to match the image rather than on whatever `python3` resolves to. `.venv` is in
+neither `.gitignore` (which has `.env`, a different entry) nor `.dockerignore`,
+and the second matters because the repo root is bind-mounted to `/app`.
 
 ## Step 13 task 09 — `USE_TZ` — DONE 2026-08-09, PUSHED, CI GREEN
 
@@ -376,6 +470,10 @@ they age out by reference count. Not acted on.
 a static sweep. Note that task 05's warning-gate lesson applies again: 5.0 will
 re-parent its deprecation warnings, so the gate filter must be re-proven to fire
 before it is trusted.
+
+**Six Step 14 task files were generated 2026-08-12** — see the planning section
+at the top of this file. **Next real-world action: Step 14 task 01**, the
+Python 3.12 base image, measured to cost no dependency bumps at all.
 
 ## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08, PUSHED, CI GREEN
 
