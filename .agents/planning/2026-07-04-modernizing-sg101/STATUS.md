@@ -174,6 +174,115 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 14 task 01 — Python 3.10 → 3.12 — DONE 2026-08-12
+
+**`FROM python:3.10` → `python:3.12`, Django held at 4.2.30. 884 tests green,
+`check` and `makemigrations --check` clean, celery and the site smoked on the
+production snapshot. THE MOVE COST ZERO DEPENDENCY BUMPS** — the image built on
+the first `FROM` edit with nothing else touched, which makes this the reverse of
+Step 13's interpreter move, where `bleach` was the gate. Python **3.12.13**.
+
+The prediction from the 2026-08-12 scoping measurement held exactly, and the
+reason it held was already in the tree: **Step 13 task 06 aligned the
+dependencies to the *current* line rather than to the minimum that worked**, so
+the interpreter's bill had been paid a step early. The 3.12-facing debts that
+step recorded — kombu for `SelectableGroups`, `assertEquals`, the invalid escape
+sequence — were all genuinely settled.
+
+### The suite got faster, and the build barely moved
+
+| | 3.10 | 3.12 |
+|---|---|---|
+| suite | 884 green, 13.03s | 884 green, **11.62s** |
+| cold build, base image already local | 26.05s | 28.70s |
+| packages built from sdist | 4 | 5 |
+| total sdist build time | 4.18s | 5.42s |
+
+**The first 3.12 cold build read 35.86s and that figure is not comparable** — it
+included pulling the base image. Re-measured under the baseline's own conditions
+it is 28.70s, and the +2.65s is entirely **`simplejson`, the one pin that has a
+cp310 wheel and no cp312 wheel**. It is also one of the two orphan pins task 05
+is set to drop, so the cost disappears there. `psycopg2` is two thirds of the
+sdist time in both columns.
+
+### What was verified beyond the suite, and why each was needed
+
+- **The three-rung ladder, in the real image rather than the slim proxy.** 30
+  modules imported in **separate processes**, zero failures, and **every process
+  checked for exit status 0** — the rung that exists because Pillow 6.2.2 once
+  imported cleanly on 3.10 and then aborted the interpreter at shutdown with
+  exit 134.
+- **Celery end to end, which is the `SelectableGroups` payoff.** The worker
+  resolved the redis transport and reported ready; `sg101.celery.debug_task` and
+  `core.tasks.max_users` were published, received and succeeded through the real
+  broker; beat came up with its 6 schedule entries. **A green suite proves none
+  of this** — it never makes the broker round-trip, and Step 6's lesson was a
+  green suite coexisting with a worker that crashed on every scheduled task.
+- **Pillow through the site's own upload path**, not a bare PIL call: an 800×600
+  JPEG resized to 400×300 with a 120×90 thumbnail, the EXIF-orientation path
+  rotating 400×300 → 300×400, and a PNG round-trip. `features.check` reports
+  `jpg`, `zlib` and `webp` all True, so the manylinux wheels carry their codecs
+  and the Dockerfile still needs no image headers.
+- **The news tag cloud**, which renders real tags. Not required by this task,
+  but it is the only thing that reaches the vendored `tagging` fork's
+  SQL-compiler code, and having a 3.12 control before the Django rungs start is
+  worth the one request.
+- **`production.py` imports on 3.12** — nothing else loads it, and it was
+  silently unimportable for a rung and a half during Step 13.
+
+### Five `tools/` scripts are still Python 2 — pre-existing, scheduled into Step 19
+
+A compile sweep of the whole tree (540 files, in-process, writing no `.pyc` so a
+cached one could not hide anything) found **zero `SyntaxWarning`s for invalid
+escape sequences** — the thing it was looking for, and the 3.12 item Step 13
+task 05 had cleared. What it did find is five files that do not compile at all:
+`filter_posts.py`, `flag_data.py` and `translate_yahoo_group.py` use `print`
+statements; `load_ygroup.py` and `post_sub.py` use unparenthesized `except`.
+
+**This is not a regression and not caused by the move** — `print "x"` is a
+SyntaxError on every Python 3, so 3.10 rejected these too. **Step 7's
+"`py_compile` clean" claim was scoped to app and migrations, and `tools/` was
+never in it**, which is the same blind spot that let `tools/tz.py` sit
+unrunnable from the Python 3 flip until task 09 ported it. Nothing imports any of
+the five. **Scheduled into Step 19 as triage rather than porting**: three feed
+the `mysqlimport` path Step 21 retires, `filter_posts.py` fixes orphans from a
+finished migration, and `flag_data.py` — which regenerates the ISO-3166 country
+JSON behind the bio flag icons — is the one plausible survivor. Step 19's test
+list now asks for a compile sweep over the *whole* tree, so this cannot be
+rediscovered as a surprise a third time.
+
+### Two things read wrong before they were read right
+
+- **`/admin/` answers 200, and that is the debug toolbar, not a change.**
+  Confirmed rather than assumed: the response body's title is literally "Django
+  Debug Toolbar Redirects Panel: 302 Found". The underlying status is 302. This
+  artifact has corrupted a smoke result on this project once already.
+- **Two probes reported a blank or misleading exit status**, because piping to
+  `grep` replaces it, and a third failed because `python /probe.py` puts
+  `sys.path[0]` at `/` rather than `/app`. Re-run properly. Worth recording
+  precisely because "check the exit status" is the rung this task exists to
+  respect — the pipe would have concealed the exact failure being looked for.
+
+### Comments brought to the truth
+
+The Dockerfile header explained why **3.10** was chosen; that reasoning expired
+with the move, so the block was rewritten rather than renumbered. The
+celery/kombu note in `requirements.txt` said the `SelectableGroups` removal
+"would have surfaced at the interpreter move, not now" — **now is the
+interpreter move**, so both requirements files say so. Eight plain version
+strings updated across `DOCKER.md`, `ci.yml` and the three requirements headers.
+Left deliberately alone: the two "bleach 3.1.5 could not import on Python 3.10"
+notes and the "bleach dropped six when it moved to 6.4.0 for Python 3.10" line,
+all of which are true as history; `mysqlclient` and the MySQL apt entries, which
+are Step 21's.
+
+**One correction made to this task's own work before commit:** the new Dockerfile
+comment first claimed the sdist builds cost "about ten seconds," which was an
+estimate written as a fact. Measured at 5.42s and corrected.
+
+**Next: Step 14 task 02**, the Django 5.0 rung — where the deprecation gate has
+to be rebuilt and proven to fire before anything it certifies is believed.
+
 ## PLANNING — Step 14 task files generated, and what measuring first changed (2026-08-12)
 
 Six task files in `.agents/tasks/2026-07-04-modernizing-sg101/step14/`:
@@ -472,8 +581,9 @@ re-parent its deprecation warnings, so the gate filter must be re-proven to fire
 before it is trusted.
 
 **Six Step 14 task files were generated 2026-08-12** — see the planning section
-at the top of this file. **Next real-world action: Step 14 task 01**, the
-Python 3.12 base image, measured to cost no dependency bumps at all.
+at the top of this file. **Task 01 (Python 3.12) DONE 2026-08-12**, and it did
+cost no dependency bumps, as measured. **Next real-world action: Step 14 task
+02**, the Django 5.0 rung.
 
 ## Step 13 task 08 — Markdown, the extensions, and the per-call parser — DONE 2026-08-08, PUSHED, CI GREEN
 
