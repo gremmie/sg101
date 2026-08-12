@@ -1,4 +1,4 @@
-# SG101 runtime requirements -- Python 3.10 / Django 4.2.
+# SG101 runtime requirements -- Python 3.12 / Django 4.2.
 #
 # Apps whose old external libraries aren't Python-3 ready are temporarily
 # stubbed, and their dependencies dropped here:
@@ -47,9 +47,9 @@ sqlparse==0.5.5
 # The 5.2 line was held down by Python 3.7. What made moving it necessary rather
 # than merely possible: kombu 5.2 reads its transport registry through
 # entry_points().get(), and the standard library removed that dict interface in
-# Python 3.12. It still works here -- 3.10 answers with a deprecated
-# SelectableGroups -- so the failure would have surfaced at the interpreter move,
-# not now.
+# Python 3.12. That removal is now live -- this image runs 3.12 -- and these
+# pins are what keep the broker transport resolvable, so a downgrade here does
+# not degrade, it stops celery finding its transport at all.
 celery==5.6.3
 kombu==5.6.2
 billiard==4.2.4

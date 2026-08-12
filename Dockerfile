@@ -1,16 +1,23 @@
-# SG101 image: Python 3.10.
+# SG101 image: Python 3.12.
 #
-# The interpreter crossed from Python 2.7 to 3.7 at the Python 3 flip, and from
-# 3.7 to 3.10 when Django 4.0 -- which needs 3.8+ -- came into range. The Django
-# pin then keeps advancing rung by rung as we climb the LTS ladder. The exact
-# pins live in the requirements files; this base image only fixes the Python
+# The interpreter crossed from Python 2.7 to 3.7 at the Python 3 flip, then to
+# 3.10 when Django 4.0 -- which needs 3.8+ -- came into range, and to 3.12 for
+# the climb to Django 5.2. The Django pin advances rung by rung; the exact pins
+# live in the requirements files, and this base image only fixes the Python
 # minor.
 #
-# 3.10 is the waypoint rather than the 3.8 minimum because it is the only version
-# supported by Django 3.2 *and* by everything through 5.2, which is what let the
-# interpreter move by itself with the Django pin untouched.
+# 3.12 is supported by Django 4.2 and by 5.2 alike, so the interpreter could
+# move on its own with the Django pin untouched -- the same opening 3.10 gave
+# when it was the one version shared by Django 3.2 and 5.2. Unlike that move,
+# this one needed no dependency bumps at all.
+#
+# Five pins have no wheel for this interpreter and build from source here:
+# mysqlclient, psycopg2, ftfy, simplejson and repoze.timeago. That is what the
+# apt build dependencies below are for. Together they cost about 5s of an
+# uncached build, two thirds of it psycopg2; only simplejson is new at 3.12,
+# the other four built from source on 3.10 too.
 
-FROM python:3.10
+FROM python:3.12
 
 # Don't buffer stdout/stderr (so logs show up immediately) and don't write .pyc.
 ENV PYTHONUNBUFFERED=1 \
@@ -29,7 +36,7 @@ ENV PYTHONUNBUFFERED=1 \
 # comparison is the only thing that catches a conversion which silently shifted
 # or dropped data, and it runs from this image. See the mysqlclient note in
 # requirements.txt before removing either one.
-# lxml and Pillow install from manylinux wheels on 3.10, so their C-library -dev
+# lxml and Pillow install from manylinux wheels on 3.12, so their C-library -dev
 # headers (libxml2/libxslt, libjpeg/zlib/freetype) are not needed. Check that
 # again after either pin moves: a version with no wheel for this interpreter
 # falls back to an sdist build, and Pillow's will quietly succeed without
