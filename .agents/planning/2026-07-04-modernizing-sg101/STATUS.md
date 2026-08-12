@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 14 task 01 — Python 3.10 → 3.12 — DONE 2026-08-12
+## Step 14 task 01 — Python 3.10 → 3.12 — DONE 2026-08-12, PUSHED, CI GREEN
 
 **`FROM python:3.10` → `python:3.12`, Django held at 4.2.30. 884 tests green,
 `check` and `makemigrations --check` clean, celery and the site smoked on the
@@ -279,6 +279,12 @@ are Step 21's.
 **One correction made to this task's own work before commit:** the new Dockerfile
 comment first claimed the sdist builds cost "about ten seconds," which was an
 estimate written as a fact. Measured at 5.42s and corrected.
+
+**Pushed 2026-08-12, CI green** — the first CI run on the 3.12 image, and on
+x86_64 rather than the arm64 the local verification used. That distinction has
+mattered here exactly once, when Step 13 task 01's Pillow abort had only been
+reproduced under emulation; it reproduced on both in the end, but CI re-checking
+the exit-status rung on a different architecture is free.
 
 **Next: Step 14 task 02**, the Django 5.0 rung — where the deprecation gate has
 to be rebuilt and proven to fire before anything it certifies is believed.
