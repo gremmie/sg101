@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-13
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,250 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 14 task 02 — the Django 5.0 rung — DONE 2026-08-13, `0713e15`, NOT YET PUSHED
+
+**On Django 5.0.14 / Python 3.12. 884 tests green under a gate proven to fire,
+`check`, `check --deploy` and `makemigrations --check` clean, search and the tag
+cloud byte-identical to captures taken on 4.2 before the bump, celery and the
+site smoked on the production snapshot.**
+
+**The rung cost zero breakers and zero dependency bumps.** The image built on the
+first `Django==5.0.14` edit with nothing else touched, and the suite came back
+884 green on its first run with no fixes applied. That is what the empty 5.x
+inventory handed over from Step 13 task 05 predicted, and unlike Step 13 task 04
+— which was handed a dead worklist and still produced a real finding — nothing
+turned up beside it. **The work in this rung was all in the gate.**
+
+### The deprecation gate: the re-parenting landed exactly as predicted
+
+Measured on 5.0.14 rather than read from release notes:
+
+| warning | 4.2 base class | 5.0 base class |
+|---|---|---|
+| `RemovedInDjango51Warning` | `PendingDeprecationWarning` | **`DeprecationWarning`** |
+| `RemovedInDjango60Warning` | — | `PendingDeprecationWarning` |
+
+So the 4.2 gate's *shape* — both categories, message-based ignores — survives,
+which is the first time a rung's gate did not need rethinking. Its *contents* did
+not survive at all.
+
+**Both halves proven to fire before a single green result was trusted**, with a
+throwaway `core/tests/test_gate_probe.py` carrying one test per category:
+`{{ x|length_is:"1" }}` for `RemovedInDjango51Warning` and `format_html()` with
+no args for `RemovedInDjango60Warning`. The probe passes **`OK` without the
+gate** and errors twice under it, which is what says the gate is doing the
+catching rather than the probe being broken. Re-run against the *final* ignore
+list, not just a bare filter, so the ignores are known not to have blunted it.
+Deleted after.
+
+**The working gate for 5.0:**
+
+```
+python -W error::DeprecationWarning -W error::PendingDeprecationWarning \
+  -W 'ignore:The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated:PendingDeprecationWarning' \
+  -W 'ignore:datetime.datetime.utcnow() is deprecated:DeprecationWarning' \
+  -W 'ignore:datetime.datetime.utcfromtimestamp() is deprecated:DeprecationWarning' \
+  -W "ignore:'pkgutil.find_loader' is deprecated:DeprecationWarning" \
+  manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+**All four of the 4.2 gate's ignores are dead — the task predicted two.** The
+`ANTIALIAS` cause was removed by Step 13 task 07 and `SelectableGroups` cannot
+fire on 3.12, both as expected; but `pkg_resources is deprecated as an API` and
+`Deprecated call to` are *also* gone, retired by the celery 5.6 pins from Step 13
+task 06. Demonstrated rather than assumed, in two directions: an unfiltered
+`-W default::DeprecationWarning -W default::PendingDeprecationWarning` run lists
+every warning the suite emits and none of the four appears, and the suite is
+green under a gate that no longer contains them.
+
+**And all four *new* ignores were demonstrated live**, each removed in turn:
+
+| ignore | source | how it fails without the ignore |
+|---|---|---|
+| `FORMS_URLFIELD_ASSUME_HTTPS` | ours, see below | aborts at settings load |
+| `datetime.utcnow()` | `repoze.timeago` 0.5 | 4 test errors |
+| `datetime.utcfromtimestamp()` | `python-dateutil` 2.8.2 | aborts at import |
+| `pkgutil.find_loader` | `django-environ` 0.4.5 | aborts at import |
+
+The three third-party ones are **Python 3.12 and 3.14 deprecations, not Django
+ones** — they were invisible until now because the gate last ran at the 4.2 rung
+on Python **3.10**, and task 01 moved the interpreter without running it. **Two
+of the three retire with a dependency bump** and are a worklist for task 05:
+`python-dateutil` 2.9 fixes `utcfromtimestamp`, and a current `django-environ`
+fixes `pkgutil.find_loader`. `repoze.timeago` is upstream-dead and will need the
+ignore or a replacement. Neither bump was taken here — one variable, one rung.
+
+**Neither datetime ignore can be hiding our own code**: a sweep for `utcnow` and
+`utcfromtimestamp` across the tree finds **zero calls**, and the one hit is a
+comment in `core/templatetags/core_tags.py:146` explaining that `repoze.timeago`
+measures against `utcnow()`.
+
+### The one code decision: URLField's implicit scheme, and Brian's call
+
+**5.0 deprecates the `http://` that `forms.URLField` prepends when a member types
+a bare domain**; 6.0 makes it `https://`. It arrives as a
+`RemovedInDjango60Warning`, so the new gate's *pending* half catches it — the
+first time this project's gate has caught something two Django versions out.
+
+Measured, all three spellings, on 5.0.14:
+
+| construction | `clean('example.com')` | warning |
+|---|---|---|
+| `forms.URLField()` | `http://example.com` | `RemovedInDjango60Warning` |
+| `forms.URLField(assume_scheme='https')` | `https://example.com` | none |
+| `FORMS_URLFIELD_ASSUME_HTTPS = True` | `https://example.com` | `RemovedInDjango60Warning`, on the setting |
+
+**The transitional setting announces its own removal, so it does not clear the
+gate — it relocates the warning.** That is the fact that made this a decision
+rather than a fix: *both* available paths cost exactly one ignore, so the config
+price is identical and the only real question is whether bare domains become
+https now or at 6.0. **Brian took https now.**
+
+`FORMS_URLFIELD_ASSUME_HTTPS = True` in `base.py`, deliberately not per-field.
+The per-field alternative is worse on this codebase: `user_photos/forms.py:113`
+is a clean one-liner, but `bandmap/forms.py` builds `url` through `Meta`, and
+`Meta.labels`/`help_texts`/`widgets` **do not apply to explicitly declared
+fields** — so it means hoisting the field out and restating four lines of
+metadata that then drift from the model by hand. And the admin's 15 model
+`URLField`s across 10 apps would still warn, so a *broader* ignore would come
+back anyway. The setting covers all of them at once.
+
+Two things rode along: `bandmap/forms.py`'s widget placeholder read literally
+`'http://'` and would now be telling members the wrong thing, and the setting
+sits next to `SITE_SCHEME` with a comment saying why they are different
+questions — `SITE_SCHEME` is how this site is served, this is where members'
+links to *other* sites land.
+
+**No data was touched.** This is input normalization on new submissions only; the
+571 stored `weblinks` rows (474 `http`, 94 `https`, 3 malformed) are untouched.
+
+### Found while answering Brian's follow-up: weblinks' add form is not a URLField
+
+Brian asked whether `weblinks/forms.py`'s `AddLinkForm.url` should be converted.
+**Measured before answering, and the first assumption was wrong**: the declared
+`forms.CharField` is *not* skipping URL validation, because the model field is a
+`models.URLField` and `ModelForm._post_clean` runs the model validators for any
+field the form carries. `javascript:alert(1)` and `not a url at all` are already
+blocked today.
+
+The only difference is scheme-less input — and it runs the wrong way:
+
+| input | today (`CharField`) | as `forms.URLField` |
+|---|---|---|
+| `example.com` | **blocked**, "Enter a valid URL." | normalized |
+| `http://example.com` | accepted | accepted |
+| `javascript:alert(1)` | blocked | blocked |
+
+**Members get the strict path and staff get the forgiving one**, since the admin
+builds its form from the model field and so already normalizes. And it reads like
+an accident: the declaration exists only to set `size: 52`, matching the
+`title = forms.CharField(...)` line directly above it, and dates to `65659c3` —
+the 2009 initial import. **Recommended, deferred to its own commit** rather than
+folded into a version bump, and it needs a test, since `weblinks` has no coverage
+of the scheme-less case.
+
+### Admin branding, and what the login page legitimately lost
+
+`sg101/templates/admin/base_site.html` now emits `<div id="site-name">`, matching
+what 5.0's own `base_site.html` renders. Verified against real pages rather than
+by reading the template: `/admin/`, `/admin/news/story/` and `/admin/auth/user/`
+each carry **exactly one `<h1>`** and it is the content title; `#site-name` is a
+`div` on all four pages checked; the moderation dashboard still renders; and the
+theme toggle survives on `/admin/login/`. The 10 admin tests pass unchanged,
+including the three from `1b968a4` behind the dashboard's own header row.
+
+**`/admin/login/` now has zero `<h1>` elements, and that is upstream behavior,
+not a loss we caused** — 5.0's own `admin/login.html` contains no `<h1>` either,
+confirmed by grepping the installed template. The CSS needed nothing: 5.0 targets
+`#site-name` by id, not by tag.
+
+### Nothing moved in search or in the vendored `tagging` fork
+
+Both captured **before** the bump and replayed after, against the same database,
+which is the only way to isolate the variable — Step 13 task 05 learned that when
+`reverb` moved 54,065 → 48,779 for reasons that were the database, not Django.
+
+- **Search: identical.** 16 queries, 16 totals, 128 per-type counts, 300 top-20
+  rows with `rank` to 10 decimal places, and every headline — every field equal,
+  over an index of 516,858 rows. Step 12's recorded figures reproduce (`FRV-1`
+  2,024; `FRV 1` 114; `frv` 2,229; `surf rock` 14,993 vs `surf-rock` 1,328;
+  `The Ventures` 11,534; `A/B box` 89; `backing track` 3,481), which is what says
+  the probe is reading the real index. **`reverb` reads 54,063 against Step 12's
+  54,065** — a two-row drift in the corpus, present on both sides of the bump.
+- **Exclusion ranking still means something.** `reverb -fender` returns 38,339
+  across **5 distinct ranks** in the top 20, not the constant score that Step 12
+  task 04 found looks entirely normal from the outside.
+- **`tagging`: identical**, across all three shapes that reach the SQL compiler —
+  the 1,001-tag cloud, `usage_for_queryset` unfiltered (the all-matching `WHERE`
+  that raises `FullResultSet`, 1,001 tags) and filtered (802), and
+  `usage_for_model(filters=...)` (802), **the path the whole project calls zero
+  times** and which was silently broken for a rung and a half before task 05
+  found it. The two filter spellings agreeing at 802 is what re-checks the
+  `add_filter` arity.
+
+**One probe result read as a defect before it read as data.** The filtered
+queries first returned **0 tags**, which looks exactly like the compiler path
+breaking again. It was the probe: tagging on this site starts at story 602, and
+the filter asked for `pk <= 500`. Widened to 1,500 — 2,820 tagged items — and
+both paths answer 802. A vacuous probe reporting a pass is the same failure this
+project keeps meeting from the other direction.
+
+### The site and the stack, on the production snapshot
+
+15 pages fetched as a logged-in member on **both** 5.0.14 and 4.2.30 — home,
+news index/archive/story/tag cloud, forums index, a topic, podcast, downloads,
+weblinks, band map, photo of the day, search, calendar, shoutbox history. All
+200 on both. Rendered page content is **byte-identical**; a diff of `/downloads/`
+shows every difference confined to the debug toolbar's own panels — request id,
+the version string it prints, its timings, and its receiver count.
+
+**`USE_TZ` is still explicitly `True` in `base.py`**, so 5.0's default flip is
+inert, and `TIME_ZONE` still reads `America/Chicago` with the same datetimes
+rendered on both versions.
+
+Celery end to end: worker ready on the redis transport, beat up and observed
+sending `core.tasks.max_users` on its own schedule, and `sg101.celery.debug_task`
+and `core.tasks.max_users` both published, received and succeeded through the
+real broker. **A green suite proves none of that** — it never makes the broker
+round-trip.
+
+### A free performance win, chased down because it looked like a regression
+
+The toolbar reported **88 signal receivers on 4.2 and 80 on 5.0**, and a first
+pass at filtering suggested all 8 were ours — which would have meant eight
+receivers silently failing to register. They are all **Django's own
+`ImageField.update_dimension_fields`**, one per `ImageField` in the project, and
+5.0 stops connecting `post_init` for image fields that declare no `width_field`
+or `height_field`. **This project has 8 `ImageField`s and zero width/height
+fields**, so all 8 receivers were pure overhead on every model instantiation.
+
+The misleading first pass is worth naming: the filter tested `'django' not in
+str(receiver)`, and `Signal.receivers` holds **weakrefs**, whose `str()` says
+nothing about what they point at. Dereferenced, the answer was immediate.
+
+### `check --deploy` and its one warning, which is pre-existing
+
+`production.py` imports and checks clean apart from `security.W001` —
+`SecurityMiddleware` absent from `MIDDLEWARE`, which is Step 21's hardening.
+**Confirmed pre-existing** by running the same command on 4.2.30 in a throwaway
+container: byte-identical output. This matters because that module was silently
+unimportable for a rung and a half during Step 13 and only `check --deploy` says
+so.
+
+### Recommendation carried forward: the gate belongs in CI
+
+Task 05 of Step 13 argued this and it is still true — CI runs the suite but not
+the gate, so the gate is a once-a-rung manual step and a deprecation introduced
+between rungs would not be caught. Not done here: it widens this rung's scope and
+would make CI red on third-party noise the ignore list has to track. **Worth
+deciding at task 05**, when two of the three third-party ignores retire with
+their dependency bumps and the list gets short enough to live in a workflow file.
+
+**Next: Step 14 task 03**, the Django 5.1 rung — where the re-parenting moves
+`RemovedInDjango60Warning` from `PendingDeprecationWarning` to
+`DeprecationWarning`, and where `length_is` and the transitional div form
+renderers are actually removed rather than merely deprecated.
 
 ## Step 14 task 01 — Python 3.10 → 3.12 — DONE 2026-08-12, PUSHED, CI GREEN
 
