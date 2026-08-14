@@ -174,6 +174,70 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Logout was broken by the 5.0 rung — FOUND AND FIXED 2026-08-13, `39aceca`
+
+**Brian hit a 405 on `/accounts/logout/`. Logging out had been broken site-wide
+since the 5.0 rung landed, and it was pushed.** Django 5.0 removed logout via
+GET; both navbars linked to it with a plain anchor, so every Logout on the site
+answered 405 and left the member signed in.
+
+| | GET | POST |
+|---|---|---|
+| Django 4.2.30 | **200**, session cleared | 200, session cleared |
+| Django 5.1.15 | **405**, still logged in | 200, session cleared |
+
+### Why the gate did not catch it, which is the part worth keeping
+
+**4.2 did raise the warning.** `LogoutView.dispatch()` on 4.2.30 warns
+`RemovedInDjango50Warning` when the method is GET — read out of the installed
+source and reproduced. The 4.2 gate turned that category into an error. It never
+fired because **no test in the project has ever requested that URL**: every
+`logout` in the suite is `self.client.logout()`, the test client's own method,
+which clears the session directly and never routes through the view. The view
+had **zero coverage**.
+
+So the "5.x inventory is EMPTY" result recorded at Step 13 task 05 was empty for
+precisely the reason its own caveat named — *a suite only covers what it
+exercises*. And the static sweep that was meant to back the suite up could not
+have helped: it looked for greppable symbols (`length_is`, `CIText`,
+`index_together`), and **"a view being reached by GET" is not a symbol**. Two
+independent checks, one blind spot, and it is the same blind spot in both.
+
+**A wrong reading on the way, worth recording because it nearly closed the
+question early:** the first probe reported *no* deprecation warning on 4.2,
+which would have meant the gate never had a chance. It was the probe — it
+filtered captured warnings for a category name containing `Deprecat`, and the
+class is called `RemovedInDjango50Warning`.
+
+### The fix
+
+Both navbars submit a form with `{% csrf_token %}`. This is a small security fix
+as well as a repair: a logout reachable by GET can be triggered by any page that
+embeds the URL, which is why Django removed it.
+
+**Three tests, each mutation-verified** — the POST, the refused GET, and the
+templates agreeing with the view. The third renders real pages rather than
+reading the templates, and covers **both** navbars deliberately: the forums index
+renders `navbar.html`, a profile renders `v3/base.html`. Reverting either
+template to a link fails it; both restored, it passes. 887 green under the gate.
+
+**A wrinkle found in the asset pipeline, and Brian's call on how to handle it.**
+The v3 rule belongs in `sg101/scss/_sg101.scss`, but `main.min.css` is a
+**committed build artifact** whose gulp-sass 2.x toolchain will not run on a
+current Node. So the compiled rule was appended to the minified file by hand, at
+the position a rebuild would put it (immediately after `.friends-logos`), with
+the SCSS remaining the source of truth. **Sorting the Sass toolchain is Step 20
+territory** — it is the same static-assets work as WhiteNoise and
+`collectstatic`.
+
+### What this says about the two free rungs
+
+Tasks 02 and 03 were both recorded as costing nothing. **Task 02 did cost
+something; it was just invisible to everything that was looking.** The record
+above stands on its measurements, but "the rung was free" should be read as "the
+rung was free as far as the suite, the gate and a symbol sweep can see", and on
+this project that phrase now has a known failure mode attached to it.
+
 ## ORDER BY collation — audited 2026-08-13, scheduled into Step 19
 
 **Brian noticed `/profile/members/user/` listing members in a different order
