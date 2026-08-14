@@ -1,9 +1,9 @@
 # Requirements for the Dockerized SG101 dev environment -- Python 3.12 / Django
-# 4.2. Mirrors the production pins in requirements.txt, plus the dev/test-only
+# 5.0. Mirrors the production pins in requirements.txt, plus the dev/test-only
 # tools needed to run the suite and dev server in-container.
 
 # --- Runtime (mirror of requirements.txt) ------------------------------------
-Django==4.2.30
+Django==5.0.14
 django-environ==0.4.5  # 12-factor env-var config
 # django-tagging is vendored into the repo as `tagging/` -- see the note in
 # requirements.txt and in tagging/__init__.py.
@@ -15,7 +15,7 @@ tzdata==2026.3
 # python-dateutil) -- see the note in requirements.txt.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (and also powers
-# debug-toolbar's SQL panel below). Django 4.2 requires >= 0.3.1.
+# debug-toolbar's SQL panel below). Django has required >= 0.3.1 since 4.2.
 sqlparse==0.5.5
 
 # The uppercase settings compat is gone in celery 5, so the config moved to the
@@ -83,10 +83,13 @@ requests==2.27.1
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 mock==4.0.3
 testfixtures==6.18.5
-# 6.3.0 is the newest debug-toolbar that still supports Django 4.2 -- 7.0 requires
-# Django >= 5.2, so this pin moves again at the 5.2 rung and not before. It had
-# been running past its supported Django range since 3.2.x. Its SQL panel uses
-# sqlparse, pinned in the runtime block.
+# debug-toolbar had been running past its supported Django range since 3.2.x.
+# 6.3.0 declares a floor of django>=4.2.9 and classifiers for 4.2 and 5.1
+# through 6.0 -- 5.0 is absent from that list, which is why this is worth
+# spelling out: the floor carries no upper bound, so the absence is a missing
+# classifier and not an enforced range, and the pin runs green here on 5.0.14,
+# suite and panels alike. Its SQL panel uses sqlparse, pinned in the runtime
+# block.
 django-debug-toolbar==6.3.0
 # Coverage for the CI report (and local use). The <5 cap was for Python 3.7.
 coverage==7.15.4

@@ -54,6 +54,21 @@ SITE_ID = 1
 # Site scheme; http or https.
 SITE_SCHEME = 'http'
 
+# The scheme a form's URLField assumes when a member types a bare domain, which
+# is a separate question from SITE_SCHEME above: this one is about links members
+# submit to other sites, not about how this site is served.
+#
+# Django has always prepended http here and changes to https in 6.0; this
+# transitional setting takes the new behavior now, so bandmap links and hot-
+# linked images land on https rather than on a scheme that mostly redirects.
+# It reaches the form fields generated from model URLFields too -- there are 15
+# of those across 10 apps, so setting it here is what covers the admin as well.
+#
+# Setting it raises a RemovedInDjango60Warning by design, announcing its own
+# removal once 6.0 makes the behavior unconditional. The deprecation gate
+# ignores that one message; the ignore retires with the setting.
+FORMS_URLFIELD_ASSUME_HTTPS = True
+
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
 USE_I18N = False

@@ -30,7 +30,10 @@
 {% block title %}{{ title }} | {% trans 'SG101 Site Admin' %}{% endblock %}
 
 {% block branding %}
-<h1 id="site-name">{% trans 'SurfGuitar101.com Site Administration' %}</h1>
+{# A div, not an h1, matching what the admin's own base_site.html renders: the #}
+{# page's single h1 is the content title, and the site name is branding. The  #}
+{# stylesheet targets #site-name by id, so the element name costs no styling. #}
+<div id="site-name">{% trans 'SurfGuitar101.com Site Administration' %}</div>
 {# The light/dark toggle is rendered twice by the admin: once in userlinks for #}
 {# signed-in staff, which this template inherits untouched, and once here for  #}
 {# everyone else. Overriding branding drops that second copy, and the one page #}

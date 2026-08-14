@@ -23,7 +23,7 @@ class BandForm(forms.ModelForm):
         widgets = {
             'url': forms.TextInput(attrs={
                 'aria-describedby': 'url-help-text',
-                'placeholder': 'http://'}),
+                'placeholder': 'https://'}),
             'location': forms.TextInput(attrs={
                 'aria-describedby': 'location-help-text',
                 'placeholder': 'Huntington Beach, CA, USA'}),
