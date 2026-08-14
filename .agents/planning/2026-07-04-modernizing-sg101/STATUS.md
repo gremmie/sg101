@@ -174,6 +174,140 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 14 task 03 — the Django 5.1 rung — DONE 2026-08-13, NOT YET COMMITTED OR PUSHED
+
+**On Django 5.1.15 / Python 3.12. 884 tests green under a re-proven gate,
+`check`, `check --deploy` and `makemigrations --check` clean, search, tagging
+and 16 site pages identical to captures taken on 5.0.14 minutes before the bump,
+celery and the admin smoked.**
+
+**A second free rung, and this one was predicted to be free.** No breakers, no
+dependency bumps, no application code changed — the suite was green on the first
+run. The task file called an explicitly recorded no-op a likely and perfectly
+good outcome, and that is what this is. **The only edits are version strings in
+comments.**
+
+### The task file's gate prediction was wrong, and the correction is the finding
+
+It said 5.1 re-parents `RemovedInDjango60Warning` from `PendingDeprecationWarning`
+to `DeprecationWarning`, on the schedule 4.2 and 5.0 followed. **It does not.**
+Read out of `django/utils/deprecation.py` on 5.1.15 rather than inferred:
+
+```python
+class RemovedInNextVersionWarning(DeprecationWarning): ...
+class RemovedInDjango60Warning(PendingDeprecationWarning): ...
+RemovedAfterNextVersionWarning = RemovedInDjango60Warning
+```
+
+**`RemovedInDjango60Warning` is still a `PendingDeprecationWarning` here, and
+`RemovedInDjango61Warning` does not exist yet.** The reason is that 6.0 is *two*
+releases away from 5.1 — 5.2 comes between them — so the pattern held all along
+and only the arithmetic was wrong. **The re-parent lands at 5.2, which is task
+04's rung**, and task 04's file already describes it correctly.
+
+**Django names the near class generically here**: removals in 5.2 would raise
+`RemovedInNextVersionWarning`, because there is no `RemovedInDjango52Warning`.
+
+**And nothing raises it — 5.1 schedules zero removals for 5.2.** Grepping the
+installed package for `RemovedInNextVersionWarning` outside `deprecation.py`
+returns **no call sites at all**. So on this rung the gate's `DeprecationWarning`
+half has nothing Django-side to catch, which is worth saying out loud rather
+than discovering as a silent absence later.
+
+### The gate carried over unchanged, and was re-proven anyway
+
+Same filter as 5.0, same four ignores, **all four still live** — the unfiltered
+`-W default` inventory lists exactly the same four sources and nothing new, so
+no ignore has gone dead and none needed adding.
+
+Both halves proven on this rung rather than inherited from the last:
+
+| half | probe | result |
+|---|---|---|
+| `DeprecationWarning` | `warnings.warn('probe', RemovedInNextVersionWarning)` | aborts |
+| `PendingDeprecationWarning` | `format_html()` with no args | aborts |
+
+**The `DeprecationWarning` probe had to be synthetic, and that is a consequence
+of the finding above** — `length_is`, which served as the live probe on 5.0, is
+*removed* in 5.1, and there is no live `RemovedInNextVersionWarning` to replace
+it with. Raising the class directly still proves the property under test: that
+the filter binds that category as an error. The naturally-occurring evidence is
+the three third-party `DeprecationWarning`s, each of which aborts the run when
+its ignore is removed — demonstrated last rung, and unchanged here. The probe
+passes `OK` without the gate, as always.
+
+### Every 5.1 removal re-measured, not inherited
+
+Step 13 task 05 swept these to zero on 4.2. Re-swept on 5.1 across app,
+migrations and templates, because a sweep taken two rungs ago is a claim about a
+tree that has changed since:
+
+| removal | count |
+|---|---|
+| `CIText` / `CICharField` / `CIEmailField` / `CITextField` | 0 |
+| `index_together` | 0 |
+| `make_random_password` | 0 |
+| `length_is` (templates) | 0 |
+| `get_storage_class` | 0 |
+| `DEFAULT_FILE_STORAGE` / `STATICFILES_STORAGE` | 0 |
+
+Confirmed from the other side too — on 5.1 `length_is` and `get_storage_class`
+are genuinely gone from Django, so those zeros are load-bearing rather than
+incidental.
+
+**The `CIText` zero is Step 11 task 02 paying out.** That task found
+`CITextField` already deprecated and routed case-insensitive uniqueness to
+`__iexact` plus a functional index, correcting `detailed-design.md` and
+`research/database-migration.md`, which had both recommended `CITEXT`. Had it
+gone the other way this rung would have been a schema migration under a version
+bump.
+
+**No positional `Model.save()` warnings**, which is what settles 5.1's other
+deprecation. The task file measured ten positional `.save(` call sites and found
+every one to be `PIL.Image.save()` or `FieldFile.save()`; the gate agrees, and
+the gate is the better witness because a positional `Model.save()` reached
+through a helper would match neither grep pattern.
+
+### `production.py` checked from both directions
+
+`check --deploy` runs clean apart from the pre-existing `security.W001`
+(`SecurityMiddleware` absent, Step 20's), byte-identical to 5.0 and 4.2. That
+covers the import.
+
+**It does not cover whether the backends resolve, so that was checked
+separately** — the `STORAGES` block names `FileSystemStorage` and
+`ManifestStaticFilesStorage`, and both instantiate through `storages[...]` on
+5.1. This is the file that carried a broken `MemcachedCache` for a rung and a
+half, and a setting naming a backend by dotted path fails on *use*, not on
+import, so import alone is not the property worth checking.
+
+### Nothing moved, measured against a baseline taken minutes earlier
+
+Captured on 5.0.14 immediately before the bump and replayed after, so the
+database could not drift between them:
+
+- **Search identical** — 16 queries, totals, 128 per-type counts, 300 top-20
+  rows with `rank` to 10 decimal places, headlines, over 516,858 index rows.
+- **The vendored `tagging` fork identical** across all three compiler paths: the
+  1,001-tag cloud, `usage_for_queryset` unfiltered (the all-matching `WHERE`
+  that raises `FullResultSet`) and filtered at 802, and
+  `usage_for_model(filters=...)` at 802 — the path nothing in the project calls.
+  **Two rungs now with no movement in the fork**, after breaking on two of the
+  three before them.
+- **16 site pages identical**, status and rendered datetimes alike, and the
+  admin still renders exactly one `<h1>` per page with `site-name` a `<div>` and
+  the dashboard on its own row — the 5.0 branding change surviving its first
+  rung.
+- Celery worker ready on the redis transport, both tasks round-tripping the real
+  broker.
+
+**Next: Step 14 task 04**, the Django 5.2 rung — the LTS this whole ladder has
+been climbing toward. Expect the re-parent that did not happen here:
+`RemovedInDjango60Warning` becomes a `DeprecationWarning` and
+`RemovedInDjango61Warning` should arrive as a `PendingDeprecationWarning`, which
+makes the gate's `DeprecationWarning` half load-bearing for Django again. Also
+the rung where debug-toolbar's pin can move.
+
 ## Step 14 task 02 — the Django 5.0 rung — DONE 2026-08-13, PUSHED, CI GREEN
 
 **On Django 5.0.14 / Python 3.12. 884 tests green under a gate proven to fire,
