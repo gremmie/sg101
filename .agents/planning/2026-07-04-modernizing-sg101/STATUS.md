@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Logout was broken by the 5.0 rung — FOUND AND FIXED 2026-08-13, `39aceca`
+## Logout was broken by the 5.0 rung — FIXED 2026-08-13, `39aceca`, PUSHED, CI GREEN
 
 **Brian hit a 405 on `/accounts/logout/`. Logging out had been broken site-wide
 since the 5.0 rung landed, and it was pushed.** Django 5.0 removed logout via
@@ -228,7 +228,8 @@ current Node. So the compiled rule was appended to the minified file by hand, at
 the position a rebuild would put it (immediately after `.friends-logos`), with
 the SCSS remaining the source of truth. **Sorting the Sass toolchain is Step 20
 territory** — it is the same static-assets work as WhiteNoise and
-`collectstatic`.
+`collectstatic`. **Brian confirmed that placement 2026-08-13**, and the toolchain
+is now written up there with what actually blocks a rebuild.
 
 ### What this says about the two free rungs
 
@@ -238,7 +239,7 @@ above stands on its measurements, but "the rung was free" should be read as "the
 rung was free as far as the suite, the gate and a symbol sweep can see", and on
 this project that phrase now has a known failure mode attached to it.
 
-## ORDER BY collation — audited 2026-08-13, scheduled into Step 19
+## ORDER BY collation — audited 2026-08-13 (`4d5104a`, pushed), scheduled into Step 19
 
 **Brian noticed `/profile/members/user/` listing members in a different order
 than production, and asked whether it was collation. It is.** Row sets are
@@ -282,7 +283,7 @@ would have been written up as drift. And a `while read` loop feeding
 consumes the loop's stdin; redirect from `/dev/null`. That one produced a table of
 fourteen "missing dump" rows before it produced anything true.
 
-## Step 14 task 03 — the Django 5.1 rung — DONE 2026-08-13, `43222f5`, NOT YET PUSHED
+## Step 14 task 03 — the Django 5.1 rung — DONE 2026-08-13, PUSHED, CI GREEN
 
 **On Django 5.1.15 / Python 3.12. 884 tests green under a re-proven gate,
 `check`, `check --deploy` and `makemigrations --check` clean, search, tagging
@@ -408,6 +409,10 @@ database could not drift between them:
   rung.
 - Celery worker ready on the redis transport, both tasks round-tripping the real
   broker.
+
+**Pushed 2026-08-13, CI green** — `43222f5` (code), `a4d7f94` (planning), and
+alongside them `4d5104a` (the ORDER BY collation audit), `39aceca` (the logout
+fix) and `649d8ba` (its write-up).
 
 **Next: Step 14 task 04**, the Django 5.2 rung — the LTS this whole ladder has
 been climbing toward. Expect the re-parent that did not happen here:
