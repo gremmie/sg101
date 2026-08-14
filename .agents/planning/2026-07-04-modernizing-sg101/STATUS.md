@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 14 task 02 — the Django 5.0 rung — DONE 2026-08-13, `0713e15`, NOT YET PUSHED
+## Step 14 task 02 — the Django 5.0 rung — DONE 2026-08-13, PUSHED, CI GREEN
 
 **On Django 5.0.14 / Python 3.12. 884 tests green under a gate proven to fire,
 `check`, `check --deploy` and `makemigrations --check` clean, search and the tag
@@ -412,6 +412,9 @@ between rungs would not be caught. Not done here: it widens this rung's scope an
 would make CI red on third-party noise the ignore list has to track. **Worth
 deciding at task 05**, when two of the three third-party ignores retire with
 their dependency bumps and the list gets short enough to live in a workflow file.
+
+**Pushed 2026-08-13, CI green** — `0713e15` (code), `8aacd65` and `6891d01`
+(planning).
 
 **Next: Step 14 task 03**, the Django 5.1 rung — where the re-parenting moves
 `RemovedInDjango60Warning` from `PendingDeprecationWarning` to
