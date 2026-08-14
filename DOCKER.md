@@ -1,6 +1,6 @@
 # Running SG101 locally with Docker
 
-Run the SG101 site (Python 3.12 / Django 5.0 / PostgreSQL 16 / Redis) on
+Run the SG101 site (Python 3.12 / Django 5.1 / PostgreSQL 16 / Redis) on
 your Mac inside Docker, seeded with a real production database snapshot. Docker gives us a
 consistent little Linux environment that matches the target deploy platform —
 handy for a stack this far from a modern Mac's defaults.
@@ -112,7 +112,7 @@ known account from the snapshot.
 docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 No snapshot needed — Django builds a throwaway `test_sg101` database from the
-migrations and drops it again. 853 tests, about 13 seconds.
+migrations and drops it again. 884 tests, about 12 seconds.
 
 **The suite runs on PostgreSQL, the same engine the site runs on.** It used to
 run on sqlite, which was roughly two seconds faster; that is the whole of what

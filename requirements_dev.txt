@@ -1,4 +1,4 @@
-# Dev/test requirements -- Python 3.12 / Django 5.0. Installs the runtime pins
+# Dev/test requirements -- Python 3.12 / Django 5.1. Installs the runtime pins
 # plus the tools needed to run the test suite and dev server. (In Docker these
 # same tools are inlined into requirements-docker.txt.)
 #
@@ -11,9 +11,9 @@ testfixtures==6.18.5
 # debug-toolbar had been running two Django versions past its supported range
 # since 3.2.x (which claims Django 2.2-3.2). 6.3.0 declares a floor of
 # django>=4.2.9 with no upper bound, and classifiers for 4.2 and 5.1 through
-# 6.0; 5.0 is missing from that list but not excluded by the requirement, and
-# the suite and the toolbar's panels are green on 5.0.14. Its SQL panel uses
-# sqlparse, pinned in the runtime block via -r requirements.txt.
+# 6.0, so this Django is inside its supported range. Worth re-examining at the
+# dependency alignment that follows the last rung. Its SQL panel uses sqlparse,
+# pinned in the runtime block via -r requirements.txt.
 django-debug-toolbar==6.3.0
 # coverage was held under 5 for the Python 3.7 line; 7.x needs 3.9+ and runs the
 # same `coverage run --source='.' / report / xml` sequence CI already invokes.
