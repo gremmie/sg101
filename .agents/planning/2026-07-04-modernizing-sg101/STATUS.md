@@ -174,7 +174,51 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 14 task 03 — the Django 5.1 rung — DONE 2026-08-13, NOT YET COMMITTED OR PUSHED
+## ORDER BY collation — audited 2026-08-13, scheduled into Step 19
+
+**Brian noticed `/profile/members/user/` listing members in a different order
+than production, and asked whether it was collation. It is.** Row sets are
+identical everywhere; this changes order, never membership or counts.
+
+**The finding behind the finding: Step 11 task 02's collation audit was scoped to
+lookups.** Its method was an AST scan of keyword arguments to
+`get`/`filter`/`exclude`/`get_or_create` — which is what caught the 12
+case-sensitivity bugs — so `ORDER BY` was never examined. A fresh AST sweep finds
+**22 orderings on text columns, 14 of them `Meta.ordering`**, which is the half a
+call-site grep could never show since it applies to every unordered queryset for
+the model.
+
+**The rule:** MySQL's `utf8_general_ci` gives punctuation a real sort weight by
+code point (`-` at 0x2D before digits, `_` at 0x5F after every letter), while
+PostgreSQL's `en_US.utf8` treats it as **ignorable at the primary level**, so
+`-Bong-` sorts as "Bong" and `_mo_` as "mo". Both engines are case-insensitive,
+so case is not the driver. Demonstrated on six strings against all three
+collations rather than asserted.
+
+**Measured on real data, same column both engines: 8 of 15 differ**, worst
+`weblinks_link.title` at 1/571 positions identical, `auth_user.username` at
+3,288/15,227 (22%). The 7 that match are exactly the columns with no leading
+punctuation — country codes, spam phrases, file extensions. `-Bong-` moves from
+page 1 of the member list to page 68; a download titled `"Yellow Jacket" Backing
+Track` moves from #25 to #716 of 716.
+
+**Recommendation recorded in `plan.md` under Step 19: keep PostgreSQL's ordering.**
+It is cosmetic and deterministic, its answer is arguably better, and **`C` is not
+the parity option it appears to be** — measured, it sorts by byte and is
+case-*sensitive*, which would put every capitalised name ahead of every lowercase
+one. Full table and reasoning in the plan; the glibc collation-version hazard
+this raises for the deploy went into Step 21.
+
+**Two measurement traps, both of which produced a wrong answer first.** `mysql -B`
+escapes control characters where `psql -At` does not, so a news title containing
+a literal tab read as a *data* difference between the engines until the escaping
+was undone — a difference in the measurement, not the data, and the kind that
+would have been written up as drift. And a `while read` loop feeding
+`docker compose exec` silently processes only its first line, because `exec`
+consumes the loop's stdin; redirect from `/dev/null`. That one produced a table of
+fourteen "missing dump" rows before it produced anything true.
+
+## Step 14 task 03 — the Django 5.1 rung — DONE 2026-08-13, `43222f5`, NOT YET PUSHED
 
 **On Django 5.1.15 / Python 3.12. 884 tests green under a re-proven gate,
 `check`, `check --deploy` and `makemigrations --check` clean, search, tagging

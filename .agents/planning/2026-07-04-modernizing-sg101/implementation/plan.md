@@ -1059,6 +1059,86 @@ against settled behavior rather than re-examining it at each rung. **It needs a
 test either way**: `weblinks` has no coverage of the scheme-less case at all,
 which is the only case the conversion changes.
 
+**Also carries the ORDER BY collation change, added 2026-08-13 after Brian
+noticed `/profile/members/user/` listing members in a different order than
+production.** He was right about the cause. It is collation, and the row sets are
+identical everywhere — this changes *order*, never *membership* or *counts*.
+
+**The gap this exposes: Step 11 task 02's collation audit was scoped to
+lookups.** Its stated method was an AST scan of keyword arguments to
+`get`/`filter`/`exclude`/`get_or_create`, which is what found the 12
+case-sensitivity bugs in equality matching. `ORDER BY` was never in scope, so
+nothing here was examined until now.
+
+**The rule, demonstrated on six strings rather than asserted:**
+
+| MySQL `utf8_general_ci` | PostgreSQL `en_US.utf8` | PostgreSQL `C` |
+|---|---|---|
+| `-Bong-` | `0zero` | `-Bong-` |
+| `0zero` | `-Bong-` | `0zero` |
+| `Bonham` | `Bonham` | `Bonham` |
+| `mn` | `mn` | `_mo_` |
+| `mp` | `_mo_` | `mn` |
+| `_mo_` | `mp` | `mp` |
+
+MySQL gives punctuation a real sort weight by code point, so `-` (0x2D) lands
+before digits and `_` (0x5F) lands after every letter. PostgreSQL's `en_US.utf8`
+treats punctuation as **ignorable at the primary level**, so `-Bong-` sorts as
+"Bong" and `_mo_` sorts as "mo". Both are case-insensitive, so case is not the
+driver here.
+
+**A fresh AST sweep found 22 orderings on text columns — and 14 of them are
+`Meta.ordering`,** which is the half no call-site grep would ever show, since it
+applies to every unordered queryset for that model. Each was then measured
+against both engines on the real data, same column, same rows:
+
+| table.column | rows | positions identical | where it shows |
+|---|---:|---:|---|
+| `weblinks_link.title` | 571 | **1 (0%)** | `Meta.ordering` |
+| `downloads_download.title` | 716 | **6 (1%)** | `Meta.ordering`, `dlcatreport`, `dlwgetcat` |
+| `news_story.title` | 1,694 | **35 (2%)** | `Meta.ordering` |
+| `bandmap_bandentry.name` | 1,040 | **92 (9%)** | `Meta.ordering` — the band map |
+| `potd_photo.caption` | 575 | **106 (18%)** | `Meta.ordering`, descending |
+| `auth_user.username` | 15,227 | **3,288 (22%)** | the member list, who's-online, admin user picker |
+| `forums_forum.name` | 16 | **10 (62%)** | `forums/forms.py:226,244` |
+| `tagging_tag.name` | 1,006 | **708 (70%)** | `Meta.ordering` — the tag cloud |
+| `bio_userprofile.country` | 15,227 | 15,227 (100%) | flag-icon tag |
+| `antispam_spamphrase.phrase` | 50 | 50 (100%) | `Meta.ordering` |
+| `smiley_smiley.title` | 85 | 85 (100%) | `Meta.ordering` |
+| `downloads_allowedextension.extension` | 12 | 12 (100%) | `Meta.ordering` |
+| `weblinks_category.title` | 11 | 11 (100%) | `Meta.ordering` |
+| `accounts_illegalusername.username` | 4 | 4 (100%) | `Meta.ordering` |
+| `banners_campaign.name` | 1 | 1 (100%) | `Meta.ordering` |
+
+**8 of 15 differ, and the 7 that do not are exactly the columns whose values
+carry no leading punctuation** — country codes, spam phrases, file extensions.
+The worst are the title columns, because so many titles begin with a quote:
+`'"Yeti" - The Noble Gasses'` moves from #15 to #571 of 571. On the member list,
+`-Bong-` moves from page 1 to page 68 and `_mo_` from the last page to the
+middle.
+
+**Recommendation: keep PostgreSQL's ordering and record the decision.** Three
+reasons. It is cosmetic — same rows, same counts, same page count, and the
+ordering is deterministic since these columns are unique or effectively so.
+Postgres's answer is arguably the better one: a member list filing `-Bong-` under
+B beats one exiling it to the first page. And **`C` is not the parity option it
+looks like** — measured above, it sorts by byte, which is case-*sensitive* and
+would put every capitalised name ahead of every lowercase one, a bigger change
+than the one being fixed. True parity would mean pinning a custom ICU collation
+on each column to reproduce a legacy tiebreak nobody chose deliberately.
+
+What this step should do is **decide and write it down**, and check the two
+places where order is closest to being load-bearing: the paginated member list
+(does anyone navigate it by expecting a name on a given page?) and the tag cloud,
+whose 70% figure means it is nearly stable already.
+
+**Two measurement traps met while doing this, both worth reusing.** `mysql -B`
+escapes control characters in its output while `psql -At` does not, so one news
+title containing a literal tab read as a *data* difference between the engines
+until the escaping was undone — the measurement, not the data. And a `while read`
+loop feeding `docker compose exec` silently processes only its first line,
+because `exec` consumes the loop's stdin; redirect it from `/dev/null`.
+
 **Tests:** App-boot tests without `wiki`; adjust/trim tests for any pruned apps;
 a compile sweep over the whole tree — not just app and migrations — that would
 fail on a Python 2 file surviving in `tools/`; a `weblinks` add-form test
@@ -1122,6 +1202,34 @@ checklist on the new host (behind Cloudflare, pre-cutover, via a test hostname).
 Schedule a **short maintenance window**: final snapshot → restore → **low-TTL DNS
 cutover** in Cloudflare. Keep the **old Ubuntu 14.04 box warm ~1–2 weeks** as an
 instant DNS-flip fallback, then decommission.
+
+**Collation is part of the host decision, added 2026-08-13 alongside the ORDER BY
+finding in Step 19.** This database is collated `en_US.utf8`, which is
+**glibc's** collation, not PostgreSQL's own — so the sort order of every text
+column is a property of the C library on the machine running the server. glibc
+has changed that order between releases (the 2.28 change is the well-known one),
+and when it moves underneath an existing cluster, **every index on a text column
+is silently wrong until reindexed** — queries start missing rows that are
+present. PostgreSQL records a collation version and warns on mismatch, but the
+warning is easy to miss in a log.
+
+This is currently controlled by accident rather than by decision: Postgres runs
+from the pinned `postgres:16` image, so its glibc is pinned with it. Two things
+in this step can break that, and both are live options:
+
+- **Managed Postgres.** The provider chooses and upgrades the OS underneath.
+  Worth asking what their collation-change policy is before committing data to
+  it, and preferring a provider that pins or documents it.
+- **A major-version or base-image upgrade of our own container**, which is the
+  same hazard wearing our own clothes.
+
+Two ways to take it off the table if either applies, to decide here rather than
+discover later: run `REINDEX` on text indexes as a standard step after any
+server or base-image move, or use **ICU collations** instead of glibc ones,
+which are versioned explicitly and travel with the database rather than the host.
+Note the second interacts with the `varchar_pattern_ops` index Step 20 adds for
+the autocomplete, so it is not a free swap — but it is the option that stops the
+question recurring.
 **Carried in from Step 12 task 03 (2026-07-30): pin the celery worker's
 concurrency explicitly.** `docker-compose.yml` runs `celery -A sg101 worker -l
 info` with no `--concurrency`, so the prefork pool silently defaults to the
