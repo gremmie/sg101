@@ -9,6 +9,10 @@ deferred to this step.
 
 Two of those pins turn out to be **dead weight**, measured rather than suspected.
 
+This task also **moves the deprecation gate into CI**, which two earlier tasks
+recommended and deferred to here — the bumps above are what shorten its ignore
+list enough to commit.
+
 ## Background
 **This is deliberately the last task in the step, not the first.** Every earlier
 task holds one variable still; this one changes many at once, so it runs when
@@ -95,6 +99,58 @@ scheduled into Step 21: `tools/pgloader/verify.py` and `verify_data.py` import
 `MySQLdb` to verify a production cutover, and retirement is gated on
 decommissioning the old box, not on the site looking fine.
 
+### The deprecation gate moves into CI here, because this is where its list gets short
+
+**The gate is the suite run under `-W error`, and today it runs only when I run
+it by hand, once per rung.** Step 13 task 05 recommended putting it in CI and
+Step 14 task 02 carried the recommendation forward; both deferred it to this
+task, for a reason that this task is what resolves: **CI runs the suite but not
+the gate, so a deprecation introduced *between* rungs is caught by nobody**, and
+the thing blocking the move was that the ignore list was too long and too
+volatile to live in a workflow file.
+
+The list as it stood at the 5.1 rung, and what this task is expected to do to it:
+
+| ignore | source | expected fate |
+|---|---|---|
+| `FORMS_URLFIELD_ASSUME_HTTPS` | ours, Step 14 task 02 | stays until Django 6.0 |
+| `datetime.utcfromtimestamp()` | `python-dateutil` 2.8.2 | **retires** — fixed in 2.9 |
+| `pkgutil.find_loader` | `django-environ` 0.4.5 | **retires** — fixed upstream |
+| `datetime.utcnow()` | `repoze.timeago` 0.5 | **stays** — upstream dead since 2011, and requirement 6 says do not bump it |
+
+Two of the four are retired by bumps this task is already making, which is what
+makes a two-line list worth committing. **Expected, not established** — the
+retirements are predictions from release notes and must be demonstrated the way
+Step 14 task 02 demonstrated the last four: an unfiltered
+`-W default::DeprecationWarning -W default::PendingDeprecationWarning` run
+inventories what the suite actually emits, and an ignore is retired only when it
+does not appear there.
+
+Three constraints on how it lands, each of them a lesson this project has already
+paid for:
+
+1. **One source, not two.** If the filter list is typed into `ci.yml` and I keep
+   rebuilding the local command by hand, they drift, and the CI copy rots
+   silently because nothing compares them. The list belongs in one committed
+   place that both CI and a developer invoke.
+2. **`PYTHONWARNINGS`, not `-W`.** Same syntax, but `-W` does not reach
+   subprocesses and `PYTHONWARNINGS` does — measured. `core/tests/test_settings.py`
+   runs its assertions through a `_run()` subprocess helper, which under `-W`
+   sits outside the gate entirely.
+3. **Message-based ignores only.** The module field matches the frame the warning
+   is *attributed* to after `stacklevel`, not the module that raised it, so
+   `-W ignore::DeprecationWarning:some_package` silently binds nothing. Step 14
+   task 02 recorded this; it is why every ignore above is spelled by message.
+
+**And the gotcha specific to this repo's CI: the suite runs inside
+`docker compose run --rm web`, so a GitHub `env:` block sets the variable on the
+*runner*, not in the container.** It has to be passed in explicitly. This matters
+more than it looks: an unbound gate is indistinguishable from a passing one —
+exactly the failure mode of Step 13 task 04's dotted `-W` category, which printed
+one line to stderr and certified 813 green tests with the deprecation still in
+the tree. **The gate must be proven to fire *in CI*, not merely locally**, before
+a green CI run is treated as evidence of anything.
+
 ### The comments are part of the work
 
 This project's requirements files carry long explanatory comments, and several
@@ -138,8 +194,20 @@ implementation. Read additional references as needed for context.
 7. Do **not** touch `mysqlclient`, and do not "clean up" the MySQL apt entries in
    the Dockerfile.
 8. Bring every touched pin's comment to the truth in both requirements files.
-9. `check`, `check --deploy` and `makemigrations --check` clean; suite green;
-   worker and beat booted.
+9. **Re-derive the deprecation gate's ignore list after the bumps**, from an
+   unfiltered `-W default` inventory rather than from this task file's table.
+   Retire an ignore only when the warning is absent from that inventory, and
+   demonstrate each *surviving* ignore by removing it and watching the run fail.
+10. **Add the gate to `.github/workflows/ci.yml`**, with the filter list in a
+    single committed source that CI and a developer both invoke — not duplicated
+    into the workflow. Use `PYTHONWARNINGS`, not `-W`, so subprocess helpers are
+    covered, and pass it *into the container*, since the suite runs under
+    `docker compose run`.
+11. **Prove the gate fires in CI**, not only locally: push a deliberate
+    deprecation on a scratch branch and confirm CI goes red, then remove it. An
+    unbound gate is indistinguishable from a passing one.
+12. `check`, `check --deploy` and `makemigrations --check` clean; suite green;
+    worker and beat booted.
 
 ## Dependencies
 - Task 04 (Django 5.2 LTS, green) — this task runs against the settled framework
@@ -160,6 +228,9 @@ implementation. Read additional references as needed for context.
 6. For `django-environ`, boot the stack from `.env` alone — the Step 3
    acceptance test — and run `core/tests/test_settings.py`.
 7. Rewrite the comments last, once the facts are settled.
+8. Take the gate last of all, once the pins have stopped moving — its ignore list
+   is a function of the final dependency set, so deriving it earlier means
+   deriving it twice.
 
 ## Acceptance Criteria
 
@@ -212,7 +283,23 @@ implementation. Read additional references as needed for context.
    - When both requirements files are read
    - Then no comment asserts something the build no longer does
 
-9. **Suite Green and Checks Clean**
+9. **The Ignore List Is Re-Derived, Not Inherited**
+   - Given the bumps this task makes
+   - When the suite is run under an unfiltered
+     `-W default::DeprecationWarning -W default::PendingDeprecationWarning`
+   - Then the surviving ignore list is derived from what that run reports, each
+     retirement is justified by absence from it, and each survivor is
+     demonstrated by removing it and watching the run fail
+
+10. **The Gate Runs in CI, From One Source, and Is Proven to Fire There**
+    - Given the shortened ignore list
+    - When `.github/workflows/ci.yml` runs the suite
+    - Then it runs under the gate via `PYTHONWARNINGS` passed into the container;
+      the filter list lives in a single committed source that a developer invokes
+      the same way; and a deliberately-introduced deprecation has been pushed on a
+      scratch branch and observed turning CI red before being removed
+
+11. **Suite Green and Checks Clean**
    - Given the aligned dependencies on Django 5.2 / Python 3.12
    - When the suite runs with `--settings=sg101.settings.docker_test`
    - Then all tests pass, `check`, `check --deploy` and
@@ -220,6 +307,7 @@ implementation. Read additional references as needed for context.
 
 ## Metadata
 - **Complexity**: Medium
-- **Labels**: Dependencies, psycopg, Pin Hygiene, Step 14
+- **Labels**: Dependencies, psycopg, Pin Hygiene, CI, Deprecation Gate, Step 14
 - **Required Skills**: Python packaging and dependency resolution, Django
-  settings, reading a dependency graph rather than a requirements file
+  settings, reading a dependency graph rather than a requirements file,
+  `warnings` filter syntax and GitHub Actions
