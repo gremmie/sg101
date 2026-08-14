@@ -34,7 +34,14 @@
                <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
                <li><a href="{% url 'messages-inbox' %}">Private Messages
                   {% unread_messages %}</a></li>
-               <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
+               {# A POST, not a link: LogoutView stopped accepting GET in 5.0, #}
+               {# because a bare link lets any other page log a member out.    #}
+               <li>
+                  <form class="logout-form" action="{% url 'accounts-logout' %}" method="post">
+                     {% csrf_token %}
+                     <button class="link-button" type="submit">Logout</button>
+                  </form>
+               </li>
             {% else %}
                {% if request.path != "/accounts/logout/" %}
                   <li><a href="{% url 'accounts-login' %}?next={{ request.path }}">Login</a></li>

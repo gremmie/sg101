@@ -229,3 +229,21 @@ table.sg101-stack {
       margin-bottom: 2rem;
    }
 }
+
+// Logout has to be a POST, since LogoutView stopped accepting GET, but it is
+// still a menu item -- so the button that submits it is dressed as one.
+// Foundation already resets a button's padding, border and background, which
+// leaves the menu item's own geometry and the anchor colour.
+.menu > li > form.logout-form {
+   margin: 0;
+
+   > button.link-button {
+      display: block;
+      padding: 0.7rem 1rem;
+      line-height: 1;
+      font-family: inherit;
+      font-size: inherit;
+      color: $anchor-color;
+      cursor: pointer;
+   }
+}

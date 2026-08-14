@@ -540,3 +540,65 @@ class ForgotEmailTest(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue(mail.outbox[0].subject.startswith('Password reset'))
+
+
+class LogoutTest(TestCase):
+    """
+    Tests for the logout view.
+
+    This view had no coverage at all until it broke. Every other test in the
+    project logs out with `self.client.logout()`, which clears the session
+    directly and never routes through the URL, so the view was never once
+    requested -- which is why a deprecation warning that the test suite would
+    otherwise have turned into an error went unseen for two Django versions,
+    and logging out started returning 405 instead.
+
+    """
+    def setUp(self):
+        User.objects.create_user('user1', 'user1@example.com', 'pw')
+        self.client.login(username='user1', password='pw')
+
+    def logged_in(self):
+        return '_auth_user_id' in self.client.session
+
+    def test_post_logs_the_user_out(self):
+        """The supported method, and the one the navbars submit."""
+        self.assertTrue(self.logged_in())
+
+        response = self.client.post(reverse('accounts-logout'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.logged_in())
+
+    def test_get_does_not_log_the_user_out(self):
+        """Logging out over GET is refused, and leaves the session alone.
+
+        Asserting the session survives matters as much as the status code: a
+        logout reachable by GET can be triggered by any other site embedding
+        the URL, which is why it stopped being allowed.
+
+        """
+        response = self.client.get(reverse('accounts-logout'))
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(self.logged_in())
+
+    def test_the_navbars_submit_logout_as_a_post(self):
+        """The templates have to agree with the view, or the site cannot log out.
+
+        A page is rendered rather than the templates being read, so this fails
+        if either navbar goes back to a plain link. The two URLs are not
+        interchangeable: the forums index renders `navbar.html` through
+        `base.html`, and a profile renders `v3/base.html`, so between them they
+        cover both of the site's navbars. Repointing either at the other design
+        would quietly halve what this covers.
+
+        """
+        for url in [reverse('forums-index'), reverse('bio-me')]:
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                logout_url = reverse('accounts-logout')
+
+                self.assertIn(f'action="{logout_url}" method="post"', html)
+                self.assertNotIn(f'<a href="{logout_url}"', html)
+                self.assertIn('csrfmiddlewaretoken', html)

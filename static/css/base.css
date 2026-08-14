@@ -55,7 +55,25 @@ a:hover {
 }
 #header-nav li a:hover {
  color: black;
-} 
+}
+/* Logout is a form, since it has to be a POST -- these two rules are what keep
+   its button looking like the links on either side of it. */
+#header-nav li form.logout-form {
+ display: inline;
+}
+#header-nav li button.link-button {
+ font-family: inherit;
+ font-size: 1.0em;
+ line-height: 1em;
+ color: teal;
+ background: none;
+ border: none;
+ padding: 0;
+ cursor: pointer;
+}
+#header-nav li button.link-button:hover {
+ color: black;
+}
 #content-primary {
 }
 #content-secondary {

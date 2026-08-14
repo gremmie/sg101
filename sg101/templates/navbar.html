@@ -5,7 +5,16 @@
    <li><a href="{% url 'forums-index' %}">Forums</a></li>
    <li>{% unread_messages %}</li>
    <li><a href="{% url 'search' %}">Search</a></li>
-   <li><a href="{% url 'accounts-logout' %}">Logout</a></li>
+   {# Logging out is a POST, not a link. Django's LogoutView stopped accepting #}
+   {# GET in 5.0, and the reason it did is that a bare link lets any other     #}
+   {# page log a member out by embedding it. The button is styled to match the #}
+   {# links beside it.                                                         #}
+   <li>
+      <form class="logout-form" action="{% url 'accounts-logout' %}" method="post">
+         {% csrf_token %}
+         <button class="link-button" type="submit">Logout</button>
+      </form>
+   </li>
    {% else %}
    <li>
    {% if request.path != "/accounts/logout/" %}
