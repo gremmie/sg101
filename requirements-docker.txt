@@ -4,7 +4,9 @@
 
 # --- Runtime (mirror of requirements.txt) ------------------------------------
 Django==5.2.17
-django-environ==0.4.5  # 12-factor env-var config
+# 12-factor env-var config -- see the note in requirements.txt for why the
+# 0.4.5 pin was a Python-2.7 fossil.
+django-environ==0.14.0
 # django-tagging is vendored into the repo as `tagging/` -- see the note in
 # requirements.txt and in tagging/__init__.py.
 # The IANA timezone database. Required, not incidental -- the base image carries
@@ -58,7 +60,7 @@ redis==6.4.0
 # surface and the thumbnail output are both unchanged from 9.5.0 through 12.3.0
 # -- see requirements.txt for what was diffed and how.
 Pillow==12.3.0
-lxml==4.9.4
+lxml==6.1.1
 # bleach 3.1.5 could not import on Python 3.10 (it read Mapping out of
 # collections), so it moved with the interpreter. 6.4.0 is the final release --
 # upstream archived bleach in 2023 in favor of nh3 -- so this pin is at the end
@@ -68,11 +70,11 @@ bleach==6.4.0
 # against the 3.x extension API (extendMarkdown(md), Registry.register with a
 # numeric priority), so they do not load on 2.x.
 Markdown==3.10.3
-docutils==0.16
-ftfy==5.9
-python-dateutil==2.8.2
+docutils==0.23
+ftfy==6.3.1
+python-dateutil==2.9.0.post0
 repoze.timeago==0.5
-requests==2.27.1
+requests==2.34.2
 
 # django-elsewhere is now vendored into the repo (was an editable git dep); the
 # boto / google-api-python-client / oauth2client / httplib2 / uritemplate / rsa /
@@ -80,7 +82,7 @@ requests==2.27.1
 
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 mock==4.0.3
-testfixtures==6.18.5
+testfixtures==12.3.0
 # The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
 # the 5.2 rung and moved with it -- see the longer note in requirements_dev.txt
 # for the two things about this package that are load-bearing here. Its SQL

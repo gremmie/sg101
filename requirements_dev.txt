@@ -7,7 +7,7 @@
 # modern deploy tooling later.
 -r requirements.txt
 mock==4.0.3
-testfixtures==6.18.5
+testfixtures==12.3.0
 # The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
 # the 5.2 rung and moved with it. The constraint now runs the other way: the
 # toolbar is what would block a Django *downgrade*, since 7.1.1 will not install

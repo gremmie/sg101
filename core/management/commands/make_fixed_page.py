@@ -70,7 +70,10 @@ class Command(LabelCommand):
     def transform_input(self, src_text):
         """Transforms input restructured text to HTML"""
 
-        return docutils.core.publish_parts(src_text, writer_name='html',
+        # `writer=`, not `writer_name=`: the latter is deprecated and goes away
+        # in Docutils 2.0. Both take the same name string and produce
+        # byte-identical output.
+        return docutils.core.publish_parts(src_text, writer='html',
                 settings_overrides={
                     'doctitle_xform': False,
                     'initial_header_level': 2,

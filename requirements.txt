@@ -11,7 +11,12 @@
 # no longer appears here.
 
 Django==5.2.17
-django-environ==0.4.5  # 12-factor env-var config
+# 12-factor env-var config: base.py reads .env through this and every secret
+# comes from it. The 0.4.5 pin it sat on was chosen in Step 3 as "the last line
+# supporting Python 2.7" -- a constraint five interpreters stale by the time it
+# moved. 0.14.0 also drops the pkgutil.find_loader() call that cost the
+# deprecation gate an ignore.
+django-environ==0.14.0
 # django-tagging is no longer installed from PyPI: 0.5.0 is the final release
 # (upstream stopped in 2018) and it does not import on Django 4.0, so it is
 # vendored into the repo as `tagging/` -- same package name and app label, so
@@ -113,7 +118,7 @@ redis==6.4.0
 # Wheels are manylinux and carry their own codecs, so the Dockerfile still needs
 # no libjpeg/zlib headers; features.check('jpg') is what proves that per build.
 Pillow==12.3.0
-lxml==4.9.4
+lxml==6.1.1
 # bleach 3.1.5 could not import on Python 3.10 (it read Mapping out of
 # collections), so it moved with the interpreter. 6.4.0 is the final release --
 # upstream archived bleach in 2023 in favor of nh3 -- so this pin is at the end
@@ -123,8 +128,17 @@ bleach==6.4.0
 # against the 3.x extension API (extendMarkdown(md), Registry.register with a
 # numeric priority), so they do not load on 2.x.
 Markdown==3.10.3
-docutils==0.16
-ftfy==5.9
-python-dateutil==2.8.2
+docutils==0.23
+ftfy==6.3.1
+python-dateutil==2.9.0.post0
+# repoze.timeago is deliberately NOT bumped: 0.5 is the last release and
+# upstream stopped in 2011, so there is nothing to bump to. It is also the
+# source of the one third-party ignore the deprecation gate still carries --
+# it calls datetime.utcnow(), deprecated in Python 3.12.
+#
+# Replacing it is application work rather than a dependency bump, because
+# core/templatetags/core_tags.py monkeypatches its module-level _NOW to keep
+# "x hours ago" honest when the container clock and TIME_ZONE disagree. That
+# patch, and this pin, are recommended into Step 19 together.
 repoze.timeago==0.5
-requests==2.27.1
+requests==2.34.2
