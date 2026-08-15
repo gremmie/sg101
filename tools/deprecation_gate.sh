@@ -63,8 +63,12 @@ FILTERS="$FILTERS,ignore:The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is
 
 # repoze.timeago 0.5 calls datetime.utcnow(), deprecated in Python 3.12. Upstream
 # stopped in 2011 and there is no newer release, so this ignore stays until the
-# library is replaced -- recommended into Step 19, where the _NOW monkeypatch in
-# core/templatetags/core_tags.py is the reason it is app work and not a bump.
+# library is replaced -- recommended into Step 19. It is app work rather than a
+# bump because every alternative renders differently (this library rounds to
+# nearest and stops at days; timeago and django.utils.timesince truncate and
+# escalate to weeks and years), so a swap restyles every "x ago" on the site.
+# Vendoring its 79 lines is the no-display-change option, and would take this
+# list to one entry.
 FILTERS="$FILTERS,ignore:datetime.datetime.utcnow() is deprecated:DeprecationWarning"
 
 printf '%s' "$FILTERS"

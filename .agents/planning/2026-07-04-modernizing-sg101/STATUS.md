@@ -326,11 +326,47 @@ before either character.** Both of ours are.
 
 ### Carried forward
 
-- **`repoze.timeago` → Step 19**, not bumped: 0.5 is the last release, upstream
-  stopped in 2011, and `core/templatetags/core_tags.py` monkeypatches its
-  module-level `_NOW` to keep "x hours ago" honest when the container clock and
-  `TIME_ZONE` disagree. Replacing it is application work, and it owns the one
-  third-party ignore the gate still carries. Recorded in the pin comment itself.
+- **`repoze.timeago` → Step 19**, not bumped: 0.5 is the last release and
+  upstream stopped in 2011, so there is nothing to bump to. It owns the one
+  third-party ignore the gate still carries — its module-level
+  `_NOW = datetime.utcnow`.
+
+  **CORRECTED 2026-08-15, same day, after Brian asked whether we would revisit
+  it.** This entry, the pin comment and plan.md all originally said replacing it
+  was application work *because `core_tags.py` monkeypatches `_NOW`*. **That
+  monkeypatch does not exist — Step 13 task 09 removed it**, and the comment at
+  `core_tags.py:146` describes it in the past tense ("used to repoint that…the
+  values are aware now"). There is no `_NOW` assignment anywhere in the tree. The
+  claim came out of the task file and was written into three places without being
+  checked against the code — **the same failure this project has recorded twice
+  before: a task file's premise inherited rather than measured.**
+
+  **The real obstacle is output compatibility, and it is a stronger reason.**
+  Measured against a fixed clock:
+
+  | delta | repoze (current) | `timeago` 1.0.16 | `django.utils.timesince` |
+  |---|---|---|---|
+  | 30s | **1 minute ago** | 30 seconds ago | 0 minutes ago |
+  | 90s | **2 minutes ago** | 1 minute ago | 1 minute ago |
+  | 59m59s | **1 hour ago** | 59 minutes ago | 59 minutes ago |
+  | 1h30m | **2 hours ago** | 1 hour ago | 1 hour, 30 minutes ago |
+  | 36h | **2 days ago** | 1 day ago | 1 day, 12 hours ago |
+  | 400d | **400 days ago** | 1 year ago | 1 year, 1 month ago |
+
+  repoze **rounds to nearest and never escalates past days**; both alternatives
+  **truncate and escalate** to weeks and years. Those strings render on every
+  forum topic and post listing, so any swap restyles the whole archive — a
+  product decision about how the site reads, which should not ride along inside a
+  dependency change.
+
+  **Vendoring is the recommendation**: the entire library is **79 BSD-licensed
+  lines**, this project calls exactly one function from it (`get_elapsed()`),
+  `tagging` and `elsewhere` are already vendored so the pattern exists, and the
+  deprecation then becomes a one-line fix that takes the gate's third-party
+  ignores to zero. `timeago` on PyPI was considered and is not obviously better —
+  last released 2022-08-18, and it changes every rendered string, so it trades a
+  dead 79-line dependency for a semi-active one that also needs a compatibility
+  wrapper. **Not decided here; Step 19 decides.**
 - **`mysqlclient` untouched**, per its Step 21 gate.
 - **`html5lib` still listed in `sg101/templates/fixed/colophon.html`**, beside
   `python-memcached` and Haystack — all three long gone. That page is Step 20's;

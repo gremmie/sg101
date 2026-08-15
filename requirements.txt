@@ -134,11 +134,18 @@ python-dateutil==2.9.0.post0
 # repoze.timeago is deliberately NOT bumped: 0.5 is the last release and
 # upstream stopped in 2011, so there is nothing to bump to. It is also the
 # source of the one third-party ignore the deprecation gate still carries --
-# it calls datetime.utcnow(), deprecated in Python 3.12.
+# its module-level `_NOW = datetime.utcnow`, deprecated in Python 3.12.
 #
-# Replacing it is application work rather than a dependency bump, because
-# core/templatetags/core_tags.py monkeypatches its module-level _NOW to keep
-# "x hours ago" honest when the container clock and TIME_ZONE disagree. That
-# patch, and this pin, are recommended into Step 19 together.
+# What makes replacing it a decision rather than a swap is that it rounds to
+# NEAREST and stops at days, and the obvious alternatives truncate and escalate:
+# 90 seconds is "2 minutes ago" here and "1 minute ago" in both `timeago` and
+# django.utils.timesince, and a 2015 post reads "3800 days ago" here and "1 year
+# ago" there. Those strings render on every forum topic and post listing, so any
+# swap restyles the whole archive.
+#
+# The whole library is 79 BSD-licensed lines and this project calls exactly one
+# function from it, get_elapsed(), so vendoring it -- as `tagging` and
+# `elsewhere` already are -- is the option with no display change, and the
+# deprecation is then a one-line fix. Recommended into Step 19; not decided here.
 repoze.timeago==0.5
 requests==2.34.2
