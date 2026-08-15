@@ -174,6 +174,170 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 14 task 05 — final dependency alignment + the gate moves into CI — DONE 2026-08-15
+
+**887 green under the gate, `check` / `check --deploy` / `makemigrations --check`
+clean, smoke 35/35 reads and writes, worker and beat clean. Two pins removed,
+seven bumped, one backport eliminated, and the deprecation gate now runs in CI
+from a single committed source.** Still Django 5.2.17 / Python 3.12.14.
+
+### The psycopg 3 decision, re-taken rather than inherited
+
+**Still psycopg2, and the structural reason was re-verified rather than cited.**
+All three `tools/pgloader/` scripts — `verify.py`, `verify_data.py` and
+`compare_schema.py` — still `import psycopg2` directly, so psycopg2 stays in the
+image whatever the ORM uses; adopting psycopg 3 today means running **two**
+PostgreSQL drivers, not a newer one. The plan names the event that changes that
+arithmetic — the Step 21 cutover retiring those tools — **and it has not
+happened**, this being Step 14. Re-decided 2026-08-15, unchanged.
+
+### Two orphan pins, and html5lib's story is older than the task file had it
+
+`html5lib` and `simplejson` are gone. **Verified by removing them and
+rebuilding**, not by grep — an orphaned pin installs perfectly well, which is
+precisely why they went unnoticed.
+
+**The task file said bleach dropped html5lib at 6.4.0 in Step 13 task 01. It is
+older than that, and Brian remembered the connection independently.** Measured
+across the versions this project actually ran:
+
+| bleach | hard deps | vendors html5lib |
+|---|---|---|
+| 3.1.5 (pre-Step 13) | packaging, six, webencodings | **yes** |
+| 5.0.1 | six, webencodings | yes |
+| 6.4.0 (now) | webencodings | no |
+
+**bleach had already vendored html5lib into `bleach._vendor.html5lib` by 3.1.5**
+— which is exactly what the 2.2 rung was looking at when it attributed a
+`collections`-ABC deprecation to "bleach's vendored html5lib". So the dependency
+was real further back still, and this pin has been a fossil of the pre-vendoring
+era for longer than the task file supposed. **The one thing that would bring it
+back is `lxml[html5]`**, the extra that declares it; this project installs plain
+`lxml`.
+
+`six` is down to a single requirer, `python-dateutil`, which **celery** requires
+— so six does not leave the image by dropping a pin, and the comment now says
+which requirer is left rather than naming one that is gone.
+
+### Seven pins bumped, one at a time, suite between each
+
+`django-environ` 0.4.5→0.14.0, `python-dateutil` 2.8.2→2.9.0.post0, `lxml`
+4.9.4→6.1.1, `requests` 2.27.1→2.34.2, `ftfy` 5.9→6.3.1, `docutils` 0.16→0.23,
+`testfixtures` 6.18.5→12.3.0. **None of them broke anything.**
+
+**`django-environ` got its two documented contracts re-checked rather than
+assumed**, since every secret this project has comes through it and its 0.4.5
+pin was chosen as "the last Py2.7 line" five interpreters ago. The stack still
+boots **from `.env` alone** with the variables absent from the environment
+(SECRET_KEY resolves at 50 chars, DB credentials resolve), and an environment
+variable still **wins over** the file rather than being overwritten by it.
+
+**`lxml` got a back-comparison rather than a green suite**, because its two
+management-command consumers are uncovered and both slice the serializer output
+by character index — `tostring(root)[5:-6]`, stripping the `<div>` that
+`create_parent=True` added. A serialization change would not raise; it would
+return HTML missing its first or last characters, the same shape as the Markdown
+`IMAGE_LINK_RE` break at Step 13 task 08. **210 real fragments plus 10 synthetic
+edge cases replayed on 4.9.4 and 6.1.1: identical on every field**, including
+`process_html`, `html_check`, `image_check` and `clean_html`.
+
+**One honest qualification, and it is the interesting part: the corpus did not
+exercise the risky line.** All 210 real fragments passed through *unchanged* —
+they were converted to https years ago, so `changed` stays False and the
+`tostring()` branch never runs. The slice is covered by three of the synthetic
+cases, best of all `<div><div><img …></div></div>`, whose own content begins and
+ends with the tags the slice removes; an off-by-N would surface as `div><div>…`
+and it came back correctly balanced on both versions. **A probe over real data
+can still miss the thing it was written for.**
+
+**`requests` brings urllib3 2.7.0**; the donations IPN path it was adopted for
+in Step 7 is green (30 tests) and a live HTTPS fetch works from the image.
+
+**`ftfy` was not back-compared** and that is worth saying plainly: it is used by
+two admin repair actions, `fix_text` still behaves (`cafÃ©` → `café`), but
+whether 6.3.1 repairs a given mojibake string identically to 5.9 was not
+measured. It is a human-triggered, human-reviewed admin action, so the risk is
+visible rather than silent.
+
+### The gate caught a deprecation introduced *by this task*
+
+`docutils` 0.23 deprecates `writer_name=` in favour of `writer=`, and
+`make_fixed_page.py:73` passed the old one. **It appeared in the unfiltered
+inventory the moment the bump landed** — which is the whole argument for the
+gate in one line, since nothing else in the run changed. Same name string,
+output verified byte-identical, fixed with a comment saying why.
+
+### `mock` removed rather than bumped — Brian's call
+
+The PyPI `mock` package backports `unittest.mock` to interpreters that lack it;
+on 3.12 it backports nothing. 26 files moved to `from unittest.mock import …`
+and 4 to `from unittest import mock` (preserving their `mock.patch` call sites).
+Only five names are used tree-wide — `ANY`, `call`, `Mock`, `mock_open`,
+`patch` — all standard library since 3.3.
+
+**The suite is the proof rather than a supporting check**: with the package
+uninstalled, a missed import cannot pass, it fails at collection. 887 green with
+`mock` absent from the image. Import *placement* was deliberately left alone —
+several files had `mock` in their third-party paragraph and `unittest.mock`
+belongs with the stdlib, but that is the isort/black pass deferred since Step 7,
+and doing it here would bury a one-line-per-file change in reformatting.
+
+### The deprecation gate now runs in CI, from one source
+
+**The ignore list is down to two, and both retirements were earned rather than
+predicted.** The task file expected `django-environ` and `python-dateutil` to
+retire theirs; each was confirmed **absent from an unfiltered `-W default`
+inventory of what the suite actually emits**, not from a changelog:
+
+| ignore | source | outcome |
+|---|---|---|
+| `FORMS_URLFIELD_ASSUME_HTTPS` | ours | **stays** until Django 6.0 |
+| `datetime.utcnow()` | `repoze.timeago` 0.5 | **stays** — upstream dead since 2011 |
+| `datetime.utcfromtimestamp()` | `python-dateutil` 2.8.2 | **retired** by 2.9 |
+| `pkgutil.find_loader` | `django-environ` 0.4.5 | **retired** by 0.14 |
+
+`tools/deprecation_gate.sh` holds the filter string; CI and a developer invoke
+the same file, so the two cannot drift. Three wiring facts, each measured:
+
+1. **`PYTHONWARNINGS`, not `-W`** — demonstrated in both directions: a child
+   process emitting a `DeprecationWarning` **exits 0 under `-W`** and **exits 1
+   under `PYTHONWARNINGS`**. `core/tests/test_settings.py` runs assertions
+   through a subprocess helper that `-W` would leave outside the gate.
+2. **Passed in with `-e`**, since the suite runs under `docker compose run` and
+   a workflow-level `env:` block sets variables on the runner.
+3. **Ignores by message, never module** — the module field matches the frame a
+   warning is *attributed* to after stacklevel.
+
+Both surviving ignores re-proven by deletion: without the first the run **aborts
+at settings load**; without the second it fails with **4 errors**, the same
+figure task 02 recorded.
+
+**A regex scare that turned out to be my own error, worth recording because the
+correction is the useful fact.** The ignore `datetime.datetime.utcnow() is
+deprecated` looked broken — `()` is an empty group, so as a raw regex the pattern
+cannot match text containing literal parens, and testing it as a raw regex says
+`False`. **But `-W`/`PYTHONWARNINGS` do not take a raw regex**:
+`warnings._setoption()` calls `re.escape()` on the message field, so it is a
+literal prefix and metacharacters are safe. (The same function does
+`re.escape(module) + r'\Z'`, which is the mechanism behind the long-standing
+"ignore by message, not module" rule.) **The real constraint is different and
+does bind: fields split on `:` and filters on `,`, so a message must be truncated
+before either character.** Both of ours are.
+
+### Carried forward
+
+- **`repoze.timeago` → Step 19**, not bumped: 0.5 is the last release, upstream
+  stopped in 2011, and `core/templatetags/core_tags.py` monkeypatches its
+  module-level `_NOW` to keep "x hours ago" honest when the container clock and
+  `TIME_ZONE` disagree. Replacing it is application work, and it owns the one
+  third-party ignore the gate still carries. Recorded in the pin comment itself.
+- **`mysqlclient` untouched**, per its Step 21 gate.
+- **`html5lib` still listed in `sg101/templates/fixed/colophon.html`**, beside
+  `python-memcached` and Haystack — all three long gone. That page is Step 20's;
+  the list of things it misstates keeps growing.
+
+**Next: Step 14 task 06** — the host venv, which closes the step.
+
 ## Step 14 task 04 — the Django 5.2 LTS rung ⭐ TARGET STACK REACHED — DONE 2026-08-15
 
 **SG101 runs on Django 5.2.17 LTS / Python 3.12.14 / PostgreSQL 16. 887 tests
