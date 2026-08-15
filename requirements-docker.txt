@@ -11,8 +11,8 @@ django-environ==0.4.5  # 12-factor env-var config
 # no "backward" zone names and most profiles are stored under one. See the note
 # in requirements.txt.
 tzdata==2026.3
-# six is a transitive dependency only, now down to two requirers (html5lib and
-# python-dateutil) -- see the note in requirements.txt.
+# six is a transitive dependency only, now down to a single requirer
+# (python-dateutil, which celery requires) -- see the note in requirements.txt.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (and also powers
 # debug-toolbar's SQL panel below). Django has required >= 0.3.1 since 4.2.
@@ -64,14 +64,12 @@ lxml==4.9.4
 # upstream archived bleach in 2023 in favor of nh3 -- so this pin is at the end
 # of the line rather than behind it.
 bleach==6.4.0
-html5lib==1.1
 # The site's markup engine. The two extensions in core/mdexts/ are written
 # against the 3.x extension API (extendMarkdown(md), Registry.register with a
 # numeric priority), so they do not load on 2.x.
 Markdown==3.10.3
 docutils==0.16
 ftfy==5.9
-simplejson==3.17.6
 python-dateutil==2.8.2
 repoze.timeago==0.5
 requests==2.27.1

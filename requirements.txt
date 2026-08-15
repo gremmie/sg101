@@ -30,10 +30,12 @@ tzdata==2026.3
 # library directly (urllib.parse/request/error, io.StringIO). It is still pulled
 # in transitively, so the pin stays for a reproducible build: unpinning would not
 # remove the package, only let it float, as a rebuild once demonstrated by
-# drifting to 1.17.0. Two requirers are left, down from four -- html5lib 1.1 and
-# python-dateutil 2.8.2. bleach dropped six when it moved to 6.4.0 for Python
-# 3.10, and python-memcached left with the memcached cache. Drop this when the
-# other two are gone or bumped.
+# drifting to 1.17.0.
+#
+# One requirer is left, down from four: python-dateutil, which celery requires --
+# so six does not leave the image by dropping a pin here, and will not until
+# dateutil stops needing it. bleach dropped six at 6.4.0, python-memcached left
+# with the memcached cache, and html5lib was dropped as an orphan.
 six==1.16.0
 # sqlparse is a hard runtime dependency of Django as of 2.2 (used internally to
 # split/format SQL). It installs automatically with Django; pinned here so the
@@ -117,14 +119,12 @@ lxml==4.9.4
 # upstream archived bleach in 2023 in favor of nh3 -- so this pin is at the end
 # of the line rather than behind it.
 bleach==6.4.0
-html5lib==1.1
 # The site's markup engine. The two extensions in core/mdexts/ are written
 # against the 3.x extension API (extendMarkdown(md), Registry.register with a
 # numeric priority), so they do not load on 2.x.
 Markdown==3.10.3
 docutils==0.16
 ftfy==5.9
-simplejson==3.17.6
 python-dateutil==2.8.2
 repoze.timeago==0.5
 requests==2.27.1
