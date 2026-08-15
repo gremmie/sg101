@@ -129,8 +129,21 @@ def csrf(session, url):
 
 
 def post(session, url, data, referer=None):
+    """POST a form and return the response without following any redirect.
+
+    allow_redirects=False is load-bearing: requests follows redirects on POST
+    by default, so a successful login would return the 200 it landed on rather
+    than the 302 that got it there, and every "expect a 302" check here would
+    fail on a working site. That went unnoticed for as long as the debug
+    toolbar's RedirectsPanel was enabled, because it turned redirects into 200
+    interstitials that requests could not follow -- so these assertions were
+    being carried by a dev-only panel, and started failing the moment it was
+    switched off. status_of() still reads the interstitial, for anyone running
+    with that panel back on.
+    """
     data = dict(data, csrfmiddlewaretoken=csrf(session, referer or url))
-    return session.post(url, data=data, headers={'Referer': referer or url})
+    return session.post(url, data=data, headers={'Referer': referer or url},
+                        allow_redirects=False)
 
 
 def check_reads(session, results):
