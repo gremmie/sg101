@@ -3,7 +3,7 @@ from io import StringIO
 import unittest
 
 from django.core.management import call_command
-from mock import patch
+from unittest.mock import patch
 
 
 class MaxUsersTestCase(unittest.TestCase):

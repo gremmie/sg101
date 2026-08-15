@@ -12,7 +12,7 @@ from django.http import QueryDict
 from django.template import Context, Template
 from django.test import TestCase
 from django.utils import timezone
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 from news.forms import AddNewsForm
 

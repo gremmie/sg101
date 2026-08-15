@@ -3,7 +3,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from mock import patch
+from unittest.mock import patch
 
 from forums.models import Forum
 from forums.models import Post

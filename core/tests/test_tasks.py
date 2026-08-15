@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
-from mock import call, patch
+from unittest.mock import call, patch
 
 import forums.unread
 from forums.models import Category, Forum, ForumLastVisit

@@ -1,7 +1,7 @@
 import datetime
 import unittest
 
-from mock import patch, call, mock_open, Mock
+from unittest.mock import patch, call, mock_open, Mock
 from core.images.upload import process_upload
 
 class ProcessUploadTestCase(unittest.TestCase):

@@ -3,7 +3,7 @@ Tests for the wiki application tasks.
 
 """
 from django.test import TestCase
-from mock import call, patch, ANY, Mock
+from unittest.mock import call, patch, ANY, Mock
 
 from wiki.tasks import expire_cookies
 

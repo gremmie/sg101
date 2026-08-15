@@ -2,7 +2,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from mock import Mock
+from unittest.mock import Mock
 
 from potd.models import Photo, Sequence, Current
 

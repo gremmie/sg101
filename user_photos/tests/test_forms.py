@@ -3,7 +3,7 @@ Tests for the forms in the user_photos application.
 """
 from contextlib import contextmanager
 
-import mock
+from unittest import mock
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User

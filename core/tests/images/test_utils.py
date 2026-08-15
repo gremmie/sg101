@@ -3,7 +3,7 @@ import unittest
 
 from PIL import Image
 
-from mock import patch, call, Mock
+from unittest.mock import patch, call, Mock
 from core.images import utils
 
 

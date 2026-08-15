@@ -7,7 +7,7 @@ import datetime
 from zoneinfo import ZoneInfo
 
 import requests
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase

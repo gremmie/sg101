@@ -4,7 +4,7 @@ Tests for accounts' stats module.
 """
 from django.contrib.auth.models import User
 from django.test import TestCase
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 import accounts.stats
 

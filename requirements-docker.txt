@@ -81,7 +81,6 @@ requests==2.34.2
 # pyasn1 lines are gone with the stubbed s3 and gcalendar integrations.
 
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
-mock==4.0.3
 testfixtures==12.3.0
 # The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
 # the 5.2 rung and moved with it -- see the longer note in requirements_dev.txt

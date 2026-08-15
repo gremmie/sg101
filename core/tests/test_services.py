@@ -1,6 +1,6 @@
 import unittest
 
-from mock import call, patch
+from unittest.mock import call, patch
 
 from core.services import get_redis_connection
 

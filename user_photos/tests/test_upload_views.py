@@ -8,7 +8,7 @@ the tests exercise the view logic without touching Pillow or Amazon.
 """
 import json
 
-import mock
+from unittest import mock
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.test import TestCase

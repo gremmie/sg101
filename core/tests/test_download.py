@@ -1,7 +1,7 @@
 import unittest
 from urllib.parse import urlparse, ParseResult
 
-from mock import call, patch, mock_open, Mock
+from unittest.mock import call, patch, mock_open, Mock
 
 from core.download import download_file
 

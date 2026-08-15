@@ -2,7 +2,7 @@ import unittest
 
 from django.http.request import HttpRequest
 from django.utils import timezone
-from mock import call, patch, mock_open, Mock
+from unittest.mock import call, patch, mock_open, Mock
 
 from core.functions import (TemporaryFile, remove_file, send_mail, email_admins,
     email_managers, get_full_name, copyright_str, get_ip, get_page, is_ajax,

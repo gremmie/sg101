@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from urllib.parse import urlparse
 
-import mock
+from unittest import mock
 from django.conf import settings
 from PIL import Image
 

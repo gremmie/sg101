@@ -3,7 +3,7 @@ Tests for the forums tasks.
 
 """
 from django.test import TestCase
-from mock import call, patch
+from unittest.mock import call, patch
 
 from forums.tasks import new_post_task
 from forums.tasks import updated_post_task

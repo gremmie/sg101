@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
-from mock import ANY, call, patch
+from unittest.mock import ANY, call, patch
 
 from comments.models import Comment, CommentFlag
 from potd.models import Current, Photo

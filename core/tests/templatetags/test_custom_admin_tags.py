@@ -7,7 +7,7 @@ import re
 from django.contrib.auth.models import User
 from django.template import Context, Template
 from django.test import TestCase
-from mock import patch
+from unittest.mock import patch
 
 
 class AdminDashboardTestCase(TestCase):

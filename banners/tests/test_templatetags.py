@@ -4,7 +4,7 @@ Tests for the banners application's template tags.
 """
 from django.test import TestCase
 
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 from banners.templatetags.banner_tags import banner_url
 

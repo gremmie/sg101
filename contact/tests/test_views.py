@@ -2,7 +2,7 @@
 Unit tests for the contact application views.
 
 """
-from mock import patch, Mock
+from unittest.mock import patch, Mock
 from django.test import TestCase
 from django.conf import settings
 from django.urls import reverse

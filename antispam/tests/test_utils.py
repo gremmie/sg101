@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.utils import timezone
 
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 from antispam import SPAM_PHRASE_KEY
 from antispam.models import SpamPhrase

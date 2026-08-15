@@ -3,7 +3,7 @@ Tests for the account application tasks.
 
 """
 from django.test import TestCase
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 import accounts.stats
 from accounts.tasks import user_stats_task

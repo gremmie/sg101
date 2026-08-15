@@ -7,7 +7,7 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 from accounts.models import PendingUser
 from accounts.utils import create_new_user

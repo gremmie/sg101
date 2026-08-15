@@ -1,6 +1,6 @@
 import unittest
 
-from mock import call, patch, Mock
+from unittest.mock import call, patch, Mock
 
 from core.s3 import S3Bucket
 

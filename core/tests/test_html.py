@@ -1,7 +1,7 @@
 """Tests for the core.html module."""
 import unittest
 
-from mock import call, patch
+from unittest.mock import call, patch
 
 from core.html import clean_html, _CLEAN_PROFILES
 from core.html import ImageCheckError

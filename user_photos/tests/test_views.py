@@ -4,7 +4,7 @@ Tests for the views in the user_photos application.
 """
 import json
 
-import mock
+from unittest import mock
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.contrib.auth.models import User
