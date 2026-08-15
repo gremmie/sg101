@@ -34,21 +34,38 @@ if DEBUG and importlib.util.find_spec('debug_toolbar') is not None:
     # middleware into a process that never registered the app leaves the app
     # registry and INSTALLED_APPS disagreeing.
     #
-    # The position is load-bearing, despite the toolbar's docs asking to be as
-    # early as possible. Middleware at index 0 wraps index 1, so moving this
-    # above CommonMiddleware routes ITS responses through the toolbar -- and
-    # DISABLE_PANELS is empty below, so RedirectsPanel is live and every
-    # APPEND_SLASH redirect turns into a "you are being redirected"
-    # interstitial: measured both ways, `/forums` answers 301 from here and 200
-    # from index 0. Simplifying this to a prepend silently breaks dev redirects.
-    MIDDLEWARE = list(MIDDLEWARE)
-    i = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
-    MIDDLEWARE.insert(i + 1,
-            'debug_toolbar.middleware.DebugToolbarMiddleware')
+    # First, which is what the toolbar's docs ask for: "as early as possible in
+    # the list", the one exception being that it must come after any middleware
+    # that encodes the response body, such as GZipMiddleware. That exception is
+    # also the only ordering rule the package enforces (its check_middleware()
+    # warns about GZip and about nothing else), and this project runs no
+    # content-encoding middleware -- so adding one later is the thing that would
+    # change this answer.
+    #
+    # It sat after CommonMiddleware for years instead, because middleware at
+    # index 0 wraps index 1: from here the toolbar sees CommonMiddleware's
+    # responses, and with RedirectsPanel on that turned every APPEND_SLASH
+    # redirect into a "you are being redirected" interstitial. Disabling that
+    # panel (below) is what freed the position -- measured both ways, and with
+    # the panel re-enabled at index 0 to confirm the panel was the cause.
+    #
+    # The move is also what makes redirect monitoring honest. From index 1 the
+    # toolbar is inside CommonMiddleware, so an APPEND_SLASH request records as
+    # the inner 404 it really is and the 301 never reaches the panel; from here
+    # HistoryPanel records the 301. Application redirects record as 302 either
+    # way.
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + list(MIDDLEWARE)
     INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
+    # The toolbar disables RedirectsPanel and ProfilingPanel by default; an
+    # empty DISABLE_PANELS therefore did not mean "leave the defaults alone", it
+    # meant "turn both on". ProfilingPanel is wanted, so it stays enabled by
+    # omission -- but RedirectsPanel is deprecated upstream and slated for
+    # removal, and it interrupts every dev redirect with an interstitial to do a
+    # job HistoryPanel now does without one: history keeps the toolbar data for
+    # the redirecting request, so it can be inspected after the redirect has
+    # been followed.
     DEBUG_TOOLBAR_CONFIG = {
-        'DISABLE_PANELS': set(),
-        'JQUERY_URL': '',
+        'DISABLE_PANELS': {'debug_toolbar.panels.redirects.RedirectsPanel'},
     }
 
 # Logging configuration
