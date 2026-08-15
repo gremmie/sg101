@@ -48,9 +48,24 @@ jobs:
       #
       # --noinput because a leftover test database makes Django prompt before
       # dropping it, and a prompt with no terminal is an EOFError, not a wait.
-      - name: Run test suite with coverage
+      # The suite runs under the deprecation gate: warnings promoted to errors,
+      # so a deprecation introduced between Django upgrades fails here rather
+      # than waiting for someone to run the gate by hand at the next rung. That
+      # gap is what this closes -- CI has always run the suite and never the
+      # gate.
+      #
+      # The filter list comes from tools/deprecation_gate.sh so CI and a
+      # developer use one source; see that file for why it is PYTHONWARNINGS
+      # rather than -W, and why the ignores are spelled by message.
+      #
+      # -e passes it INTO the container. A workflow-level `env:` block would set
+      # it on the runner, where the suite does not run, and an unbound gate looks
+      # exactly like a passing one.
+      - name: Run test suite with coverage, under the deprecation gate
         run: >
-          docker compose run --rm web
+          docker compose run --rm
+          -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)"
+          web
           sh -c "coverage run --source='.' manage.py test --noinput --settings=sg101.settings.docker_test
           && coverage report
           && coverage xml"
