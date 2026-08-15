@@ -8,13 +8,18 @@
 -r requirements.txt
 mock==4.0.3
 testfixtures==6.18.5
-# debug-toolbar had been running two Django versions past its supported range
-# since 3.2.x (which claims Django 2.2-3.2). 6.3.0 declares a floor of
-# django>=4.2.9 with no upper bound, and classifiers for 4.2 and 5.1 through
-# 6.0, so this Django is inside its supported range. Worth re-examining at the
-# dependency alignment that follows the last rung. Its SQL panel uses sqlparse,
-# pinned in the runtime block via -r requirements.txt.
-django-debug-toolbar==6.3.0
+# The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
+# the 5.2 rung and moved with it. The constraint now runs the other way: the
+# toolbar is what would block a Django *downgrade*, since 7.1.1 will not install
+# against 5.1. Classifiers cover 5.2, 6.0 and 6.1, so it is ahead of this
+# project rather than behind it for the first time in the upgrade.
+#
+# Two things about it are load-bearing and easy to lose in a bump, both found
+# the hard way and both covered by tests: its middleware sits *after*
+# CommonMiddleware deliberately (see the note in local.py), and local.py copies
+# base.py's settings objects rather than mutating them. Its SQL panel uses
+# sqlparse, pinned in the runtime block via -r requirements.txt.
+django-debug-toolbar==7.1.1
 # coverage was held under 5 for the Python 3.7 line; 7.x needs 3.9+ and runs the
 # same `coverage run --source='.' / report / xml` sequence CI already invokes.
 coverage==7.15.4

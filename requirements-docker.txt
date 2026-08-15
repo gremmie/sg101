@@ -83,12 +83,10 @@ requests==2.27.1
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 mock==4.0.3
 testfixtures==6.18.5
-# debug-toolbar had been running past its supported Django range since 3.2.x.
-# 6.3.0 declares a floor of django>=4.2.9 with no upper bound and classifiers
-# for 4.2 and 5.1 through 6.0, so this Django sits squarely inside its supported
-# range for the first time in a while. Worth re-examining at the dependency
-# alignment that follows the last rung, not before. Its SQL panel uses sqlparse,
-# pinned in the runtime block.
-django-debug-toolbar==6.3.0
+# The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
+# the 5.2 rung and moved with it -- see the longer note in requirements_dev.txt
+# for the two things about this package that are load-bearing here. Its SQL
+# panel uses sqlparse, pinned in the runtime block.
+django-debug-toolbar==7.1.1
 # Coverage for the CI report (and local use). The <5 cap was for Python 3.7.
 coverage==7.15.4
