@@ -471,6 +471,44 @@ status, sha256 and rendered datetimes.**
   resolve: `STORAGES` and `CACHES` both instantiate (`FileSystemStorage`,
   `ManifestStaticFilesStorage`, `RedisCache`).
 
+### Running the repo's own smoke script found a real bug the toolbar had been hiding
+
+**`tools/pgloader/smoke.py` — the cutover verification tool — was broken by
+disabling RedirectsPanel, and had been passing for the wrong reason.** Its
+`post()` helper did not pass `allow_redirects=False`, and **requests follows
+redirects on POST by default**, so every "expect a 302" check read the 200 it
+landed on instead of the 302 that got it there. Logging in reported
+`200 -> None`, the run aborted before any write check, and the site was working
+perfectly the whole time.
+
+**It passed for as long as it did because the toolbar's RedirectsPanel turned
+redirects into 200 interstitials, which requests cannot follow** — so
+`status_of()` dug the real status out of the interstitial body and the checks
+came out right. Those assertions were being carried by a dev-only panel.
+Confirmed directly: `requests` reports `history: [302]` on the POST, which is
+the redirect it silently followed. Fixed with `allow_redirects=False`, which
+works with the panel on or off (`733ca68`).
+
+**This matters beyond this rung: `smoke.py` is what verifies the Step 21
+production cutover**, so the failure would otherwise have surfaced during the
+maintenance window. **35 checks now pass on the target stack, reads and
+writes** — including the write paths the unit suite cannot reach (topic + post
+creation, private message, photo upload), with clean teardown.
+
+**And the process point, which is the third instance of one pattern:** this rung
+wrote a fresh scratch smoke script instead of running the repo's. The same
+substitution caused the Step 13 forum deletion (a new script walked around
+`smoke.py`'s `delete_topic()` guard) and this rung's probe-subject drift. The
+scratch script also had the defect the repo's script does not: it picked the
+password-reset subject with `filter(email__contains='@').first()`, landing on a
+real account, where `smoke.py` has used a purpose-made `SMOKE_USER` all along —
+and says why in its own comments. **Reach for the repo's guarded script first.**
+
+**Unrelated dev-database drift noted, not touched:** forum post count reads
+463,222 against the 463,221 recorded since Step 2. The extra is topic 41399,
+"Test Topic" by `Brian`, dated 2026-07-26 — a dev artifact predating this rung.
+Left alone.
+
 **Next: Step 14 task 05** — dependency alignment. It carries the two gate
 ignores that retire with bumps (`python-dateutil` 2.9 for `utcfromtimestamp`, a
 current `django-environ` for `pkgutil.find_loader`), the two dead pins task 01
