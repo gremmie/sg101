@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-15
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,309 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 14 task 04 — the Django 5.2 LTS rung ⭐ TARGET STACK REACHED — DONE 2026-08-15
+
+**SG101 runs on Django 5.2.17 LTS / Python 3.12.14 / PostgreSQL 16. 887 tests
+green under a gate proven to fire on this rung, `check`, `check --deploy` and
+`makemigrations --check` clean, all 17 site pages hash-identical to captures
+taken on 5.1.15 against the same database, search and the vendored `tagging`
+fork identical, and the full smoke checklist green.**
+
+The ladder that started at Django 1.9.13 on Python 2.7 is finished:
+**1.9 → 1.11 → 2.2 → 3.2 → 4.2 → 5.2**, on PostgreSQL, on Python 3.12.
+
+**A third free rung on the application side.** No breakers, no application code
+changed. `django-debug-toolbar 6.3.0 → 7.1.1` is the rung's only dependency
+move, and it is a dev dependency. The Django half and the toolbar half were
+built and tested separately, one variable each.
+
+**The suite baseline entering this task was 887, not the 884 the last three
+write-ups record.** `39aceca`, the logout fix that landed after task 03 closed,
+added three tests. Nothing in this rung changed the count.
+
+### The predicted gate trap landed, on schedule, for the fourth time
+
+Task 03 corrected the schedule and said the re-parent would land here. Read out
+of `django/utils/deprecation.py` on 5.2.17 rather than inferred:
+
+| class | base at 5.1.15 | base at 5.2.17 |
+|---|---|---|
+| `RemovedInDjango60Warning` | `PendingDeprecationWarning` | **`DeprecationWarning`** |
+| `RemovedInDjango61Warning` | *did not exist* | **`PendingDeprecationWarning`** |
+
+**So the inherited gate broke, and it broke in the silent direction the project
+has learned to expect — an ignore that stops binding.** The 5.0/5.1 filter spells
+its `FORMS_URLFIELD_ASSUME_HTTPS` ignore as `PendingDeprecationWarning`; that
+warning is a `RemovedInDjango60Warning`, which is now a `DeprecationWarning`, so
+the ignore no longer matches and the run **aborts at settings load**. Loud this
+time, because the setting is ours and fires on import. Had it been a third-party
+warning it would have shown up as an unexplained failure much deeper in.
+
+**The working gate for 5.2 — one character of category, changed:**
+
+```
+python -W error::DeprecationWarning -W error::PendingDeprecationWarning \
+  -W 'ignore:The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated:DeprecationWarning' \
+  -W 'ignore:datetime.datetime.utcnow() is deprecated:DeprecationWarning' \
+  -W 'ignore:datetime.datetime.utcfromtimestamp() is deprecated:DeprecationWarning' \
+  -W "ignore:'pkgutil.find_loader' is deprecated:DeprecationWarning" \
+  manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+**All four ignores are still live and none needed adding.** An unfiltered
+`-W default` run over the whole suite lists exactly four warning sources and no
+others — the same four as 5.0 and 5.1, and **the only Django-side warning in the
+entire suite is our own `FORMS_URLFIELD_ASSUME_HTTPS`.** The three third-party
+ones remain task 05's worklist (`dateutil` and `django-environ` retire with
+bumps; `repoze.timeago` is upstream-dead).
+
+**Both halves proven live on this rung, and for the first time both probes are
+real Django warnings rather than synthetic:**
+
+| half | probe | result |
+|---|---|---|
+| `DeprecationWarning` | `format_html()` with no args (`RemovedInDjango60Warning`) | aborts |
+| `PendingDeprecationWarning` | `StringAgg(ordering=...)` (`RemovedInDjango61Warning`) | aborts |
+
+Run against the **full final ignore list**, not a bare filter, so the ignores
+are known not to have blunted the gate; and run again **without** the gate,
+where both return normally, so the probes are not self-fulfilling.
+`format_html()` is the same call task 03 used to prove the *pending* half — the
+identical probe changing sides is the re-parent made visible. `StringAgg` was
+chosen over the three `contrib.auth` candidates because `django.contrib.postgres`
+is what this site's search is built on.
+
+### The Django 6.0 inventory — EMPTY, and here is what backs that
+
+Two independent legs, per the standard Step 13 task 05 set.
+
+**Leg 1 — the suite, under a gate demonstrated to fire (above).** 887 tests, one
+Django warning, and it is the `FORMS_URLFIELD_ASSUME_HTTPS` decision Brian
+already took deliberately at the 5.0 rung. Nothing else.
+
+**Leg 2 — a static sweep, because a suite only covers what it runs.** The
+removal list was **derived from the installed 5.2.17 by AST-walking every
+`warnings.warn(..., RemovedInDjango60Warning)` call site** rather than recalled
+or read off a changelog: 32 distinct deprecation points across 21 modules. Every
+one swept against the tree:
+
+| swept for | hits |
+|---|---|
+| `log_action` / `log_deletion` (admin) | 0 |
+| `get_prefetch_queryset` / `get_current_queryset` | 0 |
+| `get_joining_columns` / `get_reverse_joining_columns` | 0 |
+| `CheckConstraint(check=…)` | 0 |
+| `ChoicesMeta` | 0 |
+| `get_cache_name` | 0 |
+| `field_cast_sql` | 0 |
+| `OS_OPEN_FLAGS` | 0 |
+| `DjangoDivFormRenderer` / `Jinja2DivFormRenderer` / `FORM_RENDERER` | 0 |
+| `register_converter` (duplicate registration) | 0 |
+| `itercompat.is_iterable` | 0 |
+| `format_html()` with no args | 0 |
+| `GeoIP2` / `cx_Oracle` | 0 (neither backend in use) |
+| positional `Model.save()` | 0 |
+| `UniqueConstraint` | **2, both keyword-only** |
+
+The two `UniqueConstraint`s (`search/models.py:142` and its migration) pass
+`fields=` and `name=`, so the "positional arguments are deprecated" removal does
+not reach them. **`Model.save()` is the one worth stating carefully**: there are
+20 `.save(` call sites that are not bare, but every positional one is
+`Form.save()`, and every *model* save passes keywords (`html=`,
+`content_update=`) or forwards `*args, **kwargs` from callers that pass none.
+The gate agrees and is the better witness, since a positional save reached
+through a helper matches no grep.
+
+**So the 6.0 inventory is: one item, ours, already decided.** Whoever takes 6.0
+starts from that rather than from a survey.
+
+### The toolbar bump, and the pin comment that scheduled itself correctly
+
+`6.3.0 → 7.1.1`. The 7.x line requires `django>=5.2`, so this pin genuinely
+could not move before this rung — **the second time a pin comment naming a
+future rung as its trigger has paid off.** The comment is rewritten to describe
+the constraint as it now stands: it runs the other way, since 7.1.1 will not
+install against 5.1, so the toolbar is what would block a Django *downgrade*.
+Its classifiers cover 5.2, 6.0 and 6.1 — ahead of this project for the first
+time in the upgrade rather than behind it.
+
+**`local.py` still copies rather than mutates** `base.py`'s settings objects;
+`test_importing_deployment_settings_leaves_the_live_ones_alone` passes. The
+toolbar renders and its SQL panel works.
+
+**The middleware position is no longer load-bearing, and the toolbar moved to
+index 0 — Brian's call, after he noticed 7.x ships a History panel and warns
+that the Redirects panel is deprecated.** Both observations were right, and the
+deprecation message names its own replacement: *"The RedirectsPanel is
+deprecated and will be removed in a future version. The HistoryPanel now
+provides the ability to view toolbar data for redirected requests."*
+
+**The finding underneath it: the toolbar disables `RedirectsPanel` and
+`ProfilingPanel` by default, so this project's `DISABLE_PANELS: set()` was not
+"leave the defaults alone" — it was "turn both on".** The interstitial that made
+the middleware position load-bearing for years was therefore self-inflicted
+configuration, not a property of the toolbar. `DISABLE_PANELS` is now
+`{RedirectsPanel}`, which switches off the deprecated panel and leaves
+`ProfilingPanel` exactly as it has been. This is the mirror of the `JQUERY_URL`
+finding in the same block: one key silently reproduced a default, the other
+silently overrode one.
+
+**Measured in both directions before the move**, because the whole justification
+rested on it:
+
+| toolbar position | RedirectsPanel | `/forums` |
+|---|---|---|
+| index 1 (after `CommonMiddleware`) | on | 301 |
+| index 0 | **on** | **200 interstitial** |
+| index 0 | off | **301** |
+
+The middle row is the control: re-enabling the panel at index 0 reproduces the
+interstitial, so the panel is the cause and not something else in 7.1.1.
+
+**The authors' recommendation was then read rather than recalled** — the comment
+in `local.py` had been asserting it from memory. The installation docs say *"You
+should include the Debug Toolbar middleware as early as possible in the list.
+However, it must come after any other middleware that encodes the response's
+content, such as GZipMiddleware."* That exception is also **the only ordering
+rule the package enforces**: `check_middleware()` in `apps.py` warns about
+`GZipMiddleware` and about nothing else — there is no check wanting it first,
+and none mentioning `CommonMiddleware`. This project runs no content-encoding
+middleware, so index 0 is what the authors ask for here, and **adding a
+GZipMiddleware later is the single thing that would change that answer** (now
+said in the comment).
+
+**Moving it also makes redirect monitoring honest, which is the point of the
+change.** From index 1 the toolbar sits *inside* `CommonMiddleware`, so an
+`APPEND_SLASH` request records as the inner 404 it genuinely is and the 301
+never reaches the panel at all:
+
+| redirect | toolbar at index 1 | toolbar at index 0 |
+|---|---|---|
+| `APPEND_SLASH` (`/forums`) | records **404** | records **301** |
+| application redirect (`/admin/`) | records 302 | records 302 |
+
+So HistoryPanel does replace RedirectsPanel for this use — but only from index 0
+for the `APPEND_SLASH` case, which is exactly the case RedirectsPanel existed to
+show. **Note the store is per-process `MemoryStore`**: querying it from a
+`docker compose exec` always reports zero requests, because that is a different
+process from the one serving. The probe runs the requests and reads the store in
+one process.
+
+**Verified after the move**: 887 green under the gate, `check` clean (no toolbar
+W-codes), `/forums` still 301, HistoryPanel recording the 301, and **all 17
+pages identical between index 0 and index 1** — captured back to back, so the
+position changes no rendered output.
+
+**One dead setting removed: `JQUERY_URL: ''` in `local.py`.** The toolbar has
+carried no jQuery since its 4.x line, and the key is absent from `CONFIG_DEFAULTS`
+and appears nowhere in the package. **It is pre-existing, not from this bump** —
+verified by installing 6.3.0 side by side and finding it equally absent there,
+which means it went dead at Step 13 task 06's `3.2.4 → 6.3.0` and has been inert
+since. It is the shape Step 13 task 06 named: config that does nothing reads
+exactly like config that does.
+
+**A methodology note on how that was nearly recorded backwards.** The first
+check reported "JQUERY_URL LIVE at 6.3.0" and was wrong: the test was
+`grep … | head -3 && echo LIVE || echo dead`, and **a pipeline's exit status is
+its last command's** — `head` exits 0 on empty input, so the `&&` branch always
+fired. Same family as task 01's "importing is not exiting": a probe that reports
+success without testing anything. Read the output, not the status, when the
+status is `head`'s.
+
+### The page probe was measuring the toolbar, and had been for two rungs
+
+**The site probe disagreed with itself between back-to-back runs on one Django**,
+which is what exposed it. Two independent defects, both now fixed:
+
+1. **The debug toolbar was inside every captured page.** `docker.py` shows the
+   toolbar whenever `DEBUG`, and its payload carries per-request timings, query
+   counts, a request id and a CSRF token — so `length` was measuring toolbar
+   noise. **That is disqualifying on this rung specifically**, the one that bumps
+   the toolbar: an unstripped capture cannot separate "Django changed a page"
+   from "the toolbar renders differently". The probe now strips the toolbar
+   middleware for the capture, which also removes `INTERCEPT_REDIRECTS` — and
+   `/admin/` immediately reports its true **302** instead of the 200 the task
+   file warns about, the same artifact that corrupted a smoke result at the 4.1
+   rung.
+2. **The member was selected as "most recent login", and `force_login()` sets
+   `last_login`** — so the probe was choosing whichever user the *previous*
+   probe had logged in. It had drifted from `CaptainSpringfield` to `milesgehm`
+   between rungs, moving every page length and every forums unread marker with
+   it. The member is now pinned by name.
+
+The probe also records a **per-page sha256** now, and that immediately earned
+its place: the forums index came back **the same length with a different hash**.
+The cause is `The current time is 12:26.` — a constant-width wall clock the
+forums index prints, which moves the hash and leaves the length alone. **A
+length-only capture would have called that page identical; a hash-only capture
+would have called it changed.** Normalized, alongside the CSRF token.
+
+**A third volatile element surfaced later on the same page, and it is the
+sharpest version of the defect: Who's Online.** It is Redis-backed with a TTL
+and is fed by the probe's own `force_login()`, so the forums index reports
+whichever users a recent probe signed in and then shrinks as they expire — a
+capture perturbing the thing it measures, one layer below the `-last_login`
+selection bug. It presented as the forums index changing across the toolbar
+move, which had nothing to do with it. Now normalized too, and the page compares
+clean with it in place.
+
+**The rule worth carrying forward is about probe determinism, not data
+protection: a probe must not choose its own subject by a field its actions
+mutate.** `site_probe.py` selected a member with `.order_by('-last_login')` and
+then called `force_login()`, which sets `last_login` — so each run moved the
+target for the next one, across sessions. Task 03's probes left `milesgehm` as
+the most recent login on 2026-08-13, which is how this rung silently changed
+subject. Pin the subject by name; better still, create a purpose-made user and
+remove it, the way `tools/pgloader/smoke.py` already does for forum writes,
+which also keeps real member rows out of it. **This is deliberately *not*
+recorded as a data-integrity rule** — the `last_login` writes are harmless (the
+rung comparisons run before/after against the same database minutes apart, so
+the field sits on both sides of every diff, and nothing measured reads it). The
+data rules that do matter are the existing ones: snapshot before DB-writing
+work, and go through `smoke.py` for forum writes, where the `last_post` CASCADE
+can take a whole forum. Same shape as the Step 13 deletion — the repo had the
+guarded script and a freshly written one walked around it.
+
+`smoke52.py` carries the same latent pattern in its password-reset check, which
+picks its subject with `filter(email__contains='@').first()` — stable by pk
+today, but query-chosen, so it follows whatever sorts first on a future
+snapshot.
+
+**Then proven rather than argued.** The claim "the clock was the entire
+difference" was settled by rebuilding the image back down to 5.1.15, re-running
+the corrected probe, and rebuilding up to 5.2.17 again — the forums index hash
+matches exactly (`c9926655dbcd80bc`), and **all 17 pages compare identical on
+status, sha256 and rendered datetimes.**
+
+### Nothing moved, measured against a baseline captured minutes before the bump
+
+- **Search identical** — 16 queries, totals, all 8 per-type counts, 300 top-20
+  rows with `rank` to 10 decimal places, headlines, over **516,858** index rows.
+  Fourth rung running with no movement.
+- **The vendored `tagging` fork identical** across all three compiler paths: the
+  1,001-tag cloud, `usage_for_queryset` unfiltered (the all-matching `WHERE`
+  that raises `FullResultSet`) and filtered at 802, and `usage_for_model(filters=…)`
+  at 802, the path nothing in the project calls. **Three rungs now with no
+  movement in the fork**, after it broke on two of the three before them. The
+  live page renders 1,001 tags.
+- **All 17 site pages identical**, hash and rendered datetimes alike.
+- **Smoke green**: both password-reset flows end to end (request → email →
+  token link → new-password form), `/admin/login/` still a `<div id="site-name">`
+  with the 4.2 theme toggle intact, both feeds serving with timezone stamps,
+  `/admin/` a real 302, and a Celery task round-tripping the **real Redis
+  broker** with worker and beat clean on 5.6.3.
+- **`check --deploy` byte-identical to 5.1 and 4.2** — only the pre-existing
+  `security.W001` (`SecurityMiddleware` absent, Step 20's). Checked from both
+  directions again, since that proves the import and not that the backends
+  resolve: `STORAGES` and `CACHES` both instantiate (`FileSystemStorage`,
+  `ManifestStaticFilesStorage`, `RedisCache`).
+
+**Next: Step 14 task 05** — dependency alignment. It carries the two gate
+ignores that retire with bumps (`python-dateutil` 2.9 for `utcfromtimestamp`, a
+current `django-environ` for `pkgutil.find_loader`), the two dead pins task 01
+measured (`html5lib`, `simplejson`), and **moving the gate into CI**, written
+into that task as requirements 9–11 and ACs 9–10. Then task 06, the host venv.
 
 ## Logout was broken by the 5.0 rung — FIXED 2026-08-13, `39aceca`, PUSHED, CI GREEN
 
