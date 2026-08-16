@@ -174,6 +174,89 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## ⭐ STEP 15 COMPLETE — task 05, the S3 smoke tool — DONE 2026-08-16, `5576aa7`, NOT YET PUSHED
+
+**All five tasks done. User photo uploads are back on AWS S3, and it is verified
+against the real bucket rather than against mocks.** `tools/image_smoke.py`
+gains an opt-in `--s3` branch: **12/12 with it, 7/7 without** (the default run is
+unchanged), suite green at 866.
+
+**THE ANSWER TO THE QUESTION THE WHOLE STEP WAS CARRYING.** Nothing had written
+to `sg101.user.photos` since **2023-05-07**, and every S3 test in the suite mocks
+boto3 by Brian's deliberate no-`moto` choice — so until this ran, nothing knew
+whether the code worked. It does:
+
+- **Upload lands in the bucket**, at
+  `https://s3-us-west-1.amazonaws.com/sg101.user.photos/<key>`
+- **URL matches the rows already stored**, compared against a real pre-existing
+  row rather than a literal
+- **Object is publicly readable — HTTP 200 fetched with no credentials at all.**
+  So the bucket has **not** acquired Block Public Access or bucket-owner-enforced
+  ownership, and the `ACL='public-read'` that task 02 flagged as unanswerable
+  from the repo still works
+- **Metadata survives the boto3 rewrite**: `user=_image_smoke_user
+  date=2026-08-16 18:17:43`
+- **`delete_photos` removes both keys** through the application's own path —
+  exercising task 04's routing against a real S3 URL — refetch 403
+- **The credentials still authenticate** after three years dormant
+
+**THE FIRST RUN FAILED 8/12, and the reason is the useful part.**
+`UploadForm.save()` hashes the image bytes and **returns an existing `Photo`
+when the signature matches**, so reusing the local checks' `jpeg_bytes(1000,
+800)` meant nothing was uploaded at all — the earlier *local* photo was handed
+back. **And the delete check passed anyway**: it removed two local files, and
+refetching a path the production web server does not serve returned 404, which is
+**indistinguishable from a deleted S3 object**. A false pass sitting directly
+underneath a false premise. Fixed three ways: distinct bytes, an explicit
+assertion that a new row was created, and an **early bail** so no downstream
+check can run against a bad upload. **The general shape: when a probe's subject
+is wrong, every check below it reports on the wrong thing while looking
+healthy** — the same family as Step 14 task 04's probe determinism.
+
+**The interrupted-run cleanup was exercised, not assumed.** Forcing a failure
+*before* the delete left two objects in the bucket; cleanup reported `removing 2
+leftover bucket object(s)` and verified them gone, confirmed independently with
+`list_objects_v2`. Objects carry an `_image_smoke_` prefix because `make_key()`
+otherwise produces random base64 that a killed run would leave unfindable; the
+prefix is substituted for the run only.
+
+**BUCKET FACTS, measured 2026-08-16 after Brian caught me saying "the bucket is
+empty" — which was wrong and alarming.** What had been verified was zero objects
+matching the tool's prefix. The bucket actually holds **43,511 objects, 1.78 GB,
+2013-09-02 → 2023-05-07**. Two things worth keeping:
+- **Its newest object is dated 2023-05-07**, exactly the cutover the plan measured
+  from the database. **A third independent confirmation** of the local-upload
+  switch, after the DB rows and the git history — and, incidentally, proof that
+  the smoke runs left nothing behind, since anything surviving would carry
+  today's date.
+- **43,511 objects against 43,508 S3 URLs in the database — 3 orphans**, all
+  predating 2023. Almost certainly files whose `Photo` rows went away while
+  `delete_photos` could fail silently, which is the class of defect task 04
+  fixed. Not worth chasing at 3-in-43,511, but recorded so a future audit
+  comparing the two counts is not left puzzled.
+
+**A note on `# noqa`, from Brian asking why I had added them.** They were copied
+from the file's existing convention, which is genuine — imports below
+`django.setup()` must be there, and E402 flags them. But **the project has no
+linter at all**: no flake8 config, nothing in `requirements_dev.txt`, no CI step.
+So the markers are notes to an editor, never validated against a run — and one I
+added was for `import requests`, which needs no `django.setup()` and did not need
+suppressing. Moved up, marker dropped. **Scheduled into Step 19: pick a linter,
+possibly a formatter.** That work has now been deferred three times (Step 7/8's
+`isort`/`black` pass, Step 14 task 05's import placement, this) and never
+scheduled; the "a reformat would bury the migration" objection **expires with
+Step 14**, so it should stop being deferred.
+
+**Step 15's premise is confirmed end to end.** The rescope said the blocker was
+never S3 but the interpreter — Py2.7 TLS against AWS's TLS 1.0/1.1 deprecation —
+and that Steps 13–14 had already removed it. Uploading, reading and deleting
+against the live bucket on Python 3.12 is that claim demonstrated rather than
+argued.
+
+**Deliberately still true and not a loose end: nothing was migrated.** The 4,577
+local-disk photos keep their stored URLs and ride Step 21's media rsync; the
+21,754 S3 rows were never touched.
+
 ## Step 15 task 04 — the delete path, S3 and local — DONE 2026-08-16, `b324774`, PUSHED, CI GREEN
 
 **866 tests green** (854 + 12), gate green, checks clean, `image_smoke.py` 7/7,
