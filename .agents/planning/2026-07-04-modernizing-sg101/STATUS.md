@@ -174,6 +174,89 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 15 task 04 — the delete path, S3 and local — DONE 2026-08-16, `b324774`, NOT YET PUSHED
+
+**866 tests green** (854 + 12), gate green, checks clean, `image_smoke.py` 7/7,
+and the snapshot data verified intact afterwards at 26,331 photos / 15,227 users
+with no scratch rows. Snapshot taken first
+(`sg101-20260816-171511-before-step15-task04.dump`), this step's first
+destructive path.
+
+**What was broken, and it was worse than the plan recorded.** `delete_photos()`
+built an `S3Bucket` **before looking at any URL** and handed every URL to it.
+On this branch that raised outright — so *every* delete path in the site was
+broken: a member removing their own photos (`views.py:194`), the admin's bulk
+action (`admin.py:26`), and antispam deactivating an account
+(`utils.py:103`). None guards the call, and **the suite stayed green because all
+three tests mock `delete_photos`** — nothing had executed the function for six
+steps. And once boto3 worked it would have gone quiet rather than loud: local
+URLs skipped by the bucket, still counted as deleted, row gone, file left on
+disk, log reporting success.
+
+**Now routed per URL**, with the bucket built only if there is something in it to
+delete (a member whose photos are all local does not need working credentials),
+the count being files actually removed across both backends, and a partial
+failure logging which backend fell short.
+
+**BRIAN CAUGHT A FABRICATED JUSTIFICATION, and it is the most useful correction
+in this task.** He asked whether I had actually found `http:`-prefixed photos in
+the database "or just covering your bases in the test". I had not looked. I had
+written into a **code comment and a test docstring** that "rows exist from before
+the https move and both www and bare forms occur" — inferred from
+`base.py:57`'s `SITE_SCHEME = 'http'`, presented as a finding.
+
+**Measured 2026-08-16, and both halves were false:** all **52,662** stored URLs
+are **https**, on exactly two hosts — `s3-us-west-1.amazonaws.com` (43,508) and
+`surfguitar101.com` (9,154). **No `http:` rows, no `www.` variant.** Which is
+obvious in hindsight: local uploads only began 2023-05-08, long after the https
+move, and `production.py:8` sets `SITE_SCHEME = 'https'`.
+
+**The code did not change — the reason did.** Path-based matching is still
+correct, on a real and checkable ground: `_user_photo_url()` takes the scheme
+from `SITE_SCHEME` and the host from the `Site` row, so a photo uploaded **in a
+dev container** genuinely is `http://` on a different domain, while production's
+is `https://surfguitar101.com`. Matching on either field would make the same rows
+match in one environment and not the other. The `www.` case stays as tolerance,
+now labelled as tolerance. **This is `measure-before-recording` in its worst
+venue: a comment outlives the conversation and nobody re-derives it.** Both
+places now carry the measurement and its date.
+
+**The containment guard stays even though it is currently unreachable.** Only
+`UploadForm.save()` writes `Photo.url`, always from `process_upload()`;
+`HotLinkImageForm` returns a bare URL and creates no row, so **no user-supplied
+URL reaches that column**. Verified, not assumed — it is what makes host-agnostic
+matching safe. The guard is there because a delete driven by a database column
+should not depend on that continuing to be true.
+
+**All 13 mutations caught, and mutation testing found two holes in my own tests
+first**, both of the same shape — a test that passes whether or not the code is
+right:
+- **The blank-URL case.** An unskipped `''` falls through to "unrecognised" and
+  is not counted either way, so the count assertion could not distinguish. Now
+  asserts on the log.
+- **The empty-key-name case.** A URL ending exactly at the prefix resolves to the
+  **upload directory itself**; `os.remove()` on a directory raises
+  `IsADirectoryError`, which is an `OSError`, so it is caught and logged and
+  nothing observable changes. Now asserts the attempt is never made.
+
+**`assertLogs` is useless in this suite** — `sg101/settings/test.py:15` calls
+`logging.disable(logging.CRITICAL)` globally, so nothing is captured anywhere.
+Tests that need to assert on logging must mock the module logger; the calls still
+reach it, since the disable happens inside the logging machinery.
+
+**Module renamed `user_photos/s3.py` → `storage.py`** (three importers updated) —
+it is no longer about S3, and the old name was the kind that lies. `core.s3`
+gained **`bucket_url_prefix()`** so "a URL in this bucket" has one definition both
+modules read. **The 19 `core/s3.py` mutations were re-run after that refactor**;
+one reported a hole that was not one — the helper's trailing-slash normalisation
+is invisible to `core/tests/test_s3.py` because `S3Bucket.__init__` normalises
+first, and it is `user_photos/storage.py`, passing the raw setting, whose tests
+catch it. **A mutation scoped to the wrong module looks exactly like a gap.**
+
+**Next: task 05**, the S3 smoke tool — the load-bearing verification for the
+whole step, and the only thing that will confirm the credentials still
+authenticate and that `public-read` still succeeds.
+
 ## Step 15 task 03 — settings/env + uploads back to S3 — DONE 2026-08-16, `816b95a`, PUSHED, CI GREEN
 
 **854 tests green** (851 + 3), gate green, `check` and `makemigrations --check`
