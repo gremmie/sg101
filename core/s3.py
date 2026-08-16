@@ -2,10 +2,10 @@
 
 This module provides Amazon S3 convenience wrappers, built on boto3.
 
-Two callers: core/images/upload.py stores member photos, and user_photos/s3.py
-deletes them. S3Bucket exists so neither has to know boto3's argument shapes,
-and so the URL format written into user_photos.Photo rows is produced in one
-place.
+Two callers: core/images/upload.py stores member photos, and
+user_photos/storage.py deletes them. S3Bucket exists so neither has to know
+boto3's argument shapes, and so the URL format written into user_photos.Photo
+rows is produced in one place.
 
 boto3's *client* is used rather than its resource layer. The batch delete below
 is a client-shaped call whichever layer wraps it, and the client's flat keyword
@@ -18,11 +18,24 @@ import boto3
 
 # The S3 DeleteObjects API accepts at most 1000 keys per request. boto (v2)
 # chunked internally; boto3's delete_objects does not, and raises instead. This
-# is not a theoretical limit here: user_photos.s3.delete_photos submits two keys
-# per photo (image + thumbnail), and three members have enough photos to exceed
-# 1000 keys in a single delete -- the largest at 2,466. Both the admin's bulk
-# action and antispam's account deactivation can reach them.
+# is not a theoretical limit here: user_photos.storage.delete_photos submits two
+# keys per photo (image + thumbnail), and three members have enough photos to
+# exceed 1000 keys in a single delete -- the largest at 2,466. Both the admin's
+# bulk action and antispam's account deactivation can reach them.
 _DELETE_BATCH_SIZE = 1000
+
+
+def bucket_url_prefix(base_url, bucket_name):
+    """The URL prefix shared by every object in a bucket.
+
+    S3Bucket builds URLs from it and recognises its own keys by it, and
+    user_photos.storage uses it to tell a photo in the bucket from one on local
+    disk. Those have to agree, so the rule lives in one place.
+
+    """
+    if not base_url.endswith('/'):
+        base_url += '/'
+    return '{}{}/'.format(base_url, bucket_name)
 
 
 class S3Bucket(object):
@@ -97,7 +110,7 @@ class S3Bucket(object):
         deleted.
 
         """
-        prefix = '{}{}/'.format(self.base_url, self.name)
+        prefix = bucket_url_prefix(self.base_url, self.name)
         prefix_len = len(prefix)
 
         keys = []
@@ -149,4 +162,5 @@ class S3Bucket(object):
         have to be indistinguishable from them.
 
         """
-        return '{}{}/{}'.format(self.base_url, self.name, key_name)
+        return '{}{}'.format(bucket_url_prefix(self.base_url, self.name),
+                             key_name)

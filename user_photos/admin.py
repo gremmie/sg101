@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from user_photos.models import Photo
-from user_photos.s3 import delete_photos
+from user_photos.storage import delete_photos
 
 IMG_TAG = """<a href="{url}"><img src="{thumb_url}" alt="thumbnail" /></a>"""
 

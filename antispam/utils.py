@@ -11,7 +11,7 @@ from core.functions import email_admins
 from bio.models import STA_SUSPENDED, STA_SPAMMER
 from comments.models import Comment
 from forums.tools import delete_user_posts
-from user_photos.s3 import delete_photos
+from user_photos.storage import delete_photos
 
 
 def contains_spam(s):

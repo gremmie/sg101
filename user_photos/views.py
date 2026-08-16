@@ -16,7 +16,7 @@ from django.contrib import messages
 from core.functions import is_ajax
 from user_photos.forms import HotLinkImageForm, UploadForm
 from user_photos.models import Photo
-from user_photos.s3 import delete_photos
+from user_photos.storage import delete_photos
 
 
 @login_required
