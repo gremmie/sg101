@@ -174,6 +174,86 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 15 task 02 — `core/s3.py` on boto3 — DONE 2026-08-16, `219e4be`, NOT YET PUSHED
+
+**`boto3==1.43.72`**, 845 → **851 tests, and the suite now has no skipped tests
+at all** — those 5 skips were the whole list, the class-level skip Step 8 put on
+`core/tests/test_s3.py`. Gate green (**boto3 adds no deprecation warning**),
+`check` and `makemigrations --check` clean. `check --deploy`'s `security.W001`
+(no `SecurityMiddleware`) is **pre-existing — verified identical at HEAD by
+stashing**, and belongs to Step 20.
+
+The Step 8 stub is resolved: the `try`/`except ImportError`, `_BOTO_AVAILABLE`
+and the `NotImplementedError` are gone, and the docstring no longer says storage
+is moving to Cloudflare R2. **Neither caller changed** —
+`core/images/upload.py` and `user_photos/s3.py` are untouched, which was the
+point of holding the constructor signature and the four-method API fixed.
+
+**`client`, not `resource`, and the reason is the tests.** The batch delete is a
+client-shaped call whichever layer wraps it, and flat keyword arguments are what
+make a wrong argument legible in a mock call list; a chained
+`bucket.Object(key).put(...)` would bury it. Given Brian's choice of mocks over
+`moto`, legibility of the call list *is* the coverage.
+
+**THE FIND, and it came from measuring rather than transliterating: S3's
+`DeleteObjects` accepts at most 1000 keys per request, boto v2 chunked
+internally, and boto3's `delete_objects` does not — it raises.** This is not
+defensive: `delete_photos` submits **two keys per photo** (image + thumbnail),
+and querying the snapshot shows **three members own enough photos to exceed 1000
+keys in a single delete, the largest at 1,233 photos = 2,466 keys**. Both the
+admin's bulk action and `antispam`'s account deactivation reach them. A naive
+port would have worked in every test and failed on exactly those three accounts,
+one of which is the kind of account spam cleanup runs against.
+
+**`delete_keys`' count is fixed here rather than handed to task 04.** The task
+file allowed either, but writing `len(key_urls)` into brand-new code knowing it
+is wrong is what its own requirement 10 warns against. It now returns what was
+actually deleted from *this bucket*, and the test asserts **2** where the old one
+asserted 3. Task 04's job becomes summing S3 against local rather than unpicking
+a miscount.
+
+Two smaller decisions, both recorded because they are invisible in the diff:
+**metadata values are coerced to `str`**, since botocore rejects anything else
+where boto v2 coerced them itself (the old test passed `{'user': 1234}`); and
+**`upload_from_filename` opens the file itself**, because `client.upload_file()`
+routes through botocore's multipart transfer manager and does not take `ACL` and
+`Metadata` the same way, so `put_object` with an explicit handle keeps all three
+uploads on one path.
+
+**The public-read ACL sits in one marked place** with a comment saying what
+cannot be settled from the repo: a bucket carrying Block Public Access, or object
+ownership set to bucket-owner-enforced, rejects a per-object ACL outright. Task
+05's smoke tool is what answers it.
+
+**All 17 mutations caught** (script in the session scratchpad, worth reusing):
+region, both credentials, metadata coercion, metadata sent when empty, ACL
+absent, ACL sent when `public=False`, a wrong `Body` keyword, text-mode `open`,
+URL format, `base_url` normalisation, the v2 miscount, ignored errors, missing
+batching, an oversized batch, unfiltered URLs, the `Quiet` flag. **One mutation
+initially reported "pattern missing" rather than caught** — my replacement string
+said `aws_secret_access_key=secret)` where the source says `secret_key)`, so it
+never applied. The script scored it as a hole rather than a pass, which is the
+correct behaviour and the same trap in a new costume: **a mutation that does not
+apply proves exactly as little as one that does not reproduce the fault, and both
+look like a green run.**
+
+**Requirement 6 verified against real data, not a test literal:** the URL the new
+code builds for a given key was compared to an actual `user_photos.Photo` row
+from the snapshot —
+`https://s3-us-west-1.amazonaws.com/sg101.user.photos/<key>` — and matches in
+scheme, host, bucket segment and key placement.
+
+**What this task cannot tell us**, stated because a green suite here is easy to
+over-read: these tests mock boto3, so no wrong argument boto3 itself would reject
+can fail them, and nothing has confirmed the credentials still authenticate or
+that `public-read` still succeeds against a bucket nothing has written to since
+2023-05-07. **Task 05 is the load-bearing verification**, by construction.
+
+**Next: task 03** (settings/env + the `USER_PHOTOS_LOCAL_UPLOAD` flip). Note task
+04 should land before task 03 reaches a real deployment — turning uploads back on
+while `delete_photos` still raises would let members add photos they cannot
+remove.
+
 ## Step 15 task 01 — retire `ssl_images` — DONE 2026-08-16, `afe32ca`, PUSHED, CI GREEN
 
 **887 → 845 tests, exactly the 42 removed**, same 5 skips, no errors; green under
