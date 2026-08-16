@@ -174,6 +174,69 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 15 task 01 — retire `ssl_images` — DONE 2026-08-16, `afe32ca`, NOT YET PUSHED
+
+**887 → 845 tests, exactly the 42 removed**, same 5 skips, no errors; green under
+the deprecation gate, `check` and `makemigrations --check` clean. 1,045 lines
+deleted (479 command + 566 tests) against 9 added, all of them a comment.
+
+**The evidence was re-verified against the tree rather than inherited from the
+task file**, and it came out stronger than it went in. All seven counts hold —
+absent from `CELERY_BEAT_SCHEDULE` (6 entries), from every `call_command` site,
+from `fabfile.py`, Compose, the Dockerfile, CI, `tools/` and `DOCKER.md`; no log
+or cache file in the checkout. **The new part is a convergence the task file did
+not have:** the last commit to touch the command is `69717f7`, **2015-11-27,
+"Prevent mixed content in UserProfiles"** — the same date as production's
+`ssl_images_cache.json`. Since `save_cache()` writes that file at the end of a
+run, the code's last change and the tool's last completed run agree **from two
+independent directions**, one in the repo and one on the server. Neither was
+derived from the other.
+
+**The orphan sweep found nothing to delete, which is a result rather than a
+skipped step.** `core/download.py` and `core/functions.py` both keep live
+callers — `user_photos/forms.py:138` is `remove_file(download_file(url))` on the
+hotlink path, and each has its own test module. The four models
+(`bio.UserProfile`, `comments.Comment`, `forums.Post`, `news.Story`) were used
+through **stock fields and querysets only**; no helper had been added for this
+command. The one non-obvious coupling, `UserProfile.save(content_update=True)`,
+has eight other callers and defaults to `True` anyway.
+
+**Retiring the command is not retiring the bucket, and that was verified, not
+asserted.** The counts match the plan exactly — **15,690 posts and 16 comments**
+embed `sg101.forum.photos` URLs in stored markup, none of it touched. A HEAD
+against a real embedded image returns **200 `image/jpeg`**, and the post carrying
+it renders 200 with the URL present (done inside a rolled-back transaction so the
+topic view counter was not bumped on real data).
+
+**`HOT_LINK_PHOTOS_BASE_URL` / `HOT_LINK_PHOTOS_BUCKET` retired with the
+command** — one consumer between them. **`USER_IMAGES_SOURCES` stays** (four live
+consumers) and gained a comment, because with the writer gone the
+`s3.amazonaws.com` entry now looks like the next thing to clean up and is not.
+
+**Brian caught a real ambiguity in the first version of that comment.** He asked
+whether it would need updating once we start writing to the bucket again — and
+the answer is no, but only because **two different buckets sit in that list on two
+different endpoint hosts**: `s3.amazonaws.com` serves `sg101.forum.photos`, now
+permanently write-retired, while `s3-us-west-1.amazonaws.com` serves
+`sg101.user.photos`, which **task 03 is about to start writing to again**. The
+original comment was a header over the whole list saying "nothing writes to it
+any more", three lines above the host that soon would be — true about its
+referent, and misleading in place. Rewritten to name both buckets explicitly and
+to state the constraint that makes the list load-bearing: **a destination host
+must appear here or its images upload fine and then fail to display.** That is
+exactly the invariant task 03 has to preserve when it moves
+`USER_PHOTOS_BASE_URL` into the environment, and it is now written where someone
+editing the list will read it. **Scheduling a comment update for a later step
+would have been paying interest on my own imprecision.**
+
+One comment revision worth noting for its own sake: the first draft carried
+"15,690 posts and 16 comments" as justification. Cut — those figures drift, a
+stale count in shipped code is worse than none, and the dated measurement belongs
+here rather than in `base.py`.
+
+**Next: task 02**, the `core/s3.py` boto3 rewrite, which now has one fewer
+`S3Bucket` consumer to hold its API fixed for.
+
 ## PLANNING — Step 15 task files generated, and what the code said the plan did not (2026-08-16)
 
 **Nothing built. Five task files** at `.agents/tasks/2026-07-04-modernizing-sg101/step15/`:
