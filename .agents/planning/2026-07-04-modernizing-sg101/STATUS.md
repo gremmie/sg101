@@ -174,6 +174,144 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## PLANNING — Step 15 task files generated, and what the code said the plan did not (2026-08-16)
+
+**Nothing built. Five task files** at `.agents/tasks/2026-07-04-modernizing-sg101/step15/`:
+01 retire `ssl_images`, 02 the `core/s3.py` boto3 rewrite, 03 settings/env plus
+the `USER_PHOTOS_LOCAL_UPLOAD` flip, 04 the delete path, 05 the S3 smoke tool and
+verification.
+
+**`ssl_images` goes first**, ahead of the rewrite it is usually listed after,
+because it is one of three `S3Bucket` consumers and removing it narrows the API
+contract task 02 has to hold fixed. It stays its own separately-verified commit:
+it moves the suite **887 → 845**, and a number this project has tracked rung by
+rung should move for one legible reason at a time.
+
+**Reading the code before writing the tasks corrected six things.**
+
+1. **The credentials were already env-driven** — `USER_PHOTOS_ACCESS_KEY` /
+   `SECRET_KEY` read `AWS_ACCESS_KEY` / `AWS_SECRET_KEY` at `base.py:330-331`,
+   done in Step 3, with `.env.example` entries already in place. "Env-configure
+   `USER_PHOTOS_*`" is really three settings: `USER_PHOTOS_BUCKET`,
+   `USER_PHOTOS_BASE_URL`, and **a region that does not exist as a setting at
+   all** — it lives as `region_name='us-west-1'`, a default argument in
+   `S3Bucket`'s signature that both call sites omit.
+2. **`USER_PHOTOS_LOCAL_UPLOAD = True` is committed**, at `production.py:74`, so
+   flipping it is a one-line edit to a tracked file. **This does not retire the
+   Step 21 working-copy audit**, whose point was never this setting but the
+   twenty-month window proving production can carry an uncommitted edit
+   indefinitely.
+3. **Deleting a photo raises on this branch right now — uploading is not the only
+   broken half.** `user_photos/s3.py:20` constructs `S3Bucket` *before* looking
+   at any URL, so the absent boto v2 takes down every delete path:
+   `user_photos/views.py:194` (a member deleting their own photos),
+   `user_photos/admin.py:26`, and `antispam/utils.py:103` (spam cleanup). None
+   guards. The plan's "only *uploading* ever broke" is true of production on
+   Py2.7 and false here, and **it stayed invisible for six steps because all
+   three tests mock `delete_photos`** (`user_photos/tests/test_upload_views.py:242,252,262`).
+   Nothing exercises the real function.
+4. **`delete_keys()` miscounts, and the existing test pins the bug.** It filters
+   URLs to those matching the bucket prefix, then returns
+   `len(key_urls) - len(response.errors)` — the *unfiltered* input — so skipped
+   URLs count as deleted. `test_delete_keys` passes three URLs of which two
+   match and asserts `3`. Once boto3 works, deleting a local-disk photo would
+   leave the file on disk, delete the row, and log complete success at
+   `user_photos/s3.py:35`. Not hypothetical: 4,577 of the 26,331 rows are local.
+5. **42 tests confirmed** in `core/tests/management/commands/test_ssl_images.py`,
+   matching the plan.
+   **And the `ssl_images` evidence gained a direct measurement 2026-08-16.**
+   Brian checked production and found **two** cache artifacts in `PROJ_DIR`, both
+   owned `brian:brian`: `ssl_images_cache.json` at 2,720 bytes **dated
+   2015-11-27**, and `ssl_images_cache.json.bz2` at 306,180 bytes dated
+   **2015-10-29**. `save_cache()` writes the `.json` at the end of a run, so that
+   mtime is the last *completed* run — **the same day as the command's last code
+   change on `main`**: last run the day it was last worked on, never since.
+   **Together the two files bracket the tool's whole working life inside autumn
+   2015**: runs through October built a large cache, it was archived to `.bz2`, a
+   fresh cache started from empty and stopped a month later. I first read the
+   small `.json` as "one development run rather than accumulation" — **wrong, the
+   accumulation is in the `.bz2`** — but the conclusion is unchanged and better
+   supported, and it matches the independent data signature (966 posts carrying
+   `sg101.forum.photos` in 2015, 323 in 2016, single digits after). Location and
+   ownership say both were run by hand from `PROJ_DIR`, not by a daemon.
+   **The crontab was not checked and does not need to be** — no answer it could
+   give argues for keeping a command that uploads to S3 from Py2.7 and has
+   therefore been failing since May 2023; any entry would be a dead entry. I had
+   flagged that check with more weight than the evidence justified.
+   Incidental for Step 21: the cache file is untracked and will show as `?` in
+   the `hg status` audit — an artifact, not a modification.
+6. **`HOT_LINK_PHOTOS_BASE_URL` / `HOT_LINK_PHOTOS_BUCKET` have exactly one
+   consumer between them** (`ssl_images.py:59-60`) and are retired with the
+   command. **`USER_IMAGES_SOURCES` stays** — `core/html.py:64` and
+   `user_photos/forms.py:134` both read it, and it is the site-wide hotlink
+   whitelist. It already contains `s3-us-west-1.amazonaws.com`, so parameterizing
+   the base URL creates a way for the two to drift; task 03 guards it, because a
+   photo that uploads successfully and then fails to display is the worst
+   available failure shape.
+
+**Two decisions taken during generation, both Brian's.**
+
+**Task 02 tests with `unittest.mock`, not `moto`** — no new dependency; the five
+tests retarget from boto v2's names to boto3's, keeping their call-list shape.
+**The consequence is designed around rather than noted**: a mock accepts any
+kwarg, so a wrong argument name, a wrong method, or a wrong `Metadata` shape
+stays green, and the `delete_keys` miscount cannot fail the suite. Every new test
+is therefore required to be mutation-verified, and **task 05's run against the
+real bucket is the load-bearing verification, not a formality**. The precedent is
+Step 13 task 07, where 41 tests stayed green while a real upload raised
+`AttributeError`.
+
+**Task 04 unlinks local files** rather than skipping them or deferring. **This
+does not breach "migrate nothing"** — that rule is about not moving the 4,577
+files into the bucket, a rewrite Step 21's fresh snapshot would discard. This is
+the delete path doing what its three callers already believe it does: nothing
+moves, no row's URL is rewritten, and the files that are never deleted still ride
+the Step 21 rsync untouched. Orphans stop accumulating now, and Step 21 rsyncs a
+tree without three years of files whose rows are gone. It lands as its own commit
+— it is the most destructive path the step adds — with a `realpath` containment
+guard under `MEDIA_ROOT/USER_PHOTOS_LOCAL_UPLOAD_DIR`, host-and-path matching
+that never trusts the scheme (`SITE_SCHEME` is `http` in `base.py:55` while
+production serves https, and rows exist from both eras), and a missing file
+treated as success rather than as an aborted batch.
+
+**The verification is a tool, not a test — and the tool already exists and
+already names the hole.** Brian asked whether an integration test uploading to
+the bucket was worth keeping, or whether it should be a tool.
+`tools/image_smoke.py` settles it: it drives the real upload views with real
+image bytes and cleans up in a `finally`, and its docstring says the user-photo
+path is forced down the local branch because the S3 branch "needs live
+credentials and would put objects in a real bucket… **but it is not a test of the
+S3 code.**" Step 15 answers that comment by extending the tool with an opt-in
+`--s3` branch. It cannot be a suite test because **CI has no AWS credentials and
+should not have them**; because what is being verified is environmental — do
+three-year-dormant keys still authenticate, does `public-read` still succeed
+against a bucket that may since have acquired Block Public Access or
+bucket-owner-enforced ownership — and so changes when AWS changes, not when the
+diff does; and because **Step 21 has to run exactly this on the new host before
+the DNS flip**, which a tool supports and a buried test does not. The round trip
+also covers both mock blind spots at once, since the tool must delete what it
+uploads and does so *through* `delete_photos`, exercising task 04's routing
+against a real S3 URL. If `public-read` fails, task 05 stops and reports rather
+than working around it — how new objects become publicly readable is a bucket
+configuration call.
+
+**Also corrected here:** the plan's Step 15 checklist line still said "**Only the
+4,577 migrate**, into the existing bucket," which was the pre-reversal draft and
+contradicted the step body's MIGRATE NOTHING section written the same day. Fixed.
+
+**Step 21's working-copy audit was also run, 2026-08-16, and production is
+CLEAN** — Brian reports no outstanding edits to the sg101 hg repo on the old box.
+**No second uncommitted modification exists.** This is consistent with the
+`USER_PHOTOS_LOCAL_UPLOAD` story rather than against it: that edit was committed
+in `e53aa1f` (2025-01-04), so `hg pull --update` reconciled it and the tree went
+clean. **Downgraded, not closed** — production stays live on the old code until
+the DNS flip six steps out, and the whole point of the item is that such an edit
+survives deploys silently, so a clean tree today says nothing about cutover day.
+It stands as a one-command re-run in the maintenance window. The one known
+untracked artifact, `ssl_images_cache.json`, is noted above.
+
+**Next: Step 15 task 01** — retire `ssl_images`.
+
 ## PLANNING — Step 15 rescoped, and R2 reversed back to S3 (2026-08-15)
 
 **Nothing built; the plan's Step 15 section and checklist line rewritten.** The
@@ -418,7 +556,9 @@ tooling; DOCKER.md carries the two-command check.
   cascade hazard it shares a delete path with.
 - DOCKER.md's test count was stale at 884; corrected to **887**.
 
-**This closes Step 14.** Next: Step 15 — media to Cloudflare R2.
+**This closes Step 14.** Next: Step 15 — user photo uploads back to S3. (Written
+here as "media to Cloudflare R2"; the step was rescoped and reversed later the
+same day, see the PLANNING entry above.)
 
 ## Step 14 task 05 — final dependency alignment + the gate moves into CI — DONE 2026-08-15, PUSHED, CI GREEN
 
