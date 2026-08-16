@@ -174,6 +174,84 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 15 task 03 — settings/env + uploads back to S3 — DONE 2026-08-16, `816b95a`, NOT YET PUSHED
+
+**854 tests green** (851 + 3), gate green, `check` and `makemigrations --check`
+clean, stack boots from `.env` alone with site, worker and beat clean.
+**Production uploads go to `sg101.user.photos` again** — `production.py`'s
+`USER_PHOTOS_LOCAL_UPLOAD` is `False`.
+
+**The plan overstated this step and the write-up corrects it:** the credentials
+were already env-driven from Step 3, so what actually moved is
+`USER_PHOTOS_BUCKET`, `USER_PHOTOS_BASE_URL`, and a **new `USER_PHOTOS_REGION`**
+— the region had been a default argument in `S3Bucket`'s signature that both
+call sites left alone, i.e. configuration living in a function definition. Both
+now pass it explicitly. Defaults reproduce the previous hardcoded values exactly,
+so an unset environment changes nothing.
+
+**BRIAN CORRECTED WHAT `USER_IMAGES_SOURCES` IS FOR, and the correction is the
+most useful thing in this task.** He queried the phrase "refusing to be
+displayed" in the comment I had written, and reading the code showed the claim
+was wrong — as was the same phrase already committed in task 01 and in
+`plan.md`.
+
+- **What I had:** the list governs whether an uploaded photo *displays*, so a
+  mismatch means uploads succeed and images never appear.
+- **What it actually is:** the whitelist of hosts **user-authored content** may
+  reference in `<img>` tags. `core.html.image_check()` enforces it **at submit
+  time** over forum posts, comments, private messages, profiles, news, downloads
+  and calendar events, raising `ImageCheckError`, which every caller converts to
+  `forms.ValidationError(str(ex))` — the member sees **"Invalid image source"**.
+- **Why my version was wrong:** `gallery.html` and `photo_detail.html` render
+  `{{ photo.url }}` / `{{ photo.thumb_url }}` **directly into the template with
+  no sanitisation**, so a member's own photos display regardless of that list.
+- **Why the two settings must still agree:** `photo_detail.html` exists to hand
+  the member ready-made markup to paste into a post (`![photo](url)`,
+  `[img]url[/img]`, direct link). **Posting the photo is the point of uploading
+  it.** So a non-whitelisted upload host means a photo that uploads, appears in
+  its gallery, and cannot be posted.
+
+**The guard survives the correction but on a narrower argument.** I justified
+failing the boot on the breakage being silent; it is not silent to the *member*,
+who gets a validation error. It is invisible to the *operator* — nothing is
+logged, and the symptom is the site issuing a URL it then refuses to accept.
+That still earns a deploy-time failure, and settings raise `ImproperlyConfigured`
+rather than warning. **A system check would have been more idiomatic but needs a
+`core/apps.py` that does not exist**, and adding an AppConfig to `core` is more
+blast radius than a settings task should carry; the existing
+`core/tests/test_settings.py` subprocess seam already tests boot-time failure,
+which is what made the hard raise cheap to cover.
+
+**All 11 mutations caught**, and **mutation testing found a real hole in my own
+tests**: I had covered `USER_PHOTOS_BASE_URL` reading from the environment but
+not the other two, so hardcoding the bucket back passed. One test now sets all
+three and asserts all three. The rest: each default changed, each setting
+stopped reading the environment, the guard removed, the guard downgraded to not
+raising, the guard comparing the whole URL rather than the host, and the region
+dropped or misrouted at the upload call site.
+
+**`core/tests/images/test_upload.py` needed updating** — it asserts the exact
+`S3Bucket(...)` construction, so the new `region_name` kwarg broke it. That is
+the test doing its job, not collateral damage.
+
+**THE WORKER AND BEAT CRASHED ON `import boto3` mid-task, and it is worth
+recording twice over.** `docker compose build web` rebuilds only `sg101-web`;
+`worker` and `beat` are separate `build: .` services with their own image tags,
+and **`docker compose restart` reuses the existing container and image** — so
+both kept running an image without boto3 while the suite was green at 854.
+Fixed with a full `docker compose build` + `up -d`. Two lessons, one old and one
+new: **Step 6's "a green unit suite is not done — boot worker and beat" recurs
+verbatim**; and **task 02's removal of the `try/except ImportError` guard is what
+made the worker refuse to start** instead of running with S3 silently broken,
+which is requirement 4's "works or fails loudly" demonstrated rather than
+asserted. A dev-environment artifact of a partial rebuild, not a code defect —
+CI builds fresh — but the deploy lesson stands: every app image needs the
+dependency.
+
+**Next: task 04** (the delete path). Brian confirmed the deployment sequencing
+worry is moot — `modernize` is not being deployed for a long while — so 03 before
+04 is fine.
+
 ## Step 15 task 02 — `core/s3.py` on boto3 — DONE 2026-08-16, `219e4be`, PUSHED, CI GREEN
 
 **`boto3==1.43.72`**, 845 → **851 tests, and the suite now has no skipped tests
