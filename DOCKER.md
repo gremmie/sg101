@@ -143,6 +143,40 @@ and that gap is not hypothetical: a resampling constant was once reverted with
 its own mock assertions and 41 tests stayed green over an upload path that
 raised on the first real image.
 
+By default the user-photo checks are forced down the local-disk branch, so
+nothing touches S3.
+
+#### Against the real S3 bucket
+
+```
+docker compose exec web python /app/tools/image_smoke.py --s3
+```
+
+Adds a round trip through the real `sg101.user.photos` bucket: uploads through
+the view, fetches the object back over plain https **with no credentials** —
+which is what proves it is publicly readable — checks the metadata the upload
+attached, deletes it through `user_photos.storage.delete_photos` so the local/S3
+routing is exercised against a real S3 URL, and confirms it is gone.
+
+**This needs live `AWS_ACCESS_KEY` / `AWS_SECRET_KEY` and it writes real objects
+to the real bucket**, which is why it is opt-in. It is also the only thing in
+the project that can tell you the S3 code works: every S3 test in the suite
+mocks boto3, so none of them can catch a wrong argument, and none of them knows
+whether the credentials still authenticate or whether the bucket still permits a
+public-read write.
+
+Objects it creates are named `_image_smoke_<hex>` so an interrupted run leaves
+something findable. The cleanup removes them and verifies they are gone; if a
+run is killed outright:
+
+```
+aws s3 ls s3://sg101.user.photos/ | grep _image_smoke_
+aws s3 rm s3://sg101.user.photos/<key>
+```
+
+Run this on any host that is going to serve uploads — it is what turns "the
+settings look right" into "a member can upload a photo here."
+
 **It writes to whatever database the settings point at** — in dev, the converted
 production snapshot. It creates a scratch user, uploads as them, and removes it
 all in a `finally`, checking afterwards that the user is gone. Take a snapshot
