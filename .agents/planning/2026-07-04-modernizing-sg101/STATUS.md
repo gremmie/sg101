@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 15 task 02 — `core/s3.py` on boto3 — DONE 2026-08-16, `219e4be`, NOT YET PUSHED
+## Step 15 task 02 — `core/s3.py` on boto3 — DONE 2026-08-16, `219e4be`, PUSHED, CI GREEN
 
 **`boto3==1.43.72`**, 845 → **851 tests, and the suite now has no skipped tests
 at all** — those 5 skips were the whole list, the class-level skip Step 8 put on
