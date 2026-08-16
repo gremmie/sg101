@@ -75,10 +75,13 @@ ftfy==6.3.1
 python-dateutil==2.9.0.post0
 repoze.timeago==0.5
 requests==2.34.2
+# core/s3.py -- member photo uploads and deletes. Replaces the boto (v2) dropped
+# at the Python 3 flip; see the note in requirements.txt.
+boto3==1.43.72
 
 # django-elsewhere is now vendored into the repo (was an editable git dep); the
-# boto / google-api-python-client / oauth2client / httplib2 / uritemplate / rsa /
-# pyasn1 lines are gone with the stubbed s3 and gcalendar integrations.
+# google-api-python-client / oauth2client / httplib2 / uritemplate / rsa /
+# pyasn1 lines are gone with the stubbed gcalendar integration.
 
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 testfixtures==12.3.0

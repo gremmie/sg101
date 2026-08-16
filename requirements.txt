@@ -2,7 +2,6 @@
 #
 # Apps whose old external libraries aren't Python-3 ready are temporarily
 # stubbed, and their dependencies dropped here:
-#   boto (core/s3.py)                       -> Cloudflare R2 / boto3 later
 #   google-api-python-client / oauth2client /
 #     httplib2 / uritemplate / rsa / pyasn1 (gcalendar) -> modern google-auth later
 #
@@ -149,3 +148,9 @@ python-dateutil==2.9.0.post0
 # deprecation is then a one-line fix. Recommended into Step 19; not decided here.
 repoze.timeago==0.5
 requests==2.34.2
+# core/s3.py, which stores and deletes member photo uploads in S3. This replaces
+# the boto (v2) that was dropped at the Python 3 flip: v2 is Python-2 era and
+# abandoned, and uploading had been failing from production since AWS finished
+# deprecating TLS 1.0/1.1 in May 2023. boto3 pulls botocore at a matching
+# version, which is why only one pin appears here.
+boto3==1.43.72
