@@ -326,7 +326,7 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 14 task 06 — the host venv ⭐ STEP 14 COMPLETE — DONE 2026-08-15
+## Step 14 task 06 — the host venv ⭐ STEP 14 COMPLETE — DONE 2026-08-15, PUSHED, CI GREEN
 
 **`.venv` on Python 3.12.14 exactly matching the image, pyright resolving every
 application import, and 887 tests still green in the container.** No application
@@ -420,7 +420,7 @@ tooling; DOCKER.md carries the two-command check.
 
 **This closes Step 14.** Next: Step 15 — media to Cloudflare R2.
 
-## Step 14 task 05 — final dependency alignment + the gate moves into CI — DONE 2026-08-15
+## Step 14 task 05 — final dependency alignment + the gate moves into CI — DONE 2026-08-15, PUSHED, CI GREEN
 
 **887 green under the gate, `check` / `check --deploy` / `makemigrations --check`
 clean, smoke 35/35 reads and writes, worker and beat clean. Two pins removed,
@@ -620,7 +620,7 @@ before either character.** Both of ours are.
 
 **Next: Step 14 task 06** — the host venv, which closes the step.
 
-## Step 14 task 04 — the Django 5.2 LTS rung ⭐ TARGET STACK REACHED — DONE 2026-08-15
+## Step 14 task 04 — the Django 5.2 LTS rung ⭐ TARGET STACK REACHED — DONE 2026-08-15, PUSHED, CI GREEN
 
 **SG101 runs on Django 5.2.17 LTS / Python 3.12.14 / PostgreSQL 16. 887 tests
 green under a gate proven to fire on this rung, `check`, `check --deploy` and
