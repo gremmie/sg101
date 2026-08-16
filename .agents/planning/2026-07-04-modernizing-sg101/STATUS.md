@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 15 task 01 — retire `ssl_images` — DONE 2026-08-16, `afe32ca`, NOT YET PUSHED
+## Step 15 task 01 — retire `ssl_images` — DONE 2026-08-16, `afe32ca`, PUSHED, CI GREEN
 
 **887 → 845 tests, exactly the 42 removed**, same 5 skips, no errors; green under
 the deprecation gate, `check` and `makemigrations --check` clean. 1,045 lines
