@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## ⭐ STEP 15 COMPLETE — task 05, the S3 smoke tool — DONE 2026-08-16, `5576aa7`, NOT YET PUSHED
+## ⭐ STEP 15 COMPLETE — task 05, the S3 smoke tool — DONE 2026-08-16, `5576aa7`, PUSHED, CI GREEN
 
 **All five tasks done. User photo uploads are back on AWS S3, and it is verified
 against the real bucket rather than against mocks.** `tools/image_smoke.py`
