@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 15 task 04 — the delete path, S3 and local — DONE 2026-08-16, `b324774`, NOT YET PUSHED
+## Step 15 task 04 — the delete path, S3 and local — DONE 2026-08-16, `b324774`, PUSHED, CI GREEN
 
 **866 tests green** (854 + 12), gate green, checks clean, `image_smoke.py` 7/7,
 and the snapshot data verified intact afterwards at 26,331 photos / 15,227 users
