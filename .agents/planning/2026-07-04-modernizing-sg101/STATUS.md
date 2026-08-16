@@ -174,6 +174,100 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 14 task 06 — the host venv ⭐ STEP 14 COMPLETE — DONE 2026-08-15
+
+**`.venv` on Python 3.12.14 exactly matching the image, pyright resolving every
+application import, and 887 tests still green in the container.** No application
+code changed, so nothing here can break the site, the suite or CI — which is what
+made it the right task to close the step with.
+
+**Project-wide pyright errors: 892 → 241.** The remaining 10 unresolved imports
+are all genuinely absent packages that map onto later steps — `boto` (Step 15),
+`apiclient`/`oauth2client` (Step 18), `fabric` (legacy deploy), plus `eyed3` and
+`jinja2` in `tools/`.
+
+### Four of the task file's premises were wrong, and measuring caught all four
+
+The same failure mode this project has now recorded three times — a task file's
+premise inherited rather than measured:
+
+1. **"Two files import `MySQLdb`"** — there are **three**. It missed
+   `tools/load_ygroup.py:19`.
+2. **"Naming it `.venv` is what makes ALE find it with no configuration."** No.
+   With the venv built and populated and no config file, pyright still reported
+   all 7 imports in `forums/models.py` missing. `pyrightconfig.json` with
+   `venvPath`/`venv` is mandatory, not optional polish.
+3. **Requirement 5's "naming the settings module"** has no pyright equivalent.
+   `django_settings_module` is a **mypy plugin** setting; pyright runs no
+   plugins. Implemented what was achievable and recorded why the rest cannot be.
+4. **`.dockerignore` does not keep `.venv` out of the running container.** It
+   governs the `COPY . /app` layer only; the `.:/app` bind mount carries it in
+   regardless. Verified both directions — absent from the image, present via the
+   mount, inert there because the container's Python is `/usr/local`.
+
+### The dependency decisions, both measured rather than assumed
+
+- **`mysqlclient` omitted**, and it costs even less than the cheap path implied:
+  pyright ships typeshed stubs for `MySQLdb`, so the result is **2
+  `reportMissingModuleSource` warnings, not 3 errors**, with full type
+  information retained. No Homebrew.
+- **`psycopg2` → `psycopg2-binary`.** Same module, same import surface, bundled
+  libpq, installs from a wheel. This one had to resolve, since the site runs on
+  PostgreSQL. Also no Homebrew — the host stays clean of both `mysql_config` and
+  `pg_config`.
+- **Exactly one of 43 packages needed a source build**: `repoze.timeago`, which
+  has no wheel (upstream stopped 2011) but is pure Python and needs no headers.
+  `Pillow` and `lxml` both came from wheels. **The July 2026-07-31 attempt was
+  abandoned on the belief that four pins would need source builds this host
+  could not do; all four are now wheels.**
+
+### django-types, not django-stubs — against the task file, on evidence
+
+`django-stubs` is built for mypy and leaves its field classes generic
+(`class CharField(Field[_ST, _GT])`), filling the parameters from a plugin
+pyright cannot run. Read out of the installed stub rather than inferred: the
+`_pyi_private_get_type` markers are what the plugin consumes.
+
+| | `django-stubs` 6.1.0 | `django-types` 0.24.0 |
+|---|---|---|
+| `Topic.objects` | `Manager[Topic]` | `BaseManager[Topic]` |
+| `t.name` | **`Unknown`** | **`str`** |
+| project-wide errors | 827 | 892 |
+
+`Unknown` fields mean no hover and no completion on model instances, which
+defeats the purpose — and `g:ale_completion_enabled = 1` means completion is a
+daily path, not a nicety. `django-types`' coarser `BaseManager` label is
+cosmetic: chaining, indexing, iteration and `count()` all resolve correctly,
+verified. Neither package can see the implicit `id` pk (217 hits) or reverse
+accessors; those are plugin-only, which is why `reportAttributeAccessIssue` is a
+**warning** rather than an error in `pyrightconfig.json`, and
+`reportFunctionMemberAccess` (Celery `.delay`, admin `short_description`) is off.
+
+### `.tool-versions` is committed
+
+`python 3.12.14`, so the recreate recipe is plain `python -m venv .venv` rather
+than an absolute path into `~/.asdf/installs/`, and any stray `python`/`pip` in
+the repo is 3.12.14 instead of the global **3.14.2t free-threaded** build.
+**It can drift from the image by design** — the Dockerfile floats `FROM
+python:3.12`, so a rebuild can move ahead of the pin. Harmless for editor
+tooling; DOCKER.md carries the two-command check.
+
+### What the tooling found on its first day
+
+- **Five files in `tools/` are still Python 2** and cannot be parsed by a py3
+  checker at all: `filter_posts.py`, `flag_data.py`, `load_ygroup.py`,
+  `post_sub.py`, `translate_yahoo_group.py` (`print` statements, `except
+  IOError, ex`). Excluded in `pyrightconfig.json` so they do not sit permanently
+  red; **not** fixed, and not scheduled. `load_ygroup.py` is doubly dead — it is
+  also one of the three `MySQLdb` importers.
+- **`Post.delete()` returns `None`** where `Model.delete()` returns
+  `tuple[int, dict[str, int]]` — `forums/models.py:311`. Latent; nothing in the
+  tree reads a `.delete()` return value. **Scheduled into Step 19**, beside the
+  cascade hazard it shares a delete path with.
+- DOCKER.md's test count was stale at 884; corrected to **887**.
+
+**This closes Step 14.** Next: Step 15 — media to Cloudflare R2.
+
 ## Step 14 task 05 — final dependency alignment + the gate moves into CI — DONE 2026-08-15
 
 **887 green under the gate, `check` / `check --deploy` / `makemigrations --check`
