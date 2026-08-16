@@ -20,7 +20,8 @@ def delete_photos(qs):
     bucket = S3Bucket(settings.USER_PHOTOS_ACCESS_KEY,
                       settings.USER_PHOTOS_SECRET_KEY,
                       settings.USER_PHOTOS_BASE_URL,
-                      settings.USER_PHOTOS_BUCKET)
+                      settings.USER_PHOTOS_BUCKET,
+                      region_name=settings.USER_PHOTOS_REGION)
 
     key_urls = []
     for photo in qs:

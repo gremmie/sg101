@@ -78,6 +78,7 @@ class ProcessUploadTestCase(unittest.TestCase):
     @patch('core.images.upload.settings.USER_PHOTOS_BASE_URL', new='base-url')
     @patch('core.images.upload.settings.USER_PHOTOS_SECRET_KEY', new='secret-key')
     @patch('core.images.upload.settings.USER_PHOTOS_ACCESS_KEY', new='access-key')
+    @patch('core.images.upload.settings.USER_PHOTOS_REGION', new='region-name')
     def test_s3_upload(self, image_mock, orient_mock, uuid_mock, now_mock,
                        bucket_mock, bytes_mock):
         now_mock.localtime.return_value = datetime.datetime(2025, 4, 20)
@@ -124,7 +125,8 @@ class ProcessUploadTestCase(unittest.TestCase):
             call(access_key='access-key',
                  secret_key='secret-key',
                  base_url='base-url',
-                 bucket_name='bucket-name'),
+                 bucket_name='bucket-name',
+                 region_name='region-name'),
             call().upload_from_filename('ZGVhZGJlZWY.jpg', filename,
                                         expected_metadata),
             call().upload_from_string('ZGVhZGJlZWYt.jpg',

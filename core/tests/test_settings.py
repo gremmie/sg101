@@ -34,8 +34,13 @@ SNIPPET = (
 )
 
 
-def _run(env_overrides):
-    """Load settings in a subprocess; return (returncode, stdout, stderr)."""
+def _run(env_overrides, snippet=SNIPPET):
+    """Load settings in a subprocess; return (returncode, stdout, stderr).
+
+    snippet defaults to reading SECRET_KEY back out; pass another to read a
+    different setting, since any attribute access is enough to force the
+    settings module -- and base.py's env-var reads -- to load.
+    """
     env = os.environ.copy()
     env['DJANGO_SETTINGS_MODULE'] = 'sg101.settings.docker_test'
     env['DOTENV_PATH'] = NO_DOTENV
@@ -45,7 +50,7 @@ def _run(env_overrides):
         else:
             env[key] = value
     proc = subprocess.Popen(
-        [sys.executable, '-c', SNIPPET],
+        [sys.executable, '-c', snippet],
         cwd=ROOT, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
@@ -67,6 +72,69 @@ class EnvVarSettingsTests(SimpleTestCase):
         self.assertNotEqual(code, 0)
         self.assertIn('ImproperlyConfigured', err)
         self.assertIn('SECRET_KEY', err)
+
+
+class UserPhotoUploadSettingsTests(SimpleTestCase):
+    """The upload destination and the user-content whitelist have to agree.
+
+    USER_IMAGES_SOURCES lists the hosts members may reference in posts, enforced
+    by core.html.image_check() at submit time. Uploading a photo is only useful
+    because the detail page hands the member markup to paste into a post, so an
+    upload host missing from that list produces a photo that uploads, appears in
+    its gallery, and cannot be posted. Settings refuse to load instead.
+    """
+
+    def test_defaults_reproduce_the_previous_hardcoded_values(self):
+        """With nothing set, the env-backed settings match what they replaced."""
+        code, out, err = _run({
+            'SECRET_KEY': 'x',
+            'USER_PHOTOS_BUCKET': None,
+            'USER_PHOTOS_BASE_URL': None,
+            'USER_PHOTOS_REGION': None,
+        }, snippet=(
+            "from django.conf import settings\n"
+            "import sys\n"
+            "sys.stdout.write('|'.join([settings.USER_PHOTOS_BUCKET,\n"
+            "                           settings.USER_PHOTOS_BASE_URL,\n"
+            "                           settings.USER_PHOTOS_REGION]))\n"
+        ))
+        self.assertEqual(code, 0, msg=err)
+        self.assertEqual(
+            out.strip(),
+            'sg101.user.photos|https://s3-us-west-1.amazonaws.com|us-west-1')
+
+    def test_all_three_are_read_from_the_environment(self):
+        """Each of the three overrides reaches its setting.
+
+        The base URL override uses a host that is already whitelisted, so this
+        exercises the override rather than the guard below.
+        """
+        code, out, err = _run({
+            'SECRET_KEY': 'x',
+            'USER_PHOTOS_BUCKET': 'bucket-from-env',
+            'USER_PHOTOS_BASE_URL': 'https://s3.amazonaws.com',
+            'USER_PHOTOS_REGION': 'region-from-env',
+        }, snippet=(
+            "from django.conf import settings\n"
+            "import sys\n"
+            "sys.stdout.write('|'.join([settings.USER_PHOTOS_BUCKET,\n"
+            "                           settings.USER_PHOTOS_BASE_URL,\n"
+            "                           settings.USER_PHOTOS_REGION]))\n"
+        ))
+        self.assertEqual(code, 0, msg=err)
+        self.assertEqual(
+            out.strip(),
+            'bucket-from-env|https://s3.amazonaws.com|region-from-env')
+
+    def test_upload_host_outside_the_whitelist_refuses_to_boot(self):
+        code, out, err = _run({
+            'SECRET_KEY': 'x',
+            'USER_PHOTOS_BASE_URL': 'https://elsewhere.example.com',
+        })
+        self.assertNotEqual(code, 0)
+        self.assertIn('ImproperlyConfigured', err)
+        self.assertIn('USER_IMAGES_SOURCES', err)
+        self.assertIn('elsewhere.example.com', err)
 
 
 class SettingsImportIsolationTests(SimpleTestCase):

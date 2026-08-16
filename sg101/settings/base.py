@@ -2,9 +2,11 @@
 
 import os
 from decimal import Decimal
+from urllib.parse import urlparse
 
 import environ
 from django.contrib.messages import constants as message_constants
+from django.core.exceptions import ImproperlyConfigured
 from celery.schedules import crontab
 
 
@@ -329,21 +331,31 @@ WIKI_REDIS_SET = 'wiki_cookie_keys'
 USER_PHOTOS_ENABLED = True
 USER_PHOTOS_ACCESS_KEY = env('AWS_ACCESS_KEY', default='')
 USER_PHOTOS_SECRET_KEY = env('AWS_SECRET_KEY', default='')
-USER_PHOTOS_BUCKET = 'sg101.user.photos'
-USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
+USER_PHOTOS_BUCKET = env('USER_PHOTOS_BUCKET', default='sg101.user.photos')
+USER_PHOTOS_BASE_URL = env('USER_PHOTOS_BASE_URL',
+                           default='https://s3-us-west-1.amazonaws.com')
+# The bucket's region. This was previously a default argument in S3Bucket's
+# signature that both call sites left alone, so it was configuration living in a
+# function definition; it is passed explicitly now.
+USER_PHOTOS_REGION = env('USER_PHOTOS_REGION', default='us-west-1')
 USER_PHOTOS_MAX_SIZE = (660, 720)
 USER_PHOTOS_THUMB_SIZE = (120, 120)
 USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 
-# Hosts whose images members may hot-link. Two of these are our own S3 buckets,
-# and they are not interchangeable:
-#   s3.amazonaws.com         serves sg101.forum.photos, a read-only archive of
-#                            images embedded in thousands of old posts. Nothing
-#                            writes to it any more, and it must keep answering.
-#   s3-us-west-1.amazonaws.com  serves sg101.user.photos, where member photo
-#                            uploads go. This one is written to (USER_PHOTOS_*).
-# A destination host must appear here or its images upload fine and then fail to
-# display.
+# Hosts that user-authored content may reference in <img> tags. core.html's
+# image_check() enforces this when the content is submitted -- forum posts,
+# comments, private messages, profiles, news, downloads, calendar events -- and
+# its callers turn a rejection into a form validation error ("Invalid image
+# source"). It has no bearing on pages the site renders itself.
+#
+# Two of these are our own S3 buckets, and they are not interchangeable:
+#   s3.amazonaws.com            sg101.forum.photos -- a read-only archive of
+#                               images embedded in thousands of old posts.
+#                               Nothing writes to it any more, and it has to
+#                               keep answering.
+#   s3-us-west-1.amazonaws.com  sg101.user.photos -- where member photo uploads
+#                               go. This is the one that gets written to, by
+#                               the USER_PHOTOS_* settings above.
 USER_IMAGES_SOURCES = [
     'dl.dropboxusercontent.com',
     's3.amazonaws.com',
@@ -355,6 +367,25 @@ USER_IMAGES_SOURCES = [
 
 USER_PHOTOS_LOCAL_UPLOAD = False
 USER_PHOTOS_LOCAL_UPLOAD_DIR = 'user_photos'
+
+# The upload destination has to be a host user content may reference, because
+# posting the photo is the point of uploading it: the photo detail page hands
+# the member ready-made markup to paste into a forum post, and image_check()
+# rejects that post if the photo's host is not in the list above.
+#
+# Note the gallery and detail pages are unaffected either way -- they render the
+# stored URL directly -- so a mismatch does not look like a broken upload. It
+# looks like the site issuing a URL it then refuses to accept, reported by
+# members as "Invalid image source" on a post that will not save, with nothing
+# logged anywhere an operator would see. Refuse to boot instead.
+_upload_host = urlparse(USER_PHOTOS_BASE_URL).hostname
+if _upload_host not in USER_IMAGES_SOURCES:
+    raise ImproperlyConfigured(
+        "USER_PHOTOS_BASE_URL points at %r, which is not in "
+        "USER_IMAGES_SOURCES, so photos uploaded there would be stored and "
+        "then not displayed. Add the host to USER_IMAGES_SOURCES, or correct "
+        "USER_PHOTOS_BASE_URL." % (_upload_host,))
+del _upload_host
 
 # Google reCAPTCHA settings
 RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'

@@ -71,7 +71,12 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 DONATIONS_DEBUG = False
 
-USER_PHOTOS_LOCAL_UPLOAD = True
+# Uploads go to S3 again. This was switched to local disk when AWS finished
+# deprecating TLS 1.0/1.1 and the Python 2.7 stack could no longer negotiate a
+# connection to the bucket; the interpreter is what was broken, and it is not
+# any more. Photos already on local disk keep their stored URLs and are served
+# from the same path -- nothing is migrated here.
+USER_PHOTOS_LOCAL_UPLOAD = False
 
 # SSL related settings
 SESSION_COOKIE_SECURE = True

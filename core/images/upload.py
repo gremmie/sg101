@@ -38,7 +38,8 @@ def process_upload(user, filename):
         bucket = S3Bucket(access_key=settings.USER_PHOTOS_ACCESS_KEY,
                           secret_key=settings.USER_PHOTOS_SECRET_KEY,
                           base_url=settings.USER_PHOTOS_BASE_URL,
-                          bucket_name=settings.USER_PHOTOS_BUCKET)
+                          bucket_name=settings.USER_PHOTOS_BUCKET,
+                          region_name=settings.USER_PHOTOS_REGION)
 
         url, thumb_url = upload(filename,
                                 bucket=bucket,
