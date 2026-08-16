@@ -334,9 +334,16 @@ USER_PHOTOS_BASE_URL = 'https://s3-us-west-1.amazonaws.com'
 USER_PHOTOS_MAX_SIZE = (660, 720)
 USER_PHOTOS_THUMB_SIZE = (120, 120)
 USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
-HOT_LINK_PHOTOS_BASE_URL = 'https://s3.amazonaws.com/'
-HOT_LINK_PHOTOS_BUCKET = 'sg101.forum.photos'
 
+# Hosts whose images members may hot-link. Two of these are our own S3 buckets,
+# and they are not interchangeable:
+#   s3.amazonaws.com         serves sg101.forum.photos, a read-only archive of
+#                            images embedded in thousands of old posts. Nothing
+#                            writes to it any more, and it must keep answering.
+#   s3-us-west-1.amazonaws.com  serves sg101.user.photos, where member photo
+#                            uploads go. This one is written to (USER_PHOTOS_*).
+# A destination host must appear here or its images upload fine and then fail to
+# display.
 USER_IMAGES_SOURCES = [
     'dl.dropboxusercontent.com',
     's3.amazonaws.com',
