@@ -174,7 +174,7 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
-## Step 15 task 03 — settings/env + uploads back to S3 — DONE 2026-08-16, `816b95a`, NOT YET PUSHED
+## Step 15 task 03 — settings/env + uploads back to S3 — DONE 2026-08-16, `816b95a`, PUSHED, CI GREEN
 
 **854 tests green** (851 + 3), gate green, `check` and `makemigrations --check`
 clean, stack boots from `.env` alone with site, worker and beat clean.
