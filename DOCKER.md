@@ -112,7 +112,7 @@ known account from the snapshot.
 docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 No snapshot needed — Django builds a throwaway `test_sg101` database from the
-migrations and drops it again. 884 tests, about 12 seconds.
+migrations and drops it again. 887 tests, about 12 seconds.
 
 **The suite runs on PostgreSQL, the same engine the site runs on.** It used to
 run on sqlite, which was roughly two seconds faster; that is the whole of what
@@ -398,6 +398,110 @@ Recovery took an hour through MySQL. With a snapshot it would have been a
 `scratch` restore and one `\copy`. Note that a snapshot only helps if it is
 older than the damage — which is the argument for taking one at the start of a
 session rather than when something looks wrong.
+
+## 9. A host virtualenv for your editor
+
+**The container is still where code runs.** Nothing in this section changes how
+the site, the test suite or CI execute — all three remain exactly as described
+above. `.venv` exists for one reason: so an editor's language server can read the
+code. Before it existed, pyright could not resolve a single third-party import,
+so every `django`, `celery` and `PIL` line was flagged and real diagnostics were
+unfindable in the noise.
+
+### Recreating it
+
+```
+asdf install python 3.12.14          # the version comes from .tool-versions
+python -m venv .venv                 # 3.12.14, because you are in this directory
+.venv/bin/python -m pip install --upgrade pip
+
+# Flatten both requirements files, drop mysqlclient, swap in psycopg2-binary.
+cat requirements.txt requirements_dev.txt \
+  | grep -v '^-r ' | grep -v '^mysqlclient' \
+  | sed 's/^psycopg2==/psycopg2-binary==/' > /tmp/host-reqs.txt
+.venv/bin/pip install -r /tmp/host-reqs.txt
+.venv/bin/pip install django-types
+```
+
+**`.tool-versions` is what makes the plain `python` above correct.** It is
+committed, and it pins this directory to 3.12.14 for asdf (and mise). Without it
+you would get the global interpreter -- currently 3.14, and a free-threaded build
+at that -- and a venv built on it would type-check against a different standard
+library than the one the code runs on.
+
+**It can drift from the image, by design.** The Dockerfile floats its base tag
+(`FROM python:3.12`), so a rebuild can land on a newer patch than the line pinned
+here. That gap is harmless for editor tooling, but if you want to know:
+
+```
+docker compose run --rm --no-deps web python --version   # what the image has
+python --version                                         # what .tool-versions pins
+```
+
+Bump the pin when they disagree and you care; nothing breaks if you don't. A
+fresh clone that has not run `asdf install` yet will see `python` error in this
+directory rather than silently fall back to the global one, which is the failure
+mode you want.
+
+### The two pins that differ from the image, and why
+
+Neither `mysql_config` nor `pg_config` exists on this host, and both packages
+build from source rather than shipping wheels. Homebrew could supply both, but
+neither is worth installing:
+
+- **`mysqlclient` is omitted.** Only `tools/load_ygroup.py` and
+  `tools/pgloader/{verify,verify_data}.py` import `MySQLdb`, all of them
+  migration tooling — nothing in the application touches it. The cost is two
+  `reportMissingModuleSource` *warnings*, not errors, because pyright ships
+  typeshed stubs for `MySQLdb` and still gives full type information for it.
+- **`psycopg2` is replaced by `psycopg2-binary`.** Same `psycopg2` module and the
+  same import surface, built with a bundled libpq, so it installs from a wheel
+  with no headers. This one matters because the site does run on PostgreSQL, so
+  the import has to resolve.
+
+### What installed from a wheel, and what did not
+
+Of the 43 installed packages, **exactly one needed a source build**:
+`repoze.timeago`, which has no wheel on PyPI (upstream stopped in 2011) but is
+pure Python and needs no headers. Everything else, `Pillow` and `lxml` included,
+installed from a wheel. This is worth recording because an attempt on 2026-07-31
+was abandoned on the belief that four pins would need source builds the host
+could not do; the interpreter and dependency work since then removed all four.
+
+### django-types, not django-stubs
+
+Django generates `Model.objects` and every field attribute at runtime, so a
+checker sees neither without help. Both stub packages were measured against this
+codebase:
+
+| | `django-stubs` 6.1.0 | `django-types` 0.24.0 |
+|---|---|---|
+| `Topic.objects` | `Manager[Topic]` | `BaseManager[Topic]` |
+| `t.name` | **`Unknown`** | **`str`** |
+| project-wide errors | 827 | 892 |
+
+`django-stubs` is built for mypy and leaves its field classes generic
+(`class CharField(Field[_ST, _GT])`), filling the type parameters from a **mypy
+plugin** that pyright cannot run — so field types come out `Unknown` and hover
+and completion give nothing. `django-types` declares them directly. Its coarser
+`BaseManager` label is cosmetic: chaining, indexing, iteration and `count()` all
+resolve correctly.
+
+Neither can see the implicit `id` primary key or reverse accessors like
+`topic.posts`; those are plugin-only, and are why `reportAttributeAccessIssue` is
+a warning rather than an error in `pyrightconfig.json`.
+
+### What it is not
+
+It is **not** a way to run the code. There is no `secrets.json` handling, no
+database, and no Redis on the host path. `manage.py` run from `.venv` will not
+get far, and is not meant to. Use the `docker compose` commands above.
+
+The `.:/app` bind mount does carry `.venv` into the running container, and
+`.dockerignore` cannot prevent that — it only keeps it out of the image's
+`COPY . /app` layer, which is verified and is what matters, since those are
+macOS-architecture wheels. Inside the container it sits inert, because nothing
+activates it and the container's Python is `/usr/local`.
 
 ## Everyday commands
 

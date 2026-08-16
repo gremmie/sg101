@@ -6,6 +6,10 @@
 *.pyo
 __pycache__/
 
+# Host virtualenv, for editor tooling only. The code runs in Docker; this
+# exists so a language server can resolve imports. See DOCKER.md.
+.venv/
+
 # Editors / OS
 *.swp
 .DS_Store

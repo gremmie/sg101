@@ -1,0 +1,8 @@
+# Host interpreter for editor tooling, read by asdf (and mise). The code runs in
+# Docker; this only governs `python` inside this directory, so the host venv and
+# any stray `python`/`pip` match the image instead of the global interpreter.
+#
+# Kept at the patch level the image resolved to. The Dockerfile floats its base
+# tag (`FROM python:3.12`), so a rebuild can move ahead of this line -- check
+# `docker compose run --rm --no-deps web python --version` if they disagree.
+python 3.12.14

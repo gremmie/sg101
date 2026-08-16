@@ -1,0 +1,52 @@
+// Language-server config for the host virtualenv. Editor tooling only -- nothing
+// here affects the site, the test suite, or CI, and the code still runs in
+// Docker. See DOCKER.md, "A host virtualenv for your editor".
+{
+  // Without these two, pyright resolves nothing third-party: it does not find
+  // ./.venv on its own, and every `django`, `celery` and `PIL` import is reported
+  // missing even though the venv is sitting right there.
+  "venvPath": ".",
+  "venv": ".venv",
+
+  // Match the image (python:3.12) rather than the host default, so the checker
+  // reads the same standard library the code actually runs against.
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Darwin",
+
+  // This codebase carries no annotations, so "strict" reports thousands of
+  // unannotated-parameter diagnostics and buries the real ones -- the exact noise
+  // problem this venv exists to fix. Measured: basic 735 errors, standard 827.
+  "typeCheckingMode": "standard",
+
+  "include": ["."],
+  "exclude": [
+    ".venv",
+    "**/__pycache__",
+    "**/migrations",
+    "media",
+    "static_serve",
+    "sg101/node_modules",
+    "sg101/bower_components",
+    // Still Python 2 and unparseable by a py3 checker: `print` statements and
+    // `except IOError, ex` syntax. Excluded so they do not sit permanently red.
+    "tools/filter_posts.py",
+    "tools/flag_data.py",
+    "tools/load_ygroup.py",
+    "tools/post_sub.py",
+    "tools/translate_yahoo_group.py"
+  ],
+
+  "reportMissingImports": "error",
+
+  // Django attaches attributes no static checker can see without running the ORM:
+  // the implicit `id` primary key (217 of these) and every reverse accessor
+  // (`topic.posts`). Demoted to warning rather than off, because the same rule
+  // does catch real misspelled field names now that django-types gives models
+  // declared fields.
+  "reportAttributeAccessIssue": "warning",
+
+  // Celery's `@task` decorator and Django admin's `short_description` assignment
+  // both hang attributes off plain functions. Effectively always a false positive
+  // here, so it is off rather than demoted.
+  "reportFunctionMemberAccess": "none"
+}
