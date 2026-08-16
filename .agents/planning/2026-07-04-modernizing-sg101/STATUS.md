@@ -174,6 +174,158 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## PLANNING — Step 15 rescoped, and R2 reversed back to S3 (2026-08-15)
+
+**Nothing built; the plan's Step 15 section and checklist line rewritten.** The
+step is materially smaller than it was, and pointed at a different destination.
+
+**The recommendation this reverses was mine.** The `/pdd` session chose Cloudflare
+R2 on the understanding that S3 was no longer usable from production. Brian
+supplied the history that shows why that was the wrong reading, and the snapshot
+corroborates it to the day.
+
+**What actually happened.** Media for `bio`, `downloads`, `smiley` and the rest
+has been on the dedicated server's own disk **since day one, by design** — never
+S3. The `user_photos` app came later, when https became necessary, and it alone
+uploaded to S3. AWS then stopped accepting production's uploads: **Py2.7-era TLS
+meeting AWS's TLS 1.0/1.1 deprecation**, which S3 completed in mid-2023. Brian
+worked around it by switching new photos to local disk. **The buckets were never
+turned off and still serve reads** — only the upload path died.
+
+**Which means the blocker was the interpreter, and Steps 13-14 already removed
+it.** Python 3.12 on OpenSSL 3.6.3 can talk to S3 today. Going back costs no new
+account, no new credentials, and no migration of the historical photos — whereas
+R2 would mean either a 26,331-row migration or two storage providers forever.
+Brian's call, and the right one.
+
+**The data agrees with the story to the day** (`user_photos.Photo`, 26,331 rows,
+absolute URLs):
+
+| rows | host | `upload_date` range |
+|---|---|---|
+| 21,754 | `s3-us-west-1.amazonaws.com/sg101.user.photos` | 2013-09-15 → **2023-05-07** |
+| 4,577 | `surfguitar101.com` (local disk) | **2023-05-08** → 2026-07-11 |
+
+A one-day cutover, the day after `3e655db` added the local-upload option. **Only
+the 4,577 migrate**, into the existing bucket.
+
+### The twenty-month gap, explained — and it is a Step 21 hazard
+
+`e53aa1f` "Turn on user photos local upload in prod" is dated **2025-01-04**,
+twenty months after local uploads demonstrably began on 2023-05-08. Brian's
+recollection, offered as probable rather than certain: he ran the switch in
+production for a while before putting it under version control.
+
+**The code narrows this to exactly one mechanism.** `USER_PHOTOS_LOCAL_UPLOAD` is
+a plain assignment in `base.py`/`production.py` — not env-driven, and there is no
+`local_settings.py` override in this project. So it had to be a direct edit of
+`production.py` on the server. `fab update` is `hg pull --update`, which carries
+an uncommitted working-copy edit forward across every deploy, silently and
+indefinitely.
+
+**So production has run at least one uncommitted modification for ~20 months, and
+nothing in the repo could reveal a second one.** That matters at Step 21: a fresh
+clone onto the new host drops any such edit, and the behavior change appears
+*after* the cutover rather than during the smoke checklist. **Written into Step 21
+as a pre-cutover `hg status` / `hg diff` audit of the old box's working copy** —
+cheap, and the only way to find the ones nobody remembers.
+
+Two smaller consequences: `main`'s commit dates are evidence of when something was
+*recorded*, not when it took effect in production; and the data — 4,577 rows with
+`upload_date` from 2023-05-08 — was the more reliable witness here, as it was for
+`ssl_images`.
+
+### `ssl_images` is being retired, not ported — evidence, since memory was uncertain
+
+Brian thought it was unused but wanted it checked. It is, on seven counts:
+absent from `CELERY_BEAT_SCHEDULE` (6 entries); absent from every `call_command`
+in the tree (7 sites); absent from `fabfile.py`, compose, the Dockerfile, CI and
+`tools/`; no `ssl_images.log` or `ssl_images_cache.json` anywhere; last code
+change on `main` **2015-11-27**; a manual command with no scheduler entry; and
+**its output signature in the data stops dead** — posts containing
+`sg101.forum.photos` run 966 in 2015, 323 in 2016, then 22, 3, 5, 3 and single
+digits through 2025, a tail consistent with members pasting existing URLs rather
+than the tool running. It also could not have succeeded since May 2023 regardless,
+since it uploads to S3. **The one place this cannot be seen from is production's
+crontab**; Brian is confident it is not there, and the output evidence holds
+whatever the invocation route.
+
+**Retiring the command is NOT retiring the bucket** — 15,690 posts and 16 comments
+embed `sg101.forum.photos` URLs in stored HTML, so it must keep serving
+indefinitely. Deleting the command drops **42 tests** and wants its own commit.
+Its Py2 `gen_key()` bug dies with it; `core/images/upload.py`'s `make_key()` was
+**already correct**, so the plan's old claim that "the whole S3 upload path is
+dead" was true of one of two paths.
+
+**Local `/media` deferred to Step 20**, where WhiteNoise and the Cloudflare front
+live. `downloads` (716 MP3 rows) is the only part where size or egress might
+justify object storage; everything else is small and admin-managed.
+
+### Migrate nothing in Step 15 — Brian's question broke the first draft
+
+The rescope above originally said to upload the 4,577 local photos into the
+bucket and rewrite their rows. **Brian asked what happens to those files at
+cutover, and the answer invalidated it on three counts:**
+
+1. **The rewrites would not survive.** Step 21 loads a *fresh production
+   snapshot*; anything rewritten in dev never existed in production's database,
+   so the snapshot arrives with every row still pointing at `surfguitar101.com`.
+2. **The set keeps growing** — production stays live on the old code until the
+   DNS flip.
+3. **Production cannot perform the upload at all.** Its Py2.7 cannot reach S3 —
+   the very reason the step exists. Only a machine with both the files and a
+   modern client can do it, i.e. the new host. Dev cannot even rehearse it:
+   `media/user_photos` does not exist in the checkout.
+
+**So nothing migrates.** The local photos ride the Step 21 media rsync that has
+to happen anyway, their URLs keep working because the new host serves the same
+path, and consolidating them into S3 becomes an optional, windowless job that can
+run any time after cutover. **This is the Step 11 lesson again** — work that must
+survive a fresh snapshot belongs at cutover, as repeatable tooling, not in a dev
+database.
+
+**And it exposed a hole nobody had noticed: the plan had no media-transfer step
+at all.** Grepped both documents — no `rsync`, no `MEDIA_ROOT`, nothing. Step 21
+moved the database and nothing else, on a site that has served every badge,
+avatar, smiley, podcast, potd, banner and MP3 from local disk since day one. Now
+written in as a two-pass rsync, with the delta running *after* the final database
+snapshot so no row arrives without its file.
+
+## DECISION — the new host is a single VM, not a PaaS (2026-08-15)
+
+**Brian's call**, after the media question forced it. Step 21 had said "late-
+binding; recommend single VM on Linode/Lightsail, or Render", and that ambiguity
+turned out to be load-bearing: whether `/media` can stay on local disk is
+entirely downstream of it, and it changes the size of Steps 15 and 20.
+
+**Three reasons, in the order they matter:**
+
+1. **This project is already a compose stack.** Six services in one
+   `docker-compose.yml`, run identically by dev and CI. A VM runs it unchanged; a
+   PaaS means decomposing it into a web service, worker, scheduler, managed
+   Postgres and managed Key Value — a deployment re-architecture landing at the
+   single riskiest moment of the project. Two risks where there should be one.
+2. **Render's persistent disks are unusable for user uploads.** From Render's own
+   docs: a disk prevents scaling past one instance, **removes zero-downtime
+   deploys**, grows but never shrinks, cannot attach to a cron job, and
+   **snapshot restore is all-or-nothing** — recovering one deleted photo rolls
+   back every upload since. That alone would force media to object storage, i.e.
+   the full nine-field migration the VM lets us skip entirely.
+3. **Cost, ~4x.** Roughly **$80–115/month** on Render for this stack ($25
+   workspace fee before anything runs, $25 web, $7–25 worker, $7 beat, ~$6–20
+   Postgres, $10 Key Value, $0.15/GB over 25 GB bandwidth) against **~$24/month**
+   for a 4 GB shared-CPU Linode running all of it. Figures from third-party
+   pricing trackers on 2026-08-15 — **Render's own pricing page would not render,
+   so verify before committing money.**
+
+**A PaaS is explicitly not ruled out.** Brian's framing: revisit it as its own
+`/pdd` after the modernization lands. The objection is to doing it *during* the
+cutover, not to the idea.
+
+**Knock-on:** Step 20's guidance said "R2 media", which is now wrong twice over —
+corrected to media on the VM's disk, with object storage still used for `pg_dump`
+backups.
+
 ## Step 14 task 06 — the host venv ⭐ STEP 14 COMPLETE — DONE 2026-08-15
 
 **`.venv` on Python 3.12.14 exactly matching the image, pyright resolving every

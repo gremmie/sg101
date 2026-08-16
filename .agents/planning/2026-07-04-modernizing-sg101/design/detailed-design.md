@@ -85,12 +85,20 @@ expensive-to-port legacy. No new user-facing features are in scope.
   risk). Option to cut over at an intermediate rung retained.
 - **R15 — Cutover:** short maintenance window acceptable; keep old box warm as
   fallback ~1–2 weeks. No zero-downtime data sync required.
-- **R16 — Hosting late-binding:** portable docker-compose; provider TBD near
-  deploy (candidates: single VM on Linode/Lightsail (preferred), Render,
-  Lightsail+RDS). **AWS allowed if kept simple** (Lightsail, not ECS/EKS/App-
-  Runner-only). **Cloudflare (already in use) fronts the origin** — DNS, CDN,
-  edge TLS, DDoS, Turnstile — simplifying the origin and easing the DNS cutover;
-  this complements any chosen origin shape.
+- **R16 — Hosting: a single VM with persistent disk. DECIDED 2026-08-15**
+  (Linode/Lightsail class; **AWS allowed if kept simple** — Lightsail, not
+  ECS/EKS/App-Runner). This requirement previously read "late-binding, provider
+  TBD near deploy", with Render among the candidates. **Late-binding turned out
+  not to be free**: whether `/media` can stay on local disk is entirely
+  downstream of the host shape, so it was blocking the size of Steps 15 and 20.
+  Decided on three grounds — the project is already a six-service
+  docker-compose stack a VM runs unchanged, a PaaS would mean re-architecting
+  deployment at the riskiest moment; Render's persistent disks remove
+  zero-downtime deploys and offer only all-or-nothing snapshot restore, which is
+  unusable for user uploads; and the cost is roughly 4x (~$80–115/mo vs ~$24/mo).
+  **Revisiting a PaaS after the modernization lands is explicitly open, as its
+  own `/pdd`.** **Cloudflare (already in use) fronts the origin** — DNS, CDN,
+  edge TLS, DDoS, Turnstile — simplifying the origin and easing the DNS cutover.
 
 ### 2.7 Data, DB & subsystems
 - **R17 — Database:** decide MySQL→**PostgreSQL** after inspecting a snapshot
@@ -107,11 +115,18 @@ expensive-to-port legacy. No new user-facing features are in scope.
   working hypothesis = **Postgres full-text search** (cures the "can't run Xapian"
   pain; removes the persistent-disk hosting constraint). Must reach parity before
   cutover.
-- **R19 — Media:** return user uploads to **S3-compatible object storage** via
-  `boto3`; modern Python fixes the old TLS problem that forced local storage.
-  **Preferred: Cloudflare R2** (zero egress — ideal for an image-serving
-  community site; $0.015/GB, 10 GB free; same boto3 code via custom
-  `endpoint_url`). Alternatives: Linode Object Storage, AWS S3.
+- **R19 — Media:** return **user photo uploads** to **S3-compatible object
+  storage** via `boto3`; modern Python fixes the old TLS problem that forced
+  local storage. **REVISED 2026-08-15 — the target is the existing AWS S3
+  bucket, not R2.** This originally read "Preferred: Cloudflare R2 (zero
+  egress)". The zero-egress argument was real but the premise underneath it was
+  not: R2 was chosen believing S3 had become unusable, when in fact only
+  *uploading* broke (Py2.7 TLS vs AWS's 2023 TLS 1.0/1.1 deprecation) and the
+  buckets have served reads throughout. Going back to S3 leaves 21,754 existing
+  photo URLs untouched and needs no new account. **The rest of `/media` is not
+  object storage at all** — it has lived on the server's own disk since day one
+  and stays there, now that the host is a VM (R16). Detail and measurements in
+  the plan's Step 15 and in STATUS.
 - **R20 — Email:** replace the local mail server with a **transactional email
   provider** (Postmark/Brevo/SES) for deliverability from a fresh host.
   *(Note: Cloudflare Email Routing is inbound-only — it does NOT send outbound
@@ -183,8 +198,10 @@ graph TD
     GUNI --> DJ[Django 5.2 / Python 3.12<br/>WhiteNoise static]
     DJ --> PG[(PostgreSQL 16 + full-text search)]
     DJ --> REDIS[(Redis: cache + broker)]
-    DJ --> R2[(Cloudflare R2<br/>user media, boto3, zero egress)]
-    CF -. serves cached media .-> R2
+    DJ --> S3[(AWS S3<br/>user photos, boto3)]
+    DJ --> DISK[(VM disk<br/>/media: avatars, downloads,<br/>smiley, potd, banners)]
+    CF -. serves cached media .-> S3
+    CF -. serves cached media .-> DISK
     DJ --> EMAIL[Transactional email API<br/>Postmark/Brevo/SES]
     DJ --> PAYPAL[PayPal IPN - requests]
     DJ --> GCAL[Google Calendar<br/>google-api-python-client v2]
@@ -204,8 +221,10 @@ Removed vs. current: memcached, Xapian/Haystack/queued_search/`queues`, local
 media disk, local mail server, `irc`, `legacy`, (candidate) `wiki`/MoinMoin,
 Apache/mod_wsgi → gunicorn. **Cloudflare** (already used by the site) fronts the
 origin for DNS, CDN caching, edge TLS, DDoS protection, and **Turnstile** CAPTCHA;
-**R2** (S3-compatible, zero-egress) holds user media. Cloudflare in front also
-makes the **DNS cutover** a fast, low-TTL flip and lets the origin stay simple.
+**AWS S3** holds user photos (the existing bucket, uploads restored); the rest of
+`/media` stays on the VM's own disk, where it has always been. Cloudflare in
+front also makes the **DNS cutover** a fast, low-TTL flip, lets the origin stay
+simple, and absorbs most media egress by caching it.
 
 ### 3.3 Migration trajectory (how we get there)
 
@@ -219,7 +238,7 @@ flowchart LR
     E --> F[Django 3.2 LTS]
     F --> G[MySQL → PostgreSQL<br/>+ build Postgres FTS search<br/>on Python 3 / modern LTS]
     G --> H[Django 4.2 → 5.2 LTS<br/>on Postgres]
-    H --> I[Media→R2, email→provider,<br/>boto3, gcalendar revive, Turnstile]
+    H --> I[User photos→S3 via boto3,<br/>email→provider, gcalendar revive, Turnstile]
     I --> J[Prod compose hardening<br/>+ Cloudflare in front]
     J --> K[Deploy to new host<br/>+ DNS cutover + fallback]
 ```
@@ -283,15 +302,21 @@ Each is a subsystem of work with clear inputs/outputs and a "done" bar.
 - **Interface:** `/search/` and `/search/ajax/` restored to real functionality.
 - **Done:** search parity vs. documented current behavior; runs with no native libs.
 
-### C7. Media → object storage (Cloudflare R2)
-- **Deliver:** `core/s3.py` rewritten for `boto3` (or `django-storages`) pointed
-  at **R2** via custom `endpoint_url`; `USER_PHOTOS_*` config to the bucket;
-  bulk-migrate existing local files to R2; optional CF-cached public domain for
-  media.
-- **Interface:** uploads/serves via S3-compatible storage; `USER_IMAGES_SOURCES`
-  updated to include the media domain.
-- **Done:** upload/display works against R2 in a modern-Python container;
-  zero-egress serving via Cloudflare.
+### C7. User photo uploads → back to AWS S3 (boto3)
+- **Deliver:** `core/s3.py` rewritten for `boto3` (dropping the dead boto v2
+  import guard) against the **existing `sg101.user.photos` bucket**;
+  `USER_PHOTOS_*` env-configured; `USER_PHOTOS_LOCAL_UPLOAD` back to `False`;
+  `ssl_images` retired rather than ported.
+- **Interface:** uploads/serves via S3; `USER_IMAGES_SOURCES` unchanged if the
+  destination host stays `s3-us-west-1.amazonaws.com`.
+- **Migrate nothing** (revised 2026-08-15): the 21,754 existing S3 rows stay as
+  they are, and the 4,577 local-disk photos ride the Step 21 media rsync rather
+  than being uploaded here — a rewrite done in dev would not survive the fresh
+  production snapshot at cutover, the set keeps growing until the DNS flip, and
+  production's Py2.7 cannot perform the upload in the first place. Consolidating
+  local photos into S3 later is optional and needs no maintenance window.
+- **Done:** upload/display works against S3 in a modern-Python container, and
+  Cloudflare caching absorbs the egress.
 
 ### C8. Email → transactional provider
 - **Deliver:** Django email backend pointed at provider (SMTP/API); domain +
@@ -404,7 +429,8 @@ not new schema:
 | DB | **PostgreSQL** (lean) | Enables Postgres FTS (deletes Xapian stack), simpler/cheaper managed hosting, best Django support; fallback MySQL 8 |
 | Search | **Postgres FTS** (hypothesis) | No native libs, no persistent-disk constraint, big prune; final call post-snapshot |
 | Cache/broker | **Redis only** | Fold memcached in; one fewer service |
-| Media | **Cloudflare R2** (S3-compatible, boto3) | **Zero egress** (ideal for image-heavy site), $0.015/GB, 10 GB free; same boto3 code via `endpoint_url`. Alts: Linode Object Storage, S3 |
+| User photos | **AWS S3**, the existing bucket, via boto3 | **Revised 2026-08-15 from Cloudflare R2.** Only *uploads* ever broke (Py2.7 TLS vs AWS's 2023 TLS deprecation); the bucket has served reads throughout. Going back leaves 21,754 URLs untouched and needs no new account. R2's zero egress matters less behind Cloudflare caching |
+| Rest of `/media` | **The VM's own disk** | Where it has lived since day one — badges, 2,837 avatars, smiley, news, podcast, potd, banners, 716 downloads. No `django-storages`, no `ImageField` changes. Transferred to the new host by rsync at cutover |
 | Email | **Transactional provider** (Postmark/Brevo/SES) | Deliverability from fresh host; removes local-mail headache. (CF Email Routing is inbound-only) |
 | CAPTCHA | **Cloudflare Turnstile** | Free/unlimited, privacy-preserving; replaces reCAPTCHA (now Enterprise w/ 10k/mo cap); official migration guide |
 | CDN/DNS/TLS/WAF | **Cloudflare** (already in use) | Fronts origin: caching, edge TLS, DDoS, low-TTL DNS cutover; simplifies origin |

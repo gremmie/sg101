@@ -4,6 +4,20 @@
 2026). Final provider choice is **low-urgency** (deploy-at-end) but the *shape*
 must be settled early enough to build the container compatibly.
 
+> **DECIDED 2026-08-15 — read this first.** The host is a **single VM with
+> persistent disk** (Linode/Lightsail class), which is what this document's
+> "Shape 1" recommends, so its hosting analysis stands. **Two things here are
+> superseded:** the preference for **Cloudflare R2** for media — user photos are
+> going back to the existing **AWS S3** bucket, and the rest of `/media` stays on
+> the VM's disk — and the framing of the provider choice as low-urgency, since
+> the media strategy turned out to depend on it. **Render was priced again on
+> 2026-08-15 and rejected**: ~$80–115/mo against ~$24, a re-architecture of a
+> working six-service compose stack, and persistent disks that remove
+> zero-downtime deploys and offer only all-or-nothing snapshot restore. See
+> design R16, plan Steps 15/20/21, and STATUS. Revisiting a PaaS after the
+> modernization is explicitly open, as its own `/pdd`. Everything below is left
+> as written in July 2026; its prices are of that date.
+
 ## Constraints (from requirements)
 - **Budget:** ~$94/mo donations + some out-of-pocket; hobby project → keep it modest.
 - **Ops:** wants *simpler* than a hand-built dedicated box; somewhat comfortable

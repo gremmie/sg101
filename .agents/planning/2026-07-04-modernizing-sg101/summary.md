@@ -42,9 +42,10 @@ Core strategy:
 - **Remove the fragile search stack early** (Xapian/Haystack/queued_search/queues,
   already disabled); **swap MySQL→Postgres and build Postgres FTS mid-ladder**
   (after 3.2, on Py3).
-- **Modernize subsystems:** media→**Cloudflare R2** (zero egress), email→a
-  transactional provider, CAPTCHA→**Cloudflare Turnstile**, revive `gcalendar`,
-  fold memcached into Redis, secrets→env vars, boto→boto3.
+- **Modernize subsystems:** user photo uploads→**back to AWS S3** via boto3 (the
+  rest of `/media` stays on the server's disk), email→a transactional provider,
+  CAPTCHA→**Cloudflare Turnstile**, revive `gcalendar`, fold memcached into
+  Redis, secrets→env vars, boto→boto3.
 - **Deploy once at the end** behind Cloudflare, with the old box as fallback.
 
 ## Implementation plan overview
@@ -55,7 +56,7 @@ Core strategy:
 - **B. Python 3 crossing** (6–8): →1.11, dual-runtime, flip to Py3.
 - **C. Modern LTS + engine swap** (9–12): →2.2, →3.2, MySQL→Postgres, Postgres FTS.
 - **D. Finish the ladder** (13–14): →4.2, →5.2 (target).
-- **E. Subsystems** (15–19): R2 media, email, Turnstile, gcalendar, final pruning.
+- **E. Subsystems** (15–19): S3 photo uploads, email, Turnstile, gcalendar, final pruning.
 - **F. Ship** (20–21): production hardening + Cloudflare, deploy + cutover.
 
 The site is shippable at every rung; work is small-step and resumable for a solo,
