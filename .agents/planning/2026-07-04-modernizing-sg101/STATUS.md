@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-15
+**Last updated:** 2026-08-16
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,358 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## PLANNING — Step 16: Postmark chosen, and the DNS audit that changed the diagnosis (2026-08-16)
+
+Provider decision and a live DNS audit. **No code written; two task files
+generated.**
+
+### Volume, measured before choosing — the numbers made cost irrelevant
+
+Almost every site email funnels through one wrapper, `core/functions.py:44`
+`send_mail()` → a Celery task (`core/tasks.py:13`), so the provider swap is
+close to settings-only.
+
+**Corrected 2026-08-16 — there is one exception, and it is the worst one.**
+`accounts/urls.py:48-55` wires Django's **stock `PasswordResetView`** with no
+`form_class` override, so password reset sends via
+`PasswordResetForm.send_mail()` → `EmailMultiAlternatives` directly: **no
+wrapper, no Celery, no retry, and synchronous inside the user's request.**
+Sub-millisecond against a `localhost` Postfix; a TLS handshake and a network
+round trip against Postmark, inside a page load, on the flow a locked-out member
+is already frustrated by. Tasks 02 (requirements 10–11) and 09 both amended.
+`defer=False` has no non-test callers, so everything else does go through the
+wrapper.
+
+Measured from the snapshot, last 12 months:
+
+| Source | Volume |
+|---|---|
+| Forum topic-reply notifications | **10,494/yr** (~875/mo, peak month 1,673) |
+| Registration confirmations | ~27/mo |
+| Private-message notifications | ~25/mo |
+| Contact, email-a-friend, flag/approval, Django 500s | low hundreds/yr |
+
+**~1,000–1,800/month. Peak day in two years: 239.** 45 of 694 active days exceed
+100/day; none exceed 300. Average 37/day.
+
+### DECIDED: Postmark, Basic, $15/mo
+
+Chosen for transactional-only, actively-policed IP pools — the specific thing
+that is broken. Basic not Pro: Pro's additions are inbound processing (Cloudflare
+Email Routing handles that) and 365-day retention over Basic's 45.
+
+**Rejected, each on a measured ground:**
+- **Resend** — free 3,000/mo but **100/day**, which the peak-day figure breaches
+  on ~6.5% of days, and the breach lands on a registration confirmation.
+- **Brevo** — free 300/day would fit, but the free plan stamps a Brevo logo in
+  the footer of every message and removing it costs more than Postmark.
+- **Amazon SES** — ~$0.15/mo, and genuinely plausible now that Step 15 restored
+  working AWS credentials, which softens the original "no AWS" constraint.
+  Rejected because it retains bounce/complaint handling and reputation
+  monitoring in-house — it trades $180/yr for keeping the headache this step
+  exists to remove.
+
+### The diagnosis — found, and it is not what either of us assumed
+
+Brian's standing belief was that SPF/DKIM/DMARC were configured but somehow
+wrong. My first hypothesis was that nothing was wrong with the records at all
+and the cause was pure IP reputation — a lone origin at 37/day never
+accumulating enough sending history for Outlook to trust it. **Both were wrong,
+and the real answer came out of auditing the live Postfix config.** Worth
+recording that the correct hypothesis was third, and arrived only after
+measuring rather than reasoning.
+
+(Microsoft's May 2025 authentication mandate binds senders above 5,000/day and
+does not apply here; that much of the reframing held.)
+
+**Every message leaving `173.255.245.115` presents this way:**
+
+| Check | Result |
+|---|---|
+| Forward-confirmed reverse DNS | **fails** |
+| HELO hostname resolves to sender | **fails** |
+| DMARC policy published | **absent** |
+| DKIM | passes (1024-bit key, `simple/simple`) |
+| SPF | passes |
+
+**A fourth failure was claimed here and then disproved — see the correction
+below.** The three that remain are enough: a connecting IP whose reverse DNS
+does not confirm, greeting under a domain with no mail records, publishing no
+policy.
+
+**FCrDNS — the likeliest primary cause.** `PTR` for `173.255.245.115` is
+`surfguitar101.com`, which forward-resolves to `104.21.53.213` /
+`172.67.218.217` — Cloudflare's proxy. The pair does not match. **It used to.**
+Before the apex A record was proxied, `surfguitar101.com` resolved to the Linode
+box and confirmed perfectly. Enabling Cloudflare's orange cloud — a *web* change
+with no apparent bearing on mail — broke it silently. Nothing logs it, no bounce
+names it, and the two events are far enough apart to defeat correlation. That is
+why years of re-checking SPF and DKIM syntax found nothing.
+
+**HELO.** `myhostname = jaguar.deathofagremmie.com` resolves to Cloudflare proxy
+IPs too, and that domain has no MX and no SPF. Same failure, same cause.
+
+**CORRECTION 2026-08-16 — the DKIM claim was wrong, and a real header killed
+it.** This section asserted that `smtpd_milters = inet:localhost:88888` put the
+milter on an impossible port (88888 exceeds the 16-bit port space), so Postfix
+must be failing open via `milter_default_action = accept` and sending unsigned.
+Brian captured a delivered message and it shows `dkim=pass
+header.i=@surfguitar101.com header.s=dkim`, with a valid `DKIM-Signature`.
+**Signing works.** Likely because Postfix and OpenDKIM both truncate 88888
+identically to 23352 and meet there — self-consistently wrong, hence working for
+years. Unverified and now irrelevant; the milter is being decommissioned.
+
+*The process failure: the config value was measured, the consequence was
+inferred, and the inference went into three documents as a finding. One header
+check — cheap, available the whole time — settles it directly. Flagging an
+inference as uncertain, which the original text did, is what caught the error;
+it is not what should have prevented it.* See
+[[measure-before-recording-in-planning-docs]].
+
+**The same header corroborates two findings from the receiving side**, so the
+capture was worth more than the correction cost:
+- Gmail wrote `Received: from jaguar.deathofagremmie.com ([173.255.245.115])`
+  with an **empty parenthetical where the PTR name belongs** — it renders
+  `from HELO (ptr [ip])` when reverse DNS confirms. It did not. FCrDNS failure,
+  observed.
+- `Authentication-Results` has `dkim=` and `spf=` but **no `dmarc=` clause**,
+  because there is no policy to evaluate. Missing DMARC, observed.
+
+**And it explains the receiver split.** Gmail accepted this message without
+complaint, because Gmail leans on SPF and DKIM and both pass. Microsoft leans far
+harder on connecting-IP reputation and reverse DNS — exactly where this server
+fails. *Passing at Gmail while failing at Outlook is the expected signature of an
+FCrDNS problem, not evidence against one.*
+
+Two lesser defects visible in the same capture, both moot after the move:
+`c=simple/simple` canonicalization (strictest; any rewrite in transit breaks the
+signature), and `Message-ID: <…@jaguar.deathofagremmie.com>` — the dead domain
+leaking into a third header after HELO and PTR.
+
+**Why this degraded invisibly** is the lesson worth keeping: the FCrDNS break
+came from a *web* change, and the missing DMARC removed the one instrument that
+would have reported it. Two silent failures, no alarm on either.
+
+**None of it survives the move.** Postmark owns the IP, its PTR, the HELO and the
+signing, and aligns DKIM to the domain. The findings are properties of
+infrastructure being decommissioned — which is an unusually clean independent
+validation of the provider decision. Task 03 carries an *optional* ten-minute
+interim fix (unproxied `mail.surfguitar101.com` → Linode IP, PTR set to match,
+`myhostname` aligned) worth doing only if cutover is more than ~2 weeks out, and
+an explicit instruction **not** to repair the milter — that would only start
+signing with a weak key on a server being retired.
+
+### DNS audit — 2026-08-16, against `ada.ns.cloudflare.com`, not a resolver cache
+
+Brian suspected two conflicting TXT records. **That suspicion was wrong, and what
+is actually wrong is worse.**
+
+- **No DMARC record exists at all.** `_dmarc.surfguitar101.com` is empty from the
+  authoritative nameserver. Two-thirds of the belief was right: SPF and DKIM are
+  both present and syntactically valid. DMARC was never published. **The
+  consequence that matters most is not policy but telemetry** — `rua` aggregate
+  reports are the only channel that would have told him which receivers were
+  rejecting what. Their absence is why this went undiagnosed for years.
+- **DKIM is 1024-bit** (decoded via `openssl rsa -pubin -noout -text`). Below
+  current norms. Fixes itself on the move — Postmark issues 2048-bit.
+- **The SPF `a` mechanism now authorizes Cloudflare's shared proxy IPs**
+  (`104.21.53.213`, `172.67.218.217`), because the apex is proxied. Inert in
+  practice — Cloudflare's HTTP proxy emits no mail — but unintended, and it
+  burns one of SPF's ten lookups. `mx` is redundant with the explicit `ip4:` and
+  becomes actively wrong once MX moves to Email Routing.
+- **Exactly one apex TXT record**, so no `permerror`. The two TXT records Brian
+  was thinking of are the apex SPF and `dkim._domainkey` — two names, which is
+  correct and required.
+- **DNS is already fully on Cloudflare** (NS `ada`/`cash.ns.cloudflare.com`, apex
+  A proxied). Step 20's Cloudflare front is partly in place already, and Email
+  Routing is one toggle away. `_dc-mx.1431890da307…` → `173.255.245.115` is
+  Cloudflare's generated unproxied hostname letting MX reach the Linode origin;
+  not a fault. Stale `mail.` A record points at proxy IPs and is unusable as an
+  SMTP host.
+
+Current SPF, for the record:
+`v=spf1 a mx ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 -all`
+
+Note the `-all`: it hard-fails, so a wrong record during cutover bounces
+registration mail outright rather than degrading. Task 03 softens to `~all` for
+the window and restores `-all` after.
+
+### Inbound needs no Postfix — a separate concern from sending
+
+Postmark is send-only. Receiving moves to **Cloudflare Email Routing** (free,
+forward-only, 200 verified destinations per account, 25 MiB cap, one pattern per
+rule). The Step 21 VM ends with no MX, no inbound port 25, no spam filtering, and
+at most a **send-only null client** (`msmtp` or Postfix in satellite mode) so
+cron and root mail are not silently discarded. A null client holds no reputation
+and needs no MX — worth distinguishing from the mail server being retired.
+
+`no_reply@` must still be a deliverable address, not a black hole; members reply
+to notifications regardless of the name.
+
+### From-address inventory (both on `surfguitar101.com`, so one domain verification covers both)
+
+- **`no_reply@`** — `email_admins`/`email_managers` (`core/functions.py:85,95`),
+  contact form (`contact/forms.py:73`), PM notification
+  (`messages/forms.py:158`), `messages/views.py:408`, email-a-friend
+  (`news/views.py:233`).
+- **`admin@`** (`DEFAULT_FROM_EMAIL`, `base.py:197`) — forum topic notifications
+  (`subscriptions.py:46`), registration confirmation and password reset
+  (`accounts/forms.py:211,230,259,268`).
+
+### Two risks logged for the step
+
+- **The notification list is stale and day one will bounce.** Of 668 distinct
+  topic subscribers, **231 have not logged in for 8+ years or never have**, and
+  191 more are 3–8 years dormant — **63% stale**. Postmark auto-suppresses, but a
+  hard-bounce burst on a new account can trigger their review. Warm up
+  deliberately: recently-active users first.
+- **Email config is still hardcoded.** `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_BACKEND`
+  are literals in `base.py:214` and `production.py:68`, and `.env.example` has
+  **no mail variables at all**. Step 3's 12-factor pass skipped email; this step
+  finishes it.
+
+### Task files — nine, generated 2026-08-16 (04 rewritten, 08 and 09 added after Brian's review)
+
+Sequence: **01 → 02 → 09 → 07** are the spine; **03** runs in parallel and
+should start first; **08 → 05** is its own chain; **04** is independent; **06**
+is inbound and separable. Numbers are not renumbered on insertion — 08 executes
+before 05, and 09 after 02.
+
+- `step16/task-09-email-send-logging.code-task.md` — **added 2026-08-16 after
+  Brian asked whether per-send logging would be useful.** It would, and this
+  step's own planning proves it twice: task 04's deletion rested on judgement
+  because usage was unmeasurable, and the volume figures driving the provider
+  choice are *inferred* from posts × subscriber counts, not measured. One INFO
+  line per message to a dedicated `email.log` — category, subject, recipient,
+  From, outcome, **never the body** — following Step 12's `search.log`
+  precedent, which also settles the log-the-address question (that file already
+  records usernames and IPs). The work is not the logging; it is threading a
+  `category` kwarg through fourteen call sites, popping it before
+  `EmailMessage(**kwargs)`, tolerating tasks queued without it across a deploy,
+  and covering the two paths outside the wrapper. Also deletes the existing
+  DEBUG log at `core/functions.py:60`, which dumps the **entire message body**
+  and is one settings change away from production.
+
+**Outgoing mail on the new VM is deliberately *not* a Step 16 task** (Brian
+asked, 2026-08-16). The app's mail becomes environment config here, but the null
+client for cron/system mail, the outbound-port egress check and confirming
+nothing listens on 25 are properties of a host that does not exist yet.
+Recorded in `plan.md` under **Step 21**, which provisions the VM.
+
+- `step16/task-01-email-settings-to-env.code-task.md` — finishes the 12-factor
+  work Step 3 skipped. Every email setting is a hardcoded literal and
+  `.env.example` has **no mail variables at all**. Behaviour-preserving: current
+  values become the defaults. **One real defect found: `SERVER_EMAIL` is unset**,
+  so Django's `AdminEmailHandler` (`production.py:139,155` — a *different* path
+  from `core.functions.email_admins`) sends error mail from `root@localhost`.
+  Postfix accepted that; **Postmark will reject it**, so the first thing to break
+  after cutover would be error reporting.
+- `step16/task-02-postmark-backend.code-task.md` — SMTP, not the API, and not
+  `django-anymail`: task 01 makes the swap environment-only, and webhooks are a
+  feature this scope excludes. **The substance is not the settings change.**
+  `core/tasks.py:11-21` has no retry, no backoff, no timeout — because
+  `msg.send()` to a `localhost` Postfix could not realistically fail, and Postfix
+  owned queueing and days of retries. **Pointing `EMAIL_HOST` at an external
+  service silently deletes that durable queue**, turning a transient blip into a
+  lost registration confirmation. `EMAIL_TIMEOUT` defaults to `None`, so a hung
+  connection blocks a worker indefinitely. Nothing in the plan caught this,
+  because from the app's side it looks like editing a hostname.
+- `step16/task-03-dns-email-authentication.code-task.md` — audit findings above
+  plus staged remediation. **Start this first**: it contains a mandatory wait for
+  a DMARC reporting cycle, making it the long pole. Applied by hand in
+  Cloudflare, not by code.
+- `step16/task-05-verified-email-change.code-task.md` — the Step 11 REVISIT.
+  **This step supplies a second justification the deferral did not have:**
+  unverified addresses are now bounces charged to a shared IP pool, and Postmark
+  suspends over bounce rates. Duplicate count re-measured 2026-08-16 —
+  **13 groups / 26 accounts, unchanged** — and the trap still stands: a naive
+  `exclude(pk=…)` locks all 26 out of saving any profile edit forever. Also
+  flags **not** copying `PendingUserManager._make_key()`, which builds keys from
+  `random.sample` rather than a CSPRNG; new code uses `secrets`.
+- `step16/task-07-email-smoke-and-cutover-verification.code-task.md` —
+  `tools/email_smoke.py` on the `image_smoke.py --s3` model, opt-in live sends,
+  all eight sending paths. **The acceptance criterion for Step 16 is a message
+  landing in an Outlook/Hotmail inbox, not a green suite.** Gmail already
+  accepts this site's mail with `dkim=pass`/`spf=pass` while Microsoft rejects
+  it — so a Gmail-only check would have passed *before* any of this work and
+  cannot distinguish success from failure. Also owns the graduated warm-up
+  against the 63%-dormant subscriber list, with a stop threshold set in advance.
+- `step16/task-04-remove-email-story.code-task.md` — **rewritten 2026-08-16
+  from hardening to deletion, Brian's call**: "I'm perfectly fine with dropping
+  it, I don't imagine this gets used at all." `news.views.email_story` is the
+  only site path that sends to an **arbitrary external recipient**, with no
+  CAPTCHA and no rate limit, carrying `reply_to=request.user.email` — which
+  looks trustworthy but is transitively attacker-chooseable via the unverified
+  profile-email change task 05 fixes. Harmless on a dedicated IP; not harmless
+  on a shared pool, where the provider's answer to abuse is suspension. Deleting
+  beats hardening: it removes the surface instead of narrowing it. Full surface
+  is view + thanks view + form + 2 URLs + 2 templates + 2 template links + 3
+  tests; **866 → 863**. It stays in Step 16 rather than moving to Step 19's
+  prune list precisely because of the shared-pool timing. **`contact/forms.py:75`
+  is deliberately untouched** — its `recipient_list` is `MANAGERS`, so an
+  arbitrary `Reply-To` can only reach Brian's own inbox, the normal
+  contact-form pattern.
+  *Note the decision rests on judgement, not data: no send log exists, so usage
+  was never measurable. Had per-send logging existed, this would have been a
+  data question — which is part of why it is now under consideration.*
+- `step16/task-08-modern-token-generation.code-task.md` — **added 2026-08-16,
+  Brian's call** after `PendingUserManager._make_key()` was flagged as a pattern
+  not to propagate. It mints the registration key from `random.sample` (Mersenne
+  Twister) mixed with `SECRET_KEY`, a per-process counter and today's date, then
+  takes every other character of a SHA-1. **Not an active emergency** — the
+  `SECRET_KEY` ingredient carries it — but its security rests on one ingredient
+  while appearing to rest on four, which is worse than a short honest token.
+  Replaced with `secrets.token_urlsafe(32)` behind a shared helper, plus
+  `secrets.compare_digest` at `accounts/views.py:118` and a migration widening
+  `PendingUser.key` from 20 to fit 43 chars. Also updates
+  `generate_registration_code()`. **Explicitly leaves `wiki/middleware.py`
+  alone** — same flawed pattern, but Step 19 deletes the app. **Lands before
+  task 05**, which imports the helper rather than writing a second one.
+
+### Inbound aliases inventoried 2026-08-16 → `step16/task-06-inbound-cloudflare-email-routing.code-task.md`
+
+`virtual_alias_domains` holds three domains and 24 entries; **20 are live.**
+Checked for the three things that would force a Cloudflare Worker — fan-out to
+multiple destinations, a catch-all, alias-to-alias chains — and found **none**.
+Every entry is one-to-one, so the migration is plain routing rules.
+
+**The schedule risk is not technical.** The 20 aliases collapse to **six
+destinations, five of which are other people's inboxes** (Ivan ×4 across both
+domains, Rick ×3, Dane, Todd, Patrick), and Cloudflare will not deliver to a
+destination until its owner clicks a verification link. That is the critical
+path. Verify everyone *before* touching MX, while Postfix still receives and a
+failure costs nothing. Verification is per **account**, not per zone, and
+`surfguitar101.com`/`themadeira.net` share the `ada`/`cash` nameservers — so six
+verifications serve all twenty aliases.
+
+- **`deathofagremmie.com` drops entirely** — no MX, receives nothing, and it sits
+  on a *different* Cloudflare account (`danica`/`ganz`). Two loose ends: it is
+  the Postfix HELO identity (see diagnosis above), and `gremmie@` is Brian's
+  handle, so dropping the mail is not the same decision as dropping the
+  registration.
+- **`/etc/aliases` does not migrate.** `root`/`brian`/`www-data` →
+  `bgneal@gmail.com` and `postmaster: root` are *local system* aliases for cron
+  and package output. Email Routing never sees them; they become the send-only
+  null client on the new VM. Confusing the two is how system mail gets silently
+  discarded.
+- **`no_reply@surfguitar101.com` is absent from the table and there is no
+  catch-all**, so Postfix rejects it today — meaning **every member who replies
+  to a forum notification, PM alert or contact-form response gets a bounce.**
+  Longstanding, not a regression, but bad for exactly the mail that most needs to
+  look legitimate. Task 06 adds a rule routing it to Brian's Gmail.
+- `recipient_delimiter = +` works today; Email Routing matches literal
+  addresses. Test plus-addressing before cutover if it is used.
+
+### Still open
+
+- **No code written yet.** All seven task files exist; execution has not started.
+- **Long-pole items to start before any coding**, both gated on other people or
+  on elapsed time: publish the DMARC record at `p=none` so aggregate reports
+  begin accumulating (task 03), and send the five third-party destination
+  verification requests (task 06).
+- An **Outlook.com/Hotmail test address** is needed for task 07's acceptance
+  criterion and does not exist yet.
 
 ## ⭐ STEP 15 COMPLETE — task 05, the S3 smoke tool — DONE 2026-08-16, `5576aa7`, PUSHED, CI GREEN
 
