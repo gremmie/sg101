@@ -65,9 +65,14 @@ CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = 600
 CACHE_MIDDLEWARE_KEY_PREFIX = ''
 
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 25
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Only the settings whose defaults differ from base are restated here; the
+# rest (host, credentials, TLS, timeout, From addresses) come from the
+# environment via base.py, so pointing production at a provider needs no code
+# change. EMAIL_HOST is deliberately absent -- base already defaults it to
+# localhost, which is what the local relay has always been.
+EMAIL_BACKEND = env('EMAIL_BACKEND',
+                    default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_PORT = env.int('EMAIL_PORT', default=25)
 
 DONATIONS_DEBUG = False
 

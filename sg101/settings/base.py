@@ -14,6 +14,9 @@ PROJECT_PATH = os.path.abspath(os.path.join(os.path.split(__file__)[0], '..'))
 
 DEBUG = True
 
+# Deliberately not environment-driven: this is a nested structure django-environ
+# does not read cleanly, and there is exactly one admin. The addresses mail is
+# sent *from* are DEFAULT_FROM_EMAIL and SERVER_EMAIL, which are.
 ADMINS = (
     ('Brian Neal', 'admin@surfguitar101.com'),
 )
@@ -194,7 +197,6 @@ LOGIN_REDIRECT_URL = 'bio-me'
 LOGOUT_URL = 'accounts-logout'
 
 FILE_UPLOAD_PERMISSIONS = 0o644
-DEFAULT_FROM_EMAIL = ADMINS[0][1]
 
 #######################################################################
 # Messages
@@ -211,9 +213,35 @@ MESSAGE_TAGS = {
 #######################################################################
 # Email
 #######################################################################
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 1025
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Every value here reads from the environment so that moving to a different
+# mail service is a deployment change rather than a code change. The defaults
+# reproduce the development console backend; production.py overrides only
+# those whose defaults genuinely differ.
+EMAIL_BACKEND = env('EMAIL_BACKEND',
+                    default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+
+# Bounded on purpose. Django passes this to smtplib, where an unset value means
+# no timeout at all: against a local relay that never mattered, but against a
+# remote host a hung connection blocks the sending thread indefinitely.
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=20)
+
+# The address the site sends from. Kept independent of ADMINS -- deriving it
+# from the first admin tuple meant adding or reordering an admin would silently
+# change every outbound From address.
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
+                         default='admin@surfguitar101.com')
+
+# The From address for Django's own error mail: mail_admins(), which the
+# AdminEmailHandler logging handler calls. This is a different path from
+# core.functions.email_admins(), which sends from GPP_NO_REPLY_EMAIL. Django
+# defaults SERVER_EMAIL to root@localhost -- accepted by a local relay, and
+# rejected by a transactional provider that will not sign for that domain.
+SERVER_EMAIL = env('SERVER_EMAIL', default='admin@surfguitar101.com')
 
 #######################################################################
 # Sessions
@@ -293,7 +321,8 @@ CELERY_BEAT_SCHEDULE = {
 #######################################################################
 # sg101 Specific Settings
 #######################################################################
-GPP_NO_REPLY_EMAIL = 'no_reply'
+# Local part only; the Site domain is appended where it is used.
+GPP_NO_REPLY_EMAIL = env('GPP_NO_REPLY_EMAIL', default='no_reply')
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
 MAX_AVATAR_SIZE_PIXELS = 100
