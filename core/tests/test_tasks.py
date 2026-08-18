@@ -3,6 +3,8 @@ Tests for the core tasks.
 
 """
 import datetime
+import logging
+import smtplib
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -15,7 +17,7 @@ from forums.models import Category, Forum, ForumLastVisit
 from sg101.celery import app
 from core.tasks import cleanup
 from core.tasks import max_users
-from core.tasks import send_mail
+from core.tasks import MAX_RETRIES, send_mail
 
 
 class CoreTasksTestCase(TestCase):
@@ -57,6 +59,124 @@ class CoreTasksTestCase(TestCase):
         self.assertEqual(whos_online_mock.mock_calls, [
             call.max_users(),
         ])
+
+
+class SendMailRetryTestCase(TestCase):
+    """The retry behaviour that a local mail server used to provide for us.
+
+    Sending used to be a bare msg.send() with no retry, which was safe only
+    because the far end was Postfix on localhost: it accepted in about a
+    millisecond and then owned delivery, queueing and retrying for days.
+    Sending through an external provider deletes that queue, so a transient
+    network failure that used to be invisible becomes a lost message.
+
+    Celery runs tasks eagerly under the test settings, so .apply() executes
+    the retries inline and the countdown is ignored -- these run in
+    milliseconds rather than the minutes the backoff would really take.
+    """
+    KWARGS = {
+        'subject': 'Confirm your registration',
+        'body': 'secret body text that must not be logged',
+        'from_email': 'admin@surfguitar101.com',
+        'to': ['member@example.com'],
+    }
+
+    def setUp(self):
+        # The suite disables logging globally (settings/test.py) and that beats
+        # assertLogs, whose records never reach its handler otherwise.
+        self.old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, self.old_disable)
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_transient_failure_is_retried_until_it_succeeds(self, email_mock):
+        email_mock.return_value.send.side_effect = [
+            smtplib.SMTPException('connection reset'),
+            smtplib.SMTPException('connection reset'),
+            None,
+        ]
+
+        result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(email_mock.return_value.send.call_count, 3)
+        self.assertTrue(result.successful())
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_socket_error_is_retried(self, email_mock):
+        # EMAIL_TIMEOUT surfaces as a socket-level error rather than an SMTP
+        # one, so OSError has to be in the transient list or a timeout would
+        # never be retried.
+        email_mock.return_value.send.side_effect = [OSError('timed out'), None]
+
+        result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(email_mock.return_value.send.call_count, 2)
+        self.assertTrue(result.successful())
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_refused_recipient_is_not_retried(self, email_mock):
+        # SMTPRecipientsRefused subclasses SMTPException, so it is only kept
+        # out of the retry path by being caught first. If that ordering is
+        # ever reversed this test is what notices.
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPRecipientsRefused({'member@example.com': (550, b'no')})
+
+        result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(email_mock.return_value.send.call_count, 1)
+        self.assertFalse(result.successful())
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_refused_sender_is_not_retried(self, email_mock):
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPSenderRefused(550, b'not a verified sender',
+                                      'admin@surfguitar101.com')
+
+        result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(email_mock.return_value.send.call_count, 1)
+        self.assertFalse(result.successful())
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_permanent_failure_is_logged_with_recipient_and_subject(
+            self, email_mock):
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPRecipientsRefused({'member@example.com': (550, b'no')})
+
+        with self.assertLogs('email', level='ERROR') as logged:
+            send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(len(logged.records), 1)
+        message = logged.output[0]
+        self.assertIn('member@example.com', message)
+        self.assertIn('Confirm your registration', message)
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_exhausted_retries_give_up_and_log_at_error(self, email_mock):
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPException('provider unreachable')
+
+        with self.assertLogs('email', level='ERROR') as logged:
+            result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertEqual(email_mock.return_value.send.call_count,
+                         MAX_RETRIES + 1)
+        self.assertFalse(result.successful())
+        self.assertEqual(len(logged.records), 1)
+        self.assertIn('member@example.com', logged.output[0])
+        self.assertIn('Confirm your registration', logged.output[0])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_failure_logs_never_contain_the_message_body(self, email_mock):
+        # The log must not become the site's own copy of what it sent.
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPException('provider unreachable')
+
+        with self.assertLogs('email', level='ERROR') as logged:
+            send_mail.s(**self.KWARGS).apply()
+
+        for line in logged.output:
+            self.assertNotIn('secret body text', line)
 
 
 class BeatScheduleTestCase(SimpleTestCase):
