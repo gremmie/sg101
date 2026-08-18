@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-16
+**Last updated:** 2026-08-17
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -174,6 +174,216 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
+
+No code. Four DNS records published by hand in Cloudflare, one Postfix parameter
+changed, and **three claims from the previous day's audit corrected against
+measurement.** Task 03 was started first because requirement 2 embeds a
+mandatory week-long wait; that clock is now running.
+
+### What is live
+
+| Record | Value | State |
+|---|---|---|
+| `mail` A | `173.255.245.115`, **unproxied** | verified authoritative + two public resolvers |
+| `20260817033844pm._domainkey` TXT | Postmark DKIM | verified; green in Postmark |
+| `pm-bounces` CNAME | `pm.mtasv.net`, **unproxied** | resolves through to Postmark's AWS IPs |
+| `_dmarc` TXT | `v=DMARC1; p=none; rua=…@dmarc-reports.cloudflare.net` | exactly one record, TTL 300 |
+
+Postfix now sets `smtp_helo_name = mail.surfguitar101.com` (`postconf`-confirmed).
+The apex SPF and the legacy `dkim` selector are **deliberately untouched** — the
+SPF rewrite belongs with the task 02 cutover, and both DKIM selectors must
+coexist while Postfix still signs.
+
+**The PTR landed later the same day — FINDINGS 5 AND 6 CLOSED 2026-08-17.**
+Linode accepted `173.255.245.115 → mail.surfguitar101.com` immediately but warned
+propagation takes up to an hour; the authoritative nameservers for the reverse
+zone (`*.akam.net` — Akamai serves it, not Linode) served the old value for
+roughly that long, then flipped. Full chain verified:
+
+```
+173.255.245.115         ->  mail.surfguitar101.com     (PTR)
+mail.surfguitar101.com  ->  173.255.245.115            (A)
+=> forward-confirmed.  smtp_helo_name = mail.surfguitar101.com  => HELO matches PTR.
+```
+
+Agreed at all three Akamai nameservers and at 1.1.1.1 / 8.8.8.8 / 9.9.9.9. No
+AAAA on `mail.`, which is correct given `inet_protocols = ipv4`. **PTR, HELO and
+MX now all name the same host, and it resolves to the sending IP and nothing
+else.**
+
+*Method note: the check has to go to `*.akam.net`. The old PTR had a 300s TTL and
+public resolvers were still serving it after Linode had accepted the change, so a
+resolver query cannot distinguish "not applied yet" from "cached" — the same
+class of error as reading a DNS answer from a cache during the original audit.*
+
+**This is DNS-verified, not delivery-verified.** The remaining proof is a real
+`Received:` header showing the PTR name in the parenthetical that was empty in the
+2026-08-12 capture, and acceptance at Outlook. That belongs to task 07.
+
+### Correction 1 — **Postmark issued a 1024-bit DKIM key**
+
+The planning documents said in three places that the 1024-bit key fixes itself on
+the move because "Postmark issues 2048-bit." **It does not.** Measured from the
+key Postmark published: `Public-Key: (1024 bit)`, 216 base64 characters, DER
+header `30 81 9f`. A 2048-bit key is 392 characters and opens `MIIBIjAN`. The new
+selector is exactly as strong as the old one.
+
+**Not a blocker.** 1024-bit RSA still validates everywhere and meets Google's and
+Yahoo's published minimums, and key strength was never implicated in the Microsoft
+rejections — those are FCrDNS, HELO and the missing DMARC. Worth asking Postmark
+about a 2048-bit rotation; not worth blocking on. Task 03's acceptance criterion
+requiring 2048 bits has been **withdrawn** rather than left as a permanent
+failure.
+
+*This was a vendor's behaviour assumed and then written down as a finding, in
+three documents, none of it measured — the same shape as the milter inference
+corrected the day before.* See [[measure-before-recording-in-planning-docs]].
+
+### Correction 2 — the `_dc-mx` alias existed because the **MX target** was proxied, not the apex
+
+Finding 8 said the generated `_dc-mx.1431890da307` hostname let MX reach the
+origin "while the apex A record stays proxied." Wrong record. The zone's MX row
+has always pointed at `mail.surfguitar101.com`; because *that* name was
+orange-clouded, Cloudflare substituted its generated unproxied alias in MX
+answers. Grey-clouding `mail.` dissolved it within the hour, with nothing edited:
+
+```
+before:  10 _dc-mx.1431890da307.surfguitar101.com.   → 173.255.245.115
+after:   10 mail.surfguitar101.com.                  → 173.255.245.115
+```
+
+Inbound mail is unaffected — same box, and `_dc-mx` still resolves. Confirmed in
+the panel that the MX row itself was not edited and no wizard touched it. The
+result is strictly better: **MX, HELO and PTR now converge on one real
+hostname.** Task 06's requirement 6 and one acceptance criterion referred to
+replacing "the `_dc-mx.<hash>` record" and have been reworded.
+
+*A vendor-generated workaround record is evidence of an upstream
+misconfiguration. Reading it as "by design" was half right — it was Cloudflare's
+design, compensating for a proxy setting that never belonged on a mail hostname.*
+
+### Correction 3 — use `smtp_helo_name`, not `myhostname`
+
+Task 03's requirement 11 said to set `myhostname = mail.surfguitar101.com`. That
+works, but the live config makes it needlessly risky:
+
+```
+inet_protocols = ipv4
+myhostname     = jaguar.deathofagremmie.com
+mydestination  = jaguar.deathofagremmie.com, localhost.deathofagremmie.com, , localhost
+/etc/mailname  = surfguitar101.com
+```
+
+`mydestination` holds **literals**, not the usual `$myhostname, …`. Changing
+`myhostname` would leave the new name out of `mydestination`, and Postfix
+delivers its own generated mail to `double-bounce@$myhostname` — which, with
+`mail.surfguitar101.com` now resolving to this same box, yields `loops back to
+myself`. Fixing that means editing local delivery routing on a server carrying 20
+live aliases, for a change that is throwaway by design.
+
+`smtp_helo_name` governs exactly the broken thing — the name presented in EHLO on
+**outbound** connections — and nothing else. One line, one reload.
+
+**`inet_protocols = ipv4` also closes the IPv6 question I had raised**: Postfix
+cannot send over IPv6, so one PTR suffices and no AAAA is needed. The SPF
+record's `ip6:` term has been inert throughout, which had made the v6 path look
+live.
+
+### Correction 4 — Postmark's free DMARC service is gone; Cloudflare's is used instead
+
+The in-app "Set up DMARC" button now opens `dmarcdigests.com`, a separate product:
+14-day trial, then **$14/month per domain**. Rejected — it nearly doubles the
+step's running cost ($15 + $14) for a reporting UI on a domain sending ~30/day.
+**Cloudflare DMARC Management** (zone → Email) is free, already authoritative for
+the zone, and parses the XML into a dashboard. If the richer analysis is ever
+wanted, start that trial **at cutover**, so its 14 days cover the window that
+matters.
+
+**A constraint neither document recorded:** a `rua` mailbox outside the policy
+domain's own organizational domain requires the receiving domain to publish
+`<policy-domain>._report._dmarc.<rua-domain>` (RFC 7489 §7.1). So the obvious
+fallback — point `rua` at a personal Gmail — is unreliable, because Google
+publishes no such authorization and strict receivers drop the reports silently.
+**Reports vanishing untraceably is the exact failure DMARC was being published to
+end.** Safe destinations: an analyzer that publishes the record for its customers
+(Cloudflare's does), or any address on `surfguitar101.com` itself.
+
+### Correction 5 — the `Message-ID` claim, flagged as a hypothesis and then confirmed
+
+Finding 7a said the `<…@jaguar.deathofagremmie.com>` Message-ID is "resolved by
+requirement 11's `myhostname` change, or by the move." **Both are false**, now
+established rather than suspected. Django stamps its own `Message-ID` from
+`DNS_NAME` = `socket.getfqdn()` on the *application* host, so no SMTP-side
+setting touches it — not the interim fix, not Postmark.
+
+**Confirmed by format, not by value**, from the Outlook capture below:
+`<20260817235321.1920.52741@…>` is `YYYYMMDDHHMMSS.pid.randrange(100000)`, the
+signature of Python 2.7's `email.utils.make_msgid()`. Postfix's Message-ID would
+embed its queue ID, and that queue ID appears elsewhere in the same message
+(`with ESMTP id 0F0BD586565`) but not here.
+
+*The discriminator matters. `myhostname` was deliberately left alone, so both
+hypotheses predicted the dead domain would still appear — **the value was
+uninformative and only the format separated them.** Recording it as a hypothesis
+rather than a finding is what made it testable later.* Cosmetic either way: a
+plausibility signal, not an authentication check.
+
+### The interim fix, verified from the receiving side — Outlook, 2026-08-17
+
+A "send a news story to a friend" message to a freshly created Outlook.com
+mailbox, sent through the **unchanged** path (Linode Postfix; `EMAIL_HOST` is
+still `localhost`, Postmark is not involved). Full capture, trimmed of antispam
+blobs, in `research/email-header-captures.md`.
+
+```
+dmarc=pass action=none ... compauth=pass reason=100
+spf=pass (sender IP is 173.255.245.115)
+dkim=pass (signature was verified) header.d=surfguitar101.com
+helo=mail.surfguitar101.com
+X-Microsoft-Antispam-Mailbox-Delivery: ...jmr:0;...dest:I;...
+```
+
+**`dmarc=pass` is the first DMARC evaluation this domain has ever produced** —
+the 2026-08-12 Gmail capture had no `dmarc=` clause at all. `compauth=pass
+reason=100` is Microsoft's composite-authentication verdict at its strongest.
+`helo=mail.surfguitar101.com` confirms the `smtp_helo_name` change in flight.
+`dest:I` confirms **Inbox**, in the headers rather than visually, with no
+junk-mail rule fired and `BCL:0`.
+
+**The result is not pristine, and that part matters most.**
+`X-Message-Delivery` decodes to `SCL=3` — comfortably below the junk threshold,
+but not the 0–1 of a trusted sender, despite `X-MS-Exchange-Organization-SCL: 1`.
+**Authentication is now perfect; reputation is still neutral.** That is exactly
+the predicted split and exactly the argument for Postmark: fixing DNS does not
+retroactively build sending history.
+
+**What it does not establish.** One message to a mailbox created minutes earlier
+— no history, no contact graph, no user signal, and not equivalent to the
+established accounts whose owners reported the problem. Strong evidence about
+authentication, weak about reputation. It also does **not** independently confirm
+FCrDNS: Microsoft renders `Received` as `from <helo> (<ip>)` and never shows the
+PTR separately, unlike Gmail's `from HELO (ptr [ip])`. FCrDNS rests on the `dig`
+verification against `*.akam.net`.
+
+### Open
+
+- ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
+- **Read a week of DMARC aggregate reports** (requirement 2) before tightening
+  policy. Receivers send daily; Cloudflare's digest cadence is its own.
+- ~~Postmark is still in Test mode~~ — **approved 2026-08-17, same day.** Live
+  sending is unblocked; task 07's live send no longer has an account-state
+  dependency. The approval request led with measured volume, the double opt-in
+  registration flow, and a volunteered warning that ~63% of notification
+  subscribers are 3+ years dormant with a graduated warm-up planned.
+- Requirements 5–7 (SPF rewrite, `~all`, then `-all`) belong with the task 02
+  cutover, not with this sitting.
+
+**Three corrections in one document in two days is a pattern, not luck: DNS and
+mail configuration are unusually easy to reason about confidently and get wrong,
+because almost nothing in the system reports a disagreement.** That is the same
+property that let the original FCrDNS break go unnoticed for years.
+
 ## PLANNING — Step 16: Postmark chosen, and the DNS audit that changed the diagnosis (2026-08-16)
 
 Provider decision and a live DNS audit. **No code written; two task files
@@ -196,17 +406,51 @@ is already frustrated by. Tasks 02 (requirements 10–11) and 09 both amended.
 `defer=False` has no non-test callers, so everything else does go through the
 wrapper.
 
-Measured from the snapshot, last 12 months:
+**RE-MEASURED 2026-08-17 against the snapshot database, replacing the inferred
+figures below.** Brian challenged "~1,000–1,800/month" as too high. He was right,
+and the table had a second problem: it was **inferred from posts × subscriber
+counts**, exactly as task 09 says, while reading as measured. Window is the 12
+months to 2026-07-26 (the snapshot's most recent post).
 
-| Source | Volume |
+| Source | Measured |
 |---|---|
-| Forum topic-reply notifications | **10,494/yr** (~875/mo, peak month 1,673) |
-| Registration confirmations | ~27/mo |
-| Private-message notifications | ~25/mo |
-| Contact, email-a-friend, flag/approval, Django 500s | low hundreds/yr |
+| Forum **posts** | 4,487/yr |
+| Forum topic-reply **notification emails** | **9,819/yr** — ~2.2 recipients per post |
+| Registrations | 376/yr (~31/mo) |
+| Private messages sent | 419/yr (~35/mo) — upper bound; not all trigger mail |
+| Contact, email-a-friend, flag/approval, Django 500s | low hundreds/yr, not separately measured |
 
-**~1,000–1,800/month. Peak day in two years: 239.** 45 of 694 active days exceed
-100/day; none exceed 300. Average 37/day.
+**~900/month typical, all sources. Busiest month ~1,675** (Oct 2025: 1,589
+notifications). **Mean ~30/day. Peak day 207** in the 12-month window, **233**
+over 24 months. 11 days over 100 in 12 months; 35 of 711 active days over 24
+months; **none over 300** in either.
+
+Method, reproducible against the snapshot:
+
+```sql
+SELECT count(*) FROM forums_post p
+JOIN forums_topic_subscribers s
+  ON s.topic_id = p.topic_id AND s.user_id <> p.user_id
+WHERE p.creation_date >= '2025-07-26';
+```
+
+The join mirrors `notify_topic_subscribers()`, which fires on **every** new post
+(`forums/latest.py:125`) and excludes the poster.
+
+**The caveat runs in the honest direction.** This applies *today's* subscriber
+set to *past* posts. `auto_subscribe()` adds each poster to the topic after they
+post, so subscriptions only accumulate — today's set is larger than the historical
+one, and 9,819 is more likely an over-count than an under-count.
+
+**What was and was not wrong.** The notification estimate held up well — 10,494
+inferred against 9,819 measured — and the two-year day figures were close (239 vs
+233 peak; "45 of 694 days over 100" vs 35 of 711). **The error was the summary
+line**: "~1,000–1,800/month" was really average-month-to-peak-month presented as
+the normal band, and the typical month is ~900. **The decision is unchanged** —
+Resend's 100/day cap still breaks on a 207-message day, so the ranking of options
+holds. See [[measure-before-recording-in-planning-docs]]; also
+[[suspect-the-measurer-before-the-record]], since the first instinct here was to
+defend the recorded figure rather than re-derive it.
 
 ### DECIDED: Postmark, Basic, $15/mo
 
@@ -216,7 +460,10 @@ Email Routing handles that) and 365-day retention over Basic's 45.
 
 **Rejected, each on a measured ground:**
 - **Resend** — free 3,000/mo but **100/day**, which the peak-day figure breaches
-  on ~6.5% of days, and the breach lands on a registration confirmation.
+  on ~5% of days (**re-measured 2026-08-17: 35 of 711 active days over 24
+  months**; the figure was ~6.5% on the inferred data), and the breach lands on a
+  registration confirmation. **The rejection stands on the re-measured numbers** —
+  a 207-message day still exceeds the cap by 2×.
 - **Brevo** — free 300/day would fit, but the free plan stamps a Brevo logo in
   the footer of every message and removing it costs more than Postmark.
 - **Amazon SES** — ~$0.15/mo, and genuinely plausible now that Step 15 restored
@@ -229,7 +476,7 @@ Email Routing handles that) and 365-day retention over Basic's 45.
 
 Brian's standing belief was that SPF/DKIM/DMARC were configured but somehow
 wrong. My first hypothesis was that nothing was wrong with the records at all
-and the cause was pure IP reputation — a lone origin at 37/day never
+and the cause was pure IP reputation — a lone origin at ~30/day never
 accumulating enough sending history for Outlook to trust it. **Both were wrong,
 and the real answer came out of auditing the live Postfix config.** Worth
 recording that the correct hypothesis was third, and arrived only after
@@ -302,6 +549,12 @@ Two lesser defects visible in the same capture, both moot after the move:
 signature), and `Message-ID: <…@jaguar.deathofagremmie.com>` — the dead domain
 leaking into a third header after HELO and PTR.
 
+**"Both moot after the move" is doubtful for the second one — flagged
+2026-08-17.** Django stamps its own `Message-ID` from `DNS_NAME` =
+`socket.getfqdn()` on the *application* host, so no SMTP-side change touches it —
+neither the interim fix nor Postmark. Recorded as a hypothesis, not a finding;
+verify against `django/core/mail/message.py`. Cosmetic either way.
+
 **Why this degraded invisibly** is the lesson worth keeping: the FCrDNS break
 came from a *web* change, and the missing DMARC removed the one instrument that
 would have reported it. Two silent failures, no alarm on either.
@@ -310,10 +563,17 @@ would have reported it. Two silent failures, no alarm on either.
 signing, and aligns DKIM to the domain. The findings are properties of
 infrastructure being decommissioned — which is an unusually clean independent
 validation of the provider decision. Task 03 carries an *optional* ten-minute
-interim fix (unproxied `mail.surfguitar101.com` → Linode IP, PTR set to match,
-`myhostname` aligned) worth doing only if cutover is more than ~2 weeks out, and
-an explicit instruction **not** to repair the milter — that would only start
-signing with a weak key on a server being retired.
+interim fix worth doing only if cutover is more than ~2 weeks out, and an
+explicit instruction **not** to repair the milter — that would only start signing
+with a weak key on a server being retired.
+
+**The interim fix was TAKEN 2026-08-17** — cutover is well over two weeks out,
+with Steps 17–21 still ahead. Unproxied `mail.surfguitar101.com` → Linode IP
+(done), PTR set to match (accepted, still propagating at end of session), and
+HELO aligned via **`smtp_helo_name`, not `myhostname`** — the latter would have
+disturbed local delivery, because `mydestination` holds literals rather than
+`$myhostname`. Correction 3 in the execution section above carries the reasoning.
+The milter was left alone.
 
 ### DNS audit — 2026-08-16, against `ada.ns.cloudflare.com`, not a resolver cache
 
@@ -327,7 +587,10 @@ is actually wrong is worse.**
   reports are the only channel that would have told him which receivers were
   rejecting what. Their absence is why this went undiagnosed for years.
 - **DKIM is 1024-bit** (decoded via `openssl rsa -pubin -noout -text`). Below
-  current norms. Fixes itself on the move — Postmark issues 2048-bit.
+  current norms. ~~Fixes itself on the move — Postmark issues 2048-bit.~~
+  **CORRECTED 2026-08-17: Postmark issued a 1024-bit key as well**, measured from
+  the key it published. Not a blocker and not implicated in the rejections — see
+  Correction 1 in the execution section above.
 - **The SPF `a` mechanism now authorizes Cloudflare's shared proxy IPs**
   (`104.21.53.213`, `172.67.218.217`), because the apex is proxied. Inert in
   practice — Cloudflare's HTTP proxy emits no mail — but unintended, and it
@@ -341,7 +604,10 @@ is actually wrong is worse.**
   Routing is one toggle away. `_dc-mx.1431890da307…` → `173.255.245.115` is
   Cloudflare's generated unproxied hostname letting MX reach the Linode origin;
   not a fault. Stale `mail.` A record points at proxy IPs and is unusable as an
-  SMTP host.
+  SMTP host. **Both resolved 2026-08-17:** un-proxying `mail.` made it a usable
+  SMTP hostname *and* dissolved the generated alias — MX now answers
+  `10 mail.surfguitar101.com`. The alias existed because the **MX target** was
+  proxied, not the apex; see Correction 2 above.
 
 Current SPF, for the record:
 `v=spf1 a mx ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 -all`

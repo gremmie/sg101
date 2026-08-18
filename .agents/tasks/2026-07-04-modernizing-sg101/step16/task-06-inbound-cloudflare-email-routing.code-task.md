@@ -65,8 +65,14 @@ nameservers `danica`/`ganz`, against `ada`/`cash` for the other two — so
 migrating it would mean a second round of verification for no benefit.
 
 Two loose ends it leaves, both outside this task:
-- `myhostname = jaguar.deathofagremmie.com` makes this dead domain the Postfix
-  HELO identity, which is part of the authentication problem recorded in task 03.
+- `myhostname = jaguar.deathofagremmie.com` made this dead domain the Postfix
+  HELO identity, which was part of the authentication problem recorded in task 03.
+  **Resolved for outbound mail 2026-08-17** by setting `smtp_helo_name =
+  mail.surfguitar101.com`; `myhostname` itself was deliberately left alone,
+  because `mydestination` holds literals rather than `$myhostname` and changing it
+  would disturb local delivery. So the dead domain still appears in `myhostname`,
+  `mydestination` and the `smtpd_banner` for *inbound* connections — harmless, and
+  it disappears with the box.
 - `gremmie@deathofagremmie.com` is a personal-handle address. Dropping mail is
   not the same decision as dropping the domain registration; Brian may want to
   keep the name even with no mail on it.
@@ -179,9 +185,21 @@ implementation. Read additional references as needed for context.
    keep-or-release decision on the registration separately.
 
 6. **Coordinate the MX change with task 03.** Enabling Email Routing replaces the
-   `_dc-mx.<hash>` record with Cloudflare's own MX records. Do this as its own
-   change, separable from the outbound Postmark work, so either can be rolled
-   back alone.
+   current MX target with Cloudflare's own MX records. Do this as its own change,
+   separable from the outbound Postmark work, so either can be rolled back alone.
+
+   **Updated 2026-08-17 — the MX target is no longer `_dc-mx.<hash>`.** Task 03's
+   requirement 11 grey-clouded `mail.surfguitar101.com`, and Cloudflare stopped
+   substituting its generated alias: the authoritative answer is now
+   `10 mail.surfguitar101.com` → `173.255.245.115`. Same destination, real
+   hostname. The rollback value to write down before flipping MX is therefore
+   `10 mail.surfguitar101.com`, not the `_dc-mx` name. See task 03, Finding 8.
+
+   **Do not let a wizard bundle this.** Cloudflare's email tooling offers to
+   update MX as part of other flows — the DMARC Management setup on 2026-08-17
+   was checked specifically for this. Publishing Email Routing's MX before the
+   six destinations are verified would drop mail to unverified destinations,
+   which is the one change in this step that breaks something real.
 
 7. **Reproduce `/etc/aliases` on the new VM as null-client configuration**, not
    as Email Routing rules.
@@ -217,8 +235,11 @@ implementation. Read additional references as needed for context.
   **Then** it arrives at the destination the Postfix table specified — tested
   per address, not sampled
 - **Given** `dig +short MX surfguitar101.com` and the same for `themadeira.net`
-  **Then** both return Cloudflare's Email Routing MX hosts, and no
-  `_dc-mx.<hash>` record remains
+  **Then** both return Cloudflare's Email Routing MX hosts, and neither still
+  points at the Linode box — for `surfguitar101.com` that means the pre-cutover
+  answer `10 mail.surfguitar101.com` is gone. *(Reworded 2026-08-17: this
+  criterion named the `_dc-mx.<hash>` record, which stopped being the MX target
+  when `mail.` was unproxied — see requirement 6.)*
 - **Given** a reply sent to `no_reply@surfguitar101.com`
   **Then** it is delivered rather than bounced
 - **Given** the new VM's cron emitting output to `root`

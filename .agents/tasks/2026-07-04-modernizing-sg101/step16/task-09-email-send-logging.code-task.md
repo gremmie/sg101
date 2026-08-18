@@ -24,6 +24,17 @@ It would, and the Step 16 planning already demonstrated the gap twice.
   at which point a discrepancy will be interesting and unexplainable without
   per-category data.
 
+  **This argument got stronger on 2026-08-17, not weaker.** The figures were
+  re-derived from the snapshot after Brian challenged them: 4,487 posts → 9,819
+  notification emails in 12 months, ~900/month all-in, not 1,000–1,800. The
+  notification estimate held (10,494 inferred vs 9,819 measured); **the summary
+  range did not**. And the re-derivation is still not a measurement of *sent
+  mail* — it joins today's subscriber set against past posts, cannot see failed
+  or suppressed sends, and cannot separate the categories at all. **A database
+  query is a better inference, not a substitute for a log.** After cutover,
+  Postmark's dashboard gives a total with no category breakdown; this task is
+  what makes a discrepancy explainable.
+
 ### House precedent
 Step 12 kept the search query logging and gave it a dedicated `search.log`:
 one INFO line per search with terms, models, **username and IP**. That decision

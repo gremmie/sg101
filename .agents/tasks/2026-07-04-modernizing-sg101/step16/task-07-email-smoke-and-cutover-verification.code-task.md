@@ -49,8 +49,9 @@ addresses are dead. Postmark auto-suppresses hard bounces, but a burst of them
 on a brand-new account is exactly what triggers a provider review — and a
 suspension takes registration and password-reset mail down with it.
 
-Peak day in two years was 239 notification emails, so a busy day can put a
-few hundred messages into the pool at once. The warm-up is not optional.
+Peak day in two years was **233** notification emails (re-measured 2026-08-17;
+207 within the last 12 months), so a busy day can put a couple of hundred
+messages into the pool at once. The warm-up is not optional.
 
 ### What the site sends, for coverage
 Seven paths, after task 04 deletes email-a-friend: registration confirmation
@@ -136,6 +137,33 @@ implementation. Read additional references as needed for context.
     headers that the message no longer HELOs as `jaguar.deathofagremmie.com`,
     that reverse DNS forward-confirms, and that the `Message-ID` no longer
     carries the dead domain — the three defects found in the 2026-08-12 capture.
+
+    **The first two are already remediated and verified; the third will still
+    fail, and that is expected rather than a regression — updated 2026-08-17.**
+
+    - **HELO**: fixed via `smtp_helo_name` and **observed in an Outlook capture**
+      (`helo=mail.surfguitar101.com`).
+    - **Reverse DNS**: forward-confirms, verified at the authoritative
+      nameservers. Note Microsoft's `Received` format is `from <helo> (<ip>)` and
+      never shows the PTR, so **do not expect an Outlook header to demonstrate
+      this** — Gmail's `from HELO (ptr [ip])` form is the one that does.
+    - **`Message-ID`**: **confirmed to come from Django**, not Postfix, so
+      neither the interim fix nor Postmark changes it. A *pass* here would need
+      explaining — most likely Postmark rewriting the header — rather than being
+      taken as the fix. See task 03 Finding 7a and
+      `research/email-header-captures.md`.
+
+    **Baseline captures already exist**, so this tool is comparing against real
+    data rather than recollection: 2026-08-12 Gmail (pre-remediation) and
+    2026-08-17 Outlook (post-interim-fix, pre-Postmark), both in
+    `research/email-header-captures.md`. The original failing state can no longer
+    be reproduced on the live box, which is why capture 2 was taken when it was.
+
+    **A useful non-obvious baseline number from capture 2:** Microsoft scored the
+    message `SCL=3` while still delivering to the Inbox. Authentication was
+    perfect and reputation was neutral. **If the post-cutover capture does not
+    show that improving, the provider move has not bought what it was meant to
+    buy** — so record the SCL, not just the inbox/junk outcome.
 
 ## Dependencies
 - **Tasks 01, 02, 03** — env plumbing, the backend, and verified DNS.
