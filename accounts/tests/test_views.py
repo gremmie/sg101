@@ -3,13 +3,16 @@ View tests for the accounts application.
 
 """
 import datetime
+import logging
 import re
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import check_password
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import PendingUser
@@ -540,6 +543,90 @@ class ForgotEmailTest(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue(mail.outbox[0].subject.startswith('Password reset'))
+
+
+class PasswordResetRoutingTest(TestCase):
+    """Password reset must go through the site's mail wrapper.
+
+    Django's stock PasswordResetView sends the message itself, inline in the
+    request: no Celery, no retry, no send logging, and a round trip to the mail
+    provider while the user waits. accounts.forms.SitePasswordResetForm is what
+    redirects it, and these tests are what notice if the form_class is ever
+    dropped from the URLconf -- at which point everything still appears to work,
+    because the mail is still sent.
+    """
+
+    def setUp(self):
+        u = User.objects.create_user('user1', 'user1@example.com', 'pw')
+        u.save()
+
+    @patch('core.functions.send_mail')
+    def test_reset_email_goes_through_the_site_wrapper(self, send_mail_mock):
+        args = {'email': 'user1@example.com'}
+        response = self.client.post(reverse('accounts-password_reset'), args,
+                                    follow=True)
+
+        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+        self.assertEqual(send_mail_mock.call_count, 1)
+        call_args = send_mail_mock.call_args[0]
+        subject, body, from_email, recipients = call_args
+        self.assertEqual(recipients, ['user1@example.com'])
+        self.assertEqual(from_email, settings.DEFAULT_FROM_EMAIL)
+        self.assertTrue(subject.startswith('Password reset'))
+        self.assertIn('/accounts/password/reset/confirm/', body)
+
+    @patch('core.functions.send_mail')
+    def test_subject_has_no_newline(self, send_mail_mock):
+        # The subject template ends in a newline and a newline in a subject
+        # header is an injection, so the join that strips it must stay.
+        self.client.post(reverse('accounts-password_reset'),
+                         {'email': 'user1@example.com'}, follow=True)
+
+        subject = send_mail_mock.call_args[0][0]
+        self.assertNotIn('\n', subject)
+        self.assertNotIn('\r', subject)
+
+    @patch('core.functions.send_mail')
+    def test_from_email_is_never_the_string_none(self, send_mail_mock):
+        # The view leaves from_email as None and Django relies on
+        # EmailMultiAlternatives to fall back. The wrapper does not.
+        self.client.post(reverse('accounts-password_reset'),
+                         {'email': 'user1@example.com'}, follow=True)
+
+        from_email = send_mail_mock.call_args[0][2]
+        self.assertIsNotNone(from_email)
+        self.assertNotEqual(from_email, 'None')
+
+    @patch('core.functions.send_mail')
+    def test_a_failing_send_does_not_500_the_reset_page(self, send_mail_mock):
+        # Django swallows send failures here so a broken mail path cannot fail
+        # the page, which would also disclose whether an address has an
+        # account. Routing through Celery moves the risk to the broker --
+        # delay() raises if Redis is unreachable -- so the guarantee has to be
+        # kept deliberately rather than inherited.
+        send_mail_mock.side_effect = OSError('broker unreachable')
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='ERROR') as logged:
+            response = self.client.post(reverse('accounts-password_reset'),
+                                        {'email': 'user1@example.com'},
+                                        follow=True)
+
+        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+        self.assertEqual(len(logged.records), 1)
+
+    @patch('core.functions.send_mail')
+    def test_unknown_address_sends_nothing_and_still_redirects(self,
+                                                              send_mail_mock):
+        response = self.client.post(reverse('accounts-password_reset'),
+                                    {'email': 'nobody@example.com'},
+                                    follow=True)
+
+        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+        self.assertEqual(send_mail_mock.call_count, 0)
 
 
 class LogoutTest(TestCase):

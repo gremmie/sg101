@@ -4,12 +4,15 @@ import logging
 import random
 
 from django import forms
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
 from django.conf import settings
 
+import core.functions
 from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
@@ -17,6 +20,10 @@ from accounts.models import IllegalEmail
 
 
 logger = logging.getLogger('auth')
+
+# Mail failures belong with the rest of the site's mail logging, not in the auth
+# log, so they are all readable in one place.
+email_logger = logging.getLogger('email')
 
 
 CODE_WORD_CHOICES = [
@@ -269,3 +276,52 @@ class ForgotUsernameForm(forms.Form):
 
         logger.info('Forgotten username email sent to {} <{}>'.format(
             ', '.join(u.username for u in users), email))
+
+
+class SitePasswordResetForm(PasswordResetForm):
+    """Sends the password reset email through the site's own send_mail().
+
+    Django's stock form builds an EmailMultiAlternatives and sends it inline,
+    which made password reset the one site email that never reached the
+    wrapper: no Celery, no retry, and -- once the mail host is a provider
+    rather than a relay on localhost -- a TLS handshake and a network round
+    trip inside the user's request.
+
+    Only the delivery step is overridden. Finding the matching accounts and
+    generating the token stay with Django, in save().
+    """
+
+    def send_mail(self, subject_template_name, email_template_name, context,
+                  from_email, to_email, html_email_template_name=None):
+        if html_email_template_name is not None:
+            # The wrapper sends a plain-text EmailMessage, so an HTML
+            # alternative would be dropped without a trace. Nothing configures
+            # one today; fail loudly rather than silently send less than asked.
+            raise ImproperlyConfigured(
+                'SitePasswordResetForm cannot send an HTML alternative body; '
+                'core.functions.send_mail sends plain text only.')
+
+        subject = render_to_string(subject_template_name, context)
+        # A newline in a subject is a header injection, and the subject
+        # template file ends with one.
+        subject = ''.join(subject.splitlines())
+        body = render_to_string(email_template_name, context)
+
+        # The view leaves from_email as None and Django relies on
+        # EmailMultiAlternatives falling back to DEFAULT_FROM_EMAIL. The
+        # wrapper takes the address as an argument, so resolve it here or the
+        # From header becomes the string "None".
+        from_email = from_email or settings.DEFAULT_FROM_EMAIL
+
+        try:
+            core.functions.send_mail(subject, body, from_email, [to_email])
+        except Exception:
+            # Django's own form swallows failures here so that a broken mail
+            # path cannot return a 500 from the reset page, which would also
+            # reveal whether an address has an account. Going through Celery
+            # moves that risk rather than removing it: delay() talks to the
+            # broker, so an unreachable Redis raises inside the request where
+            # an SMTP failure no longer can. Keep the guarantee.
+            email_logger.exception(
+                'Failed to send password reset email to user %s',
+                context['user'].pk)

@@ -4,6 +4,7 @@ from django.urls import path, re_path, reverse_lazy
 import django.contrib.auth.views as auth_views
 
 from antispam.decorators import log_auth_failures
+from accounts.forms import SitePasswordResetForm
 import accounts.views
 
 urlpatterns = [
@@ -51,6 +52,9 @@ urlpatterns += [
             email_template_name='accounts/password_reset_email.txt',
             success_url=reverse_lazy('accounts-password_reset_sent'),
             extra_context={'V3_DESIGN': True},
+            # Without this the stock form sends the reset email itself,
+            # inline in the request and outside the site's mail wrapper.
+            form_class=SitePasswordResetForm,
         ),
         name='accounts-password_reset'),
     path('password/reset/sent/',
