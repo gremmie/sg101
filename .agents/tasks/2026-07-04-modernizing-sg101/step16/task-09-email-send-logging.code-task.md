@@ -156,6 +156,60 @@ implementation. Read additional references as needed for context.
 11. **Keep logging failures from breaking sends.** A logging error must never
     prevent a registration confirmation going out. Guard accordingly.
 
+## Logger wiring — decided 2026-08-17 during task 02, before this task runs
+
+Task 02 added failure logging to `core.tasks.send_mail` (permanent failures, and
+giving up after exhausted retries). **Its logger is already named `email`**, not
+`core.tasks`, so it lands in this task's file rather than in `sg101.log` the
+moment the handler below exists. Nothing further is needed to capture it — but
+two decisions come with it.
+
+**1. Use `propagate: True`. Do not copy `propagate: False` from `auth` and
+`search`.** This was briefly specified the other way and Brian pushed back on it;
+he was right, and the reasoning is worth keeping because the mistake is a
+pattern-match.
+
+Those two loggers set `propagate: False` for one stated reason — volume. The
+settings comment on `search` says so outright: to keep every executed search out
+of `sg101.log`. **Email's volume is ~30 messages a day**, measured 2026-08-17.
+Thirty lines a day is nothing beside what `sg101.log` already carries, so the
+premise for `propagate: False` simply is not present here. Copying it would
+inherit a decision whose justification does not apply.
+
+With `propagate: True` the records reach **both** files: the complete audit trail
+in `email.log`, and delivery failures in `sg101.log`, which is where anyone
+debugging an incident looks first. That duplication is the point, not a defect —
+an audit log and an error log have different readers and different retention. It
+also means logger naming and main-log inclusion stay independent decisions;
+conflating them is what produced the wrong recommendation first time.
+
+```python
+'email': {
+    'level': 'INFO',
+    'propagate': True,      # failures also reach root's sg101.log
+    'handlers': ['email'],
+},
+```
+
+If the INFO volume ever does become noise in `sg101.log`, add a filter on the
+root handler *then*, with real numbers. Do not pre-empt it.
+
+**Do not instead add a second `RotatingFileHandler` pointing at `sg101.log`.**
+Two rotating handlers on one file race each other at rotation time and can lose
+or interleave output. Propagation is the supported mechanism for one record
+reaching two destinations.
+
+**2. Never give this logger the `mail_admins` handler.** That handler sends
+email. Attaching it means the site tries to email an alert saying it cannot send
+email — which fails for the same reason it is alerting about, and if that failure
+is itself logged, loops. `django.request` uses `mail_admins` today and must stay
+the only thing that does. This is easy to add by pattern-matching the existing
+config, which is exactly why it is written down here.
+
+*The logger name is `email` rather than `mail` because the stdlib `email`
+package and `smtplib` were checked and neither calls `getLogger`, so nothing
+foreign propagates into the file.*
+
 ## Dependencies
 - **Task 02** touches the same function in `core/tasks.py`. Land 02 first and
   build on its structure, or the two will conflict.
