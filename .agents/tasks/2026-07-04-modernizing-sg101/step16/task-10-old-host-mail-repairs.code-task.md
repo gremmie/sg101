@@ -95,27 +95,57 @@ explicit `ip4:` term — **accepted by Gmail even while the PTR was broken**,
 because authentication compensates for reverse DNS. That single working case is
 the model the broken ones should be made to match.
 
-### What is NOT known, and must not be assumed
-**Brian reports receiving root cron mail occasionally — "months in between".**
-The log window (2026-08-16→18) shows six root messages and six local bounces,
-i.e. a 100% failure rate, which cannot produce an occasional success. So
-**something in this picture is missing**: another sender, another recipient,
-another path, or a job whose mail is addressed somewhere that does resolve.
+### The inventory — RUN 2026-08-18, and it found no contradiction after all
 
-Requirement 1 exists to find it. **Do not apply fixes to a model that has a
-known contradiction in it** — the inventory comes first, because a fix that
-makes the symptom disappear without explaining the rare success has only made
-the evidence harder to read.
+This section originally recorded an apparent contradiction: Brian receives root
+cron mail every few months, while the log showed a 100% failure rate that cannot
+produce an occasional success. **The inventory dissolved it — the mail he
+receives comes from a different machine.**
+
+`bobcat.gremmielabs.dev` (198.58.104.73) is a second Linode that rsyncs this box
+nightly at 03:15. Its cron mail authenticates on SPF and is delivered normally.
+**Nothing about jaguar's root mail is intermittent: it fails every time.** The
+contradiction was two servers being read as one.
+
+What generates mail on this box, measured rather than assumed:
+
+| Source | Sender | Fate |
+|---|---|---|
+| Brian's crontab (uid 1000) | `brian@surfguitar101.com` | **delivered**, daily 02:01 |
+| site mail to `admin@` | `no_reply@surfguitar101.com` | **delivered**, 23 in the window |
+| certbot (`/etc/cron.d/certbot`, twice daily) | `root` → `root@surfguitar101.com` | **`5.1.1`, dies here** |
+| `cron.daily` / `cron.weekly` via `run-parts` | same | **`5.1.1`, dies here** |
+| munin, munin-node (`MAILTO=root`), sysstat | same | silent — no output observed |
+| locally generated notices | `root@localhost` | **`5.7.26`, refused by Gmail** |
+
+There is **no root crontab and no systemd timer** on this box; `/etc/crontab`
+sets no `MAILTO`, so every `run-parts` job defaults to `root`. **Not one
+root-originated message was delivered anywhere in four weeks of retained logs.**
+
+### The certbot job is a broken alarm, and that is worse than it sounds
+
+The twice-daily ~2.4 KB is `certbot -q renew`. `-q` means it should print nothing
+on success, and it prints every time, because **two retired domains have
+long-expired certificates it keeps trying to renew** — `briananddebra.com`
+(expired 2023-07-07) and `deathofagremmie.com` (expired 2023-12-26) — alongside
+OCSP warnings from a certbot too old for Let's Encrypt having retired OCSP.
+
+The live certificates are healthy: `surfguitar101.com` valid 89 days,
+`wiki.surfguitar101.com` 40, `themadeira.net` 30, and two others.
+
+**So there is no cert emergency — there is a dead alarm.** The job's output is
+permanently non-empty, so "certbot sent mail" means nothing, and the mail is
+discarded before anyone could read it regardless. Fixing the delivery without
+silencing the noise would just deliver 2.4 KB of meaningless output twice a day,
+which is the same failure wearing a different hat.
 
 ## Technical Requirements
 
-1. **Inventory every source of local mail before changing anything.** Enumerate
-   root's crontab and `/etc/cron.*`, user crontabs, systemd timers, and any
-   `MAILTO=` settings; the `/etc/aliases` and virtual alias tables; and any
-   scripts that call `mail`, `sendmail` or `mailx` directly. For each, record
-   **sender address, recipient address, and frequency.** Cross-check against a
-   full week of `/var/log/mail.log`, not against expectation.
-   **Acceptance is explaining the rare success, not producing a list.**
+1. **~~Inventory every source of local mail before changing anything.~~ DONE
+   2026-08-18** — results in the Background section above. Every recurring mail
+   source on this box is accounted for, and the months-apart mail was traced to
+   `bobcat.gremmielabs.dev`, a different machine. The remaining requirements may
+   proceed.
 
 2. **Add a `root` entry to the virtual alias table**, pointing at a destination
    that already works — `admin@surfguitar101.com` forwards to Brian's Gmail
@@ -141,13 +171,24 @@ the evidence harder to read.
    the box will not deliver to must be refused during the SMTP conversation, so
    the *sending* server owns the failure and no message is created here.
 
-6. **Change nothing structural.** `myhostname`, `mydestination` and the milter
+6. **Retire the two dead certificates, and only then trust certbot's silence.**
+   Measure first: run `certbot -q renew` by hand and read what it actually
+   prints, since the OCSP warnings may survive deleting the expired pair. Then
+   check whether any Apache vhost still references
+   `/etc/letsencrypt/live/briananddebra.com/` or `.../deathofagremmie.com/` —
+   **deleting a certificate that a vhost still names will stop Apache from
+   starting**, which turns a tidy-up into an outage for the sites that do
+   matter. Remove or disable those vhosts first, then `certbot delete
+   --cert-name` each. The goal is a job whose output is empty on success, so
+   that a future message from it means something.
+
+7. **Change nothing structural.** `myhostname`, `mydestination` and the milter
    configuration stay as they are, per task 03's correction 3 and requirement
    12 — the box carries 20 live aliases and is being decommissioned. If a fix
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-7. **Verify from the receiving side, not from the log.** A `status=sent` line
+8. **Verify from the receiving side, not from the log.** A `status=sent` line
    means the far end accepted the connection, not that the message authenticated
    or landed in an inbox. Each fix is confirmed by a real message's
    `Authentication-Results` header, in the same way the 2026-08-17 Outlook
@@ -177,10 +218,12 @@ the evidence harder to read.
    diagnosed correctly.
 
 ## Acceptance Criteria
-- **Given** the inventory from requirement 1
-  **When** compared against a week of `/var/log/mail.log`
-  **Then** every recurring mail source is accounted for, **and the occasional
-  successful root cron mail is explained** rather than left as an anomaly
+- ~~**Given** the inventory from requirement 1…~~ **met 2026-08-18**: every
+  recurring mail source is accounted for, and the months-apart mail was traced
+  off this machine entirely
+- **Given** `certbot -q renew` after requirement 6
+  **Then** it prints nothing, so that any future mail from that job is a real
+  signal — and Apache still starts, with every live site serving its own cert
 - **Given** a root cron job that mails `root`
   **When** it runs after requirement 2
   **Then** the message reaches Brian's Gmail, and no `5.1.1 User unknown in

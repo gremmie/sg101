@@ -883,14 +883,59 @@ unauthenticated by construction.
 **Fault 3 is the one already recorded**: the null-sender DSNs, refused with
 `5.7.25` for the missing PTR.
 
-**And a contradiction the model does not survive, raised by Brian and left
-open on purpose.** He does receive root cron mail occasionally — *"months in
-between."* The measured window shows six root messages and six local bounces, a
-100% failure rate, which cannot produce an occasional success. So a path, sender
-or recipient is missing from this picture. **Recorded rather than smoothed over,
-because a symptom that contradicts the diagnosis is the most valuable thing in
-this section**, and task 10's first requirement is to explain it before anything
-is changed.
+**A contradiction was recorded here and then dissolved the same day.** Brian
+receives root cron mail every few months, which a 100% measured failure rate
+cannot produce — so this section called it an open contradiction and task 10
+gated its fixes behind explaining it. **The inventory explained it in one step:
+that mail comes from a different machine.** `bobcat.gremmielabs.dev`
+(198.58.104.73) rsyncs this box nightly at 03:15 and mails its cron output, which
+authenticates on SPF and arrives normally. Jaguar's root mail is not
+intermittent; it fails every single time. *The "contradiction" was two servers
+being read as one, and the framing overstated what four weeks of log could say
+about a months-scale event.*
+
+### The inventory, run 2026-08-18 — complete, and nothing root-originated survives
+
+| Source | Sender | Fate |
+|---|---|---|
+| Brian's crontab (uid 1000) | `brian@surfguitar101.com` | **delivered**, daily 02:01 |
+| site mail to `admin@` | `no_reply@surfguitar101.com` | **delivered**, 23 in the window |
+| certbot, `cron.daily`, `cron.weekly` | `root` → `root@surfguitar101.com` | **`5.1.1`, dies on the box** |
+| munin, munin-node, sysstat | same | silent, no output observed |
+| local notices | `root@localhost` | **`5.7.26`, refused by Gmail** |
+
+No root crontab, no systemd timers, and `/etc/crontab` sets no `MAILTO`, so every
+`run-parts` job defaults to `root`. **Not one root-originated message was
+delivered in four weeks of retained logs.**
+
+### The certbot job is a dead alarm — and the certificates are fine
+
+The twice-daily 2.4 KB is `certbot -q renew`, where `-q` should print nothing on
+success. It prints every time because **two retired domains carry long-expired
+certificates it keeps trying to renew** — `briananddebra.com` (2023-07-07) and
+`deathofagremmie.com` (2023-12-26) — plus OCSP warnings from a certbot older than
+Let's Encrypt's retirement of OCSP.
+
+**The live certificates are healthy**: `surfguitar101.com` 89 days,
+`wiki.surfguitar101.com` 40, `themadeira.net` 30. The feared renewal failure is
+not happening.
+
+**What is happening is worse in a quiet way: the alarm is stuck on.** A job whose
+output is never empty cannot signal anything, and its mail is destroyed before
+anyone reads it. Repairing delivery without silencing the noise would deliver
+2.4 KB of meaningless output twice a day — the same failure in a different hat.
+Task 10 requirement 6 covers it, with the trap noted: **deleting a certificate an
+Apache vhost still references stops Apache from starting.**
+
+### An undocumented dependency: the backup box
+
+The mail that solved the puzzle also exposed something the plan has never
+recorded. `bobcat.gremmielabs.dev` holds a nightly rsync of this machine —
+`sg101<date>.sql.bz2` dumps, the media tree, the moin wiki, `.hg`, and Brian's
+other sites. **Step 21 migrates to a new VM and says nothing about the backup box
+protecting the old one.** At cutover that rsync keeps backing up a machine nobody
+uses, and the new VM has no backup at all until someone notices. Added to the
+Step 21 line in `plan.md`.
 
 **Correction to this document's own prediction.** It said this mail "should
 resume now that the PTR forward-confirms." **It should not, and mostly will
