@@ -41,11 +41,15 @@ RETRY_BACKOFF_CAP = 600
 
 
 def _retry_countdown(retries):
-    """Exponential backoff with full jitter, in seconds.
+    """Exponential backoff with equal jitter, in seconds.
 
     Jitter matters more than it looks: a provider outage fails every queued
     message at once, and an unjittered backoff has them all retry in the same
     instant, repeatedly.
+
+    Equal jitter -- uniform over the top half of the ceiling -- rather than
+    full jitter over the whole of it, so the delay keeps a floor and a retry
+    storm cannot collapse back toward retrying immediately.
     """
     ceiling = min(RETRY_BACKOFF_BASE * (2 ** retries), RETRY_BACKOFF_CAP)
     return random.uniform(ceiling / 2, ceiling)
