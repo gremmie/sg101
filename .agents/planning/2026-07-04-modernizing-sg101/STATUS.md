@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -173,6 +173,189 @@ it can appear to be — `git ls-tree` scopes to the shell's current directory, s
 running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
+
+## Step 16 task 02 — the Postmark backend, whose diff contains no Postmark — DONE 2026-08-17, `72e823d` + `7f316dd` + `d7fefb5`, PUSHED, CI GREEN
+
+Three commits, 878 tests green, and **not one line of provider-specific code.**
+Task 01 had already made every mail setting environmental, so "point Django at
+Postmark" is `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS` and a token set in the
+deployment environment — the code change is zero. What the task actually
+contained is the part its one-line plan description hid: **a local MTA is a
+durable retry queue and an external provider is not**, and **one site email
+never went through the site's mail path at all.**
+
+### Retry and error classification — `72e823d`
+
+`core.tasks.send_mail` was a bare `msg.send()`: no `bind`, no retry, no backoff,
+no timeout. That was safe only because the far end was Postfix on `localhost`,
+which accepted in about a millisecond and then owned delivery, queueing and
+retrying for days. Pointing `EMAIL_HOST` at a provider deletes that queue in a
+diff that only touches settings.
+
+| Knob | Value | Reason |
+|---|---|---|
+| `max_retries` | 5 | transient only |
+| backoff | `4 * 2**retries`, capped 600s, jittered | a provider outage fails every queued message at once; an unjittered backoff retries them all in the same instant, repeatedly |
+| `acks_late` | `True` | a worker killed mid-send re-runs the task, so a message can go out twice — for a registration confirmation a duplicate is an annoyance and a loss blocks a signup |
+| logger | `'email'` | so failures land in task 09's `email.log` beside the per-send lines, not only in `sg101.log` |
+
+**The `except` ordering is the whole mechanism.** `SMTPRecipientsRefused` and
+`SMTPSenderRefused` are *subclasses* of `SMTPException`, so the obvious
+`autoretry_for=(SMTPException,)` would retry six times on a refused recipient,
+burning quota and delaying the error. Celery 5.6 has no `dont_autoretry_for`, so
+`PERMANENT_ERRORS` is caught in an explicit clause ahead of the transient one.
+
+The give-up log happens **before** the final `retry()` call, not in a handler
+after it, because `retry()` re-raises the original exception rather than
+`MaxRetriesExceededError` — a handler keyed on the latter would never fire.
+Recipient and subject are logged; never the body.
+
+**Correction, recorded on review 2026-08-18: the jitter is not "full jitter",
+though the docstring and the commit message both call it that.**
+`_retry_countdown` returns `random.uniform(ceiling / 2, ceiling)`, which is
+*equal* jitter in the AWS taxonomy; full jitter is `uniform(0, ceiling)`. The
+behaviour is fine and arguably the better choice here — it keeps a floor under
+the delay, so a retry storm cannot collapse toward retrying immediately — but
+**the name in the code was wrong, and a name is what the next reader trusts**
+rather than re-deriving the arithmetic. Renamed in `3157216`, behaviour
+untouched, 878 tests green under the gate.
+
+**Mutation-verified against two mutants rather than one.** Removing the retry
+fails five of the seven new tests; swapping the `except`-clause order fails the
+other two; every test fails under at least one. *An earlier attempt that reverted
+the module wholesale only produced an `ImportError`, which proves the file
+changed rather than that the behaviour is covered* — see
+[[mutation-verify-or-it-is-not-coverage]].
+
+### Password reset was the one email that bypassed the wrapper — `7f316dd`
+
+`accounts/urls.py` wired Django's stock `PasswordResetView` with no
+`form_class`, so `PasswordResetForm.send_mail()` built an
+`EmailMultiAlternatives` and sent it itself: **no Celery, no retry from the
+commit above, and no send logging when task 09 lands** — and synchronously,
+inside the request. That handoff was sub-millisecond to a relay on localhost and
+becomes a TLS handshake plus a network round trip to a provider, on the page a
+locked-out member is already frustrated by.
+
+`SitePasswordResetForm` overrides `send_mail()` and nothing else; finding the
+matching accounts and generating the token stay with Django in `save()`. Three
+details that are easy to lose in that rewrite:
+
+- **The subject keeps `''.join(subject.splitlines())`.** The subject template
+  ends in a newline, and a newline in a subject header is an injection.
+- **`from_email` arrives as `None`** — the view's default — because Django leans
+  on `EmailMultiAlternatives` falling back to `DEFAULT_FROM_EMAIL`. The wrapper
+  takes the address as an argument, so it is resolved explicitly or the `From`
+  header becomes the literal string `"None"`.
+- **The swallow is kept, and the risk it covers moved rather than went away.**
+  Django swallows send failures here so a broken mail path cannot 500 the reset
+  page — which would also disclose whether an address has an account. Routing
+  through Celery means `delay()` talks to the broker, so an unreachable Redis
+  now raises inside the request where an SMTP failure no longer can.
+
+An HTML alternative body raises `ImproperlyConfigured` rather than being dropped
+silently; nothing in the project configures one.
+
+**Mutation-verified by removing `form_class` from the URLconf: four of the five
+new tests fail. The pre-existing full-flow reset test still passes under that
+mutant** — because the stock view sends the mail too, which is exactly why it
+could never have caught this.
+
+### Making the enumeration test discriminate — `d7fefb5`
+
+`test_unknown_address_sends_nothing_and_still_redirects` asserted only that an
+unknown address redirected and sent nothing. Both hold under Django's stock form
+as well, so **it pinned nothing about this change.** It now posts a known address
+and an unknown one and asserts the two responses are indistinguishable — same
+status, same redirect chain, same rendered body — mutation-verified with a
+`clean_email()` that raises "No account with that address", the helpful-looking
+change it exists to catch. The old version passed that mutant.
+
+Its docstring records what it is *not*: a user-enumeration guard rather than a
+routing test, and the one test in the class that does **not** discriminate the
+wrapper being wired up. It also records the limit it does not cover — a known
+address renders templates and queues a task while an unknown one returns
+immediately, so **timing still separates them.** That difference is Django's own
+and is not introduced here.
+
+### Logger wiring, written into task 09 before anyone configures a handler — `2a05a03`
+
+Naming the logger `'email'` has two consequences that would otherwise be decided
+by pattern-matching the existing config:
+
+- **`propagate: True`.** The `auth` and `search` loggers set `False` to keep
+  their volume out of `sg101.log`; email's measured volume is ~30/day, and an
+  incident is debugged from `sg101.log` first.
+- **Never attach `mail_admins` to it.** It sends email, so alerting on a mail
+  failure fails for the reason it is alerting about — and loops if that failure
+  is itself logged.
+
+### What task 02 does *not* close
+
+Code-complete; **its delivery-side acceptance criteria are unmet by design.**
+Still open, and belonging to the cutover rather than to this sitting: the
+Postmark variables in the production environment, one real message with headers
+showing `dkim=pass d=surfguitar101.com` and `spf=pass`, the rollback
+demonstration (restore the old variables, no code change), and task 03's
+requirements 5–7 — the SPF rewrite, then `~all`, then `-all`. Task 07 owns the
+broader smoke and the stale-list warm-up.
+
+Test count moved 866 → 873 (retry) → 878 (reset), green under `docker_test` and
+under the deprecation gate at each commit.
+
+**Next: task 04** — delete "email this story to a friend", the site's only path
+that sends to an arbitrary external recipient, before Postmark ever carries
+traffic from this domain. Task 03's DMARC clock started 2026-08-17, so the first
+week of aggregate reports is readable from ~2026-08-24.
+
+## Step 16 task 01 — email configuration to the environment — DONE 2026-08-17, `b5b5686`, PUSHED, CI GREEN
+
+Finishes 12-factor work Step 3 skipped: every `EMAIL_*` setting was a hardcoded
+literal and `.env.example` had no mail variables at all, so pointing the site at
+a provider meant editing code. Each read now takes the current literal as its
+default, which is what let task 02 contain no provider-specific code.
+
+**Method, because "settings refactor" is exactly where an unnoticed behaviour
+change hides:** every resolved mail setting was diffed across `docker`,
+`docker_test` and `production`, before and after, with an empty environment. The
+two changes below are therefore the only ones — measured, not asserted.
+
+### The two deliberate changes
+
+- **`SERVER_EMAIL` was unset**, so Django used `root@localhost`. That is not
+  dead config: `production.py` installs `AdminEmailHandler`, which sends error
+  mail from `SERVER_EMAIL` — **a different path from
+  `core.functions.email_admins()`**, which sends from `GPP_NO_REPLY_EMAIL`. A
+  local relay accepted `root@localhost`; a provider will not sign for it. Left
+  alone, **error reporting would have been the first thing to break after
+  cutover** — the failure that hides every other failure.
+- **`EMAIL_TIMEOUT` was `None`**, meaning no timeout in `smtplib`. Harmless
+  against a local socket; against a remote host a hung connection blocks the
+  sending thread with no bound. Now 20s, and it satisfies task 02's criterion
+  that the timeout is a bounded number in every environment.
+
+Also: `DEFAULT_FROM_EMAIL` is decoupled from `ADMINS[0][1]`, so adding or
+reordering an admin no longer silently changes every outbound `From`; and
+`EMAIL_HOST` is dropped from `production.py`, where it restated base's value.
+
+### The `.env.example` entries are commented out, not listed blank
+
+Compose loads that file through `env_file:` and CI seeds from it, so a bare
+`EMAIL_PORT=` sets the variable to the empty string rather than leaving it
+absent — **and empty beats the default**: `int('')` raises at settings-load
+time and nothing starts. Only the two credential variables are safe listed
+blank, their default being blank. The reasoning is in the file itself so it does
+not get tidied away by someone filling in the blanks.
+
+`ADMINS` stays hardcoded: a nested structure `django-environ` does not read
+cleanly, for exactly one admin.
+
+866 tests green under `docker_test` and under the deprecation gate; `check` and
+`makemigrations --check` clean; **`check --deploy` byte-identical to before.**
+
+*CI note: this commit and `72e823d` have no run of their own — they were pushed
+in the batch whose tip was `2a05a03`, which is green, so both are covered by
+that run rather than by one naming them.*
 
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
