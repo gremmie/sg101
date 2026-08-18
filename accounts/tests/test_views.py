@@ -619,14 +619,41 @@ class PasswordResetRoutingTest(TestCase):
         self.assertEqual(len(logged.records), 1)
 
     @patch('core.functions.send_mail')
-    def test_unknown_address_sends_nothing_and_still_redirects(self,
-                                                              send_mail_mock):
-        response = self.client.post(reverse('accounts-password_reset'),
-                                    {'email': 'nobody@example.com'},
-                                    follow=True)
+    def test_unknown_address_is_indistinguishable_from_a_known_one(
+            self, send_mail_mock):
+        """An address with no account must produce the same response.
 
-        self.assertRedirects(response, reverse('accounts-password_reset_sent'))
+        This is a user-enumeration guard, not a routing test, and it does not
+        discriminate the way the others in this class do: it passes just as
+        well against Django's stock form, because that sends nothing for an
+        unknown address either. It is here because the override sits between
+        "which users match" and "send the mail" -- overriding save() instead of
+        send_mail(), or adding any fallback that sends when the user list is
+        empty, would break this silently while the flow still looked right in a
+        browser.
+
+        What it pins is that the two responses are the same. If someone later
+        adds a helpful "no account with that address" message, this fails --
+        which is the realistic regression. It does not cover timing-based
+        enumeration: a known address renders templates and queues a task while
+        an unknown one returns immediately. That difference exists in Django
+        itself and is out of scope here.
+        """
+        known = self.client.post(reverse('accounts-password_reset'),
+                                 {'email': 'user1@example.com'}, follow=True)
+        self.assertEqual(send_mail_mock.call_count, 1)
+
+        send_mail_mock.reset_mock()
+        unknown = self.client.post(reverse('accounts-password_reset'),
+                                   {'email': 'nobody@example.com'},
+                                   follow=True)
         self.assertEqual(send_mail_mock.call_count, 0)
+
+        # Same status, same landing page, same rendered body: nothing in the
+        # response tells the caller whether the address has an account.
+        self.assertEqual(unknown.status_code, known.status_code)
+        self.assertEqual(unknown.redirect_chain, known.redirect_chain)
+        self.assertEqual(unknown.content, known.content)
 
 
 class LogoutTest(TestCase):
