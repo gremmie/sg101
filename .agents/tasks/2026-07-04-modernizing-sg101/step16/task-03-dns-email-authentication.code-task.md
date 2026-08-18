@@ -510,6 +510,26 @@ implementation. Read additional references as needed for context.
     truncate identically. Changing it can only break a working signer on a
     server being decommissioned.
 
+13. **Publish SPF at the HELO name, not only at the apex.** Added 2026-08-18
+    from the first DMARC reports, which showed 4 of 65 messages failing both
+    mechanisms. Requirements 5–7 all describe the apex record, and
+    **null-sender mail never consults it**: a bounce has an empty envelope
+    sender, so SPF falls back to the HELO identity (RFC 7208 §2.3) — now
+    `mail.surfguitar101.com`, which requirement 10 published as an A record
+    only. No TXT there means the result is `none`, never `pass`, so a bounce
+    has no aligned pass available from SPF. It has none from DKIM either,
+    because Postfix does not apply milters to internally generated bounces
+    (`internal_mail_filter_classes` is empty by default, confirmed with
+    `postconf -d`). Publish:
+    ```
+    mail.surfguitar101.com.  TXT  "v=spf1 ip4:173.255.245.115 -all"
+    ```
+    This is the only DMARC-relevant record that is *not* about site mail, which
+    is why it was missed: every other requirement here reasons about the mail
+    the application sends. **Its lifetime is the old host's** — once inbound
+    moves to Cloudflare Email Routing and the new VM keeps no local bounce
+    traffic, the record retires with the box that needed it.
+
 ## Dependencies
 - Postmark account created and the domain added, so the assigned DKIM selector
   and Return-Path target are known (requirement 3).
