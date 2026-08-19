@@ -166,7 +166,36 @@ which is the same failure wearing a different hat.
    unreachable since `surfguitar101.com` became a virtual alias domain — the
    intent was configured, just never consulted.
 
-3. **Give locally generated mail a sender that can be authenticated.** Rewrite
+3. **~~Give locally generated mail a sender that can be authenticated.~~ DONE
+   2026-08-18.** `sender_canonical_maps` mapping `root@localhost` to
+   `root@surfguitar101.com`, one entry, `main.cf` backed up first.
+   `sender_canonical_classes` was already at its default of `envelope_sender,
+   header_sender` — **rewriting the header is the load-bearing half**, since
+   OpenDKIM signs by From domain, and envelope-only would have fixed SPF while
+   leaving DKIM failing.
+
+   **What this class of mail turned out to be: Django's error reports.** The
+   Message-ID format (`YYYYMMDDHHMMSS.pid.randrange`), the
+   `client=localhost.localdomain[127.0.0.1]` submission and the 5–10 KB sizes
+   identify it as `mail_admins()` through `AdminEmailHandler`, sent from
+   `root@localhost` because **`SERVER_EMAIL` is unset** — exactly the defect
+   Step 16 task 01 found in the settings and fixed in code. Eighteen of them
+   between 2026-07-20 and 2026-08-18, every one refused, with the bounce about
+   each also failing. **Nobody has seen an exception report from the live site
+   in years.**
+
+   Verified at the receiver: `dkim=pass header.i=@surfguitar101.com`,
+   `spf=pass smtp.mailfrom=root@surfguitar101.com`, `dmarc=pass
+   header.from=surfguitar101.com`. *OpenDKIM logged nothing for the message, so
+   the mail log alone could not have answered this — the header could.*
+
+   **Interim by construction.** Task 01's `SERVER_EMAIL` fix does the same job
+   properly, but production runs the old code and will for several more steps.
+   The rewrite becomes redundant, and harmless, once that deploys.
+
+   Original text follows.
+
+   ~~Give locally generated mail a sender that can be authenticated.~~ Rewrite
    `root@localhost` (and any other non-`surfguitar101.com` local sender found in
    requirement 1) onto an address on the signing domain, via
    `sender_canonical_maps`. The test is not that the rewrite happens; it is that

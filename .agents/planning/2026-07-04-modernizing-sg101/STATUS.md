@@ -1186,6 +1186,55 @@ have surfaced**, the first being root's mail dying locally. The reports say what
 authentication did; they are silent about everything that stops a message before
 authentication is evaluated.
 
+### The `root@localhost` mail was Django's error reports — req 3 done 2026-08-18
+
+Requirement 3 was written to fix an unauthenticatable sender. Identifying what
+actually sends that way turned it into the most operationally significant finding
+of the day.
+
+**It is `mail_admins()` through `AdminEmailHandler`.** Three signatures agree:
+the Message-ID is `YYYYMMDDHHMMSS.pid.randrange(100000)` — Python's
+`email.utils.make_msgid()`, the same format task 03's correction 5 used to
+identify Django's stamping; submission is `client=localhost.localdomain
+[127.0.0.1]`, i.e. SMTP to localhost, which is how the site sends; and the
+messages are 5–10 KB, the size of a traceback.
+
+The sender is `root@localhost` **because `SERVER_EMAIL` is unset** — precisely
+the defect Step 16 task 01 found in the settings and fixed in code. Task 01
+recorded it as configuration that *would* break after cutover. **It has been
+breaking all along:** 18 error reports between 2026-07-20 and 2026-08-18, every
+one refused by Gmail with `5.7.26`, and the bounce about each also failing.
+
+**Nobody has seen a Django exception report from the live site in years.** The
+site could have been throwing errors continuously and the only channel that would
+say so was destroying the evidence at both ends.
+
+**Fixed with `sender_canonical_maps`**, one entry, `root@localhost` →
+`root@surfguitar101.com`. `sender_canonical_classes` was already at its default
+of `envelope_sender, header_sender`, and **the header half is the load-bearing
+one** — OpenDKIM signs by From domain, so an envelope-only rewrite would have
+fixed SPF and left DKIM failing.
+
+Verified at the receiver, which was necessary rather than ceremonial:
+
+```
+dkim=pass header.i=@surfguitar101.com header.s=dkim
+spf=pass  smtp.mailfrom=root@surfguitar101.com
+dmarc=pass header.from=surfguitar101.com
+```
+
+*OpenDKIM logged nothing for that message. The mail log showed delivery and said
+nothing about signing, so on log evidence alone this would have been recorded as
+"passed on SPF, DKIM unknown". The header answered it in one line.*
+
+**Interim by construction**, and worth flagging so nobody later reads it as
+duplication: task 01's `SERVER_EMAIL` setting does this job properly, but
+production runs the old code and will for several more steps. The Postfix rewrite
+covers the gap and becomes redundant, and harmless, at deploy.
+
+**Expect a consequence:** roughly 18 tracebacks a month now start arriving. If
+the site turns out to have been failing quietly, that is this fix working.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -1222,9 +1271,9 @@ authentication is evaluated.
   the inventory gated ahead of them.
 - ~~Add `root@surfguitar101.com` to the virtual alias table~~ — **done
   2026-08-18**; it points straight at Brian's Gmail, matching the file's style.
-- **Rewrite local system senders onto `@surfguitar101.com`** so opendkim signs
-  them. Mail leaving as `root@localhost` is refused by Gmail with `5.7.26`,
-  unauthenticated by construction.
+- ~~Rewrite local system senders onto `@surfguitar101.com`~~ — **done and
+  verified 2026-08-18**; the class turned out to be Django's error reports, lost
+  for years. Now `dkim=pass`/`spf=pass`/`dmarc=pass` at the receiver.
 - ~~Confirm system mail resumed now the PTR forward-confirms~~ — **withdrawn: it
   will not.** Two of the three faults are unrelated to reverse DNS, and the
   third only changes error code from `5.7.25` to `5.7.26`. 33 rejections in
