@@ -72,11 +72,6 @@
    <li><a href="{{ story.get_absolute_url }}" title="Permalink" />
          <i class="fi-link size-21"></i> Permalink</a>
    </li>
-   {% if user.is_authenticated %}
-   <li><a href="{% url 'news-email_story' story.id %}">
-         <i class="fi-mail size-21"></i> Email to Friend</a>
-   </li>
-   {% endif %}
 </ul>
 
 {% if story.tag_list %}

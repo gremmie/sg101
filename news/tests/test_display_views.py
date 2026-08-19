@@ -108,35 +108,3 @@ class NewsDisplayTests(TestCase):
         self.assertEqual(Tag.objects.filter(name__iexact='surf').count(), 1)
         self.assertEqual(list(Tag.objects.values_list('name', flat=True)),
                          ['surf'])
-
-
-class NewsEmailStoryTests(TestCase):
-    fixtures = ['news_categories.json']
-
-    def setUp(self):
-        self.author = User.objects.create_user('author', '', 'pw')
-        self.reader = User.objects.create_user('reader', 'reader@example.com', 'pw')
-        self.story = make_story(self.author, Category.objects.get(pk=1))
-
-    def test_email_story_requires_login(self):
-        response = self.client.get(reverse('news-email_story', args=[self.story.id]))
-        self.assertEqual(response.status_code, 302)
-
-    def test_email_story_form_renders(self):
-        self.client.login(username='reader', password='pw')
-        response = self.client.get(reverse('news-email_story', args=[self.story.id]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_email_story_sends_mail(self):
-        self.client.login(username='reader', password='pw')
-        response = self.client.post(
-            reverse('news-email_story', args=[self.story.id]),
-            {'friend_name': 'A Friend', 'friend_email': 'friend@example.com'})
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('friend@example.com', mail.outbox[0].to)
-
-    def test_email_thanks_renders(self):
-        self.client.login(username='reader', password='pw')
-        response = self.client.get(reverse('news-email_thanks', args=[self.story.id]))
-        self.assertEqual(response.status_code, 200)

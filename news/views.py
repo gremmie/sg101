@@ -7,7 +7,6 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db.models.functions import ExtractMonth, ExtractYear
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
@@ -15,20 +14,16 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.core.paginator import InvalidPage
 from django.urls import reverse
-from django.contrib.sites.models import Site
 from django.http import Http404
 
 from tagging.models import Tag
 from tagging.models import TaggedItem
 
-from core.functions import send_mail
-from core.functions import get_full_name
 from core.functions import get_page
 from core.paginator import DiggPaginator
 from news.models import Category
 from news.models import Story
 from news.forms import AddNewsForm
-from news.forms import SendStoryForm
 from news.utils import attach_extra_attrs
 
 
@@ -215,52 +210,5 @@ def tag(request, tag_name):
     return render(request, 'news/index.html', {
         'title': 'Stories with tag: "%s"' % tag_name,
         'page': the_page,
-        'V3_DESIGN': True,
-        })
-
-#######################################################################
-
-@login_required
-def email_story(request, story_id):
-    story = get_object_or_404(Story, pk=story_id)
-    if request.method == 'POST':
-        send_form = SendStoryForm(request.POST)
-        if send_form.is_valid():
-            site = Site.objects.get_current()
-            to_name = send_form.name()
-            to_email = send_form.email()
-            from_name = get_full_name(request.user)
-            from_email = settings.GPP_NO_REPLY_EMAIL + '@' + site.domain
-
-            msg = render_to_string('news/send_story_email.txt',
-                    {
-                        'to_name': to_name,
-                        'sender_name': from_name,
-                        'site_name' : site.name,
-                        'site_url' : site.domain,
-                        'story_title': story.title,
-                        'story_link': story.get_absolute_url(),
-                    })
-
-            subject = 'Interesting Story at ' + site.name
-            send_mail(subject, msg, from_email, [to_email], reply_to=request.user.email)
-            return HttpResponseRedirect(reverse('news-email_thanks',
-                                                args=[story_id]))
-    else:
-        send_form = SendStoryForm()
-
-    return render(request, 'news/send_story.html', {
-        'send_form': send_form,
-        'story': story,
-        'V3_DESIGN': True,
-        })
-
-#######################################################################
-
-@login_required
-def email_thanks(request, story_id):
-    story = get_object_or_404(Story, pk=story_id)
-    return render(request, 'news/send_story.html', {
-        'story': story,
         'V3_DESIGN': True,
         })

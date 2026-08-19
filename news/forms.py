@@ -47,16 +47,3 @@ class AddNewsForm(forms.ModelForm):
         pending_story.submitter = user
         pending_story.save(short_text=self.html)
         return pending_story
-
-
-class SendStoryForm(forms.Form):
-    """Form for sending a news story via email to a friend."""
-    friend_name = forms.CharField(label="Friend's Name", max_length=64)
-    friend_email = forms.EmailField(label="Friend's Email")
-
-    def email(self):
-        return self.cleaned_data['friend_email']
-
-    def name(self):
-        return self.cleaned_data['friend_name']
-
