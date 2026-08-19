@@ -1063,7 +1063,7 @@ full of it:
 74 KB: 23 site notifications to one member at `comcast.net`, plus one to
 `uplus.co.kr`. The oldest carries `delay=416092` — **4.8 days**, against
 Postfix's 5-day default queue lifetime, so they begin expiring and bouncing
-today.
+today. **Left to expire, on Brian's call** — see the Open list.
 
 **Checked against six public blocklists from outside the box — `zen.spamhaus.org`,
 `b.barracudacentral.org`, `bl.spamcop.net`, `dnsbl.sorbs.net`,
@@ -1110,9 +1110,13 @@ green suite while unbound. See [[measure-before-recording-in-planning-docs]].
   cover the apex only, which null-sender mail never consults. ~~Rewrite
   requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
   that they were not came from reading a summary instead of the file.
-- **Request Comcast delisting** at `postmaster.comcast.net` — the IP is on their
-  internal blocklist, 23 messages to one member are queued behind it, and they
-  start expiring 2026-08-18. Time-sensitive in a way nothing else here is.
+- **Request Comcast delisting** at `postmaster.comcast.net`, **after** the
+  backscatter fix rather than before — asking while the box still bounces to
+  forged senders invites a second listing. **No longer time-sensitive: Brian's
+  call 2026-08-18 is to let the 23 queued messages expire**, since Comcast has
+  been blocking for a long time, the mail is stale, and no removal request would
+  have completed inside the remaining hours anyway. They return to
+  `no_reply@`, which is not in the alias map, so the bounces die locally.
 - ~~Retire the two dead certs~~ — **done 2026-08-18**, `certbot -q renew` silent.
 - ~~Add `root@surfguitar101.com` to the virtual alias table~~ — **done
   2026-08-18**, delivery confirmed in Brian's inbox.

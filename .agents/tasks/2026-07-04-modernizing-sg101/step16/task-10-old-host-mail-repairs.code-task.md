@@ -203,15 +203,27 @@ which is the same failure wearing a different hat.
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-8. **Request delisting from Comcast.** Added 2026-08-18, and **the only
-   time-sensitive item in this task.** Comcast refuses all mail from
-   `173.255.245.115` with `554 … found on one or more DNSBLs` (their code
-   `BL000100`), and 23 site notifications to one member are queued behind it,
-   the oldest already 4.8 days into Postfix's 5-day queue lifetime. The IP is on
-   **none** of six public blocklists checked, so this is Comcast's internal
-   list: use their block-removal request at `postmaster.comcast.net`. Delisting
-   before the queue expires is the difference between those 23 messages being
-   delivered and being lost.
+8. **Request delisting from Comcast — after requirement 5, not before.**
+   Added 2026-08-18. Comcast refuses all mail from `173.255.245.115` with
+   `554 … found on one or more DNSBLs` (their code `BL000100`). The IP is on
+   **none** of six public blocklists checked, so this is Comcast's own internal
+   list, and the remedy is their block-removal request at
+   `postmaster.comcast.net`.
+
+   **Sequencing, and the reason it is not urgent.** 23 site notifications to one
+   member were queued behind the block, and this requirement originally called
+   saving them time-sensitive. **Brian's call, 2026-08-18: let them expire** —
+   Comcast has been blocking for a long time, the messages are stale, and a
+   removal request would not have completed inside the remaining hours of the
+   5-day queue lifetime anyway. On expiry each returns to
+   `no_reply@surfguitar101.com`, which is not in the virtual alias map, so the
+   bounces die locally and nothing reaches a third party.
+
+   **With no deadline, submit the request only once the backscatter is fixed.**
+   Asking for removal while the box still bounces to forged senders invites a
+   second listing, and the submission is far stronger when it can state that
+   reverse DNS was repaired 2026-08-17, that SPF, DKIM and DMARC all pass, and
+   that the bounce behaviour has been corrected.
 
 9. **Verify from the receiving side, not from the log.** A `status=sent` line
    means the far end accepted the connection, not that the message authenticated
