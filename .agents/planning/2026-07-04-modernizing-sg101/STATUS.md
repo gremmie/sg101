@@ -357,6 +357,61 @@ cleanly, for exactly one admin.
 in the batch whose tip was `2a05a03`, which is green, so both are covered by
 that run rather than by one naming them.*
 
+## Step 16 task 04 — delete "email this story to a friend" — DONE 2026-08-18, `3b5eb64`, PUSHED, CI GREEN
+
+165 deletions, nothing added. The view, the thanks view, `SendStoryForm`, both
+URLs, both templates, the link in `story.html` and `story_summary.html`, and the
+whole `NewsEmailStoryTests` class.
+
+**Why it was a Step 16 task rather than a Step 19 prune:** it was the only path
+in the site that sends to an arbitrary external recipient — any address typed
+into a form, no CAPTCHA, no rate limit, and a `Reply-To` taken from the sender's
+profile email, which any member can set to an address they do not control. On a
+dedicated IP the blast radius was a domain we own; on a provider's shared pool it
+lands on other senders, and the provider's answer to abuse is suspension, which
+would take registration confirmations and password resets with it. **Deleting it
+before cutover means Postmark never sees traffic from this path.**
+
+### Two corrections to the task file
+
+- **Four tests, not three.** The enumerated surface missed
+  `test_email_thanks_renders`, so the class went whole. **The count moves
+  878 → 874**, not the 866 → 863 the task predicted — 878 being where tasks 01
+  and 02 left it. Recorded because this project tracks that number and an
+  unexplained move costs someone an investigation.
+- **A fourth import fell out unused.** The task flagged `get_full_name` and
+  `render_to_string` as needing a check; `Site` from
+  `django.contrib.sites.models` also existed in `news/views.py` only for this
+  feature. `settings`, `HttpResponseRedirect` and `reverse` have other callers
+  and stayed.
+
+`email_thanks` rendered `send_story.html` rather than a thanks template — there
+is no `email_thanks.html` in the tree — so a latent oddity goes with it.
+
+### The render check needed a control, and nearly did not get one
+
+First attempt rendered both pages as an anonymous client and found no
+"Email to Friend". **That proved nothing**: the link lived inside
+`{% if user.is_authenticated %}`, so an anonymous render never showed it, before
+or after. Re-run logged in — the case that used to show the link — with
+`Permalink` asserted present in the same `<ul>` as the control that the probe can
+match text in that region at all. See
+[[measure-before-recording-in-planning-docs]], item 7.
+
+**Also worth recording: there is no linter to satisfy.** The task's acceptance
+criteria ask for a clean linter run; this project has none configured, which is
+the item Step 19 carries. Imports were verified by grepping each symbol for
+surviving uses instead.
+
+874 green under `docker_test` and under the deprecation gate; `check` clean;
+`check --deploy` unchanged; no residual references outside `.agents/` for any of
+the seven search terms. `contact/forms.py` untouched — its `Reply-To` is also
+user-supplied, but its recipient list is `settings.MANAGERS`, so it can only ever
+mail us and there is no third party to abuse.
+
+**Next: task 10 requirement 4** (SPF at the HELO name, once tomorrow's DMARC
+report is read), then Step 16 tasks 05–09.
+
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
 No code. Four DNS records published by hand in Cloudflare, one Postfix parameter
