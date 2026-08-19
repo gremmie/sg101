@@ -147,9 +147,14 @@ which is the same failure wearing a different hat.
    `bobcat.gremmielabs.dev`, a different machine. The remaining requirements may
    proceed.
 
-2. **Add a `root` entry to the virtual alias table**, pointing at a destination
-   that already works — `admin@surfguitar101.com` forwards to Brian's Gmail
-   today. Rebuild with `postmap` and reload. This is the whole of fault 1.
+2. **~~Add a `root` entry to the virtual alias table.~~ DONE 2026-08-18** —
+   `root@surfguitar101.com  bgneal@gmail.com` in
+   `/etc/postfix/virtual_alias_maps`, `postmap`ed and reloaded, with the file
+   backed up first. Verified by `postmap -q`, by a test message reaching
+   `status=sent`, and **by Brian confirming it in his Gmail inbox**. Note for
+   the record: `/etc/aliases` already held `root: bgneal@gmail.com` and had been
+   unreachable since `surfguitar101.com` became a virtual alias domain — the
+   intent was configured, just never consulted.
 
 3. **Give locally generated mail a sender that can be authenticated.** Rewrite
    `root@localhost` (and any other non-`surfguitar101.com` local sender found in
@@ -171,7 +176,17 @@ which is the same failure wearing a different hat.
    the box will not deliver to must be refused during the SMTP conversation, so
    the *sending* server owns the failure and no message is created here.
 
-6. **Retire the two dead certificates, and only then trust certbot's silence.**
+6. **~~Retire the two dead certificates.~~ DONE 2026-08-18.** The trap was
+   real: `deathofagremmie.com` was an *enabled* vhost naming its expired cert,
+   so deletion without `a2dissite` first would have stopped Apache and taken
+   `surfguitar101.com` with it. Order run: disable, `configtest`, reload, verify
+   both live sites answer 200, then `certbot delete` on both. `certbot -q renew`
+   now prints nothing and exits 0. **Brian no longer owns
+   `deathofagremmie.com`** — the renewal had been failing against the current
+   owner's Cloudflare, which is why it could never have been fixed, only
+   deleted. Original wording follows.
+
+   ~~Retire the two dead certificates, and only then trust certbot's silence.~~
    Measure first: run `certbot -q renew` by hand and read what it actually
    prints, since the OCSP warnings may survive deleting the expired pair. Then
    check whether any Apache vhost still references
@@ -188,7 +203,17 @@ which is the same failure wearing a different hat.
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-8. **Verify from the receiving side, not from the log.** A `status=sent` line
+8. **Request delisting from Comcast.** Added 2026-08-18, and **the only
+   time-sensitive item in this task.** Comcast refuses all mail from
+   `173.255.245.115` with `554 … found on one or more DNSBLs` (their code
+   `BL000100`), and 23 site notifications to one member are queued behind it,
+   the oldest already 4.8 days into Postfix's 5-day queue lifetime. The IP is on
+   **none** of six public blocklists checked, so this is Comcast's internal
+   list: use their block-removal request at `postmaster.comcast.net`. Delisting
+   before the queue expires is the difference between those 23 messages being
+   delivered and being lost.
+
+9. **Verify from the receiving side, not from the log.** A `status=sent` line
    means the far end accepted the connection, not that the message authenticated
    or landed in an inbox. Each fix is confirmed by a real message's
    `Authentication-Results` header, in the same way the 2026-08-17 Outlook

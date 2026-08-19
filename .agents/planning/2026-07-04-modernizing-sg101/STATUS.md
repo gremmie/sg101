@@ -988,6 +988,108 @@ this section is wrong.
    Postmark will actually carry is *smaller* than this report suggests, since
    forwarding and system mail are not moving to it.
 
+### Task 10 executed, part one — 2026-08-18, requirements 6 and 2 done
+
+Run on the box with Brian driving, one script at a time. **Both verified from the
+receiving side, not from the log.**
+
+**Requirement 6 — certbot is an alarm again.** `deathofagremmie.com` turned out
+to be an *enabled* Apache vhost naming all three of its expired cert files, so
+the trap this requirement warned about was real: deleting the cert first would
+have stopped Apache from starting and taken `surfguitar101.com` down with it.
+Order run: `a2dissite`, `configtest` (Syntax OK), reload, confirm both live sites
+still answer 200, then `certbot delete` on both dead certs. **`certbot -q renew`
+now prints nothing and exits 0** — the twice-daily 2.4 KB is gone, so a future
+message from that job means something.
+
+**Correction to a phrase this document has used repeatedly: `deathofagremmie.com`
+is not "a dead domain". Brian no longer owns it.** The renewal was failing with a
+403 from *Cloudflare addresses belonging to whoever holds it now* — certbot has
+been trying twice a day to prove control of someone else's domain. The box still
+calls itself `jaguar.deathofagremmie.com` in `myhostname` and stamps that into
+every Django `Message-ID`. Cosmetic, since HELO was fixed in task 03, but "dead"
+and "someone else's" are different facts and the second is a better argument for
+retiring the box.
+
+**Requirement 2 — root's mail arrives, for the first time.** The mechanism is now
+fully established from the config rather than inferred:
+
+1. `myorigin = /etc/mailname` = `surfguitar101.com`, so bare `root` becomes
+   `root@surfguitar101.com`
+2. `virtual_alias_domains` contains `surfguitar101.com`, so that address resolves
+   through `virtual_alias_maps`
+3. no `root` entry there → `5.1.1 User unknown in virtual alias table`
+4. **`/etc/aliases` line 2 is `root: bgneal@gmail.com`** — and it is never
+   consulted, because `/etc/aliases` serves `mydestination` domains only
+
+**The intent was there all along.** That line has been trying to deliver root's
+mail since before 2017 and stopped working the moment `surfguitar101.com` became
+a virtual alias domain. One line added to `virtual_alias_maps`, `postmap`,
+`postfix reload`, and:
+
+```
+19:23:20  169FB58658E: to=<bgneal@gmail.com>, orig_to=<root>, dsn=2.0.0, status=sent
+```
+
+**Brian confirms the message arrived in his Gmail inbox** — receiver-side, not a
+`status=sent` line, which is the standard this project holds itself to. It also
+passed Gmail's authentication, so `root` (rewritten onto the signing domain) is
+signed; only the `root@localhost` sender form is unauthenticatable.
+
+### Fault 3, quoted by the receiver rather than inferred
+
+Gmail's refusals name the exact SPF identity it evaluated:
+
+```
+SPF [] with ip: [173.255.245.115] = did not pass          <- null envelope sender
+SPF [localhost] with ip: [173.255.245.115] = did not pass  <- root@localhost
+DKIM = did not pass                                        <- both
+```
+
+**An empty SPF identity is the bounce class**, and it is the strongest evidence
+yet for the diagnosis of the 4 DMARC failures: unsigned mail with no envelope
+domain to check.
+
+### The IP is blocked by Comcast, and a member has missed 23 emails
+
+Found by accident while testing the root alias — the tail of the mail log was
+full of it:
+
+```
+554 ... 173.255.245.115 found on one or more DNSBLs
+```
+
+**Comcast refuses every message from this IP.** The queue holds 24 messages,
+74 KB: 23 site notifications to one member at `comcast.net`, plus one to
+`uplus.co.kr`. The oldest carries `delay=416092` — **4.8 days**, against
+Postfix's 5-day default queue lifetime, so they begin expiring and bouncing
+today.
+
+**Checked against six public blocklists from outside the box — `zen.spamhaus.org`,
+`b.barracudacentral.org`, `bl.spamcop.net`, `dnsbl.sorbs.net`,
+`ips.backscatterer.org`, `psbl.surriel.com` — and the IP is on none of them.** So
+this is Comcast's own internal list, which their `BL000100` code refers to, and
+the remedy is their block-removal request rather than waiting.
+
+**This is worse than the reputation reading taken from the Outlook capture.**
+That said "authentication perfect, reputation neutral". Neutral is not the
+picture: one major consumer ISP refuses outright, and has been doing so long
+enough to accumulate a 23-message backlog for a single member. It is also the
+sharpest argument yet for moving member mail to Postmark, whose IPs are not this
+one.
+
+### Three probes that could not match, in one session
+
+Recorded because it is now a pattern rather than an incident. `grep -r` skips
+symlinks during recursion, so the Apache vhost search would have returned nothing
+from `sites-enabled` (fixed to `-R` before running). The alias audit looked in
+`/etc/postfix/virtual`, `virtual_alias` and `vmailbox` — none of which exist here;
+the real file is `virtual_alias_maps`, so its empty output meant "looked in the
+wrong place". And a reload step used `systemctl` on a box already established to
+be upstart-era. **Each would have produced silence that reads exactly like a
+clean result**, which is the same failure as the deprecation gate certifying a
+green suite while unbound. See [[measure-before-recording-in-planning-docs]].
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -1008,14 +1110,18 @@ this section is wrong.
   cover the apex only, which null-sender mail never consults. ~~Rewrite
   requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
   that they were not came from reading a summary instead of the file.
+- **Request Comcast delisting** at `postmaster.comcast.net` — the IP is on their
+  internal blocklist, 23 messages to one member are queued behind it, and they
+  start expiring 2026-08-18. Time-sensitive in a way nothing else here is.
+- ~~Retire the two dead certs~~ — **done 2026-08-18**, `certbot -q renew` silent.
+- ~~Add `root@surfguitar101.com` to the virtual alias table~~ — **done
+  2026-08-18**, delivery confirmed in Brian's inbox.
 - **All four host-side repairs are now task 10**
   (`task-10-old-host-mail-repairs.code-task.md`, created 2026-08-18): the alias
   entry, the sender rewrite, the HELO SPF record and the backscatter fix, with
   the inventory gated ahead of them.
-- **Add `root@surfguitar101.com` to the virtual alias table** (→ `admin@`, which
-  already forwards to Brian's Gmail). Root's cron mail currently bounces
-  locally with `5.1.1 User unknown in virtual alias table`, twice a day, and has
-  done for years.
+- ~~Add `root@surfguitar101.com` to the virtual alias table~~ — **done
+  2026-08-18**; it points straight at Brian's Gmail, matching the file's style.
 - **Rewrite local system senders onto `@surfguitar101.com`** so opendkim signs
   them. Mail leaving as `root@localhost` is refused by Gmail with `5.7.26`,
   unauthenticated by construction.
