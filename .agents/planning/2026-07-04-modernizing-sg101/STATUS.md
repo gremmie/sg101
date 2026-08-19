@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-19
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -1331,19 +1331,151 @@ box. After cutover, member mail leaves from Postmark's addresses and none of thi
 follows it. What is at stake meanwhile is notifications to `comcast.net` members
 between now and then — real, bounded, and not worth a campaign.
 
+### Second DMARC reading — 2026-08-19, covering 2026-08-18: the prediction held
+
+The first reading closed with a prediction rather than a conclusion: *2026-08-18
+shows a similar handful of failures, and they stop only when one of two things is
+fixed; a clean 18th would mean the cause was transient and this section is wrong.*
+**Neither lever has been pulled, and the 18th is not clean.**
+
+From Cloudflare's per-day detail for 2026-08-18. The cumulative view is reported
+separately below, because reading it alone produces a finding that is not there.
+
+| Sending service | Volume | DMARC pass | SPF aligned | DKIM aligned | IPs |
+|---|---|---|---|---|---|
+| "Akamai Technologies, Inc." | 32 | 29 (90.63%) | 29 (90.63%) | 29 (90.63%) | 1 |
+| Google LLC | 1 | 100% | 0% | 100% | 1 |
+| **Day total** | **33** | **30 (90.91%)** | **29 (87.88%)** | **30 (90.91%)** | 2 |
+
+Two days now reconcile exactly against the cumulative totals — 67 + 33 = 100
+messages, 63 + 30 = 93 passing, 4 + 3 = 7 failing, with the Akamai row summing
+65 + 32 = 97 at 92.78% — so no report is missing and no message is double-counted.
+
+**Three failures, all in the Akamai row, all failing both mechanisms.** The three
+alignment columns are identical again — 90.63% across pass, SPF and DKIM. DMARC
+needs only one aligned pass, so equal numbers mean the same messages failed both.
+That signature now holds on two independent days.
+
+**The class is fixed in count, not in proportion, and that is the useful part.**
+4 failures on the 17th, 3 on the 18th, while volume fell 67 → 33; the failure
+*rate* therefore rose, 5.97% → 9.09%, as the denominator drained. **A class that
+produces three or four messages a day regardless of site traffic is a scheduled
+one, not a traffic-driven one** — which is what root's twice-daily cron and the
+forwarded system bounces are, and is exactly what site notifications are not.
+Independent support for the bounce diagnosis, arriving from the shape of the
+numbers rather than from the mail log.
+
+**And the report's own keying rules out the rival class.** Aggregate reports are
+keyed by the From domain, so fault 2's `root@localhost` mail could never have
+appeared here at all — `localhost` is not `surfguitar101.com`. Only bounces,
+whose From is `MAILER-DAEMON@surfguitar101.com` by way of `/etc/mailname`, land
+in *this* domain's report unsigned. Fault 2 was never a candidate for these
+numbers; fault 3 remains the only class that fits.
+
+#### The cumulative view manufactures a second sender, and the per-day view kills it
+
+Cloudflare's all-time table reads **IP count 2** on the Akamai row, against **1**
+on the first reading. That reads as a second host sending as this domain — and
+this document already names a candidate: `bobcat.gremmielabs.dev`
+(198.58.104.73), a Linode box, hence "Akamai" in ownership lookups, recorded in
+the backup-box section as mailing its cron output. It would also *fail* SPF,
+since the apex record lists only `ip4:173.255.245.115` and resolves both `a` and
+`mx` to that same address. Motive, mechanism and suspect, all consistent.
+
+**It is an artifact of the view.** The per-day rows are 1 Akamai IP on the 18th
+and 1 on the 17th, and Google reads 1 per day against 2 cumulative. Jaguar has
+one address, so a de-duplicated union across two days would be 1, not 2.
+**Cloudflare's cumulative IP count sums the per-day rows rather than counting
+distinct addresses** — the only reading consistent with both rows.
+
+So there is no second sender, the "one IP, so this is not a second sender"
+premise the first reading leaned on still holds, and the elimination argument
+from the SPF record — *any message from .115 with an aligned envelope domain
+passes unconditionally, so a failure had none* — covers the 18th's three exactly
+as it covered the 17th's four.
+
+*Recorded because it was nearly written up the other way.* The finding had a
+named suspect, a mechanism and a working motive, and one click into the per-day
+detail dissolved it. See [[suspect-the-measurer-before-the-record]].
+
+#### Caveat 2 substantially narrowed — 33 against a measured ~30/day
+
+The first reading flagged 65 messages in a day against a re-measured **~30/day
+total**, called the residue unreconciled, and noted that the number "chose the
+Postmark tier and shapes the warm-up schedule." **The 18th comes in at 33.** The
+17th was the outlier rather than the baseline — and 2026-08-17 is precisely the
+day of the PTR repair, the `smtp_helo_name` change, the Outlook test send, and
+the bounce and forwarding traffic all of that generated. **The discrepancy was
+in large part the debugging session measuring itself.** See
+[[probes-must-not-perturb-what-they-measure]].
+
+Two days is not a baseline and this is not closed, but the direction is right and
+the reassuring reading survives: the traffic Postmark actually carries is smaller
+than these totals, since forwarding and system mail are not moving to it.
+
+#### The Google row, on a second and independent day
+
+One forwarded message: SPF aligned 0%, DKIM aligned 100%, DMARC pass 100%. Same
+lesson as the 17th's two, now on a separate day rather than inside one batch —
+**DKIM carries forwarded mail through DMARC**, which is the argument that taking
+SPF to `-all` under requirements 5–7 does not strand it. The day-level 1-message
+gap between SPF-aligned (29) and DKIM-aligned (30) is this row, exactly as the
+17th's 2-message gap was.
+
+#### What has not moved
+
+- **Caveat 1 stands.** This view lists *sending* services, not reporting
+  organizations, so nothing in it says whether Microsoft has begun reporting. The
+  receiver whose rejections are the reason this step exists is still absent as
+  far as this dashboard shows.
+- **Requirement 2 is 2 days into a 7-day read**, so tightening past `p=none`
+  stays blocked.
+
+#### The next report is the first that can show the 18th's Postfix repairs
+
+The root virtual-alias entry and `sender_canonical_maps` were applied at 19:23
+CDT on 2026-08-18 — **00:23 UTC on the 19th, outside the 18th's report window.**
+The 18th is therefore a clean *before* for both, and the 2026-08-19 report,
+arriving on the 20th, is the first that can carry them. Two predictions, written
+before the observation:
+
+1. **The three-a-day failure class persists**, because nothing touching it has
+   changed: still no SPF TXT at `mail.surfguitar101.com`, bounces still bypassing
+   the milters unsigned.
+2. **A new *passing* class appears.** `sender_canonical_maps` rewrites
+   `root@localhost` onto `root@surfguitar101.com`, which puts a From domain of
+   `surfguitar101.com` on mail that previously had none — so Django's error
+   reports should enter this report for the first time, in the pass column, since
+   they were verified `dkim=pass`/`spf=pass`/`dmarc=pass` at the receiver. Volume
+   up, failures flat.
+
+If the failures fall to zero without either lever being pulled, prediction 1 is
+wrong and the class was something else.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
+  **2 of 7 days read** — 2026-08-17 and 2026-08-18.
 - **First reading done 2026-08-18** (above): Gmail only, 61/65 passing, 4 failures
   hypothesised as unsigned Postfix bounces, forwarded to Brian's Gmail by the
   `admin@`/`root@` aliases. **Tightening past `p=none` stays blocked until those
   4 are identified** — 93.85% from one receiver is not the proof requirement 2
   asks for. Remaining step: read one `MAILER-DAEMON` message's
   `Authentication-Results` from Brian's own inbox.
-- **Reconcile the send-volume discrepancy** the first reading exposed (caveat 2
-  above).
+- **Second reading done 2026-08-19** (above), covering 2026-08-18: 33 messages,
+  3 failures, all in the Akamai row with pass/SPF/DKIM identical at 90.63% — the
+  17th's signature on an independent day. **The predicted persistence held**, and
+  the count staying at 3–4 while volume halved is new support for a scheduled
+  class rather than a traffic-driven one. Still Gmail's view alone; still
+  blocked past `p=none`. **The cumulative view's "IP count 2" is a summing
+  artifact, not a second sender** — per-day rows read 1.
+- ~~**Reconcile the send-volume discrepancy** the first reading exposed (caveat 2
+  above).~~ — **substantially narrowed 2026-08-19**: the 18th came in at 33
+  against the measured ~30/day, so the 17th's 65 was the outlier, and that day
+  was the PTR/HELO repair session generating its own traffic. Two days is not a
+  baseline; keep watching, but the Postmark tier is not in question.
 - **Publish SPF on `mail.surfguitar101.com`** (`v=spf1 ip4:173.255.245.115 -all`),
   without which null-sender mail has no SPF record to find at the HELO name.
   Belongs with requirements 5–7.
