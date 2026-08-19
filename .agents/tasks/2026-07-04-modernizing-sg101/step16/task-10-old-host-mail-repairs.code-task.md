@@ -259,7 +259,13 @@ which is the same failure wearing a different hat.
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-8. **~~Request delisting from Comcast.~~ CHASED TO ITS SOURCE 2026-08-18.**
+8. **~~Request delisting from Comcast.~~ CLEARED 2026-08-19** — both MX hosts
+   now answer `220 … ESMTP server ready` where they answered `554 … #BL000100`
+   the day before, same box, same command, same two targets. Delivery itself is
+   still unconfirmed: a `220` is the connection being accepted, not a message
+   reaching an inbox. History below.
+
+   **~~Request delisting from Comcast.~~ CHASED TO ITS SOURCE 2026-08-18.**
    The Blocked Provider form covers `BL000000`; our error is `BL000100`, and
    their reply ("not on our blocklist") answered the wrong question. The block
    was still live afterwards — `554 … #BL000100` at both `mx1.mxge.comcast.net`
@@ -286,11 +292,28 @@ which is the same failure wearing a different hat.
    ```
    python -c "
    import socket
-   s = socket.create_connection(('mx1.comcast.net', 25), 10)
-   print(s.recv(1024).decode('utf-8', 'replace').strip())
-   s.close()"
+   for h in ('mx1.mxge.comcast.net', 'mx1a1.comcast.net'):
+       try:
+           s = socket.create_connection((h, 25), 10)
+           print('%-24s %s' % (h, s.recv(1024).decode('utf-8', 'replace').strip()))
+           s.close()
+       except Exception as e:
+           print('%-24s ERROR %s' % (h, e))"
    ```
    Must be run on the production host: the answer depends on the connecting IP.
+   The MX lookup does not — `dig +short mx comcast.net` answers the same
+   anywhere, so the hostnames can be refreshed from a laptop.
+
+   **Corrected 2026-08-19: this block previously named `mx1.comcast.net`, which
+   does not exist.** It is not in Comcast's MX set and has no A record, so the
+   command as written could only ever produce
+   `socket.gaierror: [Errno -2] Name or service not known` — a failure that
+   looks like a connection problem rather than a typo. The two hostnames above
+   are the ones actually run on 2026-08-18, recovered from the host's shell
+   history rather than reconstructed. Comcast publishes eight MX hosts
+   (`mx1`/`mx2.mxge` at priority 5, six more at 50); **only these two were ever
+   checked**, so a `554` from both is evidence about the IP, not proof that all
+   eight agree.
 
    Original text follows.
 

@@ -1452,6 +1452,55 @@ before the observation:
 If the failures fall to zero without either lever being pulled, prediction 1 is
 wrong and the class was something else.
 
+### The Comcast block is gone — 2026-08-19, and this one is a clean before/after
+
+Re-checked from jaguar with the same command against the same two MX hosts that
+refused the day before:
+
+```
+mx1.mxge.comcast.net     220 resimta-a2p-650690.sys.comcast.net resimta-a2p-650690.sys.comcast.net ESMTP server ready
+mx1a1.comcast.net        220 resimta-a2p-651040.sys.comcast.net resimta-a2p-651040.sys.comcast.net ESMTP server ready
+```
+
+`554 … found on one or more DNSBLs … #BL000100` on 2026-08-18, `220` on
+2026-08-19. **Same host, same command, same targets, different answer** — which
+is the part worth recording, because the blocklist work in this step twice
+produced a result that was really an instrument artifact. Here the instrument
+was held fixed and only the answer moved. See
+[[suspect-the-measurer-before-the-record]].
+
+**What it establishes and what it does not.** Comcast refuses at the SMTP
+greeting rather than at `DATA`, so the greeting *is* the block — there is nothing
+left to reject at that stage. But a `220` is the connection being accepted, not a
+message reaching an inbox: `RCPT TO`, `DATA` and spam-foldering are all still
+downstream, and **no delivery to a `comcast.net` mailbox has been observed.**
+That is the standard this project has held everywhere else (Gmail inbox confirmed
+by Brian, Outlook confirmed by `dest:I` in the headers) and this result does not
+meet it.
+
+**On causation, stated at the strength the evidence supports.** Removal was
+requested through Validity on 2026-08-18 and the block was gone by the 19th, so
+the timing fits. It is not proof: Validity's form never disclosed listing status,
+so "cleared within a day of the request" is the claim, and a feed refresh or an
+aged-out listing are not excluded. The identification of `BL000100` as Validity's
+Return Path Blocklist stands either way — it came from the error's own link, not
+from the outcome.
+
+**The 23 queued messages were already gone**, and that was the decision rather
+than an accident. The oldest sat at `delay=416092` — 4.8 days against Postfix's
+5-day queue lifetime — when Brian's call on 2026-08-18 was to let them expire,
+since no removal request could complete inside the remaining hours. It could not
+and did not. They returned to `no_reply@`, which is not in the virtual alias map,
+so the bounces died locally.
+
+**What it is worth, kept in proportion.** `comcast.net` members can receive
+notifications again from the old box between now and cutover. That is real and
+bounded: this IP's reputation dies with the box, and after cutover member mail
+leaves from Postmark's addresses, where none of this follows it.
+
+*Only 2 of Comcast's 8 MX hosts were checked — but they are the same 2 that
+returned `554`, which is what makes this a comparison rather than a sample.*
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -1483,17 +1532,20 @@ wrong and the class was something else.
   cover the apex only, which null-sender mail never consults. ~~Rewrite
   requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
   that they were not came from reading a summary instead of the file.
-- **Comcast delisting SUBMITTED 2026-08-18** — Blocked Provider Request Form,
-  citing dated remediation and recipient-side authentication results. Up to
-  three business days per the acknowledgement, thirty minutes per their FAQ.
-  Check with a bare SMTP connection from the box (`220` vs `554` at the
-  greeting); no mail need be sent. Originally sequenced **after** the backscatter
-  fix rather than before — asking while the box still bounces to
-  forged senders invites a second listing. **No longer time-sensitive: Brian's
-  call 2026-08-18 is to let the 23 queued messages expire**, since Comcast has
-  been blocking for a long time, the mail is stale, and no removal request would
-  have completed inside the remaining hours anyway. They return to
-  `no_reply@`, which is not in the alias map, so the bounces die locally.
+- ~~**Comcast delisting SUBMITTED 2026-08-18**~~ — **CLEARED 2026-08-19**
+  (above): both MX hosts answer `220` where they answered `554 … #BL000100` the
+  day before, same box, same command, same targets. **Delivery to a
+  `comcast.net` mailbox is still unobserved** — a `220` is the connection being
+  accepted, not a message landing. Causation is timing rather than proof;
+  Validity never disclosed listing status. Original text follows.
+
+  Originally sequenced **after** the backscatter fix rather than before — asking
+  while the box still bounces to forged senders invites a second listing. **No
+  longer time-sensitive: Brian's call 2026-08-18 is to let the 23 queued
+  messages expire**, since Comcast has been blocking for a long time, the mail
+  is stale, and no removal request would have completed inside the remaining
+  hours anyway. They return to `no_reply@`, which is not in the alias map, so
+  the bounces die locally.
 - ~~Retire the two dead certs~~ — **done 2026-08-18**, `certbot -q renew` silent.
 - ~~Add `root@surfguitar101.com` to the virtual alias table~~ — **done
   2026-08-18**, delivery confirmed in Brian's inbox.
