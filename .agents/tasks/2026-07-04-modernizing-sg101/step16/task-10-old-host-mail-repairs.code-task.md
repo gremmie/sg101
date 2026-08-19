@@ -79,14 +79,24 @@ PTR was broken.
 error it gets. Google requires SPF *or* DKIM to pass, so an unsigned null-sender
 message now fails `5.7.26` where it used to fail `5.7.25`.
 
-### Fault 4 — the box emits backscatter
+### Fault 4 — the box emits backscatter. **Traced 2026-08-18; smaller and
+### differently caused than first written**
 
-53 delivery-status notifications to `member21@example.com` in three days. The box
-accepts mail for an address it cannot deliver, then bounces it to the envelope
-sender, which on spam is forged. **That makes this machine a sender of
-unsolicited mail on a spammer's behalf, from the IP Postmark is currently
-evaluating.** It is the reputation half of Step 16's problem, and no DNS record
-touches it.
+First recorded as "53 delivery-status notifications to `member21@example.com` in
+three days", from a box accepting mail for an undeliverable address and bouncing
+it to a forged sender. The trace corrected all of that:
+
+- **One message, not 53.** All those lines share queue ID `4F3A25869C1`, retried
+  hourly because `uplus.co.kr` refuses connections. Log lines were counted as
+  messages.
+- **Forwarding, not unknown recipients.** A forged-sender spam arrived for
+  `themadeira@themadeira.net` — a *valid* alias — was forwarded to a Gmail
+  address, and **Gmail refused it for the missing PTR**, so Postfix bounced to
+  the forged sender.
+- **`smtpd_reject_unlisted_recipient` is already `yes`**, so the accept-then-
+  bounce mechanism this fault was written around does not exist here.
+- **The trigger is fixed.** The PTR was repaired 2026-08-17, so that forward now
+  succeeds and generates no DSN.
 
 ### What the survivor tells us
 Brian's own crontab is delivered reliably: `uid=1000 from=<brian>`, rewritten to
@@ -170,11 +180,28 @@ which is the same failure wearing a different hat.
    One record, and it satisfies both Google's authentication requirement and
    DMARC's need for one aligned pass.
 
-5. **Stop the backscatter by rejecting at SMTP time rather than accepting and
-   bouncing.** Confirm `smtpd_reject_unlisted_recipient = yes` and that the
-   virtual alias maps genuinely cover every address the MX accepts. A recipient
-   the box will not deliver to must be refused during the SMTP conversation, so
-   the *sending* server owns the failure and no message is created here.
+5. **Verify the backscatter stopped — do not "fix" it.** Rewritten 2026-08-18
+   after tracing it (see fault 4 above). The original text prescribed rejecting
+   unknown recipients at SMTP time; that mechanism is not what produced the
+   bounces, and it is already enabled by default.
+
+   The check is DSN generation per day across the retained logs:
+   ```
+   zgrep -h 'sender non-delivery notification' /var/log/mail.log* \
+     | awk '{print $1, $2}' | sort -k1,1M -k2,2n | uniq -c
+   ```
+   **Expected: counts fall to zero after 2026-08-17**, when the PTR was repaired
+   and forwarded mail stopped being refused. If they do not, the diagnosis is
+   incomplete and the remaining DSNs must be traced the same way — parent queue
+   ID via `postfix/bounce: <parent>: sender non-delivery notification: <child>`.
+
+   **Change nothing on the strength of this requirement alone.** What remains
+   after the PTR fix is inherent to forwarding third-party mail: any destination
+   refusing a forwarded message for any reason produces a bounce to whatever
+   sender the message claimed. `themadeira.net` forwards to four external
+   addresses, so the exposure is real but small, and **task 06's move to
+   Cloudflare Email Routing retires it structurally** — which is the correct fix
+   on a box scheduled for decommissioning.
 
 6. **~~Retire the two dead certificates.~~ DONE 2026-08-18.** The trap was
    real: `deathofagremmie.com` was an *enabled* vhost naming its expired cert,
@@ -272,9 +299,9 @@ which is the same failure wearing a different hat.
 - **Given** a Postfix-generated bounce after requirement 4
   **When** its headers are read at the receiver
   **Then** SPF passes on the HELO identity and DMARC reports an aligned pass
-- **Given** a day of mail log after requirement 5
-  **Then** no delivery-status notification was sent to an external address that
-  did not originate mail here
+- **Given** the DSN-per-day counts across the retained logs
+  **Then** they are zero after 2026-08-17, or every survivor has been traced to
+  its parent message and explained
 - **Given** the DMARC aggregate reports 48 hours after requirements 3–5
   **Then** the residual both-mechanism failures are absent
 - **Given** the whole task

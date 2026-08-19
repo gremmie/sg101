@@ -670,7 +670,7 @@ unrelated messages — the recipients are:
 
 | Recipient | Lines |
 |---|---|
-| `member21@example.com` | 53 |
+| `member21@example.com` | 53 — **one message retried, see below** |
 | `bgneal@gmail.com` | 33 |
 | `admin@surfguitar101.com` | 30 |
 | `root@surfguitar101.com` | 6 |
@@ -695,18 +695,48 @@ this one. That subset distinction is the likely reconciliation of 33 against the
 received them. A `MAILER-DAEMON` message from 2026-08-17, with `Return-Path: <>`
 and its `Authentication-Results`, settles the class outright.
 
-### The backscatter finding — 53 DSNs to one Korean address in three days
+### The backscatter finding — traced 2026-08-18, and both halves of it were wrong
 
-Surfaced by the hunt above and unrelated to the 4 failures, but **this is the
-reputation half of the problem the whole step exists to fix, and no DNS record
-touches it.** The box accepts mail for an address it cannot deliver and then
-bounces it to the envelope sender, which on spam is forged — so it is sending
-unsolicited mail to `member21@example.com` on a spammer's behalf, from the IP
-Postmark is about to judge.
+**Originally recorded here as "53 DSNs to one Korean address in three days", with
+the box accepting mail for an address it cannot deliver and bouncing it to a
+forged sender.** Tracing one DSN back to its cause corrected the volume, the
+mechanism, and the fix.
 
-It ends structurally when task 06 moves inbound to Cloudflare Email Routing and
-the new VM keeps no inbound MX. The interim fix, if one is wanted before then, is
-to reject at SMTP time instead of accept-then-bounce.
+**The volume was one message, not 53.** Every one of those lines carries the same
+queue ID, `4F3A25869C1`, retrying hourly with `status=deferred` because
+`uplus.co.kr` does not accept connections. *Log lines counted as messages — the
+identical error this document warned about two hours earlier while counting the
+33 rejections to Brian's Gmail.* See
+[[measure-before-recording-in-planning-docs]].
+
+**The mechanism is forwarding, not unknown recipients**, and the full chain is in
+the log:
+
+```
+03:44:39  mail.21cpat.com [210.124.121.5] connects
+          from=<member21@example.com>  ->  themadeira@themadeira.net    (forged sender)
+03:44:41  forwarded on to member36@example.com
+          Gmail: 550-5.7.25 ... does not have a PTR record setup
+03:44:41  postfix/bounce: sender non-delivery notification: 4F3A25869C1
+          -> DSN to the forged address
+```
+
+The recipient was **valid**, so rejecting unknown recipients would not have
+prevented it — and `smtpd_reject_unlisted_recipient` is already `yes` by default,
+so accept-then-bounce for unknown recipients was never happening at all. The
+originally prescribed fix addressed a mechanism this box does not have.
+
+**And the trigger is already fixed.** The DSN exists because *Gmail refused the
+forwarded message for the missing PTR* — repaired 2026-08-17. With reverse DNS
+forward-confirming, that forward now succeeds, no DSN is generated, and no
+backscatter leaves. **Task 03's DNS work appears to have closed this without
+anyone aiming at it.**
+
+**What remains is inherent to forwarding.** Relaying other people's mail to
+third parties (`themadeira.net` forwards to four external addresses) risks a
+bounce to a forged sender whenever the destination refuses for *any* reason,
+spam content included. No Postfix setting removes that while the box forwards;
+task 06's move to Cloudflare Email Routing retires it structurally.
 
 ### The Gmail capture, 2026-08-18 — the wrong class of message, and worth it anyway
 
@@ -1137,9 +1167,10 @@ green suite while unbound. See [[measure-before-recording-in-planning-docs]].
 - **Switch opendkim to `Canonicalization relaxed/relaxed`** before SPF reaches
   `-all`, since `simple/simple` breaks on any in-transit modification and
   forwarded mail will then depend on DKIM alone.
-- **Backscatter: the box bounces undeliverable spam to forged senders** (53 to one
-  address in three days). Ends with task 06's move to Cloudflare Email Routing;
-  reject-at-SMTP-time is the interim fix.
+- **Backscatter — verify it stopped rather than fix it.** Traced 2026-08-18: one
+  DSN, not 53, caused by a forwarded message Gmail refused for the missing PTR.
+  That trigger was repaired 2026-08-17, so the expected state is zero. Residual
+  risk is inherent to forwarding third-party mail and is retired by task 06.
 - ~~Explain `inet:localhost:88888`~~ — **not open.** Finding 7 and requirement 12
   already explain it and decide to leave it alone.
 - ~~Postmark is still in Test mode~~ — **approved 2026-08-17, same day.** Live
