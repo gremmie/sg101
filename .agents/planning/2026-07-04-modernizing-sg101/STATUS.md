@@ -1235,6 +1235,47 @@ covers the gap and becomes redundant, and harmless, at deploy.
 **Expect a consequence:** roughly 18 tracebacks a month now start arriving. If
 the site turns out to have been failing quietly, that is this fix working.
 
+### The Comcast block, chased to its actual source — 2026-08-18
+
+Four steps, two of them dead ends, ending in a list no public query can see.
+
+**1. The first delisting request went to the wrong form.** Comcast's Blocked
+Provider Request Form covers error `BL000000`; our bounces say **`BL000100`**.
+Their reply: *"Of the one IP(s) you submitted, none were on our blocklist"* — an
+accurate answer to a question we had not asked.
+
+**2. The block is still live, confirmed without sending mail.** Comcast refuses
+at the SMTP *greeting*, so a bare TCP connection from the box settles it. Both
+`mx1.mxge.comcast.net` (priority 5) and `mx1a1.comcast.net` returned
+`554 … found on one or more DNSBLs … #BL000100` on 2026-08-18, after their reply.
+
+**3. My "not on six public blocklists" claim was never a measurement, and the
+conclusion survived anyway.** Re-run from jaguar with a `127.0.0.2` control on
+every zone — the test entry that must be listed — eight of nine zones answered
+(SORBS did not), and Spamhaus ZEN, SpamCop, Barracuda, CBL, SpamRats, UCEPROTECT,
+PSBL and GBUdb all report the IP unlisted. **But the original check, run from a
+laptop, had four zones silently refusing to answer it**: Spamhaus and SpamRats
+block lookups from public and cloud resolvers, and a blocked query returns
+exactly what "not listed" returns. *The answer held; the evidence did not.
+Recording both, because the version of this that matters is the one where the
+guess is wrong.*
+
+**4. `BL000100` is Validity's Return Path Blocklist.** The link inside the error
+leads, after a redirect, to `senderscore.org/assess/blocklist-lookup/` — Validity,
+formerly Return Path. **A commercial reputation feed, invisible to every public
+DNSBL query**, which is exactly why Comcast's own list is clean, eight public
+lists are clean, and the greeting still refuses.
+
+**Removal requested 2026-08-18** through Validity's form, which asked only for
+name, business, email, country and a mass-mail declaration — and **did not report
+whether the IP was listed**, so its state there is unknown. Re-check the SMTP
+greeting in a day or two; that is the only ground truth on this.
+
+**Perspective, so nobody spends a week here:** this IP's reputation dies with the
+box. After cutover, member mail leaves from Postmark's addresses and none of this
+follows it. What is at stake meanwhile is notifications to `comcast.net` members
+between now and then — real, bounded, and not worth a campaign.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -1255,8 +1296,12 @@ the site turns out to have been failing quietly, that is this fix working.
   cover the apex only, which null-sender mail never consults. ~~Rewrite
   requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
   that they were not came from reading a summary instead of the file.
-- **Request Comcast delisting** at `postmaster.comcast.net`, **after** the
-  backscatter fix rather than before — asking while the box still bounces to
+- **Comcast delisting SUBMITTED 2026-08-18** — Blocked Provider Request Form,
+  citing dated remediation and recipient-side authentication results. Up to
+  three business days per the acknowledgement, thirty minutes per their FAQ.
+  Check with a bare SMTP connection from the box (`220` vs `554` at the
+  greeting); no mail need be sent. Originally sequenced **after** the backscatter
+  fix rather than before — asking while the box still bounces to
   forged senders invites a second listing. **No longer time-sensitive: Brian's
   call 2026-08-18 is to let the 23 queued messages expire**, since Comcast has
   been blocking for a long time, the mail is stale, and no removal request would

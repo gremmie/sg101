@@ -259,7 +259,42 @@ which is the same failure wearing a different hat.
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-8. **Request delisting from Comcast — after requirement 5, not before.**
+8. **~~Request delisting from Comcast.~~ CHASED TO ITS SOURCE 2026-08-18.**
+   The Blocked Provider form covers `BL000000`; our error is `BL000100`, and
+   their reply ("not on our blocklist") answered the wrong question. The block
+   was still live afterwards — `554 … #BL000100` at both `mx1.mxge.comcast.net`
+   and `mx1a1.comcast.net`, from a bare SMTP greeting with no mail sent. The
+   error's own link leads to **Validity's Return Path Blocklist**
+   (`senderscore.org`), a commercial feed no public DNSBL query can see, which
+   is why the IP reads clean on Spamhaus, SpamCop, Barracuda, CBL, SpamRats,
+   UCEPROTECT, PSBL and GBUdb (all control-verified from the sending host).
+   **Removal requested there 2026-08-18**; the form did not disclose listing
+   status. Re-check the greeting in a day or two — it is the only ground truth.
+   Original text follows.
+
+   ~~Request delisting from Comcast.~~ SUBMITTED 2026-08-18, via their
+   Blocked Provider Request Form, citing the measured remediation with dates:
+   PTR forward-confirming since 2026-08-17, HELO aligned, DMARC published,
+   outbound TLS enabled 2026-08-18, local senders rewritten, and recipient-side
+   headers showing `spf=pass` / `dkim=pass` / `dmarc=pass`. Acknowledgement says
+   up to three business days; their FAQ says as little as thirty minutes.
+
+   **Verify without sending mail.** Comcast refuses at the SMTP greeting, not at
+   `DATA`, so a bare connection from the box answers it — `220` means delisted,
+   `554` means still blocked, and no message, queue entry or member recipient is
+   involved:
+   ```
+   python -c "
+   import socket
+   s = socket.create_connection(('mx1.comcast.net', 25), 10)
+   print(s.recv(1024).decode('utf-8', 'replace').strip())
+   s.close()"
+   ```
+   Must be run on the production host: the answer depends on the connecting IP.
+
+   Original text follows.
+
+   ~~Request delisting from Comcast — after requirement 5, not before.~~
    Added 2026-08-18. Comcast refuses all mail from `173.255.245.115` with
    `554 … found on one or more DNSBLs` (their code `BL000100`). The IP is on
    **none** of six public blocklists checked, so this is Comcast's own internal
