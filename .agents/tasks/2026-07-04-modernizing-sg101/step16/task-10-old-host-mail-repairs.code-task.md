@@ -252,7 +252,45 @@ which is the same failure wearing a different hat.
    reverse DNS was repaired 2026-08-17, that SPF, DKIM and DMARC all pass, and
    that the bounce behaviour has been corrected.
 
-9. **Verify from the receiving side, not from the log.** A `status=sent` line
+9. **~~Enable opportunistic outbound TLS.~~ DONE 2026-08-18.** Applied
+   (`smtp_tls_security_level = may`, `smtp_tls_loglevel = 1`, `main.cf` backed
+   up) and verified from both ends: the log shows `Untrusted TLS connection
+   established to gmail-smtp-in.l.google.com: TLSv1.2 with cipher
+   ECDHE-ECDSA-AES128-GCM-SHA256`, the message was delivered, and **Gmail now
+   reports it as encrypted where it previously reported it was not** — a
+   before/after contrast at the receiver, not an inference. Original text
+   follows.
+
+   Added 2026-08-18, and unlike the rest
+   of this task it affects **every message the box sends**, not only bounces and
+   system mail. `smtp_tls_security_level` is unset, which on this Postfix
+   vintage means outbound TLS is off: mail leaves in plaintext to every
+   destination. Inbound has TLS (`smtpd_use_tls = yes`) with the snakeoil
+   self-signed certificate, which is why the omission is easy to miss — the
+   config *looks* TLS-aware.
+
+   Found by accident, in a bounce nobody was reading: a DSN to a Mailchimp
+   address was refused with `530 Must issue a STARTTLS command first`. **A
+   receiver that requires STARTTLS refuses this box outright, and no DMARC
+   report will ever say so, because it is not an authentication failure.**
+   Google's bulk-sender guidelines also list TLS as a requirement, so this has
+   been working against the very receiver whose acceptance this step keeps
+   measuring.
+
+   ```
+   postconf -e 'smtp_tls_security_level = may'
+   postconf -e 'smtp_tls_loglevel = 1'
+   postfix reload
+   ```
+   `may` is opportunistic: a peer that offers no TLS still receives plaintext,
+   exactly as today, so nothing that currently works can stop working. The
+   loglevel makes verification direct — a delivered message's headers should
+   show `version=TLS1_2` where they currently show nothing. Back up `main.cf`
+   first. **Caveat:** this box's OpenSSL is 14.04-era; if a handshake ever
+   fails, opportunistic mode retries in the clear, so the failure mode is delay
+   rather than loss.
+
+10. **Verify from the receiving side, not from the log.** A `status=sent` line
    means the far end accepted the connection, not that the message authenticated
    or landed in an inbox. Each fix is confirmed by a real message's
    `Authentication-Results` header, in the same way the 2026-08-17 Outlook
@@ -299,6 +337,9 @@ which is the same failure wearing a different hat.
 - **Given** a Postfix-generated bounce after requirement 4
   **When** its headers are read at the receiver
   **Then** SPF passes on the HELO identity and DMARC reports an aligned pass
+- **Given** a message delivered to Gmail after requirement 9
+  **Then** its `Received` header records a TLS version and cipher, where today
+  it records none
 - **Given** the DSN-per-day counts across the retained logs
   **Then** they are zero after 2026-08-17, or every survivor has been traced to
   its parent message and explained

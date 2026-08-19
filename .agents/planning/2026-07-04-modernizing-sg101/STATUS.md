@@ -1120,6 +1120,72 @@ be upstart-era. **Each would have produced silence that reads exactly like a
 clean result**, which is the same failure as the deprecation gate certifying a
 green suite while unbound. See [[measure-before-recording-in-planning-docs]].
 
+### Requirement 5 verified — and the answer was a third thing
+
+The check predicted DSN generation would fall to zero after the PTR repair. **It
+did not**, and the raw counts refuse the prediction outright: 22 on 2026-08-17,
+6 on 2026-08-18. But the metric counted *every* DSN the box generates, most of
+which are internal — root's twice-daily `5.1.1`, and one for each of the Gmail
+refusals. Classifying the 28 DSNs from those two days by recipient:
+
+| Recipient domain | Count |
+|---|---|
+| `surfguitar101.com` | 25 |
+| `gmail.com` | 21 |
+| `solutions-entreprises-digitales.com` | 1 |
+| `mail39.atl71.mcdlv.net` | 1 |
+| `localhost` | 1 |
+
+The first two overlap — a DSN to `admin@` is forwarded to Brian's Gmail and logs
+under both. **Only two DSNs reached outsiders in two days**, one of them
+delivered at 04:06 on 2026-08-18, i.e. *after* the PTR repair.
+
+**So the real backscatter rate is about one a day, and the PTR fix removed the
+dominant trigger rather than the mechanism.** Both survivors are the forwarding
+pattern, and one is a Mailchimp VERP address, i.e. list mail rather than spam. At
+that volume, on a box being decommissioned, requirement 5 stays a verification:
+no change here, retired structurally by task 06.
+
+*Three readings in one afternoon — "53 messages, fix it", "one message, already
+fixed", "one a day, mechanism intact" — each from measuring something slightly
+different. The first two were wrong because the measurement was, not because the
+box changed.* See [[suspect-the-measurer-before-the-record]].
+
+### Outbound mail has been unencrypted this whole time
+
+Found inside one of those two bounces, which is the argument for reading them:
+
+```
+530 Must issue a STARTTLS command first (in reply to MAIL FROM command)
+```
+
+`smtp_tls_security_level` is unset, which on this Postfix vintage means
+**outbound TLS is off entirely: every message this box has ever sent left in
+plaintext.** Inbound has `smtpd_use_tls = yes` with the snakeoil self-signed
+certificate — which is exactly why nobody noticed, since the configuration reads
+as TLS-aware at a glance.
+
+**Two consequences, neither visible in any DMARC report**, because this is not an
+authentication failure and nothing reports it:
+
+1. Receivers that require STARTTLS refuse outright — the AWS host above did.
+2. **Google's bulk-sender guidelines list TLS as a requirement**, so this has
+   been quietly counting against the sender at the very receiver whose
+   acceptance this step has spent two days measuring.
+
+**FIXED AND VERIFIED the same day.** `smtp_tls_security_level = may` applied,
+and the proof is on both sides: `Untrusted TLS connection established to
+gmail-smtp-in.l.google.com: TLSv1.2 with cipher ECDHE-ECDSA-AES128-GCM-SHA256`
+in the log, and **Gmail reporting the delivered message as encrypted where it
+previously reported it was not.** ("Untrusted" is correct and expected —
+opportunistic TLS does not verify the peer's chain; the traffic is encrypted
+regardless.)
+
+**This is the second finding in this step that no amount of DMARC data would ever
+have surfaced**, the first being root's mail dying locally. The reports say what
+authentication did; they are silent about everything that stops a message before
+authentication is evaluated.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -1167,7 +1233,12 @@ green suite while unbound. See [[measure-before-recording-in-planning-docs]].
 - **Switch opendkim to `Canonicalization relaxed/relaxed`** before SPF reaches
   `-all`, since `simple/simple` breaks on any in-transit modification and
   forwarded mail will then depend on DKIM alone.
-- **Backscatter — verify it stopped rather than fix it.** Traced 2026-08-18: one
+- ~~Enable opportunistic outbound TLS~~ — **done and verified 2026-08-18**,
+  TLSv1.2 to Gmail, confirmed encrypted at the receiver.
+- ~~Backscatter — verify it stopped rather than fix it.~~ **Verified 2026-08-18:
+  about one DSN a day reaches an outsider, down from the misread 53-in-three-days
+  but not zero. No change on this box; task 06 retires it.**
+- **Superseded — backscatter, original framing:** Traced 2026-08-18: one
   DSN, not 53, caused by a forwarded message Gmail refused for the missing PTR.
   That trigger was repaired 2026-08-17, so the expected state is zero. Residual
   risk is inherent to forwarding third-party mail and is retired by task 06.
