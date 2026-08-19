@@ -202,7 +202,16 @@ implementation. Read additional references as needed for context.
    which is the one change in this step that breaks something real.
 
 7. **Reproduce `/etc/aliases` on the new VM as null-client configuration**, not
-   as Email Routing rules.
+   as Email Routing rules. **And rewrite the sender as well as the recipients**
+   (added 2026-08-18): system mail leaves as `root@<hostname>`, which Postmark
+   refuses because it is not a verified sender signature. A `sender_canonical`
+   map onto `@surfguitar101.com` is required for any of this mail to be
+   accepted — the same fix task 10 applied to the old host, where the identical
+   defect had been silently destroying Django's error reports.
+
+   **Verify by making a cron job fail**, not by reading the configuration. A
+   null client that discards mail looks exactly like a server with nothing to
+   say, which is how the old box lost every root message for years.
 
 8. **Keep Postfix running and able to receive until the new path is verified
    end-to-end.** MX has a TTL and senders cache; mail will arrive at the old box
@@ -242,12 +251,22 @@ implementation. Read additional references as needed for context.
   when `mail.` was unproxied — see requirement 6.)*
 - **Given** a reply sent to `no_reply@surfguitar101.com`
   **Then** it is delivered rather than bounced
-- **Given** the new VM's cron emitting output to `root`
-  **Then** it reaches `bgneal@gmail.com` via the null client, with no MX record
-  and no listening SMTP port on the VM
+- **Given** a cron job on the new VM **made to fail**, rather than one merely
+  configured to send
+  **Then** its output reaches `bgneal@gmail.com` via the null client, with no MX
+  record and no listening SMTP port on the VM — *a null client that discards
+  silently is indistinguishable from a quiet server, which is how the old host
+  lost every root message for years*
+- **Given** that same message
+  **Then** Postmark accepted it, i.e. its From address was rewritten onto a
+  verified domain rather than left as `root@<hostname>`, which Postmark refuses
 - **Given** `deathofagremmie.com`
   **Then** it has no Email Routing configuration and no aliases, and its absence
-  breaks nothing
+  breaks nothing. **Confirmed 2026-08-18: Brian no longer owns this domain.**
+  The old box still lists it in `virtual_alias_domains` and carries four
+  forwards for it in `virtual_alias_maps` (`postmaster@`, `abuse@`, `gremmie@`,
+  `brian@`). None of that may be migrated — it would forward mail for a domain
+  someone else controls.
 - **Given** a plus-addressed form of any alias in real use
   **Then** its behaviour has been tested and either works or has a documented
   fallback

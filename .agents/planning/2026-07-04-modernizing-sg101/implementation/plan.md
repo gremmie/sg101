@@ -1513,6 +1513,22 @@ ideally while it is stood up and not yet serving:
   is silent queueing.
 - **Confirm nothing listens on 25**, and that the VM publishes no MX record.
   The end state is no inbound mail path on the host at all.
+- **Rewrite the null client's *sender*, not just its recipients — Postmark will
+  refuse it otherwise** (added 2026-08-18). Cron mail leaves as
+  `root@<hostname>`, and Postmark accepts only a From address on a verified
+  domain or sender signature, answering "not a Sender Signature on this account"
+  to anything else. Reproducing `/etc/aliases` covers where the mail *goes*;
+  this is where it *comes from*, and it is the same `sender_canonical` rewrite
+  Step 16 task 10 applied to jaguar on 2026-08-18 — where the identical defect
+  had been destroying Django's error reports for years. Both halves are needed,
+  and only one of them was written down.
+- **Prove it by breaking something, not by reading the config** (added
+  2026-08-18). `tools/email_smoke.py` proves the *application's* egress; it says
+  nothing about the null client. Make a cron job fail on the new VM and confirm
+  the message reaches Brian's inbox. **A misconfigured null client discards
+  silently and looks exactly like a quiet server** — which is precisely how
+  jaguar lost every root message, every certbot warning and every Django
+  traceback for years without anyone noticing.
 
 Verification belongs to Step 16's `tools/email_smoke.py`, run *from the VM*
 rather than from a laptop — the point is to prove the host's egress, not the
