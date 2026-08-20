@@ -2394,6 +2394,30 @@ box that needed it.
   published once. ~~Rewrite requirements 5–7~~ — withdrawn 2026-08-18, they are
   already correct; the claim that they were not came from reading a summary
   instead of the file.
+- **Zone cleanup is deferred to the decommission project, deliberately** —
+  raised and declined 2026-08-20. A Step 20 zone-wide DNS audit was proposed and
+  **Brian's call was that it does not earn its place here**: the mail records
+  each retire on a condition already written into the task that owns it (task 03
+  step 8 the legacy `dkim` selector, task 06 the MX, task 03 requirement 13 the
+  HELO SPF), jaguar is expected gone within about a month, and a separate `/pdd`
+  is planned to decommission it alongside several other sites. **A zone audit
+  belongs in that project, across all those domains at once**, rather than here
+  for this one. The proposal's stated justification — that the non-mail half of
+  the zone has never been audited — is true and still not worth a work item on a
+  box with weeks to live.
+
+  **What must carry forward is an ordering constraint, not tidiness.** The zone
+  does *not* retire with the box: `surfguitar101.com` stays in Cloudflare and
+  repoints at the new VM, so `mail` A (`173.255.245.115`) and the `mail` SPF TXT
+  survive jaguar unless deleted on purpose. **Linode reassigns IPs.** The moment
+  that instance is destroyed, those two records name a stranger's server as
+  `mail.surfguitar101.com` and affirmatively authorize its address to send as
+  that name — and if MX has not moved yet, hand it inbound mail. **Delete both
+  before destroying the instance, not after.** Between the Postmark cutover and
+  the decommission they are correct and should stay; the window that matters is
+  minutes wide and on the far side of this project. The same trap applies to
+  every other site in that move, which is the argument for carrying it as a
+  checklist item there rather than a one-off here.
 - ~~**Comcast delisting SUBMITTED 2026-08-18**~~ — **CLEARED 2026-08-18,
   20:44:52–20:54:52 CDT**, corrected 2026-08-20 from the Postfix log (above).
   The `220` greeting recorded on the 19th observed a state that had changed ~22
