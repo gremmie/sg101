@@ -78,8 +78,83 @@ and left modernizing registration as an open question. Brian settled it on
 exposes it at module level precisely so this task can reuse it. **Task 08 lands
 first.**
 
+### The pending state is its own model — decided 2026-08-19
+
+```python
+class PendingEmailChange(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    new_email = models.EmailField()
+    key = models.CharField(max_length=64)
+    date_requested = models.DateTimeField(default=timezone.now, db_index=True)
+```
+
+**In `accounts`, beside `PendingUser`**, not in `bio`. It reuses that model's
+manager idiom and `accounts.utils.make_confirmation_token()`, and the
+confirmation view belongs next to `register_confirm`. `bio` currently imports
+nothing from `accounts`; this is the first edge and it points the right way —
+profile editing depending on account-identity machinery, not the reverse.
+
+**`OneToOneField` is load-bearing.** It enforces at most one pending change per
+user in the database, which *is* the last-request-wins rule: a second request
+overwrites the row rather than racing with it. Existence of the row is the
+entire pending state, so the template condition is `{% if pending_change %}` and
+nothing has to encode "pending" as a flag that can disagree with the data.
+
+`max_length=64` and the indexed date match what task 08 settled for
+`PendingUser.key`, so the token helper and a `purge_expired()`-shaped sweep carry
+over unchanged.
+
+**Rejected: fields on `bio.UserProfile`.** Three reasons, the middle one specific
+to this codebase:
+
+- It is already a 20-field hot table, read on every profile view, member-list row
+  and forum post, for columns that are non-null a few hours a year.
+- **It is a search document.** `search/receivers.py:132` queues a Celery reindex
+  on `UserProfile` writes, so every change request *and* every expiry sweep would
+  dirty the profile row and reindex data that is not indexed.
+- A sweep cannot `.delete()` a set of columns. `PendingUser.purge_expired()` is a
+  `.delete()`, and requirement 3 says to follow it; nulling fields is a different
+  and messier shape that re-triggers the reindex above.
+
 ### Fix order, from the plan
 Verify on change > uniqueness check > don't display an unverified address.
+
+### The UI, decided 2026-08-19
+
+Requirement 7 as originally written covers *other people's* views. What the owner
+sees was unspecified, and it is the actual interface.
+
+- **On save, a flash**: `messages.success` telling them the change is pending and
+  to confirm from the new address. `bio/views.py:edit_profile` already uses the
+  `messages` idiom, so this is the existing pattern.
+- **And a persistent notice**, because a flash dies on the next page load while
+  the pending state does not. The email field keeps showing the **verified**
+  address; below it a block names the pending one, marked as awaiting
+  confirmation, with **resend** and **cancel**.
+- **Cancel is not a nicety.** Without it a typo'd address leaves the member
+  waiting out the expiry with no recourse and no way to retry to the right
+  address.
+- **Two small confirm templates** mirroring `register_success.html` /
+  `register_failure.html` rather than reusing them: different wording, and reuse
+  would couple two flows that will drift.
+- **The courtesy mail to the old address carries no action link.** The background
+  above establishes there is no takeover path, so a "this wasn't me" link would
+  add attack surface to answer a risk that does not exist. It names a contact
+  instead.
+
+**Both use Foundation callouts, and the flash half is already free.** Checked
+2026-08-19 rather than assumed: `sg101/settings/base.py:204` maps Django's
+message constants onto Foundation's callout classes (`ERROR → alert`,
+`INFO → primary`, and so on), and `core/message_list.html` renders
+`<div class="{{ message.tags }} callout">`. So `messages.success(...)` emits a
+`success callout` with no template work. 40 templates already use callouts and
+`main.scss` includes the component.
+
+**The persistent notice is the part that needs markup**, since it is model state
+rather than a message — hand-written into `edit_profile.html`. Start from
+`warning callout`: the state is "action still required from you", not success.
+Brian's call, and worth revisiting against the rendered page rather than settled
+here.
 
 ## Reference Documentation
 **Required:**
@@ -132,6 +207,12 @@ implementation. Read additional references as needed for context.
    page, member list and forum posts should show the previously verified
    address, not the pending one.
 
+   **This is a verification, not a change — consequence of the model decision
+   above (2026-08-19).** The pending address never enters `User.email`, so those
+   three templates already render the verified address and need no edit. Confirm
+   it by test rather than by reading them; the criterion stays because the
+   *property* still has to hold, not because there is work to do.
+
 8. **Reuse `core.functions.send_mail`.** It is the wrapper every other path uses
    and the one task 02 makes reliable.
 
@@ -143,6 +224,13 @@ implementation. Read additional references as needed for context.
     means a member with a dead address on file can no longer update it
     themselves. Make sure the failure is legible on screen, and that an admin
     path exists, rather than leaving them stuck with no explanation.
+
+    **Resolved 2026-08-19.** The admin path already exists — Django's stock
+    `UserAdmin` edits `auth.User.email` directly, and that write bypasses this
+    flow entirely. So the work here is only the on-screen half: the pending
+    notice must say plainly that confirmation goes to the new address, and point
+    at the contact form for a member who cannot reach it. Do not build a second
+    admin surface.
 
 ## Dependencies
 - **Task 08** — the shared `secrets` token helper. Hard prerequisite.
@@ -180,7 +268,18 @@ implementation. Read additional references as needed for context.
   `exclude(pk=…)` implementation
 - **Given** a pending, unconfirmed address
   **Then** the profile page, member list and forum posts show the previously
-  verified address
+  verified address — asserted by test, since the model decision means those
+  templates are unchanged and nothing else would catch a regression
+- **Given** a member who has just requested a change
+  **Then** the edit page shows the **verified** address in the email field and a
+  persistent notice naming the pending one, and that notice survives a page
+  reload — a flash alone does not satisfy this
+- **Given** a member with a pending change who cancels it
+  **Then** the pending record is gone, `User.email` is unchanged, and they can
+  immediately request a different address
+- **Given** a member who requests a second change while one is pending
+  **Then** the first is replaced rather than duplicated, and the old address is
+  notified again
 - **Given** the old address
   **Then** it receives notification that a change was requested
 - **Given** the new confirmation key
