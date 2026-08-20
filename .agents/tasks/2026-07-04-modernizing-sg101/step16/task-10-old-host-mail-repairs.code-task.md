@@ -201,7 +201,13 @@ which is the same failure wearing a different hat.
    `sender_canonical_maps`. The test is not that the rewrite happens; it is that
    the resulting message is **signed**, since OpenDKIM signs by domain.
 
-4. **Publish SPF at the HELO name.** This is task 03's requirement 13, repeated
+4. **~~Publish SPF at the HELO name.~~ DONE 2026-08-20** — published by hand in
+   Cloudflare and verified at both authoritative nameservers, exactly one SPF
+   record at the name. Task 03's requirement 13 is the same record and closes
+   with it. Delivery-side proof is still outstanding: the clean test is the DMARC
+   report covering 08-21, read on 08-22, and the confirming observation is a
+   *pass* row for the bounce class rather than an absence of failures. Original
+   text follows. This is task 03's requirement 13, repeated
    here because it fixes fault 3 and is a prerequisite for verifying it:
    ```
    mail.surfguitar101.com.  TXT  "v=spf1 ip4:173.255.245.115 -all"

@@ -2205,12 +2205,70 @@ the last set was written at a confidence the data did not support:
 1. **Failures stay in the 0–3 band and keep failing both mechanisms**, since the
    SPF record at the HELO name still does not exist. A zero day is now *within*
    the expected range rather than a refutation, which is the direct consequence
-   of the count argument collapsing.
+   of the count argument collapsing. **Premise expired 2026-08-20** — the record
+   now exists (below), so this prediction covers the 08-20 report and earlier
+   only. From the 08-21 report on the bounce class should *pass*; continued
+   failure means the fix did not take.
 2. **Volume runs near the Gmail-destined median of 12/day**, revised 2026-08-20
    now that a baseline exists. The original "no prediction is offered" was
    written without one. Days in the 50–70 range are possible without anything
    being wrong — the log shows them occurring naturally — so a high day is not
    evidence of a new sending source.
+
+### Task 10 requirement 4 — the HELO SPF record, published 2026-08-20
+
+```
+mail.surfguitar101.com.  TXT  "v=spf1 ip4:173.255.245.115 -all"
+```
+
+Published by hand in Cloudflare. **Task 10 requirement 4 and task 03 requirement
+13 are the same record** — flagged as overlapping when task 10 was written, with
+the instruction to do it once. Published once; both close.
+
+**Verified at both authoritative nameservers**, `ada` and `cash`, with `1.1.1.1`
+and `8.8.8.8` already carrying it. **Exactly one SPF record at the name** — two
+would make the result `permerror` rather than something stricter, so the count
+was taken rather than assumed. The `mail.` A record still answers
+`173.255.245.115` and is still unproxied; a proxied answer would return
+Cloudflare addresses and break the forward-confirmation the whole HELO chain
+rests on. Apex untouched.
+
+**Self-consistent:** the record authorizes `173.255.245.115` and the HELO name
+resolves to exactly that, so a bounce from jaguar now has something to pass on.
+
+**`-all` is correct at this name precisely where it would not be at the apex.**
+The only sender that ever HELOs as `mail.surfguitar101.com` is jaguar, at that
+one address. There is no third party to hard-fail — which is what lets this name
+be strict while the apex cannot be until Postmark is named in it.
+
+**Why this is the *only* route to an aligned pass for the bounce class**, not the
+better of two. A null-sender bounce has no envelope domain, so SPF falls back to
+the HELO identity (RFC 7208 §2.3); and it has no DKIM either, because Postfix
+does not apply milters to internally generated bounces
+(`internal_mail_filter_classes` is empty by default). With no TXT at the HELO
+name the result was `none` — never `pass` — from both mechanisms at once.
+
+**It yields an *aligned* pass only because `aspf` defaults to relaxed.**
+`mail.surfguitar101.com` and `surfguitar101.com` share an organizational domain,
+which relaxed alignment accepts, and the `_dmarc` record sets no `aspf` tag, so
+the default holds. **Consequence for step 9: `p=none` → `quarantine` → `reject`
+is safe, but adding `aspf=s` alongside it is not** — strict alignment demands an
+exact domain match, `mail.` is not the apex, and this bounce class would return
+to failing under a policy that now acts on it. Recorded because `aspf=s` is an
+easy thing to reach for while "tightening."
+
+**DNS-verified, not delivery-verified**, the same distinction task 03 drew for
+the PTR. The proof is a DMARC row showing the bounce class passing SPF on the
+HELO identity. The record landed mid-UTC-day on 2026-08-20, so **the report
+covering 08-20 is a mix and cannot settle it; the clean test is the report
+covering 08-21, read on 08-22.** The confirming observation is a *pass* row, not
+an absence of failures — the failure count has been falling on its own
+(4 → 3 → 1 against volume 67 → 33 → 10), so a zero day sits inside the expected
+band and proves nothing in either direction.
+
+**Its lifetime is the old host's.** Once inbound moves to Cloudflare Email
+Routing and the new VM keeps no local bounce traffic, the record retires with the
+box that needed it.
 
 ### Open
 
@@ -2225,11 +2283,29 @@ the last set was written at a confidence the data did not support:
   03's own implementation order that is **step 7 (restore `-all`) and step 9
   (`p=none` → `quarantine` → `reject`) — both of which happen after cutover.**
   Steps 3–6 (Postmark's records, the transition SPF, verification, and the
-  cutover itself) need nothing from it, and the two safety valves are already
-  published: `p=none` means receivers take no action on failures, and
-  requirement 6 softens SPF to `~all` for the duration of the window, so no
-  unknown sender can be hard-failed while this runs. **The week is the long pole
-  meant to elapse concurrently, not a hold on other work.**
+  cutover itself) need nothing from it.
+
+  **Correction 2026-08-20: only one of the two safety valves this paragraph
+  claimed is actually published.** `p=none` is live and does mean receivers take
+  no action on failures. The second — task 03 step 6 softening the apex to
+  `~all` for the duration of the window — **has not run.** Measured at
+  `ada.ns.cloudflare.com`: the apex reads
+  `v=spf1 a mx ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 -all`,
+  one SPF record, no `include:`. The same Open list elsewhere schedules steps 5–7
+  with the task 02 cutover, so this document asserted a valve while also
+  scheduling it for later, and DNS agrees with the schedule. *(Found while
+  reading the apex for an unrelated reason — nothing was watching it, which is
+  the property that makes DNS claims worth re-measuring rather than re-reading;
+  see [[measure-before-recording-in-planning-docs]].)*
+
+  **What it changes is small.** Under `p=none` a hard SPF fail still produces no
+  receiver action, and jaguar has been sending under `-all` for years, so this is
+  the status quo rather than an exposure the week introduced. **What it does
+  change is the cutover**, where that apex record hard-fails everything but
+  jaguar's two addresses and does not name Postmark — which is exactly why steps
+  5–7 are pinned there, and why flipping `EMAIL_HOST` ahead of step 5 would hard-
+  fail every Postmark message at the apex. **The week is the long pole meant to
+  elapse concurrently, not a hold on other work.**
 
   **What is left to learn from it is narrow.** Three days show one sending
   source — jaguar — plus one member's Gmail forwarding, so the inventory the
@@ -2306,13 +2382,18 @@ the last set was written at a confidence the data did not support:
   2026-08-21 to 08-22; **a quiet first day is not a signal.** **Still not a
   blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
   check, not by DMARC data.
-- **Publish SPF on `mail.surfguitar101.com`** (`v=spf1 ip4:173.255.245.115 -all`),
-  without which null-sender mail has no SPF record to find at the HELO name.
-  Belongs with requirements 5–7.
-- **Add one requirement to task 03: SPF at the HELO name.** Requirements 5–7
-  cover the apex only, which null-sender mail never consults. ~~Rewrite
-  requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
-  that they were not came from reading a summary instead of the file.
+- ~~**Publish SPF on `mail.surfguitar101.com`**~~ — **DONE 2026-08-20** (above),
+  `v=spf1 ip4:173.255.245.115 -all`, verified at both authoritative nameservers,
+  exactly one SPF record at the name. **It did not "belong with requirements
+  5–7"** as this line used to say: those govern the apex, this is the HELO name,
+  and it needed no part of the cutover to publish. What remains is reading the
+  08-21 report on 08-22 to see the bounce class pass.
+- ~~**Add one requirement to task 03: SPF at the HELO name**~~ — **already done
+  2026-08-18**, as task 03 requirement 13; this line outlived the work it asked
+  for. Task 10 requirement 4 and task 03 requirement 13 are one record,
+  published once. ~~Rewrite requirements 5–7~~ — withdrawn 2026-08-18, they are
+  already correct; the claim that they were not came from reading a summary
+  instead of the file.
 - ~~**Comcast delisting SUBMITTED 2026-08-18**~~ — **CLEARED 2026-08-18,
   20:44:52–20:54:52 CDT**, corrected 2026-08-20 from the Postfix log (above).
   The `220` greeting recorded on the 19th observed a state that had changed ~22
