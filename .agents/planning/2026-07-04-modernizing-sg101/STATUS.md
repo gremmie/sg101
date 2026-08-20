@@ -2270,6 +2270,64 @@ band and proves nothing in either direction.
 Routing and the new VM keeps no local bounce traffic, the record retires with the
 box that needed it.
 
+### The warm-up plan, measured 2026-08-20 — the mechanism is real, the size is not
+
+Brian asked what the graduated warm-up is actually defending against: someone
+replying to an old thread and the site mailing addresses that died years ago.
+**That is exactly the mechanism, and it is the only one.**
+`notify_topic_subscribers()` (`forums/views/subscriptions.py:20`) takes the new
+post's topic, pulls `topic.subscribers` minus the poster, and sends one message
+per recipient. Subscriptions are explicit opt-in — a POST to `subscribe_topic` —
+so nobody was auto-subscribed by posting, and **no mass-mail path exists
+anywhere in the tree**: every `send_mail` call site sends to a single recipient
+on an individual event. A burst can only come from organic traffic.
+
+**Fan-out is one.** 14,984 subscription rows across 9,608 of 35,693 topics:
+median **1** subscriber per topic, mean 1.56, p95 of 3, max 31. A reply to an old
+thread mails one or two people.
+
+**The recorded 63% is a headcount, and the risk needs a message count.** Dormant
+members subscribe to dead topics that never get replied to, so their rows never
+turn into mail. Weighted by subscription rows the picture already inverts —
+active members hold **11,023 of the 14,984 rows (73.6%)**. Weighted by mail
+actually generated it inverts further. Twelve months of real posting, 4,186 posts
+producing **9,041 notification emails (~24.8/day**, which cross-checks the mail
+log's 27/day median total outbound):
+
+| Recipient last logged in | Emails | % | Distinct people |
+|---|---|---|---|
+| Within 1 year | 7,526 | **83.2%** | 81 |
+| 1–3 years | 440 | 4.9% | 17 |
+| 3–8 years | 712 | 7.9% | 20 |
+| 8+ years | 363 | 4.0% | 15 |
+
+**11.9% of notification mail reaches accounts dormant 3+ years, from 35 distinct
+addresses** — not the 423 people the headcount implies. The subscriber counts
+themselves reproduce (232 at 8+ years against the 231 recorded on 2026-08-16, 191
+at 3–8 unchanged); **none of the 668 has never logged in**, so the original
+"8+ years or never have" was one category, not two.
+
+**What makes the warm-up unnecessary rather than merely oversized: Postmark
+suppresses an address after its first hard bounce.** Exposure is therefore
+bounded by *distinct addresses*, not message volume — each dead address bounces
+once and is never mailed again. Across a full year of organic posting the ceiling
+is 35 bounces from the dormant class, and dormant is not dead: plenty of
+decade-old Gmail addresses still accept mail.
+
+**Decision: no staged send.** A warm-up defends against a burst, and nothing here
+produces one — no mass-mail feature, median fan-out of 1, ~25 notifications a
+day, and suppression capping repeats. Sequencing recently-active members first
+would be real work guarding a rate that cannot get high enough to matter. **What
+replaces it is watching Postmark's bounce dashboard for the first two weeks**,
+which the numbers are small enough to eyeball.
+
+**Two caveats kept attached.** This measures forum notifications only; PM
+notifications (`messages/forms.py:159`) can also reach a dormant member, and
+registration and password-reset mail goes to an address the user just typed —
+none of them bulk. And the graduated warm-up was **volunteered to Postmark in the
+approval request**, so this is doing less than was stated, not more. Not a
+problem, and worth knowing it was said.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -2472,7 +2530,10 @@ box that needed it.
   sending is unblocked; task 07's live send no longer has an account-state
   dependency. The approval request led with measured volume, the double opt-in
   registration flow, and a volunteered warning that ~63% of notification
-  subscribers are 3+ years dormant with a graduated warm-up planned.
+  subscribers are 3+ years dormant with a graduated warm-up planned. *(The 63%
+  stands as a subscriber headcount; the warm-up was dropped 2026-08-20 once the
+  figure was re-measured as mail actually sent. What was said to Postmark is left
+  as it was said.)*
 - Requirements 5–7 (SPF rewrite, `~all`, then `-all`) belong with the task 02
   cutover, not with this sitting.
 
@@ -2741,7 +2802,14 @@ to notifications regardless of the name.
   topic subscribers, **231 have not logged in for 8+ years or never have**, and
   191 more are 3–8 years dormant — **63% stale**. Postmark auto-suppresses, but a
   hard-bounce burst on a new account can trigger their review. Warm up
-  deliberately: recently-active users first.
+  deliberately: recently-active users first. **— MEASURED AND CUT DOWN
+  2026-08-20 (above). The 63% is a headcount where a message count was needed.**
+  Dormant subscribers hold dead topics that never generate mail: 83.2% of a
+  year's 9,041 notification emails go to members active within the year, and only
+  **11.9% to 3+ year dormant accounts, across 35 distinct addresses**. Since
+  Postmark suppresses after one hard bounce, the ceiling is 35 bounces a year,
+  not a burst. **The staged warm-up is dropped in favour of watching the bounce
+  dashboard.**
 - **Email config is still hardcoded.** `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_BACKEND`
   are literals in `base.py:214` and `production.py:68`, and `.env.example` has
   **no mail variables at all**. Step 3's 12-factor pass skipped email; this step
@@ -2811,8 +2879,11 @@ Recorded in `plan.md` under **Step 21**, which provisions the VM.
   landing in an Outlook/Hotmail inbox, not a green suite.** Gmail already
   accepts this site's mail with `dkim=pass`/`spf=pass` while Microsoft rejects
   it — so a Gmail-only check would have passed *before* any of this work and
-  cannot distinguish success from failure. Also owns the graduated warm-up
-  against the 63%-dormant subscriber list, with a stop threshold set in advance.
+  cannot distinguish success from failure. ~~Also owns the graduated warm-up
+  against the 63%-dormant subscriber list, with a stop threshold set in
+  advance.~~ **Dropped 2026-08-20 on measurement (above)** — what it owns instead
+  is watching Postmark's bounce dashboard for two weeks; the stop threshold idea
+  survives, the staged send does not.
 - `step16/task-04-remove-email-story.code-task.md` — **rewritten 2026-08-16
   from hardening to deletion, Brian's call**: "I'm perfectly fine with dropping
   it, I don't imagine this gets used at all." `news.views.email_story` is the
