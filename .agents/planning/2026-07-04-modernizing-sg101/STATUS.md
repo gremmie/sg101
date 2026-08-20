@@ -1923,9 +1923,10 @@ the first reading and is now backed by numbers.**
 none of them:**
 
 1. **We send them almost nothing** — answerable from the member table, and the
-   only one of the three that is ours to check.
+   only one of the three that is ours to check. *(Refuted below.)*
 2. **They may not publish aggregate reports at all.** Not verified either way;
-   recorded as a question rather than a fact.
+   recorded as a question rather than a fact. *(Largely refuted below, on vendor
+   sources; a fourth explanation was added at the same time.)*
 3. **They do and we cannot see it**, per the unmeasurable half above.
 
 **Brian's reading on 2026-08-20 was that few active members use Microsoft
@@ -2052,8 +2053,72 @@ unremarkable — 4.3% in 2024, 11.8% in 2025, 12.5% in 2026 on single-digit coun
 
 **This kills explanation 1.** We send Microsoft roughly a tenth of all
 notifications, so "we send them almost nothing" is not why they are absent from
-the reports. Explanations 2 and 3 remain: they may not publish aggregate reports,
-or they do and Cloudflare does not surface reporter identity.
+the reports.
+
+#### The remaining explanations, and the one edit that separates them
+
+**Explanation 2 is probably dead too, on vendor sources rather than measurement.**
+Microsoft does now publish aggregate reports, sent from `dmarcreport@microsoft.com`,
+and the coverage named is exactly our members' population — consumer
+`hotmail.*`, `outlook.*`, `live.*` and `msn.com` mailboxes. **Marked as sourced,
+not measured: no report from Microsoft has been seen for this domain.**
+
+**A fourth explanation surfaced while checking, and it is specific enough to be
+worth naming.** Microsoft's report mail is reported to violate RFC 5322 — the
+base64 attachment is not wrapped at 78 characters — which breaks strict parsers.
+**Microsoft may be reporting while Cloudflare silently fails to ingest it.** That
+possibility did not exist on the earlier list and is not visible from any
+dashboard.
+
+So the live set is: **(2′) Microsoft reports but not for a domain this small;
+(3) they report and Cloudflare does not surface reporter identity; (4) they
+report and Cloudflare cannot parse it.** All three look identical from where we
+have been standing.
+
+**One DNS edit separates all of them.** `rua` accepts a comma-separated list, so
+add a second destination we control alongside Cloudflare's:
+
+```
+v=DMARC1; p=none; rua=mailto:00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,mailto:dmarc@surfguitar101.com
+```
+
+Then raw XML arrives where `<report_metadata><org_name>` can be read directly:
+mail from `dmarcreport@microsoft.com` proves they report and indicts Cloudflare's
+pipeline; silence over a week supports 2′. **It also removes the caveat-1
+blindness permanently**, for every future question about who is reporting, rather
+than just this one.
+
+**No opt-in or enabling record is needed for Microsoft**, checked 2026-08-20:
+they report to any domain publishing a valid `rua=mailto:`. The
+MX-points-to-Microsoft-365 condition in their documentation governs the
+*recipient tenant's* mail flow, not the sending domain, and does not apply to us.
+
+**The one real constraint is where `rua` may point.** RFC 7489 §7.1 requires an
+external-destination authorization record whenever the mailbox sits outside the
+policy domain's organizational domain, and **it must be published in the
+destination's zone.** Measured:
+
+```
+surfguitar101.com._report._dmarc.dmarc-reports.cloudflare.net  →  "v=DMARC1;"
+```
+
+Cloudflare publishes its own, so the current `rua` is authorized. **The practical
+consequence is that `rua` cannot point at `bgneal@gmail.com`** — that would need
+a record inside `gmail.com`'s zone, which is not ours to create, and conforming
+reporters are meant to refuse. The second destination therefore has to be an
+address *at* `surfguitar101.com`, forwarded onward through the virtual alias
+table. `mailto:dmarc@surfguitar101.com` is the same organizational domain and
+needs no authorization record at all.
+
+**Two operational notes if this is done:** add `dmarc@` to the alias table so the
+reports land somewhere Brian reads, and add the same address to Cloudflare Email
+Routing at task 06, or it dies with the old box.
+
+**Kept in proportion.** This is a know-your-instrument question, not a blocker.
+Even if Microsoft never reports a row, the evidence that settles Microsoft
+deliverability is task 07's smoke test with an Outlook inbox check (`dest:I`),
+which is already Step 16's acceptance criterion. The answer changes what to
+expect from DMARC data, not what the plan does.
 
 *Incidental cross-check:* Gmail is 40% of members overall but **46.8% of the
 recently active** and **58% of outbound**, which is consistent — the more engaged
@@ -2179,10 +2244,21 @@ the last set was written at a confidence the data did not support:
   attrition signature. The working assumption that few active members use Microsoft is
   refuted, and **the Microsoft rejections keep their priority.** Also kills
   "we send them almost nothing" as the reason they are absent from the reports.
-- **Open question, not a finding: does Microsoft publish DMARC aggregate reports
-  at all?** Recorded 2026-08-20 as one of three live explanations for its
-  absence, alongside "we send them almost nothing" and "reporter identity is not
-  surfaced by Cloudflare." Unverified in either direction.
+- **Add a second `rua` destination at our own domain** — new 2026-08-20, and the
+  single edit that resolves Microsoft's absence from the reports. Vendor sources
+  say Microsoft does publish aggregate reports from `dmarcreport@microsoft.com`
+  covering consumer `hotmail`/`outlook`/`live`/`msn` mailboxes, and that its
+  report mail violates RFC 5322 badly enough to break strict parsers — so
+  **"Cloudflare cannot parse Microsoft's reports" is now a live explanation**
+  alongside "too small to report on" and "reporter identity is not surfaced."
+  Appending `,mailto:dmarc@surfguitar101.com` to the `rua` list puts raw XML
+  where `org_name` can be read, and permanently removes the caveat-1 blindness.
+  **No Microsoft opt-in exists or is needed.** `rua` must stay at
+  `surfguitar101.com` — pointing it at a Gmail address would require an RFC 7489
+  §7.1 authorization record inside `gmail.com`'s zone — so alias `dmarc@` onward
+  instead, and carry it into Cloudflare Email Routing at task 06. **Not a
+  blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
+  check, not by DMARC data.
 - **Publish SPF on `mail.surfguitar101.com`** (`v=spf1 ip4:173.255.245.115 -all`),
   without which null-sender mail has no SPF record to find at the HELO name.
   Belongs with requirements 5–7.
