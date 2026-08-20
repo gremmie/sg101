@@ -410,7 +410,107 @@ user-supplied, but its recipient list is `settings.MANAGERS`, so it can only eve
 mail us and there is no third party to abuse.
 
 **Next: task 10 requirement 4** (SPF at the HELO name, once tomorrow's DMARC
-report is read), then Step 16 tasks 05–09.
+report is read), then Step 16 tasks 05–09. *(Task 08 landed first, 2026-08-19 —
+it is pure code and was the unblocked work while the DMARC week runs.)*
+
+## Step 16 task 08 — registration tokens from `secrets` — DONE 2026-08-19, `20ad77ed`, PUSHED, CI GREEN
+
+`PendingUserManager._make_key()` derived the registration confirmation key from
+`SECRET_KEY`, a per-process counter, an eight-character `random.sample` and the
+date, then took every other character of a SHA-1. Replaced with
+`secrets.token_urlsafe(32)`. Also `secrets.compare_digest` for the comparison and
+`secrets.choice`/`secrets.randbelow` for the registration code word.
+
+**The point was never that it was breakable.** `SECRET_KEY` in the hashed input
+means an attacker who cannot read the settings cannot reproduce a key, whatever
+the Mersenne Twister does. What was wrong is that its security rested on one
+ingredient while *appearing* to rest on four — which is worse than a short honest
+token, because it discourages the question. The task file's own risk assessment
+said so and this execution did not inflate it.
+
+The helper is module-level in `accounts/utils.py`, not a private method on the
+manager, **so task 05 imports it rather than copying a bad one.** That sequencing
+is the entire reason this is its own task.
+
+### Requirement 8 asked for a confirmation and got a refutation
+
+It said the route "takes `username` and `key`; a longer key changes the URL's
+length, not its structure. Confirm the route still matches." **It did not match,
+and on two axes at once:**
+
+```
+before:  (?P<key>[a-zA-Z0-9]{20})        fixed length, no - or _
+after:   (?P<key>[A-Za-z0-9_-]{20,64})
+```
+
+A 43-character URL-safe token fails the length *and* the alphabet. This was not
+theoretical: the token minted in the end-to-end run was
+`UdH8BK15k9q13--FE4gYjEjYkIXH7oRIw60q8rmAZ7w`, which contains `--` and would have
+404'd. The comment above the pattern asserted "a fixed 20-char alphanumeric run"
+and went with it.
+
+**The lower bound of 20 is load-bearing, not laziness.** A `{43}` bound would
+reject every confirmation link already sitting in an inbox, for the full day the
+expiry window stays open — turning a widening migration into a silent outage for
+anyone mid-registration at deploy time. Acceptance criterion 4 covers exactly
+this and now has a test of its own: `test_confirm_registration_differing_case`
+happened to use a 20-character key and so covered it *incidentally*, which is not
+coverage — nothing in that test says the short key matters, and a later edit
+would have removed it without anyone noticing.
+
+### Three mutations, each seen to fail
+
+Per [[mutation-verify-or-it-is-not-coverage]]. None of these tests counted until
+the thing they guard was broken and they were watched to fail:
+
+| Test | Mutation | Result |
+|---|---|---|
+| key shape ≥32 chars, URL-safe alphabet | the unmodified `_make_key()` | `20 not greater than or equal to 32` |
+| legacy 20-character key confirms | regex narrowed to `{43}` | error — route no longer resolves |
+| wrong key refused | comparison replaced with `if False:` | `a wrong key created the user anyway` |
+
+**The alphabet assertion does not discriminate and the test says so.** The old
+20-character lowercase-hex key also matches `^[A-Za-z0-9_-]+$`; only the length
+separates old from new. Recorded in a comment so nobody later reads the regex as
+doing work it is not doing.
+
+`test_wrong_key_is_refused` likewise records what it is *not*: it passes equally
+under a plain `!=`, because both reject a wrong key. `compare_digest`'s property
+is timing, which no functional test observes. What it catches is the comparison
+being dropped or inverted — which is what the mutation demonstrates.
+
+### The acceptance criteria contradicted the background, and the criterion was wrong
+
+One criterion asked that a tree-wide grep for `random.sample` leave
+`wiki/middleware.py` as the **only** hit. It cannot: `core/templatetags/
+core_tags.py:243` also has one, and the same task file's out-of-scope list says
+to leave it — banner rotation, no security property. **Satisfying the criterion
+would have meant changing something the task forbids.** Corrected the criterion
+rather than the code, and recorded why. `wiki/middleware.py` stays untouched
+deliberately; Step 19 deletes that app, so fixing it is work thrown away.
+
+### Verification
+
+877 green under `docker_test` and under the deprecation gate; `check` and
+`makemigrations --check` clean; **`check --deploy` byte-identical** before and
+after, the one pre-existing `security.W001` unchanged. CI green on the pushed
+commit (run `32316319294`).
+
+**Registration was exercised end to end against the real dev database, not a
+freshly built test one** — which is the only way the migration itself is under
+test. Column confirmed at 64 after `migrate`, a token minted, the confirm URL
+followed, the user created, the pending row consumed, artifacts cleaned up.
+`secrets.randbelow(900) + 100` reproduces `random.randint(100, 999)`'s inclusive
+range exactly.
+
+Imports removed as dead once `_make_key()` went: `random`, `string`, `hashlib`,
+`base64` and `settings` from `accounts/models.py`, `random` from
+`accounts/forms.py`. `datetime` stays — `purge_expired()` still uses it.
+
+Test count 874 → 877.
+
+**Next: task 05** (verified email address changes), which is what the shared
+helper exists for.
 
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
