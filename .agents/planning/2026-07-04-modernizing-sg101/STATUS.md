@@ -2076,10 +2076,11 @@ report and Cloudflare cannot parse it.** All three look identical from where we
 have been standing.
 
 **One DNS edit separates all of them.** `rua` accepts a comma-separated list, so
-add a second destination we control alongside Cloudflare's:
+add a second destination we control alongside Cloudflare's. **Published
+2026-08-20:**
 
 ```
-v=DMARC1; p=none; rua=mailto:00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,mailto:dmarc@surfguitar101.com
+v=DMARC1; p=none; rua=mailto:00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com
 ```
 
 Then raw XML arrives where `<report_metadata><org_name>` can be read directly:
@@ -2107,12 +2108,57 @@ consequence is that `rua` cannot point at `bgneal@gmail.com`** — that would ne
 a record inside `gmail.com`'s zone, which is not ours to create, and conforming
 reporters are meant to refuse. The second destination therefore has to be an
 address *at* `surfguitar101.com`, forwarded onward through the virtual alias
-table. `mailto:dmarc@surfguitar101.com` is the same organizational domain and
-needs no authorization record at all.
+table. `admin@surfguitar101.com` is the same organizational domain and needs no
+authorization record at all.
 
-**Two operational notes if this is done:** add `dmarc@` to the alias table so the
-reports land somewhere Brian reads, and add the same address to Cloudflare Email
-Routing at task 06, or it dies with the old box.
+**`admin@` rather than a new `dmarc@` — Brian's call, 2026-08-20, and it is the
+better of the two.** The `dmarc@` in the sketch above was habit, not requirement;
+all three arguments run the other way:
+
+- **Nothing to add on the old box.** `admin@` is already in the virtual alias
+  table forwarding to Brian's Gmail — verified 2026-08-18, when 23 queued
+  messages went through it. A purpose-built `dmarc@` would have been a second
+  thing to create for a destination this document already calls temporary.
+- **It removes an action item instead of adding one.** The `dmarc@` plan carried
+  "add it to Cloudflare Email Routing at task 06 or it dies with the old box."
+  `admin@` is the default for both `DEFAULT_FROM_EMAIL` and `SERVER_EMAIL`
+  (`sg101/settings/base.py:236,244`) and has to reach task 06 regardless, so that
+  footnote simply disappears.
+- **Cleanup is deleting text**, not retiring an alias — one edit to one TXT
+  record.
+
+**Verified from both authoritative nameservers rather than a resolver cache**,
+2026-08-20: `ada` and `cash` return it byte-identical, and `1.1.1.1` and
+`8.8.8.8` already had it. **Exactly one TXT record at `_dmarc`** — two would void
+DMARC outright, so the count was taken rather than assumed. 121 characters in a
+single string, well inside the 255-byte boundary that would force a split.
+`p=none` unchanged, Cloudflare's destination still first in the list.
+
+**The instrument is jaguar's mail log, not the Gmail inbox — and this is not a
+cost of `admin@`.** Any local address forwards, and forwarding breaks the
+report's own SPF alignment, which is the same mechanism behind the 4 failures
+blocking the tightening. Google's and Yahoo's reports are DKIM-signed and should
+survive it. **Microsoft's is the one already suspected of being malformed enough
+to break strict parsers** — so a forward Gmail refuses would look identical to
+Microsoft never reporting, which is the exact ambiguity this edit exists to
+remove. The envelope sender at the SMTP layer is upstream of all of that:
+
+```
+grep -iE 'to=<admin@surfguitar101\.com>' /var/log/mail.log | grep -i dmarc
+```
+
+`from=<dmarcreport@microsoft.com>` proves they report and indicts Cloudflare's
+ingestion; a week of Google and Yahoo with no Microsoft envelope supports 2′.
+
+**No contamination of our own data.** A forwarded report keeps its original
+`From:`, so it is `google.com` or `microsoft.com` mail failing alignment at
+Gmail, not `surfguitar101.com` mail, and cannot surface in our own aggregate
+reports.
+
+**Arrival window, so a quiet day is not misread.** Receivers read the record at
+message-processing time and batch one report per UTC day, sent the next. The edit
+landed mid-UTC-day on 2026-08-20, so a partial report for the 20th may or may not
+carry the new destination. **First dependable arrivals are 2026-08-21 to 08-22.**
 
 **Kept in proportion.** This is a know-your-instrument question, not a blocker.
 Even if Microsoft never reports a row, the evidence that settles Microsoft
@@ -2244,19 +2290,20 @@ the last set was written at a confidence the data did not support:
   attrition signature. The working assumption that few active members use Microsoft is
   refuted, and **the Microsoft rejections keep their priority.** Also kills
   "we send them almost nothing" as the reason they are absent from the reports.
-- **Add a second `rua` destination at our own domain** — new 2026-08-20, and the
-  single edit that resolves Microsoft's absence from the reports. Vendor sources
-  say Microsoft does publish aggregate reports from `dmarcreport@microsoft.com`
-  covering consumer `hotmail`/`outlook`/`live`/`msn` mailboxes, and that its
-  report mail violates RFC 5322 badly enough to break strict parsers — so
-  **"Cloudflare cannot parse Microsoft's reports" is now a live explanation**
-  alongside "too small to report on" and "reporter identity is not surfaced."
-  Appending `,mailto:dmarc@surfguitar101.com` to the `rua` list puts raw XML
-  where `org_name` can be read, and permanently removes the caveat-1 blindness.
-  **No Microsoft opt-in exists or is needed.** `rua` must stay at
-  `surfguitar101.com` — pointing it at a Gmail address would require an RFC 7489
-  §7.1 authorization record inside `gmail.com`'s zone — so alias `dmarc@` onward
-  instead, and carry it into Cloudflare Email Routing at task 06. **Not a
+- **Add a second `rua` destination at our own domain** — **PUBLISHED
+  2026-08-20** (above), the single edit that separates the three surviving
+  explanations for Microsoft's absence from the reports. Landed at
+  **`admin@surfguitar101.com`**, not the `dmarc@` first sketched: it is already
+  aliased to Brian's Gmail, it has to reach Cloudflare Email Routing at task 06
+  regardless, and retiring it later is a text deletion rather than an orphaned
+  alias. Verified at both authoritative nameservers, exactly one TXT record at
+  `_dmarc`, `p=none` untouched. **`rua` could not have pointed at
+  `bgneal@gmail.com`** — RFC 7489 §7.1 would need an authorization record inside
+  `gmail.com`'s zone; same-organizational-domain needs none.
+  **What is now open is reading it**, and the instrument is jaguar's mail log
+  rather than the inbox, since the forward to Gmail can drop a malformed
+  Microsoft report and manufacture a false silence. First dependable arrivals
+  2026-08-21 to 08-22; **a quiet first day is not a signal.** **Still not a
   blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
   check, not by DMARC data.
 - **Publish SPF on `mail.surfguitar101.com`** (`v=spf1 ip4:173.255.245.115 -all`),
