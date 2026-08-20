@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-08-20
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -409,9 +409,12 @@ the seven search terms. `contact/forms.py` untouched — its `Reply-To` is also
 user-supplied, but its recipient list is `settings.MANAGERS`, so it can only ever
 mail us and there is no third party to abuse.
 
-**Next: task 10 requirement 4** (SPF at the HELO name, once tomorrow's DMARC
-report is read), then Step 16 tasks 05–09. *(Task 08 landed first, 2026-08-19 —
-it is pure code and was the unblocked work while the DMARC week runs.)*
+**Next: task 10 requirement 4** (SPF at the HELO name), then Step 16 tasks 05–09.
+*(Task 08 landed first, 2026-08-19.)*
+
+*Corrected 2026-08-20: this line used to read "once tomorrow's DMARC report is
+read," and requirement 4 has no such dependency — it publishes one TXT record.
+The DMARC week gates policy tightening only; see the scoping note in Open.*
 
 ## Step 16 task 08 — registration tokens from `secrets` — DONE 2026-08-19, `20ad77ed`, PUSHED, CI GREEN
 
@@ -568,6 +571,40 @@ the move because "Postmark issues 2048-bit." **It does not.** Measured from the
 key Postmark published: `Public-Key: (1024 bit)`, 216 base64 characters, DER
 header `30 81 9f`. A 2048-bit key is 392 characters and opens `MIIBIjAN`. The new
 selector is exactly as strong as the old one.
+
+**Re-measured 2026-08-20, both selectors side by side, after Cloudflare's DMARC
+analysis page raised it.** The analysis carries the line *"DKIM record at `dkim`
+uses a 1024-bit RSA key. Consider upgrading to 2048-bit keys for better
+security,"* and the natural reading — that the provider move retires the problem
+along with the old selector — is the same assumption Correction 1 already
+refuted. Both published keys, measured from live DNS rather than from this
+document:
+
+```
+dkim                   len=216  Public-Key: (1024 bit)
+20260817033844pm       len=216  Public-Key: (1024 bit)
+```
+
+**Identical strength**, so Postmark's key has not been rotated since 2026-08-17
+and the cutover changes which selector signs, not how strongly. Task 03 step 8
+retires the `dkim` selector once Postfix is confirmed silent, so **that
+particular advisory line does disappear at cutover — by the record being
+deleted, not by the weakness being fixed.**
+
+**Prediction, and a cheap discriminator for it.** If Cloudflare's analysis scans
+published selectors, it should already be flagging `20260817033844pm` too, since
+both are in DNS today; if it is driven by observed report data, it flags only
+what actually signs, which is currently the old box alone. **Whether the analysis
+page names the Postmark selector settles which**, and on the report-driven
+reading the advisory returns after cutover under the new selector name.
+
+**The open item cannot be closed from documentation.** Finding 2 left "worth
+asking Postmark whether a 2048-bit rotation is offered." Postmark's DKIM support
+articles do not state a key length at all, and their published upgrade material
+covers the 768 → 1024 move, not 1024 → 2048. **That makes it a support ticket,
+not a docs lookup.** If it is offered, the incidental cost is real: a 2048-bit
+key is 392 base64 characters, past the 255-byte DNS string limit, so it must be
+published as two quoted strings — which the current 224-character value avoids.
 
 **Not a blocker.** 1024-bit RSA still validates everywhere and meets Google's and
 Yahoo's published minimums, and key strength was never implicated in the Microsoft
@@ -1564,6 +1601,8 @@ mx1a1.comcast.net        220 resimta-a2p-651040.sys.comcast.net resimta-a2p-6510
 
 `554 … found on one or more DNSBLs … #BL000100` on 2026-08-18, `220` on
 2026-08-19. **Same host, same command, same targets, different answer** — which
+*(the mail log later dated the change to the evening of the 18th, not the 19th;
+see the correction below)* — which
 is the part worth recording, because the blocklist work in this step twice
 produced a result that was really an instrument artifact. Here the instrument
 was held fixed and only the answer moved. See
@@ -1586,12 +1625,59 @@ aged-out listing are not excluded. The identification of `BL000100` as Validity'
 Return Path Blocklist stands either way — it came from the error's own link, not
 from the outcome.
 
-**The 23 queued messages were already gone**, and that was the decision rather
-than an accident. The oldest sat at `delay=416092` — 4.8 days against Postfix's
-5-day queue lifetime — when Brian's call on 2026-08-18 was to let them expire,
-since no removal request could complete inside the remaining hours. It could not
-and did not. They returned to `no_reply@`, which is not in the virtual alias map,
-so the bounces died locally.
+#### CORRECTED 2026-08-20 from the mail log — the block lifted on the 18th, and all 23 messages were delivered
+
+The three paragraphs above were written from telnet probes plus an inference
+about the queue. **The Postfix log contradicts all three, and it was on the box
+the whole time.** 492 log lines for `to=<…@comcast.net>`, of which 468 are
+`status=deferred` and 24 are `status=sent`:
+
+```
+Aug 18 20:44:52  delay=340600  status=deferred (… 554 … #BL000100)   <- last refusal
+Aug 18 20:54:52  delay=294206  status=sent (250 2.0.0 … mail accepted for delivery)
+…
+Aug 18 21:54:52  delay=365674  status=sent (250 2.0.0 … mail accepted for delivery)
+Aug 19 19:53:36  delay=2.6     status=sent (250 2.0.0 … mail accepted for delivery)
+```
+
+**1. The block lifted inside a ten-minute window on 2026-08-18** — last `554` at
+20:44:52 CDT, first `250` at 20:54:52 CDT — **not on the 19th.** The `220`
+greeting recorded above was taken the following day and merely observed a state
+that had already changed roughly 22 hours earlier. Removal was requested on the
+18th and took effect the same evening.
+
+**2. All 23 queued messages were delivered, not expired.** They went out between
+20:54:52 and 21:54:52 CDT as the queue runs walked them, carrying delays from
+`96840` (1.12 days) to `424510` (**4.91 days**). Against Postfix's 5-day default
+`maximal_queue_lifetime` of 432000s, the oldest cleared with **7490 seconds —
+2.1 hours — of margin.** It is the same message the section above clocked at
+`delay=416092`, two hours and twenty minutes earlier.
+
+So *"no removal request could complete inside the remaining hours. It could not
+and did not"* is exactly wrong: it could, and it did, by about two hours. And
+since nothing expired, nothing returned to `no_reply@` and there were no locally
+dying bounces — that whole sentence describes an event that never happened.
+
+**3. Delivery to `comcast.net` is now observed far past the greeting.** Twenty-three
+`250 … mail accepted for delivery` responses are Comcast's MX accepting the
+messages after `RCPT TO` and `DATA`, not just answering the connection. The
+standard this project holds — inbox placement, as with Gmail and the Outlook
+`dest:I` — is **still not met**, because spam-foldering remains downstream and
+invisible from here. But "no delivery to a `comcast.net` mailbox has been
+observed" understates what is now in the log by a wide margin.
+
+**On causation, tightened.** The request went in on 2026-08-18 and the block
+lifted the evening of 2026-08-18. The window is hours rather than a day, which
+fits the request better than it fits a feed refresh — still not proof, for the
+reason already given: Validity never disclosed listing status.
+
+*The process failure, stated plainly.* The queue outcome was **inferred** from a
+decision and a deadline, then written as an observation, and it sat in this
+document for two days one command away from being checked. The delisting date was
+taken from the instrument that happened to be run rather than from the log that
+recorded the event. Both are the same failure this document keeps recording. See
+[[measure-before-recording-in-planning-docs]] and
+[[suspect-the-measurer-before-the-record]].
 
 **What it is worth, kept in proportion.** `comcast.net` members can receive
 notifications again from the old box between now and cutover. That is real and
@@ -1601,30 +1687,382 @@ leaves from Postmark's addresses, where none of this follows it.
 *Only 2 of Comcast's 8 MX hosts were checked — but they are the same 2 that
 returned `554`, which is what makes this a comparison rather than a sample.*
 
+### Third DMARC reading — 2026-08-20, covering 2026-08-19: one prediction held weakly, the other never appeared
+
+Two predictions were written into the second reading before this report existed:
+the three-a-day failure class persists, and a new *passing* class appears as
+`sender_canonical_maps` gives root's mail a From domain. **The first held only in
+its weak form, the second is invisible, and the day's headline is neither of
+them — it is the volume.**
+
+From Cloudflare's per-day detail for 2026-08-19.
+
+| Sending service | Volume | DMARC pass | SPF aligned | DKIM aligned | IPs |
+|---|---|---|---|---|---|
+| "Akamai Technologies, Inc." | 9 | 8 (88.89%) | 8 (88.89%) | 8 (88.89%) | 1 |
+| Google LLC | 1 | 1 (100%) | 0 (0%) | 1 (100%) | 1 |
+| **Day total** | **10** | **9 (90%)** | **8 (80%)** | **9 (90%)** | 2 |
+
+The rows sum to the header exactly — 8+0 SPF-aligned, 8+1 DKIM-aligned, 8+1
+passing — so nothing is missing inside the day.
+
+#### The by-date table, read 2026-08-20: three rows, and every digit reproduces
+
+The all-time view broken out by date, which is a different view from the three
+per-day details these numbers were transcribed from:
+
+| Date | Volume | DMARC pass | SPF aligned | DKIM aligned | IPs |
+|---|---|---|---|---|---|
+| 2026-08-19 | 10 | 90% | 80% | 90% | 2 |
+| 2026-08-18 | 33 | 90.91% | 87.88% | 90.91% | 2 |
+| 2026-08-17 | 67 | 94.03% | 91.04% | 94.03% | 2 |
+
+**There are exactly three rows** — no day before the 17th, and no partial row for
+the 20th. That was the thing worth checking: a report this document never read
+would inflate any cumulative total and read as a discrepancy that is really a
+gap in the reading. There is no such report.
+
+**Every percentage reproduces from the counts recorded here, to the digit** —
+63/67 = 94.03%, 61/67 = 91.04%, 30/33 = 90.91%, 29/33 = 87.88%, 9/10 = 90%,
+8/10 = 80%. Three days of transcription off screenshots, checked against a view
+that computes them independently, with no drift. Day totals sum to **110 volume,
+102 passing, 8 failing, 98 SPF-aligned**.
+
+**The 4-message cumulative gap between DKIM-aligned (102) and SPF-aligned (98) is
+exactly the forwarded mail** — the Google row's 2 + 1 + 1 across the three days,
+whose SPF alignment is 0% every time and whose DKIM alignment is 100% every time.
+The argument that DKIM carries forwarded mail through DMARC now has a whole-corpus
+accounting behind it and not just three matching rows.
+
+**What this does not close.** Summing the by-date rows is not the same check the
+first two readings ran, which was Cloudflare's own cumulative total against the
+sum of the days. That total has still not been read; 110 / 102 / 8 remains a
+prediction about the header, not an observation of it.
+See [[measure-before-recording-in-planning-docs]].
+
+**And it sharpens the IP-count test rather than running it.** Per-day IP counts
+read 2, 2, 2 — one Akamai address and one Google address each day — so this view
+is consistent with either summing or de-duplication and settles nothing. The
+sharp form is the all-time **by-service** row for Akamai: **3 means Cloudflare
+sums per-day counts, 1 means it de-duplicates, and the document currently asserts
+summing** on the strength of a 2 that was read when only two days existed. Jaguar
+has one address, so the two answers are now far apart.
+
+#### Prediction 1 held in signature and failed in count — and the count *was* the argument
+
+The signature is intact on a third independent day: the failure sits in the
+Akamai row, and all three alignment columns read 88.89% identically, so the one
+failing message failed both mechanisms rather than one. Nothing that touches this
+class has changed — still no SPF TXT at `mail.surfguitar101.com`, bounces still
+bypassing the milters unsigned — so persistence is what the mechanism predicts.
+
+The count is where it breaks:
+
+| | 2026-08-17 | 2026-08-18 | 2026-08-19 |
+|---|---|---|---|
+| Volume | 67 | 33 | **10** |
+| Failures | 4 | 3 | **1** |
+| Failure rate | 5.97% | 9.09% | **10.0%** |
+
+**The second reading's inference was "a class that produces three or four a day
+regardless of site traffic is scheduled, not traffic-driven." The 19th is the
+first day that could test that, and it reads against it.** A fixed-count class at
+three-to-four a day predicts three or four and delivered one — P(≤1) ≈ 14% under
+a Poisson with λ=3.5. A class proportional to volume at the running ~9% predicts
+0.9 and delivered one.
+
+**This does not touch fault 3.** Unsigned Postfix bounces still fit every column
+observed, and bounces scale with outbound volume anyway, so a traffic-proportional
+shape is if anything the more natural fit for them. What the 19th removes is the
+*argument from fixed count* — the piece of the second reading that read the flat
+3–4 as independent support arriving "from the shape of the numbers rather than
+from the mail log." One day at n=1 failure cannot establish the rival shape
+either; the honest position is that three days of single-digit failure counts
+distinguish nothing, and the second reading claimed more than that.
+
+*Recorded as a correction to this document rather than a new finding: the
+inference was written from two points and the third did not follow it.*
+
+#### Prediction 2 did not appear, and it cannot be called refuted
+
+`sender_canonical_maps` and the root virtual-alias entry were applied at 00:23
+UTC on the 19th, so **the whole of this report's window is "after."** The
+prediction was volume up, failures flat, as `root@surfguitar101.com` mail entered
+this domain's report for the first time. Volume went 33 → 10.
+
+**No new passing class is visible, and a quiet day looks identical to a broken
+rewrite here.** Cron mails only when a job produces output; Django's error
+reports arrive only when the site raises. Both being silent for a day is ordinary,
+and this report cannot separate that from the rewrite failing to take. The
+rewrite was independently verified at the receiver on 2026-08-18
+(`dkim=pass`/`spf=pass`/`dmarc=pass` on a real message), which is stronger
+evidence than this absence is against it.
+
+What the absence does bear on is a premise used earlier in this section: root's
+"twice-daily cron" was cited as a *scheduled generator* accounting for a steady
+daily class. **If it produced mail twice a day, the rewrite should have added
+about two aligned, passing messages to this report and the total should have
+risen.** It fell. So the cron leg of the scheduled-class story is unsupported by
+its own first test.
+
+#### There was no volume collapse — CORRECTED 2026-08-20 against a month of mail log
+
+**This subsection first read 67 → 33 → 10 as a collapse and asked which of two
+declines explained it. Both readings were wrong, because neither had a baseline.**
+A per-day count out of the Postfix log for 2026-07-19 → 2026-08-16, the 29 days
+before any of this step's mail work:
+
+| | mean | median | max |
+|---|---|---|---|
+| total outbound | 31.7 | **27** | 102 |
+| gmail-destined | 18.6 | **12** | 65 |
+
+Against that, **the 17th was 4.3× the median and the 19th is 0.8×.** The 19th is
+an ordinary day. The sequence is not a decline at all — it is regression to the
+mean after a spike, and the spike is the PTR/HELO repair session this document
+already identified as generating its own traffic. Aug 10–11 is the confirming
+case: 96 and 102 messages, 54 and 65 of them to Gmail, a week before any mail
+work began. **Bursts to ~100/day happen on their own**, which is what
+`forums/views/subscriptions.py` produces — one message per subscriber per reply,
+so a single busy thread fans out to dozens of messages.
+
+#### Caveat 2's actual resolution: two different populations were being compared
+
+**Gmail is 58% of outbound, and Gmail is the only receiver reporting.** A DMARC
+volume is therefore a *Gmail-destined* count. Every comparison in this document
+has set it against "~30/day", which is **total outbound to all recipients** — a
+different population, larger by a factor of about 1.7.
+
+Both numbers were measured correctly and neither was ever wrong; the *comparison*
+was. The right check for the 17th's 65 is that day's 69 Gmail-destined messages
+in the log, and those agree. **Caveat 2 was an artifact of the mismatch, not a
+discrepancy in the data**, and it closes here.
+
+Two consequences worth keeping:
+
+- **The Postmark tier should be sized on total outbound — 27/day median, 31.7
+  mean — not on any DMARC figure**, which sees only the Gmail slice.
+- **The ~30/day estimate was right all along**, and held steady across the whole
+  month.
+
+#### The two instruments reconcile, which is what makes the above trustworthy
+
+Jaguar-origin mail to Gmail across the three report days: DMARC's Akamai row
+reads 65 + 32 + 9 = **106**, the log's gmail column 69 + 20 + 14 = **103**. Three
+apart over three days. The per-day split differs because **the log is CDT and
+DMARC windows are UTC**, so each report day carries the previous evening's
+19:00–24:00. Gmail is reporting what jaguar actually sent.
+
+#### The Google row, on a third day
+
+One forwarded message: SPF aligned 0%, DKIM aligned 100%, DMARC pass 100%. Three
+readings, three days, same signature every time — **DKIM carries forwarded mail
+through DMARC**, which is the standing argument that taking SPF to `-all` under
+requirements 5–7 does not strand forwarded mail. The day's 1-message gap between
+SPF-aligned (8) and DKIM-aligned (9) is this row, as the 18th's gap of 1 and the
+17th's gap of 2 were. Cumulatively the whole 4-message gap between DKIM-aligned
+(102) and SPF-aligned (98) is these three days of forwarding, and nothing else.
+
+**The mechanism, since the row is easy to misread as a second sender.** One
+notification makes two trips. Jaguar sends `From: admin@surfguitar101.com` to a
+member, aligned on both mechanisms — that is the Akamai row. The member's mailbox
+then **auto-forwards** it onward, so Google's servers relay it: the From header is
+preserved, which is why it stays in *this* domain's report, but the connecting IP
+is now Google's, so SPF is no longer aligned however it resolves. The opendkim
+signature still validates because forwarding modifies neither headers nor body,
+and DMARC passes on DKIM alone. That is the second row.
+
+**It is member-side configuration and there is nothing to find or fix on the
+box** — an old address kept alive by forwarding, a Workspace domain pointing at a
+personal Gmail. Jaguar cannot see the second hop at all. *(A manual "Forward"
+would not appear here: that rewrites From to the member's own address, putting it
+in their provider's report instead.)* **The risk it quantifies is narrow and
+real**: under `-all`, if that member's DKIM ever breaks — a list appending a
+footer, a gateway rewriting headers — their copy moves from soft-fail to hard
+reject.
+
+#### What has not moved
+
+- **Caveat 1 splits in two** — see the subsection below. Its unmeasurable half
+  stands; the premise it was guarding is now measured.
+- **Requirement 2 is 3 days into a 7-day read**, so tightening past `p=none`
+  stays blocked.
+- **The "IP count 2" on the day total is the two rows' 1 + 1.** Consistent with
+  the summing behaviour established on the 18th, but not a fresh test of it —
+  the two rows hold genuinely different addresses, so a de-duplicating count
+  would also read 2.
+- **The remaining identification step got harder, not easier.** Reading one
+  `MAILER-DAEMON` message's `Authentication-Results` out of Brian's inbox is
+  still what would settle the failure class, and the 19th offers a single
+  candidate message to find.
+
+#### Caveat 1, split: "Gmail's view alone" is now measured, the reason for Microsoft's absence is not
+
+**Every row in this dashboard is a *source*; the report is one *receiver's*
+account.** The two get conflated because "Google" appears in both roles — Gmail
+as the receiver that evaluated and reported the mail, and Google as the network
+that relayed one forwarded message. **The reporter is not a row, it is the whole
+table.** Reporter identity lives in the XML's `<report_metadata><org_name>`,
+which Cloudflare does not surface, and *that* half of caveat 1 stands unchanged.
+
+**The half it was guarding is now measured**, from the mail log rather than the
+dashboard, across the three report days:
+
+| | messages |
+|---|---|
+| jaguar outbound, all recipients | 192 |
+| jaguar outbound, Gmail-destined | 103 |
+| **reported in the Akamai row** | **106** |
+
+The reports account for **55% of what jaguar sent, and Gmail is 54% of what
+jaguar sent.** Any second reporting receiver would push that row toward 192; it
+tracks the Gmail slice instead. **"Gmail's view alone" has been asserted since
+the first reading and is now backed by numbers.**
+
+**Microsoft's absence still has three explanations and this data separates
+none of them:**
+
+1. **We send them almost nothing** — answerable from the member table, and the
+   only one of the three that is ours to check.
+2. **They may not publish aggregate reports at all.** Not verified either way;
+   recorded as a question rather than a fact.
+3. **They do and we cannot see it**, per the unmeasurable half above.
+
+**Brian's reading on 2026-08-20 was that few active members use Microsoft
+addresses.** Plausible, and it would lower the priority of chasing Microsoft
+specifically — but **it cannot be taken from this dashboard**, which never shows
+recipients, only sources. **And measuring it today measures the post-damage
+state:** if Microsoft has been rejecting this box for years, members on those
+addresses stopped receiving notifications and drifted off, so a low share now may
+be the *consequence* of the deliverability failure rather than evidence the
+audience never used it. **The discriminator is domain share by registration
+cohort** — flat across cohorts means audience preference, collapsing across the
+rejection years means attrition.
+
+**Either way it changes urgency, not plan.** Nothing in Step 16 is
+Microsoft-specific: FCrDNS, the HELO name and SPF/DKIM/DMARC are what every
+receiver checks, and after cutover member mail leaves on Postmark's addresses
+where none of this reputation follows it.
+
+#### The "Akamai" label is a registry lookup, not a party to the mail
+
+Nothing is reported *by* Akamai or Linode; they are the network the packets left
+from and never see the evaluation. Cloudflare enriches the report's bare
+`<source_ip>` with an ownership lookup, and ARIN answers:
+
+```
+NetName:        LINODE-US
+Organization:   Akamai Technologies, Inc. (AKAMAI)
+```
+
+The netblock is still named for Linode; the `Organization` field moved to the
+parent after the 2022 acquisition, and that is the field being rendered.
+**It is demonstrably the registry and not reverse DNS**, since the PTR now reads
+`mail.surfguitar101.com` — an rDNS-derived label would say so. *(Same acquisition,
+second sighting: the reverse zone is still delegated to `a3-67.akam.net` and
+friends.)*
+
+**Consequence for the cutover:** rows are keyed by source IP, so the migration
+will appear here as a new row under Postmark's ownership while the Akamai row
+drains.
+
+#### Prediction for the next report
+
+Written before the observation, and deliberately narrower than last time, because
+the last set was written at a confidence the data did not support:
+
+1. **Failures stay in the 0–3 band and keep failing both mechanisms**, since the
+   SPF record at the HELO name still does not exist. A zero day is now *within*
+   the expected range rather than a refutation, which is the direct consequence
+   of the count argument collapsing.
+2. **Volume runs near the Gmail-destined median of 12/day**, revised 2026-08-20
+   now that a baseline exists. The original "no prediction is offered" was
+   written without one. Days in the 50–70 range are possible without anything
+   being wrong — the log shows them occurring naturally — so a high day is not
+   evidence of a new sending source.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
-  **2 of 7 days read** — 2026-08-17 and 2026-08-18.
+  **3 of 7 days read** — 2026-08-17, 2026-08-18 and 2026-08-19.
+
+  **Scope of this gate, stated precisely 2026-08-20 because the daily readings
+  had begun to imply more.** Requirement 2 reads *"before tightening policy…
+  the only way to learn what is currently sending as this domain."* Against task
+  03's own implementation order that is **step 7 (restore `-all`) and step 9
+  (`p=none` → `quarantine` → `reject`) — both of which happen after cutover.**
+  Steps 3–6 (Postmark's records, the transition SPF, verification, and the
+  cutover itself) need nothing from it, and the two safety valves are already
+  published: `p=none` means receivers take no action on failures, and
+  requirement 6 softens SPF to `~all` for the duration of the window, so no
+  unknown sender can be hard-failed while this runs. **The week is the long pole
+  meant to elapse concurrently, not a hold on other work.**
+
+  **What is left to learn from it is narrow.** Three days show one sending
+  source — jaguar — plus one member's Gmail forwarding, so the inventory the
+  requirement asks for was substantially answered on day one. The residual value
+  is a sender on a *weekly* cadence that three days would miss. Two limits, both
+  now measured: the reports cover only the **~55% of outbound that goes to
+  Gmail**, so a sender that never mails Gmail is invisible here; and the
+  inventory that actually governs step 7 is the **post-cutover** one, since
+  Postmark becomes the dominant source and changes the picture entirely. The
+  complementary instrument is the mail log — all destinations, but only this box;
+  DMARC's unique contribution is a source we do not control.
 - **First reading done 2026-08-18** (above): Gmail only, 61/65 passing, 4 failures
   hypothesised as unsigned Postfix bounces, forwarded to Brian's Gmail by the
   `admin@`/`root@` aliases. **Tightening past `p=none` stays blocked until those
   4 are identified** — 93.85% from one receiver is not the proof requirement 2
   asks for. Remaining step: read one `MAILER-DAEMON` message's
   `Authentication-Results` from Brian's own inbox.
+- **Third reading done 2026-08-20** (above), covering 2026-08-19: 10 messages,
+  1 failure, Akamai row again with pass/SPF/DKIM identical at 88.89% — the
+  signature on a third day, and the failure class persists as predicted. **But
+  the count fell 4 → 3 → 1 while volume fell 67 → 33 → 10, which reads against
+  the second reading's "scheduled, not traffic-driven" argument**; at these
+  counts nothing distinguishes the two shapes, and that section claimed more
+  than two points could carry. The predicted *passing* class from
+  `sender_canonical_maps` did not appear — a quiet cron day is indistinguishable
+  from a broken rewrite here, and the rewrite was already verified at the
+  receiver on the 18th. Still Gmail's view alone; still blocked past `p=none`.
+  **"Gmail's view alone" is no longer an assumption** — over the three report
+  days jaguar sent 192 messages, 103 of them to Gmail, and the Akamai row
+  reports 106; a second reporting receiver would push that toward 192.
+  **The by-date table was read 2026-08-20**: exactly three rows, every
+  percentage reproducing from the recorded counts, day totals summing to
+  110 / 102 / 8 with the 4-message SPF/DKIM gap accounted for entirely by
+  forwarded mail. **Cloudflare's own cumulative header is still unread**, and
+  the all-time by-service Akamai IP count — 3 for summing, 1 for
+  de-duplication — is the outstanding test of the summing claim.
 - **Second reading done 2026-08-19** (above), covering 2026-08-18: 33 messages,
   3 failures, all in the Akamai row with pass/SPF/DKIM identical at 90.63% — the
   17th's signature on an independent day. **The predicted persistence held**, and
   the count staying at 3–4 while volume halved is new support for a scheduled
   class rather than a traffic-driven one. Still Gmail's view alone; still
   blocked past `p=none`. **The cumulative view's "IP count 2" is a summing
-  artifact, not a second sender** — per-day rows read 1.
+  artifact, not a second sender** — per-day rows read 1. **The "scheduled, not
+  traffic-driven" inference in that section is corrected by the third reading
+  below** — it was written from two points and the third did not follow it.
 - ~~**Reconcile the send-volume discrepancy** the first reading exposed (caveat 2
-  above).~~ — **substantially narrowed 2026-08-19**: the 18th came in at 33
-  against the measured ~30/day, so the 17th's 65 was the outlier, and that day
-  was the PTR/HELO repair session generating its own traffic. Two days is not a
-  baseline; keep watching, but the Postmark tier is not in question.
+  above)~~ — **CLOSED 2026-08-20 against a month of mail log.** There was no
+  discrepancy: a DMARC volume is a *Gmail-destined* count and "~30/day" is
+  *total outbound*, two populations differing by ~1.7× since Gmail is 58% of
+  send. Both numbers were always right. The 29-day baseline reads **27/day
+  median total (31.7 mean), 12/day median to Gmail**, so the 17th was 4.3× the
+  median and the 19th is 0.8× — an ordinary day, not a collapse. **Size the
+  Postmark tier on total outbound, never on a DMARC figure.**
+- **Measure member email domains by registration cohort** — new 2026-08-20. It
+  is the only instrument for "how much of the membership is on Microsoft", since
+  DMARC data never shows recipients, and it decides how much the Microsoft
+  rejections are still worth chasing directly. **Read it by cohort, not in
+  aggregate**: years of rejections would have driven those members off, so a low
+  share today may be the damage rather than an audience fact. Aggregate the
+  `auth_user.email` domain against `date_joined`, counting only — no addresses.
+- **Open question, not a finding: does Microsoft publish DMARC aggregate reports
+  at all?** Recorded 2026-08-20 as one of three live explanations for its
+  absence, alongside "we send them almost nothing" and "reporter identity is not
+  surfaced by Cloudflare." Unverified in either direction.
 - **Publish SPF on `mail.surfguitar101.com`** (`v=spf1 ip4:173.255.245.115 -all`),
   without which null-sender mail has no SPF record to find at the HELO name.
   Belongs with requirements 5–7.
@@ -1632,17 +2070,22 @@ returned `554`, which is what makes this a comparison rather than a sample.*
   cover the apex only, which null-sender mail never consults. ~~Rewrite
   requirements 5–7~~ — withdrawn 2026-08-18, they are already correct; the claim
   that they were not came from reading a summary instead of the file.
-- ~~**Comcast delisting SUBMITTED 2026-08-18**~~ — **CLEARED 2026-08-19**
-  (above): both MX hosts answer `220` where they answered `554 … #BL000100` the
-  day before, same box, same command, same targets. **Delivery to a
-  `comcast.net` mailbox is still unobserved** — a `220` is the connection being
-  accepted, not a message landing. Causation is timing rather than proof;
-  Validity never disclosed listing status. Original text follows.
+- ~~**Comcast delisting SUBMITTED 2026-08-18**~~ — **CLEARED 2026-08-18,
+  20:44:52–20:54:52 CDT**, corrected 2026-08-20 from the Postfix log (above).
+  The `220` greeting recorded on the 19th observed a state that had changed ~22
+  hours earlier; the log dates the change to a ten-minute window on the 18th,
+  the same evening the removal request went in. **All 23 queued messages were
+  delivered, not expired** — out between 20:54 and 21:54 CDT, the oldest at
+  `delay=424510` clearing Postfix's 5-day lifetime with 2.1 hours to spare — so
+  nothing returned to `no_reply@` and no bounces died locally. **Comcast's MX
+  accepted 23 messages with `250 … mail accepted for delivery`**, which is well
+  past the greeting; inbox placement is still unobserved, since spam-foldering
+  is downstream and invisible from here. Original text follows.
 
   Originally sequenced **after** the backscatter fix rather than before — asking
   while the box still bounces to forged senders invites a second listing. **No
   longer time-sensitive: Brian's call 2026-08-18 is to let the 23 queued
-  messages expire**, since Comcast has been blocking for a long time, the mail
+  messages expire** *(they did not expire — see the correction above)*, since Comcast has been blocking for a long time, the mail
   is stale, and no removal request would have completed inside the remaining
   hours anyway. They return to `no_reply@`, which is not in the alias map, so
   the bounces die locally.
