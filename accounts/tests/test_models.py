@@ -2,11 +2,9 @@
 Tests for accounts.models -- registration-key generation and the
 case-insensitive uniqueness of usernames.
 
-PendingUserManager._make_key() builds the email-confirmation key with
-base64 + sha1. That path relied on Py2-only text/bytes behavior
-(unicode(), sha1(unicode), b64encode(str)) and was rewritten to be
-dual-runtime; these lock in that create_pending_user() still yields a
-well-formed key so the rewrite can't silently regress it.
+The registration key is a CSPRNG token from accounts.utils. These lock in
+its shape at the point registration actually mints one, so a change to the
+manager cannot quietly reintroduce a derived or short key.
 """
 import re
 
@@ -17,21 +15,26 @@ from django.test import TestCase
 from accounts.models import PendingUser
 
 
-class MakeKeyTests(TestCase):
+class RegistrationKeyTests(TestCase):
 
-    def test_create_pending_user_generates_a_wellformed_key(self):
+    def test_create_pending_user_generates_a_urlsafe_token(self):
         pu = PendingUser.objects.create_pending_user(
             'newbie', 'newbie@example.com', 'secret')
 
-        # sha1 hexdigest is 40 hex chars; [::2] keeps every other -> 20, which
-        # is exactly the key field's max_length.
-        self.assertEqual(len(pu.key), 20)
-        self.assertTrue(re.match(r'^[0-9a-f]{20}$', pu.key),
-                        msg='key is not 20 lowercase hex chars: %r' % pu.key)
+        # Length is what discriminates: the old derived key was 20 characters
+        # of lowercase hex, which also matches the URL-safe alphabet.
+        self.assertGreaterEqual(len(pu.key), 32)
+        self.assertTrue(re.match(r'^[A-Za-z0-9_-]+$', pu.key),
+                        msg='key is not a URL-safe token: %r' % pu.key)
+
+    def test_key_fits_the_column(self):
+        pu = PendingUser.objects.create_pending_user(
+            'newbie', 'newbie@example.com', 'secret')
+
+        max_length = PendingUser._meta.get_field('key').max_length
+        self.assertLessEqual(len(pu.key), max_length)
 
     def test_keys_differ_between_registrations(self):
-        # _make_key mixes in a random sample plus an incrementing counter, so
-        # two registrations must not collide.
         a = PendingUser.objects.create_pending_user('a', 'a@example.com', 'pw')
         b = PendingUser.objects.create_pending_user('b', 'b@example.com', 'pw')
         self.assertNotEqual(a.key, b.key)

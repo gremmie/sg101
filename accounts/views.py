@@ -4,6 +4,7 @@ Views for the accounts application.
 """
 import json
 import logging
+import secrets
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -115,7 +116,7 @@ def register_confirm(request, username, key):
             'V3_DESIGN': True,
         })
 
-    if pending_user.key != key:
+    if not secrets.compare_digest(pending_user.key, key):
         logger.error('Accounts register_confirm [%s]: key error: %s', ip, username)
         return render(request, 'accounts/register_failure.html', {
             'username': username,

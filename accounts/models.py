@@ -1,15 +1,12 @@
 """Contains models for the accounts application"""
 
 import datetime
-import random
-import string
-import hashlib
-import base64
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.conf import settings
 from django.utils import timezone
+
+from accounts.utils import make_confirmation_token
 
 
 class IllegalUsername(models.Model):
@@ -37,8 +34,6 @@ class IllegalEmail(models.Model):
 class PendingUserManager(models.Manager):
    """user manager for PendingUser model"""
 
-   create_count = 0
-
    def create_pending_user(self, username, email, password):
       '''creates a new pending user and saves it to the database'''
 
@@ -51,10 +46,9 @@ class PendingUserManager(models.Manager):
             email,
             temp_user.password,
             now,
-            self._make_key())
+            make_confirmation_token())
 
       pending_user.save()
-      self.create_count += 1
       return pending_user
 
 
@@ -64,15 +58,6 @@ class PendingUserManager(models.Manager):
       expired_pending_users.delete()
 
 
-   def _make_key(self):
-      s = ''.join(random.sample(string.printable, 8))
-      delta = datetime.date.today() - datetime.date(1846, 12, 28)
-      days = base64.urlsafe_b64encode(str(delta * 10).encode('ascii')).decode('ascii')
-      raw = u'%s%s%s%s' % (settings.SECRET_KEY, self.create_count, s, days)
-      key = hashlib.sha1(raw.encode('utf-8')).hexdigest()[::2]
-      return key
-
-
 class PendingUser(models.Model):
    """model for holding users while they go through the email registration cycle"""
 
@@ -80,7 +65,7 @@ class PendingUser(models.Model):
    email = models.EmailField()
    password = models.CharField(max_length=128)
    date_joined = models.DateTimeField(default=timezone.now, db_index=True)
-   key = models.CharField(max_length=20)
+   key = models.CharField(max_length=64)
 
    objects = PendingUserManager()
 

@@ -136,6 +136,18 @@ implementation. Read additional references as needed for context.
    structure. Confirm the route still matches — the token is URL-safe base64,
    which includes `-` and `_`.
 
+   **Corrected 2026-08-19: it did not match, and the route had to change on
+   both axes.** The pattern was
+   `(?P<key>[a-zA-Z0-9]{20})` — a fixed length *and* an alphabet with no `-`
+   or `_`. A 43-character token fails it twice over; the first token minted in
+   the end-to-end run contained `--`. It is now
+   `(?P<key>[A-Za-z0-9_-]{20,64})`, the lower bound kept deliberately so links
+   already emailed under the old derived key still resolve — a `{43}` bound
+   would strand them for the day the expiry window is open. The comment above
+   the pattern asserted "a fixed 20-char alphanumeric run" and was updated with
+   it. *Requirement 8 asked for a confirmation and got a refutation, which is
+   the value of asking.*
+
 ## Dependencies
 - None. **Should land before task 05**, which will import the helper.
 
@@ -168,7 +180,12 @@ implementation. Read additional references as needed for context.
   **Then** confirmation is refused, and the comparison uses
   `secrets.compare_digest`
 - **Given** the tree grepped for `random.sample`
-  **Then** the only remaining hit is `wiki/middleware.py`, which Step 19 deletes
+  **Then** the only remaining hits are `wiki/middleware.py`, which Step 19
+  deletes, and `core/templatetags/core_tags.py:243`, the banner rotation.
+  *(Corrected 2026-08-19: this criterion named wiki alone and was unsatisfiable
+  as written — the background's own out-of-scope list keeps the banner
+  rotation, so meeting the criterion would have meant changing something the
+  same task file says to leave. The criterion was wrong, not the background.)*
 - **Given** `accounts/models.py` and `accounts/forms.py`
   **Then** neither imports `random`, and no import is left unused
 - **Given** the suite under `docker_test`, `check`, `check --deploy` and

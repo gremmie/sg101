@@ -1,10 +1,27 @@
 import logging
+import secrets
 
 from django.contrib.auth.models import User
 from django.utils import timezone
 
 
 logger = logging.getLogger('auth')
+
+# Bytes of randomness behind a confirmation token; 32 yields 43 URL-safe
+# characters, which the 64-character PendingUser.key column holds with room to
+# grow.
+TOKEN_NBYTES = 32
+
+
+def make_confirmation_token():
+    """
+    Return a URL-safe one-time token drawn from the system CSPRNG.
+
+    Shared by every flow that emails a confirmation link, so that none of them
+    has to decide how to generate one.
+
+    """
+    return secrets.token_urlsafe(TOKEN_NBYTES)
 
 
 def create_new_user(pending_user, ip=None, admin_activation=False):

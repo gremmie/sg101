@@ -1,7 +1,7 @@
 """forms for the accounts application"""
 
 import logging
-import random
+import secrets
 
 from django import forms
 from django.contrib.auth.forms import PasswordResetForm
@@ -47,7 +47,8 @@ CODE_WORD_CHOICES = [
 
 def generate_registration_code():
     """Generates a simple, random registration code for the user to enter."""
-    return '{}-{}'.format(random.choice(CODE_WORD_CHOICES), random.randint(100, 999))
+    return '{}-{}'.format(secrets.choice(CODE_WORD_CHOICES),
+                          secrets.randbelow(900) + 100)
 
 
 class RegisterForm(forms.Form):

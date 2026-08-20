@@ -18,6 +18,7 @@ from django.utils import timezone
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
+from accounts.utils import make_confirmation_token
 
 
 class RegistrationTest(TestCase):
@@ -232,6 +233,60 @@ class RegistrationTest(TestCase):
             msg='the pending user survived confirmation')
         self.assertTrue(User.objects.filter(username='MixedCaseUser').exists(),
                         msg='the real user was not created')
+
+    def test_legacy_short_key_still_confirms(self):
+        """
+        A key issued before the move to secrets.token_urlsafe must still work.
+
+        Registration keys were 20 characters of hex; the column and the URL
+        pattern were both sized for exactly that. Widening them must not strand
+        a link already sitting in somebody's inbox -- the expiry window is a
+        day, so such links exist right through the deploy.
+
+        """
+        pending = PendingUser.objects.create(username='oldkeyuser',
+            email='oldkey@example.com',
+            password='pw',
+            date_joined=timezone.now(),
+            key='0123456789abcdef0123')
+
+        response = self.client.get(reverse('accounts-register_confirm',
+                                           kwargs={'username': 'oldkeyuser',
+                                                   'key': pending.key}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(username='oldkeyuser').exists(),
+                        msg='a legacy 20-character key was refused')
+
+    def test_wrong_key_is_refused(self):
+        """
+        Confirmation with the wrong key creates no user.
+
+        This pins the behaviour, not the mechanism: it passes equally under a
+        plain != comparison, because both reject a wrong key. compare_digest's
+        property is timing, which a functional test cannot observe. What this
+        does catch is the comparison being dropped or inverted.
+
+        """
+        pending = PendingUser.objects.create(username='wrongkeyuser',
+            email='wrongkey@example.com',
+            password='pw',
+            date_joined=timezone.now(),
+            key=make_confirmation_token())
+
+        wrong = make_confirmation_token()
+        self.assertNotEqual(wrong, pending.key)
+
+        response = self.client.get(reverse('accounts-register_confirm',
+                                           kwargs={'username': 'wrongkeyuser',
+                                                   'key': wrong}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username='wrongkeyuser').exists(),
+                         msg='a wrong key created the user anyway')
+        self.assertTrue(
+            PendingUser.objects.filter(username='wrongkeyuser').exists(),
+            msg='the pending user was consumed by a failed confirmation')
 
     def test_password_match(self):
         """
