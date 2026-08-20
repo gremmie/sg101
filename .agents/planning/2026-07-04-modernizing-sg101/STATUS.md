@@ -1939,6 +1939,126 @@ audience never used it. **The discriminator is domain share by registration
 cohort** — flat across cohorts means audience preference, collapsing across the
 rejection years means attrition.
 
+#### MEASURED 2026-08-20 — Microsoft is 12% of the membership, and the share is not eroding
+
+Run against the live Postgres (snapshot-era data; signups are rare enough that
+staleness does not matter). **Counts only — no addresses were read out.**
+
+**Picking the population matters, and the status field does not mean what its
+name suggests.** Per Brian, 2026-08-20: **members stay `STA_STRANGER` until an
+admin sees them post something to the forums that reads as non-spam.** Promotion
+is manual, so `STA_STRANGER` is *un-vetted*, not *spam* — it holds bots and
+legitimate lurkers who never posted alike. `auth_user` has **15,227** rows:
+10,729 stranger, 1,600 spammer, 32 resigned/removed/suspended, **2,862
+`STA_ACTIVE`**.
+
+**So 2,862 is a floor on the real audience, not a measurement of it** — a lurker
+who subscribes to a topic gets mail without ever being promoted. **The Microsoft
+figure survives the choice either way**, which is why the ambiguity does not
+matter here: Microsoft is **12.1%** of vetted members and **13.8%** of strangers.
+Whichever population you take, it is roughly an eighth.
+
+Members in good standing (`is_active` and `status = STA_ACTIVE`), and the
+subset who logged in within the last year:
+
+| bucket | good standing | % | active <1y | % |
+|---|---|---|---|---|
+| gmail | 1146 | 40.1 | 245 | 46.8 |
+| other | 725 | 25.3 | 122 | 23.3 |
+| yahoo | 456 | 15.9 | 69 | 13.2 |
+| **microsoft** | **347** | **12.1** | **56** | **10.7** |
+| aol | 97 | 3.4 | 21 | 4.0 |
+| comcast | 69 | 2.4 | 11 | 2.1 |
+
+**Brian's 2026-08-20 reading — that few active members use Microsoft addresses —
+is refuted.** Microsoft is the fourth-largest bucket, 346 of its 347 have posted
+at least once, and it is **five times the Comcast share**, which was worth a
+delisting campaign this same week.
+
+**And the attrition trap does not apply here** — the cohort cut was run
+specifically to check it:
+
+| cohort | n | microsoft % | gmail % | yahoo % |
+|---|---|---|---|---|
+| 2006–07 | 466 | 13.9 | 22.7 | 22.7 |
+| 2008–11 | 727 | 12.7 | 33.1 | 17.5 |
+| 2012–15 | 691 | 14.0 | 40.1 | 15.2 |
+| 2016–19 | 564 | 8.7 | 47.7 | 13.3 |
+| 2020–23 | 316 | 11.4 | 63.0 | 9.8 |
+| 2024–26 | 97 | 8.2 | 55.7 | 12.4 |
+
+*The first row was labelled "2004–07" when first written — an artifact of
+bucketing by `(year/4)*4`, not a claim about the data. **Checked 2026-08-20 on
+Brian's challenge: there are no 2004 or 2005 registrations.** The site's history
+starts **2006-02-25**, which matches his recollection of the phpBB import, and
+the years run 663, 709, 828, 828, 1020 from 2006 to 2010. The single row before
+that is **`Anonymous`, `date_joined` 2000-11-10 00:00:00** — phpBB's guest-post
+placeholder, carried across by the import. It is `is_active = false` so it never
+entered any of these figures, and it carries a `forum_post_count` of **-180**,
+the counter having been decremented for deleted guest posts it was never
+credited with. Harmless, and recorded so it is not rediscovered as a finding.
+(Its `last_login` reads 2026-08-09, which is modernization-window activity on an
+account that cannot log in — noted, not chased.)*
+
+Microsoft drifts mildly inside an 8–14% band across the **20 years** the data
+actually covers, with **no collapse and no signature of members being driven
+off**; if years of rejections had culled them, older cohorts would read *lower*,
+and they read slightly higher. **The
+displacement in this table is Gmail taking Yahoo's share** — 22.7% → 63%, against
+22.7% → 9.8% — and it has nothing to do with Microsoft.
+
+#### Every account is proof of a delivered registration email — which constrains "Microsoft blocks us"
+
+**Brian's reaction, 2026-08-20: surprise that there are recent Microsoft members
+at all, since Microsoft blocks the registration mail.** The registration flow
+answers it directly, and it is a stronger instrument than it looks.
+
+`create_new_user()` is reachable from exactly one place — `register_confirm`,
+which requires both the username and a key compared with
+`secrets.compare_digest` against the `PendingUser` row — and
+`PendingUser.objects.purge_expired()` deletes anything older than a day. **A row
+in `auth_user` therefore certifies that a confirmation email reached that
+address, was opened, and was clicked inside 24 hours.** Every account is a
+delivery receipt.
+
+Microsoft-address registrations that completed that round trip, by year:
+
+| | 2018 | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026* |
+|---|---|---|---|---|---|---|---|---|---|
+| all registrations | 618 | 556 | 506 | 498 | 542 | 667 | 777 | 760 | 177 |
+| **Microsoft** | 69 | 48 | 51 | 42 | 36 | 23 | **69** | **46** | 19 |
+| of which admin-vetted | 16 | 7 | 16 | 8 | 6 | 6 | 2 | 4 | 2 |
+
+*\* 2026 partial — latest registration in this snapshot is 2026-07-07.*
+
+**69 Microsoft addresses completed the email round trip in 2024 and 46 in 2025**,
+through the period this document describes as Microsoft rejecting the site's
+mail. Bots count as evidence here too: a spam registration still had to receive
+and click the link.
+
+**What that constrains.** "Microsoft blocks our mail" cannot be a total block —
+this is quantitative evidence of delivery, every year, throughout. The compatible
+readings are intermittent rejection, or Junk-foldering that a person mid-signup
+goes looking for, which is exactly the message someone hunts down. **It does not
+overturn the rejections themselves** — those were observed — and Step 16's
+acceptance criterion is unchanged, since the standard is inbox placement rather
+than eventual findability.
+
+**The vetted row is falling and that is a separate story.** Admin-vetted signups
+went 155 → 124 → 109 → 75 → 61 → 71 → 47 → 34 → 16 across the same years, while
+total registrations *rose*. That is moderation load and lurker behaviour, not
+deliverability, and the Microsoft share of vetted signups stays noisy but
+unremarkable — 4.3% in 2024, 11.8% in 2025, 12.5% in 2026 on single-digit counts.
+
+**This kills explanation 1.** We send Microsoft roughly a tenth of all
+notifications, so "we send them almost nothing" is not why they are absent from
+the reports. Explanations 2 and 3 remain: they may not publish aggregate reports,
+or they do and Cloudflare does not surface reporter identity.
+
+*Incidental cross-check:* Gmail is 40% of members overall but **46.8% of the
+recently active** and **58% of outbound**, which is consistent — the more engaged
+half of the membership carries more subscriptions, and forwarding adds the rest.
+
 **Either way it changes urgency, not plan.** Nothing in Step 16 is
 Microsoft-specific: FCrDNS, the HELO name and SPF/DKIM/DMARC are what every
 receiver checks, and after cutover member mail leaves on Postmark's addresses
@@ -2052,13 +2172,13 @@ the last set was written at a confidence the data did not support:
   median total (31.7 mean), 12/day median to Gmail**, so the 17th was 4.3× the
   median and the 19th is 0.8× — an ordinary day, not a collapse. **Size the
   Postmark tier on total outbound, never on a DMARC figure.**
-- **Measure member email domains by registration cohort** — new 2026-08-20. It
-  is the only instrument for "how much of the membership is on Microsoft", since
-  DMARC data never shows recipients, and it decides how much the Microsoft
-  rejections are still worth chasing directly. **Read it by cohort, not in
-  aggregate**: years of rejections would have driven those members off, so a low
-  share today may be the damage rather than an audience fact. Aggregate the
-  `auth_user.email` domain against `date_joined`, counting only — no addresses.
+- ~~**Measure member email domains by registration cohort**~~ — **DONE
+  2026-08-20** (above). **Microsoft is 12.1% of members in good standing (347)
+  and 10.7% of those active within a year (56) — five times the Comcast share**,
+  and the cohort cut shows an 8–14% band across the 20 years of data with no
+  attrition signature. The working assumption that few active members use Microsoft is
+  refuted, and **the Microsoft rejections keep their priority.** Also kills
+  "we send them almost nothing" as the reason they are absent from the reports.
 - **Open question, not a finding: does Microsoft publish DMARC aggregate reports
   at all?** Recorded 2026-08-20 as one of three live explanations for its
   absence, alongside "we send them almost nothing" and "reporter identity is not
