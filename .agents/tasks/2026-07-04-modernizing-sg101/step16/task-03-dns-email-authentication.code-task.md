@@ -512,9 +512,13 @@ implementation. Read additional references as needed for context.
 
 13. **~~Publish SPF at the HELO name, not only at the apex.~~ DONE 2026-08-20** —
     verified at both authoritative nameservers, one SPF record at the name, apex
-    untouched. Note for step 9: the pass it produces is *aligned* only because
-    `aspf` defaults to relaxed, so tightening `p=` is safe but adding `aspf=s`
-    would send this class back to failing. Original text follows. Added 2026-08-18
+    untouched, and **delivery-verified at Gmail the same evening** —
+    `spf=pass smtp.helo=mail.surfguitar101.com` on a real null-sender message.
+    Note for step 9: the pass it produces is *aligned* only because `aspf`
+    defaults to relaxed — observed, not assumed, in that same message's
+    `dmarc=pass ... header.from=surfguitar101.com` — so tightening `p=` is safe
+    but adding `aspf=s` would send this class back to failing. Original text
+    follows. Added 2026-08-18
     from the first DMARC reports, which showed 4 of 65 messages failing both
     mechanisms. Requirements 5–7 all describe the apex record, and
     **null-sender mail never consults it**: a bounce has an empty envelope

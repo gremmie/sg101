@@ -204,9 +204,10 @@ which is the same failure wearing a different hat.
 4. **~~Publish SPF at the HELO name.~~ DONE 2026-08-20** — published by hand in
    Cloudflare and verified at both authoritative nameservers, exactly one SPF
    record at the name. Task 03's requirement 13 is the same record and closes
-   with it. Delivery-side proof is still outstanding: the clean test is the DMARC
-   report covering 08-21, read on 08-22, and the confirming observation is a
-   *pass* row for the bounce class rather than an absence of failures. Original
+   with it. **Delivery-verified the same evening**, ahead of the 08-22 report: a
+   deliberate null-sender message returned `Return-Path: <>`, `spf=pass` with
+   `smtp.helo=mail.surfguitar101.com`, and an aligned `dmarc=pass` at Gmail — so
+   this requirement's acceptance criterion is met at the receiver. Original
    text follows. This is task 03's requirement 13, repeated
    here because it fixes fault 3 and is a prerequisite for verifying it:
    ```

@@ -2277,14 +2277,44 @@ exact domain match, `mail.` is not the apex, and this bounce class would return
 to failing under a policy that now acts on it. Recorded because `aspf=s` is an
 easy thing to reach for while "tightening."
 
-**DNS-verified, not delivery-verified**, the same distinction task 03 drew for
-the PTR. The proof is a DMARC row showing the bounce class passing SPF on the
-HELO identity. The record landed mid-UTC-day on 2026-08-20, so **the report
-covering 08-20 is a mix and cannot settle it; the clean test is the report
-covering 08-21, read on 08-22.** The confirming observation is a *pass* row, not
-an absence of failures — the failure count has been falling on its own
-(4 → 3 → 1 against volume 67 → 33 → 10), so a zero day sits inside the expected
-band and proves nothing in either direction.
+**Observed the same evening, not merely reasoned:** the test above returned
+`dmarc=pass ... header.from=surfguitar101.com` while SPF authenticated
+`mail.surfguitar101.com`. Relaxed alignment accepted the pair. That is the exact
+pairing `aspf=s` would reject.
+
+**DELIVERY-VERIFIED THE SAME EVENING**, which was not expected — the plan was to
+wait for the report covering 08-21, read on 08-22. Instead a null-sender message
+was sent deliberately and its headers read at Gmail:
+
+```
+Return-Path: <>
+Received-SPF: pass (google.com: domain of postmaster@mail.surfguitar101.com
+              designates 173.255.245.115 as permitted sender)
+spf=pass ... smtp.helo=mail.surfguitar101.com
+dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=surfguitar101.com
+```
+
+**`Return-Path: <>` makes it the real failing class, not an easier case.**
+Gmail fell back to the HELO identity exactly as RFC 7208 §2.3 describes, looked
+up `postmaster@mail.surfguitar101.com`, and found the record. **Task 10
+requirement 4's acceptance criterion — "SPF passes on the HELO identity and DMARC
+reports an aligned pass" — is met at the receiver.**
+
+**`dkim=pass` as well**, since opendkim signs submitted mail, so this does not
+prove SPF *sufficient alone*. The claim under test was narrower: that the record
+resolves and matches for that identity, which `Authentication-Results` reports
+independently of DKIM. Real DSNs carry no signature and now have an SPF pass
+available where they previously had nothing.
+
+*Two false starts worth keeping.* The first attempt used
+`sendmail -f ''` with **no `From:` header**, so Postfix supplied a bare
+`From: MAILER-DAEMON`; opendkim logged `can't parse From: header value` and Gmail
+rejected with `5.7.1` for RFC 5322 non-compliance — **the message never reached
+an authentication check.** And *acceptance itself was never the discriminator*,
+because DKIM alone would have carried it; the header had to be read. **The
+message landed in spam**, which is unremarkable and not an auth signal: it had no
+`To:` header at all, a one-line body, and a test subject. Placement belongs to
+task 07.
 
 **Its lifetime is the old host's.** Once inbound moves to Cloudflare Email
 Routing and the new VM keeps no local bounce traffic, the record retires with the
@@ -2468,13 +2498,35 @@ Aug 19 23:30  dsn=5.7.26  status=bounced
    SPF [] with ip: [173.255.245.115] = did not pass"
 ```
 
-**Two days after the PTR repair and one after the sender rewrite.** Those repairs
-fixed jaguar's *own* mail; forwarded third-party mail is a different class and
-still fails. Google's and Yahoo's reports are DKIM-signed and would likely
-survive the forward — **Microsoft's is the one already suspected of being
-malformed enough to break parsers, which is precisely the report we cannot afford
-to lose.** Recorded as a caution when the destination was published; now
-demonstrated with timestamps.
+**⚠️ CORRECTED LATER THE SAME EVENING — the diagnosis above is wrong, and the
+correction matters.** These failures are **not** third-party forwarded mail.
+Gmail names the envelope-sender domain it checked in every rejection, and across
+all seven `5.7.26` events it is `SPF []` — an **empty** domain, i.e. a null
+sender, meaning a DSN — except one reading `SPF [localhost]`. **No third-party
+domain was ever observed failing.** Postfix forwarding does not alter the body,
+so a reporter's DKIM signature survives the hop and Gmail accepts on DKIM alone;
+the reports would most likely have arrived. **The local copy was insurance
+against a risk smaller than described here** — still worth having, since it takes
+the forward out of the path entirely for the one thing that must be read, but the
+justification was overstated.
+
+**And the null-sender class has a cause that was fixed hours earlier.** A null
+sender has no domain, so SPF falls back to the HELO identity — which had no TXT
+record until the afternoon of 2026-08-20, making both mechanisms unable to pass.
+**Confirmed at the receiver that evening** (see the HELO SPF section): a
+deliberate null-sender message now returns `spf=pass` with
+`smtp.helo=mail.surfguitar101.com`. **The record published to fix the DMARC
+bounce class also fixes this forwarded system mail — the same root cause, which
+nobody had connected.** The last failure of this kind was 08-19 23:30; anything
+after 08-20 midday would mean it did not take.
+
+*Original text follows.* **Two days after the PTR repair and one after the sender
+rewrite.** Those repairs fixed jaguar's *own* mail; forwarded third-party mail is
+a different class and still fails. Google's and Yahoo's reports are DKIM-signed
+and would likely survive the forward — **Microsoft's is the one already suspected
+of being malformed enough to break parsers, which is precisely the report we
+cannot afford to lose.** Recorded as a caution when the destination was
+published; now demonstrated with timestamps.
 
 **Fixed by delivering a second copy locally**, which nothing can forward away: a
 dedicated user with no `/etc/aliases` entry, and dual delivery in the virtual map.
@@ -2674,12 +2726,26 @@ those shapes, plus an empty directory and a non-report message.
   2026-08-21 to 08-22; **a quiet first day is not a signal.** **Still not a
   blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
   check, not by DMARC data.
+- **Check what `From:` a real Postfix bounce carries** — new 2026-08-20, and it
+  may unseat a hypothesis three readings have leaned on. The null-sender test
+  message showed opendkim logging `can't parse From: header value 'MAILER-DAEMON'`
+  for a locally submitted message with no `From:`. **If jaguar's own bounces carry
+  `From: MAILER-DAEMON@jaguar.deathofagremmie.com`** — what `myhostname` would
+  produce — **they appear in that domain's DMARC data and never in ours**, since a
+  report only contains messages whose `From:` header domain is the policy domain.
+  The four failures would then be something else entirely. **Not asserted**: the
+  test's bare `MAILER-DAEMON` came from local submission with no header, and the
+  bounce daemon may format differently. The check is to read the `From:` on a real
+  DSN.
 - ~~**Publish SPF on `mail.surfguitar101.com`**~~ — **DONE 2026-08-20** (above),
   `v=spf1 ip4:173.255.245.115 -all`, verified at both authoritative nameservers,
   exactly one SPF record at the name. **It did not "belong with requirements
   5–7"** as this line used to say: those govern the apex, this is the HELO name,
-  and it needed no part of the cutover to publish. What remains is reading the
-  08-21 report on 08-22 to see the bounce class pass.
+  and it needed no part of the cutover to publish. **DELIVERY-VERIFIED the same
+  evening** rather than waiting for the 08-22 report: a deliberate null-sender
+  message returned `spf=pass` with `smtp.helo=mail.surfguitar101.com` and an
+  aligned `dmarc=pass` at Gmail. The 08-22 report is now corroboration, not the
+  test.
 - ~~**Add one requirement to task 03: SPF at the HELO name**~~ — **already done
   2026-08-18**, as task 03 requirement 13; this line outlived the work it asked
   for. Task 10 requirement 4 and task 03 requirement 13 are one record,
