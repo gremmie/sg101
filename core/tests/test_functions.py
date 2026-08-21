@@ -152,10 +152,10 @@ class GetIpTestCase(unittest.TestCase):
         ip = get_ip(self.request)
         self.assertIsNone(ip)
 
-    def test_found_in_forwarded_for(self):
+    def test_forwarded_for_alone_is_ignored(self):
         self.request.META['HTTP_X_FORWARDED_FOR'] = '127.0.0.1'
         ip = get_ip(self.request)
-        self.assertEqual(ip, '127.0.0.1')
+        self.assertIsNone(ip)
 
     def test_found_in_remote_addr(self):
         self.request.META['REMOTE_ADDR'] = '127.0.0.1'
@@ -167,10 +167,14 @@ class GetIpTestCase(unittest.TestCase):
         ip = get_ip(self.request)
         self.assertIsNone(ip)
 
-    def test_invalid_found_in_forwarded_for(self):
-        self.request.META['HTTP_X_FORWARDED_FOR'] = '$%#!'
+    def test_forwarded_for_does_not_override_remote_addr(self):
+        # The header is client-supplied: a scanner sends a leading loopback
+        # entry to pass itself off as local. REMOTE_ADDR, which the front-end
+        # proxy sets, has to win.
+        self.request.META['HTTP_X_FORWARDED_FOR'] = '127.0.0.1,192.0.2.3'
+        self.request.META['REMOTE_ADDR'] = '192.0.2.3'
         ip = get_ip(self.request)
-        self.assertIsNone(ip)
+        self.assertEqual(ip, '192.0.2.3')
 
 
 class IsAjaxTestCase(unittest.TestCase):

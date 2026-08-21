@@ -2605,6 +2605,164 @@ directory of files copied off the server, or a single file — **detecting mail 
 renamed in transit still parses. Verified against synthetic reports in all of
 those shapes, plus an empty directory and a non-report message.
 
+### Fifth reading — 2026-08-21, the first from our own copy, and two of my claims died on the way
+
+**One report, from Google, covering 2026-08-20.** Five messages, all from
+`173.255.245.115`, **0 aligned on neither mechanism**. The rows split by the
+identity SPF was evaluated against:
+
+| count | SPF domain | identity |
+|---|---|---|
+| 1 | `mail.surfguitar101.com` | HELO |
+| 4 | `surfguitar101.com` | MAIL FROM |
+
+**The count-1 row is the HELO SPF record confirmed in aggregate data by a third
+party.** The null-sender test of 2026-08-20 carries no MAIL FROM domain, so SPF
+fell through to the HELO name and passed. STATUS expected this as corroboration
+on the 08-22 report; it arrived in the 08-20 window instead.
+
+**Google addresses one message to both `rua` destinations**, not two sends:
+
+```
+To: 00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,
+        admin@surfguitar101.com
+```
+
+**Cloudflare therefore receives byte-identical input to what we parse.** For any
+Google report, a disagreement between the dashboard and the local copy can only
+be Cloudflare's ingestion or presentation, never a difference in what arrived.
+That is caveat 1 removed rather than worked around.
+
+**Still no Microsoft, and no Comcast.** Day one of the 08-21/08-22 window; a
+quiet first day is not a signal.
+
+#### The Gmail forward, confirmed by a natural experiment rather than by reasoning
+
+Two messages reached `admin@surfguitar101.com` the same night, differing only in
+envelope sender:
+
+| envelope sender | reached Brian's Gmail? |
+|---|---|
+| `root@surfguitar101.com` (Django error mail) | **yes** |
+| `noreply-dmarc-support@google.com` (the report) | **no** |
+
+jaguar can pass SPF for its own domain and cannot for Google's. The prediction
+that built the local copy is now an observation. **The empty Gmail inbox is a
+property of the forward, not of the reporters** — reading it as silence would
+have been exactly the false negative the local copy exists to prevent.
+
+#### The reconciliation gap, found by walking into it
+
+Three files in the maildir, one report, and the tool said **nothing** about the
+other two. `main()` printed the report count alone, and its "none carrying a
+report" line fired only when that count was zero — so 3-in/1-out read exactly
+like a clean run. Identifying the two took a separate pass over the raw files.
+
+**`admin@` is now both the `rua` destination and Django's error destination**, so
+that maildir mixes crash mail with reports permanently. Files-in will never equal
+reports-out again, which makes the gap structural rather than incidental.
+
+Fixed: the tool now always prints `N file(s) read, M report(s)` and names every
+file that carried none, with its `From:` and `Subject:`. A malformed report is
+caught per file, named on stderr, and counted among them rather than ending the
+run — **verified by feeding the previous version a truncated XML report, which
+died with an unhandled `ParseError` and lost the rest of the maildir.** That is
+the shape hypothesis 4 accuses Cloudflare of, reproduced locally and closed here.
+
+#### The Django error mail is real, and it corrects a comment in shipped code
+
+`[Django] ERROR (EXTERNAL IP): Internal Server Error: /admin/password_reset/`,
+2026-08-21 01:09 — the first Django error report in years, and independent
+confirmation of task 10's sender rewrite: every previous confirmation came from a
+message built for the purpose.
+
+The crash is `NoReverseMatch` for `password_reset_done` at
+`django/contrib/auth/views.py:159` on the **old** site (`SCRIPT_FILENAME:
+.../sg101/apache/sg101.wsgi`, Django on Python 2.7). Already fixed on
+`modernize`: `sg101/urls.py` redirects that path to the site's own flow and
+`core/tests/test_urls.py` covers it three ways. **The bug dies with jaguar.**
+
+**But the comment describing it was wrong, and the traceback says so.** It read
+"the flow raised NoReverseMatch *on submit*". The view reverses
+`password_reset_done` before it dispatches on the request method, and the request
+that crashed was `REQUEST_METHOD: 'GET'` with empty `GET` and `POST` dicts. The
+page 500'd on every visit, for every visitor, for as long as that URLconf stood.
+Corrected — the fix was right; its stated rationale understated the breakage.
+
+**Expect more of these.** Scanners hit that URL, it 500s on every hit until
+cutover, and the error channel now works.
+
+#### `mod_remoteip` — two of my conclusions withdrawn
+
+The crashing request carried seven headers claiming `127.0.0.1`
+(`TRUE_CLIENT_IP`, `X_CLIENT_IP`, `X_ORIGINATING_IP`, `X_AZURE_CLIENTIP`,
+`X_HOST`, an `X_FORWARED` typo, and a leading entry in `X_FORWARDED_FOR`) from
+`REMOTE_ADDR: 192.0.2.3`, `curl/8.7.1` — a scanner probing for an
+access-control bypass.
+
+**I concluded the origin had been reached directly, and that was wrong.** The
+reasoning assumed `REMOTE_ADDR` is the connecting peer. Apache's `mod_remoteip`
+is loaded *and* enabled on jaguar (`conf-enabled/remoteip.conf`, symlinked
+2025-08-10) with `RemoteIPHeader CF-Connecting-IP` and a `RemoteIPTrustedProxy`
+list **diffed as a set against Cloudflare's published `ips-v4`: 15 ranges,
+identical, no drift.** Under that config a normal proxied request shows a
+non-Cloudflare `REMOTE_ADDR` — the module working, not a bypass. The absent
+`HTTP_CF_CONNECTING_IP`, alongside four intact `CF-*` siblings, is the module
+having consumed it.
+
+**Two measurement traps on the way, both the house pattern:**
+
+1. **`remoteip.load` proves loading, not configuring.** `mod_remoteip` has no
+   default header; with no `RemoteIPHeader` set it loads and does nothing. Both
+   branches fit every observation available at that point. Installed is not
+   enabled is not in effect — see [[measure-before-recording-in-planning-docs]].
+2. **`grep -r` cannot see `conf-enabled/`.** It does not follow symlinks during
+   traversal. The proof is in its own output, which reported the *enabled* module
+   from the `mods-available` path — grep skipped the `mods-enabled` symlink and
+   found the target behind it. Reading "present only in conf-available, therefore
+   disabled" out of that would have been reading the tool's blind spot as data.
+   `ls -l` on the directory settled it.
+
+**Also withdrawn: the concern that `REMOTE_ADDR` readers log Cloudflare edge
+IPs.** `antispam`, `accounts`, `forums`, `comments`, `downloads` and `donations`
+read `REMOTE_ADDR` directly and are correct.
+
+#### The one real defect: `core/functions.py` preferred the forgeable header
+
+`get_ip()` read `HTTP_X_FORWARDED_FOR` in preference to `REMOTE_ADDR` — stepping
+over the value Apache had already made trustworthy in favour of the one any
+client can choose. On the crashing request every direct reader recorded
+`192.0.2.3`; `get_ip()` returned `127.0.0.1`, and `contact/forms.py` hands
+that to reCAPTCHA as `remoteip`, degrading its risk scoring on the contact form.
+The other callers (`core/middleware.py` online tracking, `search/views.py`
+logging) are pollution rather than compromise. **No access is gated on these
+headers, so the probe gained nothing.**
+
+Fixed to `REMOTE_ADDR` only. Dropping the preference is right in either topology:
+if the proxy rewrites `REMOTE_ADDR` the header is redundant, and if it does not,
+trusting it without a proxy check is worse than recording a proxy address,
+because the wrong value is then attacker-chosen rather than merely wrong.
+`core/tests/test_functions.py` asserted the old preference and **encoded the
+bug**; both tests replaced, and the regression test reproduces the real fault —
+under the old code it fails `'127.0.0.1' != '192.0.2.3'`. Suite 877 green.
+
+#### A cutover requirement this exposed
+
+**Nothing in the repo sets the real client address.** No `real_ip`, no
+`SECURE_PROXY_SSL_HEADER`, no `USE_X_FORWARDED_HOST`, no proxy in
+`docker-compose.yml`. The rewrite that makes every `REMOTE_ADDR` reader correct
+exists only as Apache configuration on a box with weeks to live, and Django does
+not perform it itself.
+
+**Whatever fronts the new VM needs the analogue** — nginx's
+`ngx_http_realip_module` with the same Cloudflare ranges — or on cutover day
+every IP the site records silently becomes a proxy address. Same shape as the
+failures this project keeps finding: correct-looking output, wrong underlying
+value, nothing reporting a disagreement. **Written into Step 20** — production
+hardening already owns the Cloudflare front and the prod compose, which is where
+this belongs; no new step was needed. Step 17 inherits it through the captcha's
+`remoteip`.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -2655,6 +2813,34 @@ those shapes, plus an empty directory and a non-report message.
   Postmark becomes the dominant source and changes the picture entirely. The
   complementary instrument is the mail log — all destinations, but only this box;
   DMARC's unique contribution is a source we do not control.
+- **Fifth reading done 2026-08-21** (above), **the first taken from our own copy
+  rather than a dashboard**, covering 2026-08-20: one report, Google, 5 messages,
+  all aligned, **0 failures**. The HELO SPF record reads as a pass in aggregate
+  data, on the null-sender row where SPF fell through to the HELO identity.
+  **Google addresses one message to both `rua` destinations**, so Cloudflare
+  ingests byte-identical input and caveat 1 is closed. **Still no Microsoft** —
+  day one of the two-day window.
+- **The new VM needs a real-client-IP rewrite before cutover** — new 2026-08-21
+  (fifth reading above). `mod_remoteip` on jaguar sets `REMOTE_ADDR` from
+  `CF-Connecting-IP` for Cloudflare's ranges, and **every `REMOTE_ADDR` reader in
+  the codebase is correct only because of it**: `antispam`, `accounts`, `forums`,
+  `comments`, `downloads`, `donations`. **Nothing in the repo performs it** — no
+  `real_ip`, no `SECURE_PROXY_SSL_HEADER`, no proxy in `docker-compose.yml` — and
+  Django does not do it itself. Without the analogue (nginx's
+  `ngx_http_realip_module`, same 15 ranges) every IP the site records silently
+  becomes a proxy address on cutover day, with nothing reporting the
+  disagreement. **Hung on Step 20 in `plan.md` 2026-08-21** — production
+  hardening already owns the Cloudflare front and the gunicorn prod compose, so
+  it needs no new step. **Step 17 inherits it**: Turnstile's siteverify takes the
+  same `remoteip` the contact form passes today. **The origin-exposure question
+  is now measured, not open**: jaguar answers `https://surfguitar101.com/` with
+  200 over both IPv4 and IPv6 when reached by address, on a publicly-trusted
+  Let's Encrypt certificate, and the address is published four times in the zone
+  (`mail` A, apex SPF v4 + v6, `mail` SPF). Cloudflare's WAF and rate limiting
+  are therefore advisory today. **Closing it belongs to the new VM** — firewall
+  443 to Cloudflare's ranges, IPv6 included — and task 06 removes the reason the
+  leak exists, since Email Routing leaves the VM with no MX and no public mail
+  name. Recorded in Step 20.
 - **First reading done 2026-08-18** (above): Gmail only, 61/65 passing, 4 failures
   hypothesised as unsigned Postfix bounces, forwarded to Brian's Gmail by the
   `admin@`/`root@` aliases. **Tightening past `p=none` stays blocked until those
@@ -2718,12 +2904,17 @@ those shapes, plus an empty directory and a non-report message.
   `_dmarc`, `p=none` untouched. **`rua` could not have pointed at
   `bgneal@gmail.com`** — RFC 7489 §7.1 would need an authorization record inside
   `gmail.com`'s zone; same-organizational-domain needs none.
-  **What is now open is reading it.** The instrument is **not** the Gmail inbox:
-  the forward bounces third-party mail (above, demonstrated as recently as
-  08-19 23:30), so a malformed Microsoft report would vanish and manufacture a
-  false silence. **A local copy was added the same evening** —
-  `/home/dmarc/mail/new/`, read with `tools/dmarc_report.py`. First dependable arrivals
-  2026-08-21 to 08-22; **a quiet first day is not a signal.** **Still not a
+  ~~**What is now open is reading it.**~~ — **READ 2026-08-21** (fifth reading
+  above). The instrument is **not** the Gmail inbox: the forward bounces
+  third-party mail, so a malformed Microsoft report would vanish and manufacture
+  a false silence. **A local copy was added the same evening** —
+  `/home/dmarc/mail/new/`, read with `tools/dmarc_report.py`. **That forward
+  failure is now observed, not predicted**: the same night's Django error mail
+  reached Gmail and the Google report did not, differing only in envelope sender.
+  **The first local report names its reporter outright** — `google.com` — and
+  Google addresses one message to *both* `rua` destinations, so Cloudflare
+  ingests byte-identical input. **Still no Microsoft on day one of the
+  08-21/08-22 window; a quiet first day is not a signal.** **Still not a
   blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
   check, not by DMARC data.
 - **Check what `From:` a real Postfix bounce carries** — new 2026-08-20, and it

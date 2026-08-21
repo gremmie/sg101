@@ -35,8 +35,10 @@ urlpatterns = [
    # The admin login page offers a "Forgotten your password?" link when this
    # name resolves. Send it to the site's own reset flow rather than running a
    # second one: these routes used to point at a parallel set of auth views
-   # whose companion routes were never named, so the flow raised NoReverseMatch
-   # on submit, and its confirm URL still expected the pre-1.6 uidb36 format.
+   # whose companion routes were never named. The view reverses
+   # 'password_reset_done' before it dispatches on the request method, so the
+   # page raised NoReverseMatch on every visit rather than only on submit, and
+   # its confirm URL still expected the pre-1.6 uidb36 format.
    path('admin/password_reset/',
        RedirectView.as_view(pattern_name='accounts-password_reset',
                             permanent=False),

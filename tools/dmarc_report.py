@@ -171,6 +171,48 @@ def maildir_files(path):
     return found
 
 
+def describe(raw):
+    """Return (from, subject) for a file, for listing one that held no report.
+
+    Headers fold across lines, so each is collapsed onto one line to keep the
+    listing aligned.
+    """
+    try:
+        message = email.message_from_bytes(raw)
+    except Exception:                                 # noqa: BLE001
+        return '', ''
+    return (' '.join(message.get('From', '').split()),
+            ' '.join(message.get('Subject', '').split()))
+
+
+def scan(paths):
+    """Summarize every report in `paths`.
+
+    Returns the report count and a list of (path, (from, subject)) for the
+    files that carried none, so the caller can account for every file it read.
+    A file that cannot be parsed is named on stderr and counted among them
+    rather than ending the run, since the rest of the maildir is still worth
+    reading.
+    """
+    reports = 0
+    barren = []
+    for path in paths:
+        with open(path, 'rb') as handle:
+            raw = handle.read()
+        found = 0
+        try:
+            for xml_bytes in reports_in_bytes(raw, path):
+                summarize(xml_bytes)
+                found += 1
+        except Exception as exc:                      # noqa: BLE001
+            sys.stderr.write('  ! %s: %s\n'
+                             % (os.path.basename(path), exc))
+        if not found:
+            barren.append((path, describe(raw)))
+        reports += found
+    return reports, barren
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dir', default=DEFAULT_MAILDIR,
@@ -180,32 +222,30 @@ def main():
                         help='a report file instead: .xml, .gz or .zip')
     args = parser.parse_args()
 
-    seen = 0
     if args.file:
-        for path in args.file:
-            with open(path, 'rb') as handle:
-                payload = handle.read()
-            for xml_bytes in reports_in_bytes(payload, path):
-                summarize(xml_bytes)
-                seen += 1
+        paths = args.file
     else:
-        files = maildir_files(args.dir)
-        if not files:
+        paths = maildir_files(args.dir)
+        if not paths:
             print('No mail in %s' % args.dir)
             return 0
-        for path in files:
-            with open(path, 'rb') as handle:
-                raw = handle.read()
-            for xml_bytes in reports_in_bytes(raw, path):
-                summarize(xml_bytes)
-                seen += 1
-        if not seen:
-            print('%d file(s) in %s, none carrying a report.'
-                  % (len(files), args.dir))
 
-    if seen:
-        print('=' * 78)
-        print('%d report(s).' % seen)
+    reports, barren = scan(paths)
+
+    # Always reconcile files read against reports found: this maildir also
+    # receives the site's error mail, so a file holding no report is routine
+    # and must be named rather than silently dropped -- otherwise a report
+    # that failed to parse is indistinguishable from one that never arrived.
+    print('=' * 78)
+    print('%d file(s) read, %d report(s).' % (len(paths), reports))
+    if barren:
+        print('%d file(s) carried no report:' % len(barren))
+        for path, (sender, subject) in barren:
+            print('  %s' % os.path.basename(path))
+            if sender:
+                print('      from    %s' % sender)
+            if subject:
+                print('      subject %s' % subject)
     return 0
 
 

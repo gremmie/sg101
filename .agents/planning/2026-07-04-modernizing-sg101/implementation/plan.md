@@ -1478,6 +1478,81 @@ Deliberately *not* done during Step 12: 2.7 ms is invisible to a member, and an
 index that exists for one endpoint is a production-tuning decision rather than a
 correctness one. Revisit here with real traffic, and drop it if the autocomplete
 turns out to be rare.
+
+**Also carries the real-client-IP rewrite, added 2026-08-21 out of a Django
+error report.** The Cloudflare front line above has a consequence that is easy to
+miss: behind a proxy, `REMOTE_ADDR` is the proxy unless something rewrites it,
+and **Django does not do this itself.**
+
+jaguar already solves it — Apache `mod_remoteip`, `RemoteIPHeader
+CF-Connecting-IP`, `RemoteIPTrustedProxy` carrying Cloudflare's 15 IPv4 and 7
+IPv6 ranges (`conf-enabled/remoteip.conf`, verified against Cloudflare's
+published list 2026-08-21: identical, no drift). **That configuration is not in
+the repo and does not travel with the code.** Six apps read `REMOTE_ADDR`
+directly — `antispam`, `accounts`, `forums`, `comments`, `downloads`,
+`donations` — and every one of them is correct today *only* because of it.
+
+**The requirement:** whatever fronts the new VM must set the client address from
+`CF-Connecting-IP` for connections from Cloudflare's published ranges, and from
+nothing else. For nginx that is `ngx_http_realip_module` (`set_real_ip_from` per
+range, `real_ip_header CF-Connecting-IP`). **The trusted-range list is the
+security boundary, not the header name**: without it the header is client-
+supplied and anyone can claim any address. It also needs a refresh plan, since
+Cloudflare adds ranges.
+
+**Failure mode if skipped:** no error, no log line, no failing test — every IP
+the site records silently becomes a proxy address, and IP-based moderation
+quietly stops distinguishing members. Worth an explicit assertion in the
+prod-mode smoke test: a request bearing a forged `CF-Connecting-IP` from an
+untrusted source must *not* be recorded under the forged address.
+
+**Two adjacent consequences.** `core/functions.py:get_ip()` was fixed
+2026-08-21 to read `REMOTE_ADDR` only (it had preferred the client-supplied
+`X-Forwarded-For`), so it now inherits whatever this step configures. And **Step
+17 depends on this**: the contact form passes the client IP to the captcha's
+siteverify call as `remoteip`, and Turnstile takes the same parameter, so a
+wrong value degrades scoring on the endpoint that exists to stop bots.
+
+**The origin accepts direct connections, measured 2026-08-21 — and the address
+is published in the zone.** jaguar answers `https://surfguitar101.com/` with
+**200 on both IPv4 (`173.255.245.115`) and IPv6
+(`2600:3c01::f03c:91ff:fe70:e820`)** when reached with `curl --resolve`,
+bypassing the proxied apex (`172.67.218.217` / `104.21.53.213`). **No
+certificate trick is needed**: the origin serves a publicly-trusted Let's
+Encrypt certificate for `surfguitar101.com`, so verification succeeds without
+`-k`.
+
+**Finding the address takes one `dig`.** It is published four times:
+
+| record | value |
+|---|---|
+| `mail.surfguitar101.com` A | `173.255.245.115` |
+| apex SPF | `ip4:173.255.245.115` and `ip6:2600:3c01::f03c:91ff:fe70:e820/64` |
+| `mail` SPF | `ip4:173.255.245.115` |
+
+This is the ordinary way a Cloudflare origin leaks: **an MX target cannot be
+proxied**, so the mail name necessarily exposes the host, and SPF then republishes
+it. The consequence is that WAF, rate limiting and bot rules are **advisory** —
+anyone willing to read the zone reaches the application directly, and the
+real-IP rewrite above correctly declines to trust their headers but cannot
+refuse the request.
+
+**Closing it is a Step 21 property of the new VM, not a jaguar repair**: firewall
+443 to Cloudflare's published ranges (**IPv6 included** — a v4-only rule leaves
+the door open, as measured here), or Cloudflare Origin CA with
+`authenticated_origin_pull`. **It interacts with Step 16 task 06**: once inbound
+mail moves to Cloudflare Email Routing the new VM needs no MX and no public mail
+name, so the leak has no reason to be recreated — provided the host is not given
+a proxy-exempt A record for some other purpose, and provided SPF names Postmark
+rather than the VM.
+
+**One inconsistency to check while here, found in the same `dig`:**
+`mail.surfguitar101.com` has an **unproxied A but a Cloudflare AAAA**
+(`2606:4700:3030::ac43:dad9`). Proxy state in Cloudflare is per record, so one
+name can disagree with itself. For an MX target that is worth understanding
+before task 06 moves the MX — related to Correction 2 in STATUS (the `_dc-mx`
+alias existed because the MX target was proxied), and possibly the same knot.
+
 **Tests:** A prod-mode boot/smoke test (DEBUG off, static served, security
 settings on); CI builds the prod image.
 **Integration:** Combines every prior subsystem into the deployable artifact.

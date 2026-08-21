@@ -123,9 +123,16 @@ def copyright_str():
 IP_PAT = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
 
 def get_ip(request):
-    """Returns the IP from the request or None if it cannot be retrieved."""
-    ip = request.META.get('HTTP_X_FORWARDED_FOR',
-            request.META.get('REMOTE_ADDR'))
+    """Returns the IP from the request or None if it cannot be retrieved.
+
+    REMOTE_ADDR only, and deliberately. Setting it to the real client address
+    is the front-end proxy's job -- Apache's mod_remoteip does it today, from
+    CF-Connecting-IP, for connections arriving from Cloudflare's ranges.
+    X-Forwarded-For must not be preferred over it: any client can send that
+    header, so a request carrying a forged leading entry would otherwise be
+    recorded under whatever address it chose to claim.
+    """
+    ip = request.META.get('REMOTE_ADDR')
 
     if ip:
         match = IP_PAT.match(ip)
