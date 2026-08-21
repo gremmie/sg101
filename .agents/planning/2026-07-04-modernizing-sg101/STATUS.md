@@ -1695,6 +1695,15 @@ the three-a-day failure class persists, and a new *passing* class appears as
 its weak form, the second is invisible, and the day's headline is neither of
 them — it is the volume.**
 
+> **⚠️ CORRECTED THE SAME EVENING — this section's headline is wrong.** The
+> 2026-08-19 row was **incomplete when read**: 10 messages that morning, 34 by
+> that evening, once Comcast's aggregate report for the day arrived. **The volume
+> did not collapse** — the sequence is 67 → 33 → **34**, failures 4 → 3 → **2**.
+> Everything below that argues from the number 10, or from volume falling, does
+> not stand. The signature findings — the failure sitting in the Akamai row, all
+> three alignment columns reading identically — are unaffected, being shape
+> rather than count. See the fourth reading below.
+
 From Cloudflare's per-day detail for 2026-08-19.
 
 | Sending service | Volume | DMARC pass | SPF aligned | DKIM aligned | IPs |
@@ -1713,7 +1722,7 @@ per-day details these numbers were transcribed from:
 
 | Date | Volume | DMARC pass | SPF aligned | DKIM aligned | IPs |
 |---|---|---|---|---|---|
-| 2026-08-19 | 10 | 90% | 80% | 90% | 2 |
+| 2026-08-19 | 10 *(partial — 34 by that evening)* | 90% | 80% | 90% | 2 |
 | 2026-08-18 | 33 | 90.91% | 87.88% | 90.91% | 2 |
 | 2026-08-17 | 67 | 94.03% | 91.04% | 94.03% | 2 |
 
@@ -1763,6 +1772,13 @@ The count is where it breaks:
 | Volume | 67 | 33 | **10** |
 | Failures | 4 | 3 | **1** |
 | Failure rate | 5.97% | 9.09% | **10.0%** |
+
+**Superseded — the 08-19 column is a partial row.** Corrected the same evening to
+volume **34**, failures **2**, failure rate **5.88%**. The count argument this
+table was built to make has no support either way: 4 / 3 / 2 across 67 / 33 / 34
+cannot separate a scheduled class from a traffic-driven one — the same limit this
+section named when it said the second reading claimed more than two points could
+carry.
 
 **The second reading's inference was "a class that produces three or four a day
 regardless of site traffic is scheduled, not traffic-driven." The 19th is the
@@ -1818,7 +1834,11 @@ before any of this step's mail work:
 | gmail-destined | 18.6 | **12** | 65 |
 
 Against that, **the 17th was 4.3× the median and the 19th is 0.8×.** The 19th is
-an ordinary day. The sequence is not a decline at all — it is regression to the
+an ordinary day. *(Corrected the same evening: the 0.8× used the partial
+10-message row. Against the corrected 34 the 19th is ~2.8× the Gmail-destined
+median — still an ordinary day, and still not a decline. This item's conclusion
+is untouched: there was never a discrepancy, only two populations. The multiplier
+was wrong.)* The sequence is not a decline at all — it is regression to the
 mean after a spike, and the spike is the PTR/HELO repair session this document
 already identified as generating its own traffic. Aug 10–11 is the confirming
 case: 96 and 102 messages, 54 and 65 of them to Gmail, a week before any mail
@@ -2328,12 +2348,121 @@ none of them bulk. And the graduated warm-up was **volunteered to Postmark in th
 approval request**, so this is doing less than was stated, not more. Not a
 problem, and worth knowing it was said.
 
+### Fourth reading — 2026-08-20 evening, re-reading 2026-08-19: the row had tripled, and Comcast is the second reporter
+
+**Brian noticed the dashboard held more data than it had that morning.** Re-reading
+a day already recorded is not something the first three readings did, and it
+overturns three conclusions.
+
+| Date | Read 08-20 morning | Read 08-20 evening | |
+|---|---|---|---|
+| 2026-08-17 | 67 · 94.03% · 91.04% · 94.03% · 2 | identical | unchanged |
+| 2026-08-18 | 33 · 90.91% · 87.88% · 90.91% · 2 | identical | unchanged |
+| 2026-08-19 | **10** · 90% · 80% · 90% · 2 | **34** · 94.12% · 91.18% · 94.12% · 2 | **+24** |
+
+**Two stable rows are the control**: the dashboard is not drifting generally, the
+most recent day was incomplete. The new row reproduces as 32/34 = 94.12% and
+31/34 = 91.18% — 34 messages, 32 passing, 2 failing, 31 SPF-aligned, 32
+DKIM-aligned. **The delta is +24 volume, +23 passing, +23 SPF-aligned, +23
+DKIM-aligned, +1 failing.**
+
+**The per-day detail for 2026-08-19 then returned "no data available"** — a view
+that had rendered a full service breakdown that morning. So the number that moved
+came from a dashboard whose companion view was simultaneously broken, and it was
+deliberately not recorded as fact until the mail log settled it independently.
+See [[suspect-the-measurer-before-the-record]].
+
+#### The mail log settled it, and the answer was in the window boundary
+
+Three measurements on jaguar, none of which depend on Cloudflare:
+
+| Query | Count |
+|---|---|
+| Delivered to Google, syslog day `Aug 19` (CDT) | 14 |
+| Total `status=sent`, syslog day `Aug 19` (CDT) | 21 |
+| Total `status=sent`, **UTC** Aug 19 window (`Aug 18 19:00`–`Aug 19 19:00` CDT) | **46** |
+
+**21 is less than 34, and that is what pointed at the boundary.** Syslog stamps
+local time and DMARC days are UTC, so UTC 2026-08-19 begins at 19:00 CDT on the
+18th — and it therefore contains **the Comcast delisting flush**, which STATUS
+records as 23 queued messages delivered between 20:54 and 21:54 CDT on 08-18,
+i.e. **01:54–02:54 UTC on 08-19.**
+
+The per-relay breakdown for that UTC window:
+
+```
+Gmail     11 + 5 + 2                = 18
+Comcast    7 + 5 + 3 + 3 + 3 + 2    = 23
+Others     hushmail 1, Yahoo 2, 1and1 1, Outlook 1 = 5
+                                    total = 46
+```
+
+**Comcast is exactly 23.** The flush, message for message.
+
+#### The delta decomposes exactly, and names a second reporting receiver
+
+10 (Gmail's report, read that morning) + 23 (Comcast, all authenticating) + 1
+(one further Gmail failure) = **34**, and every column reconciles: +23 passing and
++23 aligned on both mechanisms is the Comcast block, the +1 failing is Gmail's.
+
+**"Gmail's view alone" is retired.** It qualified all three previous readings, and
+the doc's own stated test was that a second reporting receiver *"would push that
+toward 192."* It pushed. **It arrived on its own — the second `rua` destination
+published the same afternoon had nothing to do with it.**
+
+**The 23 flushed messages authenticated at Comcast.** The delisting entry records
+them accepted at the MX with `250 … mail accepted for delivery` and explicitly
+leaves placement unobserved. Comcast's own report now adds SPF aligned, DKIM
+aligned and DMARC pass on all 23. **Placement is still downstream and still
+invisible** — this is authentication, not inbox.
+
+**The 2026-08-19 volume collapse never happened.** The third reading's headline
+was 67 → 33 → 10; it is 67 → 33 → 34, with failures 4 → 3 → 2 and a failure rate
+of 5.88% rather than the recorded 10.0%.
+
+#### One gap, recorded as inference rather than measurement
+
+Gmail took 18 messages in that window but contributes about 11 to the report. The
+likely reason is definitional — aggregate reports cover messages whose **`From:`
+header domain** is `surfguitar101.com`, and jaguar forwards third-party mail
+(`themadeira.net` and the aliases) whose `From:` belongs to someone else, making
+it invisible to our reports by construction. **Consistent, but the seven messages'
+`From:` domains were not checked.**
+
+#### Two things worth noticing in the relay list
+
+- **One message reached Microsoft** — `hotmail-com.olc.protection.outlook.com`,
+  `status=sent`. **Accepted, not rejected**, which is the FCrDNS and HELO repairs
+  working at the receiver this step exists for. No Microsoft report has appeared
+  for it, a further small weight on "too small to report on."
+- **Two reached Yahoo**, which does publish aggregate reports, and no Yahoo row is
+  visible either.
+
+#### The rule this establishes, and why the dashboard cannot confirm the reporter
+
+**A day's row is not final the morning after.** Every reading so far was taken the
+next morning and treated as complete; two conclusions were built on a row that was
+a third filled. **Re-read previously recorded days each session, and treat the most
+recent row as provisional until a later reading reproduces it.** 08-17 and 08-18
+have now been reproduced twice and can be treated as settled.
+
+**Cloudflare cannot name Comcast as the reporter, and never will.** The by-service
+view groups by *sending* IP — "Akamai Technologies" is jaguar, since Akamai owns
+Linode — so a Comcast-sourced report adds to the **Akamai** row rather than
+appearing as itself. When the detail view returns it should read Akamai ≈ 33, not
+9. That is caveat 1 exactly, and it is what the second `rua` destination exists to
+remove: `<report_metadata><org_name>` in the raw XML at `admin@` names the reporter
+outright.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
-  **3 of 7 days read** — 2026-08-17, 2026-08-18 and 2026-08-19.
+  **3 of 7 days read** — 2026-08-17, 2026-08-18 and 2026-08-19, **with 08-19
+  re-read the same evening and found to have tripled** (see the fourth reading).
+  **Readings now re-check previously recorded days, not only the new one**, and
+  the most recent row is provisional until a later reading reproduces it.
 
   **Scope of this gate, stated precisely 2026-08-20 because the daily readings
   had begun to imply more.** Requirement 2 reads *"before tightening policy…
@@ -2381,7 +2510,11 @@ problem, and worth knowing it was said.
   4 are identified** — 93.85% from one receiver is not the proof requirement 2
   asks for. Remaining step: read one `MAILER-DAEMON` message's
   `Authentication-Results` from Brian's own inbox.
-- **Third reading done 2026-08-20** (above), covering 2026-08-19: 10 messages,
+- **Third reading SUPERSEDED the same evening — see the fourth reading.** Its
+  10-message row for 2026-08-19 was a partial report; the day closed at 34, the
+  volume never collapsed, and **Comcast turned out to be a second reporting
+  receiver**, which retires "Gmail's view alone" everywhere it appears below.
+  Original bullet follows. **Third reading done 2026-08-20** (above), covering 2026-08-19: 10 messages,
   1 failure, Akamai row again with pass/SPF/DKIM identical at 88.89% — the
   signature on a third day, and the failure class persists as predicted. **But
   the count fell 4 → 3 → 1 while volume fell 67 → 33 → 10, which reads against
