@@ -2454,6 +2454,105 @@ appearing as itself. When the detail view returns it should read Akamai ≈ 33, 
 remove: `<report_metadata><org_name>` in the raw XML at `admin@` names the reporter
 outright.
 
+### The `rua` destination needed a local copy, and building it hit six traps — 2026-08-20
+
+**The published `rua` destination was not sufficient on its own, and the mail log
+says so.** `admin@surfguitar101.com` is aliased to Brian's Gmail, and forwarding
+preserves the original envelope sender, so jaguar cannot pass SPF for a third
+party's domain. Gmail refuses the result:
+
+```
+Aug 19 23:30  dsn=5.7.26  status=bounced
+  "blocked because the sender is unauthenticated
+   DKIM = did not pass
+   SPF [] with ip: [173.255.245.115] = did not pass"
+```
+
+**Two days after the PTR repair and one after the sender rewrite.** Those repairs
+fixed jaguar's *own* mail; forwarded third-party mail is a different class and
+still fails. Google's and Yahoo's reports are DKIM-signed and would likely
+survive the forward — **Microsoft's is the one already suspected of being
+malformed enough to break parsers, which is precisely the report we cannot afford
+to lose.** Recorded as a caution when the destination was published; now
+demonstrated with timestamps.
+
+**Fixed by delivering a second copy locally**, which nothing can forward away: a
+dedicated user with no `/etc/aliases` entry, and dual delivery in the virtual map.
+
+```
+admin@surfguitar101.com    bgneal@gmail.com, dmarc@localhost
+```
+
+Proven end to end rather than from config: one queue ID, `nrcpt=2`, a
+`relay=local` delivery with **no `forwarded as`**, one Gmail delivery, and the
+message readable in the mailbox afterwards. It lives at
+**`/home/dmarc/mail/new/`** — `home_mailbox = mail/`, so maildir under the user's
+home, not `/var/mail`.
+
+#### Six traps on a two-line change, four of which reported success or silence
+
+Recorded because this document's own summary of the box — *"almost nothing in the
+system reports a disagreement"* — just produced six instances in one sitting.
+
+| # | Trap | How it presented |
+|---|---|---|
+| 1 | The file is named after its parameter: `/etc/postfix/virtual_alias_maps` | **silence** — a grep of the plausible names returns nothing, which reads as "no aliases" |
+| 2 | Bare `brian` takes `$myorigin` → `brian@surfguitar101.com` → a **virtual alias domain** → `5.1.1 User unknown` | would have bounced only the local half; the Gmail half keeps working, so mail to `admin@` still arrives |
+| 3 | `/etc/aliases` holds `brian: bgneal@gmail.com`, so `brian@localhost` forwards straight back out | **`status=sent`** — two forwards, no mailbox |
+| 4 | `dmarccopy: \brian` — **the backslash did not suppress expansion** | **`status=sent (forwarded as …)`**; that `forwarded as` is the only tell |
+| 5 | `home_mailbox = mail/`, so the maildir is `~/mail/` — not `/var/mail/`, not `~/Maildir/` | `ls` error |
+| 6 | `sudo cat dir/*` — the glob expands in the *unprivileged* shell, which cannot read a `0700` directory | `cat` error |
+
+**Traps 2 and 3 were caught by measuring before acting** — `postconf myorigin
+mydestination`, and a grep of `/etc/aliases` — rather than by failing. **Trap 4
+was not**: it was executed on my advice, the advice was wrong, and it looked like
+a clean success in the log. Only 5 and 6 announced themselves.
+
+#### What the test message confirmed incidentally
+
+The delivered copy's own headers settle three things previously read from
+configuration rather than observed:
+
+- **`From: brian@surfguitar101.com`** from an envelope of bare `brian` — task 10's
+  `sender_canonical_maps` rewrite, working in a fresh case.
+- **`d=surfguitar101.com; s=dkim`** — opendkim signs locally *submitted* mail.
+  That sharpens the distinction task 03 requirement 13 rests on: submission gets
+  signed, internally generated bounces do not, because milters do not apply to
+  them.
+- **`c=simple/simple`** — the canonicalization on the open list to change to
+  `relaxed/relaxed` before SPF reaches `-all`, now seen in a real signature
+  rather than in `postconf`.
+
+#### The 5.7.25 → 5.7.26 transition, caught in the log on the day it happened
+
+The same grep shows the PTR repair landing on 2026-08-17:
+
+| Time (CDT) | Rejection |
+|---|---|
+| 08:36, 11:06, 13:07 | `5.7.25` — no PTR record |
+| 16:15, 18:25, 18:31 | `5.7.26` — sender unauthenticated |
+
+**STATUS predicted exactly this** — that fixing reverse DNS *"only changes error
+code from `5.7.25` to `5.7.26`"* — and the prediction was written before this
+evidence existed.
+
+#### `tools/dmarc_report.py`
+
+Reports arrive as gzipped or zipped XML in base64, so the mailbox is unreadable
+without a decoder. The tool prints the reporter, the window, the published
+policy, and one row per sending source with its disposition and **the domain each
+mechanism was evaluated against** — which is where the bounce class shows
+`mail.surfguitar101.com`, and where the HELO SPF record published today will read
+as a pass or a fail.
+
+Kept **Python 3.4-safe** so it runs on jaguar as well as on the Mac (no
+f-strings, no `subprocess.run`, no `os.scandir`), and clean under
+`-W error::DeprecationWarning` on modern Python. Takes a maildir, a flat
+directory of files copied off the server, or a single file — **detecting mail vs
+`.gz` vs `.zip` vs raw XML from the bytes rather than the extension**, so a file
+renamed in transit still parses. Verified against synthetic reports in all of
+those shapes, plus an empty directory and a non-report message.
+
 ### Open
 
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
@@ -2567,9 +2666,11 @@ outright.
   `_dmarc`, `p=none` untouched. **`rua` could not have pointed at
   `bgneal@gmail.com`** — RFC 7489 §7.1 would need an authorization record inside
   `gmail.com`'s zone; same-organizational-domain needs none.
-  **What is now open is reading it**, and the instrument is jaguar's mail log
-  rather than the inbox, since the forward to Gmail can drop a malformed
-  Microsoft report and manufacture a false silence. First dependable arrivals
+  **What is now open is reading it.** The instrument is **not** the Gmail inbox:
+  the forward bounces third-party mail (above, demonstrated as recently as
+  08-19 23:30), so a malformed Microsoft report would vanish and manufacture a
+  false silence. **A local copy was added the same evening** —
+  `/home/dmarc/mail/new/`, read with `tools/dmarc_report.py`. First dependable arrivals
   2026-08-21 to 08-22; **a quiet first day is not a signal.** **Still not a
   blocker**: Microsoft deliverability is settled by task 07's Outlook inbox
   check, not by DMARC data.
