@@ -10,6 +10,8 @@ from django.conf import settings
 import django.core.mail
 from django.utils import timezone
 
+from core.email_categories import EmailCategory
+from .tasks import log_send
 from .tasks import send_mail as send_mail_task
 
 
@@ -41,14 +43,18 @@ def remove_file(path):
         os.remove(path)
 
 
-def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer=True):
+def send_mail(subject, message, from_email, recipient_list, reply_to=None,
+              defer=True, category=EmailCategory.UNCATEGORIZED):
     """
     The main send email function. Use this function to send email from the
     site. All applications should use this function instead of calling
     Django's directly.
     If defer is True, the email will be sent to a Celery task to actually send
-    the email. Otherwise it is sent on the caller's thread. In any event, the
-    email will be logged at the DEBUG level.
+    the email. Otherwise it is sent on the caller's thread.
+
+    category says why the site is sending, and is what makes email.log
+    countable by purpose. Callers should always pass one; the default exists
+    for the task's sake, not as an invitation.
 
     """
     # Guard against empty email addresses
@@ -56,9 +62,6 @@ def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer
     if not recipient_list:
         logging.warning("Empty recipient_list in send_mail")
         return
-
-    logging.debug('EMAIL:\nFrom: %s\nTo: %s\nReply-To: %s\nSubject: %s\nMessage:\n%s',
-        from_email, str(recipient_list), reply_to, subject, message)
 
     headers = {'Reply-To': reply_to} if reply_to else None
     msg_kwargs = {
@@ -70,10 +73,12 @@ def send_mail(subject, message, from_email, recipient_list, reply_to=None, defer
     }
 
     if defer:
-        send_mail_task.delay(**msg_kwargs)
+        send_mail_task.delay(category=category, **msg_kwargs)
     else:
+        # The task logs its own sends; this path has to log its own.
         msg = django.core.mail.EmailMessage(**msg_kwargs)
         msg.send()
+        log_send(category, msg_kwargs, 'sent')
 
 
 def email_admins(subject, message):
@@ -83,7 +88,8 @@ def email_admins(subject, message):
     send_mail(subject,
             message,
             '%s@%s' % (settings.GPP_NO_REPLY_EMAIL, site.domain),
-            [mail_tuple[1] for mail_tuple in settings.ADMINS])
+            [mail_tuple[1] for mail_tuple in settings.ADMINS],
+            category=EmailCategory.ADMIN_NOTIFICATION)
 
 
 def email_managers(subject, message):
@@ -93,7 +99,8 @@ def email_managers(subject, message):
     send_mail(subject,
             message,
             '%s@%s' % (settings.GPP_NO_REPLY_EMAIL, site.domain),
-            [mail_tuple[1] for mail_tuple in settings.MANAGERS])
+            [mail_tuple[1] for mail_tuple in settings.MANAGERS],
+            category=EmailCategory.ADMIN_NOTIFICATION)
 
 
 def get_full_name(user):

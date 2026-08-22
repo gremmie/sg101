@@ -13,6 +13,7 @@ from django.contrib.sites.models import Site
 from django.conf import settings
 
 import core.functions
+from core.email_categories import EmailCategory
 from core.functions import send_mail
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
@@ -235,7 +236,8 @@ class RegisterCodeForm(forms.Form):
                 })
 
         subject = 'Registration Confirmation for ' + site.name
-        send_mail(subject, msg, admin_email, [email])
+        send_mail(subject, msg, admin_email, [email],
+                  category=EmailCategory.REGISTRATION)
         logger.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
                     email, pending_user.username, self.ip)
         del self.session['reg_info']
@@ -273,7 +275,8 @@ class ForgotUsernameForm(forms.Form):
             'site': site,
             'admin_email': admin_email,
             })
-        send_mail(subject, msg, admin_email, [email])
+        send_mail(subject, msg, admin_email, [email],
+                  category=EmailCategory.FORGOT_USERNAME)
 
         logger.info('Forgotten username email sent to {} <{}>'.format(
             ', '.join(u.username for u in users), email))
@@ -315,7 +318,8 @@ class SitePasswordResetForm(PasswordResetForm):
         from_email = from_email or settings.DEFAULT_FROM_EMAIL
 
         try:
-            core.functions.send_mail(subject, body, from_email, [to_email])
+            core.functions.send_mail(subject, body, from_email, [to_email],
+                                     category=EmailCategory.PASSWORD_RESET)
         except Exception:
             # Django's own form swallows failures here so that a broken mail
             # path cannot return a 500 from the reset page, which would also

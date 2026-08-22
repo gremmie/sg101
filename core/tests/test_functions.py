@@ -1,9 +1,12 @@
+import inspect
+import logging
 import unittest
 
 from django.http.request import HttpRequest
 from django.utils import timezone
 from unittest.mock import call, patch, mock_open, Mock
 
+from core.email_categories import EmailCategory
 from core.functions import (TemporaryFile, remove_file, send_mail, email_admins,
     email_managers, get_full_name, copyright_str, get_ip, get_page, is_ajax,
     quote_message)
@@ -53,23 +56,72 @@ class SendMailTestCase(unittest.TestCase):
     @patch('core.functions.send_mail_task')
     def test_task_case(self, task_mock):
         send_mail('Subject', 'Message', 'From', ['bob@example.com'],
-                  reply_to='admin@example.com', defer=True)
+                  reply_to='admin@example.com', defer=True,
+                  category=EmailCategory.REGISTRATION)
 
         self.assertEqual(task_mock.delay.mock_calls, [
             call(body='Message', to=['bob@example.com'], from_email='From',
-                 headers={'Reply-To': 'admin@example.com'}, subject='Subject'),
+                 headers={'Reply-To': 'admin@example.com'}, subject='Subject',
+                 category=EmailCategory.REGISTRATION),
         ])
+
+    @patch('core.functions.send_mail_task')
+    def test_category_defaults_to_uncategorized(self, task_mock):
+        send_mail('Subject', 'Message', 'From', ['bob@example.com'])
+
+        self.assertEqual(task_mock.delay.mock_calls[0].kwargs['category'],
+                         EmailCategory.UNCATEGORIZED)
 
     @patch('core.functions.django.core.mail')
     def test_django_case(self, mail_mock):
+        # defer=False: the message is built and sent here rather than handed
+        # to the task. Previously this passed defer=True and reached
+        # EmailMessage through the eagerly-executed task, so it did not test
+        # what its name says.
         send_mail('Subject', 'Message', 'From', ['bob@example.com'],
-                  reply_to='admin@example.com', defer=True)
+                  reply_to='admin@example.com', defer=False)
 
         self.assertEqual(mail_mock.EmailMessage.mock_calls, [
             call(body='Message', to=['bob@example.com'], from_email='From',
                  headers={'Reply-To': 'admin@example.com'}, subject='Subject'),
             call().send(),
         ])
+
+    @patch('core.functions.django.core.mail')
+    def test_the_inline_path_is_logged_too(self, mail_mock):
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail('Subject', 'Message', 'From', ['bob@example.com'],
+                      defer=False, category=EmailCategory.ADMIN_NOTIFICATION)
+
+        self.assertIn('category=admin_notification', logged.output[0])
+        self.assertIn('outcome=sent', logged.output[0])
+
+    @patch('core.functions.django.core.mail')
+    def test_no_recipients_logs_no_send_line(self, mail_mock):
+        # defer=False rather than a mocked task: with the task mocked, no line
+        # is written whether or not the guard fires, and the test passes for
+        # the wrong reason.
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            logging.getLogger('email').info('marker')
+            send_mail('Subject', 'Message', 'From', [''], defer=False)
+
+        self.assertEqual([line for line in logged.output if 'outcome=' in line],
+                         [])
+        self.assertFalse(mail_mock.EmailMessage.mock_calls)
+
+    def test_the_debug_body_log_is_gone(self):
+        # One code path with two logging schemes, and a body dump one settings
+        # change away from production, is what this replaced.
+        source = inspect.getsource(send_mail)
+        self.assertNotIn('Message:', source)
 
 
 class EmailAdminsTestCase(unittest.TestCase):
@@ -90,7 +142,8 @@ class EmailAdminsTestCase(unittest.TestCase):
 
         self.assertEqual(send_mail_mock.mock_calls, [
             call('[Site] Subject', 'Message', 'nope@site.com',
-                 ['alice@example.com', 'bob@example.com']),
+                 ['alice@example.com', 'bob@example.com'],
+                 category=EmailCategory.ADMIN_NOTIFICATION),
         ])
 
 
@@ -112,7 +165,8 @@ class EmailManagersTestCase(unittest.TestCase):
 
         self.assertEqual(send_mail_mock.mock_calls, [
             call('[Site] Subject', 'Message', 'nope@site.com',
-                 ['alice@example.com', 'bob@example.com']),
+                 ['alice@example.com', 'bob@example.com'],
+                 category=EmailCategory.ADMIN_NOTIFICATION),
         ])
 
 

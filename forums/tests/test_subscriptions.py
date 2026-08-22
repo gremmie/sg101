@@ -6,12 +6,15 @@ bookmarks. The two view modules are near-parallel, but differ in one telling way
 subscribing to an inaccessible topic raises Http404 while favoriting one returns
 403 -- both are pinned below.
 """
+import logging
+
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
 
 from forums.models import Forum, Post, Topic
+from forums.views.subscriptions import notify_topic_subscribers
 
 
 def make_topic(forum, user, name='a topic'):
@@ -63,6 +66,24 @@ class SubscriptionTests(TestCase):
             reverse('forums-subscribe_topic', args=[self.topic.id]))
         self.assertEqual(response.status_code, 404)
         self.assertNotIn(self.member, self.topic.subscribers.all())
+
+    def test_the_notification_is_categorized(self):
+        # setUp's member has no email address, and the wrapper drops empty
+        # recipients before it sends anything.
+        self.member.email = 'member@example.com'
+        self.member.save()
+        self.topic.subscribers.add(self.member)
+        reply = Post.objects.create(topic=self.topic, user=self.author,
+                                    body='a reply')
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            notify_topic_subscribers(reply, defer=False)
+
+        self.assertIn('category=topic_notification', logged.output[0])
 
     def test_unsubscribe_removes_user(self):
         self.topic.subscribers.add(self.member)

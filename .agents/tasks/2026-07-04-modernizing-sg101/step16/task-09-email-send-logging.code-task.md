@@ -176,12 +176,21 @@ Thirty lines a day is nothing beside what `sg101.log` already carries, so the
 premise for `propagate: False` simply is not present here. Copying it would
 inherit a decision whose justification does not apply.
 
-With `propagate: True` the records reach **both** files: the complete audit trail
-in `email.log`, and delivery failures in `sg101.log`, which is where anyone
-debugging an incident looks first. That duplication is the point, not a defect —
-an audit log and an error log have different readers and different retention. It
-also means logger naming and main-log inclusion stay independent decisions;
-conflating them is what produced the wrong recommendation first time.
+With `propagate: True` the records reach **both** files. That duplication is the
+point, not a defect — an audit log and an error log have different readers and
+different retention. It also means logger naming and main-log inclusion stay
+independent decisions; conflating them is what produced the wrong recommendation
+first time.
+
+**⚠️ CORRECTED 2026-08-21 during execution — this paragraph said `sg101.log`
+receives "delivery failures", and it receives everything.** Every line at INFO
+and above lands in both files, successes included. The mechanism is the part
+that misleads: a propagated record is offered to each handler up the chain, and
+**the ancestor logger's own level is never re-checked** — `root` being `INFO`
+filters nothing, only the `file` handler's own level applies, and it is `DEBUG`.
+Measured rather than read: one send, `grep -c` in each file, one hit in each.
+The behaviour is what was wanted at ~30 messages a day; only the description of
+it was wrong.
 
 ```python
 'email': {

@@ -17,6 +17,7 @@ from forums.models import Category, Forum, ForumLastVisit
 from sg101.celery import app
 from core.tasks import cleanup
 from core.tasks import max_users
+from core.email_categories import EmailCategory
 from core.tasks import MAX_RETRIES, send_mail
 
 
@@ -144,7 +145,8 @@ class SendMailRetryTestCase(TestCase):
             smtplib.SMTPRecipientsRefused({'member@example.com': (550, b'no')})
 
         with self.assertLogs('email', level='ERROR') as logged:
-            send_mail.s(**self.KWARGS).apply()
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
 
         self.assertEqual(len(logged.records), 1)
         message = logged.output[0]
@@ -157,7 +159,8 @@ class SendMailRetryTestCase(TestCase):
             smtplib.SMTPException('provider unreachable')
 
         with self.assertLogs('email', level='ERROR') as logged:
-            result = send_mail.s(**self.KWARGS).apply()
+            result = send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
 
         self.assertEqual(email_mock.return_value.send.call_count,
                          MAX_RETRIES + 1)
@@ -173,10 +176,141 @@ class SendMailRetryTestCase(TestCase):
             smtplib.SMTPException('provider unreachable')
 
         with self.assertLogs('email', level='ERROR') as logged:
-            send_mail.s(**self.KWARGS).apply()
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
 
         for line in logged.output:
             self.assertNotIn('secret body text', line)
+
+
+class SendMailLoggingTestCase(TestCase):
+    """One line per message, carrying the outcome.
+
+    The line is written where the send happens rather than where it is queued,
+    so it can say what became of the message. A line written at dispatch could
+    only report intent.
+    """
+    KWARGS = {
+        'subject': 'Confirm your registration',
+        'body': 'secret body text that must not be logged',
+        'from_email': 'admin@surfguitar101.com',
+        'to': ['member@example.com'],
+    }
+
+    def setUp(self):
+        # The suite disables logging globally (settings/test.py) and that beats
+        # assertLogs, whose records never reach its handler otherwise.
+        self.old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, self.old_disable)
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_successful_send_logs_one_line(self, email_mock):
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
+
+        self.assertEqual(len(logged.records), 1)
+        line = logged.output[0]
+        self.assertIn('category=registration', line)
+        self.assertIn('to=member@example.com', line)
+        self.assertIn('from=admin@surfguitar101.com', line)
+        self.assertIn('outcome=sent', line)
+        self.assertIn('Confirm your registration', line)
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_the_line_never_contains_the_body(self, email_mock):
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
+
+        self.assertNotIn('secret body text', logged.output[0])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_a_task_queued_without_a_category_still_runs(self, email_mock):
+        # Celery can hold tasks serialized by the previous code across a
+        # deploy. The default is what keeps that mail moving.
+        with self.assertLogs('email', level='INFO') as logged:
+            result = send_mail.s(**self.KWARGS).apply()
+
+        self.assertTrue(result.successful())
+        self.assertIn('category=uncategorized', logged.output[0])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_category_is_not_passed_to_the_message(self, email_mock):
+        # EmailMessage raises on an unexpected keyword, so category has to be
+        # an explicit parameter rather than part of **kwargs.
+        send_mail.s(category=EmailCategory.REGISTRATION, **self.KWARGS).apply()
+
+        self.assertEqual(email_mock.mock_calls, [
+            call(**self.KWARGS), call().send(),
+        ])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_member_authored_subjects_are_redacted(self, email_mock):
+        kwargs = dict(self.KWARGS, subject='Re: your amp settings')
+
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail.s(category=EmailCategory.PM_NOTIFICATION, **kwargs).apply()
+
+        self.assertIn('category=pm_notification', logged.output[0])
+        self.assertIn('<redacted>', logged.output[0])
+        self.assertNotIn('your amp settings', logged.output[0])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_permanent_failure_says_so_in_the_line(self, email_mock):
+        # Distinguishable by a value, not by the absence of a line.
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPRecipientsRefused({'member@example.com': (550, b'no')})
+
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
+
+        self.assertNotIn('outcome=sent', logged.output[0])
+        self.assertIn('outcome=failed', logged.output[0])
+        self.assertIn('category=registration', logged.output[0])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_a_retry_is_logged_before_the_eventual_success(self, email_mock):
+        email_mock.return_value.send.side_effect = [
+            smtplib.SMTPException('connection reset'),
+            None,
+        ]
+
+        with self.assertLogs('email', level='INFO') as logged:
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
+
+        outcomes = [line for line in logged.output if 'outcome=' in line]
+        self.assertEqual(len(outcomes), 2)
+        self.assertIn('outcome=retrying', outcomes[0])
+        self.assertIn('outcome=sent', outcomes[1])
+
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_giving_up_says_failed(self, email_mock):
+        email_mock.return_value.send.side_effect = \
+            smtplib.SMTPException('provider unreachable')
+
+        with self.assertLogs('email', level='ERROR') as logged:
+            send_mail.s(category=EmailCategory.REGISTRATION,
+                        **self.KWARGS).apply()
+
+        self.assertIn('outcome=failed', logged.output[-1])
+
+    @patch('core.tasks.logger')
+    @patch('core.tasks.django.core.mail.EmailMessage')
+    def test_a_logging_failure_does_not_stop_the_send(self, email_mock,
+                                                      logger_mock):
+        # A broken log line must never cost someone their registration
+        # confirmation.
+        logger_mock.log.side_effect = ValueError('bad format string')
+
+        result = send_mail.s(category=EmailCategory.REGISTRATION,
+                             **self.KWARGS).apply()
+
+        self.assertTrue(result.successful())
+        self.assertEqual(email_mock.return_value.send.call_count, 1)
 
 
 class BeatScheduleTestCase(SimpleTestCase):

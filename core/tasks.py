@@ -10,13 +10,14 @@ import smtplib
 import django.core.mail
 from celery import shared_task
 
+from core.email_categories import EmailCategory, subject_for_log
 import core.whos_online
 
 
 # Named for the subsystem rather than the module, matching the 'auth' and
 # 'search' loggers: mail failures belong in the same file as the per-send log,
-# not split across two. Until that handler exists this propagates to the root
-# logger exactly as a module-named logger would.
+# not split across two. It propagates as well as writing there, so failures
+# reach sg101.log, which is where anyone debugging an incident looks first.
 logger = logging.getLogger('email')
 
 # Failures that recur identically on every attempt: a recipient the server
@@ -34,6 +35,33 @@ PERMANENT_ERRORS = (
 # mid-conversation, or answering 4xx. OSError covers the socket-level cases,
 # including the timeout EMAIL_TIMEOUT now imposes.
 TRANSIENT_ERRORS = (smtplib.SMTPException, OSError)
+
+
+def log_send(category, kwargs, outcome, level=logging.INFO, detail=None):
+    """Write the one line per message that email.log exists for.
+
+    Recipients are recorded in full, following the search log: answering "did
+    this member get their confirmation" is the operational reason the file
+    exists. The body never is, and neither is a subject a member wrote.
+
+    Guarded, because a broken log line must never cost someone their
+    registration confirmation. There is nowhere reliable to report a logging
+    failure -- the reporting is what failed -- so it is swallowed.
+    """
+    try:
+        message = 'category=%s to=%s from=%s outcome=%s subject=%s'
+        args = [category,
+                ','.join(kwargs.get('to') or []),
+                kwargs.get('from_email'),
+                outcome,
+                subject_for_log(category, kwargs.get('subject'))]
+        if detail:
+            message += ' detail=%s'
+            args.append(detail)
+        logger.log(level, message, *args)
+    except Exception:
+        pass
+
 
 MAX_RETRIES = 5
 RETRY_BACKOFF_BASE = 4
@@ -56,11 +84,14 @@ def _retry_countdown(retries):
 
 
 @shared_task(bind=True, max_retries=MAX_RETRIES, acks_late=True)
-def send_mail(self, **kwargs):
+def send_mail(self, category=EmailCategory.UNCATEGORIZED, **kwargs):
     """
     A task to send mail via Django.
 
-    kwargs must be a dict of keyword arguments for an EmailMessage.
+    kwargs must be a dict of keyword arguments for an EmailMessage. category
+    is separate from them because EmailMessage raises on an unexpected keyword,
+    and it has a default so that tasks serialized by the previous code -- which
+    Celery can still be holding across a deploy -- keep running.
 
     Retries transient failures. This used to be a bare send with no retry at
     all, which was safe only because the far end was a mail server on
@@ -79,10 +110,9 @@ def send_mail(self, **kwargs):
     msg = django.core.mail.EmailMessage(**kwargs)
     try:
         msg.send()
-    except PERMANENT_ERRORS:
-        logger.exception('Permanent failure sending mail; not retrying. '
-                         'To: %s Subject: %s',
-                         kwargs.get('to'), kwargs.get('subject'))
+    except PERMANENT_ERRORS as exc:
+        log_send(category, kwargs, 'failed', logging.ERROR,
+                 detail='permanent failure, not retrying: %s' % exc)
         raise
     except TRANSIENT_ERRORS as exc:
         if self.request.retries >= self.max_retries:
@@ -90,12 +120,16 @@ def send_mail(self, **kwargs):
             # this is the last chance to say the message was dropped. A
             # silently lost confirmation is the failure this task exists to
             # prevent; if it happens anyway it must be visible.
-            logger.error('Giving up sending mail after %d attempts: %s. '
-                         'To: %s Subject: %s',
-                         self.request.retries + 1, exc,
-                         kwargs.get('to'), kwargs.get('subject'))
+            log_send(category, kwargs, 'failed', logging.ERROR,
+                     detail='gave up after %d attempts: %s'
+                            % (self.request.retries + 1, exc))
+        else:
+            log_send(category, kwargs, 'retrying', logging.WARNING,
+                     detail=str(exc))
         raise self.retry(exc=exc,
                          countdown=_retry_countdown(self.request.retries))
+    else:
+        log_send(category, kwargs, 'sent')
 
 
 @shared_task

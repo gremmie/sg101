@@ -2,6 +2,8 @@
 Unit tests for the contact application views.
 
 """
+import logging
+
 from unittest.mock import patch, Mock
 from django.test import TestCase
 from django.conf import settings
@@ -31,7 +33,17 @@ class BaseTestCase(TestCase):
             'message': 'Testing contact form.',
             'g-recaptcha-response': 'crazy-google-string',
         }
-        response = self.client.post(self.url, data=post_data, follow=True)
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            response = self.client.post(self.url, data=post_data, follow=True)
+
+        # A member wrote this subject, so the log records the category in its
+        # place.
+        self.assertIn('category=contact_form', logged.output[0])
+        self.assertNotIn('Test message', logged.output[0])
         self.assertRedirects(response, reverse('contact-thanks'))
 
         self.assertEqual(len(mail.outbox), 1)

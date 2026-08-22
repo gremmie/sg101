@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from forums.models import Topic
 import forums.permissions as perms
+from core.email_categories import EmailCategory
 from core.functions import send_mail
 from core.paginator import DiggPaginator
 
@@ -44,7 +45,8 @@ def notify_topic_subscribers(post, defer=True):
                 })
         for recipient in recipients:
             send_mail(subject, msg, settings.DEFAULT_FROM_EMAIL, [recipient],
-                    defer=defer)
+                    defer=defer,
+                    category=EmailCategory.TOPIC_NOTIFICATION)
 
 
 @login_required

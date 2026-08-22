@@ -122,6 +122,20 @@ LOGGING = {
             'backupCount': 5,
             'encoding': 'utf-8',
         },
+        # Every message the site sends, one line each, no bodies. Django's crash
+        # mail is not here: AdminEmailHandler sends outside the site's mail
+        # wrapper, so error reports are neither categorised nor counted, and a
+        # line count of this file undercounts total sends by that many.
+        'email': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'filename': os.path.join(PROJECT_PATH, 'logs', 'email.log'),
+            'mode': 'a',
+            'maxBytes': 2 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+        },
         'mail_admins': {
             'class': 'django.utils.log.AdminEmailHandler',
             'level': 'ERROR',
@@ -146,6 +160,20 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
             'handlers': ['search'],
+        },
+        # propagate: True, unlike auth and search. Those two keep their volume
+        # out of sg101.log; thirty messages a day is not volume. Every line
+        # therefore lands in both files -- successes included, not just
+        # failures: a propagated record is offered to each handler up the
+        # chain, and the ancestor logger's own level is never re-checked, so
+        # root's INFO does not filter it. That is wanted. email.log is the
+        # audit trail, and sg101.log is where anyone debugging an incident
+        # looks first. Never add mail_admins here: that handler sends email, so
+        # an alert about mail failing would fail the same way.
+        'email': {
+            'level': 'INFO',
+            'propagate': True,
+            'handlers': ['email'],
         },
         # Markdown logs a DEBUG record per extension as it builds a parser --
         # four of them, and core.markup builds one per render. This entry is

@@ -3,6 +3,7 @@ Unit tests for the messages application views.
 
 """
 import datetime
+import logging
 
 from django.test import TestCase
 from django.urls import reverse
@@ -617,6 +618,27 @@ class BasicTestCase(TestCase):
         self.assertContains(response, "Your outbox is full", status_code=200)
         self.assertEqual(Message.objects.all().count(), self.MSG_BOX_LIMIT)
 
+    def test_email_export_is_categorized(self):
+        post_data = {
+            'receiver': 'eddie',
+            'subject': 'Mr. Moto Demo',
+            'message': 'Gig at Newport High School',
+        }
+        self.client.post(reverse('messages-compose'), data=post_data)
+        msg = Message.objects.get(receiver=self.users['eddie'])
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            self.client.post(reverse('messages-bulk'), follow=True, data={
+                'pm_ids': [msg.id],
+                'action': 'Email',
+            })
+
+        self.assertIn('category=pm_notification', logged.output[-1])
+
     def test_email_export(self):
 
         post_data = {
@@ -685,6 +707,22 @@ class EmailTestCase(TestCase):
             self.assertEqual(len(email.recipients()), 1)
             self.assertEqual(email.recipients()[0], 'eddie@example.com')
             self.assertTrue(email.subject.startswith('New private message'))
+
+    def test_the_notification_is_categorized(self):
+        opts = Options.objects.for_user(self.users['eddie'])
+        opts.notify_email = True
+        opts.save()
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            self._test_email(True)
+
+        self.assertIn('category=pm_notification', logged.output[0])
+        # The subject is a member's own words.
+        self.assertNotIn('Mr. Moto Demo', logged.output[0])
 
     def test_email_sent(self):
         # eddie elects to receive email notifications

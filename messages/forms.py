@@ -9,6 +9,7 @@ from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.template.loader import render_to_string
 
+from core.email_categories import EmailCategory
 from core.functions import send_mail
 from core.html import ImageCheckError
 from core.html import image_check
@@ -156,4 +157,5 @@ def notify_receiver(new_msg):
 
     subject = 'New private message for %s at %s' % (new_msg.receiver.username, site.name)
     from_email = settings.GPP_NO_REPLY_EMAIL + '@' + site.domain
-    send_mail(subject, email_body, from_email, [new_msg.receiver.email])
+    send_mail(subject, email_body, from_email, [new_msg.receiver.email],
+              category=EmailCategory.PM_NOTIFICATION)

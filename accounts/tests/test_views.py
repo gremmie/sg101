@@ -386,8 +386,14 @@ class RegistrationTest(TestCase):
             self.fail("PendingUser was created early")
 
         # Try good code
-        response = self.client.post(reverse('accounts-register2'),
-                                    {'code': code })
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            response = self.client.post(reverse('accounts-register2'),
+                                        {'code': code })
+        self.assertIn('category=registration', logged.output[0])
         self.assertRedirects(response, reverse('accounts-register_thanks'))
         self.assertIsNone(self.client.session.get('reg_info'))
 
@@ -466,6 +472,18 @@ class ForgotUsernameTest(TestCase):
         self.assertRedirects(response, reverse('accounts-username_sent'))
 
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_the_send_is_categorized(self):
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            self.client.post(reverse('accounts-username_query'), {
+                'email': 'existing_user@example.com',
+                }, follow=True)
+
+        self.assertIn('category=forgot_username', logged.output[0])
 
     def test_valid_email(self):
         """Test form submittal of valid email address."""
@@ -651,6 +669,17 @@ class PasswordResetRoutingTest(TestCase):
         from_email = send_mail_mock.call_args[0][2]
         self.assertIsNotNone(from_email)
         self.assertNotEqual(from_email, 'None')
+
+    def test_the_send_is_categorized(self):
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            self.client.post(reverse('accounts-password_reset'),
+                             {'email': 'user1@example.com'}, follow=True)
+
+        self.assertIn('category=password_reset', logged.output[0])
 
     @patch('core.functions.send_mail')
     def test_a_failing_send_does_not_500_the_reset_page(self, send_mail_mock):

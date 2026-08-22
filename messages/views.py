@@ -20,6 +20,7 @@ from messages.models import Flag, Message, Options
 from messages.forms import OptionsForm, ComposeForm, ReportForm
 from messages.utils import reply_subject
 from messages import MSG_BOX_LIMIT
+from core.email_categories import EmailCategory
 from core.functions import email_admins, quote_message, send_mail
 
 
@@ -412,7 +413,8 @@ def _email_pms(request, msg_ids):
                     'msgs': msgs,
                     'admin_email': admin_email,
                 })
-    send_mail(subject, msg_body, from_email, [email_addr])
+    send_mail(subject, msg_body, from_email, [email_addr],
+              category=EmailCategory.PM_NOTIFICATION)
 
     msg = '{} message{} sent to email.'.format(count, '' if count == 1 else 's')
     if count > 0:
