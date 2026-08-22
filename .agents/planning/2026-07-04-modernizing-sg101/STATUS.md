@@ -515,6 +515,135 @@ Test count 874 → 877.
 **Next: task 05** (verified email address changes), which is what the shared
 helper exists for.
 
+## Step 16 task 09 — one line per email, and a category that cannot go unclassified — DONE 2026-08-21, `1763704f`, PUSHED, CI GREEN
+
+904 tests green (877 before), check clean, no migrations, deprecation gate green.
+Every message the site sends now writes one INFO line to a dedicated
+`email.log` **at send time, so it carries the outcome rather than the intent**:
+
+```
+category=registration to=member@example.com from=admin@surfguitar101.com outcome=sent subject=Confirm your registration
+category=pm_notification to=other@example.com from=no_reply@surfguitar101.com outcome=sent subject=<redacted>
+```
+
+`outcome` is `sent` / `retrying` / `failed`, so a failure is distinguishable by a
+value rather than by a missing line. Recipients in full, following `search.log`'s
+precedent — answering *"did this member get their confirmation"* is the
+operational reason the file exists, and this step has spent a week unable to
+answer exactly that from Postfix logs. The body never appears, and neither does a
+subject a member wrote.
+
+**Brian's two calls at the design step**, both recorded before implementation:
+full addresses rather than a count plus a hash, and subjects verbatim **except**
+`pm_notification` and `contact_form`, whose subject lines are member-authored.
+The third — Django's `AdminEmailHandler` — he declined, so crash reports are not
+categorised or counted; **named in the settings handler comment rather than left
+silent**, since a line count of `email.log` undercounts total sends by that many,
+and STATUS expects a run of them until cutover.
+
+### The enum, and the argument that actually decided it
+
+`core/email_categories.py` holds an `enum.StrEnum`. **Measured on the container's
+Python 3.12 rather than assumed**: a plain `Enum` raises `TypeError` under
+`json.dumps` — which is what Celery does to task arguments — and formats as
+`EmailCategory.REGISTRATION`; `StrEnum` does neither, and compares equal to the
+bare string, which is also what keeps requirement 4's in-flight tasks working.
+
+**The deciding argument was not typo safety.** Brian asked for the pros and cons
+of constants, and the honest answer was that the tests pin each call site either
+way. What settled it is that an enum is *enumerable*, so a test can assert
+`set(EmailCategory) == SUBJECT_SAFE | SUBJECT_REDACTED`. **That makes adding a
+category without classifying it impossible to commit**, where the allowlist alone
+only made the omission fail safely. Both are kept: the allowlist guards runtime,
+the test guards the set. `SUBJECT_REDACTED` has no runtime consumer and carries a
+comment saying so, so nobody deletes it as dead code.
+
+### Three things the task file had wrong
+
+1. **Requirement 5's password-reset half was already built.** Task 02 (`7f316dd`)
+   added `SitePasswordResetForm` and wired it through `form_class`. Reset already
+   reached the wrapper and Celery; this task only had to pass a category. No
+   separate commit, no behaviour change.
+2. **"Fourteen call sites" is nine.** `email_admins` and `email_managers` are
+   themselves wrappers with many callers, so categorising inside those two covers
+   the whole `admin_notification` family in one place.
+3. **The `assertLogs` idiom already existed.** `settings/test.py` disables logging
+   globally, which beats `assertLogs`; `core/tests/test_tasks.py:84` already
+   re-enables it in `setUp` with `addCleanup`, and task 02 even left a fixture
+   body reading `'secret body text that must not be logged'`.
+
+### `uncategorized` is redacted, and two task 02 tests said so
+
+Two of task 02's failure tests broke: they send without a category, and
+`uncategorized` is in the redacted set, so their subject vanished from the
+failure line. **The fix was to give those tests a category, not to weaken the
+assertion** — every real caller passes one now. Keeping `uncategorized` redacted
+is the fail-safe direction: the case it protects against (a caller who forgets a
+category on member-authored mail) is likelier than the case it costs (a
+short-lived in-flight task logging a failure without its subject).
+
+### The propagation claim was wrong, and a measurement fixed it
+
+The task file said `propagate: True` puts *"the complete audit trail in
+`email.log`, and delivery failures in `sg101.log`."* **It puts everything in
+both.** A propagated record is offered to each handler up the chain and **the
+ancestor logger's own level is never re-checked**, so `root` being `INFO` filters
+nothing — only the `file` handler's level applies, and it is `DEBUG`. Found when
+Brian asked why the levels differ between `production.py` and `local.py`.
+Verified with one send and `grep -c` in each file: one hit in each. The behaviour
+is what was wanted at ~30 messages a day; only its description was wrong.
+Corrected in both settings modules and in the task file.
+
+*(The levels themselves, since the question is a fair one to ask again:
+formatters have none. Only handlers and loggers do, and a record must clear
+both. The only real production/local differences are `root` and `auth`, DEBUG on
+a dev box and INFO in production. For `search` and `email` the logger is INFO in
+both, so local's DEBUG handler changes nothing — local handlers are uniformly
+DEBUG by convention so they are never the constraint.)*
+
+### Two test defects found on the way
+
+1. **`core/tests/test_functions.py::test_django_case` was testing the wrong
+   path.** It passed `defer=True` while claiming to cover the inline send, and
+   reached `EmailMessage` through the eagerly-executed Celery task — the patch
+   target resolves to the same module object either way, so it passed for a
+   reason unrelated to its name. Now `defer=False`.
+2. **One of this task's own tests was vacuous.** `test_no_recipients_logs_no_send_line`
+   mocked the task, so no line is written whether the empty-recipient guard fires
+   or not; it would have passed with the guard deleted. Rewritten against
+   `defer=False`, and mutation 5 below now fails it.
+
+### Mutation verification — five, each seen to fail
+
+| Mutation | Result |
+|---|---|
+| guard removed from `log_send` | 1 failure |
+| `subject_for_log` never redacts | 5 failures |
+| wrapper drops `category` on `delay()` | 2 failures |
+| a ninth enum member left unclassified | 1 failure — the exhaustiveness test |
+| empty-recipient guard removed | 2 failures |
+
+Per [[mutation-verify-or-it-is-not-coverage]]. The forums call-site test also
+failed for a fixture reason worth keeping: `setUp` creates its member with an
+empty email address, and the wrapper drops empty recipients before sending —
+the guard working, discovered by walking into it.
+
+### End-to-end, because no unit test covers the settings wiring
+
+Two real sends under `sg101.settings.docker`, read back out of
+`sg101/logs/email.log` (gitignored by `*.log`). The handler creates its own file
+and the redaction fires. The suite proves the mechanism; only this proves the
+configuration.
+
+### What is still owed
+
+The task's own step 9: **after a month in production, compare the measured
+totals against the estimates in STATUS and record the delta.** That cannot start
+until this is deployed, and **the pre-cutover window is the only chance to
+collect a jaguar-side baseline** — which is why this task went first among the
+four that were unblocked. Postmark's dashboard will give a total with no
+category breakdown; this is what makes a discrepancy explainable.
+
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
 No code. Four DNS records published by hand in Cloudflare, one Postfix parameter
