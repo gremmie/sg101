@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-22
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -2987,6 +2987,103 @@ The surviving conclusion — that the throttle is message-specific rather than
 IP-wide — rests on the `4.7.28` census, which was date-safe, and not on the
 broken count.
 
+### Sixth reading — 2026-08-22, covering 2026-08-21: three reporters, and the first window re-read from an immutable source
+
+**Five reports in the maildir, from three reporting organizations** — the first
+reading in which Google is not the only voice.
+
+| Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|
+| `google.com` | `1291292834730335860` | 2026-08-20 | 5 | 0 |
+| `Yahoo` | `1787378132.213085` | 2026-08-21 | 2 | 0 |
+| `Yahoo` | `1787378132.213034` | 2026-08-21 | 2 | 0 |
+| `comcast.net` | `v2-1787362929-surfguitar101.com` | 2026-08-21 | 3 | 0 |
+| `google.com` | `9674723540522333898` | 2026-08-21 | 3 | 0 |
+
+**2026-08-21: 10 messages, 3 reporters, 0 aligned on neither mechanism.** Also
+the first reading to record reporter, Report-ID and window for every report — the
+convention was adopted on 08-21 with only one report to apply it to.
+
+#### Comcast is observed directly — the inference is closed
+
+`org_name` reads `comcast.net`, contact `dmarc-admin@alerts.comcast.net`. The
+Open list has carried *"no reporter other than Google has ever been observed
+directly"* since 08-21, with Comcast deduced from a +24 message delta on a
+dashboard that never names reporters. **It is now read rather than deduced, by
+the instrument that Open item named for the purpose.** Comcast reported the 08-21
+window and not the 08-20 one, consistent with a receiver that files only for
+windows in which it received mail.
+
+#### swbell is Yahoo — a second receiver assumed, and refuted before it was recorded
+
+Three sender names arrived in Brian's Gmail: Comcast, swbell and Yahoo. **Only
+two reporting organizations stand behind them.** Both Yahoo reports carry
+identical `org_name` (`Yahoo`) and contact (`dmarchelp@yahooinc.com`), cover the
+same window, and their Report-IDs share the batch prefix `1787378132.` differing
+only in suffix — that prefix decoding to **2026-08-22 05:55:32Z**, one generation
+run emitting two reports. AT&T consumer mail (`swbell.net`) has been
+Yahoo-operated for years.
+
+**Count Yahoo as one reporting organization.** Taking swbell as an independent
+corroboration would have inflated the reporter base by half, in the one direction
+requirement 2 cares about.
+
+**A limit of the format, worth stating once:** an aggregate report never names the
+*recipient* domain, so which of the two covers `swbell.net` cannot be read from
+the report body — only from the carrying message's headers.
+
+#### The 08-20 window reproduced exactly, and that settles what "tripled" meant
+
+Google Report-ID `1291292834730335860` is **the same report the fifth reading
+read**, and it returns identical rows: 5 messages, the count-1
+`spf:mail.surfguitar101.com=pass` HELO row and the count-4 MAIL FROM row. Under
+the convention that the most recent row stays provisional until a later reading
+reproduces it, **2026-08-20 is confirmed.**
+
+It also explains the fourth reading's tripling. **A report keyed by Report-ID is
+immutable — re-reading one cannot change it.** What tripled was a *dashboard
+aggregate* absorbing reports that arrived later, from reporters it declines to
+name. The direction of error is therefore known: **per-report readings only ever
+gain reports for a window, never revise one. 2026-08-21's 10 messages are a
+floor, not a total** — Microsoft, or any receiver yet to file, would add to it.
+
+#### What held steady
+
+- **One sending source.** Every aligned row is `173.255.245.115`. Five days, now
+  three reporters, and no unknown sender has ever appeared.
+- **The member's Gmail forward recurs** — `209.85.220.41`, SPF `fail` (evaluated
+  against `gmail.com`, therefore unaligned), DKIM aligned pass, disposition none.
+  Still the evidence that **DKIM carries forwarded mail through DMARC**, which is
+  the argument that taking SPF to `-all` is survivable.
+- **No HELO row on 08-21**, as expected: that row was the deliberate null-sender
+  test of 08-20 and nothing generated another. Its absence is not a regression of
+  the HELO SPF record, which remains confirmed by the 08-20 report above.
+- **Still no Microsoft** — day two of the 08-21/08-22 window.
+
+#### `policy_published` is the reporter's rendering, not a transcript of the zone
+
+Yahoo reports `sp=-` (absent) where Google and Comcast report `sp=none`. The
+published record is `p=none` with no `sp` tag, so Yahoo echoes DNS while the
+other two render the RFC default. **The reporters disagree while the zone is
+constant** — worth knowing before anyone diffs that block across reporters hoping
+to detect a zone change.
+
+#### The reconciliation fix proved itself on real data
+
+7 files read, 5 reports, **2 named as carrying none**: the "rua test 2" message
+of 08-21 03:04:23Z and the Django error mail of 08-21 06:09:19Z. That is the gap
+found by walking into it during the fifth reading, now closed against a maildir
+holding more than twice the files.
+
+**The Django 500 is neither new nor mail-related, and reading the arrival alone
+suggested it was.** Its subject and its coincidence with the `4.7.28` throttle
+the same day made a send failure 500ing the reset view look plausible, and that
+hypothesis was put to Brian before the record was checked. It is the
+`NoReverseMatch` already diagnosed in the fifth reading — same file, same
+timestamp — fixed on `modernize` and dying with jaguar. **A hypothesis built from
+a subject line and a date, refuted by the document that already held the
+traceback.** See [[measure-before-recording-in-planning-docs]].
+
 ### Open
 
 - **Record the reporter, Report-ID and window in every reading** — convention
@@ -2995,9 +3092,12 @@ broken count.
   read?" cost a header dump and a mail-log pull on 08-21. For the record, the
   08-20 window is Google Report-ID **`1291292834730335860`**, and Google addresses
   one message to both `rua` destinations, so the local copy and Cloudflare's
-  ingest share it.
-- **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter is
-  still an inference** — noted 2026-08-21. The organization list on the dashboard
+  ingest share it. **Applied in full for the first time in the sixth reading,
+  2026-08-22** — five reports tabulated with all three — and it paid immediately:
+  the 08-20 Google report was recognised as one already read from its Report-ID
+  alone, at no cost.
+- **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter was
+  an inference** — noted 2026-08-21, **CLOSED 2026-08-22**. The organization list on the dashboard
   reads **Akamai and Google**, which are the two *sending sources* already on
   record: Akamai owns Linode, so that row is jaguar at `173.255.245.115`, and
   Google is the one member's Gmail forwarding. **Comcast's absence is the tell** —
@@ -3005,9 +3105,13 @@ broken count.
   list would name it. Cloudflare appears not to expose reporter identity at all,
   which is why that reading had to deduce Comcast from a +24 delta rather than
   read the name, and why `tools/dmarc_report.py` prints
-  `<report_metadata><org_name>`. **Consequence: no reporter other than Google has
-  ever been observed directly.** The local copy is the instrument that settles it;
-  two windows in (08-20, 08-21) it has shown Google alone.
+  `<report_metadata><org_name>`. **Closed by the sixth reading**: the local copy
+  delivered a report whose `org_name` reads `comcast.net`
+  (`dmarc-admin@alerts.comcast.net`), alongside Yahoo — so the reporter base is
+  three organizations, read rather than deduced, and the standing claim that no
+  reporter other than Google had been observed directly no longer holds. **The
+  finding about Cloudflare stands**: it still exposes sending sources only, which
+  is why the local copy remains the instrument for reporter identity.
 - **jaguar forwards mail for a second domain — `themadeira.net`** — new
   2026-08-21, found in a bounce sample (`orig_to=<themadeira@themadeira.net>`).
   Nothing in Step 16 names it; the cutover inventory has assumed `admin@` and
@@ -3029,8 +3133,9 @@ broken count.
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
-  **3 of 7 days read** — 2026-08-17, 2026-08-18 and 2026-08-19, **with 08-19
-  re-read the same evening and found to have tripled** (see the fourth reading).
+  **5 of 7 days read** — 2026-08-17 through 2026-08-21, **with 08-19 re-read the
+  same evening and found to have tripled** (see the fourth reading) and **08-20
+  reproduced exactly from its Report-ID** on 08-22 (see the sixth).
   **Readings now re-check previously recorded days, not only the new one**, and
   the most recent row is provisional until a later reading reproduces it.
 
@@ -3083,6 +3188,17 @@ broken count.
   day one of the two-day window. **Partly corrected later that day**: its Gmail-
   forward subsection measured queue state and reported a rejection. The reading
   itself — reporter, window, rows, the HELO pass — is unaffected.
+- **Sixth reading done 2026-08-22** (above), covering 2026-08-21: **five reports,
+  three reporting organizations**, 10 messages, **0 failures**. **Comcast observed
+  directly**, closing the inference above. **swbell is Yahoo, not a third
+  receiver** — one generation run emitting two reports, refuted before it could be
+  recorded as an independent corroboration. **08-20 re-read from its Report-ID and
+  reproduced exactly**, which also establishes that per-report readings only gain
+  reports for a window and never revise one — so **08-21's total is a floor**.
+  **Still no Microsoft** — day two of the two-day window. **The ~55%-of-outbound
+  blind spot is materially smaller**: the reporter base is no longer Gmail alone,
+  which is the first real progress on requirement 2's residual value rather than
+  another day of the same view.
 - **The new VM needs a real-client-IP rewrite before cutover** — new 2026-08-21
   (fifth reading above). `mod_remoteip` on jaguar sets `REMOTE_ADDR` from
   `CF-Connecting-IP` for Cloudflare's ranges, and **every `REMOTE_ADDR` reader in
