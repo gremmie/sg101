@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-20
+**Last updated:** 2026-08-21
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -2510,6 +2510,13 @@ against a risk smaller than described here** — still worth having, since it ta
 the forward out of the path entirely for the one thing that must be read, but the
 justification was overstated.
 
+**⚠️ AMENDED 2026-08-21 — the justification is real, and it is latency rather
+than loss.** The Google report covering 08-20 was delivered locally in **0.85s**
+(`relay=local, status=sent (delivered to maildir)`) and to Brian's Gmail
+**9h25m52s** later, after twelve attempts against a Gmail rate limit. Both copies
+arrived; only one arrived in time to be read on the morning of the day it covers.
+The local copy is what made the fifth reading possible when it happened.
+
 **And the null-sender class has a cause that was fixed hours earlier.** A null
 sender has no domain, so SPF falls back to the HELO identity — which had no TXT
 record until the afternoon of 2026-08-20, making both mechanisms unable to pass.
@@ -2636,20 +2643,46 @@ That is caveat 1 removed rather than worked around.
 **Still no Microsoft, and no Comcast.** Day one of the 08-21/08-22 window; a
 quiet first day is not a signal.
 
-#### The Gmail forward, confirmed by a natural experiment rather than by reasoning
+#### The Gmail forward — the natural experiment measured queue state, not delivery
 
-Two messages reached `admin@surfguitar101.com` the same night, differing only in
-envelope sender:
+**⚠️ CORRECTED 2026-08-21, later the same day. The conclusion below is wrong and
+the mail log says so.** It read:
 
 | envelope sender | reached Brian's Gmail? |
 |---|---|
 | `root@surfguitar101.com` (Django error mail) | **yes** |
 | `noreply-dmarc-support@google.com` (the report) | **no** |
 
-jaguar can pass SPF for its own domain and cannot for Google's. The prediction
-that built the local copy is now an observation. **The empty Gmail inbox is a
-property of the forward, not of the reporters** — reading it as silence would
-have been exactly the false negative the local copy exists to prevent.
+— and concluded that "the prediction that built the local copy is now an
+observation." **The report was never refused. It was in jaguar's queue**, and the
+inbox was read while it sat there. It reached Gmail at 20:09:09Z the same day,
+**9h25m52s** after Google handed it over, on the twelfth delivery attempt. See
+the `4.7.28` section below.
+
+**The comparison was never controlled.** The two messages differed in envelope
+sender *and* in queue state at the moment of observation, so it measured a delay
+and reported a rejection. The evidence that should have blocked the conclusion
+was already available: nothing in the mail log had ever shown a bounce for a
+reporter's message.
+
+**What Gmail actually did**, from the delivered copy's headers:
+
+```
+dkim=pass header.i=@google.com header.s=20251104   (2048-bit, relaxed/relaxed)
+spf=softfail  ... does not designate 173.255.245.115 as permitted sender
+dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com
+```
+
+**This restores the 2026-08-20 correction that the paragraph above had demoted**
+— *"a reporter's DKIM signature survives the hop and Gmail accepts on DKIM alone;
+the reports would most likely have arrived."* That was right. Note `softfail`,
+not `fail`: google.com publishes `~all`, so the forward does not even hard-fail
+SPF, and a `p=REJECT` domain rode through it on DKIM alignment alone.
+
+**Still true:** jaguar cannot pass SPF for a third party's domain. **No longer
+claimed:** that this stops a reporter's mail from arriving. See
+[[suspect-the-measurer-before-the-record]] — the newer reading was the one that
+needed suspecting, being the one that required no self-correction.
 
 #### The reconciliation gap, found by walking into it
 
@@ -2763,8 +2796,107 @@ hardening already owns the Cloudflare front and the prod compose, which is where
 this belongs; no new step was needed. Step 17 inherits it through the captcha's
 `remoteip`.
 
+### Gmail rate-limits jaguar with `421-4.7.28` — found 2026-08-21, two episodes a month apart
+
+The 9h25m52s the correction above refers to. One message, twelve delivery
+attempts, every one refused at end of DATA:
+
+```
+421-4.7.28 Gmail has detected an unusual rate of unsolicited mail.
+           ... mail has been temporarily rate limited.
+```
+
+| attempt | 05:43:19 | 05:49 | 05:59 | 06:19 | 06:59 | 08:09 | 09:19 | 10:29 | 11:39 | 12:49 | 13:59 | **15:09** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gap | — | 6m | 10m | 20m | 40m | 70m | 70m | 70m | 70m | 70m | 70m | **sent** |
+
+Textbook Postfix backoff — 300s doubling into the 4000s cap, quantized to the
+300s queue run. `delay=33952` on the final line matches the two `Received:`
+stamps in the delivered copy to the second.
+
+**Not IP-wide.** All 23 `4.7.28` lines in the day's log belong to this one
+message — eleven attempts × two lines each, plus the twelfth attempt's primary-MX
+refusal before `alt1` accepted. No member address was touched, and no other
+Gmail-bound message that day carried the code.
+
+**Not caused by the authentication work.** Across the rotated logs the code
+appears on **Jul 21 (20 lines)** and **Aug 21 (23 lines)** with three empty logs
+between — a month of silence spanning the PTR repair (08-17), the DKIM key, the
+sender rewrite and the HELO SPF record (08-20). The hypothesis that our own fixes
+provoked it is refuted before it cost anything.
+
+**Jul 21, for the record and no more than that.** Three messages throttled: two
+to a member (`admin@` → a Gmail address, delivered after **2h27m54s** and
+**37m04s**) and one admin notification (**19m20s**). All three delivered, nothing
+expired. That member joined **2026-07-14**, a week earlier, so nothing was near a
+registration deadline. **The class of those messages is unidentified** — Postfix
+logs no subjects, `admin@` is `DEFAULT_FROM_EMAIL`, and `no_reply@` is
+`GPP_NO_REPLY_EMAIL@site.domain`. Two checks are left deliberately unrun, the
+stakes having evaporated: `grep 'Forgotten username email sent' logs/auth.log`,
+and prod forum posts at 12:58:02 / 14:43:52 that day (topic-reply notifications
+go out inline at post time, `forums/latest.py:125`).
+
+**Why it matters little, and is recorded anyway.** Postmark replaces the sending
+path and task 06 takes `admin@` off the box entirely, so this dies with jaguar.
+It is here because it is the mechanism behind the correction above, and because
+it is the fourth finding in this step that no DMARC report could ever surface —
+after root's mail dying locally, outbound TLS being off, and the `5.7.25` PTR
+class. One incidental property: **each message carries its own backoff**, so two
+mails to the same person can arrive out of order. On Jul 21 the 14:43 message
+landed five minutes before the 12:58 one.
+
+#### Two measurement traps, both producing clean-looking wrong answers
+
+Added to the collection that starts with the six traps of 2026-08-20.
+
+| Trap | How it presented |
+|---|---|
+| **A time-of-day filter on a multi-day syslog file matches every day in it.** `awk` testing `$3` alone over `/var/log/mail.log`, which holds Aug 17 onward | a tidy three-row table — `5 bounced / 11 deferred / 32 sent` — read as "during the 9h25m window." The bounces were Aug 17 and Aug 18; the 32 is meaningless. The filter needs `$1` and `$2` as well |
+| **An envelope sender can look unique because a test pins it.** `contact/tests/test_views.py:41` asserts the contact form sends from `no_reply@` | `no_reply@ → admin@` was read as *the contact form*, and a user-facing narrative was built on it. It is `GPP_NO_REPLY_EMAIL@site.domain`, shared by the contact form, four flag/report paths, the spammer sweep and antispam |
+
+The surviving conclusion — that the throttle is message-specific rather than
+IP-wide — rests on the `4.7.28` census, which was date-safe, and not on the
+broken count.
+
 ### Open
 
+- **Record the reporter, Report-ID and window in every reading** — convention
+  adopted 2026-08-21. `tools/dmarc_report.py` prints all three and no reading has
+  ever captured one, which is the entire reason "is this the report we already
+  read?" cost a header dump and a mail-log pull on 08-21. For the record, the
+  08-20 window is Google Report-ID **`1291292834730335860`**, and Google addresses
+  one message to both `rua` destinations, so the local copy and Cloudflare's
+  ingest share it.
+- **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter is
+  still an inference** — noted 2026-08-21. The organization list on the dashboard
+  reads **Akamai and Google**, which are the two *sending sources* already on
+  record: Akamai owns Linode, so that row is jaguar at `173.255.245.115`, and
+  Google is the one member's Gmail forwarding. **Comcast's absence is the tell** —
+  the fourth reading established it as a second reporting receiver, so a reporter
+  list would name it. Cloudflare appears not to expose reporter identity at all,
+  which is why that reading had to deduce Comcast from a +24 delta rather than
+  read the name, and why `tools/dmarc_report.py` prints
+  `<report_metadata><org_name>`. **Consequence: no reporter other than Google has
+  ever been observed directly.** The local copy is the instrument that settles it;
+  two windows in (08-20, 08-21) it has shown Google alone.
+- **jaguar forwards mail for a second domain — `themadeira.net`** — new
+  2026-08-21, found in a bounce sample (`orig_to=<themadeira@themadeira.net>`).
+  Nothing in Step 16 names it; the cutover inventory has assumed `admin@` and
+  `root@` were the forwarding paths on the box. **When jaguar goes away that
+  forwarding needs a destination**, and task 06's Email Routing covers
+  `surfguitar101.com` only. Belongs to the cutover inventory rather than to the
+  reading log.
+- **The activation window is a hard 24 hours and the queue lifetime is days** —
+  noted 2026-08-21, **not observed**. `PendingUser.purge_expired()` runs at the
+  top of `register_confirm`, so a user clicking at 24h+1s deletes their own row
+  before the lookup, while Postfix keeps retrying for days. A confirmation
+  delayed past 24h therefore arrives to a row that no longer exists: dead link,
+  no bounce, `status=sent` in the mail log, and `register_confirm ... user does
+  not exist` in `auth.log` as the only trace. The 08-21 throttle consumed 39% of
+  that window and the 07-21 one 10%. Checkable with `grep -c 'register_confirm.*
+  user does not exist' logs/auth.log*`. Postmark changes the delivery
+  characteristics anyway, so this is a latent property of the code, not a live
+  defect.
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
@@ -2819,7 +2951,9 @@ this belongs; no new step was needed. Step 17 inherits it through the captcha's
   data, on the null-sender row where SPF fell through to the HELO identity.
   **Google addresses one message to both `rua` destinations**, so Cloudflare
   ingests byte-identical input and caveat 1 is closed. **Still no Microsoft** —
-  day one of the two-day window.
+  day one of the two-day window. **Partly corrected later that day**: its Gmail-
+  forward subsection measured queue state and reported a rejection. The reading
+  itself — reporter, window, rows, the HELO pass — is unaffected.
 - **The new VM needs a real-client-IP rewrite before cutover** — new 2026-08-21
   (fifth reading above). `mod_remoteip` on jaguar sets `REMOTE_ADDR` from
   `CF-Connecting-IP` for Cloudflare's ranges, and **every `REMOTE_ADDR` reader in
