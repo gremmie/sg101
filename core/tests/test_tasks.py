@@ -13,6 +13,8 @@ from django.utils import timezone
 from unittest.mock import call, patch
 
 import forums.unread
+from accounts.models import EMAIL_CHANGE_EXPIRATION
+from accounts.models import PendingEmailChange
 from forums.models import Category, Forum, ForumLastVisit
 from sg101.celery import app
 from core.tasks import cleanup
@@ -51,6 +53,23 @@ class CoreTasksTestCase(TestCase):
         cleanup.s().apply().get()
 
         self.assertFalse(ForumLastVisit.objects.filter(pk=flv.pk).exists())
+
+    def test_cleanup_purges_expired_email_changes(self):
+        # Unlike a registration confirmation, nobody is guaranteed to visit a
+        # view that would purge these: a member who requests a change and never
+        # confirms leaves the row behind forever. The daily sweep collects them.
+        user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+        other = User.objects.create_user('eddie', 'eddie@example.com', 'pw')
+        stale = PendingEmailChange.objects.request_change(user, 'a@example.com')
+        PendingEmailChange.objects.filter(pk=stale.pk).update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+        fresh = PendingEmailChange.objects.request_change(other, 'b@example.com')
+
+        cleanup.s().apply().get()
+
+        self.assertEqual([c.pk for c in PendingEmailChange.objects.all()],
+                         [fresh.pk])
 
     @patch('core.tasks.core.whos_online')
     def test_max_users(self, whos_online_mock):

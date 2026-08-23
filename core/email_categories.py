@@ -22,6 +22,7 @@ class EmailCategory(StrEnum):
     REGISTRATION = 'registration'
     PASSWORD_RESET = 'password_reset'
     FORGOT_USERNAME = 'forgot_username'
+    EMAIL_CHANGE = 'email_change'
     TOPIC_NOTIFICATION = 'topic_notification'
     PM_NOTIFICATION = 'pm_notification'
     CONTACT_FORM = 'contact_form'
@@ -43,6 +44,7 @@ SUBJECT_SAFE = frozenset({
     EmailCategory.REGISTRATION,
     EmailCategory.PASSWORD_RESET,
     EmailCategory.FORGOT_USERNAME,
+    EmailCategory.EMAIL_CHANGE,
     EmailCategory.TOPIC_NOTIFICATION,
     EmailCategory.ADMIN_NOTIFICATION,
 })

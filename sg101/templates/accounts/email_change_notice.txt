@@ -1,0 +1,15 @@
+Hello {{ username }},
+
+Someone has asked to change the email address on your {{ site_name }} account to {{ new_email }}.
+
+Your address has not been changed. The new address has to be confirmed from a link sent to it first, and if that never happens the request expires in 24 hours and your address stays exactly as it is.
+
+If this was you, there is nothing to do here -- just follow the link in the message we sent to the new address.
+
+If it was not you, please let us know at {{ admin_email }} or through the contact form:
+
+{{ contact_link }}
+
+Regards,
+
+The staff at {{ site_name }}

@@ -15,6 +15,8 @@ from django.contrib.auth.hashers import check_password
 from django.conf import settings
 from django.utils import timezone
 
+from accounts.models import EMAIL_CHANGE_EXPIRATION
+from accounts.models import PendingEmailChange
 from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
@@ -800,3 +802,101 @@ class LogoutTest(TestCase):
                 self.assertIn(f'action="{logout_url}" method="post"', html)
                 self.assertNotIn(f'<a href="{logout_url}"', html)
                 self.assertIn('csrfmiddlewaretoken', html)
+
+
+class EmailChangeConfirmTestCase(TestCase):
+    """Following the link from the new mailbox.
+
+    Confirming deliberately does not require a login: the link is read in the
+    new mailbox, which may well be on another device. Possession of the token
+    is the proof, which is why the token is compared rather than looked up.
+
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+        self.change = PendingEmailChange.objects.request_change(
+            self.user, 'new@example.com')
+
+    def confirm_url(self, key=None, username=None):
+        return reverse('accounts-email_change_confirm', kwargs={
+            'username': username or self.user.username,
+            'key': key or self.change.key,
+        })
+
+    def expire(self):
+        PendingEmailChange.objects.filter(pk=self.change.pk).update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+
+    def test_a_valid_link_applies_the_change(self):
+        response = self.client.get(self.confirm_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'new@example.com')
+        self.assertFalse(PendingEmailChange.objects.exists())
+
+    def test_a_valid_link_works_while_logged_in(self):
+        self.client.login(username='paul', password='pw')
+
+        self.client.get(self.confirm_url())
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'new@example.com')
+
+    def test_an_expired_link_is_refused_and_says_so(self):
+        self.expire()
+
+        response = self.client.get(self.confirm_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'expired')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'paul@example.com')
+
+    def test_a_wrong_key_is_refused(self):
+        response = self.client.get(self.confirm_url(key=make_confirmation_token()))
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'paul@example.com')
+        self.assertTrue(PendingEmailChange.objects.exists())
+
+    def test_an_unknown_user_is_refused(self):
+        response = self.client.get(self.confirm_url(username='nobody'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username='nobody').exists())
+
+    def test_an_address_claimed_in_the_meantime_is_refused(self):
+        """Two members can request the same free address and both confirm.
+
+        The form check cannot see this coming -- at request time neither
+        account held the address -- so the last write is guarded here too.
+        Without it this flow mints exactly the kind of duplicate pair it
+        exists to prevent.
+
+        """
+        User.objects.create_user('eddie', 'new@example.com', 'pw')
+
+        response = self.client.get(self.confirm_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'paul@example.com')
+
+    def test_the_key_is_a_csprng_token(self):
+        self.assertGreaterEqual(len(self.change.key), 32)
+        self.assertTrue(re.match(r'^[A-Za-z0-9_-]+$', self.change.key),
+                        msg='key is not a URL-safe token: %r' % self.change.key)
+
+    def test_the_route_accepts_the_tokens_the_helper_mints(self):
+        # A 43-character URL-safe token contains '-' and '_' and is far longer
+        # than the 20-character alphanumeric keys the registration route was
+        # originally written for. Minting a batch is cheap insurance against a
+        # pattern that happens to match the one token a fixture chose.
+        for _ in range(50):
+            key = make_confirmation_token()
+            with self.subTest(key=key):
+                self.confirm_url(key=key)

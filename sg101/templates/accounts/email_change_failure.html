@@ -1,0 +1,24 @@
+{% extends 'v3/base.html' %}
+{% block title %}Email Address Change Error{% endblock %}
+{% block content %}
+<h2>Email Address Change Error</h2>
+<div class="alert callout">
+   {% if reason == 'expired' %}
+   That request has expired. A confirmation link is only good for 24 hours,
+   after which the address on your account is left as it was. Please edit your
+   profile and ask for the change again.
+   {% elif reason == 'taken' %}
+   That email address now belongs to another account, so we can't move it to
+   yours. Please edit your profile and try a different address.
+   {% else %}
+   We don't have a record of that email address change request. It may have
+   been confirmed or cancelled already, or the link may have been copied out
+   of the email incompletely.
+   {% endif %}
+</div>
+<p>
+   If you continue to have problems, please
+   <a href="{% url 'contact-form' %}?subject=Email%20Address%20Change">contact
+      the site staff</a> for assistance.
+</p>
+{% endblock %}

@@ -6,11 +6,13 @@ import json
 import logging
 import secrets
 
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.views.generic import TemplateView
 
+from accounts.models import PendingEmailChange
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
 from accounts.forms import RegisterCodeForm
@@ -127,6 +129,66 @@ def register_confirm(request, username, key):
 
     return render(request, 'accounts/register_success.html', {
         'username': username,
+        'V3_DESIGN': True,
+    })
+
+#######################################################################
+
+def _email_change_failure(request, reason):
+    return render(request, 'accounts/email_change_failure.html', {
+        'reason': reason,
+        'V3_DESIGN': True,
+    })
+
+
+def email_change_confirm(request, username, key):
+    """Apply a pending email address change, if the key is good.
+
+    Deliberately not login_required: the link is read in the new mailbox, which
+    may be on another device entirely. Possession of the key is the proof, so
+    the row is found by username and the key is then compared -- rather than
+    looked up, which would make the key a database index instead of a secret.
+
+    """
+    ip = request.META.get('REMOTE_ADDR', '?')
+    try:
+        change = PendingEmailChange.objects.get(user__username__iexact=username)
+    except PendingEmailChange.DoesNotExist:
+        logger.error('Accounts email_change_confirm [%s]: no request for %s',
+                     ip, username)
+        return _email_change_failure(request, 'unknown')
+
+    # Checked before the key so an expired link can say so. Purging first --
+    # the way register_confirm does -- would leave an expired link
+    # indistinguishable from a mistyped one.
+    if change.is_expired:
+        change.delete()
+        logger.info('Accounts email_change_confirm [%s]: expired for %s',
+                    ip, username)
+        return _email_change_failure(request, 'expired')
+
+    if not secrets.compare_digest(change.key, key):
+        logger.error('Accounts email_change_confirm [%s]: key error: %s',
+                     ip, username)
+        return _email_change_failure(request, 'unknown')
+
+    user = change.user
+    # Nobody held the address when the change was requested, but two members
+    # can request the same free address and both confirm. Without this the
+    # flow mints the sort of duplicate pair it exists to prevent.
+    if User.objects.filter(email__iexact=change.new_email).exclude(
+            pk=user.pk).exists():
+        logger.error('Accounts email_change_confirm [%s]: %s is taken, for %s',
+                     ip, change.new_email, username)
+        return _email_change_failure(request, 'taken')
+
+    user.email = change.new_email
+    user.save()
+    change.delete()
+    logger.info('Accounts email change confirmed for %s from %s', username, ip)
+
+    return render(request, 'accounts/email_change_success.html', {
+        'new_email': user.email,
         'V3_DESIGN': True,
     })
 

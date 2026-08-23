@@ -1,17 +1,21 @@
 """
-Tests for accounts.models -- registration-key generation and the
-case-insensitive uniqueness of usernames.
+Tests for accounts.models -- registration-key generation, the
+case-insensitive uniqueness of usernames, and pending email address changes.
 
 The registration key is a CSPRNG token from accounts.utils. These lock in
 its shape at the point registration actually mints one, so a change to the
 manager cannot quietly reintroduce a derived or short key.
 """
+import datetime
 import re
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
 
+from accounts.models import EMAIL_CHANGE_EXPIRATION
+from accounts.models import PendingEmailChange
 from accounts.models import PendingUser
 
 
@@ -64,3 +68,70 @@ class UsernameUniquenessTests(TestCase):
         User.objects.create_user('brianneal2', 'other@example.com', 'pw')
 
         self.assertEqual(User.objects.count(), 2)
+
+
+class PendingEmailChangeTests(TestCase):
+    """The pending-change row, its key, and the one-day window.
+
+    The OneToOneField is the last-request-wins rule expressed in the schema:
+    there is no application code that deletes a previous request, because the
+    database cannot hold two.
+
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+
+    def test_request_change_generates_a_urlsafe_token(self):
+        change = PendingEmailChange.objects.request_change(
+            self.user, 'new@example.com')
+
+        # Length is what discriminates here, exactly as it does for the
+        # registration key: 20 characters of lowercase hex would satisfy the
+        # alphabet too.
+        self.assertGreaterEqual(len(change.key), 32)
+        self.assertTrue(re.match(r'^[A-Za-z0-9_-]+$', change.key),
+                        msg='key is not a URL-safe token: %r' % change.key)
+        self.assertLessEqual(
+            len(change.key),
+            PendingEmailChange._meta.get_field('key').max_length)
+
+    def test_a_second_request_replaces_the_first(self):
+        first = PendingEmailChange.objects.request_change(
+            self.user, 'first@example.com')
+        second = PendingEmailChange.objects.request_change(
+            self.user, 'second@example.com')
+
+        self.assertEqual(PendingEmailChange.objects.count(), 1)
+        self.assertEqual(second.new_email, 'second@example.com')
+        self.assertNotEqual(second.key, first.key)
+
+    def test_purge_expired_deletes_expired_and_keeps_fresh(self):
+        other = User.objects.create_user('eddie', 'eddie@example.com', 'pw')
+        stale = PendingEmailChange.objects.request_change(
+            self.user, 'stale@example.com')
+        PendingEmailChange.objects.filter(pk=stale.pk).update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+        fresh = PendingEmailChange.objects.request_change(
+            other, 'fresh@example.com')
+
+        PendingEmailChange.objects.purge_expired()
+
+        self.assertEqual([c.pk for c in PendingEmailChange.objects.all()],
+                         [fresh.pk])
+
+    def test_is_expired_and_active_agree_on_the_window(self):
+        change = PendingEmailChange.objects.request_change(
+            self.user, 'new@example.com')
+
+        self.assertFalse(change.is_expired)
+        self.assertEqual(PendingEmailChange.objects.active().count(), 1)
+
+        PendingEmailChange.objects.filter(pk=change.pk).update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+        change.refresh_from_db()
+
+        self.assertTrue(change.is_expired)
+        self.assertEqual(PendingEmailChange.objects.active().count(), 0)

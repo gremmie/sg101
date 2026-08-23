@@ -148,6 +148,15 @@ def cleanup():
 
     call_command('forum_cleanup')
 
+    # Discard email address changes nobody confirmed. Unlike a registration
+    # confirmation, nothing guarantees anyone visits a view that would purge
+    # these, so they need a sweep. Imported here rather than at module scope:
+    # accounts.utils imports core.functions, which imports this module.
+
+    from accounts.models import PendingEmailChange
+
+    PendingEmailChange.objects.purge_expired()
+
 
 @shared_task
 def max_users():

@@ -19,6 +19,13 @@ urlpatterns = [
     re_path(r'^register/confirm/(?P<username>[\w.@+-]{1,30})/(?P<key>[A-Za-z0-9_-]{20,64})/$',
         accounts.views.register_confirm,
         name='accounts-register_confirm'),
+    # Same shape and the same bounds as the registration route above; both keys
+    # come from accounts.utils.make_confirmation_token(). The range is wider
+    # than the 43 characters that helper mints today so that a change to the
+    # token size cannot 404 every link already sitting in an inbox.
+    re_path(r'^email/confirm/(?P<username>[\w.@+-]{1,30})/(?P<key>[A-Za-z0-9_-]{20,64})/$',
+        accounts.views.email_change_confirm,
+        name='accounts-email_change_confirm'),
 ]
 
 urlpatterns += [

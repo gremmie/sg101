@@ -1,0 +1,13 @@
+{% extends 'v3/base.html' %}
+{% block title %}Email Address Changed{% endblock %}
+{% block content %}
+<h2>Email Address Changed</h2>
+<div class="success callout">
+   <i class="fi-like size-21"></i>
+   Thanks! The email address on your account is now
+   <strong>{{ new_email }}</strong>.
+</div>
+<p>
+   <a href="{% url 'bio-me' %}" class="primary button">Go to My Profile</a>
+</p>
+{% endblock %}

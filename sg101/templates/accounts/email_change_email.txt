@@ -1,0 +1,15 @@
+Hello {{ username }},
+
+We have received a request to change the email address on your {{ site_name }} account to this one.
+
+To confirm the change, please visit the link below. The link will expire in 24 hours, after which your address will be left as it is and you would need to request the change again.
+
+{{ confirmation_link }}
+
+Nothing has changed yet. Your account keeps its current address until you follow that link, so if you ignore this email nothing will happen.
+
+If you did not ask for this, you can safely ignore this message. If you have questions or problems, please send an email to {{ admin_email }}.
+
+Regards,
+
+The staff at {{ site_name }}
