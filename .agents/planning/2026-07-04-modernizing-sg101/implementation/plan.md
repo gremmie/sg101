@@ -1595,6 +1595,51 @@ window**: final snapshot → restore → final media delta → **low-TTL DNS cut
 in Cloudflare. Keep the **old Ubuntu 14.04 box warm ~1–2 weeks** as an instant
 DNS-flip fallback, then decommission.
 
+**ALSO CARRIES: a decommission inventory — jaguar is not an sg101 box (added
+2026-08-23, Brian's catch).** Everything above treats the old host as if
+sg101 were all it does. It is not, and *"then decommission"* is unsatisfiable
+until someone enumerates what else dies with it. **The inventory is itself the
+deliverable** — three items have surfaced independently, each found while
+chasing something else, which is the signature of a list nobody has written.
+
+- **Three other websites.** One static HTML site and **two frozen Django 1.8
+  sites** — non-interactive, no content added in years. Brian's plan is to make
+  all three static and move them to Cloudflare Pages, which is what finally lets
+  jaguar be switched off. **Its own project, not this one** (different
+  codebases, different target, different acceptance criteria), but this step
+  cannot complete without it, so the dependency is recorded here.
+
+  **Recommended approach: crawl, do not bake.** `django-bakery` or
+  `django-distill` requires resurrecting a Django 1.8 / Python 2 codebase well
+  enough to render — expensive archaeology for sites nobody edits. A
+  `wget --mirror` against the *running* site produces the same static output
+  with zero code changes, which reduces the job from "port two Django sites" to
+  "mirror two websites." Open questions for a honing pass, all small: forms and
+  POST endpoints, feeds and sitemaps, extensionless URLs (Pages handles clean
+  URLs), where media lives, absolute-vs-relative link rewriting, the 404 page.
+
+  **Ordering constraint, and the reason this belongs in Step 21 at all: the
+  crawl must happen while jaguar is still serving.** Capture, verify the mirror,
+  *then* decommission. Getting that backwards means reconstructing the sites
+  from bobcat's rsync instead of from a live server.
+
+- **`themadeira.net` inbound mail forwarding** — found 2026-08-21 in a bounce
+  sample (`orig_to=<themadeira@themadeira.net>`), and nothing in Step 16 named
+  it. Step 16 task 06 covers this zone in its Phase 2, so the item here is
+  simply to confirm that phase is complete — MX moved off jaguar — before the
+  box goes away.
+
+- **bobcat's nightly rsync** — already recorded in detail on this step's
+  checklist line above (backup box undocumented, added 2026-08-18), including
+  its own broken FCrDNS and the 93%-deaf alarm that follows from it. Repointing
+  it at the new VM belongs with the cutover, not after it.
+
+**Treat these three as the beginning of the inventory, not the whole of it.**
+Each was discovered by accident while investigating an unrelated symptom, so the
+prior is that more exist. Worth an explicit sweep of the old box — vhosts, cron
+jobs, DNS records pointing at `173.255.245.115`, and anything else answering on
+it — before the warm-fallback window closes.
+
 **ALSO CARRIES: outgoing mail on the new VM (added 2026-08-16, Brian's catch).**
 Step 16 makes the *application's* mail a matter of environment variables, but
 three things are properties of the host and can only be done once it exists —
