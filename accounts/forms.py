@@ -254,8 +254,8 @@ class ForgotUsernameForm(forms.Form):
     def save(self):
         """Email the usernames associated with the email address to the user."""
         email = self.cleaned_data['email']
-        # An address can belong to more than one account -- thirteen do -- so
-        # this cannot assume a single match. get() raised
+        # An address can belong to more than one account, and some in this
+        # database do, so this cannot assume a single match. get() raised
         # MultipleObjectsReturned for those users, and they could never recover
         # a username at all. Every match is listed: whoever reads the mailbox
         # owns all of them.

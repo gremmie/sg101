@@ -518,11 +518,10 @@ class ForgotUsernameTest(TestCase):
     def test_email_shared_by_two_accounts(self):
         """Two accounts on one address get one email listing both usernames.
 
-        Thirteen addresses in the production database are held by two users
-        each, so this is reachable in the wild -- and was a 500 before the
+        Some addresses in the production database are held by more than one
+        account, so this is reachable in the wild -- and was a 500 before the
         lookup stopped assuming a single match. Whoever reads the mailbox owns
-        both accounts, so naming only one of them would leave them stuck on the
-        other.
+        all of them, so naming only one would leave them stuck on the rest.
 
         """
         u = User.objects.create_user('second_user', 'existing_user@example.com',
