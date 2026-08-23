@@ -513,7 +513,7 @@ Imports removed as dead once `_make_key()` went: `random`, `string`, `hashlib`,
 Test count 874 → 877.
 
 **Next: task 05** (verified email address changes), which is what the shared
-helper exists for.
+helper exists for. *(Done 2026-08-22.)*
 
 ## Step 16 task 09 — one line per email, and a category that cannot go unclassified — DONE 2026-08-21, `1763704f`, PUSHED, CI GREEN
 
@@ -643,6 +643,211 @@ until this is deployed, and **the pre-cutover window is the only chance to
 collect a jaguar-side baseline** — which is why this task went first among the
 four that were unblocked. Postmark's dashboard will give a total with no
 category breakdown; this is what makes a discrepancy explainable.
+
+## Step 16 task 05 — an email address is not yours until you answer mail at it — DONE 2026-08-22, `d3f5cd4e` + `da938045`, PUSHED
+
+The Step 11 REVISIT, closed. `/profile/edit/` no longer writes `User.email`:
+a requested address goes into a new `accounts.PendingEmailChange` row, a
+confirmation link is mailed to it, and only following that link moves the
+address onto the account. **951 tests green** (904 before), gate green, `check`
+and `makemigrations --check` clean, `check --deploy` unchanged.
+
+### The form change is the whole guarantee
+
+`email` came **out** of `EditUserForm.Meta.fields` and became a declared-only
+field. A `ModelForm` writes its Meta fields to the instance, so leaving it there
+would have meant undoing the write in `save()` — a thing a later edit can
+forget. Off the Meta list, the form *cannot* touch `User.email`, and the view
+asks `requested_email()` instead. The mutation test for this is putting `email`
+back: two tests fail immediately.
+
+That also disposes of requirement 7 without touching a template. The three
+surfaces that render an address — `view_profile.html:87`, `members.html:48`,
+`display_post.html:25` — all read `user.email`, which is now never the pending
+one. Asserted rather than assumed, across all three at once, since nothing else
+in the suite would notice a regression.
+
+### Requirement 3's premise was wrong, and the answer is both
+
+It said sweeping expiry from "the existing cleanup task" is "more consistent
+with the codebase." Measured: `PendingUser.purge_expired()` has exactly one
+caller and it is **on use**, in `register_confirm` — not scheduled at all.
+Brian took both, each doing a job the other cannot:
+
+- The confirm view fetches the row and **then** checks `is_expired`, so an
+  expired link says so. `register_confirm` purges first and therefore cannot
+  tell an expired link from a mistyped one — its template hedges with "it may
+  have expired". This one does not have to.
+- `core.tasks.cleanup` calls `purge_expired()` daily. Nothing guarantees a
+  member who abandons a request ever visits a view that would collect the row.
+
+The import in `cleanup()` is local, and the comment says why: `accounts.utils`
+imports `core.functions`, which imports `core.tasks`.
+
+### The race requirement 4 could not see
+
+Two members can request the same *free* address — neither holds it, so the form
+passes for both — and both confirm, minting exactly the kind of duplicate pair
+this task exists to prevent. Brian's call was to guard both ends: `clean_email`
+also rejects an address pending un-expired for another account (registration
+already does this for `PendingUser`), and the confirm view re-checks uniqueness
+before the write, answering with a distinct "that address was claimed" page.
+
+### The 26 accounts, verified against the real database
+
+`clean_email` returns before doing any work when the submitted address matches
+`self.instance.email` case-insensitively. That guard is the requirement, not an
+optimization. Verified two ways:
+
+- A test that fails against the naive implementation — watched to fail with
+  *"a member sharing an address cannot save: {'email': ['That email address is
+  already in use by another account.']}"*.
+- A read-only probe over the dev database: **13 groups, 26 accounts** (unchanged
+  since 2026-08-16), the real form instantiated against each real row,
+  **0 that could not save**.
+
+A case-only edit of your own address counts as unchanged for the same reason —
+same mailbox, and calling it a change would make a member confirm an address
+they already hold.
+
+### Five mutations, each seen to fail
+
+Per [[mutation-verify-or-it-is-not-coverage]].
+
+| Test | Mutation | Result |
+|---|---|---|
+| duplicate-pair member saves an unrelated edit | unconditional `exclude(pk=…)` | rejected as already in use |
+| requested address never reaches `User.email` | `email` back in `Meta.fields` | `'new@…' != 'paul@…'`, form and view |
+| expired link says expired | drop the `is_expired` branch | "Couldn't find 'expired'" |
+| wrong key refused | `compare_digest` → `if False:` | wrong key applied the change |
+| three surfaces show the verified address | write `User.email` at request time | all three fail |
+
+### End to end against the dev database, not a fresh test one
+
+The only way the migration itself is under test. A scratch user, a change
+requested, the edit page checked, the link followed **logged out** — the link is
+read in the new mailbox, possibly on another device, so confirming deliberately
+does not require a session. The key minted was
+`m3f7Xedx_cMg9EamMrV0C1-geMcoHVK8hakIGFYlWnw` — it contains both `-` and `_`,
+which is the exact token shape that broke the registration route in task 08, and
+the route pattern here handles it because it was copied from the fixed one.
+Scratch user and all rows removed afterward; snapshot
+`sg101-20260822-141919-pre-step16-task05.dump` taken first.
+
+### Decisions worth keeping
+
+- **Cancel and resend live in `bio`, not `accounts`.** Only the confirmation
+  view belongs beside `register_confirm`; these two are posted from the profile
+  edit page and redirect back to it. Putting them in `accounts` would have made
+  it import `bio` URL names, and the whole point of the model living in
+  `accounts` is that the dependency points `bio -> accounts` only.
+- **Resend re-requests the same address** rather than re-mailing the old link,
+  so the expiry window restarts — a member who waited most of a day does not get
+  a link good for the remaining hour. It does **not** re-notify the old address:
+  that address was told when the change was requested, and a resend is the same
+  request again.
+- **The courtesy mail to the old address carries no action link**, as the task
+  file decided. Asserted by test: the key appears in the message to the new
+  address and not in the one to the old.
+- **One category, `EmailCategory.EMAIL_CHANGE`**, in `SUBJECT_SAFE` — both
+  subjects are site-authored. The log line's recipient already distinguishes the
+  confirmation from the courtesy note.
+
+### Six defects came out of ten minutes in a browser, against 946 green tests
+
+**This is the finding worth carrying forward, not the feature.** The suite was
+thorough by every measure this project uses — mutation-verified, exercised
+against the real database, 41 new tests — and it was blind to the entire
+rendered surface. Every one of these passed the suite and failed a human
+looking at the page:
+
+| What broke | Why nothing caught it |
+|---|---|
+| A multi-line `{# #}` rendered to the page as literal text | Django's tokenizer is not `DOTALL`, so it is not a comment token. Tests asserted the pending address appeared, never that the markup around it was clean |
+| Cancel/Resend flashes never displayed | Only **four** templates on the site include `core/message_list.html` and `edit_profile.html` was not one; the messages surfaced two pages later. Tests asserted `assertRedirects`, and the redirect was always right |
+| The two buttons stacked instead of sitting inline | Nothing asserted on layout, and nothing asserted the buttons were on the page at all — the cancel/resend tests POST straight to the URLs, so a missing button would have shipped green |
+| Cancel from the profile page teleported you to the edit page | The redirect target was hard-coded and every test asserted that exact target |
+| The save flash and the notice said the same thing twice | Two correct behaviours, ugly together. No test can see that |
+| A stale Celery worker had been failing **every** deferred send | See below |
+
+The shape is identical in all six: **the tests asserted state, never what a
+person would see.** A view can be correct in every respect the suite checks and
+still be unusable. Worth remembering when the next task's acceptance criteria
+are all `assertEqual` on model fields.
+
+### The stale worker, which is a trap and not a one-off
+
+Every deferred `send_mail` in the dev container was dying with
+`TypeError: EmailMessage.__init__() got an unexpected keyword argument
+'category'` — and the code was fine. **The `worker` container had been up since
+2026-08-16**, five days before task 09 added that parameter (2026-08-21), so it
+was executing the old function. The tell is a traceback whose line number lands
+on a comment: old code object, new file on disk.
+
+Two consequences:
+
+- **No deferred send had succeeded in dev since task 09 landed.** Task 09's
+  STATUS entry claims two real sends read back out of `email.log`; those cannot
+  have gone through this worker, so the deferred path was never exercised after
+  that change.
+- **`manage.py runserver` reloads on edit and Celery does not.** The suite
+  cannot see this at all: `CELERY_TASK_ALWAYS_EAGER` imports fresh code every
+  run. **Editing a task means `docker compose restart worker`, or you are
+  testing code you did not write.**
+
+### UI decided at the page, as the task file asked
+
+- The notice is a **shared partial**, `bio/pending_email_change.html`, included
+  by the profile page *and* the edit page. Brian's call: the edit page is not
+  where a member spends time. Two copies of that markup would have drifted.
+- **It cannot reach anyone else's profile, structurally.** `view_profile`
+  redirects to `bio-me` when the subject is you, so `my_profile` is the only
+  view that renders that page for its owner and the only one that supplies
+  `pending_change`. No `{% if this_is_me %}` to forget. Mutation-verified by
+  leaking it deliberately.
+- **Cancel and Resend return to the page they were pressed on**, via a posted
+  `next` validated with `url_has_allowed_host_and_scheme` — trusting a
+  form-posted redirect target is an open redirect, and there is a test for
+  three hostile values.
+- **One form, two `formaction` buttons.** Two forms stack, because a form is
+  block-level and no `text-align` moves a block.
+- **The save flash is gone**; the notice on `bio-me` says all of it and stays.
+  Cancel and Resend keep theirs, because there the callout *disappears* and a
+  thing vanishing is not an explanation.
+
+### Two tests were passing for the wrong reason, and both got sharper
+
+Neither was wrong when written; both stopped discriminating once the notice
+appeared on the profile page.
+
+- `test_profile_page` asserted the pending address was **absent** from
+  `bio-me`. The owner's own notice now names it deliberately, so the assertion
+  failed for correct behaviour. The real property is "do not *publish* an
+  unverified address", and publishing is the `mailto:` link — now
+  `assertContains('mailto:paul@…')` and `assertNotContains('mailto:new@…')`,
+  which is stricter than what it replaced (the old one passed if the address
+  vanished entirely).
+- `test_the_member_is_told_the_change_is_pending` asserted the address appeared
+  after saving. With the flash dropped it would have kept passing — off the
+  notice instead. Repointed at the notice explicitly, and verified to fail when
+  the include is removed.
+
+**Not done here, deliberately:** `unique=True` on `User.email`. Those rows would
+fail the migration, and reconciling them is a data question with a human in it.
+Requirement 6 says so; it stays a follow-on once the data is clean.
+
+**OPEN, Brian to decide (raised 2026-08-22, deferred):** should
+`core/message_list.html` move into `v3/base.html` for all 58 V3 templates? The
+measurement that makes it decidable: all **22** `messages.*` call sites live in
+exactly four modules (`messages` 13, `bio` 6, `user_photos` 2, `bandmap` 1),
+and those map one-to-one onto the five templates that include the message list —
+so the convention holds today, but only by hand, and the failure mode is a
+message ambushing you on a later page rather than being dropped. All five
+current includes sit under `v3/base.html`, so the move is clean; **they would
+have to be removed, or messages render twice.**
+
+**Next: task 06** (inbound → Cloudflare Email Routing) and task 07 (the smoke
+tool), with task 03's DMARC week still the long pole.
 
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
