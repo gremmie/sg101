@@ -211,11 +211,28 @@ anywhere in the repository outside this file.
    | `madeira@` | `ipongrac@…` | Ivan keeps |
    | `themadeira@` | `ipongrac@…` | Ivan keeps |
    | `ivan@` | `ipongrac@…` | Ivan keeps |
-   | `todd@` | `todd4ta@…`, unverified | **undecided — see 3a.** Default is to wait; this zone's MX does not move until Brian chooses, whatever Ivan does |
+   | `todd@` | `member35@example.com`, unverified | **settled 2026-08-23 — see 3a.** Todd wants it kept at this new address; needs its own verification click |
 
    **Dropped:** `brian@`, `dane@`, `patrick@`.
 
-3a. **`todd@themadeira.net` — UNDECIDED, and deferrable at no cost.**
+3a. **`todd@themadeira.net` — SETTLED 2026-08-23. Todd wants it kept, moved to
+   `member35@example.com`.**
+
+   **None of the three options below is what happened.** They all presuppose
+   continued silence; he broke it. The rule stays, pointed at a *new* address.
+
+   Two consequences. **This is a new destination, not a re-point** — the Gmail
+   address is unverified and needs its own click, so Phase 2 waits on two
+   third-party verifications (Ivan's and Todd's) rather than one. And **the
+   privacy objection that killed the holding pen is retired**: Todd has said
+   where he wants his mail to go, which is the consent the pen would have
+   manufactured. Neither verification gates anything until MX moves.
+
+   *The original requirement is kept below, because its reasoning about
+   verification and MX being independent is what made waiting free — and that
+   reasoning still governs Phase 2.*
+
+3a-original. **`todd@themadeira.net` — UNDECIDED, and deferrable at no cost.**
 
    **Verifying a destination and changing MX are independent actions**, and
    realising that is what makes this easy (2026-08-22). Verification is a click
@@ -278,6 +295,44 @@ anywhere in the repository outside this file.
    hostname. The rollback value to write down before flipping MX is therefore
    `10 mail.surfguitar101.com`, not the `_dc-mx` name. See task 03, Finding 8.
 
+   **The two zones have different rollback values — measured 2026-08-23, and
+   this is the first time `themadeira.net`'s was read.** Every `_dc-mx` note in
+   these documents describes `surfguitar101.com`'s hash; the other zone was
+   never queried. At `ada.ns.cloudflare.com`:
+
+   ```
+   surfguitar101.com   MX  10 mail.surfguitar101.com              -> 173.255.245.115
+   themadeira.net      MX  10 _dc-mx.658032ac2d3a.themadeira.net  -> 173.255.245.115
+   ```
+
+   `themadeira.net` still carries the generated alias **because
+   `mail.themadeira.net` is still proxied** — it answers `104.21.71.48` /
+   `172.67.169.122`, Cloudflare's shared proxy addresses. That is exactly the
+   mechanism task 03's Finding 8 identified and removed on the other zone by
+   grey-clouding `mail.`; it was never done here, so the substitution is still
+   in effect. Both zones deliver to the same box today, so nothing is broken —
+   but **the value to write down before flipping Phase 2's MX is
+   `10 _dc-mx.658032ac2d3a.themadeira.net`**, and copying Phase 1's rollback
+   value onto this zone would restore a record that was never its MX.
+
+   *Grey-clouding `mail.themadeira.net` to make the two zones symmetric is
+   deliberately **not** proposed. Phase 3 removes this zone's MX entirely, so
+   the alias disappears on its own; changing a live MX target's proxy state to
+   tidy a record that is about to be deleted is risk with no return.*
+
+   **CONFIRMED 2026-08-23 — the bundle is five records, all-or-nothing, and one
+   of them breaks outbound mail.** The Settings page's **Add missing records**
+   button offers three MX records, a `cf2024-1._domainkey` TXT, and
+   `v=spf1 include:_spf.mx.cloudflare.net ~all` **at the apex** — a second
+   `v=spf1` string alongside the existing record, i.e. a `permerror` at every
+   receiver (task 03, Finding 4). There is no per-record control. Add the three
+   MX records by hand instead.
+
+   **And the panel keeps reporting them missing afterward.** Cloudflare tracks
+   records it created itself by ID, so hand-made records read as absent even when
+   the values match exactly — pressing the button later would add *duplicate* MX
+   records. The display is cosmetic; verify with `dig`, not with the dashboard.
+
    **Do not let a wizard bundle this.** Cloudflare's email tooling offers to
    update MX as part of other flows — the DMARC Management setup on 2026-08-17
    was checked specifically for this. Publishing Email Routing's MX before the
@@ -336,7 +391,23 @@ to be settled before its MX changes, and why requirement 3a exists.
 and MX are independent, so this zone can sit fully staged and verified with mail
 still arriving through Postfix indefinitely. Ivan verifying starts no clock.
 
-### Phase 1 — `surfguitar101.com`, unblocked
+### Phase 1 — `surfguitar101.com` — ✅ DONE 2026-08-23
+
+**Executed as written, with two additions the steps below did not anticipate.**
+Full account in `STATUS.md`. In brief: the **Add missing records** button offered
+five records with no per-record control, one of them a second apex `v=spf1`
+string, so the three MX records were added by hand. Reading a delivered message
+then exposed two deliverability defects — `cf2024-1._domainkey` unpublished
+(Cloudflare signs forwarded mail as your domain, and the missing selector made it
+`permerror`), and the apex SPF not authorizing Cloudflare's forwarder. **The
+second one corrects a claim made in planning**: Cloudflare's SRS rewrite lands in
+`@surfguitar101.com`, so Email Routing *does* need your SPF authorization. Both
+fixed; a forwarded message now passes DKIM, SPF and DMARC.
+
+**Also learned: Cloudflare's Email Routing DKIM key is shared across customer
+zones** — same key as `cf2024-1._domainkey.cloudflare-email.net`, published on a
+hypothesis and then confirmed by a test send rather than assumed.
+
 
 1. Enable Email Routing on the zone, but **do not let it publish MX yet**; see
    requirement 6 on wizards that offer to bundle the change.
@@ -362,8 +433,10 @@ still arriving through Postfix indefinitely. Ivan verifying starts no clock.
 10. **Stop here until `todd@` is settled** — requirement 3a. Ivan verifying does
     not oblige a flip, and staged-but-unflipped costs nothing: Postfix keeps
     receiving exactly as it does today.
-11. When Ivan has verified **and** `todd@` is resolved, publish MX on this zone
-    and test all seven addresses.
+11. When Ivan has verified **and** `todd@` is resolved, **write down this
+    zone's own rollback value — `10 _dc-mx.658032ac2d3a.themadeira.net`, not
+    Phase 1's (requirement 6)** — then publish MX on this zone and test all
+    seven addresses.
 
 ### Phase 3 — teardown, after both
 

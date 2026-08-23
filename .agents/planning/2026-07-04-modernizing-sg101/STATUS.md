@@ -941,7 +941,195 @@ Brian's own destination, create six rules, write down the rollback value
 convenience step** — that is the one change here that breaks something real.
 
 **Phase 2 (`themadeira.net`) is staged but deliberately parked**, pending Ivan's
-click and a decision on Todd.
+click and a decision on Todd. **Todd answered 2026-08-23 — see the execution
+section below; the decision is no longer open.**
+
+## Step 16 task 06 Phase 1 — `surfguitar101.com` inbound is Cloudflare's — DONE 2026-08-23
+
+No code. Six routing rules, one verified destination, four DNS records written
+and one deleted, all by hand in the dashboard and through the API. **Inbound mail
+for `surfguitar101.com` no longer touches jaguar.** Phase 2 remains staged.
+
+### What is live
+
+| Change | Value |
+|---|---|
+| MX | `41 route1` / `46 route3` / `98 route2 .mx.cloudflare.net` |
+| MX removed | `10 mail.surfguitar101.com` — **rollback value, recorded before the flip** |
+| Rules | `admin@` `no_reply@` `podcast@` `postmaster@` `abuse@` `brian@` → `bgneal@gmail.com` |
+| Catch-all | **left Disabled** — so dropped aliases are refused, not silently discarded |
+| `cf2024-1._domainkey` TXT | Cloudflare's Email Routing DKIM key, 2048-bit |
+| Apex SPF | rewritten — `a` and `mx` dropped, `include:_spf.mx.cloudflare.net` added |
+
+All six addresses tested end-to-end from an Outlook mailbox — **per address, not
+sampled**, which is what the acceptance criterion asks for. `no_reply@` delivers
+instead of bouncing, the one change members will notice.
+
+**The staged-then-flip sequence worked exactly as intended.** The three Cloudflare
+MX records were added while `10 mail.surfguitar101.com` still existed; priority 10
+kept winning, so every sender continued to reach jaguar and nothing changed until
+the single deletion. That deletion was the entire cutover. **Additions before the
+deletion is the load-bearing ordering** — reversed, there is a window with no MX
+at all, where senders fall back to the apex A record, which is Cloudflare's HTTP
+proxy and does not answer on port 25.
+
+### The wizard trap was real, and worse than the task file recorded
+
+Requirement 6 warns against letting Cloudflare's flow bundle the MX change. The
+**Add missing records** button proposed five records at once with no per-record
+control, and **one of them was a second apex `v=spf1` string**:
+`v=spf1 include:_spf.mx.cloudflare.net ~all`. Publishing it alongside the existing
+apex record is a `permerror` at every receiver — task 03's Finding 4, which notes
+it *"fails harder than publishing no SPF at all."* The button was never pressed;
+the three MX records went in by hand instead.
+
+**A second reason not to press it emerged later.** After the MX records were added
+manually, the Settings page still reported **all five records missing**, the three
+correct MX records included. Cloudflare tracks records it created itself by ID, so
+hand-made records read as absent even when the values match exactly. Pressing the
+button at that point would have added three *duplicate* MX records. **The panel is
+cosmetic and will keep saying missing** — the DNS is right and the mail flows.
+
+### Two deliverability defects, both found by reading a real header
+
+The first messages landed in Gmail's spam. Rather than accept that as
+new-forwarder friction, one delivered message was read in full, and it named two
+distinct faults:
+
+```
+dkim=permerror (no key for signature) header.i=@surfguitar101.com header.s=cf2024-1
+spf=fail   ... does not designate 104.30.8.10 as permitted sender
+```
+
+**Defect 1 — Cloudflare signs forwarded mail as your domain, with a selector that
+was not published.** Every forwarded message carried *two* signatures: one for
+`cloudflare-email.net`, which passed, and one for `surfguitar101.com`, which
+permerrored because `cf2024-1._domainkey` did not exist in the zone. A failing
+signature scores worse than no signature. It was recorded as *optional* when the
+record list was first reviewed — correct as to routing, wrong as to
+deliverability.
+
+**Defect 2 — CORRECTION: Email Routing forwards under *your* domain, and does
+need your SPF authorization.** This document's earlier reasoning — that Cloudflare
+forwards with its own envelope sender and therefore needs nothing from the apex
+record — was wrong, and the Return-Path says so:
+
+```
+Return-Path: <SRS0=TCQU=qg=outlook.com=bgneal43@surfguitar101.com>
+```
+
+Cloudflare's SRS rewrite lands in **`@surfguitar101.com`**, so the forwarding hop
+is evaluated against the apex record and hard-failed under `-all`. That is why
+Cloudflare proposes an SPF record at all. **The objection to *how* it proposes it
+still stands**: the fix is to merge the include into the existing record, never to
+publish a second one.
+
+### The DKIM key is shared across Cloudflare's customer zones — confirmed by test, not assumed
+
+The dashboard truncates the key with an ellipsis, and the API endpoints that serve
+it (`/email/routing` and `/email/routing/dns`) refused a token holding
+`Zone → Email Routing Rules → Read`, `Zone → DNS → Edit` and an account-level
+Email Routing permission. `/email/routing/rules` worked, so the token was valid and
+the permission that opens those two endpoints was not discoverable by guessing.
+
+The key was instead taken from `cf2024-1._domainkey.cloudflare-email.net` on the
+hypothesis that Cloudflare uses **one shared signing key** — argued from the
+selector name being identical on their domain and ours, where a per-customer key
+would carry a per-customer selector the way Postmark's `20260817033844pm` does.
+
+**The prefix match proved nothing and was explicitly not treated as evidence**:
+`MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA` is the fixed DER/SPKI header of
+*every* 2048-bit RSA key. It establishes key size, never identity. So the
+hypothesis was published and then tested, with the two outcomes named in advance —
+`pass` confirms, `fail` refutes and the record comes straight back out:
+
+```
+dkim=pass header.i=@surfguitar101.com header.s=cf2024-1
+```
+
+**Confirmed.** Cloudflare's Email Routing DKIM key is shared across customer
+zones. Nothing in the planning documents knew this.
+
+*Incidentally this is the domain's first 2048-bit key — both existing selectors,
+`dkim` and `20260817033844pm`, are 1024-bit — and at 420 bytes it exceeds the
+255-byte DNS string limit and is stored as two strings. That is exactly the
+incidental cost task 03's Correction 1 predicted for a hypothetical Postmark
+rotation; it turned up here first.*
+
+### Finding 3's prediction came true, on the day the MX moved
+
+Task 03's Finding 3 said `mx` *"becomes actively wrong the moment inbound mail
+moves to Cloudflare Email Routing, at which point `mx` would authorize
+Cloudflare's inbound MX hosts to send outbound as this domain."* Measured
+immediately after the flip:
+
+```
+a  -> 172.67.218.217, 104.21.53.213     (HTTP proxy)
+mx -> 162.159.205.11-.25                 (Cloudflare's inbound MX hosts)
+```
+
+Neither covers the forwarder, so neither accidentally rescued Defect 2. The apex
+record was rewritten in place — **one record updated, never two coexisting**:
+
+```
+before:  v=spf1 a mx ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 -all
+after:   v=spf1 ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 include:_spf.mx.cloudflare.net -all
+```
+
+This **partially executes task 03 step 5 ahead of its scheduled slot** at the
+Postmark cutover, because live forwarding created the need tonight. Postmark's
+`include:spf.mtasv.net` deliberately stays out until then. `-all` is kept; jaguar
+stays authorized by the explicit `ip4:`; DNS lookups drop from 2 to 1.
+
+Final state of a forwarded message, all four verdicts green:
+
+```
+dkim=pass  @cloudflare-email.net / @surfguitar101.com / @outlook.com
+spf=pass   104.30.8.10 designated
+dmarc=pass
+```
+
+### Requirement 3a is settled, and none of its three options is what happened
+
+**Todd answered 2026-08-23: keep the alias, and move it to `member35@example.com`.**
+Requirement 3a framed the choice as *wait (default) / drop / holding pen* — all
+three of which presuppose continued silence. He broke the silence, so the question
+the requirement was built to answer no longer exists.
+
+Two consequences. **It is a new destination, not a re-point** — the Gmail address
+is unverified and needs its own click, so Phase 2 now waits on two third-party
+verifications, Ivan's and Todd's, rather than one. And **the privacy objection
+that killed the holding pen is retired**: Todd has now said where he wants his
+mail to go, which is the consent the pen would have manufactured.
+
+**Neither verification gates anything until MX moves**, per the independence fact
+already recorded above: `themadeira.net` can stage fully — Email Routing enabled,
+all seven rules created, both destinations pending — with MX still pointing at
+jaguar and mail arriving exactly as it does today, indefinitely.
+
+### Loose ends
+
+- **`admin@surfguitar101.com` was briefly added as a *destination* by mistake**,
+  and Cloudflare rate-limited its deletion. It was inert throughout — no rule
+  targeted it — and it was **deleted 2026-08-23**. Its verification mail was
+  deliberately left unclicked: verifying an address on a zone Cloudflare routes is
+  the shape that creates forwarding loops.
+- **`_dmarc`'s `rua` includes `admin@surfguitar101.com`**, so the local-copy path
+  that feeds `tools/dmarc_report.py` now runs through Email Routing rather than
+  Postfix. Reports should keep arriving; **the eighth reading should confirm receipt
+  rather than assume it**, since the `p=none` → `quarantine` decision rests on them.
+- **Jaguar still holds `surfguitar101.com` in `virtual_alias_domains`**, so mail
+  the old box originates to these addresses is delivered by its local alias table
+  and never consults MX. Tests must come from an external mailbox. It also means
+  `no_reply@` still bounces *locally* — inert, since nothing sends to it.
+- Sending **from the site** has not been exercised since the apex SPF rewrite.
+  Jaguar is covered by the explicit `ip4:`, but that is reasoning, not a
+  measurement.
+
+**Next: Phase 2 (`themadeira.net`)** — enable Email Routing MX-less, create the
+seven rules, request verification from Ivan and from Todd at his new address. Then
+task 07's smoke and cutover verification, which now has the Outlook mailbox it had
+been waiting for.
 
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
