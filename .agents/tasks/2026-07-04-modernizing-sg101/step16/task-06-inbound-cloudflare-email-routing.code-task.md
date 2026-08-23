@@ -428,11 +428,31 @@ hypothesis and then confirmed by a test send rather than assumed.
    a short note explaining what the click is for. **Ivan and Todd are the only
    two people this task still waits on, and neither of them blocks
    `surfguitar101.com`.**
-9. Create all seven rules, `todd@` pointed at `todd4ta@…` for now. Rules to an
-   unverified destination can exist; they simply do not deliver yet.
-10. **Stop here until `todd@` is settled** — requirement 3a. Ivan verifying does
-    not oblige a flip, and staged-but-unflipped costs nothing: Postfix keeps
-    receiving exactly as it does today.
+9. **CORRECTED 2026-08-23 — rules to an unverified destination cannot be
+   created.** This step used to read *"Rules to an unverified destination can
+   exist; they simply do not deliver yet."* **The dashboard refuses**: attempted
+   on this zone, only the three rules targeting the already-verified
+   `bgneal@gmail.com` could be created. `madeira@` `themadeira@` `ivan@` `todd@`
+   were all blocked.
+
+   **So verification gates rule creation, not merely delivery, and the
+   "fully staged and parked" state this plan describes is not reachable.** The
+   zone can hold Email Routing enabled plus Brian's three rules; the other four
+   wait on Ivan's and Todd's clicks.
+
+   *Consequence for flip day: it is no longer a single MX change. It is create
+   four rules, verify them, then change MX — more steps, on the day when the
+   temptation to hurry is highest.*
+
+   *Consequence for requirement 3a: its central hazard — "flipping MX with a
+   destination unverified, which makes Cloudflare accept the rule and then
+   silently discard" — appears unreachable through the dashboard, since the rule
+   cannot exist in the first place. Not proven for the API, and a destination
+   that becomes unverified after its rule exists is untested. Treat the warning
+   as still standing, but not as the live risk it was written to be.*
+10. **Stop here until Ivan and Todd have verified** — then create the remaining
+    four rules. Neither click obliges a flip, and staged-but-unflipped costs
+    nothing: Postfix keeps receiving exactly as it does today.
 11. When Ivan has verified **and** `todd@` is resolved, **write down this
     zone's own rollback value — `10 _dc-mx.658032ac2d3a.themadeira.net`, not
     Phase 1's (requirement 6)** — then publish MX on this zone and test all
