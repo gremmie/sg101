@@ -138,8 +138,17 @@ def summarize(xml_bytes):
         auth = record.find('auth_results')
         if auth is not None:
             for spf_node in auth.findall('spf'):
-                detail.append('spf:%s=%s' % (_text(spf_node, 'domain', '?'),
-                                             _text(spf_node, 'result', '?')))
+                # scope says which identity SPF was evaluated against: 'mfrom'
+                # for the envelope sender, 'helo' when there is no usable one --
+                # a bounce or other null-sender message. Without it, a domain
+                # that happens to be a subdomain cannot be told apart from a
+                # HELO fallback, and the difference decides which mail a DKIM
+                # failure belongs to. Optional in the schema, so it may be
+                # absent; say so rather than guessing.
+                scope = _text(spf_node, 'scope') or '?'
+                detail.append('spf:%s=%s/%s' % (_text(spf_node, 'domain', '?'),
+                                                _text(spf_node, 'result', '?'),
+                                                scope))
             for dkim_node in auth.findall('dkim'):
                 detail.append('dkim:%s=%s' % (_text(dkim_node, 'domain', '?'),
                                               _text(dkim_node, 'result', '?')))
