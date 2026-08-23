@@ -849,6 +849,100 @@ have to be removed, or messages render twice.**
 **Next: task 06** (inbound → Cloudflare Email Routing) and task 07 (the smoke
 tool), with task 03's DMARC week still the long pole.
 
+## PLANNING — Step 16 task 06: the alias prune, which collapsed the critical path (2026-08-22)
+
+No code and nothing touched in Cloudflare yet. Requirement 0's prune ran, and it
+turned the task from one gated on five people into one that is **half executable
+today by Brian alone**.
+
+Brian asked all five destination owners; four answered.
+
+| Owner | Answer | Effect |
+|---|---|---|
+| Rick | wants none | `hellbenders@` `meltdowns@` `volcanos@` dropped — **destination gone** |
+| Ivan | keep all but `madeira@surfguitar101.com` | three kept — **destination stays** |
+| Dane | drop | **gone** |
+| Patrick | drop | **gone** |
+| Todd | no answer yet | undecided, and it gates nothing yet |
+
+Plus Brian's own, needing nobody: `store@surfguitar101.com` and
+`brian@themadeira.net` dropped, `admin@themadeira.net` kept.
+
+**21 rules → 13. Six destinations → two.**
+
+### The consequence neither of us had stated: `surfguitar101.com` is now 100% Brian
+
+All six of its surviving rules point at `bgneal@gmail.com`. Ivan's
+`madeira@surfguitar101.com` was the only external address on that zone, and he
+is the one who asked to drop it. **So the domain carrying `admin@`, `no_reply@`,
+`postmaster@` and the site's entire mail identity has no third-party dependency
+at all** — it can be migrated start to finish, today, waiting on nobody. Only
+`themadeira.net` needs Ivan.
+
+It is also the better rehearsal: every address on it is Brian's to test by
+mailing it and watching it arrive, and any surprise is his to fix immediately
+rather than discovered on someone else's mail.
+
+### What survives, and why — recorded so a later prune cannot remove it by accident
+
+`admin@surfguitar101.com` is `DEFAULT_FROM_EMAIL` **and** `SERVER_EMAIL`
+(`settings/base.py:236,244`) — the From on every site email and on Django's
+error mail — and is published as a mailto in `potd/view.html:53`.
+`no_reply@` is `GPP_NO_REPLY_EMAIL`, the From on PM, contact-form and flag
+notifications, and **bounces today** because no such alias exists.
+`podcast@` is published as a mailto in `podcast/base.html:27`. `postmaster@` and
+`abuse@` stay on both zones per RFC 2142. Each rule row in the task file now
+carries its reason.
+
+`store@` was checked rather than assumed: `/store/` is an "Editor's Choice"
+recommendations page whose every item links out to Amazon, John Blair's site or
+reverbjunkiesfilm.com. The site sells nothing itself, there is no order flow, and
+the page publishes no address. Nothing in the repository referenced `store@`.
+
+### Two mechanism facts that changed the plan's shape
+
+**MX is per-zone, and the two domains are independent.** Requirement 1 said
+"verify all remaining destinations before touching any MX record", which reads as
+both domains gating any flip — and that misreading is exactly what would have
+made `surfguitar101.com` wait on Ivan for no reason. Reworded to gate per zone.
+
+**Verification and MX are independent actions.** Verifying a destination is a
+click in the owner's inbox recording consent; it publishes no DNS, routes no
+mail, touches Postfix not at all, and never expires. **So Ivan verifying does not
+oblige anyone to flip `themadeira.net`** — that zone can sit fully staged, rules
+created and destination verified, with MX still pointing at jaguar and mail still
+arriving exactly as it does today, indefinitely. The only real deadline is Step
+21's cutover.
+
+### `todd@themadeira.net` — undecided, and the earlier recommendation was wrong
+
+The task file had recommended routing `todd@` to Brian as a holding pen, on the
+reasoning that Todd would otherwise block everything on one person. **Brian
+objected, and the objection is sound: people writing to `todd@` are writing to
+Todd, and he never agreed to Brian reading it.**
+
+The recommendation was wrong on a second count too, which the objection exposed:
+`themadeira.net` is gated on Ivan regardless, so the pen removed no blocker. It
+traded someone else's mail privacy against a scheduling problem that does not
+exist. Combined with the independence fact above, **the default is simply to
+wait, at no cost.** Requirement 3a now records three options — wait (default),
+drop and let it bounce (what Rick, Dane and Patrick chose), or the pen for a
+genuine deadline — and the one thing that must not happen either way: flipping MX
+with a destination unverified, which makes Cloudflare accept the rule and then
+silently discard.
+
+### Where it stands
+
+**Phase 1 (`surfguitar101.com`) is unblocked and is now transcription.** Verify
+Brian's own destination, create six rules, write down the rollback value
+`10 mail.surfguitar101.com` (not the `_dc-mx` name — task 03 superseded that
+2026-08-17), publish MX as its own deliberate step, test six addresses.
+**Do not let Cloudflare's enable-Email-Routing wizard publish MX as a
+convenience step** — that is the one change here that breaks something real.
+
+**Phase 2 (`themadeira.net`) is staged but deliberately parked**, pending Ivan's
+click and a decision on Todd.
+
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
 No code. Four DNS records published by hand in Cloudflare, one Postfix parameter

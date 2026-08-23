@@ -1,15 +1,23 @@
 # Task: Move Inbound Mail from Postfix Virtual Aliases to Cloudflare Email Routing
 
 ## Description
-Retire the Postfix instance's inbound role by reproducing its 20 live virtual
+Retire the Postfix instance's inbound role by reproducing its live virtual
 aliases as Cloudflare Email Routing rules across two domains, and drop the third
 domain entirely. This is what allows the Step 21 VM to ship with no MX record, no
 inbound port 25, and no mail server to maintain.
 
 **The alias table converts mechanically — there is no hard part in the mapping.**
-The schedule risk is entirely in Cloudflare's destination-verification
-requirement, which depends on five other people clicking links in their own
-inboxes. Plan around that, not around the rules.
+The schedule risk was entirely in Cloudflare's destination-verification
+requirement, which depended on five other people clicking links in their own
+inboxes.
+
+**That risk is largely retired as of 2026-08-22.** The prune in requirement 0
+ran: 20 aliases became 12 kept plus the new `no_reply@`, and **six destinations
+became two** — Brian, who self-verifies, and Ivan, who has already replied. Todd
+has not answered, which gates nothing: verification and MX are independent, so
+that zone can sit fully staged with mail still flowing through Postfix until he
+does (requirement 3a). What remains is dashboard transcription plus one person's
+click.
 
 **Applied by hand in the Cloudflare dashboard. No repository code changes.**
 
@@ -37,17 +45,19 @@ Cloudflare will not deliver to a destination address until its owner has clicked
 a verification link Cloudflare emails them. The 20 aliases collapse to six
 distinct destinations:
 
-| Destination | Owner | Aliases served |
-|---|---|---|
-| `bgneal@gmail.com` | Brian — self-verify | 10 |
-| `ipongrac@…` | Ivan | 4 (both domains) |
-| `creepyrick@…` | Rick | 3 |
-| `dane.carter@…` | Dane | 1 |
-| `todd4ta@…` | Todd | 1 |
-| `malfunctioncentral@…` | Patrick | 1 |
+| Destination | Owner | Aliases served | Outcome of the 2026-08-22 prune |
+|---|---|---|---|
+| `bgneal@gmail.com` | Brian — self-verify | 10 | **stays**, now serving 10 of the 13 rules |
+| `ipongrac@…` | Ivan | 4 (both domains) | **stays**, 3 of 4 kept — the only third party left |
+| `creepyrick@…` | Rick | 3 | **gone** — wants none |
+| `dane.carter@…` | Dane | 1 | **gone** |
+| `todd4ta@…` | Todd | 1 | **deferred** — undecided, requirement 3a |
+| `malfunctioncentral@…` | Patrick | 1 | **gone** |
 
-**Five of the six require someone else to act.** This is the entire critical
-path. A migration that is twenty minutes of dashboard work becomes a week or
+**Five of the six required someone else to act, which was the entire critical
+path — and the prune removed four of them.** What follows is the reasoning that
+made the prune worth doing first; it is now history, kept because it is why the
+critical path is one person instead of five. A migration that is twenty minutes of dashboard work becomes a week or
 more of chasing bandmates, and any destination still unverified when MX flips
 means mail to its aliases is refused.
 
@@ -122,8 +132,12 @@ implementation. Read additional references as needed for context.
 
 ## Technical Requirements
 
-0. **Prune before migrating — Brian's call, 2026-08-16.** He believes several
-   aliases are no longer used and will confirm with their owners. **Do this
+0. **Prune before migrating — Brian's call, 2026-08-16. DONE 2026-08-22**, see
+   the prune section below for what was decided; the rest of this requirement is
+   kept because it is the reasoning that made it worth doing first.
+
+   He believed several aliases were no longer used and would confirm with their
+   owners. **Do this
    first**, because it is the one action that shortens the critical path:
    every third-party destination that turns out to be dead is one fewer person
    whose click the cutover waits on. The rules cost nothing to create, so the
@@ -140,41 +154,110 @@ implementation. Read additional references as needed for context.
    the forwarding at all — a band address nobody has read in five years is
    better retired than migrated.
 
-1. **Verify all remaining destinations before touching any MX record.** This
+1. **Verify a zone's destinations before touching that zone's MX record.** This
    is the ordering that makes the cutover safe: while Postfix still holds MX,
-   mail keeps flowing normally and verification failures cost nothing. Send the
-   third-party requests early and treat them as the long pole.
+   mail keeps flowing normally and verification failures cost nothing.
 
-2. **Create these rules on `surfguitar101.com`:**
+   **Per zone, not across both** (clarified 2026-08-22). MX is a per-domain
+   record, so `surfguitar101.com` needs only its own destination — Brian's —
+   verified before its flip, and does not wait on `themadeira.net`. After the
+   prune that is the difference between one domain being blocked and both.
 
-   | Address | Destination |
-   |---|---|
-   | `postmaster@` | `bgneal@gmail.com` |
-   | `abuse@` | `bgneal@gmail.com` |
-   | `admin@` | `bgneal@gmail.com` |
-   | `brian@` | `bgneal@gmail.com` |
-   | `podcast@` | `bgneal@gmail.com` |
-   | `store@` | `bgneal@gmail.com` |
-   | `hellbenders@` | `creepyrick@…` |
-   | `meltdowns@` | `creepyrick@…` |
-   | `volcanos@` | `creepyrick@…` |
-   | `madeira@` | `ipongrac@…` |
-   | `no_reply@` | `bgneal@gmail.com` — **new**, see background |
+### THE PRUNE IS DONE — decided 2026-08-22, and it collapsed the critical path
 
-3. **Create these rules on `themadeira.net`:**
+Requirement 0 has been executed. Brian asked all five destination owners; four
+answered. **Six destinations became two**, so the only third party left to wait
+on is Ivan, who has already replied.
 
-   | Address | Destination |
-   |---|---|
-   | `postmaster@` | `bgneal@gmail.com` |
-   | `abuse@` | `bgneal@gmail.com` |
-   | `admin@` | `bgneal@gmail.com` |
-   | `brian@` | `bgneal@gmail.com` |
-   | `madeira@` | `ipongrac@…` |
-   | `themadeira@` | `ipongrac@…` |
-   | `ivan@` | `ipongrac@…` |
-   | `dane@` | `dane.carter@…` |
-   | `todd@` | `todd4ta@…` |
-   | `patrick@` | `malfunctioncentral@…` |
+| Owner | Answer | Effect |
+|---|---|---|
+| Rick | wants none of them | `hellbenders@` `meltdowns@` `volcanos@` dropped — **destination gone** |
+| Ivan | keep all but `madeira@surfguitar101.com` | that one dropped; his other three kept — **destination stays** |
+| Dane | drop | `dane@` dropped — **destination gone** |
+| Patrick | drop | `patrick@` dropped — **destination gone** |
+| Todd | no answer yet | **undecided, requirement 3a** — costs nothing, since this zone's MX moves only when Brian says so |
+
+Brian's own calls, needing nobody: **`store@surfguitar101.com` dropped**,
+**`brian@themadeira.net` dropped**, `admin@themadeira.net` kept.
+
+`store@` was checked rather than assumed: `/store/` is an "Editor's Choice"
+recommendations page whose every item links out to Amazon, John Blair's site or
+reverbjunkiesfilm.com. **The site sells nothing itself, there is no order flow,
+and the page publishes no address at all.** No reference to `store@` exists
+anywhere in the repository outside this file.
+
+**21 rules become 13. Six destinations become two** (three until Todd resolves).
+
+2. **Create these rules on `surfguitar101.com`** (was 11, now 6):
+
+   | Address | Destination | Why it survives |
+   |---|---|---|
+   | `postmaster@` | `bgneal@gmail.com` | RFC 2142; requirement 4 |
+   | `abuse@` | `bgneal@gmail.com` | RFC 2142; requirement 4 |
+   | `admin@` | `bgneal@gmail.com` | `DEFAULT_FROM_EMAIL` **and** `SERVER_EMAIL` (`settings/base.py:236,244`) — the From on every site email and on Django's error mail. Also published as a mailto in `potd/view.html:53` |
+   | `no_reply@` | `bgneal@gmail.com` | **new** — `GPP_NO_REPLY_EMAIL`, the From on PM, contact-form and flag notifications. Bounces today |
+   | `podcast@` | `bgneal@gmail.com` | published as a mailto in `podcast/base.html:27` |
+   | `brian@` | `bgneal@gmail.com` | Brian's own |
+
+   **Dropped:** `store@`, `hellbenders@`, `meltdowns@`, `volcanos@`, `madeira@`.
+
+3. **Create these rules on `themadeira.net`** (was 10, now 7):
+
+   | Address | Destination | Why it survives |
+   |---|---|---|
+   | `postmaster@` | `bgneal@gmail.com` | RFC 2142; requirement 4 |
+   | `abuse@` | `bgneal@gmail.com` | RFC 2142; requirement 4 |
+   | `admin@` | `bgneal@gmail.com` | Brian's call 2026-08-22 |
+   | `madeira@` | `ipongrac@…` | Ivan keeps |
+   | `themadeira@` | `ipongrac@…` | Ivan keeps |
+   | `ivan@` | `ipongrac@…` | Ivan keeps |
+   | `todd@` | `todd4ta@…`, unverified | **undecided — see 3a.** Default is to wait; this zone's MX does not move until Brian chooses, whatever Ivan does |
+
+   **Dropped:** `brian@`, `dane@`, `patrick@`.
+
+3a. **`todd@themadeira.net` — UNDECIDED, and deferrable at no cost.**
+
+   **Verifying a destination and changing MX are independent actions**, and
+   realising that is what makes this easy (2026-08-22). Verification is a click
+   in the destination owner's inbox recording their consent; it publishes no
+   DNS, routes no mail, touches Postfix not at all, and never expires. So Ivan
+   verifying does **not** oblige anyone to flip `themadeira.net`. The zone can
+   sit fully staged — Email Routing enabled, Ivan verified, all seven rules
+   created — with MX still pointing at jaguar and every message still arriving
+   exactly as it does today, for as long as anyone likes.
+
+   **Therefore the default is simply to wait for Todd**, and it costs nothing
+   but patience. The only real deadline is Step 21's cutover, several steps out.
+
+   The three options, for the moment this actually becomes live — which is only
+   if Ivan verifies, Todd is still silent, *and* something forces a date:
+
+   - **Wait.** Keep the rule pointed at `todd4ta@…` and leave MX alone. Nothing
+     breaks; Postfix keeps receiving. **This is the default.**
+   - **Drop `todd@`.** Mail to it bounces, so his correspondents find out and
+     reach him another way — the same answer Rick, Dane and Patrick chose, and
+     arguably more respectful of his mail than forwarding it.
+   - **Holding pen:** point `todd@` at `bgneal@gmail.com`, an already-verified
+     destination, and forward by hand until Todd surfaces. **Brian is uneasy
+     about this and the objection is sound** — people writing to `todd@` are
+     writing to Todd, and he never agreed to Brian reading it. Reserve it for a
+     genuine deadline.
+
+   **What must not happen in any case: flipping MX while his destination is
+   unverified.** Cloudflare accepts the rule and then silently discards, which
+   is worse than bouncing and worse than waiting.
+
+   *(Superseded 2026-08-22: this requirement previously recommended the holding
+   pen outright, on the reasoning that Todd would otherwise block everything on
+   one person. That reasoning was wrong twice — `themadeira.net` is gated on
+   Ivan regardless, so the pen removed no blocker; and it traded away someone
+   else's mail privacy to solve a scheduling problem that does not exist.)*
+
+3b. **The eight dropped addresses will bounce, not vanish.** That is the correct
+   behaviour — a sender writing to `dane@themadeira.net` finds out rather than
+   being ignored — but it is a hard failure at the far end. **If any of those
+   band addresses were ever published, tell Rick, Dane and Patrick** so a bounce
+   to one of their contacts is not a surprise.
 
 4. **Keep `postmaster@` and `abuse@` on both live domains.** RFC 2142 expects
    them, receivers and registrars check them, and they are the channel by which
@@ -224,25 +307,89 @@ implementation. Read additional references as needed for context.
 - Independent of the outbound Postmark tasks; sequence them separately.
 
 ## Implementation Approach
-1. Enable Email Routing on `surfguitar101.com`, but do not let it publish MX yet.
-2. Add all six destinations; verify `bgneal@gmail.com` immediately, and send the
-   five third-party requests with a short note explaining what the click is for.
-3. While waiting, create every routing rule. Rules to unverified destinations can
-   exist; they simply do not deliver yet.
-4. When all six are verified, publish Cloudflare's MX on `surfguitar101.com`.
-5. Test each address end-to-end from an external mailbox before moving on.
-6. Repeat for `themadeira.net`.
-7. Leave Postfix receiving for at least a week past the flip.
-8. Decommission Postfix's inbound role; drop `deathofagremmie.com` from the
-   config.
+
+### The two domains are independent, and after the prune only one of them waits
+
+Each domain is its own Cloudflare zone with its own MX record, so migrating one
+touches nothing about the other. **What the prune changed is that
+`surfguitar101.com` now has no third-party destination at all**: all six of its
+surviving rules point at `bgneal@gmail.com`, because Ivan's
+`madeira@surfguitar101.com` was the only external address on it and he is the
+one who asked to drop it.
+
+So the domain carrying `admin@`, `no_reply@`, `postmaster@` and the site's whole
+mail identity **can be migrated start to finish by Brian alone, today, waiting
+on nobody.** Only `themadeira.net` needs Ivan.
+
+Do `surfguitar101.com` first. Besides being unblocked, it is the better
+rehearsal: every address on it is Brian's to test by mailing it and watching it
+arrive, and any surprise is his to fix immediately rather than discovered on
+someone else's mail.
+
+**The constraint is *within* a domain, not between them.** MX is per-zone, so
+enabling Email Routing on `themadeira.net` replaces that zone's MX wholesale —
+there is no arrangement where `ivan@` is served by Cloudflare while `todd@` is
+still served by Postfix. That domain moves as a unit — which is why `todd@` has
+to be settled before its MX changes, and why requirement 3a exists.
+
+**But the unit does not have to move at all until Brian says so.** Verification
+and MX are independent, so this zone can sit fully staged and verified with mail
+still arriving through Postfix indefinitely. Ivan verifying starts no clock.
+
+### Phase 1 — `surfguitar101.com`, unblocked
+
+1. Enable Email Routing on the zone, but **do not let it publish MX yet**; see
+   requirement 6 on wizards that offer to bundle the change.
+2. Add `bgneal@gmail.com` as a destination and verify it — Brian's own inbox,
+   so this is immediate.
+3. Create all six rules (requirement 2).
+4. **Write down the rollback value before touching MX: `10
+   mail.surfguitar101.com`.** Not the `_dc-mx` name, which task 03 superseded on
+   2026-08-17.
+5. Publish Cloudflare's MX as its own deliberate step.
+6. Test all six addresses end-to-end from an external mailbox. Every one lands
+   in the same inbox, so this is six sends and six checks with nobody to chase.
+
+### Phase 2 — `themadeira.net`, gated on Ivan's click and on Todd
+
+7. Enable Email Routing on the zone, MX still unpublished.
+8. Add `ipongrac@…` as a destination and send Ivan the verification request with
+   a short note explaining what the click is for. **Ivan and Todd are the only
+   two people this task still waits on, and neither of them blocks
+   `surfguitar101.com`.**
+9. Create all seven rules, `todd@` pointed at `todd4ta@…` for now. Rules to an
+   unverified destination can exist; they simply do not deliver yet.
+10. **Stop here until `todd@` is settled** — requirement 3a. Ivan verifying does
+    not oblige a flip, and staged-but-unflipped costs nothing: Postfix keeps
+    receiving exactly as it does today.
+11. When Ivan has verified **and** `todd@` is resolved, publish MX on this zone
+    and test all seven addresses.
+
+### Phase 3 — teardown, after both
+
+12. Leave Postfix receiving for at least a week past each flip. MX has a TTL and
+    senders cache, so mail keeps arriving at the old box regardless.
+13. Decommission Postfix's inbound role; drop `deathofagremmie.com` from the
+    config.
 
 ## Acceptance Criteria
 - **Given** the Cloudflare account destination list
-  **Then** all six addresses show as verified before any MX record is changed
-- **Given** each of the 20 migrated aliases plus the new `no_reply@`
+  **Then** every destination a zone's rules point at shows as verified before
+  that zone's MX record is changed. *(Reworded 2026-08-22: this said "all six
+  addresses ... before any MX record is changed". The prune left two
+  destinations, and verification gates each zone separately —
+  `surfguitar101.com` needs only Brian's, which is why it can go first.)*
+- **Given** each of the 13 migrated aliases — 12 kept from the Postfix table
+  plus the new `no_reply@`
   **When** a message is sent to it from an external mailbox after cutover
   **Then** it arrives at the destination the Postfix table specified — tested
-  per address, not sampled
+  per address, not sampled. `todd@themadeira.net` is whatever requirement 3a
+  settled it to be, and **`themadeira.net`'s MX is not flipped until it is
+  settled.**
+  *(Was "each of the 20 migrated aliases"; eight were dropped 2026-08-22.)*
+- **Given** each of the eight dropped aliases
+  **Then** a message to it is refused rather than silently accepted — the
+  senders who still use them should find out
 - **Given** `dig +short MX surfguitar101.com` and the same for `themadeira.net`
   **Then** both return Cloudflare's Email Routing MX hosts, and neither still
   points at the Linode box — for `surfguitar101.com` that means the pre-cutover
