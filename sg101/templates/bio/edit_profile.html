@@ -17,6 +17,7 @@
 </nav>
 
 <h2>Edit Profile for {{ user.username }}</h2>
+{% include 'core/message_list.html' %}
 <div class="row align-middle">
    <div class="columns">
       <p>
@@ -30,6 +31,8 @@
          Change Avatar</a>
    </div>
 </div>
+
+{% include 'bio/pending_email_change.html' %}
 
 <form action="{% url 'bio-edit_profile' %}" method="post">{% csrf_token %}
    {{ user_form.non_field_errors }}

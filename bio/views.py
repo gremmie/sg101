@@ -12,6 +12,8 @@ from django.http import HttpResponseServerError
 from django.http import Http404
 from django.core.paginator import InvalidPage
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from elsewhere.models import SocialNetworkForm
@@ -25,6 +27,9 @@ from bio.forms import UploadAvatarForm
 from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
+from accounts.models import PendingEmailChange
+from accounts.utils import send_email_change_confirmation
+from accounts.utils import send_email_change_notice
 from core.paginator import DiggPaginator
 from core.functions import email_admins
 from core.functions import get_page
@@ -71,6 +76,10 @@ def my_profile(request):
         'hide_email': False,
         'this_is_me': True,
         'badge_collection': badge_collection,
+        # Only this view supplies it, so the notice cannot reach anyone else's
+        # profile page: view_profile redirects here when the subject is you.
+        'pending_change': PendingEmailChange.objects.active().filter(
+            user=request.user).first(),
         'V3_DESIGN': True,
         })
 
@@ -112,6 +121,15 @@ def edit_profile(request):
             profile = profile_form.save(commit=False)
             profile.user = request.user
             profile.save()
+
+            new_email = user_form.requested_email()
+            if new_email:
+                change = PendingEmailChange.objects.request_change(request.user,
+                                                                   new_email)
+                send_email_change_confirmation(change)
+                send_email_change_notice(change)
+                # No flash: bio-me renders the pending-change notice, which
+                # says all of this and stays put until the change resolves.
             return redirect('bio-me')
     else:
         profile = request.user.profile
@@ -121,8 +139,64 @@ def edit_profile(request):
     return render(request, 'bio/edit_profile.html', {
         'user_form': user_form,
         'profile_form': profile_form,
+        'pending_change': PendingEmailChange.objects.active().filter(
+            user=request.user).first(),
         'V3_DESIGN': True,
          })
+
+#######################################################################
+
+def _back_to(request):
+    """Return the posted 'next' URL if it is one of ours, else the edit page.
+
+    The notice is rendered on two pages, so sending the member to a fixed one
+    would move them off whichever they were reading. Validated rather than
+    trusted: an unchecked redirect target posted by a form is an open redirect.
+
+    """
+    next_url = request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return next_url
+    return reverse('bio-edit_profile')
+
+#######################################################################
+
+@login_required
+@require_POST
+def email_change_cancel(request):
+    """Discard a pending email address change.
+
+    Not a nicety: without it a member who mistypes an address has to wait out
+    the expiry with no way to correct it and no way to retry.
+
+    """
+    PendingEmailChange.objects.filter(user=request.user).delete()
+    messages.success(request, 'The pending email address change was cancelled.')
+    return redirect(_back_to(request))
+
+#######################################################################
+
+@login_required
+@require_POST
+def email_change_resend(request):
+    """Send the confirmation link for a pending change again."""
+    pending = PendingEmailChange.objects.active().filter(
+        user=request.user).first()
+    if pending:
+        # Re-requesting the same address rather than re-mailing the old link:
+        # it restarts the expiry window, so a member who waited most of a day
+        # does not get a link good for the remaining hour.
+        change = PendingEmailChange.objects.request_change(request.user,
+                                                           pending.new_email)
+        send_email_change_confirmation(change)
+        messages.success(request,
+            'Confirmation sent again to %s.' % change.new_email)
+    else:
+        messages.error(request,
+            'There is no email address change waiting to be confirmed.')
+    return redirect(_back_to(request))
 
 #######################################################################
 

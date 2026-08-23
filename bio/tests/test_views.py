@@ -2,17 +2,23 @@
 View tests for the bio application.
 
 """
+import datetime
 from io import BytesIO
+import logging
 import os
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse, NoReverseMatch
 from django.core import mail
+from django.utils import timezone
 
 from PIL import Image
 
+from accounts.models import EMAIL_CHANGE_EXPIRATION
+from accounts.models import PendingEmailChange
 from bio.models import UserProfile, UserProfileFlag
+from forums.models import Topic
 
 from elsewhere.models import (SocialNetworkProfile, InstantMessengerProfile,
     WebsiteProfile)
@@ -217,7 +223,11 @@ class ProfileTest(TestCase):
         u = User.objects.get(username='paul')
         self.assertEqual(u.first_name, 'Paul')
         self.assertEqual(u.last_name, 'Johnson')
-        self.assertEqual(u.email, 'pjmoto@example.com')
+        # The address posted above is now pending confirmation rather than
+        # applied; EmailChangeTestCase covers that flow. This assertion used to
+        # read assertEqual(u.email, 'pjmoto@example.com').
+        self.assertEqual(u.email, '')
+        self.assertEqual(u.pending_email_change.new_email, 'pjmoto@example.com')
         profile = u.profile
         self.assertEqual(profile.occupation, 'Surf Guitar Pioneer')
         self.assertEqual(profile.profile_text, 'Wrote Mr. Moto at age 15.')
@@ -357,3 +367,349 @@ class EditElsewhereTestCase(TestCase):
         })
         self.assertRedirects(response, self.url)
         self.assertEqual(self.user.website_profiles.count(), 0)
+
+
+class EmailChangeTestCase(TestCase):
+    """Requesting, confirming, cancelling and resending an email change.
+
+    The property under test throughout: an address the member has not answered
+    mail at never reaches User.email.
+
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+        self.url = reverse('bio-edit_profile')
+        self.assertTrue(self.client.login(username='paul', password='pw'))
+
+    def post_edit(self, email, **kwargs):
+        data = {
+            'first_name': 'Paul',
+            'last_name': 'Johnson',
+            'email': email,
+            'submit_button': 'Save',
+        }
+        data.update(kwargs)
+        return self.client.post(self.url, data, follow=True)
+
+    def test_requested_address_does_not_reach_the_user(self):
+        self.post_edit('new@example.com')
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'paul@example.com')
+        self.assertEqual(self.user.pending_email_change.new_email,
+                         'new@example.com')
+
+    def test_the_rest_of_the_profile_still_saves(self):
+        self.post_edit('new@example.com', occupation='Surf Guitar Pioneer')
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Paul')
+        self.assertEqual(self.user.profile.occupation, 'Surf Guitar Pioneer')
+
+    def test_both_addresses_are_mailed(self):
+        self.post_edit('new@example.com')
+
+        recipients = sorted(sum((m.to for m in mail.outbox), []))
+        self.assertEqual(recipients, ['new@example.com', 'paul@example.com'])
+
+    def test_the_confirmation_carries_the_link_and_the_notice_does_not(self):
+        self.post_edit('new@example.com')
+
+        change = self.user.pending_email_change
+        by_recipient = {m.to[0]: m for m in mail.outbox}
+        self.assertIn(change.key, by_recipient['new@example.com'].body)
+        # No action link to the old address: there is no takeover path here
+        # (login is by username, and a password reset mails its link to the
+        # address on file), so a "this wasn't me" link would add attack surface
+        # to answer a risk that does not exist. It names the contact form.
+        self.assertNotIn(change.key, by_recipient['paul@example.com'].body)
+
+    def test_the_send_is_categorized(self):
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('email', level='INFO') as logged:
+            self.post_edit('new@example.com')
+
+        self.assertTrue(all('category=email_change' in line
+                            for line in logged.output),
+                        msg=logged.output)
+
+    def test_the_member_is_told_the_change_is_pending(self):
+        """Asserted against the notice, not against the address appearing.
+
+        Saving redirects to bio-me, which renders the pending-change notice --
+        so a bare assertContains for the address passes whether or not the
+        member is told anything, and would keep passing if the notice were
+        removed and something else happened to print the address.
+
+        """
+        response = self.post_edit('new@example.com')
+
+        self.assertContains(response, 'warning callout')
+        self.assertContains(response, 'new@example.com')
+        self.assertContains(response, reverse('bio-email_change_cancel'))
+
+    def test_the_edit_page_shows_the_verified_address_and_a_notice(self):
+        """A flash dies on the next page load; the pending state does not."""
+        self.post_edit('new@example.com')
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context['pending_change'].new_email,
+                         'new@example.com')
+        self.assertEqual(response.context['user_form']['email'].value(),
+                         'paul@example.com')
+        self.assertContains(response, 'new@example.com')
+        # A multi-line {# #} is not a comment token -- Django's tokenizer is
+        # not DOTALL -- so one renders to the page as literal text. Asserting
+        # on the address alone did not notice that.
+        self.assertNotContains(response, '{#')
+        self.assertNotContains(response, '{%')
+        # Both buttons reach the page and point somewhere real. The cancel and
+        # resend tests below post to these URLs directly, so nothing else here
+        # would notice a button that went missing or lost its formaction.
+        self.assertContains(response, reverse('bio-email_change_cancel'))
+        self.assertContains(response, reverse('bio-email_change_resend'))
+
+    def test_the_profile_page_shows_the_notice_too(self):
+        """The edit page is not where a member spends time; the profile is."""
+        self.post_edit('new@example.com')
+
+        response = self.client.get(reverse('bio-me'))
+
+        self.assertEqual(response.context['pending_change'].new_email,
+                         'new@example.com')
+        self.assertContains(response, 'warning callout')
+        self.assertContains(response, reverse('bio-email_change_cancel'))
+        self.assertContains(response, reverse('bio-email_change_resend'))
+
+    def test_the_notice_never_reaches_another_members_profile(self):
+        """Nobody else should learn an address its owner has not confirmed.
+
+        Structural rather than conditional: only my_profile puts
+        pending_change in the context, and view_profile redirects to bio-me
+        when the subject is you. This asserts the structure holds.
+
+        """
+        self.post_edit('new@example.com')
+        User.objects.create_user('eddie', 'eddie@example.com', 'pw')
+        self.client.login(username='eddie', password='pw')
+
+        response = self.client.get(reverse('bio-view_profile',
+                                           kwargs={'username': 'paul'}))
+
+        self.assertIsNone(response.context.get('pending_change'))
+        self.assertNotContains(response, 'new@example.com')
+
+    def test_the_profile_page_notice_expires_with_the_request(self):
+        self.post_edit('new@example.com')
+        PendingEmailChange.objects.all().update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+
+        response = self.client.get(reverse('bio-me'))
+
+        self.assertIsNone(response.context['pending_change'])
+
+    def test_an_expired_pending_change_is_not_shown(self):
+        self.post_edit('new@example.com')
+        PendingEmailChange.objects.all().update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+
+        response = self.client.get(self.url)
+
+        self.assertIsNone(response.context['pending_change'])
+
+    def test_a_second_request_replaces_the_first(self):
+        self.post_edit('first@example.com')
+        mail.outbox = []
+
+        self.post_edit('second@example.com')
+
+        self.assertEqual(PendingEmailChange.objects.count(), 1)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.pending_email_change.new_email,
+                         'second@example.com')
+        # The old address is told again: it is the only signal the member gets
+        # if someone else is making these requests.
+        recipients = sorted(sum((m.to for m in mail.outbox), []))
+        self.assertEqual(recipients, ['paul@example.com', 'second@example.com'])
+
+    def test_cancel_clears_the_pending_change(self):
+        self.post_edit('typo@example.com')
+
+        response = self.client.post(reverse('bio-email_change_cancel'),
+                                    follow=True)
+
+        self.assertRedirects(response, self.url)
+        self.assertFalse(PendingEmailChange.objects.exists())
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'paul@example.com')
+
+    def test_a_new_request_works_immediately_after_a_cancel(self):
+        self.post_edit('typo@example.com')
+        self.client.post(reverse('bio-email_change_cancel'))
+
+        self.post_edit('right@example.com')
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.pending_email_change.new_email,
+                         'right@example.com')
+
+    def test_cancel_and_resend_return_to_the_page_they_came_from(self):
+        """The notice is on two pages, so a fixed redirect moves the member."""
+        self.post_edit('new@example.com')
+        me = reverse('bio-me')
+
+        for name in ['bio-email_change_resend', 'bio-email_change_cancel']:
+            with self.subTest(name=name):
+                self.post_edit('new@example.com')
+                response = self.client.post(reverse(name), {'next': me})
+                self.assertRedirects(response, me)
+
+    def test_an_offsite_next_is_refused(self):
+        """A redirect target posted by a form is an open redirect if trusted."""
+        self.post_edit('new@example.com')
+
+        for hostile in ['https://evil.example.com/', '//evil.example.com/',
+                        'http://evil.example.com/']:
+            with self.subTest(next=hostile):
+                self.post_edit('new@example.com')
+                response = self.client.post(reverse('bio-email_change_cancel'),
+                                            {'next': hostile})
+                self.assertRedirects(response, reverse('bio-edit_profile'))
+
+    def test_cancel_requires_a_post(self):
+        self.post_edit('typo@example.com')
+
+        response = self.client.get(reverse('bio-email_change_cancel'))
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(PendingEmailChange.objects.exists())
+
+    def test_the_cancel_and_resend_flashes_are_actually_displayed(self):
+        """Both redirect to the edit page, so that page has to render messages.
+
+        Only four templates on the site include core/message_list.html, and
+        edit_profile.html was not one of them -- so these two flashes were
+        stored and then surfaced on whatever page the member happened to visit
+        next. Asserting the redirect is not enough to catch that.
+
+        """
+        self.post_edit('new@example.com')
+
+        for name, expected in [('bio-email_change_resend', 'sent again'),
+                               ('bio-email_change_cancel', 'cancelled')]:
+            with self.subTest(name=name):
+                response = self.client.post(reverse(name), follow=True)
+                self.assertContains(response, expected)
+
+    def test_resend_mails_the_new_address_only(self):
+        self.post_edit('new@example.com')
+        mail.outbox = []
+
+        response = self.client.post(reverse('bio-email_change_resend'),
+                                    follow=True)
+
+        self.assertRedirects(response, self.url)
+        # The old address was told when the change was requested; a resend is
+        # not a new request, so telling it again would be noise.
+        self.assertEqual([m.to for m in mail.outbox], [['new@example.com']])
+
+    def test_resend_restarts_the_expiry_window(self):
+        self.post_edit('new@example.com')
+        original = PendingEmailChange.objects.get()
+        PendingEmailChange.objects.all().update(
+            date_requested=timezone.now() - datetime.timedelta(hours=23))
+
+        self.client.post(reverse('bio-email_change_resend'))
+
+        current = PendingEmailChange.objects.get()
+        self.assertNotEqual(current.key, original.key)
+        self.assertLess(timezone.now() - current.date_requested,
+                        datetime.timedelta(minutes=1))
+
+    def test_resend_with_nothing_pending_is_harmless(self):
+        response = self.client.post(reverse('bio-email_change_resend'),
+                                    follow=True)
+
+        self.assertRedirects(response, self.url)
+        self.assertEqual(mail.outbox, [])
+
+    def test_login_is_required(self):
+        self.client.logout()
+
+        for name in ['bio-email_change_cancel', 'bio-email_change_resend']:
+            with self.subTest(name=name):
+                url = reverse(name)
+                response = self.client.post(url)
+                self.assertRedirects(
+                    response, reverse('accounts-login') + '?next=' + url)
+
+
+class UnverifiedAddressIsNotDisplayedTestCase(TestCase):
+    """Criterion 7, asserted rather than assumed.
+
+    The pending address never enters User.email, so the three templates that
+    render a member's address need no edit. That is a property of the model
+    decision, not of the templates, and nothing else in the suite would notice
+    if a later change started writing the address at request time -- so it is
+    asserted here, across all three surfaces at once. The forums fixture is
+    here for the third of them.
+
+    """
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+        # hide_email defaults to True, which would make every assertion below
+        # pass for the wrong reason.
+        UserProfile.objects.filter(user=self.user).update(hide_email=False)
+        self.assertTrue(self.client.login(username='paul', password='pw'))
+        # follow=True so the success flash is rendered and consumed here: it
+        # names the pending address, and an unconsumed message would appear on
+        # whichever page each test below fetches.
+        self.client.post(reverse('bio-edit_profile'), {
+            'first_name': '', 'last_name': '', 'email': 'new@example.com',
+            'submit_button': 'Save',
+        }, follow=True)
+        self.assertEqual(PendingEmailChange.objects.count(), 1)
+
+    def assertPublishesVerifiedAddressOnly(self, response):
+        """Assert on the mailto link, not on the bare string.
+
+        "Do not display an unverified address" means do not publish it to
+        other people. The owner's own pending-change notice names the pending
+        address on purpose, so asserting the string is simply absent would
+        fail for the right behaviour. The mailto link is the thing that
+        actually hands the address out.
+
+        """
+        self.assertContains(response, 'mailto:paul@example.com')
+        self.assertNotContains(response, 'mailto:new@example.com')
+
+    def test_profile_page(self):
+        response = self.client.get(reverse('bio-me'))
+
+        self.assertPublishesVerifiedAddressOnly(response)
+
+    def test_member_list(self):
+        response = self.client.get(reverse('bio-member_list',
+                                           kwargs={'type': 'user'}))
+
+        self.assertPublishesVerifiedAddressOnly(response)
+
+    def test_forum_post(self):
+        self.client.post(
+            reverse('forums-new_topic', kwargs={'slug': 'shallow-end'}),
+            {'name': 'A test topic', 'body': 'testing 1, 2, 3...'})
+        topic = Topic.objects.get(name='A test topic')
+
+        response = self.client.get(reverse('forums-topic_index',
+                                           kwargs={'id': str(topic.pk)}))
+
+        self.assertPublishesVerifiedAddressOnly(response)

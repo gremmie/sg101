@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 
+from accounts.models import PendingEmailChange
 from bio.models import UserProfile
 from core.html import image_check
 from core.html import ImageCheckError
@@ -19,11 +20,62 @@ from core.markup import site_markup
 
 
 class EditUserForm(forms.ModelForm):
-    """Form for editing the fields of the User model."""
+    """Form for editing the fields of the User model.
+
+    email is deliberately declared here rather than listed in Meta.fields. A
+    ModelForm writes its Meta fields to the instance, and an address is not the
+    member's until they have answered mail sent to it -- so the form cannot be
+    allowed to touch User.email at all. The view asks requested_email() and
+    starts the confirmation flow instead.
+
+    """
     email = forms.EmailField(label='Email', required=True)
+
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'email')
+        fields = ('first_name', 'last_name')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Meta fields are populated from the instance; a declared field is not.
+        self.fields['email'].initial = self.instance.email
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip()
+
+        if email.lower() == self.instance.email.lower():
+            # Not a change, so there is nothing to check -- and this guard is
+            # the whole point of the method. Some accounts share an address
+            # with another account, and a uniqueness check that ran
+            # unconditionally would lock every one of those members out of
+            # saving any profile edit, forever, including edits that never
+            # touch this field. It is the constraint
+            # accounts.forms.ForgotUsernameForm handles from the recovery
+            # side.
+            return self.instance.email
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                'That email address is already in use by another account.')
+
+        if PendingEmailChange.objects.active().filter(
+                new_email__iexact=email).exclude(user=self.instance).exists():
+            raise forms.ValidationError(
+                'Another member has asked to move to that email address and '
+                'has not confirmed it yet. Please try again tomorrow.')
+
+        return email
+
+    def requested_email(self):
+        """Return the address the member asked for, or None if it is unchanged.
+
+        A case-only edit of the member's own address is not a change: it is the
+        same mailbox, and treating it as one would make them confirm an address
+        they already hold.
+
+        """
+        email = self.cleaned_data['email']
+        return None if email.lower() == self.instance.email.lower() else email
 
 
 class EditUserProfileForm(forms.ModelForm):

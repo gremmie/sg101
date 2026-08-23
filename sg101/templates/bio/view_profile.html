@@ -9,6 +9,7 @@
 {% block content %}
 <h2>User Profile for {{ subject.username }}</h2>
 {% include 'core/message_list.html' %}
+{% include 'bio/pending_email_change.html' %}
 <p>
    {% avatar subject 0 %}
 </p>

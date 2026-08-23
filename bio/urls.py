@@ -15,6 +15,10 @@ urlpatterns = [
         name='bio-view_profile'),
     path('edit/', bio.views.edit_profile, name='bio-edit_profile'),
     path('edit/elsewhere/', bio.views.edit_elsewhere, name='bio-edit_elsewhere'),
+    path('edit/email/cancel/', bio.views.email_change_cancel,
+        name='bio-email_change_cancel'),
+    path('edit/email/resend/', bio.views.email_change_resend,
+        name='bio-email_change_resend'),
     path('avatar/', bio.views.change_avatar, name='bio-change_avatar'),
     path('flag/<int:profile_id>/', bio.views.flag_profile, name='bio-flag_profile'),
 ]

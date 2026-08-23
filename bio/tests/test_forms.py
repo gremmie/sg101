@@ -2,13 +2,18 @@
 Form tests for the bio application.
 
 """
+import datetime
 from io import BytesIO
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.utils import timezone
 from PIL import Image
 
+from accounts.models import EMAIL_CHANGE_EXPIRATION
+from accounts.models import PendingEmailChange
+from bio.forms import EditUserForm
 from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
 from bio.forms import UploadAvatarForm
@@ -144,3 +149,116 @@ class UploadAvatarFormTestCase(TestCase):
 
         self.assertEqual(filename, 'small.png')
         self.assertIs(content, upload)
+
+
+class EditUserFormTestCase(TestCase):
+    """Validation on the email field of the profile edit form.
+
+    The constraint that shapes every test here: some addresses in the
+    production database are held by more than one account. A uniqueness check
+    that ran on every submission would lock every one of those members out of
+    saving any profile edit at all, forever, including edits that never touch
+    the email field. So the check must fire only when the address actually
+    changes.
+
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('paul', 'paul@example.com', 'pw')
+        self.other = User.objects.create_user('eddie', 'eddie@example.com', 'pw')
+
+    def post_data(self, email, **kwargs):
+        data = {'first_name': 'Paul', 'last_name': 'Johnson', 'email': email}
+        data.update(kwargs)
+        return data
+
+    def test_fresh_address_is_accepted_and_reported_as_requested(self):
+        form = EditUserForm(self.post_data('new@example.com'),
+                            instance=self.user)
+
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.requested_email(), 'new@example.com')
+
+    def test_saving_never_writes_the_requested_address(self):
+        form = EditUserForm(self.post_data('new@example.com'),
+                            instance=self.user)
+        self.assertTrue(form.is_valid())
+
+        form.save()
+
+        self.assertEqual(User.objects.get(pk=self.user.pk).email,
+                         'paul@example.com')
+
+    def test_address_another_account_holds_is_rejected(self):
+        form = EditUserForm(self.post_data('eddie@example.com'),
+                            instance=self.user)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_address_another_account_holds_is_rejected_differing_case(self):
+        # Addresses came to be shared partly through differences of case and
+        # collation, so the check has to be case-insensitive to be worth
+        # anything.
+        form = EditUserForm(self.post_data('Eddie@Example.COM'),
+                            instance=self.user)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_address_pending_for_another_account_is_rejected(self):
+        PendingEmailChange.objects.request_change(self.other, 'new@example.com')
+
+        form = EditUserForm(self.post_data('new@example.com'),
+                            instance=self.user)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_expired_pending_address_does_not_block(self):
+        change = PendingEmailChange.objects.request_change(self.other,
+                                                           'new@example.com')
+        PendingEmailChange.objects.filter(pk=change.pk).update(
+            date_requested=timezone.now() - EMAIL_CHANGE_EXPIRATION
+                           - datetime.timedelta(minutes=1))
+
+        form = EditUserForm(self.post_data('new@example.com'),
+                            instance=self.user)
+
+        self.assertTrue(form.is_valid())
+
+    def test_member_sharing_an_address_can_still_save(self):
+        """The regression a naive uniqueness check invites.
+
+        This is the specific test the task called for: a member who shares an
+        address with another account, saving an edit that does not touch the
+        email field at all. Against an implementation that runs the uniqueness
+        check unconditionally -- exclude(pk=self.instance.pk) and nothing else
+        -- this fails, and every member in that position can never save a
+        profile edit again.
+
+        """
+        twin = User.objects.create_user('twin', 'paul@example.com', 'pw')
+
+        form = EditUserForm(self.post_data('paul@example.com'), instance=twin)
+
+        self.assertTrue(form.is_valid(),
+                        msg='a member sharing an address cannot save: %r'
+                            % form.errors)
+        self.assertIsNone(form.requested_email())
+
+    def test_recasing_your_own_address_is_not_a_change(self):
+        # Same mailbox, so there is nothing to verify -- and treating it as a
+        # change would make the member confirm an address they already own.
+        form = EditUserForm(self.post_data('Paul@Example.com'),
+                            instance=self.user)
+
+        self.assertTrue(form.is_valid())
+        self.assertIsNone(form.requested_email())
+
+    def test_unchanged_address_is_not_a_change(self):
+        form = EditUserForm(self.post_data('paul@example.com'),
+                            instance=self.user)
+
+        self.assertTrue(form.is_valid())
+        self.assertIsNone(form.requested_email())

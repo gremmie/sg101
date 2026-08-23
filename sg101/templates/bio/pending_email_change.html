@@ -1,0 +1,48 @@
+{% comment %}
+   The notice a member sees while an email address change waits to be
+   confirmed. Included by both the profile page and the profile edit page,
+   so the wording and the buttons cannot drift apart. Renders nothing
+   unless the view supplies pending_change, and only the owner's own views
+   ever do -- view_profile redirects to bio-me when the subject is you, so
+   there is no path that could show it on someone else's profile.
+{% endcomment %}
+{% if pending_change %}
+{% comment %}
+   A warning callout rather than a success one: the state this describes is
+   "we are still waiting on you". On the edit page this sits outside the
+   profile form, because the buttons below are a form of their own and HTML
+   has no nested forms.
+{% endcomment %}
+<div class="row">
+   <div class="columns">
+      <div class="warning callout">
+         <p>
+         You asked to change your email address to
+         <strong>{{ pending_change.new_email }}</strong>. It is not your
+         address yet: we sent a confirmation link to it, and until you follow
+         that link your address here stays <strong>{{ user.email }}</strong>.
+         The link is good for 24 hours.
+         </p>
+         <p>
+         If you can't read mail at that address, cancel the change and try
+         another one, or
+         <a href="{% url 'contact-form' %}?subject=Email%20Address%20Change">ask
+            the site staff for help</a>.
+         </p>
+         {% comment %}
+            One form posting to two URLs, via formaction on each button. Two
+            separate forms would stack, since a form is block-level, and no
+            amount of text-align on the parent moves a block.
+         {% endcomment %}
+         <form method="post" class="text-right">{% csrf_token %}
+            {# Both buttons return to the page they were pressed on. #}
+            <input type="hidden" name="next" value="{{ request.path }}" />
+            <input type="submit" class="alert button" value="Cancel Change"
+               formaction="{% url 'bio-email_change_cancel' %}" />
+            <input type="submit" class="primary button" value="Resend Email"
+               formaction="{% url 'bio-email_change_resend' %}" />
+         </form>
+      </div>
+   </div>
+</div>
+{% endif %}
