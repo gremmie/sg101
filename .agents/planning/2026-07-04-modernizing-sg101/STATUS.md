@@ -3383,6 +3383,163 @@ timestamp — fixed on `modernize` and dying with jaguar. **A hypothesis built f
 a subject line and a date, refuted by the document that already held the
 traceback.** See [[measure-before-recording-in-planning-docs]].
 
+### Seventh reading — 2026-08-23, covering 2026-08-20 through 08-22: Microsoft arrives, and the first DKIM failure from our own IP
+
+**Nine reports, three windows, four reporting organizations.** Read from
+`tools/dmarc-aug-23.txt`, the tool's output over the maildir on jaguar.
+
+| Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|
+| `google.com` | `1291292834730335860` | 2026-08-20 | 5 | 0 |
+| `Yahoo` | `1787378132.213085` | 2026-08-21 | 2 | 0 |
+| `Yahoo` | `1787378132.213034` | 2026-08-21 | 2 | 0 |
+| `comcast.net` | `v2-1787362929-surfguitar101.com` | 2026-08-21 | 3 | 0 |
+| `google.com` | `9674723540522333898` | 2026-08-21 | 3 | 0 |
+| **`Outlook.com`** | `46b44804ed974be598daac23a1ebd5be` | 2026-08-21 | **1** | 0 |
+| `comcast.net` | `v2-1787445829-surfguitar101.com` | 2026-08-22 | 1 | 0 |
+| `Yahoo` | `1787462955.303904` | 2026-08-22 | 3 | 0 |
+| `google.com` | `7690294439508097741` | 2026-08-22 | 23 | 0 |
+
+| Window | Messages | Reporters | Change |
+|---|---|---|---|
+| 2026-08-20 | 5 | 1 | identical — **third** reproduction |
+| 2026-08-21 | **11** | 4 | was 10 across 3 |
+| 2026-08-22 | 27 | 3 | new |
+
+#### Microsoft has reported — the standing absence is closed
+
+`Outlook.com`, contact `dmarcreport@microsoft.com`, one message from
+`173.255.245.115`, SPF and DKIM both aligned pass, disposition none. *"Still no
+Microsoft"* has been carried since the fifth reading. **Four reporting
+organizations now observed directly: Google, Yahoo, Comcast, Microsoft.**
+
+Its window prints as `2026-08-21 00:00:00Z -> 2026-08-22 00:00:00Z` where the
+others print `-> 23:59:59Z`. **That is one day expressed with an exclusive end,
+not a two-day window** — a reporter formatting difference, recorded so a later
+reading does not double-count it.
+
+#### The floor prediction confirmed, exactly as stated
+
+The sixth reading recorded 08-21's 10 messages as *"a floor, not a total"*, on
+the reasoning that a report keyed by Report-ID is immutable, so per-report
+readings only ever **gain** reports for a window and never revise one. A late
+filer arrived, added 1, and **every one of the four pre-existing 08-21 reports
+reproduced byte-identically** — as did the 08-20 Google report, now read
+unchanged three times across the fifth, sixth and seventh readings.
+
+**The convention is now confirmed on two independent windows.** Treat the most
+recent window's count as a lower bound; it moves up or not at all.
+
+#### The first DKIM failure from `173.255.245.115` in seven readings — and it is UNIDENTIFIED
+
+In Google's 08-22 report, one message in 23:
+
+```
+173.255.245.115   1  none  pass  fail  spf:mail.surfguitar101.com=pass/?
+```
+
+**What is measured:** SPF passed against the domain `mail.surfguitar101.com`;
+there is no `dkim:` node at all, so no signature was evaluated; disposition none;
+DMARC passed, because that domain aligns with the org domain under relaxed
+`aspf`, which is why the report still reads 0 aligned on neither mechanism.
+
+**What is NOT known: which message it was.** Four hypotheses were raised and all
+four died. Recorded in full because the elimination is the only durable result
+of the hunt.
+
+| Hypothesis | How it died |
+|---|---|
+| A null-sender message — MAIL FROM empty, so SPF fell to HELO | **The `<scope>` element was never read.** `dmarc_report.py` printed only domain and result, and "the domain is a `mail.` subdomain, therefore HELO" is an inference. Patched to print scope; Google emits **no scope at all**, on either row — so the report cannot answer it |
+| Even so, a null sender should appear in the log | `grep "from=<>"` over both local days returns exactly one message, `4F3A25869C1`, which ran 00:29–03:59 local on Aug 21 — the **08-21** window — and `status=expired, returned to sender`, so it was never delivered and could not appear in any report |
+| An ordinary message with envelope sender at `@mail.surfguitar101.com` | No such sender appears anywhere in the window |
+| Unsigned because the milter is unreachable on `inet:localhost:88888` | **Already answered in task 03 Finding 7, and rediscovered a third time.** Both sides truncate to 23352 and signing works; a captured header proves it. See the note below |
+
+Two instrument checks were run before trusting any absence, and both passed:
+the log **does** cover the window (858 lines on Aug 22), and the UTC→local
+conversion is **confirmed from the data** — `Aug 22 14:49:22` carries
+`message-id=<20260822194922…>`, and Django stamps those in UTC, so the box is
+exactly UTC−5 as assumed.
+
+An elimination pass — find the delivery to a Google relay with no opendkim line —
+**also failed, and said so in its own output**: opendkim here logs only inbound
+verification of external hosts and writes nothing when it signs, so ten IDs came
+back "unsigned" while Google reported 22 of 23 as DKIM pass.
+
+**Recorded as a bounded known-unknown, and closed.** One message in 23, passed
+DMARC, disposition none, nothing harmed. jaguar is decommissioned at Step 21 and
+outbound moves to Postmark, which applies its own signature. Reopen only if a
+later reading shows a *second* unsigned message — one is an anomaly, two is a
+pattern with something to grep for.
+
+#### A consequence for the earlier readings: the `identity` column was inferred
+
+Google emits no `<scope>`, and Google was the **only** reporter for the 08-20
+window. So the fifth reading's table — which tabulated that window's two rows as
+`HELO` and `MAIL FROM` — **cannot have read that from the report.** It was
+derived the same way this reading's null-sender claim was derived, and the sixth
+reading then built on it ("that row was the deliberate null-sender test"), and
+the seventh built on the sixth.
+
+For 08-20 the conclusion is probably still correct, because a deliberate
+null-sender test was run that day — but that is corroboration from outside the
+report, not the report speaking. **Three readings treated an inference as a
+measurement.** [[measure-before-recording-in-planning-docs]], in the place it was
+already written down.
+
+#### `inet:localhost:88888` — presented as new for the third time
+
+The milter port was raised again in this sitting as a live risk ("the next
+`postfix reload` silently stops all signing"), and **withdrawn**. Task 03's
+Finding 7 has held the answer since before the first reading: a captured header
+from 2026-08-12 shows `dkim=pass header.s=dkim` aligned to the org domain,
+`88888 − 65536 = 23352`, both sides truncate identically, and the decision *do
+not touch it* was taken because the milter is decommissioned with the box.
+
+STATUS's own 08-21 note already called this a rediscovery and drew the lesson —
+*"when this document and the task file disagree, the task file has usually
+already been there."* **This is the third occurrence and the second time that
+lesson was available and unread.** The failure is not the wrong conclusion; it is
+re-deriving from a config value what a captured message header had already
+settled. Same shape as the finding it sits beside.
+
+#### An independent instrument agrees with the volume estimate
+
+08-22's **27 messages, on a day when four receivers filed**, sits against the
+**~30/day mean** measured from the snapshot in 2026-08-17 — the figure the
+Postmark plan choice rests on. Two unrelated instruments, close agreement.
+
+It also reframes the earlier windows: **5 and 11 were not quiet days, they were
+days when fewer receivers filed.** DMARC counts track reporter participation as
+much as traffic, and remain a lower bound on real volume in any case, since mail
+to non-reporting domains is invisible to this instrument entirely.
+
+#### What held steady
+
+- **One sending source.** Every aligned row is `173.255.245.115`. Seven readings,
+  four reporters, and no unknown sender has ever appeared.
+- **Zero messages aligned on neither mechanism**, in every window, from every
+  reporter, since the first reading.
+- **The member's Gmail forward recurs** on 08-21 — `209.85.220.41`, SPF `fail`
+  (evaluated against `gmail.com`, therefore unaligned), DKIM aligned pass,
+  disposition none. Still the evidence that **DKIM carries forwarded mail through
+  DMARC**. It does not appear in the 08-22 window.
+- **Yahoo prints `sp=-` where the others print `sp=none`.** A reporter omitting a
+  value the others fill in from the effective policy — **not** Yahoo seeing a
+  different record. Recorded so it is not read as a discrepancy.
+
+#### Bearing on the policy decision
+
+`p=none` was published 2026-08-17, so **the mandatory week is up 2026-08-24**;
+this is day six. The evidence for tightening is as strong as this instrument can
+make it: four independent receivers, one sending source, no unaligned mail in any
+window, and a demonstrated case of DKIM carrying a forward that SPF could not.
+
+**The unsigned message above was hunted the same day and did not survive as a
+blocker.** It cannot be identified from these instruments, it passed DMARC, and
+nothing was harmed. It is not a reason to hold step 7; it is a reason to look
+again at the next reading, since a second occurrence would be a pattern with
+something to grep for.
+
 ### Open
 
 - **Record the reporter, Report-ID and window in every reading** — convention
@@ -3432,11 +3589,13 @@ traceback.** See [[measure-before-recording-in-planning-docs]].
 - ~~Re-verify the PTR at `*.akam.net`~~ — **done 2026-08-17, passes.**
 - **Read a week of DMARC aggregate reports** (requirement 2) before tightening
   policy. Receivers send daily; Cloudflare's digest cadence is its own.
-  **5 of 7 days read** — 2026-08-17 through 2026-08-21, **with 08-19 re-read the
-  same evening and found to have tripled** (see the fourth reading) and **08-20
-  reproduced exactly from its Report-ID** on 08-22 (see the sixth).
+  **6 of 7 days read** — 2026-08-17 through 2026-08-22, **with 08-19 re-read the
+  same evening and found to have tripled** (see the fourth reading), **08-20
+  reproduced exactly from its Report-ID** on 08-22 and again on 08-23, and
+  **08-21's four reports all reproduced** on 08-23 while gaining a late filer.
   **Readings now re-check previously recorded days, not only the new one**, and
   the most recent row is provisional until a later reading reproduces it.
+  **The gate closes 2026-08-24.**
 
   **Scope of this gate, stated precisely 2026-08-20 because the daily readings
   had begun to imply more.** Requirement 2 reads *"before tightening policy…
@@ -3494,10 +3653,30 @@ traceback.** See [[measure-before-recording-in-planning-docs]].
   recorded as an independent corroboration. **08-20 re-read from its Report-ID and
   reproduced exactly**, which also establishes that per-report readings only gain
   reports for a window and never revise one — so **08-21's total is a floor**.
-  **Still no Microsoft** — day two of the two-day window. **The ~55%-of-outbound
+  **Still no Microsoft** — day two of the two-day window; *it filed for this same
+  window and was read on 08-23, see the seventh reading.* **The ~55%-of-outbound
   blind spot is materially smaller**: the reporter base is no longer Gmail alone,
   which is the first real progress on requirement 2's residual value rather than
   another day of the same view.
+- **Seventh reading done 2026-08-23** (above), covering 2026-08-20 through 08-22:
+  **nine reports, four reporting organizations**, 0 failures in every window.
+  **Microsoft has reported** — `Outlook.com`, one message, aligned — closing the
+  standing "still no Microsoft" line carried since the fifth reading. **The floor
+  convention is confirmed on a second window**: 08-21 gained the late filer and
+  went 10 → 11 while all four earlier reports reproduced byte-identically.
+  **08-22's 27 messages agree with the independently measured ~30/day mean**,
+  which reframes the smaller earlier windows as reporter participation rather
+  than quiet days. **NEW AND UNRESOLVED: the first DKIM failure from
+  `173.255.245.115` in seven readings** — one unsigned message on 08-22, which
+  passed DMARC on SPF alignment alone. **Hunted and closed as a bounded
+  known-unknown the same day**: four hypotheses raised and all four refuted, the
+  message never identified. Google emits no SPF `<scope>`, the log covers the
+  window and contains no null sender and no subdomain envelope sender in it, and
+  opendkim logs nothing when it signs, so elimination is impossible from these
+  instruments. **Reopen only on a second occurrence** — one is an anomaly, two is
+  a pattern. Full account, including what killed each hypothesis, in the seventh
+  reading above.
+
 - **The new VM needs a real-client-IP rewrite before cutover** — new 2026-08-21
   (fifth reading above). `mod_remoteip` on jaguar sets `REMOTE_ADDR` from
   `CF-Connecting-IP` for Cloudflare's ranges, and **every `REMOTE_ADDR` reader in
