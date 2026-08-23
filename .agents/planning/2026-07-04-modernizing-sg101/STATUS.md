@@ -1122,9 +1122,22 @@ jaguar and mail arriving exactly as it does today, indefinitely.
   the old box originates to these addresses is delivered by its local alias table
   and never consults MX. Tests must come from an external mailbox. It also means
   `no_reply@` still bounces *locally* — inert, since nothing sends to it.
-- Sending **from the site** has not been exercised since the apex SPF rewrite.
-  Jaguar is covered by the explicit `ip4:`, but that is reasoning, not a
-  measurement.
+- ~~Sending **from the site** has not been exercised since the apex SPF
+  rewrite.~~ **CLOSED 2026-08-23 by a live contact-form submission** — the one
+  loose end that was reasoning rather than measurement:
+
+  ```
+  spf=pass   173.255.245.115 designates, smtp.mailfrom=no_reply@surfguitar101.com
+  dkim=pass  header.i=@surfguitar101.com header.s=dkim
+  dmarc=pass header.from=surfguitar101.com
+  ```
+
+  **Dropping `a` and `mx` cost nothing** — jaguar passes on the explicit `ip4:`.
+  Two incidentals: the envelope sender reads `no_reply@surfguitar101.com` rather
+  than a bare local part, which is task 10's `sender_canonical` rewrite observed
+  on live mail; and unlike the forwarded test messages this one is
+  `header.from=surfguitar101.com`, so it is *this* domain's DMARC being
+  evaluated and it will appear in the next aggregate report as an aligned pass.
 
 **Next: Phase 2 (`themadeira.net`)** — enable Email Routing MX-less, create the
 seven rules, request verification from Ivan and from Todd at his new address. Then
