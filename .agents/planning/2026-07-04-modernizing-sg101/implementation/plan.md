@@ -34,7 +34,7 @@ green (tests pass), deprecation-clean, and with the manual smoke checklist passi
 - [ ] **Step 18** — Revive `gcalendar` with modern Google libraries
 - [ ] **Step 19** — Retire `wiki`/MoinMoin; verify-then-prune `banners`/`oembed` (`contests`/`countdown`/`bandmap` confirmed KEEP 2026-07-24; `membermap` already pruned in Step 4). Also carries: the `elsewhere` rework, the `last_post` CASCADE hazard, retiring vendored `django-tagging`, the `downloads`/`potd`/`weblinks` `ready()` coverage gap, and — added 2026-08-07 from Step 13 task 06 — the **settings-module cleanup** (extract `LOGGING` to its own module; move the search-logging assertions onto the subprocess helper), and — added 2026-08-09 from Step 13 task 09 — the **PayPal `payment_date` timezone truncation** (the IPN handler discards PayPal's `PST`/`PDT` instead of converting it, so all 1,421 donations are stored 2 hours early; 5 rows would change month, 0 would change year). Also carries the **timezone dropdown** (`static/js/timezone.js` is frozen 2010 pytz data and the form field behind it is a hidden free-text `CharField`, not a choice field — leave it, regenerate it, or move the choices into Python), and — added 2026-08-12 from Step 14 task 01 — **five `tools/` scripts that are still Python 2 and compile on no Python 3** (`filter_posts.py`, `flag_data.py`, `load_ygroup.py`, `post_sub.py`, `translate_yahoo_group.py`; pre-existing, since Step 7's `py_compile` claim covered app and migrations only — nothing imports them, three feed the `mysqlimport` path Step 21 retires, and `flag_data.py` is the one plausible survivor, so the work is triage rather than porting). Also carries — added 2026-08-15 from Step 14 task 05, **corrected the same day** — **replacing `repoze.timeago`** (0.5 is the last release, upstream stopped in 2011, and it owns the one third-party ignore the deprecation gate still carries, its module-level `_NOW = datetime.utcnow`). The reason first recorded here was **wrong and is worth noting as a process failure**: it said replacement was application work *because `core_tags.py` monkeypatches `_NOW`*, but **Step 13 task 09 removed that monkeypatch** and there is no `_NOW` assignment left in the tree — the claim came from the task file and went into three files unchecked. **The real obstacle is that every alternative changes what the site displays**: repoze rounds to nearest and stops at days (90s = "2 minutes ago", 400d = "400 days ago"), while `timeago` and `django.utils.timesince` both truncate and escalate to weeks/years ("1 minute ago", "1 year ago") — and those strings render on every forum topic and post listing, so a swap restyles the archive. **Vendoring is the recommendation** (79 BSD-licensed lines, one function used, `tagging` and `elsewhere` already vendored, and the deprecation becomes a one-line fix that empties the gate's third-party ignore list); `timeago` on PyPI was considered and last released 2022-08-18. Decision belongs to this step, not to task 05. Also carries, added 2026-08-16 from Step 15 task 05 (Brian's call): **choose a linter, and possibly a formatter — and note this has now been deferred three times without ever being scheduled.** Step 7/8 parked an `isort` (+ maybe `black`) pass as "its own commit right after the flip", on the sound reasoning that a whole-repo reformat would bury the Py2→Py3 migration; Step 14 task 05 hit it again and left `mock`/`unittest.mock` import placement alone for the same reason; and Step 15 task 05 found the third face of it — **the project carries `# noqa: E402` markers but has no linter at all**: no flake8 config, nothing in `requirements_dev.txt`, no lint step in CI. So those suppressions have never been validated against a run, and some may be for rules nothing checks (one was added in that task for an import that did not need it, and removed on inspection). The work is: pick the linter (flake8 vs ruff — ruff subsumes isort and is fast enough to run in CI), decide whether a formatter is wanted at all given this codebase's deliberate hand-wrapped comment style, wire whatever is chosen into CI so it is enforced rather than advisory, and only then run the reformat as its own separately-verified commit. **The "burying the migration" objection expires with Step 14** — the ladder is finished, so the reason for deferral no longer holds, which is exactly why it should stop being deferred. Also carries, added 2026-08-15 from Step 14 task 06: **`Post.delete()` returns `None` where `Model.delete()` returns a tuple** (`forums/models.py:311`, latent -- nothing reads the value), and a test for the queryset delete at `forums/tools.py:71` that bypasses that override entirely.
 - [ ] **Step 20** — Production hardening (gunicorn/WhiteNoise/prod compose/backups) + Cloudflare front **Corrected 2026-08-15:** media is NOT going to R2 -- Step 21 chose a single VM, so `/media` stays on the server's disk as it always has, and no `ImageField`/`FileField` changes shape. Backups still go to object storage. `downloads` (716 MP3 rows) is the one category worth measuring egress on before leaving it on disk.
-- [ ] **Step 21** — Deploy to new host + cutover + fallback. **Carried in 2026-08-05: bound Redis's memory and set `maxmemory-policy volatile-lru`** — one Redis now serves the cache (db 2), the broker (db 1) and the site's kept state (db 0), and the policy is server-wide, so `allkeys-lru` would evict broker messages and kept keys; `volatile-lru` evicts only the TTL-carrying cache keys. Also: the Redis cache backend fails hard where memcached failed soft. **Also carried in 2026-08-07 from Step 13 task 06: decide the dev/prod settings split.** `docker-strategy.md` records both "the dev override owns the debug toolbar" and "one image runs dev and prod", and those cannot both hold — one image means the prod image either carries `django-debug-toolbar` or it does not. Recommended: a **multi-target Dockerfile** (`prod` from `requirements.txt`, `dev` layering `requirements_dev.txt`), which lets a dev-only settings module drop the `if DEBUG and find_spec(...)` guard entirely. Neither half of that guard protects production today — `production.py` never goes through `local.py`. **Do the whole chain at once**: `local.py` and `production.py` both still declare `django.db.backends.mysql` five steps after the PostgreSQL move. **Preserve the toolbar's MIDDLEWARE position** — after `CommonMiddleware` deliberately, measured, and commented in place. **Tail item: retire the MySQL conversion chain, gated on decommissioning the old box** — not on the site looking fine, because while the old box stays warm a DNS flip makes its MySQL authoritative again and any second roll-forward is another convert-and-verify. Preconditions: tag the cutover commit (`verify_data.py`'s canonicalization is worth keeping findable) and archive the final snapshot (git restores the tooling; nothing restores the data). Out: `mysqlclient` + the Dockerfile's MySQL apt packages, the `db` service and `mysql` profile, `verify.py` / `verify_data.py` / `convert.sh` / `sg101.load` / `crosscheck_dumpdata.sh`, `DOCKER.md` §6–§7, and the four keep-this comments added 2026-08-02, which become wrong at exactly that moment. Stays: `compare_schema.py` (psycopg2 only — compares a converted schema against a Django-built one, useful beyond MySQL). **Carried in 2026-08-15 from the Step 15 rescope: audit the old box's working copy (`hg status` / `hg diff`) before cutover.** Production ran `USER_PHOTOS_LOCAL_UPLOAD = True` as an uncommitted edit to `production.py` for ~20 months (live 2023-05-08, committed 2025-01-04); `hg pull --update` preserves such edits silently, and a fresh clone drops them, so any second instance would surface after cutover rather than during. **RUN 2026-08-16: the working copy is CLEAN, no second edit exists** — consistent with `e53aa1f` having committed the first one. **Downgraded to a cutover-day re-run rather than closed**: production stays live on the old code for six more steps, and an edit made in that window is exactly what this check is for. **HOST DECIDED 2026-08-15: single VM with persistent disk** (Linode/Lightsail class), no longer late-binding -- the media strategy is downstream of it. Render priced at ~$80-115/mo against ~$24, would mean re-architecting a working six-service compose stack at the riskiest moment, and its persistent disks remove zero-downtime deploys and offer only all-or-nothing snapshot restore, which is unusable for user uploads. PaaS revisit deferred to its own `/pdd` after modernization. **Also carried in 2026-08-18, found while tracing a stray cron mail: the backup box is undocumented.** `bobcat.gremmielabs.dev` (198.58.104.73) is a second Linode that rsyncs the production host nightly at 03:15 — the `sg101<date>.sql.bz2` dumps, the media tree, the moin wiki, `.hg`, and Brian's other sites — and **nothing in this plan mentions it.** At cutover that job keeps backing up a machine nobody uses while the new VM has no backup at all, and the failure mode is silence: the backup appears to be running because it is, just of the wrong host. Repointing it belongs with the cutover, not after it. It also mails its output to Brian, which is how it surfaced at all — **and that alarm is almost entirely deaf**: 54 bounce log lines against 4 deliveries in the retained logs, measured 2026-08-18 — and since each failed message logs one line per MX host tried (Gmail is reached over both IPv6 and IPv4), that is roughly 27 messages, i.e. about one a day, which is exactly the backup job's cadence. Nearly every night's report has been refused. Causes are jaguar's own, on another machine: the IP's PTR names `gremmielabs.com`, which has no A record, so reverse DNS cannot forward-confirm and Gmail refuses with `5.7.25`; the HELO name `bobcat.gremmielabs.dev` has no A record either; and Postfix also attempts IPv6, where Gmail's stricter rules refuse with `5.7.1` for the same missing PTR — so one nightly message generates two rejections. **The consequence is not the mail, it is the alarm: a backup that starts failing would announce it through a channel that already fails 93% of the time.** Fix mirrors task 03 — an unproxied A record for the HELO name, Linode reverse DNS repointed at it, and `inet_protocols = ipv4` so it stops trying IPv6. Out of this repo's scope, but the cutover depends on that box. **Also added: a media-transfer step, which this plan had entirely missing** -- two-pass rsync, the delta running AFTER the final DB snapshot so no row arrives without its file.
+- [ ] **Step 21** — Deploy to new host + cutover + fallback. **Carried in 2026-08-05: bound Redis's memory and set `maxmemory-policy volatile-lru`** — one Redis now serves the cache (db 2), the broker (db 1) and the site's kept state (db 0), and the policy is server-wide, so `allkeys-lru` would evict broker messages and kept keys; `volatile-lru` evicts only the TTL-carrying cache keys. Also: the Redis cache backend fails hard where memcached failed soft. **Also carried in 2026-08-07 from Step 13 task 06: decide the dev/prod settings split.** `docker-strategy.md` records both "the dev override owns the debug toolbar" and "one image runs dev and prod", and those cannot both hold — one image means the prod image either carries `django-debug-toolbar` or it does not. Recommended: a **multi-target Dockerfile** (`prod` from `requirements.txt`, `dev` layering `requirements_dev.txt`), which lets a dev-only settings module drop the `if DEBUG and find_spec(...)` guard entirely. Neither half of that guard protects production today — `production.py` never goes through `local.py`. **Do the whole chain at once**: `local.py` and `production.py` both still declare `django.db.backends.mysql` five steps after the PostgreSQL move. **Preserve the toolbar's MIDDLEWARE position** — after `CommonMiddleware` deliberately, measured, and commented in place. **Tail item: retire the MySQL conversion chain, gated on decommissioning the old box** — not on the site looking fine, because while the old box stays warm a DNS flip makes its MySQL authoritative again and any second roll-forward is another convert-and-verify. Preconditions: tag the cutover commit (`verify_data.py`'s canonicalization is worth keeping findable) and archive the final snapshot (git restores the tooling; nothing restores the data). Out: `mysqlclient` + the Dockerfile's MySQL apt packages, the `db` service and `mysql` profile, `verify.py` / `verify_data.py` / `convert.sh` / `sg101.load` / `crosscheck_dumpdata.sh`, `DOCKER.md` §6–§7, and the four keep-this comments added 2026-08-02, which become wrong at exactly that moment. Stays: `compare_schema.py` (psycopg2 only — compares a converted schema against a Django-built one, useful beyond MySQL). **Carried in 2026-08-15 from the Step 15 rescope: audit the old box's working copy (`hg status` / `hg diff`) before cutover.** Production ran `USER_PHOTOS_LOCAL_UPLOAD = True` as an uncommitted edit to `production.py` for ~20 months (live 2023-05-08, committed 2025-01-04); `hg pull --update` preserves such edits silently, and a fresh clone drops them, so any second instance would surface after cutover rather than during. **RUN 2026-08-16: the working copy is CLEAN, no second edit exists** — consistent with `e53aa1f` having committed the first one. **Downgraded to a cutover-day re-run rather than closed**: production stays live on the old code for six more steps, and an edit made in that window is exactly what this check is for. **HOST DECIDED 2026-08-15: single VM with persistent disk** (Linode/Lightsail class), no longer late-binding -- the media strategy is downstream of it. Render priced at ~$80-115/mo against ~$24, would mean re-architecting a working six-service compose stack at the riskiest moment, and its persistent disks remove zero-downtime deploys and offer only all-or-nothing snapshot restore, which is unusable for user uploads. PaaS revisit deferred to its own `/pdd` after modernization. **Also carried in 2026-08-18, found while tracing a stray cron mail: the backup box is undocumented.** `bobcat.gremmielabs.dev` (198.58.104.73) is a second Linode that rsyncs the production host nightly at 03:15 — the `sg101<date>.sql.bz2` dumps, the media tree, the moin wiki, `.hg`, and Brian's other sites — and **nothing in this plan mentions it.** At cutover that job keeps backing up a machine nobody uses while the new VM has no backup at all, and the failure mode is silence: the backup appears to be running because it is, just of the wrong host. Repointing it belongs with the cutover, not after it. It also mails its output to Brian, which is how it surfaced at all — **and that alarm is almost entirely deaf**: 54 bounce log lines against 4 deliveries in the retained logs, measured 2026-08-18 — and since each failed message logs one line per MX host tried (Gmail is reached over both IPv6 and IPv4), that is roughly 27 messages, i.e. about one a day, which is exactly the backup job's cadence. Nearly every night's report has been refused. Causes are jaguar's own, on another machine: the IP's PTR names `gremmielabs.com`, which has no A record, so reverse DNS cannot forward-confirm and Gmail refuses with `5.7.25`; the HELO name `bobcat.gremmielabs.dev` has no A record either; and Postfix also attempts IPv6, where Gmail's stricter rules refuse with `5.7.1` for the same missing PTR — so one nightly message generates two rejections. **The consequence is not the mail, it is the alarm: a backup that starts failing would announce it through a channel that already fails 93% of the time.** Fix mirrors task 03 — an unproxied A record for the HELO name, Linode reverse DNS repointed at it, and `inet_protocols = ipv4` so it stops trying IPv6. Out of this repo's scope, but the cutover depends on that box. **Also added: a media-transfer step, which this plan had entirely missing** -- two-pass rsync, the delta running AFTER the final DB snapshot so no row arrives without its file. **Corrected 2026-08-23: the decommission inventory is now its own PDD project** (`~/workspaces/bgn/planning/2026-08-23-jaguar-decommission/`, its `STATUS.md` authoritative) -- **three** sites move, not the six vhosts on the box, because `tmensurf.com` and `briananddebra.com` have lapsed entirely and `deathofagremmie.com` serves 403; `bravenewsurf.com` is **Django 1.3.7 not 1.8** and *also* still MXes to jaguar (previously unrecorded); `edtaxidermy.com` needs no crawl at all since it rebuilds from source; and **the warm window no longer has a fixed 1-2 week length** -- it ends when that project does.
 
 ---
 
@@ -1592,8 +1592,16 @@ production snapshot**; **transfer the media tree** (below); run migrations +
 rebuild the search vectors; run the smoke checklist on the new host (behind
 Cloudflare, pre-cutover, via a test hostname). Schedule a **short maintenance
 window**: final snapshot → restore → final media delta → **low-TTL DNS cutover**
-in Cloudflare. Keep the **old Ubuntu 14.04 box warm ~1–2 weeks** as an instant
-DNS-flip fallback, then decommission.
+in Cloudflare. Keep the **old Ubuntu 14.04 box warm** as an instant DNS-flip
+fallback, then decommission.
+
+**Corrected 2026-08-23: the warm window is no longer "~1–2 weeks."** Brian's
+chosen ordering does the *other* websites during it (see the decommission
+inventory below), so the window now has two jobs with different natural lengths:
+as an sg101 fallback it ends when confidence in the new VM is high, in 1–2
+weeks; as the other sites' capture window it ends when three sites are mirrored,
+verified to URL parity, deployed and DNS-moved. **The second sets the length —
+"then decommission" gates on that project completing, not on a duration.**
 
 **ALSO CARRIES: a decommission inventory — jaguar is not an sg101 box (added
 2026-08-23, Brian's catch).** Everything above treats the old host as if
@@ -1602,19 +1610,59 @@ until someone enumerates what else dies with it. **The inventory is itself the
 deliverable** — three items have surfaced independently, each found while
 chasing something else, which is the signature of a list nobody has written.
 
-- **Three other websites.** One static HTML site and **two frozen Django 1.8
-  sites** — non-interactive, no content added in years. Brian's plan is to make
-  all three static and move them to Cloudflare Pages, which is what finally lets
-  jaguar be switched off. **Its own project, not this one** (different
+- **Three websites move; three more vhosts were already dead. RESOLVED
+  2026-08-23 — the inventory is now its own project**, at
+  `~/workspaces/bgn/planning/2026-08-23-jaguar-decommission/`, whose `STATUS.md`
+  is authoritative for the sites work. It remains **not this project** (different
   codebases, different target, different acceptance criteria), but this step
-  cannot complete without it, so the dependency is recorded here.
+  cannot complete without it. What follows is the dependency plus the
+  corrections to what was originally written here.
+
+  **The original account was wrong in three ways** — all measured 2026-08-23
+  from live DNS/HTTP and the local source repos:
+
+  | vhost | what it actually is | disposition |
+  |---|---|---|
+  | `themadeira.net` | Django **1.8.10**, mod_wsgi | crawl → static → Pages |
+  | `bravenewsurf.com` | Django **1.3.7** | crawl → static → Pages |
+  | `edtaxidermy.com` | Flutter web, **already static, builds from a git repo** | **no crawl** — rebuild, retarget `deploy.sh` |
+  | `tmensurf.com` | — | **retired; no NS, A or MX — domain lapsed entirely** |
+  | `briananddebra.com` | — | **retired; domain lapsed entirely** |
+  | `deathofagremmie.com` | returns 403; `/munin` not publicly exposed | **retired as a website** (mail below) |
+
+  1. **`bravenewsurf.com` is Django 1.3.7, not 1.8** — `MySQL-python`,
+     `gdata==2.0.15`, `wsgiref==0.1.2`, last commit 2014-09-27. That is 2011-era
+     Django, which *strengthens* the crawl-don't-bake call below.
+  2. **`edtaxidermy.com` needs no crawl at all.** It has a live source repo that
+     already builds to static output, and a `deploy.sh` that rsyncs `build/*` to
+     jaguar. Mirroring it would be strictly worse than rebuilding it.
+  3. **Two of the six domains have lapsed entirely** — no nameservers, no
+     records at all. Nothing to migrate, nothing to preserve, no certificates to
+     worry about.
+
+  **All three in-scope domains are already on Cloudflare and already proxied**
+  (`ada`/`cash` nameservers — the same pair as `surfguitar101.com`). The move to
+  Pages is a per-zone origin change; there is **no nameserver or registrar
+  work**, which the original entry did not know.
 
   **Recommended approach: crawl, do not bake.** `django-bakery` or
   `django-distill` requires resurrecting a Django 1.8 / Python 2 codebase well
   enough to render — expensive archaeology for sites nobody edits. A
   `wget --mirror` against the *running* site produces the same static output
   with zero code changes, which reduces the job from "port two Django sites" to
-  "mirror two websites." Open questions for a honing pass, all small: forms and
+  "mirror two websites."
+
+  **Crawl the origin, not the proxy (added 2026-08-23, measured).** Cloudflare
+  **Email Address Obfuscation** is active on `themadeira.net`: the contact
+  page's `mailto:` links come back through the proxy as
+  `/cdn-cgi/l/email-protection#<hex>` hrefs and `__cf_email__` spans, decoded in
+  the browser by a script Cloudflare injects at the edge. A crawl through the
+  proxy therefore mirrors **the transformation, not the site** — capturing a
+  `/cdn-cgi/` link target that will not exist on Pages, and markup that renders
+  as a literal "[email protected]" placeholder if the decode script is not
+  injected alongside it. Same family as the cache hazard: crawl what the origin
+  serves, and treat any edge feature that rewrites HTML as something to bypass
+  or disable for the duration. Open questions for a honing pass, all small: forms and
   POST endpoints, feeds and sitemaps, extensionless URLs (Pages handles clean
   URLs), where media lives, absolute-vs-relative link rewriting, the 404 page.
 
@@ -1623,22 +1671,76 @@ chasing something else, which is the signature of a list nobody has written.
   *then* decommission. Getting that backwards means reconstructing the sites
   from bobcat's rsync instead of from a live server.
 
-- **`themadeira.net` inbound mail forwarding** — found 2026-08-21 in a bounce
-  sample (`orig_to=<themadeira@themadeira.net>`), and nothing in Step 16 named
-  it. Step 16 task 06 covers this zone in its Phase 2, so the item here is
-  simply to confirm that phase is complete — MX moved off jaguar — before the
-  box goes away.
+  **Confirmed satisfied 2026-08-23, not merely restated.** Brian chose to cut
+  sg101 over *first* and do the sites during the warm window. That ordering
+  works because this cutover moves only `surfguitar101.com`'s DNS and leaves the
+  other three zones pointing at jaguar — they stay live and crawlable
+  throughout. The accepted trade is that capture happens later on an
+  end-of-life box rather than sooner.
+
+  **Also settled in that project's requirements pass** (`idea-honing.md`, Q1–Q8):
+  all three sites are frozen (the band is on hiatus); media is mirrored as-is
+  and the videos are YouTube embeds, so nothing large is hosted; the mailing-list
+  form becomes a `mailto:`; deployment is `wrangler` direct upload rather than
+  Pages' Git integration, which does not support Mercurial; and the acceptance
+  bar is **URL parity measured against jaguar's Apache access logs** — which
+  rotate weekly, `rotate 8`, so roughly **eight weeks** of history is all that
+  will exist at crawl time unless logs are archived sooner.
+
+- **Inbound mail on two zones, not one (corrected 2026-08-23).**
+  `themadeira.net` was recorded here on 2026-08-21, found in a bounce sample
+  (`orig_to=<themadeira@themadeira.net>`). **`bravenewsurf.com` carries the same
+  dependency and was named nowhere** — the fourth item to surface by accident,
+  which is the pattern this inventory exists to break.
+
+  | zone | MX | resolves to |
+  |---|---|---|
+  | `themadeira.net` | `_dc-mx.658032ac2d3a.themadeira.net` | `173.255.245.115` — jaguar |
+  | `bravenewsurf.com` | `_dc-mx.78cd6718bba2.bravenewsurf.com` | `173.255.245.115` — jaguar |
+  | `deathofagremmie.com` | **none** | no inbound path exists at all |
+
+  - **`themadeira.net`** stays Step 16 task 06 Phase 2's, as recorded — **but
+    its blocker is now concrete, and it has a lead time nothing else in either
+    project has.** Jaguar's `virtual_alias_maps` carries ten aliases on this
+    zone forwarding to **five different people**, four of them band members
+    rather than Brian. Cloudflare Email Routing requires every destination to be
+    verified *by its owner clicking a link* — which is exactly why "rules to an
+    unverified destination cannot be created" blocks Phase 2. It is a
+    human-coordination dependency on four other people, and **jaguar cannot be
+    switched off until it completes. Start it early.**
+  - **`bravenewsurf.com`** — jaguar's `virtual_alias_domains` does not list the
+    zone, so mail for it is most likely refused already and the MX is
+    vestigial. **Not proven** (see the evidence note below). One bounce test to
+    any `@bravenewsurf.com` address settles it; if it bounces, the record is
+    deleted rather than migrated.
+  - **`deathofagremmie.com`** has four live-looking aliases in the same file but
+    **no MX record at all**, so nothing reaches them from the internet
+    regardless. Nothing to migrate.
+
+  **Both `_dc-mx` records are unproxied A records publishing jaguar's real IP** —
+  the same origin-leak class measured for `surfguitar101.com` above, in two more
+  zones. It stops mattering once jaguar is gone; it matters while the box is
+  warm as a fallback.
 
 - **bobcat's nightly rsync** — already recorded in detail on this step's
   checklist line above (backup box undocumented, added 2026-08-18), including
   its own broken FCrDNS and the 93%-deaf alarm that follows from it. Repointing
   it at the new VM belongs with the cutover, not after it.
 
-**Treat these three as the beginning of the inventory, not the whole of it.**
-Each was discovered by accident while investigating an unrelated symptom, so the
-prior is that more exist. Worth an explicit sweep of the old box — vhosts, cron
-jobs, DNS records pointing at `173.255.245.115`, and anything else answering on
-it — before the warm-fallback window closes.
+**The prior that more exist was correct (updated 2026-08-23).** Each original
+item was found by accident chasing an unrelated symptom; the sweep that followed
+found a fourth — `bravenewsurf.com` mail — and corrected three of the first
+three. **The remaining sweep of the live box** — vhosts actually enabled, cron
+jobs, listening ports, DNS records still pointing at `173.255.245.115` — belongs
+to the sites project's research phase and is tracked in its `STATUS.md`. It must
+still happen before the warm-fallback window closes.
+
+**Evidence grade, carried deliberately.** The Apache, Postfix, logrotate and
+backup-script facts above come from the `jaguar_linode_cfg` repo, which **Brian
+flagged 2026-08-23 as "probably incomplete and out of date."** Every DNS and
+HTTP measurement is live and dated. **Do not promote the former to the latter
+without re-measuring on the box** — most of the sites project's open research
+items exist precisely to do that.
 
 **ALSO CARRIES: outgoing mail on the new VM (added 2026-08-16, Brian's catch).**
 Step 16 makes the *application's* mail a matter of environment variables, but
