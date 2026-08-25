@@ -1148,6 +1148,179 @@ seven rules, request verification from Ivan and from Todd at his new address. Th
 task 07's smoke and cutover verification, which now has the Outlook mailbox it had
 been waiting for.
 
+## Step 16 task 06 Phase 2 — `themadeira.net` prepared, and the flip is now one deletion — DNS DONE 2026-08-24, MX NOT FLIPPED
+
+**Todd verified `member35@example.com` on 2026-08-24. Ivan has not, and says
+tomorrow.** Ivan gates exactly one thing — this zone's MX flip. He gates nothing
+else in Step 16, and in particular not the Postmark cutover, which is a different
+domain in a different direction and was deliberately built to wait on nobody.
+
+**Four records published by hand, all verified on both authoritative
+nameservers.** The zone now carries everything Phase 1 had to add *after* its
+flip, so tomorrow's cutover is a single MX deletion with no repairs trailing it.
+
+| Change | Value | State |
+|---|---|---|
+| `cf2024-1._domainkey` TXT | Cloudflare's shared Email Routing key, 2048-bit | **live**, byte-identical to `surfguitar101.com`'s |
+| apex SPF | `v=spf1 ip4:173.255.245.115 include:_spf.mx.cloudflare.net -all` | **live**, `a` and `mx` dropped, `-all` kept |
+| `_dmarc` TXT | `v=DMARC1; p=none; rua=mailto:admin@surfguitar101.com` | **live**, first reporting this zone has ever had |
+| `themadeira.net._report._dmarc` TXT on **`surfguitar101.com`** | `v=DMARC1` | **live** — without it the `rua` above is inert |
+| MX | `10 _dc-mx.658032ac2d3a.themadeira.net.` | **untouched** — the rollback value, recorded before anything moved |
+
+Everything is at **TTL 300**, so rollback is five minutes.
+
+**Every record below was read from `ada.ns.cloudflare.com`, an authoritative
+nameserver for the zone, not from a resolver cache**, with a query against
+`surfguitar101.com` as a control in the same run.
+
+| Record | Value today | Verdict |
+|---|---|---|
+| apex TXT | `v=spf1 a mx ip4:173.255.245.115 -all` | **the exact pre-rewrite form Phase 1 had to fix** |
+| MX | `10 _dc-mx.658032ac2d3a.themadeira.net.` → `173.255.245.115` | jaguar, through the `_dc-mx` indirection |
+| apex A / AAAA | `172.67.169.122`, `104.21.71.48` / `2606:4700:3035::ac43:a97a`, `2606:4700:3034::6815:4730` | Cloudflare's HTTP proxy |
+| `_dc-mx…` A / AAAA | `173.255.245.115` / **none** | v4 only |
+| `cf2024-1._domainkey` | **absent** | Phase 1's Defect 1, waiting to happen again |
+| `_dmarc` | **absent** | no reporting on this zone at all |
+
+### The three changes, and why each was safe before Ivan clicks
+
+**1. `cf2024-1._domainkey`, value copied from `surfguitar101.com`.**
+Phase 1 established by test that Cloudflare's Email Routing DKIM key is shared
+across customer zones, so the value is already in hand and does not need the API
+endpoint that refused the token. 420 bytes, stored as two strings of 255 and 165.
+Without it every forwarded message carries a signature for this domain that
+permerrors, which is what put Phase 1's first messages in Gmail's spam. Additive
+and inert until forwarding starts, so there was no reason to wait.
+
+**Verified three ways, not one.** The published value splits into the same two
+strings of 255 and 165 bytes; it is **byte-identical** to the live
+`surfguitar101.com` record under `cmp`; and it decodes under `openssl rsa -pubin`
+as a well-formed **2048-bit** key. String equality against a key already proven
+to sign passing mail is the strongest of the three — the decode only rules out a
+mangled transcription.
+
+**2. The apex SPF, one record updated in place, never two coexisting.**
+
+```
+before:  v=spf1 a mx ip4:173.255.245.115 -all
+after:   v=spf1 ip4:173.255.245.115 include:_spf.mx.cloudflare.net -all
+```
+
+Each part of that is measured rather than argued:
+
+- **`mx` is provably redundant.** It resolves to `173.255.245.115`, which the
+  explicit `ip4:` already authorizes, and the target has no AAAA. Dropping it
+  removes nothing.
+- **`a` is already wrong today**, not merely wrong after the flip. It resolves to
+  Cloudflare's HTTP proxy over both v4 and v6, so the record currently authorizes
+  a large shared pool to send as this domain. This is task 03's Finding 3 in a
+  worse form than `surfguitar101.com` had it, where only `mx` went bad and only
+  at the flip.
+- **The include is required**, per Phase 1's Defect 2: Cloudflare's SRS rewrite
+  lands the forwarding hop in the forwarding domain, so it is evaluated against
+  this apex and hard-fails under `-all` without it.
+
+**No `ip6:` term, deliberately, despite `surfguitar101.com` carrying one.** That
+term was *preserved* from the pre-existing record in Phase 1, not added by it;
+this zone's record never had one. Dropping dead mechanisms and adding what
+forwarding needs is provable, while authorizing a /64 nothing has been shown to
+use is not. If jaguar does send this domain's mail over IPv6 it is failing SPF
+today and has always been, and with no `_dmarc` on the zone nobody would know —
+which is a thing to measure, not to paper over in this edit. **The `_dmarc`
+record published the same day is what turns that from an argument into something
+the next reading answers.**
+
+**Verified after publishing:** exactly one `v=spf1` string at the apex, neither
+`a` nor `mx` present, `-all` intact, and **one DNS-resolving term against a limit
+of ten** — `_spf.mx.cloudflare.net` expands to `ip4:104.30.0.0/19
+ip6:2405:8100:c000::/38 ~all`, pure address literals costing no further lookup.
+That leaves room for Postmark's include at the cutover.
+
+**3. Record the rollback value before touching MX:
+`10 _dc-mx.658032ac2d3a.themadeira.net.`** Note this **inverts the Phase 1
+instruction**, which said to write down `10 mail.surfguitar101.com` and
+explicitly *not* the `_dc-mx` name, because task 03 superseded that alias on that
+zone. Here the `_dc-mx` name is the live value. The additions-before-deletion
+ordering is unchanged and still load-bearing: publish the three Cloudflare MX
+records while priority 10 still wins, then the single deletion is the cutover.
+
+### 4. `_dmarc`, published before the flip to buy a baseline
+
+The zone had **no DMARC record at all**, so nothing that happens to its mail has
+ever been observable. Publishing `p=none` changes no deliverability — it requests
+reports and nothing else — which is why it was safe before the MX moves rather
+than after.
+
+**The reason to do it a day early is a baseline.** Reports arrive daily, so a
+record published today covers today: `themadeira.net` mail still flowing through
+jaguar, pre-Cloudflare. Tomorrow's flip then has a *before* to compare against.
+That is this document's own lesson, stated in the fourth reading — *"Both
+readings were wrong, because neither had a baseline."*
+
+**It takes two records, and the second is easy to miss.** RFC 7489 §7.1 requires
+a `rua` destination outside the policy domain to authorize the arrangement in
+*its own* zone, at `<policy-domain>._report._dmarc.<rua-domain>`. This document
+already recorded that constraint as the reason `rua` cannot point at
+`bgneal@gmail.com` — Google's zone is not ours to publish in. It is satisfiable
+here because both zones are:
+
+```
+_dmarc.themadeira.net                             v=DMARC1; p=none; rua=mailto:admin@surfguitar101.com
+themadeira.net._report._dmarc.surfguitar101.com   v=DMARC1
+```
+
+**Without the second record conforming reporters silently decline** — no bounce,
+no error, no reports, a state indistinguishable from nobody reporting. The
+constraint is being exercised here for the first time rather than merely
+recorded.
+
+**The destination is deliberate.** `admin@surfguitar101.com` is a live, verified
+Email Routing rule landing in the Gmail inbox already being read, so both domains
+arrive in one place and one `dmarc_report.py` run covers both — the `Policy   :
+domain=` line separates them. Pointing at `admin@themadeira.net` would have
+needed no authorization record, being inside the policy domain, and was rejected
+for a better reason: that address routes through jaguar, the path being
+dismantled.
+
+**No `ruf=`, deliberately.** Forensic reports carry message content, on a domain
+that forwards other people's mail. The privacy objection that killed the
+holding-pen idea for Todd applies here with more force, and almost no receiver
+sends them anyway.
+
+**Two things to expect in the first report, so neither reads as a surprise:**
+DKIM may well fail, since jaguar's opendkim signs with the `dkim` selector for
+`surfguitar101.com` and whether it signs this domain is unverified; and the
+volume will be small, so absent reporters mean fewer filers rather than no
+traffic.
+
+### The two open questions, both answered 2026-08-24
+
+- **`themadeira@themadeira.net`** — carried on the Open list since 2026-08-21,
+  found in a bounce sample, forwarded by jaguar, and named nowhere in task 06.
+  **It is not yet a rule, and is to be added when Ivan verifies.** Named here
+  because the same gap found after the MX flip is a dead address.
+- **Todd's rule target** — **confirmed pointing at `member35@example.com`**, not the
+  address he abandoned. His verification only ever proved the destination exists.
+- **How much of Phase 2 is built** — **all seven rules exist except Ivan's**, and
+  the **catch-all is Disabled**, so a dropped alias is refused rather than
+  silently discarded. Same choice as Phase 1.
+
+### The audit's first run was wrong, and a control caught it
+
+The first pass reported **every** `themadeira.net` record as absent while the
+same names answered through a resolver — which reads as "this zone is on
+different nameservers than `surfguitar101.com`," contradicting a true statement
+already in this document. The cause was the harness, not the zone: the loop
+expanded an unquoted variable holding `name type`, and **zsh does not word-split
+unquoted parameter expansions**, so `dig` received one malformed argument and
+`+short` printed nothing useful. Both zones do share `ada`/`cash`, as recorded.
+
+Nothing was published from the bad run, because the control query in the second
+pass had to answer before any of it was believed.
+[[suspect-the-measurer-before-the-record]] — the reading that needed no
+self-correction was the suspicious one.
+
+
 ## Step 16 task 03 — DNS and email authentication — PARTIALLY EXECUTED 2026-08-17
 
 No code. Four DNS records published by hand in Cloudflare, one Postfix parameter
@@ -3865,8 +4038,12 @@ a correction to the sixth reading and is not one.
 maildir, the filename is a delivery ID, and the receiving domain is gone the
 moment the attachment is detached from its message. The Gmail export preserved it
 by accident of how attachments save. **Keep the attachment filenames in future
-readings**, and note that `tools/dmarc_report.py` prints `org_name` only — the
-receiving domain is not in the report body for it to print.
+readings** — the receiving domain is not in the report body for any tool to
+print. **Amended 2026-08-24:** `tools/dmarc_report.py` now prints the source file
+and, when the name follows the `receiver!policy-domain!begin!end` convention, a
+`Receiver` line beside `Reporter`; it declines rather than guesses for a maildir
+delivery ID. The sentence above describes the tool as it was when this reading
+was taken, not as it is.
 
 **Consequence for the record: "reporter" has meant two different things.**
 Reporting organizations remain **four** — Google, Yahoo, Comcast, Microsoft.
