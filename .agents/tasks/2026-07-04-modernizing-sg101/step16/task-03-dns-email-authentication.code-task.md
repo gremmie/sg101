@@ -479,16 +479,59 @@ implementation. Read additional references as needed for context.
    carries the selector that signed it. Removing the old one early breaks
    verification for mail already in flight.
 
+   **There is a third signer, found 2026-08-25 and previously uninventoried:
+   `cf2024-1`.** Cloudflare DKIM-signs the mail it forwards as
+   `d=surfguitar101.com; s=cf2024-1`, and
+   `cf2024-1._domainkey.surfguitar101.com` resolves to a 2048-bit
+   Cloudflare-managed key. So this domain has three selectors in service, not
+   two: `dkim` (legacy, 1024-bit, Postfix), `20260817033844pm` (Postmark), and
+   `cf2024-1` (Cloudflare, forwarded mail).
+
+   It is not a defect and it needs no action — but it is not ours to rotate or
+   remove, and it never appears in a DMARC report for this domain because
+   forwarded mail carries the *original sender's* `header.from`, so this domain's
+   DMARC is not what gets evaluated on it. That is why ten readings of the
+   aggregate reports could not have found it, and why it took a raw message.
+
 5. **Rewrite the SPF record in two stages.** During the transition, while
    Postfix still sends:
    ```
-   v=spf1 ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 include:spf.mtasv.net ~all
+   v=spf1 ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 include:spf.mtasv.net include:_spf.mx.cloudflare.net ~all
    ```
    After cutover, when nothing but Postmark sends:
    ```
-   v=spf1 include:spf.mtasv.net -all
+   v=spf1 include:spf.mtasv.net include:_spf.mx.cloudflare.net -all
    ```
-   Both drop `a` and `mx` per Finding 3.
+   Both drop `a` and `mx` per Finding 3. Both use **3 of the 10 permitted DNS
+   lookups** in the transition form and 2 after cutover: `spf.mtasv.net` and
+   `_spf.mx.cloudflare.net` are flat, expanding to bare `ip4`/`ip6` with no
+   nesting.
+
+   **Corrected 2026-08-25 — both records above previously omitted
+   `include:_spf.mx.cloudflare.net`, and publishing either as written would have
+   broken forwarded mail.** Cloudflare Email Routing applies **SRS**: it rewrites
+   the envelope sender of every message it forwards into this domain, e.g.
+   `SRS0=zJrw=sg=alerts.comcast.net=dmarc-support@surfguitar101.com`. The
+   receiver therefore evaluates SPF **against `surfguitar101.com`** for mail this
+   domain did not originate, and it passes only because Cloudflare's forwarding
+   IP falls inside that include. Measured from a raw message 2026-08-25: Gmail
+   returned `spf=pass ... designates 104.30.10.185 as permitted sender` against
+   the SRS envelope, and `104.30.10.185` is inside `104.30.0.0/19` from
+   `_spf.mx.cloudflare.net`.
+
+   **The blast radius is every forwarding alias** — `admin@`, `abuse@`,
+   `postmaster@`, `brian@` — **including the DMARC reports themselves, which
+   arrive through `admin@surfguitar101.com`.** Deleting the include would break
+   the pipeline that would otherwise report the breakage. Note also that this
+   failure needs no policy change to bite: an SPF hard fail on the SRS envelope
+   stands on its own, under `p=none` as much as under `p=quarantine`.
+
+   **Why it was missed.** The include was read as belonging to *inbound* mail,
+   since Email Routing is a forwarding service, and an inbound feature has no
+   business in an outbound policy record. SRS is what makes that wrong: a
+   forwarder re-sends under the forwarding domain's name, which makes it an
+   outbound sender for this domain. Full derivation in the planning `STATUS.md`,
+   tenth reading.
 
 6. **Soften to `~all` for the duration of the cutover, then restore `-all`.** The
    current `-all` is a hard fail: a wrong record does not degrade, it bounces

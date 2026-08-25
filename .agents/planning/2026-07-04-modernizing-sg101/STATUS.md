@@ -4248,6 +4248,125 @@ evidence that task 10's repairs worked and that jaguar's mail is in order. They
 are no evidence at all about Postmark, and the first window after cutover is the
 one that has to be read with the same attention as the first window ever was.
 
+### Tenth reading — 2026-08-25 evening, covering 2026-08-24: one raw message closes three open questions and corrects two claims
+
+**One report, and one `.eml` that matters more than the report.** Comcast's 08-24
+filing arrived in the afternoon, after the morning batch had been read.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `comcast.net` | `comcast.net` | `v2-1787622101-surfguitar101.com` | 2026-08-24 | 4 | 0 |
+
+**2026-08-24 rises to 22 messages across four receiving domains, still zero
+aligned on neither mechanism.** Microsoft's 08-24 report is outstanding, so 22 is
+still a floor — the convention holds a sixth time.
+
+#### Cloudflare Email Routing forwards in 2 seconds — measured, finally
+
+The raw message was read for the first time in ten readings, and the `Received`
+chain answers the question that has been open since 2026-08-21:
+
+| Time (UTC) | Hop |
+|---|---|
+| 18:16:26 | Comcast internal, `mdpapp-ch-1p-162526` → `mdpmta-as-1p-177146` |
+| **18:16:26** | `by cloudflare-email.net (cloudflare) id cjRKZG5NJV2Z for <admin@surfguitar101.com>` |
+| **18:16:28** | `by mx.google.com` (`11:16:28 -0700`) |
+
+**Two seconds, Cloudflare receipt to Gmail receipt.**
+
+**This kills the local copy's justification outright.** That justification was
+0.85s to jaguar's maildir against 9h25m52s to Gmail, measured 2026-08-21 — but
+the 9h25m52s was *jaguar's own rate-limited outbound*, not a forwarder cost.
+Cloudflare's path is 2 seconds, near enough the maildir that no latency argument
+for a local copy survives. The maildir has been deaf since 08-23 21:02Z anyway;
+this removes the reason to care.
+
+#### The ninth reading's latency suspicion was wrong, and the error is worth naming
+
+The ninth reading noticed this report was absent from the morning batch and
+inferred a Cloudflare delivery lag of 12h31m–20h29m, flagged as *"suggestive
+bound, not a measurement."* **The observation was real and the explanation was
+wrong.** Comcast's Report-ID encodes `1787622101` = 2026-08-25 01:41:41Z, which
+was read as the send time. The message was transmitted at 18:16:26Z:
+**Comcast held its own report for 16h34m45s between generating it and sending
+it.** The delay was entirely Comcast's, and Cloudflare's share of it was two
+seconds.
+
+**Report-ID timestamps are generation times, not send times.** Nine readings have
+used Report-IDs to recognise reports already seen, which they are perfectly good
+for. Nothing else about them should be read as a clock. That is the second time
+in two readings that a number was decoded confidently from a string rather than
+measured — [[suspect-the-measurer-before-the-record]].
+
+#### `include:_spf.mx.cloudflare.net` is load-bearing, and requirement 5 would have deleted it
+
+This is the finding with teeth. The forwarded message carries:
+
+```
+Return-Path: <SRS0=zJrw=sg=alerts.comcast.net=dmarc-support@surfguitar101.com>
+spf=pass (google.com: ... designates 104.30.10.185 as permitted sender)
+```
+
+**Cloudflare applies SRS**, rewriting the envelope sender into
+`surfguitar101.com`. The receiver therefore evaluates SPF against *this* domain
+for every forwarded message, and it passes only because `104.30.10.185` falls
+inside `104.30.0.0/19` from that include. Verified: the include expands to
+`ip4:104.30.0.0/19 ip6:2405:8100:c000::/38`, and the sending IP is in range.
+
+**Task 03 requirement 5 prescribes two future SPF records and neither contains
+that include.** Publishing either as written would hard-fail SPF on every message
+Cloudflare forwards for this domain — `admin@`, `abuse@`, `postmaster@`,
+`brian@` — **including the DMARC reports themselves, which arrive through
+`admin@surfguitar101.com`.** The record that would break the reporting pipeline
+is written down in the task file as the post-cutover target. Corrected there.
+
+Earlier the same day this include was described as unexplained for an outbound
+policy, with deletion offered as an option. It is explained, it is not optional,
+and the reasoning that called it unexplained treated Email Routing as purely
+inbound. SRS makes a forwarder an outbound sender under the forwarding domain's
+name.
+
+#### A third signer: `cf2024-1`, signing as this domain, in no inventory
+
+Cloudflare DKIM-signs forwarded mail as **`d=surfguitar101.com; s=cf2024-1`**,
+and `cf2024-1._domainkey.surfguitar101.com` resolves to a 2048-bit
+Cloudflare-managed key. That is a **third signer** alongside the legacy `dkim`
+selector and Postmark's `20260817033844pm`, and it appears in no task file and no
+prior reading.
+
+It is not a defect. It has never surfaced in a DMARC report because forwarded
+mail carries the *original sender's* `header.from`, so this domain's DMARC is not
+what gets evaluated — which is exactly why ten readings could not see it. But it
+is a key signing under this domain's name that nobody inventoried, and the
+selector inventory in task 03 predates it.
+
+#### Receipt through Email Routing is now measured rather than inferred
+
+The eighth reading recorded receipt as *"inference, not measurement"* — an
+argument from the absence of any other path into the inbox, with the `Received`
+chain named as the thing that would make it direct. The chain is above, and
+`X-Forwarded-For: admin@surfguitar101.com bgneal@gmail.com` names the route
+explicitly. **Closed.**
+
+#### What held steady
+
+- **One sending source.** Ten readings, every aligned row `173.255.245.115`.
+- **Zero messages aligned on neither mechanism**, every window, every reporter.
+- **Comcast is consistent in content and erratic in timing.** Its 08-23 report was
+  saved 08-24 14:22Z; this one was generated 01:41Z and sent 18:16Z. Content has
+  never varied.
+
+#### Bearing on the policy decision
+
+Nothing here argues against tightening, and one thing argues for doing it in the
+right order — but not the order previously recorded. The Postmark ordering
+concern was retired this morning (the custom Return-Path carries SPF alignment).
+**What replaces it is the apex record's contents:** whatever SPF string is
+published at cutover must retain `include:_spf.mx.cloudflare.net` alongside
+Postmark's include, or forwarded mail breaks the moment the record changes —
+under any policy, `p=none` included, because SPF hard-fail on the SRS domain
+stands on its own without DMARC.
+
 ### Open
 
 - **Record the reporter, Report-ID and window in every reading** — convention
