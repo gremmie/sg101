@@ -45,14 +45,44 @@ neither mechanism in any window from any reporter.** The one DKIM anomaly, in th
 seventh reading, did not recur across the five windows since. Requirement 2 asked
 what is currently sending as this domain; the answer is jaguar and nothing else.
 
-**Open before this task can close:** requirements 5–7 at cutover — and
-requirement 5 has been reclassified. `include:spf.mtasv.net` is an **ordering
-requirement, not a tidy-up**: under `p=quarantine` a first Postmark send made
-before the include lands rides on DKIM alone into a policy that quarantines.
-Publish it at or before the task 02 cutover, never after. The PTR was confirmed
-at the authoritative nameservers on 2026-08-17 and the chain forward-confirms.
-**Postmark account approved 2026-08-17**, so live sending is no longer gated by
-account state.
+**Open before this task can close:** requirements 5–7 at cutover.
+
+**Corrected 2026-08-25, hours after it was written.** This paragraph called
+requirement 5 an *ordering requirement* — the claim that under `p=quarantine` a
+first Postmark send made before `include:spf.mtasv.net` lands would ride on DKIM
+alone. **That is wrong, and requirement 3 in this very document says why.**
+Postmark's custom Return-Path is live: `pm-bounces.surfguitar101.com` is a CNAME
+to `pm.mtasv.net`, which publishes `v=spf1 include:spf.mtasv.net -all`. SPF is
+evaluated against the **envelope sender**, so a Postmark send is checked against
+`pm-bounces.surfguitar101.com`, not the apex — it passes there, and
+`pm-bounces.surfguitar101.com` is relaxed-aligned with `surfguitar101.com` under
+`aspf=r`. **The apex include is not what authorizes Postmark. The CNAME is, and
+it has been live and green since 2026-08-17.**
+
+So requirement 5's apex include is defensive rather than load-bearing: it costs
+one DNS lookup of the ten available (both includes are flat — `_spf.mx.cloudflare.net`
+and `spf.mtasv.net` expand to bare `ip4`/`ip6` with no nesting, so the record uses
+2 of 10 with it added) and it covers the case where the Return-Path is later
+disabled. Worth publishing. Not a gate on anything.
+
+**This is the fourth occurrence in this document of the failure it already names**
+— *"DNS and mail configuration are unusually easy to reason about confidently and
+get wrong, because almost nothing in the system reports a disagreement."* The
+eighth reading reasoned it, the ninth reading repeated it, and this file recorded
+it as a reclassification. None of the three read requirement 3, four hundred lines
+below, which had it right on 2026-08-17. [[search-the-artifacts-before-claiming-new]]
+
+**The measurement that settles it, and it has not been taken:** send one Postmark
+test message and read `Authentication-Results` at the receiver. If
+`smtp.mailfrom=pm-bounces.surfguitar101.com` then the above is confirmed from the
+receiving side. If `smtp.mailfrom=pm.mtasv.net` then the Return-Path is not in
+effect despite being green, SPF is unaligned, and DKIM alone does carry the
+message — the original concern, arrived at for a different reason. **Take the
+header before tightening policy, not after.**
+
+The PTR was confirmed at the authoritative nameservers on 2026-08-17 and the
+chain forward-confirms. **Postmark account approved 2026-08-17**, so live sending
+is no longer gated by account state.
 
 **What the clean week does not cover.** Every observation in all nine readings is
 the legacy `dkim` selector on jaguar's IP — the path being retired. The Postmark
