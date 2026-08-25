@@ -6,6 +6,10 @@ This prints who reported, over what window, and one row per sending source
 with its alignment results -- which is the part no dashboard shows, because
 the reporter's identity lives in <report_metadata><org_name>.
 
+The receiving domain is not in the report at all. It appears only in the
+filename, so it is printed when the file still carries its original name and
+omitted when it does not, rather than guessed.
+
 Written for the Python 3.4 on the old host: no f-strings, no subprocess.run,
 no os.scandir.
 
@@ -101,13 +105,44 @@ def reports_in_message(raw):
                              % (filename or ctype, exc))
 
 
-def summarize(xml_bytes):
+def receiver_name(filename):
+    """Return the receiver field of an aggregate report's filename.
+
+    Reports are named `receiver!policy-domain!begin!end[!unique].ext`, and that
+    filename is the only place the receiving side is written down: the body
+    names the reporting organization, which is not the same thing. Yahoo files
+    one report per hosted domain -- att.net, cox.net and yahoo.com arrive with
+    identical <org_name>, differing only here.
+
+    Returns '' for a name that does not follow the convention. A maildir
+    delivery ID is the case that matters: it carries no receiver at all, and a
+    reading must be able to tell that from one that does.
+    """
+    parts = os.path.basename(filename).split('!')
+    if len(parts) < 4:
+        return ''
+    # The timestamps are what identify the convention; the last one carries
+    # the extension, so compare only up to it.
+    if not (parts[2].isdigit() and parts[3].split('.')[0].isdigit()):
+        return ''
+    return parts[0]
+
+
+def summarize(xml_bytes, source=''):
     root = ET.fromstring(xml_bytes)
     meta = root.find('report_metadata')
     policy = root.find('policy_published')
     date_range = meta.find('date_range') if meta is not None else None
 
     print('=' * 78)
+    if source:
+        print('File     : %s' % os.path.basename(source))
+        receiver = receiver_name(source)
+        # Printed next to the reporter rather than instead of it, because the
+        # two differ for a provider that files per hosted domain and reading
+        # one as the other undercounts receivers.
+        if receiver:
+            print('Receiver : %s' % receiver)
     print('Reporter : %s   <%s>' % (_text(meta, 'org_name', '?'),
                                     _text(meta, 'email')))
     print('Report ID: %s' % _text(meta, 'report_id', '?'))
@@ -211,7 +246,7 @@ def scan(paths):
         found = 0
         try:
             for xml_bytes in reports_in_bytes(raw, path):
-                summarize(xml_bytes)
+                summarize(xml_bytes, path)
                 found += 1
         except Exception as exc:                      # noqa: BLE001
             sys.stderr.write('  ! %s: %s\n'
