@@ -15,6 +15,38 @@ verify it, and stop thinking about it. Where a fix would require restructuring
 local delivery, the recommendation is to leave it alone and let the migration
 retire it.
 
+## Status — the DMARC confirmation landed 2026-08-25
+
+| Requirement | State |
+|---|---|
+| 1 — inventory every source of local mail | **done** 2026-08-18 |
+| 2 — `root` entry in the virtual alias table | **done** 2026-08-18 |
+| 3 — authenticable sender for local mail | **done** 2026-08-18 |
+| 4 — SPF at the HELO name | **done** 2026-08-20 |
+| 5 — verify the backscatter stopped | verification, open — needs the DSN-per-day count run on the box |
+| 6 — retire the two dead certificates | **done** 2026-08-18 |
+| 8 — Comcast delisting | **CLEARED** 2026-08-19 |
+| 9 — opportunistic outbound TLS | **done** 2026-08-18 |
+
+**The diagnosis of fault 3 is confirmed from the receiving side.** Requirement 4
+landed 2026-08-20, so the 48-hour re-read in implementation step 6 covers the
+windows from 2026-08-22 onward. Three consecutive windows — **08-22 at 30
+messages, 08-23 at 24, 08-24 at 18** — carry **zero messages aligned on neither
+mechanism**, against the baseline of **4 of 65** that opened this task on
+2026-08-18. That is 72 messages from four reporting organizations, every row
+`173.255.245.115` with `spf=pass` and `dkim=pass`, disposition none. Full
+tabulation in the planning `STATUS.md`, sixth through ninth readings.
+
+**08-24's 18 is a floor, not a total** — Microsoft has filed exactly one window
+late on three consecutive observations, so its 08-24 report is still outstanding.
+That cannot weaken the result: windows have only ever gained reports, and a
+Microsoft filing has never yet carried a failure.
+
+**Still open:** requirement 5 is a check, not a change, and it has to be run on
+jaguar — the DSN-per-day count across the retained logs. The DMARC reports cannot
+substitute: they show what receivers saw of mail that left, not what bounces the
+box generated toward strangers.
+
 ## Background
 
 ### How these were found
@@ -409,9 +441,10 @@ which is the same failure wearing a different hat.
    `Authentication-Results` afterwards.
 5. Apply requirement 5; watch the log for a day and confirm no new DSNs to
    external strangers.
-6. Re-read the DMARC aggregate reports after 48 hours: the residual failures
+6. ~~Re-read the DMARC aggregate reports after 48 hours: the residual failures
    should be gone, which is the independent confirmation that fault 3 was
-   diagnosed correctly.
+   diagnosed correctly.~~ **DONE 2026-08-25** — done nine times rather than once,
+   and the failures have been absent in every window since.
 
 ## Acceptance Criteria
 - ~~**Given** the inventory from requirement 1…~~ **met 2026-08-18**: every
@@ -437,8 +470,12 @@ which is the same failure wearing a different hat.
 - **Given** the DSN-per-day counts across the retained logs
   **Then** they are zero after 2026-08-17, or every survivor has been traced to
   its parent message and explained
-- **Given** the DMARC aggregate reports 48 hours after requirements 3–5
-  **Then** the residual both-mechanism failures are absent
+- ~~**Given** the DMARC aggregate reports 48 hours after requirements 3–5
+  **Then** the residual both-mechanism failures are absent~~ **met 2026-08-25**:
+  zero both-mechanism failures across the 08-22, 08-23 and 08-24 windows — 72
+  messages from four reporting organizations — against the 4-of-65 baseline that
+  opened this task. The residual failures are gone, which is the independent
+  confirmation fault 3 was diagnosed correctly
 - **Given** the whole task
   **Then** `myhostname`, `mydestination` and the milter configuration are
   unchanged, and the 20 existing aliases still deliver

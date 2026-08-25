@@ -4115,6 +4115,139 @@ Two residual risks, neither a blocker, both worth stating before the flip:
   tidy-up: publish the include at or before the Postmark cutover, never after.**
 
 
+### Ninth reading — 2026-08-25, covering 2026-08-24: the Microsoft prediction held, and an eighth receiving domain
+
+**Ten files, read from `~/dmarc` on Brian's Mac — four new, six already read.**
+The four new ones were saved 2026-08-25 14:11–14:12Z; the six re-reads were saved
+14:21–14:23Z the day before and are the eighth reading's, recognised by
+Report-ID. Three of the new four cover 2026-08-24; the fourth is the predicted
+late Microsoft filing for 08-23.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `2097562329291412247` | 2026-08-24 | 15 | 0 |
+| `yahoo.com` | `Yahoo` | `1787636161.506830` | 2026-08-24 | 2 | 0 |
+| `aol.com` | `Yahoo` | `1787636161.506805` | 2026-08-24 | 1 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `4b4c7f287941475e9c0efa5adaf5e22e` | 2026-08-23 | 1 | 0 |
+
+**2026-08-24: 18 messages, three receiving domains, 0 aligned on neither
+mechanism.** Every row is `173.255.245.115`, `spf:surfguitar101.com=pass`,
+`dkim:surfguitar101.com=pass`, disposition none — the ninth consecutive reading
+in which that sentence is the whole result.
+
+#### The Microsoft prediction held, and 08-23 gained on schedule
+
+The eighth reading predicted *"a Microsoft report for the 08-23 window in the
+next batch"* and called 08-23's 23 messages a floor rather than a total. Both
+landed: `4b4c7f28…` covers 08-23 with 1 message, on the same exclusive window end
+(`-> 00:00:00Z` of the next day) Microsoft has used throughout.
+
+| Window | Messages | Receiving domains | Change |
+|---|---|---|---|
+| 2026-08-23 | **24** | **6** | was 23 across 5 — Microsoft's late filing added 1 |
+| 2026-08-24 | 18 | 3 | new; a floor, Microsoft outstanding |
+
+**Windows gain reports and never revise them — a fourth independent window, and
+the floor convention now holds a fifth time.** Microsoft filing exactly one
+window late is three consecutive observations (08-21, 08-22, 08-23), which is
+enough to stop calling it an observation and start scheduling around it:
+**08-24's 18 is a floor with Microsoft outstanding, expected in tomorrow's
+batch.**
+
+#### `aol.com` is the eighth receiving domain — and Yahoo's filing pattern reproduces
+
+`aol.com` has not appeared in any prior reading. It arrives in filing run
+`1787636161.` alongside `yahoo.com` — **byte-identical `report_metadata` apart
+from `report_id`**, separated only by the filename, which is precisely the shape
+the eighth reading established from run `1787549139.` (`att.net`, `cox.net`,
+`yahoo.com`).
+
+That is the finding reproducing on an independent filing run rather than being
+re-argued from the same evidence. **Reporting organizations stay at four** —
+Google, Yahoo, Comcast, Microsoft. **Receiving domains observed are now eight**:
+`google.com`, `yahoo.com`, `att.net`, `cox.net`, `aol.com`, `comcast.net`,
+`protection.outlook.com`, `swbell.net`. Four of the eight are Yahoo-filed, which
+is why "reporter" undercounted receivers for seven readings.
+
+#### The first reading where the tool printed a Receiver for every file
+
+This is the first reading taken from a folder of saved attachments with their
+original names intact, and the first to exercise the `Receiver` line added to
+`tools/dmarc_report.py` on 2026-08-24 against real data. **All ten files follow
+the `receiver!policy-domain!begin!end` convention and all ten printed a
+Receiver**, including the two `.zip` files from Google, whose wrapper differs but
+whose naming does not. The guard that declines rather than guesses was not
+exercised, because nothing here needed it.
+
+The eighth reading's instruction — *"keep the attachment filenames in future
+readings"* — is what made this reading cost nothing. Saving the attachments to a
+folder does it by construction, where the maildir destroyed it by construction.
+
+**The Report-ID convention paid a third time.** Six of ten files were recognised
+as already read from Report-ID, window and count, at the cost of one comparison
+each.
+
+#### Forward latency is still unmeasured — the same loose end, a second time
+
+The eighth reading closed with *"export raw `.eml` next time and it answers
+itself."* These are extracted attachments again, so it does not. The local
+copy's entire justification remains the unmeasured quantity: 0.85s to the maildir
+against 9h25m52s to Gmail through a rate limit, measured 2026-08-21, with
+Cloudflare's forwarders untested.
+
+**The file mtimes do not substitute, and it is worth saying why.** Yahoo filed
+run `1787636161.` at 2026-08-25 05:36:01Z and the files were saved at 14:11–14:12Z;
+Comcast filed at 2026-08-24 00:41:20Z and its file was saved at 14:22:20Z. The
+two save runs sit eleven minutes apart on consecutive days, which measures when
+Brian sits down at his mail, not when Cloudflare delivered it. It bounds delivery
+from above at roughly 8h35m and 13h41m respectively — both above the 9h25m figure
+in one case and below it in the other, so it does not even order the two
+hypotheses. **Second time asked; ask for the `.eml` a third time or stop
+carrying it as an open question.**
+
+#### What held steady
+
+- **One sending source.** Every aligned row in nine readings is
+  `173.255.245.115`. No unknown sender has ever appeared.
+- **Zero messages aligned on neither mechanism**, in every window, from every
+  reporter, since the first reading.
+- **No second unsigned message.** The seventh reading's reopen trigger — *one is
+  an anomaly, two is a pattern* — did not fire in the 08-24 window either, nor in
+  Microsoft's late look at 08-23. It stays one occurrence, one window, one
+  receiver, with two clean windows behind it.
+- **Yahoo prints `sp=-` where the others print `sp=none`.** Unchanged on
+  `aol.com` too, and still not a discrepancy.
+- **The member's Gmail forward (`209.85.220.41`) is absent** from 08-23 and
+  08-24, which with the eighth reading's 08-22 makes three consecutive windows.
+  It has always been intermittent, so absence is still not removal — but it is
+  the one class `quarantine` puts at risk, and three windows without it means the
+  risk cannot currently be re-measured. That is a gap in the evidence, not a sign
+  the class has gone away.
+- **Every row still signs with the legacy `dkim` selector.** The Postmark
+  selector `20260817033844pm` has appeared in no auth result in any reading,
+  which is the direct confirmation that task 02 has not cut over yet.
+
+#### Bearing on the policy decision
+
+The mandatory week was up on 2026-08-24 and the eighth reading found nothing
+arguing to hold step 7. This reading adds a ninth clean window and changes
+neither the recommendation nor the two residual risks, which stand exactly as
+written there. One is worth restating because this reading sharpens it:
+
+**`include:spf.mtasv.net` is an ordering requirement, and the evidence for it is
+now nine readings deep.** Every message this domain has ever been observed to
+send comes from one IP under the legacy `dkim` selector. Postmark is a sender
+with *no* observation behind it — no window, no receiver, no reporter has seen
+it. Under `p=none` a late SPF edit is harmless; under `p=quarantine` the first
+Postmark send rides on DKIM alone into a policy that quarantines. **Publish the
+include at or before the task 02 cutover, never after.**
+
+A note on scope, since the clean run invites the wrong inference: nine clean
+readings measure *the sending path that is being retired*. They are strong
+evidence that task 10's repairs worked and that jaguar's mail is in order. They
+are no evidence at all about Postmark, and the first window after cutover is the
+one that has to be read with the same attention as the first window ever was.
+
 ### Open
 
 - **Record the reporter, Report-ID and window in every reading** — convention

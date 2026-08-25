@@ -21,7 +21,7 @@ document.
 | Requirement | State |
 |---|---|
 | 1 — publish DMARC at `p=none` with working `rua` | **done**, verified |
-| 2 — wait one reporting cycle | **running**, clock started 2026-08-17 |
+| 2 — wait one reporting cycle | **done** — week ran 2026-08-17 → 08-24, closed by the ninth reading 2026-08-25 |
 | 3 — Postmark DKIM + Return-Path | **done**, verified, green in Postmark |
 | 5, 6 — SPF rewrite and `~all` | not started; belongs with the task 02 cutover |
 | 10, 11 — stale `mail` record, interim FCrDNS relief | **done**; PTR propagated later the same day and the full chain forward-confirms — **Findings 5 and 6 closed** |
@@ -37,11 +37,29 @@ domain has produced), `compauth=pass reason=100`, `helo=mail.surfguitar101.com`,
 and `dest:I`. Full capture and its limits in
 `research/email-header-captures.md`.
 
-**Open before this task can close:** read a week of DMARC aggregate reports
-(requirement 2, clock started 2026-08-17), then requirements 5–7 at cutover. The
-PTR was confirmed at the authoritative nameservers on 2026-08-17 and the chain
-forward-confirms. **Postmark account approved 2026-08-17**, so live sending is no
-longer gated by account state.
+**Requirement 2 is satisfied as of 2026-08-25.** The week of aggregate reports
+was read across nine sittings, recorded in the planning `STATUS.md` as the first
+through ninth readings. Result: **four reporting organizations, eight receiving
+domains, one sending source (`173.255.245.115`), and zero messages aligned on
+neither mechanism in any window from any reporter.** The one DKIM anomaly, in the
+seventh reading, did not recur across the five windows since. Requirement 2 asked
+what is currently sending as this domain; the answer is jaguar and nothing else.
+
+**Open before this task can close:** requirements 5–7 at cutover — and
+requirement 5 has been reclassified. `include:spf.mtasv.net` is an **ordering
+requirement, not a tidy-up**: under `p=quarantine` a first Postmark send made
+before the include lands rides on DKIM alone into a policy that quarantines.
+Publish it at or before the task 02 cutover, never after. The PTR was confirmed
+at the authoritative nameservers on 2026-08-17 and the chain forward-confirms.
+**Postmark account approved 2026-08-17**, so live sending is no longer gated by
+account state.
+
+**What the clean week does not cover.** Every observation in all nine readings is
+the legacy `dkim` selector on jaguar's IP — the path being retired. The Postmark
+selector `20260817033844pm` has appeared in no auth result in any window. These
+reports are evidence that task 10's repairs worked; they are no evidence about
+Postmark, and the first window after cutover needs reading with the same
+attention as the first window ever did.
 
 **Three claims in this document were corrected on 2026-08-17** — Findings 2, 7a
 and 8, each marked in place. All three were inferences recorded as findings; none
@@ -391,6 +409,16 @@ implementation. Read additional references as needed for context.
    reports arrive daily) before tightening policy. Reading one week of reports
    costs a week and is the only way to learn what is currently sending as this
    domain.
+
+   **DONE 2026-08-25.** Clock started 2026-08-17 and the mandatory week was up
+   2026-08-24. Nine readings, recorded in the planning `STATUS.md`: four
+   reporting organizations, eight receiving domains, one sending source, zero
+   messages aligned on neither mechanism. Two facts worth carrying forward from
+   the week rather than from this record: **windows gain reports and never revise
+   them** — Microsoft files exactly one window late, observed on 08-21, 08-22 and
+   08-23, so any window's newest count is a floor — and **Yahoo files one report
+   per receiving domain**, which is why a count of reports overstates
+   organizations and understates receivers.
 
 3. **Add Postmark's DKIM and Return-Path records** using the selector Postmark
    assigns in its dashboard. Do not copy a selector from any guide, including
