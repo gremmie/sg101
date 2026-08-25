@@ -4326,19 +4326,54 @@ and the reasoning that called it unexplained treated Email Routing as purely
 inbound. SRS makes a forwarder an outbound sender under the forwarding domain's
 name.
 
-#### A third signer: `cf2024-1`, signing as this domain, in no inventory
+**CORRECTED, same evening — SRS was not discovered here. It was recorded on
+2026-08-23 and this reading did not look.** Task 06's Phase 1 account says it
+plainly: *"Cloudflare's SRS rewrite lands in `@surfguitar101.com`, so Email
+Routing does need your SPF authorization"* — flagged there as correcting a
+planning claim, which makes this the *second* time the same correction has been
+made. The apex SPF was fixed on that basis two days ago, which is the only reason
+the live record carries the include at all.
+
+**So the finding is not SRS. The finding is that two task files disagree and
+nobody reconciled them.** Task 06 learned it on 08-23 and wrote it down; task 03
+requirement 5 went on prescribing SPF records that omit the include. A plan is
+executed from its own requirements, not from another document's retrospective, so
+the defect and its correction stand. The framing of it as a discovery does not.
+
+[[search-the-artifacts-before-claiming-new]] — **invoked against the ninth
+reading three paragraphs above, then committed here in the same sitting.** The
+tag exists because this failure recurs; it recurred while being cited.
+
+#### A third signer: `cf2024-1`, seen in service for the first time
 
 Cloudflare DKIM-signs forwarded mail as **`d=surfguitar101.com; s=cf2024-1`**,
 and `cf2024-1._domainkey.surfguitar101.com` resolves to a 2048-bit
 Cloudflare-managed key. That is a **third signer** alongside the legacy `dkim`
-selector and Postmark's `20260817033844pm`, and it appears in no task file and no
-prior reading.
+selector and Postmark's `20260817033844pm`.
 
-It is not a defect. It has never surfaced in a DMARC report because forwarded
-mail carries the *original sender's* `header.from`, so this domain's DMARC is not
-what gets evaluated — which is exactly why ten readings could not see it. But it
-is a key signing under this domain's name that nobody inventoried, and the
-selector inventory in task 03 predates it.
+It has never surfaced in a DMARC report because forwarded mail carries the
+*original sender's* `header.from`, so this domain's DMARC is not what gets
+evaluated — which is why ten readings of aggregate data could not show it
+signing.
+
+**CORRECTED, same evening — the first draft of this section said the selector
+"appears in no task file and no prior reading" and that "nobody inventoried" it.
+Both are false, and badly so.** Task 06 records `cf2024-1._domainkey` three
+times: as one of the five records in the **Add missing records** bundle, as Phase
+1's Defect 1 — unpublished on `surfguitar101.com`, which made forwarded mail
+`permerror` and put the first messages in Gmail's spam — and as a key **shared
+across customer zones**, confirmed by test send. This document then published it
+on `themadeira.net` on 08-23 and verified the value three ways, including a
+byte-identical `cmp` against the other zone.
+
+Measured tonight: `cf2024-1._domainkey.themadeira.net` resolves, so that entry in
+the 08-23 readiness table — *"absent, Phase 1's Defect 1 waiting to happen
+again"* — is now closed.
+
+What is actually new is narrow: the selector was observed **in service**, signing
+a real forwarded message, read from the receiving side. Task 03's selector
+inventory does genuinely predate it and is worth updating. The project having
+never seen it is not a thing that happened.
 
 #### Receipt through Email Routing is now measured rather than inferred
 
