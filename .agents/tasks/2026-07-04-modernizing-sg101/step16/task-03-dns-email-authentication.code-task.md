@@ -479,19 +479,25 @@ implementation. Read additional references as needed for context.
    carries the selector that signed it. Removing the old one early breaks
    verification for mail already in flight.
 
-   **There is a third signer, found 2026-08-25 and previously uninventoried:
-   `cf2024-1`.** Cloudflare DKIM-signs the mail it forwards as
+   **There is a third signer this file never listed: `cf2024-1`.** It is not
+   new to the project — task 06 has carried it since 2026-08-23, as one of the
+   five records in Cloudflare's **Add missing records** bundle and as Phase 1's
+   Defect 1 — but this document's selector inventory predates it and said two
+   where there are three.
+   Cloudflare DKIM-signs the mail it forwards as
    `d=surfguitar101.com; s=cf2024-1`, and
    `cf2024-1._domainkey.surfguitar101.com` resolves to a 2048-bit
    Cloudflare-managed key. So this domain has three selectors in service, not
    two: `dkim` (legacy, 1024-bit, Postfix), `20260817033844pm` (Postmark), and
    `cf2024-1` (Cloudflare, forwarded mail).
 
-   It is not a defect and it needs no action — but it is not ours to rotate or
-   remove, and it never appears in a DMARC report for this domain because
-   forwarded mail carries the *original sender's* `header.from`, so this domain's
-   DMARC is not what gets evaluated on it. That is why ten readings of the
-   aggregate reports could not have found it, and why it took a raw message.
+   It needs no action here — the record is published on both zones and the key
+   is Cloudflare's, shared across customer zones, not ours to rotate or remove.
+   It never appears in a DMARC report for this domain because forwarded mail
+   carries the *original sender's* `header.from`, so this domain's DMARC is not
+   what gets evaluated on it. Task 06 found the selector by reading a delivered
+   message on 2026-08-23; a raw message on 08-25 is what showed it actually
+   signing.
 
 5. **Rewrite the SPF record in two stages.** During the transition, while
    Postfix still sends:
@@ -532,6 +538,15 @@ implementation. Read additional references as needed for context.
    forwarder re-sends under the forwarding domain's name, which makes it an
    outbound sender for this domain. Full derivation in the planning `STATUS.md`,
    tenth reading.
+
+   **This was known and not carried across.** Task 06's Phase 1 account, written
+   2026-08-23, states that *"Cloudflare's SRS rewrite lands in
+   `@surfguitar101.com`, so Email Routing does need your SPF authorization"*, and
+   the live apex record was fixed that day on exactly that basis. Requirement 5
+   was never updated to match, so this file spent two days prescribing a record
+   that would undo a fix another file had already made. **The defect was not that
+   SRS was unknown. It was that two documents disagreed and the executable one
+   was wrong.**
 
 6. **Soften to `~all` for the duration of the cutover, then restore `-all`.** The
    current `-all` is a hard fail: a wrong record does not degrade, it bounces
