@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-22
+**Last updated:** 2026-08-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -1118,6 +1118,10 @@ jaguar and mail arriving exactly as it does today, indefinitely.
   that feeds `tools/dmarc_report.py` now runs through Email Routing rather than
   Postfix. Reports should keep arriving; **the eighth reading should confirm receipt
   rather than assume it**, since the `p=none` → `quarantine` decision rests on them.
+  **CLOSED 2026-08-24** — six reports arrived in the Gmail copy, four organizations,
+  none of them in jaguar's maildir. See the eighth reading, which also records that
+  receipt is established by the absence of any other path rather than from a
+  `Received` chain.
 - **Jaguar still holds `surfguitar101.com` in `virtual_alias_domains`**, so mail
   the old box originates to these addresses is delivered by its local alias table
   and never consults MX. Tests must come from an external mailbox. It also means
@@ -3532,6 +3536,13 @@ requirement 2 cares about.
 *recipient* domain, so which of the two covers `swbell.net` cannot be read from
 the report body — only from the carrying message's headers.
 
+**⚠️ WIDENED 2026-08-24 — the report *filename* carries it too.** The convention
+is `receiver!policy-domain!begin!end`, so a saved attachment names the receiving
+domain even with the message gone. The body claim stands; "only from the headers"
+was too narrow, and it is why seven readings taken from a maildir — where the
+filename is a delivery ID — could not see this dimension at all. The eighth
+reading resolves the pair above: **Yahoo files one report per receiving domain.**
+
 #### The 08-20 window reproduced exactly, and that settles what "tripled" meant
 
 Google Report-ID `1291292834730335860` is **the same report the fifth reading
@@ -3740,6 +3751,192 @@ blocker.** It cannot be identified from these instruments, it passed DMARC, and
 nothing was harmed. It is not a reason to hold step 7; it is a reason to look
 again at the next reading, since a second occurrence would be a pattern with
 something to grep for.
+
+### Eighth reading — 2026-08-24, covering 2026-08-23: the SPF rewrite measured at five receivers, and "Yahoo" is three receiving domains
+
+**Six reports, read from the Gmail copy — the first reading taken after the local
+copy stopped receiving.** Five cover 2026-08-23, the first window after the MX
+flip and the apex SPF rewrite; the sixth is a late Microsoft filing for 08-22.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `7598911246411840152` | 2026-08-23 | 12 | 0 |
+| `yahoo.com` | `Yahoo` | `1787549139.16450` | 2026-08-23 | 5 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1787532080-surfguitar101.com` | 2026-08-23 | 3 | 0 |
+| `att.net` | `Yahoo` | `1787549139.16305` | 2026-08-23 | 2 | 0 |
+| `cox.net` | `Yahoo` | `1787549139.16351` | 2026-08-23 | 1 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `c2fe8b5012c84e53ba99091ccf756c28` | 2026-08-22 | 3 | 0 |
+
+**2026-08-23: 23 messages, five receiving domains, 0 aligned on neither
+mechanism.** Every row is `173.255.245.115`, `spf:surfguitar101.com=pass`,
+`dkim:surfguitar101.com=pass`, disposition none.
+
+#### Receipt through Cloudflare Email Routing is confirmed
+
+Phase 1's loose end asked for exactly this: *"the eighth reading should confirm
+receipt rather than assume it"*, since the `rua` path now runs through Email
+Routing instead of Postfix and the `p=none` → `quarantine` decision rests on
+these reports. Six arrived, from four organizations.
+
+**Recorded as inference, not measurement.** The reports are in the Gmail inbox
+and absent from jaguar, and `admin@surfguitar101.com` → Cloudflare →
+`bgneal@gmail.com` is the only route into that inbox — an argument from the
+absence of any other path. The `Received` chain would make it direct, and was not
+read, because the export carried the attachments alone.
+
+That same gap leaves the **forward latency unmeasured**, which is the local
+copy's entire justification: 0.85s to the maildir against 9h25m52s to Gmail
+through a rate limit, measured 2026-08-21. Whether Cloudflare's forwarders
+inherit that limit is now an open question with no data. Export raw `.eml` next
+time and it answers itself.
+
+#### jaguar's maildir is not stale, it is deaf
+
+Run over `/home/dmarc/mail` the same day: **14 files, 9 reports, and all nine are
+the seventh reading's** — matching by Report-ID, window and count. Zero new
+reports. Decoding the maildir filenames dates the changeover, and the shape is
+sharper than "frozen":
+
+| Delivered (UTC) | Message | Origin |
+|---|---|---|
+| 08-21 03:04 | `rua test 2` | local |
+| 08-21 06:09 | Django error, `/admin/password_reset/` | local |
+| 08-23 05:33 | MAILER-DAEMON bounce | local |
+| **08-23 21:02** | Cloudflare "Verify your Email Routing address" | **external — the last one** |
+| 08-24 01:08 | contact-form feedback, *SOUNDS OF THE PRESTON WAYNE FOUR* | local |
+
+External mail stops at 08-23 21:02Z. Everything after it is jaguar talking to
+itself through `virtual_alias_domains`, which never consults MX — the loose end
+already recorded, now visible on live mail rather than argued from config. The
+08-24 01:08Z feedback message is **the local half of the Phase 1 capture**: one
+message, `nrcpt=2`, whose Gmail half is what returned `spf=pass / dkim=pass /
+dmarc=pass` under the rewritten apex record.
+
+**A byproduct: Cloudflare's verification mail reached jaguar**, which puts the MX
+deletion after 08-23 21:02Z. Inference from delivery path, not measurement — a
+queued retry produces the same file — and Cloudflare's audit log settles it if
+the exact minute ever matters.
+
+**The Report-ID convention paid again.** Recognizing nine already-read reports
+cost one comparison. On 08-21 the same question cost a header dump and a mail-log
+pull.
+
+#### The apex SPF rewrite cost nothing, at five receivers instead of one
+
+08-23 is the first window covering the day `a` and `mx` came out of the apex
+record. Phase 1 closed *"sending from the site has not been exercised since the
+apex SPF rewrite"* on a single contact-form message at a single receiver. This is
+**23 messages at five receivers**, every row passing SPF on the explicit `ip4:`,
+every row DKIM aligned, disposition none throughout. Task 03's Finding 3 and the
+rewrite that answered it are both now measured rather than reasoned.
+
+#### No second unsigned message — the reopen trigger did not fire
+
+The seventh reading closed the unidentified DKIM failure as a bounded
+known-unknown and named the condition for reopening: *one is an anomaly, two is a
+pattern with something to grep for.* Every 08-23 row across five receivers is
+`dkim=pass`, and none carries the `mail.surfguitar101.com` SPF domain that
+accompanied it. It stays one occurrence, one window, one receiver. Microsoft's
+independent 08-22 report shows 3 of 3 passing.
+
+#### "Yahoo" is three receiving domains — and the sixth reading was already right about the part that mattered
+
+The three Yahoo files carry **byte-identical `report_metadata` apart from
+`report_id`** — same `org_name`, same contact, same window — and share the
+filing-run prefix `1787549139.`. What separates them is the filename:
+`att.net`, `cox.net`, `yahoo.com`. **Yahoo files one report per receiving
+domain.**
+
+That explains the 08-21 pair the sixth and seventh readings could not account
+for. `1787378132.213085` and `.213034` were two receiving domains from one
+filing run, so their 2 + 2 messages are two populations rather than a double
+count.
+
+**The sixth reading had already reached the conclusion that mattered** — *"count
+Yahoo as one reporting organization"* — and refuted the inflated reporter base
+before recording it. What it could not do was say *why* there were two. One of
+its claims needs widening rather than correcting: it states the recipient domain
+is readable *"only from the carrying message's headers."* The standard report
+filename — `receiver!policy-domain!begin!end` — carries it too, which is how this
+reading has it. [[search-the-artifacts-before-claiming-new]]: this was drafted as
+a correction to the sixth reading and is not one.
+
+**And that names why it stayed invisible for seven readings.** Read from a
+maildir, the filename is a delivery ID, and the receiving domain is gone the
+moment the attachment is detached from its message. The Gmail export preserved it
+by accident of how attachments save. **Keep the attachment filenames in future
+readings**, and note that `tools/dmarc_report.py` prints `org_name` only — the
+receiving domain is not in the report body for it to print.
+
+**Consequence for the record: "reporter" has meant two different things.**
+Reporting organizations remain **four** — Google, Yahoo, Comcast, Microsoft.
+Receiving domains observed now number **seven**: `google.com`, `yahoo.com`,
+`att.net`, `cox.net`, `comcast.net`, `protection.outlook.com`, and `swbell.net`
+— the last from the sixth reading's report-mail sender names rather than a
+filename, so it is the one of the seven not read from the file naming
+convention. Prior readings' per-window "reporter" counts are counts of *reports*,
+which for Yahoo overstates organizations and understates receivers.
+
+#### Microsoft files a window late — two points, and a prediction
+
+`protection.outlook.com`'s report covers 08-22 and arrived in the 08-24 batch;
+its 08-21 report arrived in the 08-23 batch. Two observations, consistent.
+**Prediction: a Microsoft report for the 08-23 window in the next batch** — which
+also makes 08-23's 23 messages a floor under the standing convention, not a
+total.
+
+This one is `protection.outlook.com`, the EOP side. Whether `46b44804…` came from
+consumer `outlook.com` cannot be recovered from the maildir copy, where the
+filename is a delivery ID — though the attachment name *inside* that message on
+jaguar would still say. It bears on the Microsoft deliverability thread, which
+concerns an eighth of the membership.
+
+#### 08-22 gained again — the floor convention holds a fourth time
+
+| Window | Messages | Reporting orgs | Change |
+|---|---|---|---|
+| 2026-08-22 | **30** | 4 | was 27 across 3 — Microsoft's late filing added 3 |
+| 2026-08-23 | 23 | 3 | new; a floor, Microsoft outstanding |
+
+Windows gain reports and never revise them, now confirmed on three independent
+windows.
+
+#### What held steady
+
+- **One sending source.** Every aligned row in eight readings is
+  `173.255.245.115`. No unknown sender has ever appeared.
+- **Zero messages aligned on neither mechanism**, in every window, from every
+  reporter, since the first reading.
+- **Yahoo prints `sp=-` where the others print `sp=none`.** Unchanged, and still
+  not a discrepancy.
+- **Microsoft's exclusive window end** (`-> 00:00:00Z` of the next day) recurs on
+  the 08-22 report. Still one day, still not to be double-counted.
+- **The member's Gmail forward (`209.85.220.41`) is absent** from 08-22 and
+  08-23. It has always been intermittent, so absence is not removal.
+
+#### Bearing on the policy decision
+
+`p=none` was published 2026-08-17, so **the mandatory week is up today**. Eight
+readings, four reporting organizations, seven receiving domains, one sending
+source, zero messages aligned on neither mechanism in any window from any
+reporter, and the single DKIM anomaly did not recur on the day five receivers
+looked. **Nothing in this reading argues for holding step 7.**
+
+Two residual risks, neither a blocker, both worth stating before the flip:
+
+- **The member's Gmail forward is the one class `quarantine` puts at risk.** SPF
+  fails there by construction — evaluated against `gmail.com`, therefore
+  unaligned — and aligned DKIM is what carries it through. That has held on every
+  observation. A forwarder that modifies the body breaks it, and under
+  `quarantine` the failure mode becomes a quarantined message rather than
+  nothing.
+- **Postmark is not in the apex SPF record yet, and tightening changes what that
+  costs.** `include:spf.mtasv.net` is deliberately held to the cutover (task 03
+  step 5). Under `p=none` a late edit is harmless. Under `p=quarantine` the first
+  Postmark send rides on DKIM alone, one mechanism deep, with quarantine as the
+  failure mode. **That makes step 5 an ordering requirement rather than a
+  tidy-up: publish the include at or before the Postmark cutover, never after.**
+
 
 ### Open
 
