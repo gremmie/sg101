@@ -1268,7 +1268,9 @@ across all fourteen files is `none`, and all three 08-25 reports still print
 `p=none`. The record resolves as `p=quarantine` from both nameservers, and Yahoo
 generated a `p=none` report at 05:43:03Z on 08-26 — hours after publication —
 which shows `policy_published` reports the policy *applied during the window*,
-not the record as it reads at generation time. **The twelfth reading, covering
+not the record as it reads at generation time. **Corroborated the same day by a
+second reporter** — Comcast filed for 08-25 at 01:46:46Z, also reading `p=none`;
+see the eleventh reading's addendum in `research/dmarc-readings.md`. **The twelfth reading, covering
 2026-08-26, is the decisive one: every report for that window must read
 `p=quarantine`.**
 

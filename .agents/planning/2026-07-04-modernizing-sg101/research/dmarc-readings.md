@@ -33,6 +33,11 @@ evidence, that one is the state.
 | 10 | 2026-08-25 pm | 08-24 | one raw message closes three open questions |
 | 11 | 2026-08-26 | 08-25 | Postmark appears; the policy line does not |
 
+**Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
+read 2026-08-26 13:12Z, which takes that window to 11 messages across four
+receiving domains and gives the `policy_published` timing property a second
+witness.
+
 **The twelfth reading, covering the 2026-08-26 window, is the decisive one** —
 every report for that window must read `p=quarantine`.
 
@@ -2036,3 +2041,45 @@ not filed, and both missing ones contributed 4 and 1 to the previous window. **N
 trend claim is available until the 08-25 window closes.** This is the same error
 shape as the second and third readings' traffic-decline argument, which the fourth
 reading killed: *"Both readings were wrong, because neither had a baseline."*
+
+#### Addendum, 2026-08-26 13:12Z — Comcast files for 08-25, and the timing property gets a second witness
+
+A fifteenth file arrived after this reading was written: **`comcast.net`,
+Report-ID `v2-1787708806-surfguitar101.com`, window 2026-08-25**. One sending
+source, jaguar's `173.255.245.115`, **2 messages, both mechanisms aligned,
+disposition `none`.**
+
+| | recorded above | with Comcast |
+|---|---|---|
+| 2026-08-25 messages | 9 | **11** |
+| receiving domains | 3 | **4** |
+| aligned on neither | 0 | **0** |
+| jaguar's own volume | 8 | **10** |
+
+**The floor holds an eighth time.** One of the two outstanding reporters has now
+filed and the window went up, never sideways — so *"two of the four 08-25
+reporters have not filed"* above should now read *one*, and Microsoft is that one.
+Its four-consecutive-windows-late pattern still predicts `50.31.156.118` in the
+next batch.
+
+**The reason this was worth opening early: `policy_published` reads `p=none`, and
+this report was generated 2026-08-26 01:46:46Z** — one hour and forty-seven
+minutes after the window closed, and hours after `p=quarantine` went live. That is
+a **second, independent witness** to the timing property this reading inferred
+from a single Yahoo report at 05:43:03Z. Two reporters, two generation times, two
+filing pipelines, same behaviour: **`policy_published` carries the policy applied
+during the window, not the record as it reads when the report is written.** One
+witness left open the possibility of a single receiver's quirk; two make it a
+property of the format, which is what the twelfth reading's whole argument rests
+on.
+
+**Comcast passing at all is the quiet result.** This is the receiver that refused
+every message from `173.255.245.115` outright until the block lifted on 08-19 —
+two messages, both aligned, delivered disposition `none`.
+
+**No Postmark row**, and that is expected rather than a gap: the two 08-25 test
+sends went to Outlook and Gmail, so Comcast saw neither. This report says nothing
+about `.116` or `.118`.
+
+**Unchanged: the twelfth reading is still the decisive one.** No file in `~/dmarc`
+yet covers the 2026-08-26 window.
