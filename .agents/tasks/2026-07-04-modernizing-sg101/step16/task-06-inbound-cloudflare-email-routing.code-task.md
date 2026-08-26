@@ -421,12 +421,13 @@ hypothesis and then confirmed by a test send rather than assumed.
 6. Test all six addresses end-to-end from an external mailbox. Every one lands
    in the same inbox, so this is six sends and six checks with nobody to chase.
 
-### Phase 2 — `themadeira.net` — ✅ MX FLIPPED 2026-08-25, 6 of 7 confirmed
+### Phase 2 — `themadeira.net` — ✅ COMPLETE — MX FLIPPED 2026-08-25, 7 of 7 confirmed 2026-08-26
 
 **Ivan verified 2026-08-25, the last gate.** All three destinations verified, the
 seven rules created, MX flipped, six addresses confirmed end-to-end from an
-external mailbox. `todd@` awaits Todd's reply — an outstanding confirmation, not
-an observed fault. Full account in the planning `STATUS.md`.
+external mailbox. **`todd@` closed 2026-08-26 — Todd confirmed his mail is being
+forwarded — so all seven are confirmed per address, not sampled.** Full account in
+the planning `STATUS.md`.
 
 **Two things the steps below did not anticipate.** Cloudflare assigned MX
 priorities of **3, 46 and 17**, and 3 beats the `_dc-mx` record's 10 — publishing
@@ -479,7 +480,7 @@ being independent is what made the wait free.*
     Phase 1's (requirement 6)** — then publish MX on this zone and test all
     seven addresses.~~ **DONE 2026-08-25**, with the rollback value corrected to
     its panel form `MX 10 → mail.themadeira.net` — see the Phase 2 header above.
-    Six of seven addresses confirmed; `todd@` outstanding.
+    **All seven addresses confirmed as of 2026-08-26.**
 
 ### Phase 3 — teardown, after both
 

@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-24
+**Last updated:** 2026-08-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
@@ -1233,6 +1233,17 @@ should check each:
    disposition, so an all-`none` window remains the healthy state and is not
    evidence the policy failed to take effect. Item 1 is what distinguishes those.
 
+**ANSWERED 2026-08-26 — see the eleventh reading. 2 and 3 landed; 1 did not, and
+that is a timing property rather than a fault.** Postmark's `50.31.156.116`
+appears in Google's 08-25 report with both mechanisms aligned, every disposition
+across all fourteen files is `none`, and all three 08-25 reports still print
+`p=none`. The record resolves as `p=quarantine` from both nameservers, and Yahoo
+generated a `p=none` report at 05:43:03Z on 08-26 — hours after publication —
+which shows `policy_published` reports the policy *applied during the window*,
+not the record as it reads at generation time. **The twelfth reading, covering
+2026-08-26, is the decisive one: every report for that window must read
+`p=quarantine`.**
+
 ## Step 16 — Postmark measured at two receivers, 2026-08-25 — the new path is proven before cutover
 
 **Two test messages sent through Postmark over SMTP as
@@ -1318,7 +1329,7 @@ non-jaguar sending source in eleven readings. If it does not appear, the reports
 are not seeing everything this domain sends, which would matter more than the
 result itself.
 
-## Step 16 task 06 Phase 2 — `themadeira.net` MX FLIPPED 2026-08-25 — 6 of 7 addresses confirmed, `todd@` awaiting reply
+## Step 16 task 06 Phase 2 — `themadeira.net` MX FLIPPED 2026-08-25 — ✅ 7 of 7 addresses confirmed 2026-08-26
 
 **Ivan verified `member36@example.com` on 2026-08-25**, which was the last gate. All
 three destinations read verified in the dashboard — `bgneal@gmail.com`,
@@ -1410,7 +1421,7 @@ body. That is adjacent to sg101's quarantine residual risk — a body-modifying
 forwarder is what would break the member's Gmail forward — but it is evidence
 about *Cloudflare's* forwarder and says nothing definitive about Gmail's.
 
-### Test results — 6 of 7
+### Test results — 7 of 7 ✅
 
 | Address | Destination | Confirmed |
 |---|---|---|
@@ -1420,19 +1431,30 @@ about *Cloudflare's* forwarder and says nothing definitive about Gmail's.
 | `madeira@` | `member36@example.com` | ✅ confirmed by Ivan |
 | `themadeira@` | `member36@example.com` | ✅ confirmed by Ivan |
 | `ivan@` | `member36@example.com` | ✅ confirmed by Ivan |
-| `todd@` | `member35@example.com` | **awaiting Todd's reply** |
+| `todd@` | `member35@example.com` | ✅ **confirmed by Todd 2026-08-26** |
 
-Sent from Outlook, an external mailbox, not from anything on jaguar. **`todd@` is
-the one address not yet confirmed end-to-end.** It is an outstanding reply rather
-than an observed fault: the rule exists, the destination is verified, and the six
-addresses sharing the same MX and the same three route hosts all deliver. Nothing
-suggests it is broken; it is simply unmeasured, and this record does not treat the
-other six as evidence for it.
+Sent from Outlook, an external mailbox, not from anything on jaguar.
+
+**`todd@` CLOSED 2026-08-26 — Todd confirmed his mail is being forwarded.** The
+record held that the other six were not evidence for the seventh, and it was
+right not to assume: this is the seventh measured, not the sixth generalised.
+**All seven `themadeira.net` addresses are now confirmed end-to-end**, which is
+what task 06's acceptance criteria ask for — *"tested per address, not sampled"*.
+
+Confirmation is Todd's report of receipt, not a header read on this side. That is
+the same standard the three `member36@example.com` addresses were closed under and
+is what a third-party destination allows; it establishes delivery, not the
+authentication result at Todd's receiver. Nothing depends on the latter — `todd@`
+is inbound forwarding, and DMARC for forwarded mail is evaluated against the
+original sender's domain, as the Outlook capture above showed.
 
 ### Still open
 
-- **`todd@themadeira.net` end-to-end.** Task 06's acceptance criteria want all
-  seven tested; six are done.
+- ~~**`todd@themadeira.net` end-to-end.**~~ **CLOSED 2026-08-26** — Todd
+  confirmed receipt. Seven of seven; the acceptance criterion is met. **This was
+  the longest-standing item in either project, open in one form or another since
+  2026-08-17**, and it was the last thing gating `themadeira.net`'s inbound mail.
+  Phase 3 is all that remains of task 06.
 - **Postfix keeps receiving on jaguar for at least a week** (Phase 3, step 12).
   Senders cache MX beyond the 300s TTL, so a tail of mail will keep arriving at
   the old box and must not be refused.
@@ -1440,6 +1462,21 @@ other six as evidence for it.
   two. `_dmarc` went live 08-24, one day before the flip, so the intended
   jaguar-era baseline window is one day wide at most and may be empty — a known
   limitation recorded when it was published, not a surprise.
+
+  **Still absent as of the eleventh reading, 2026-08-26 — two days on, and the
+  delivery path is ruled out as the explanation.** All fourteen files in
+  `~/dmarc` are `surfguitar101.com`; not one is `themadeira.net`. That zone's
+  record reads `v=DMARC1; p=none; rua=mailto:admin@surfguitar101.com` —
+  **`admin@surfguitar101.com` is the same mailbox that just delivered fourteen
+  reports**, so "the reports are not reaching us" is not available as an
+  explanation. What remains is that no reporter has filed for this zone yet,
+  which is unremarkable for a domain that sends almost nothing.
+
+  **Two consequences worth having written down.** Its `rua` names only the local
+  copy — no `dmarc-reports.cloudflare.net` destination — so **there is no
+  Cloudflare dashboard for `themadeira.net`**, and `tools/dmarc_report.py` over
+  `~/dmarc` is the only instrument this zone has. And the record publishes no
+  `sp=`, so the subdomain policy inherits `p=none` rather than being stated.
 - **Five `ns1`–`ns5.linode.com` NS rows** sit in the panel. Inert — Cloudflare
   publishes only `ada`/`cash` at the apex and the `.net` delegation agrees — so
   they were deliberately not touched during a mail cutover. Belongs to the
@@ -4698,6 +4735,114 @@ published at cutover must retain `include:_spf.mx.cloudflare.net` alongside
 Postmark's include, or forwarded mail breaks the moment the record changes —
 under any policy, `p=none` included, because SPF hard-fail on the SRS domain
 stands on its own without DMARC.
+
+### Eleventh reading — 2026-08-26, covering 2026-08-25: Postmark appears, and the policy line does not
+
+**Fourteen files in `~/dmarc` — three new, eleven re-reads.** The three new ones
+were saved 2026-08-26 14:03Z and all cover the **2026-08-25 window**, the one the
+tenth reading wrote three predictions against.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `16063363139180655336` | 2026-08-25 | 6 | 0 |
+| `yahoo.com` | `Yahoo` | `1787722983.752886` | 2026-08-25 | 2 | 0 |
+| `aol.com` | `Yahoo` | `1787722983.752860` | 2026-08-25 | 1 | 0 |
+
+**2026-08-25: 9 messages, three receiving domains, 0 aligned on neither
+mechanism.** Comcast and Microsoft are both outstanding, so **9 is a floor** — the
+convention holds a seventh time. Yahoo's filing run `1787722983.` reproduces the
+established shape a third time: `yahoo.com` and `aol.com` byte-identical in
+`report_metadata` apart from `report_id`, separated only by the filename.
+
+*Applying the tenth reading's own correction: `1787722983` decodes to 2026-08-26
+05:43:03Z and that is a **generation** time, not a send time. It is used below as
+a lower bound on when the report was written, which is all it can support.*
+
+#### Prediction 2 landed — the first non-jaguar sending source in eleven readings
+
+Google's 08-25 report carries a second `<record>`:
+
+```
+source_ip 50.31.156.116   count 1   disposition none   dkim pass   spf pass
+  dkim  d=surfguitar101.com   s=20260817033844pm   pass
+  dkim  d=pm.mtasv.net        s=pm20250806         pass
+  spf   d=pm-bounces.surfguitar101.com              pass
+```
+
+**`20260817033844pm` has now appeared in an aggregate report.** Its absence is
+what ten readings used to conclude the cutover had not happened; the header
+capture read at Gmail on 08-25 proved it signs a real message, and this is the
+same send arriving from the receiver's own accounting. Both signatures ride
+together exactly as the header showed, and only `d=surfguitar101.com` aligns.
+
+**`50.31.156.118` does not appear anywhere.** That is the Outlook send, and
+Microsoft has now filed exactly one window late four consecutive times (08-21,
+08-22, 08-23, 08-24). So `.118` is expected in Microsoft's 08-25 filing in the
+next batch, and its *absence* there would be the finding.
+
+#### The relaxed SPF alignment is load-bearing, and nothing chose it deliberately
+
+The envelope domain is `pm-bounces.surfguitar101.com` — a **subdomain** of the
+header-from domain, not the domain itself. `policy_evaluated/spf` reads `pass`
+only because the published record carries `aspf=r`.
+
+**Under `aspf=s` this row would read `spf=fail` and rest on DKIM alone.** Nothing
+proposes tightening alignment and this is not a defect. It is recorded because
+`aspf=r` is now a property the Postmark path depends on rather than a default
+nobody examined — the same class as `include:_spf.mx.cloudflare.net`, which the
+tenth reading found was holding up the reporting pipeline itself.
+
+#### Prediction 3 landed — every row in all fourteen files is `disposition=none`
+
+No exceptions, in the new reports or the re-reads.
+
+#### Prediction 1 did NOT land — and the record is published, so the reports are the thing to explain
+
+All three 08-25 reports print **`p=none`**. Google adds `sp=none np=none`.
+
+**The record itself is fine, verified authoritatively rather than from a cache:**
+
+```
+_dmarc.surfguitar101.com. 300 IN TXT "v=DMARC1; p=quarantine; rua=mailto:00fc…@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com"
+```
+
+Identical from `ada` and `cash`, **exactly one `v=DMARC1` string**, TTL 300, `rua`
+intact with both destinations. Nothing was lost or double-published.
+
+**Yahoo's report settles which explanation is right.** It was generated at
+05:43:03Z on **08-26** — hours after `p=quarantine` went live — and still prints
+`p=none`. A reporter that stamped `policy_published` from the record as it read at
+generation time would have printed `quarantine`. So `policy_published` is the
+policy **applied to the messages in the window**, per RFC 7489, and an 08-25
+window whose mail was evaluated before the change took effect correctly reads
+`p=none`.
+
+**This is unanswered, not failed.** The distinction matters because the
+alternative — that receivers are not seeing the record — would be a live defect,
+and it is ruled out by the record resolving and by Yahoo's generation time. **The
+decisive test is the 2026-08-26 window**, which is the twelfth reading: those
+reports cover mail evaluated entirely after publication, and every one of them
+should read `p=quarantine`. If any still reads `p=none`, that is a real finding
+and the record needs re-examining rather than re-explaining.
+
+#### The eleven re-reads reproduce, and 08-23 reproduces in full
+
+Every re-read matches its recorded Report-ID and count. The 08-23 window
+recomputes from six files as **24 messages across six receiving domains** —
+`att.net` 2, `comcast.net` 3, `cox.net` 1, `google.com` 12, `yahoo.com` 5,
+`protection.outlook.com` 1 — which is exactly the ninth reading's revised total
+after Microsoft's late filing. 08-24 recomputes as **22 across four**, matching
+the tenth reading. **Windows gain reports and never revise them** now holds across
+four independent windows and seven readings.
+
+#### One count worth not over-reading
+
+Jaguar's own volume by window: 08-23 **24**, 08-24 **22**, 08-25 **8**. That looks
+like a collapse and is not evidence of one — two of the four 08-25 reporters have
+not filed, and both missing ones contributed 4 and 1 to the previous window. **No
+trend claim is available until the 08-25 window closes.** This is the same error
+shape as the second and third readings' traffic-decline argument, which the fourth
+reading killed: *"Both readings were wrong, because neither had a baseline."*
 
 ### Open
 
