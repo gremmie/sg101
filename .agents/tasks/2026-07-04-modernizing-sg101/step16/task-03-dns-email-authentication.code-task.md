@@ -21,6 +21,7 @@ document.
 | Requirement | State |
 |---|---|
 | 1 — publish DMARC at `p=none` with working `rua` | **done**, verified |
+| 7 — tighten policy after the monitor week | **done 2026-08-25** — `p=quarantine` live, verified authoritatively, one `v=DMARC1` string |
 | 2 — wait one reporting cycle | **done** — week ran 2026-08-17 → 08-24, closed by the ninth reading 2026-08-25 |
 | 3 — Postmark DKIM + Return-Path | **done**, verified, green in Postmark |
 | 5, 6 — SPF rewrite and `~all` | not started; belongs with the task 02 cutover |

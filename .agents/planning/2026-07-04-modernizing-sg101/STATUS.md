@@ -1148,6 +1148,91 @@ seven rules, request verification from Ivan and from Todd at his new address. Th
 task 07's smoke and cutover verification, which now has the Outlook mailbox it had
 been waiting for.
 
+## Step 16 task 03 step 7 — `p=quarantine` published 2026-08-25 — the monitor phase is over
+
+**The policy was tightened the same day the Postmark path was first measured, and
+the ordering is the point.** The case for tightening on 08-24 rested on ten clean
+readings of the sender being *retired*. The case acted on rests on the sender
+being *adopted*: Postmark measured at two receivers, aligned on both mechanisms,
+landing in a Microsoft inbox. Those are different arguments and only the second
+one covers the mail this domain is about to start sending.
+
+```
+before:  v=DMARC1; p=none;       rua=mailto:00fc…@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com
+after:   v=DMARC1; p=quarantine; rua=mailto:00fc…@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com
+```
+
+One word changed; `rua` byte-identical with both destinations intact. **Verified
+authoritatively: exactly one `v=DMARC1` string at `_dmarc`, TTL 300**, so rollback
+to `p=none` propagates in five minutes.
+
+`p=none` ran **2026-08-17 → 2026-08-25**, nine days, eleven readings, four
+reporting organizations, eight receiving domains, one sending source until today,
+and **zero messages aligned on neither mechanism in any window from any
+reporter.**
+
+### The quoting warnings are cosmetic, and the hazard is obeying them
+
+Cloudflare's DNS editor flagged several TXT records as needing quotes, while
+indicating it would publish them with quotes anyway. **That warning is about the
+input field, not the stored value.** DNS transports TXT as quoted
+character-strings regardless, so Cloudflare supplies the quoting at publish time.
+
+**The failure mode is typing the quotes in.** That produces *double* quoting —
+literal `"` characters inside the string — turning `v=spf1` into `"v=spf1`, which
+matches nothing, or a DKIM key into one that no longer verifies. Both fail
+silently, which is the recurring shape of every defect in this step.
+
+**Audited rather than assumed.** Twelve mail-related TXT records across both zones
+checked for embedded literal quotes: **zero**. All five DKIM keys decoded with
+`openssl rsa -pubin`:
+
+| Selector | Decodes |
+|---|---|
+| `dkim._domainkey.surfguitar101.com` | 1024-bit |
+| `20260817033844pm._domainkey.surfguitar101.com` | 1024-bit |
+| `cf2024-1._domainkey.surfguitar101.com` | 2048-bit |
+| `dkim._domainkey.themadeira.net` | 1024-bit |
+| `cf2024-1._domainkey.themadeira.net` | 2048-bit |
+
+**Left alone deliberately.** Same reasoning as the `ns1`–`ns5.linode.com` rows and
+the decision not to grey-cloud `mail.themadeira.net`: cosmetic warnings on working
+records, and tidying them during a mail cutover converts one change into several.
+
+**Incidental worth recording: Postmark's selector is 1024-bit**, the same size
+task 03's Finding 2 objected to in the legacy `dkim` key. The provider move did
+not upgrade key size. Postmark issues 1024 by default and supports rotation to
+2048. Not acted on — it passed at both Gmail and Outlook today — but the finding
+that prompted the audit is not actually resolved by the migration that was
+supposed to resolve it.
+
+### Rollback
+
+```
+v=DMARC1; p=none; rua=mailto:00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com
+```
+
+Edit the existing record. **Never add a second one** — two `v=DMARC1` strings at
+`_dmarc` means the domain is treated as having no DMARC record at all, losing
+policy *and* reporting silently. Same class as the double `v=spf1` string that
+Finding 4 identified and that Cloudflare's **Add missing records** button still
+offers to create.
+
+### What the next reading answers
+
+Three things land in the 2026-08-25 window's reports, and the eleventh reading
+should check each:
+
+1. **`policy_published` should read `p=quarantine`** — the receivers confirming
+   they see the change, as distinct from `dig` confirming it was published.
+2. **A second sending source should appear** — `50.31.156.116` and/or `.118`,
+   Postmark, SPF and DKIM both aligned. That would be the first non-jaguar source
+   in eleven readings. Its *absence* would be the more significant result: it
+   would mean the reports are not seeing everything this domain sends.
+3. **Dispositions should stay `none`.** Only failing mail earns a `quarantine`
+   disposition, so an all-`none` window remains the healthy state and is not
+   evidence the policy failed to take effect. Item 1 is what distinguishes those.
+
 ## Step 16 — Postmark measured at two receivers, 2026-08-25 — the new path is proven before cutover
 
 **Two test messages sent through Postmark over SMTP as
