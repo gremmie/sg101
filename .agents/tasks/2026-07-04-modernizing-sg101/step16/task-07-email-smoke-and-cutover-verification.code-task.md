@@ -1,4 +1,4 @@
-# Task: Email Smoke Tool, Warm-Up, and Cutover Verification
+# Task: Email Smoke Tool and Cutover Verification
 
 ## Description
 Build `tools/email_smoke.py` on the model of `tools/image_smoke.py`, and use it
@@ -12,8 +12,10 @@ would have passed before any of this work and will pass after — it cannot
 distinguish success from failure.** The test that matters is a real message
 arriving in an Outlook/Hotmail inbox, and not in its junk folder.
 
-This task also owns the warm-up, because the first bulk send after cutover goes
-to a list that is 63% dormant.
+The graduated warm-up this task used to own was **dropped 2026-08-20 on
+measurement** — no path in the tree can produce a burst. What it owns instead is
+watching Postmark's bounce dashboard through the first two weeks. See the
+Background below.
 
 ## Background
 
@@ -34,7 +36,7 @@ The suite cannot see any of this, because `locmem` never leaves the process:
 - **whether Microsoft accepts the message**, which is the entire point of Step 16
 - whether mail lands in inbox or junk, which no SMTP response reveals
 
-### The stale-list problem, measured
+### The stale-list problem, and why the warm-up was dropped — 2026-08-20
 Of 668 distinct forum topic subscribers:
 
 | Last login | Subscribers |
@@ -44,14 +46,45 @@ Of 668 distinct forum topic subscribers:
 | 1–3 years | 94 |
 | under 1 year | 152 |
 
-**63% are three or more years dormant.** A meaningful fraction of those
-addresses are dead. Postmark auto-suppresses hard bounces, but a burst of them
-on a brand-new account is exactly what triggers a provider review — and a
-suspension takes registration and password-reset mail down with it.
+**63% are three or more years dormant**, and this task originally answered that
+with a graduated warm-up. **The headcount is the wrong unit.** Dormant members
+subscribe to dead topics that never get replied to, so their rows never turn into
+mail. Weighted by a year of real posting — 4,186 posts producing 9,041
+notification emails — the picture inverts:
 
-Peak day in two years was **233** notification emails (re-measured 2026-08-17;
-207 within the last 12 months), so a busy day can put a couple of hundred
-messages into the pool at once. The warm-up is not optional.
+| Recipient last logged in | Emails | % | Distinct people |
+|---|---|---|---|
+| Within 1 year | 7,526 | **83.2%** | 81 |
+| 1–3 years | 440 | 4.9% | 17 |
+| 3–8 years | 712 | 7.9% | 20 |
+| 8+ years | 363 | 4.0% | 15 |
+
+**11.9% of notification mail reaches accounts dormant 3+ years, across 35
+distinct addresses** — not the 423 people the headcount implies. And **Postmark
+suppresses an address after its first hard bounce**, so exposure is bounded by
+distinct addresses rather than by message volume: the ceiling is ~35 bounces
+across a full year, and dormant is not dead.
+
+**No burst is reachable.** No mass-mail path exists anywhere in the tree — every
+`send_mail` call site sends to a single recipient on an individual event, and
+subscriptions are explicit opt-in, so nobody was auto-subscribed by posting.
+Fan-out is **median 1** subscriber per topic (mean 1.56, p95 3, max 31) against
+~25 notifications a day. A reply to an old thread mails one or two people. The
+peak day in two years was **233** notifications (207 within the last 12 months),
+which is the one number that argues for staging — but a peak day is spread across
+many topics at a median fan-out of one, and suppression still caps each dead
+address at a single bounce.
+
+**Decision: no staged send.** Sequencing recently-active members first would be
+real work guarding a rate that cannot get high enough to matter. **What replaces
+it is watching Postmark's bounce dashboard through the first two weeks**, with
+the stop threshold still set in advance — the numbers are small enough to eyeball.
+
+Two caveats stay attached. This measured forum notifications only; PM
+notifications (`messages/forms.py:159`) can also reach a dormant member, and
+registration and password-reset mail goes to an address the user just typed —
+none of them bulk. And the graduated warm-up was **volunteered to Postmark in the
+approval request**, so this is doing less than was stated, not more.
 
 ### What the site sends, for coverage
 Seven paths, after task 04 deletes email-a-friend: registration confirmation
@@ -124,16 +157,13 @@ implementation. Read additional references as needed for context.
 8. **Do not put credentials in the tool.** Read the same environment variables
    the application uses.
 
-9. **Warm up the notification list rather than sending to all 668 at once.**
-   Send to recently-active subscribers first, watch the Postmark bounce and
-   suppression counts, and widen only if they stay low. The 231 subscribers
-   dormant 8+ years should be last, or pre-pruned.
+9. **Watch Postmark's bounce and complaint rates through the first two weeks**,
+   and define in advance what number triggers stopping. This is what replaced the
+   graduated warm-up (dropped 2026-08-20, above): there is no staged send to
+   widen, only a dashboard to read. Deciding the threshold after seeing a scary
+   number is how a cutover becomes a suspension.
 
-10. **Watch Postmark's bounce and complaint rates through the first week**, and
-    define in advance what number triggers stopping. Deciding the threshold
-    after seeing a scary number is how a warm-up becomes a suspension.
-
-11. **Re-verify against the old server's failure modes.** Confirm from real
+10. **Re-verify against the old server's failure modes.** Confirm from real
     headers that the message no longer HELOs as `jaguar.deathofagremmie.com`,
     that reverse DNS forward-confirms, and that the `Message-ID` no longer
     carries the dead domain — the three defects found in the 2026-08-12 capture.
@@ -177,7 +207,8 @@ implementation. Read additional references as needed for context.
 4. After tasks 01–03 land, run with the live flag to the three receivers.
 5. Read the full headers by hand for each; record them in STATUS.
 6. Confirm inbox versus junk in each mailbox by eye.
-7. Begin the graduated warm-up; monitor bounce and suppression counts daily.
+7. Watch Postmark's bounce and suppression counts daily through the first two
+   weeks, against the threshold set before the first live send.
 8. Only after a clean week, let task 03 restore `-all` and escalate DMARC past
    `p=none`.
 
@@ -200,17 +231,17 @@ implementation. Read additional references as needed for context.
 - **Given** `SERVER_EMAIL`
   **Then** error mail sends from `admin@surfguitar101.com`, and an assertion
   fails if it is ever `root@localhost`
-- **Given** the first week after cutover
+- **Given** the first two weeks after cutover
   **Then** Postmark's bounce and complaint rates stayed under the threshold set
-  **in advance**, and the warm-up widened only as they held
+  **in advance**, read off the dashboard rather than staged around
 - **Given** the suite under `docker_test`
   **Then** it is green, and the tool's own tests are included
 
 ## Metadata
 - **Complexity**: Medium — the tool is straightforward; the verification
-  discipline and the warm-up are the substance
+  discipline is the substance
 - **Labels**: Email, Verification, Smoke Test, Deliverability, Postmark,
   Tooling, Step 16
 - **Required Skills**: Reading `Authentication-Results` and `Received` headers,
-  SMTP delivery semantics, IP warm-up practice, writing a tool that is honest
-  about what it cannot check
+  SMTP delivery semantics, writing a tool that is honest about what it cannot
+  check

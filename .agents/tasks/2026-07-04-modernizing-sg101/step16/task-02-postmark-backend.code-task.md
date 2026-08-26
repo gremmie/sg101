@@ -187,7 +187,8 @@ implementation. Read additional references as needed for context.
 5. Send one real message through Postmark to a mailbox you control, and read the
    full headers before sending anything to a member.
 6. Run the suite under `docker_test`, plus `check --deploy` and the gate.
-7. Task 07 handles the broader smoke and the stale-list warm-up.
+7. Task 07 handles the broader smoke and the bounce-dashboard watch that
+   replaced the stale-list warm-up (dropped 2026-08-20 on measurement).
 
 ## Acceptance Criteria
 - **Given** a transient `SMTPException` raised by the backend
