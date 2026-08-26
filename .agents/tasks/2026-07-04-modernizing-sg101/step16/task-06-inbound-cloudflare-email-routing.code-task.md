@@ -421,7 +421,28 @@ hypothesis and then confirmed by a test send rather than assumed.
 6. Test all six addresses end-to-end from an external mailbox. Every one lands
    in the same inbox, so this is six sends and six checks with nobody to chase.
 
-### Phase 2 — `themadeira.net`, gated on Ivan's click and on Todd
+### Phase 2 — `themadeira.net` — ✅ MX FLIPPED 2026-08-25, 6 of 7 confirmed
+
+**Ivan verified 2026-08-25, the last gate.** All three destinations verified, the
+seven rules created, MX flipped, six addresses confirmed end-to-end from an
+external mailbox. `todd@` awaits Todd's reply — an outstanding confirmation, not
+an observed fault. Full account in the planning `STATUS.md`.
+
+**Two things the steps below did not anticipate.** Cloudflare assigned MX
+priorities of **3, 46 and 17**, and 3 beats the `_dc-mx` record's 10 — publishing
+it as assigned would have cut mail over on the spot, defeating the
+additions-before-deletion ordering. Published `route1` at **15** instead, which
+preserves Cloudflare's ranking of its own three hosts. And **`_dc-mx` is not a
+record in the panel**: `mail.themadeira.net` is proxied, so Cloudflare substitutes
+a generated alias, and the panel row reads `MX 10 → mail.themadeira.net`. The
+rollback value recorded in step 11 was therefore the *published* form and could
+not have been re-created as written — measured after the deletion, the `_dc-mx`
+name stops resolving entirely once its source record is gone. **The rollback is
+`MX 10 → mail.themadeira.net`**, and the `mail.` A record was left in place so it
+stays one record away.
+
+*Original steps below, kept because their reasoning about verification and MX
+being independent is what made the wait free.*
 
 7. Enable Email Routing on the zone, MX still unpublished.
 8. Add `ipongrac@…` as a destination and send Ivan the verification request with
@@ -453,10 +474,12 @@ hypothesis and then confirmed by a test send rather than assumed.
 10. **Stop here until Ivan and Todd have verified** — then create the remaining
     four rules. Neither click obliges a flip, and staged-but-unflipped costs
     nothing: Postfix keeps receiving exactly as it does today.
-11. When Ivan has verified **and** `todd@` is resolved, **write down this
+11. ~~When Ivan has verified **and** `todd@` is resolved, **write down this
     zone's own rollback value — `10 _dc-mx.658032ac2d3a.themadeira.net`, not
     Phase 1's (requirement 6)** — then publish MX on this zone and test all
-    seven addresses.
+    seven addresses.~~ **DONE 2026-08-25**, with the rollback value corrected to
+    its panel form `MX 10 → mail.themadeira.net` — see the Phase 2 header above.
+    Six of seven addresses confirmed; `todd@` outstanding.
 
 ### Phase 3 — teardown, after both
 

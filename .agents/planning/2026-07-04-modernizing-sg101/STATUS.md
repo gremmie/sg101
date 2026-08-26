@@ -1148,7 +1148,134 @@ seven rules, request verification from Ivan and from Todd at his new address. Th
 task 07's smoke and cutover verification, which now has the Outlook mailbox it had
 been waiting for.
 
-## Step 16 task 06 Phase 2 — `themadeira.net` prepared, and the flip is now one deletion — DNS DONE 2026-08-24, MX NOT FLIPPED
+## Step 16 task 06 Phase 2 — `themadeira.net` MX FLIPPED 2026-08-25 — 6 of 7 addresses confirmed, `todd@` awaiting reply
+
+**Ivan verified `member36@example.com` on 2026-08-25**, which was the last gate. All
+three destinations read verified in the dashboard — `bgneal@gmail.com`,
+`member36@example.com`, `member35@example.com` — and the seven rules had been created
+against them. **The longest-standing blocker in either project, open since
+2026-08-17, is cleared.**
+
+### The staged-additions ordering worked, and one assigned priority nearly broke it
+
+The plan called for publishing Cloudflare's three MX records while priority 10
+still won, making the cutover a single deletion. Cloudflare's assigned priorities
+were **3, 46 and 17** — and **3 beats 10**. Adding that record as assigned would
+have cut mail over on the spot, before anything was verified and before the
+deliberate deletion step, which is precisely the failure the ordering exists to
+prevent.
+
+**Resolved by publishing `route1` at 15 instead of 3.** The relative order among
+Cloudflare's three is preserved — 15 < 17 < 46 ranks the same hosts in the same
+sequence as 3 < 17 < 46 — and MX preference is a number in this zone, not a
+setting on Cloudflare's side, so it cannot affect whether Cloudflare accepts. Two
+alternatives were rejected: lowering the `_dc-mx` record to win would have edited
+the recorded rollback value and made *"put it back"* ambiguous, and adding the
+priority-3 record last as the cutover would have moved the flip from a deletion to
+an addition mid-execution, leaving the written rollback describing something other
+than what would actually be done.
+
+**Verified inert before the deletion:** four MX records on both `ada` and `cash`,
+`_dc-mx` at 10 still winning, all three route hosts resolving, exactly one
+`v=spf1` at the apex, `cf2024-1` and `_dmarc` untouched, and `surfguitar101.com`'s
+MX unchanged as a control.
+
+### `_dc-mx` is not in the DNS panel, and the recorded rollback value was the wrong form
+
+Looking for `10 _dc-mx.658032ac2d3a.themadeira.net` in the dashboard found
+nothing, because **it is not a record anyone created**. `mail.themadeira.net` is
+proxied (`172.67.169.122` / `104.21.71.48`), and Cloudflare substitutes a
+generated alias rather than publish proxy addresses as a mail target. The panel
+row reads `MX 10 → mail.themadeira.net`, carrying a warning icon; the published
+answer is the `_dc-mx` name, which resolves to jaguar.
+
+**So the rollback value recorded on 2026-08-24 was the published form, not the
+form that can be re-created.** The panel form is `MX 10 → mail.themadeira.net`.
+
+**And the distinction is not academic — measured after the deletion:
+`_dc-mx.658032ac2d3a.themadeira.net` no longer resolves at all.** Cloudflare stops
+generating the alias once the record it derives from is gone. Entering the
+`_dc-mx` name by hand as a rollback would have created an MX pointing at a
+hostname that does not exist — **a rollback that looks successful and delivers no
+mail**. The `mail.themadeira.net` A record was deliberately left in place, so the
+real rollback remains one record away.
+
+### After the flip
+
+```
+themadeira.net.  300  IN  MX  15  route1.mx.cloudflare.net.
+themadeira.net.  300  IN  MX  17  route3.mx.cloudflare.net.
+themadeira.net.  300  IN  MX  46  route2.mx.cloudflare.net.
+```
+
+Both nameservers agree. SPF, `cf2024-1` and `_dmarc` intact; `surfguitar101.com`
+unchanged.
+
+### Both of Phase 1's deliverability defects were pre-fixed, and this is the proof
+
+Phase 1 found its two defects *after* flipping, by reading a delivered message.
+This zone carried both fixes in advance — but on reasoning, not measurement. A
+test message from Outlook to `admin@themadeira.net`, delivered to Gmail, settles
+it from the receiving side:
+
+```
+dkim=pass header.i=@themadeira.net header.s=cf2024-1
+spf=pass  ... SRS0=9530=sg=outlook.com=bgneal43@themadeira.net
+          designates 104.30.10.31 as permitted sender
+dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=outlook.com
+```
+
+- **Defect 1 closed.** The key copied byte-identically from `surfguitar101.com` on
+  08-23 does not merely resolve — it verifies a real signature on this zone.
+- **Defect 2 closed.** The SRS envelope landed in `@themadeira.net` as predicted,
+  and `104.30.10.31` is inside `104.30.0.0/19` from `_spf.mx.cloudflare.net`,
+  confirmed by range check. Without that include this line reads `spf=fail` under
+  `-all`.
+- DMARC is evaluated against `outlook.com`, the original `header.from`, which is
+  correct for forwarded mail and not a gap in this zone's coverage.
+
+**One incidental worth keeping:** `dkim=pass header.i=@outlook.com
+header.s=selector1` survived the hop, so Cloudflare's forwarder did not modify the
+body. That is adjacent to sg101's quarantine residual risk — a body-modifying
+forwarder is what would break the member's Gmail forward — but it is evidence
+about *Cloudflare's* forwarder and says nothing definitive about Gmail's.
+
+### Test results — 6 of 7
+
+| Address | Destination | Confirmed |
+|---|---|---|
+| `admin@` | `bgneal@gmail.com` | ✅ received, headers read |
+| `abuse@` | `bgneal@gmail.com` | ✅ received |
+| `postmaster@` | `bgneal@gmail.com` | ✅ received |
+| `madeira@` | `member36@example.com` | ✅ confirmed by Ivan |
+| `themadeira@` | `member36@example.com` | ✅ confirmed by Ivan |
+| `ivan@` | `member36@example.com` | ✅ confirmed by Ivan |
+| `todd@` | `member35@example.com` | **awaiting Todd's reply** |
+
+Sent from Outlook, an external mailbox, not from anything on jaguar. **`todd@` is
+the one address not yet confirmed end-to-end.** It is an outstanding reply rather
+than an observed fault: the rule exists, the destination is verified, and the six
+addresses sharing the same MX and the same three route hosts all deliver. Nothing
+suggests it is broken; it is simply unmeasured, and this record does not treat the
+other six as evidence for it.
+
+### Still open
+
+- **`todd@themadeira.net` end-to-end.** Task 06's acceptance criteria want all
+  seven tested; six are done.
+- **Postfix keeps receiving on jaguar for at least a week** (Phase 3, step 12).
+  Senders cache MX beyond the 300s TTL, so a tail of mail will keep arriving at
+  the old box and must not be refused.
+- **This zone's first DMARC aggregate report ever** should arrive within a day or
+  two. `_dmarc` went live 08-24, one day before the flip, so the intended
+  jaguar-era baseline window is one day wide at most and may be empty — a known
+  limitation recorded when it was published, not a surprise.
+- **Five `ns1`–`ns5.linode.com` NS rows** sit in the panel. Inert — Cloudflare
+  publishes only `ada`/`cash` at the apex and the `.net` delegation agrees — so
+  they were deliberately not touched during a mail cutover. Belongs to the
+  decommission project's DNS end-state question.
+
+## Step 16 task 06 Phase 2 — `themadeira.net` prepared, and the flip is now one deletion — DNS DONE 2026-08-24, MX FLIPPED 2026-08-25, see the section above
 
 **Todd verified `member35@example.com` on 2026-08-24. Ivan has not, and says
 tomorrow.** Ivan gates exactly one thing — this zone's MX flip. He gates nothing
