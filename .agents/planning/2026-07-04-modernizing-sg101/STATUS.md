@@ -1148,6 +1148,91 @@ seven rules, request verification from Ivan and from Todd at his new address. Th
 task 07's smoke and cutover verification, which now has the Outlook mailbox it had
 been waiting for.
 
+## Step 16 — Postmark measured at two receivers, 2026-08-25 — the new path is proven before cutover
+
+**Two test messages sent through Postmark over SMTP as
+`no_reply@surfguitar101.com`, before any application change.** This is the first
+time the Postmark path has been observed at all: ten DMARC readings measured only
+jaguar, and the ninth reading recorded that limit explicitly — *"they are no
+evidence at all about Postmark."*
+
+| Receiver | Result |
+|---|---|
+| **Outlook** | `spf=pass` (50.31.156.118), `dkim=pass header.d=surfguitar101.com`, `dmarc=pass action=none`, `compauth=pass reason=100`, **Inbox** |
+| **Gmail** | `spf=pass` (50.31.156.116), `dkim=pass header.s=20260817033844pm`, `dmarc=pass`, `header.from=surfguitar101.com` |
+
+### The Return-Path is in effect, and this settles the ordering question by measurement
+
+```
+smtp.mailfrom=pm_bounces@pm-bounces.surfguitar101.com
+```
+
+Both receivers evaluate SPF against `pm-bounces.surfguitar101.com`, which CNAMEs
+to `pm.mtasv.net` publishing `v=spf1 include:spf.mtasv.net -all`. Both sending IPs
+— `.116` and `.118` — are inside `50.31.156.96/27`, verified by range check. The
+envelope domain is a subdomain of the header-from domain, so it **aligns relaxed
+under `aspf=r`**.
+
+**Postmark therefore arrives two mechanisms deep, not one.** The "ordering
+requirement" — the claim that a first Postmark send under `p=quarantine` would
+ride on DKIM alone before `include:spf.mtasv.net` reached the apex — was retired
+on reasoning this morning and is now retired on measurement. Requirement 3 and
+requirement 7 of task 03 both said so in advance; it took two headers to stop
+arguing about it.
+
+### The Postmark selector is confirmed signing, and the legacy selector is not involved
+
+Gmail names it explicitly where Outlook did not:
+
+```
+dkim=pass header.i=@surfguitar101.com header.s=20260817033844pm
+dkim=pass header.i=@pm.mtasv.net      header.s=pm20250806
+```
+
+**`20260817033844pm` has appeared in no aggregate report in any window** — that
+absence is what ten readings used to conclude the cutover had not happened. It is
+now observed signing a real message. The legacy `dkim` selector does not appear,
+which is the direct confirmation that Postmark's path does not touch Postfix.
+
+Two signatures ride together: Postmark's own `d=pm.mtasv.net` and this domain's
+`d=surfguitar101.com`. Only the second aligns and only the second matters for
+DMARC.
+
+### Inbox at Microsoft, which is the premise of the entire step
+
+`compauth=pass reason=100` and **Inbox, not Junk**, at the receiver task 07 names
+as the only acceptance test that can distinguish success from failure — *"Gmail
+already accepts this site's mail today... a verification that only checks Gmail
+would have passed before any of this work."*
+
+**Task 07's headline acceptance criterion is met. Task 07 is not done.**
+`tools/email_smoke.py` does not exist and the warm-up has not been planned, and
+the warm-up is the part that matters for a list which is 63% dormant. What is
+proven is the hard part — that a message from the new path reaches a Microsoft
+inbox — not the tooling that would prove it repeatably.
+
+### Consequences
+
+- **`p=quarantine` is now safe for a reason it was not safe this morning.** The
+  case for tightening rested on ten clean readings of the sender being *retired*.
+  It now rests on the sender being *adopted*, measured at two receivers, aligned
+  on both mechanisms.
+- **Task 03 requirement 2's recorded limitation is closed.** It read: *"These
+  reports are evidence that task 10's repairs worked; they are no evidence about
+  Postmark."* There is now evidence about Postmark.
+- **Task 02's deliverability risk is retired before a line of it is written.**
+  What remains in that task is the retry and timeout on `core.tasks.send_mail`,
+  which is application robustness, not deliverability.
+
+### A prediction for the eleventh reading
+
+These two sends should appear in the **2026-08-25 window** aggregate reports as a
+**second source IP** — `50.31.156.116` and/or `.118` — with SPF and DKIM both
+aligned and passing, alongside jaguar's `173.255.245.115`. That would be the first
+non-jaguar sending source in eleven readings. If it does not appear, the reports
+are not seeing everything this domain sends, which would matter more than the
+result itself.
+
 ## Step 16 task 06 Phase 2 — `themadeira.net` MX FLIPPED 2026-08-25 — 6 of 7 addresses confirmed, `todd@` awaiting reply
 
 **Ivan verified `member36@example.com` on 2026-08-25**, which was the last gate. All

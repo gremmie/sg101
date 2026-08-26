@@ -84,12 +84,32 @@ The PTR was confirmed at the authoritative nameservers on 2026-08-17 and the
 chain forward-confirms. **Postmark account approved 2026-08-17**, so live sending
 is no longer gated by account state.
 
-**What the clean week does not cover.** Every observation in all nine readings is
-the legacy `dkim` selector on jaguar's IP — the path being retired. The Postmark
-selector `20260817033844pm` has appeared in no auth result in any window. These
-reports are evidence that task 10's repairs worked; they are no evidence about
-Postmark, and the first window after cutover needs reading with the same
-attention as the first window ever did.
+~~**What the clean week does not cover.** Every observation in all nine readings
+is the legacy `dkim` selector on jaguar's IP — the path being retired. The
+Postmark selector `20260817033844pm` has appeared in no auth result in any
+window. These reports are evidence that task 10's repairs worked; they are no
+evidence about Postmark.~~ **CLOSED 2026-08-25 by direct measurement.** Two test
+messages sent through Postmark over SMTP, before any application change, were
+read at both receivers:
+
+```
+Outlook: spf=pass (50.31.156.118) dkim=pass header.d=surfguitar101.com
+         dmarc=pass action=none compauth=pass reason=100      -> Inbox
+Gmail:   spf=pass (50.31.156.116) dkim=pass header.s=20260817033844pm
+         dmarc=pass header.from=surfguitar101.com
+         smtp.mailfrom=pm_bounces@pm-bounces.surfguitar101.com
+```
+
+**The custom Return-Path is in effect**, so SPF is evaluated against
+`pm-bounces.surfguitar101.com`, passes on Postmark's range, and aligns relaxed
+with the apex — confirming requirements 3 and 7 from the receiving side and
+retiring the "ordering requirement" on measurement rather than argument. **The
+Postmark selector is confirmed signing**, and the legacy `dkim` selector does not
+appear. **Inbox at Microsoft with `compauth=pass reason=100`**, which is task
+07's acceptance test.
+
+The first window after cutover still deserves close reading — but the path is no
+longer unmeasured going into it.
 
 **Three claims in this document were corrected on 2026-08-17** — Findings 2, 7a
 and 8, each marked in place. All three were inferences recorded as findings; none
