@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the eleven DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twelve DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -1429,9 +1429,15 @@ generated a `p=none` report at 05:43:03Z on 08-26 — hours after publication �
 which shows `policy_published` reports the policy *applied during the window*,
 not the record as it reads at generation time. **Corroborated the same day by a
 second reporter** — Comcast filed for 08-25 at 01:46:46Z, also reading `p=none`;
-see the eleventh reading's addendum in `research/dmarc-readings.md`. **The twelfth reading, covering
-2026-08-26, is the decisive one: every report for that window must read
-`p=quarantine`.**
+see the eleventh reading's addendum in `research/dmarc-readings.md`. **The twelfth reading — 2026-08-27, covering 2026-08-26 —
+returned two of three.** Google and `bellsouth.net` read `p=quarantine`;
+`yahoo.com` read `p=none`, from the same reporter and the *same filing run* as
+`bellsouth.net`. The record was re-verified from both authoritative nameservers
+and is intact, and Google is enforcing the policy — an explicit `forwarded`
+override on the one failing row. So the split is a per-receiving-domain rendering
+question inside Yahoo rather than a defect in the zone, and the property above is
+insufficient rather than refuted: it predicts both Yahoo reports agree, and they
+do not. The 08-27 window settles it.
 
 ## Step 16 — Postmark measured at two receivers, 2026-08-25 — the new path is proven before cutover
 

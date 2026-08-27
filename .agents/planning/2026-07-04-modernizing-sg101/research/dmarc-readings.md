@@ -2083,3 +2083,197 @@ about `.116` or `.118`.
 
 **Unchanged: the twelfth reading is still the decisive one.** No file in `~/dmarc`
 yet covers the 2026-08-26 window.
+
+### Twelfth reading — 2026-08-27, covering 2026-08-26: the policy line appears, and one report of three did not get it
+
+**Eighteen files in `~/dmarc` — three new, fifteen re-reads.** The three new ones
+carry mtimes of 2026-08-27 12:29 and all cover the **2026-08-26 window** — the one
+the eleventh reading named decisive, being the first whose mail was evaluated
+entirely after `p=quarantine` went live.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Neither | `policy_published` |
+|---|---|---|---|---|---|---|
+| `google.com` | `google.com` | `14558492136586096678` | 2026-08-26 | 9 | 1 | **`p=quarantine sp=quarantine`** |
+| `bellsouth.net` | `Yahoo` | `1787809465.293390` | 2026-08-26 | 1 | 0 | **`p=quarantine`** |
+| `yahoo.com` | `Yahoo` | `1787809465.293416` | 2026-08-26 | 6 | 0 | **`p=none`** |
+
+**2026-08-26: 16 messages, three receiving domains, 1 aligned on neither
+mechanism.** Comcast and Microsoft are both outstanding, so **16 is a floor** — the
+convention gets its ninth test.
+
+#### The decisive test returns two of three, and the record is not the explanation
+
+The eleventh reading committed in advance: *"If any still reads `p=none`, that is a
+real finding and the record needs re-examining rather than re-explaining."* One
+does. The record was re-examined first, from both authoritative nameservers:
+
+```
+_dmarc.surfguitar101.com. TXT "v=DMARC1; p=quarantine; rua=mailto:00fc…@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com"
+```
+
+Byte-identical from `cash.ns.cloudflare.com` and `ada.ns.cloudflare.com`, exactly
+one `v=DMARC1` string, `rua` intact with both destinations. **The record is not the
+explanation, and "receivers are not seeing it" is refuted three separate ways:**
+the record resolves authoritatively, Google prints `quarantine` *and enforces it*,
+and Yahoo itself prints `quarantine` for another domain in the same filing run.
+
+**The tool was checked before the record was believed.** Raw XML from both `.gz`
+files carries `<p>quarantine</p>` in one and `<p>none</p>` in the other. This is
+not a parsing artefact.
+
+#### The exception is inside one reporter's single filing run
+
+The two disagreeing reports are not two receivers who read the zone at different
+moments. They are the same reporter, in the same run:
+
+- `bellsouth.net` — Report-ID `1787809465.293390` — `p=quarantine`
+- `yahoo.com` — Report-ID `1787809465.293416` — `p=none`
+
+Both IDs share the prefix `1787809465`, which decodes to **2026-08-27 05:44:25Z** —
+a *generation* time, per the tenth reading's correction, and hours after
+publication for both. Same reporter, same run, same window, same generation stamp,
+`report_metadata` otherwise byte-similar apart from `report_id`. They differ in the
+receiving domain and in `p`, and in nothing else.
+
+**This breaks the tenth and eleventh readings' explanation as a *complete*
+account.** That property — `policy_published` carries the policy applied to the
+messages in the window, not the record as it reads when the report is written —
+predicts both Yahoo reports print the same value, because both describe the same
+window. They do not. The property is not refuted (see the boundary below); it is
+**insufficient**, and what it fails to cover is a per-receiving-domain split
+inside one reporter.
+
+**No cause is offered here.** A per-domain policy cache inside Yahoo would produce
+this, and so would several other mechanisms; nothing in these files distinguishes
+them. **The thirteenth reading settles it:** if `yahoo.com` reads `p=none` again on
+the 08-27 window while a Yahoo sibling reads `quarantine`, it is a persistent
+per-domain rendering property of Yahoo's filing. If it flips to `quarantine`, this
+was a one-window lag and the eleventh reading's property absorbs it after all.
+
+#### Google is enforcing the policy, and says so in the report
+
+The only row in twelve readings to align on neither mechanism was **not**
+quarantined, under a policy reading `p=quarantine`. The reason is in the record:
+
+```xml
+<reason>
+  <type>forwarded</type>
+  <comment>looks forwarded, not quarantined for DMARC</comment>
+</reason>
+```
+
+That is a documented local override, not the policy being ignored. **It is the
+first direct evidence that `p=quarantine` is live and being evaluated at a
+receiver** — worth more than any `policy_published` line, because it shows the
+policy acting rather than being echoed.
+
+#### `bellsouth.net` is the ninth receiving domain, and the fifth Yahoo-filed
+
+Filed by `Yahoo <dmarchelp@yahooinc.com>` with `sp=-`, the established Yahoo
+signature. The eighth reading's finding that "Yahoo" is several receiving domains
+holds a fourth time. The list is now `google.com`, `yahoo.com`, `aol.com`,
+`att.net`, `cox.net`, `comcast.net`, `protection.outlook.com`, `swbell.net`,
+`bellsouth.net`.
+
+#### The first IPv6 sender, and the first row in twelve readings aligned on neither
+
+```
+source_ip 2001:470:0:60::2   count 1   disposition none   dkim fail   spf fail
+  dkim  d=surfguitar101.com   s=dkim   fail
+  spf   d=surfguitar101.com            fail
+```
+
+**No IPv6 source has appeared in any prior reading** — grepped, not assumed. It
+signs with the legacy `dkim` selector and fails both mechanisms, the ordinary
+signature of a forwarded message altered in transit, and Google's own override
+says `forwarded`.
+
+**The `2001:470::/32` allocation is UNIDENTIFIED in this reading.** It was not
+looked up, and is recorded as a lead rather than an attribution, following the
+seventh reading's convention. One message, one window, one receiver. **Reopen
+trigger: a second such row, or this same source in the 08-27 window.**
+
+#### The fifteen re-reads reproduce, and the policy boundary is otherwise exact
+
+Every re-read matches its recorded Report-ID and count. Recomputed from all
+eighteen files:
+
+| Window | Msgs | Receiving domains | Neither |
+|---|---|---|---|
+| 2026-08-22 | 3 | 1 | 0 |
+| 2026-08-23 | 24 | 6 | 0 |
+| 2026-08-24 | 22 | 4 | 0 |
+| 2026-08-25 | 11 | 4 | 0 |
+| 2026-08-26 | **16** | **3** | **1** |
+
+08-23 at 24 across six and 08-24 at 22 across four match the ninth and tenth
+readings; 08-25 at 11 across four matches the eleventh reading's Comcast addendum.
+**Windows gain reports and never revise them** now holds across five windows and
+eight readings.
+
+**The policy boundary is exact everywhere except the one file.** All fifteen
+pre-08-26 reports read `p=none`, and 08-26 is the first window in which
+`quarantine` appears at all. That clean boundary is what makes the `yahoo.com`
+report an exception rather than a refutation — and also why the exception earns
+this much attention.
+
+#### A discrepancy against the eleventh reading, recorded not resolved
+
+The eleventh reading states Microsoft *"has now filed exactly one window late four
+consecutive times (08-21, 08-22, 08-23, 08-24)."* **Only two Microsoft files exist
+in `~/dmarc`**, covering the 08-22 and 08-23 windows, and nothing was removed
+between that reading and this one — fifteen files then, three added, eighteen now.
+08-24, 08-25 and 08-26 are all outstanding from Microsoft.
+
+Recorded as a discrepancy to check, **not** as a correction: the parenthetical may
+count filing dates rather than windows, or may rest on files deleted before the
+eleventh reading. It matters because a live prediction rests on it — *"its
+four-consecutive-windows-late pattern still predicts `50.31.156.118` in the next
+batch."* If Microsoft has in fact filed nothing since the 08-23 window, that
+prediction has no support and `.118` is unobserved for a different reason.
+
+#### What held steady
+
+- **`173.255.245.115` is in every window still.** Six messages at Google, six at
+  Yahoo, one at bellsouth, all aligned on both mechanisms.
+- **Every row in all eighteen files is `disposition=none`** — including the one
+  failing row, by explicit override.
+- **Yahoo prints `sp=-`** where Google prints `sp=quarantine`. Unchanged on
+  `bellsouth.net` too, and still not a discrepancy.
+- **The member's Gmail forward returns.** `209.85.220.41`, 2 messages, SPF fail /
+  DKIM pass — after four consecutive absent windows, 08-22 through 08-25, the last
+  confirmed by re-reading the 08-25 Google report's source list. The ninth
+  reading's gap in the evidence is closed: the class `quarantine` puts at risk is
+  observable again, and it passed on DKIM.
+- **No Postmark row.** `50.31.156.116` appeared in the 08-25 Google report and is
+  **absent** from 08-26. `50.31.156.118` has still never appeared in any report.
+
+#### Bearing on the policy decision
+
+`p=quarantine` is published, resolving, and demonstrably being evaluated — step 7
+is executed rather than pending, and nothing here argues to reverse it. Two things
+follow.
+
+**The forwarding class is now the live risk, and it is no longer hypothetical.**
+Eleven readings ran with zero rows aligned on neither; this one has two forwarded
+sources in a single window — `209.85.220.41` passing on DKIM, `2001:470:0:60::2`
+failing both. Google exempted the failing one by local heuristic. **That exemption
+is Google's policy, not ours, and no other receiver is obliged to make it.** The
+ninth reading called this the one class `quarantine` puts at risk; it is now
+measured rather than anticipated.
+
+**`include:spf.mtasv.net` ordering is unchanged and still unmet by observation.**
+The Postmark row appeared once, in the 08-25 window, and did not recur. One
+observation is not a cutover, and the eleventh reading's ordering requirement
+stands exactly as written.
+
+#### Predictions for the thirteenth reading
+
+1. **`yahoo.com` reads `p=quarantine` on the 08-27 window.** If it reads `p=none`
+   again beside a `quarantine` sibling, the per-domain rendering property is real
+   and belongs in the record as a property of Yahoo's filing, not of our zone.
+2. **08-26 gains and does not revise** — Comcast at minimum, on its established
+   next-day cadence.
+3. **No second `2001:470::/32` row.** A second fires the reopen trigger above.
+4. **Every row stays `disposition=none`**, with any failing row carrying an
+   explicit `<reason>`.
