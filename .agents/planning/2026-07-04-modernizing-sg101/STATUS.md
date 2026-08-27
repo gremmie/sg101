@@ -202,6 +202,165 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## Step 16 task 07 — the smoke tool, and a Microsoft inbox — TOOLING DONE 2026-08-26, `4d77b672`, PUSHED
+
+**The acceptance criterion for Step 16 as a whole is met, repeatably.** A message
+built by the site, sent through Postmark by `tools/email_smoke.py --live`,
+arrived in an Outlook inbox with every verdict passing. Three files, 1,055 lines,
+**951 → 972 tests** green under the deprecation gate.
+
+| | |
+|---|---|
+| `tools/email_smoke.py` | renders every path; `--live` sends; `--check-headers` reads |
+| `tools/live_mail.sh` | keeps the provider settings out of `.env` |
+| `core/tests/test_email_smoke.py` | 21 tests, the coverage and safety rules |
+
+### The capture, 2026-08-26
+
+```
+Authentication-Results: spf=pass smtp.mailfrom=pm-bounces.surfguitar101.com;
+  dkim=pass header.d=pm.mtasv.net; dkim=pass header.d=surfguitar101.com;
+  dmarc=pass action=none; compauth=pass
+helo=sc-ord-mta113.mtasv.net; client-ip=50.31.156.113
+X-Microsoft-Antispam-Mailbox-Delivery: ... dest:I ...
+Message-Id: <02a00dc5-4fb5-4f25-854b-ba002bd242a4@mtasv.net>
+```
+
+- **`dest:I`** — Inbox, from the header rather than by eye, at the receiver that
+  has been refusing this site's mail for years.
+- **Return-Path alignment holds in ordinary traffic**, not just in the hand-sent
+  probe of 08-25: SPF is evaluated against `pm-bounces.surfguitar101.com` and
+  aligns relaxed under `aspf=r`.
+- **Two DKIM signatures ride together**; only `d=surfguitar101.com` aligns, and
+  it is the one DMARC passed on.
+- **A third Postmark IP: `50.31.156.113`**, inside `50.31.156.96/27` like `.116`
+  and `.118`. Expect it in a future reading; its absence would say the reports
+  are not seeing everything this domain sends.
+
+### `Message-ID` is closed by substitution, not by repair — and this was predicted
+
+The dead domain appears **nowhere**, including in `Message-ID`. That is a *pass*
+where task 03 Finding 7a and task 07 requirement 11 both expected a failure, and
+requirement 11 said in advance what a pass would mean: *"most likely Postmark
+rewriting the header -- rather than being taken as the fix."*
+
+**That is exactly what happened.** Postmark replaces the header with its own
+`@mtasv.net` value. **Django's code is unchanged and still builds a `Message-ID`
+from the sending host's FQDN**, so nothing was fixed; the header that carried the
+dead domain is simply no longer the one that ships. Recorded this way because a
+later reader finding "dead domain absent" in this file would otherwise conclude
+the code was repaired, and go looking for a commit that does not exist.
+
+### `SCL=-1` is NOT the reputation result, and the tool said it was
+
+The plan treats the post-cutover SCL as the measure of whether the provider move
+bought anything: the 2026-08-17 baseline scored **3** — *"authentication now
+perfect, reputation still neutral"* — and task 07 asks whether that improves.
+
+This capture reads `SCL=-1`, and **that is not an improvement on 3 because it is
+not a score.** Exchange stamps `-1` when a message **skipped filtering** — a
+safe-sender list, a contact entry, or an allow rule at the receiver. It records
+that *this mailbox* trusts the sender, which is a different claim from the sender
+having earned a reputation, and it cannot be compared with a baseline that was
+actually scored.
+
+**The mailbox has been receiving these test messages since 2026-08-17**, so the
+probe is measuring its own history —
+[[probes-must-not-perturb-what-they-measure]] in its plainest form.
+
+**Consequence: the SCL question is still open**, and closing it needs a Microsoft
+address that has never been told to trust this sender. Nothing else in the step
+depends on it; the deliverability claim rests on authentication and on `dest:I`,
+both of which this capture supplies.
+
+**The tool reported it as "the real score."** It would have gone into this file
+as the best result yet. Corrected the same day and mutation-verified: it now
+prints `FILTERING SKIPPED, not a score` and names what would measure the thing.
+
+### Four defects that reading did not find and mutation did
+
+Each is now pinned by a test that fails when the defect is reintroduced.
+
+1. **The tool passed a template referencing a variable that no longer exists.**
+   Django renders a missing variable as `''` and carries on, so asserting a
+   non-empty body proved nothing — which is precisely what requirement 2 says
+   this tool exists to catch. Paths are now rendered under `string_if_invalid`.
+   **The first sentinel was itself inert**: it was `<<MISSING:%s>>`, autoescaping
+   renders `<<` as `&lt;&lt;`, and the marker never matched the body it was
+   supposed to be found in. Only a second mutation showed it.
+2. **The template name in the output was an unverified label.** A producer could
+   claim one file and render another. The `template_rendered` signal now checks
+   it — in the suite, since that signal only fires under the test runner.
+3. **Setting Celery's eager config at import** reconfigured the shared app for
+   every importer and broke **11 retry tests** in `core.tests.test_tasks`, which
+   depend on an eager task *not* propagating. Moved to the entry point. The first
+   regression test for it was worthless — `setUp` had already imported the tool,
+   so the damage preceded the reading.
+4. **`--live` was a false green.** With no provider configured the container
+   falls back to the console backend on `localhost:1025`, and `--live` printed
+   ten messages to stdout, announced *"real messages through localhost"*, and
+   reported **23/23 checks passed having sent nothing** — the one failure mode
+   this tool exists to prevent, produced by the tool. `check_live_backend()`
+   refuses, naming every problem at once. **Found by Brian asking whether he
+   could run it at all.**
+
+### Coverage is enumerated by category, because the hand-list had already rotted
+
+The task file said **seven paths**; there are **ten**, across nine categories,
+plus Django's error mail which carries none. Task 05 added the email-change
+confirmation and notice four days after the list was written, and
+`messages/views.py:416` was a second PM shape it never had.
+
+`COVERED` maps every `EmailCategory` to a producer and a test fails until a new
+category has one — the same trick task 09 used for `SUBJECT_SAFE`, and for the
+same reason: a hand-maintained list is a list that is wrong later.
+
+### No recipient ever comes from the database
+
+`notify_topic_subscribers()` reads `topic.subscribers`, and **the dev database is
+a production snapshot full of real member addresses**, so a producer built on a
+real row would mail real members from a tool whose purpose is sending test
+messages. The forum producer builds its post in memory and stubs the subscriber
+query — which also keeps it clear of the `Forum.last_post` CASCADE. Asserted by
+`test_no_recipient_comes_from_the_database`, mutation-verified: pointed at the
+DB, it fails and names the category.
+
+`email_admins` gets the same treatment via `override_settings(ADMINS=...)`,
+otherwise a live run would mail the real admin address on top of the recipients
+asked for.
+
+### Sending is a deliberate act, not a property of the dev stack
+
+`tools/live_mail.sh` passes the six mail variables to one `--rm` container rather
+than leaving them in `.env`. **The hazard it answers is specific**: with the
+provider configured in `.env`, the site at `localhost` can mail real people, and
+nobody has to do anything unusual — a forum reply notifies real subscribers.
+
+**The token is passed by name, not by value.** `docker compose run -e VAR` with
+no `=` takes it from the shell, so it reaches neither the command line, nor `ps`,
+nor shell history. The script refuses a token file stored inside the repository,
+reads it rather than sourcing it (`pg_snapshot.sh`'s reasoning: sourcing a file
+to get one value out runs everything else in it as shell), and warns if `.env`
+carries an active `EMAIL_BACKEND`, because then the script is not what is
+protecting you.
+
+### What the tool cannot do, stated in it
+
+`image_smoke.py --s3` closes its own loop — upload, fetch back, delete, confirm
+gone. **Email has no read-back.** A `250` is accepted-for-delivery and nothing
+more. `--check-headers` reads what a human fetches: the four verdicts, the real
+SCL, `dest:I`/`dest:J`, and whether the dead domain appears anywhere but
+`Message-ID`.
+
+### Still open
+
+- **The two-week bounce-dashboard watch**, which replaced the graduated warm-up
+  (dropped 2026-08-20 on measurement). It starts at cutover, not now.
+- **The SCL comparison**, above — needs an untrained Microsoft mailbox.
+- **A live run of all ten paths.** One path to one receiver is what has been
+  sent; `--only` exists so a first send against a young sending reputation is one
+  message rather than ten.
+
 ## Step 16 task 02 — the Postmark backend, whose diff contains no Postmark — DONE 2026-08-17, `72e823d` + `7f316dd` + `d7fefb5`, PUSHED, CI GREEN
 
 Three commits, 878 tests green, and **not one line of provider-specific code.**
