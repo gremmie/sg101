@@ -202,6 +202,147 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
+
+**R23's premise is true about reCAPTCHA and false about this site.** The step was
+justified on 2026-07-04 by reCAPTCHA's move to a 10k/month cap — a real vendor
+change, never sized against SG101. Measured against the box, this site's busiest
+month is **71 assessments**. The cost argument does not survive contact with the
+number, and Step 17 proceeds on privacy and user friction instead.
+
+**DECIDED: adopt Turnstile, on the contact form and registration both.** The
+integration is written once and used twice.
+
+### The current widget is reCAPTCHA v2, checkbox
+
+`sg101/templates/contact/contact_form.html:55` renders `<div class="g-recaptcha"
+data-sitekey="…">` with no `data-size="invisible"` and no `data-callback`, loads
+`api.js`, and `contact/forms.py:44` reads `g-recaptcha-response`. That is the
+"I'm not a robot" checkbox, not v2-invisible and not v3. Added 2018-04-14 in
+`153b6afd`, on `main` — so the deployed code is the code read here.
+
+**`contact/` is the only reCAPTCHA caller in the repo.** Registration has none.
+
+### The pricing claim, verified at the source
+
+From Google's own billing page (`docs.cloud.google.com/recaptcha/docs/billing-information`,
+last updated 2026-08-11), **not** a competitor's blog — every third-party summary
+of this has an interest in the framing:
+
+| Tier | Price |
+|---|---|
+| Up to 10,000 assessments/month, **per organization** | free |
+| 10,001–100,000/month | $8 flat |
+| Over 100,000/month | $0.001/assessment |
+
+### What this site actually consumes — measured 2026-08-27
+
+`contact/forms.py:52` has logged one line per `siteverify` call since 2018. Read
+from `/svr/django-sites/sg101/sg101/sg101/logs/sg101.log{,.1..10}` on jaguar
+(rotation is 100 KB × 10, giving ~5 months):
+
+| | |
+|---|---|
+| Window | **2026-04-01 → 2026-08-27**, 149 days |
+| Assessments | **225** |
+| Outcome | **225 `True`, 0 `False`** |
+| `error-codes` | `<Missing>` on all 225 — never once populated |
+| Busiest month | **71** (June 2026) |
+| Per month | Apr 49 · May 51 · Jun 71 · Jul 34 · Aug 20 (27 days) |
+| Recent rate | 1–3/day |
+
+**Peak month is 0.7% of the free tier — roughly 140x headroom.** Annualised,
+~550/year against 120,000/year free.
+
+**Nothing else aggregates against the allowance.** The cap is per *organization*,
+and jaguar hosts two other Django sites; `bravenewsurf` and `madeira` were
+grepped and neither uses reCAPTCHA.
+
+### The classic key is healthy, not degraded — the finding that could have forced the step
+
+Google no longer issues classic keys and recommends migrating them. Third-party
+reporting (**unconfirmed** — this is not in Google's own docs) says classic keys
+were auto-migrated to Cloud projects, and that one not linked to a project with
+billing runs degraded.
+
+**225 consecutive successes with `error-codes` never populated says otherwise**,
+and the chain is proven end-to-end at **2026-08-27 13:29:01**: script loaded,
+user solved the checkbox, token issued, `siteverify` accepted it.
+
+**Why the counts alone could not have shown this.** A client-side failure — script
+blocked, key rejected before a token is issued — produces *absent* log lines, not
+failures, because `contact/forms.py:45` raises before `siteverify` is ever
+called. The monthly decline from 71 to 20 is therefore not readable as health on
+its own. **Today's successful line is what settles it**, and it is the whole
+reason to prefer a recent success over a clean tally.
+
+### v3 was never the right tool, and cost is not why
+
+v3 returns a score, not a verdict: the threshold becomes ours to choose and
+re-tune forever. It spends quota **per page load** rather than per submit, and
+Google's guidance is to load it site-wide for scoring accuracy — which is also
+the worse privacy posture of the three. Rejected on maintenance surface.
+
+### Turnstile's free tier is uncapped — from Cloudflare's plans page
+
+Free plan: **"Unlimited challenges (traffic or verification requests)"**, 20
+widgets per account, 10 hostnames per widget, 7-day analytics retention.
+
+**Several third-party sites claim a 1M/month cap. That number does not appear in
+Cloudflare's own documentation** and is recorded here as noise, not as a limit.
+
+Migration shape is close to like-for-like with what `contact/forms.py` already
+does — a div, a script, and a server-side verify POST. **Turnstile's siteverify
+takes the same `remoteip`** the contact form passes today via
+`get_ip(self.request)`; the `CF-Connecting-IP` dependency that makes that value
+correct is recorded once in task 03's *Open* register and hangs on Step 20.
+
+### Registration already has four layers, and they are being defeated
+
+`accounts/forms.py` protects registration with a static knowledge question
+(`question1`, "What number appears in the site name?" → `101`), a hidden honeypot
+(`question2`, logged CRITICAL), a visible honeypot (`question3`), and the
+two-stage emailed code word (`RegisterCodeForm`).
+
+Measured from `auth.log` (**2025-01-10 → 2026-08-25, ~19.5 months** — this file
+retains far longer than `sg101.log`):
+
+| | |
+|---|---|
+| Successful registrations | **1,038** |
+| Registration failure lines | **2,698** |
+| Blocked by the anti-bot layers | **876** — 439 wrong answer, 276 visible honeypot, 161 hidden honeypot |
+| Registration events/month | 57–137 (last 12 months), peak **137** (Oct 2025) |
+
+**And spam still gets through. Seven accounts registered successfully and were
+later deactivated for spam** between 2026-04-03 and 2026-07-24 — inside
+`sg101.log`'s ~5-month window, so **~1.4/month**. That figure counts only the
+ones caught; it is a floor, not a rate.
+
+**`question1`'s answer is a fixed constant.** That is consistent with the shape of
+the evidence: it stops generic crawlers — 439 of them — and is one line of code
+for anything targeting SG101 specifically.
+
+**Stated so a later reading does not over-claim: a challenge is not expected to
+close this.** Accounts that clear an emailed code word are likely human-assisted
+or using a solving service, which no CAPTCHA reliably stops. It raises cost
+rather than shutting the door. **The value of measuring it now is the baseline** —
+1.4/month is what "did it work" will be judged against.
+
+### Volume if Turnstile goes on both forms
+
+Worst case, assuming every registration event spends a verification: 137 + 71 =
+**~210/month**. Against reCAPTCHA's free tier that would be 2% of the cap; under
+Turnstile it is moot. **Brian's read that traffic is low enough was correct.**
+
+### Still open
+
+- **The registration flow itself** — Brian wants to discuss it during task
+  generation. Whether Turnstile replaces `question1`, or joins it, is not decided
+  here.
+- **Where the widget goes on registration** — the form is two-stage, so "on
+  registration" is ambiguous between the details page and the code page.
+
 ## Step 16 task 07 — the smoke tool, and a Microsoft inbox — TOOLING DONE 2026-08-26, `4d77b672`, PUSHED
 
 **The acceptance criterion for Step 16 as a whole is met, repeatably.** A message

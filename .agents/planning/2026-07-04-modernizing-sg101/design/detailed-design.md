@@ -140,6 +140,11 @@ expensive-to-port legacy. No new user-facing features are in scope.
   unlimited, privacy-preserving; official reCAPTCHA migration guide). Timely
   because reCAPTCHA moved to Enterprise with a 10k/mo free cap then paid.
   (Fallback: keep reCAPTCHA.)
+  **The timeliness clause is superseded — measured 2026-08-27.** The cap is real
+  but this site peaks at 71 assessments/month, so cost is not a reason to move;
+  the decision stands on privacy and friction, and scope grew to include
+  registration. See the Step 17 section of `STATUS.md` — it holds the numbers, and
+  this entry is not the place to restate them.
 - **R24 — Donations:** keep PayPal IPN; port `urllib2`→`requests`; verify IPN is
   still supported by PayPal (legacy API).
 
