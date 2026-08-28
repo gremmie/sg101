@@ -475,6 +475,111 @@ determine it rather than assume, because "fixes a long-standing defect" and
   only thing "did it work" can be judged against, and `sg101.log`'s ~5-month
   retention means it has to be read before it rotates away.
 
+## Step 17 task 01 — the verification helper, and a default that is not blank — DONE 2026-08-27, `c96648dc`, PUSHED
+
+Four files, 308 insertions, **972 → 989 tests** green under the deprecation gate.
+Nothing user-visible changed and reCAPTCHA still works; task 02 does the swap.
+
+| | |
+|---|---|
+| `antispam/turnstile.py` | outcome enum, result, `verify()` |
+| `antispam/tests/test_turnstile.py` | 17 tests |
+| `sg101/settings/base.py` | four settings, beside the reCAPTCHA block |
+| `.env.example` | Turnstile entries, with Cloudflare's public test keys |
+
+### Three outcomes, because a bool would have hidden an outage
+
+`verify()` returns `PASSED`, `REJECTED` or `UNAVAILABLE`. A failed challenge and
+an unreachable provider are different events, and **collapsing them is how a
+Cloudflare incident becomes "the form rejects everyone" with nothing in the log
+saying why.**
+
+It also never raises. Transport and protocol failures become `UNAVAILABLE`, so a
+form's `clean()` does not have to catch `requests` exceptions. **That is the
+actual fix for `contact/forms.py:47`**, where `r.json()` on an HTML error page
+surfaces today as a 500 on the contact form.
+
+### The timeout, which is the whole reason this was not a copy-paste
+
+The call being replaced had none. `TURNSTILE_TIMEOUT` follows `EMAIL_TIMEOUT`'s
+shape exactly — `env.int`, default 20 — because it is the same bug class Step 16
+task 02 found, and the one outcome this task could not produce was a port that
+preserved it.
+
+### DECIDED — fail open, and log loudly
+
+Brian's call, 2026-08-27. A caller treats `UNAVAILABLE` as passed, so a
+Cloudflare outage does not take the contact form and registration down.
+
+**`UNAVAILABLE` logs at WARNING, not INFO, and the reason is a consequence of
+failing open:** a passing check and a skipped one are indistinguishable
+downstream, so that line is the only record the check did not actually happen.
+At INFO it would sit unremarked beside ordinary passes.
+
+**Neither form is naked during the window.** Contact keeps its honeypot;
+registration keeps the hidden honeypot — 8%, the best discriminator measured —
+and the emailed activation link. **The helper stays neutral**: it returns the
+outcome and tasks 02 and 03 apply the policy.
+
+### The key defaults are test keys, not blanks — a deliberate departure
+
+`TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` default to Cloudflare's published
+test keys. **The reCAPTCHA block directly above them defaults to `''`**, which is
+why a fresh checkout cannot exercise the contact form at all today. The test keys
+always pass and work from any domain including `localhost` with no Cloudflare
+account, so a clone now has working forms with no configuration. Production
+overrides both.
+
+### `antispam/turnstile.py`, not `antispam/utils.py`
+
+That module imports `bio`, `comments`, `forums` and `user_photos`. Two form
+modules needing none of it would drag four app dependency graphs in behind them
+and invite an import cycle. `antispam/decorators.py` is the same narrow shape and
+`accounts/urls.py` already consumes it — **so the plan's "update the `antispam`
+app" is finally true, of a helper rather than of reCAPTCHA.**
+
+### The TDD order was inverted, and the mutations are why that is recoverable
+
+**Recorded rather than hidden: the implementation was written before the tests.**
+The compensation was not an assertion that the order held, but the battery below
+— **8 mutations, 8 caught**, file restored byte-identical, control run green.
+
+| Mutation | Caught by |
+|---|---|
+| drop the `timeout` kwarg | errors=1 |
+| return `PASSED` on transport exception | failures=3 |
+| log the token | failures=1 |
+| skip the status-code check | failures=1 |
+| stringify a `None` `remoteip` | failures=1 |
+| drop error codes from the result | failures=1 |
+| log `UNAVAILABLE` at INFO | failures=1 |
+| treat a non-dict body as a pass | failures=1 |
+
+Every test has therefore been watched to fail against a deliberate defect, which
+is the guarantee the ordering is only a means to. See
+[[mutation-verify-or-it-is-not-coverage]] — the standard is the failure observed,
+not the sequence.
+
+### The test settings disable logging, and three tests failed for that alone
+
+First run: three logging tests failed with *no logs of level INFO or higher
+triggered*, for a reason unrelated to the code. `contact/tests/test_views.py`
+already had the enable-and-restore dance; it was copied rather than a second
+pattern invented. **Worth knowing before writing any `assertLogs` test in this
+repo** — the failure looks like a missing log line and is not one.
+
+### What task 02 inherits
+
+- **The fail-open policy is documented but not yet implemented.** The helper
+  returns three outcomes; nothing consumes them until task 02.
+- **The spent-token question is still open and deliberately unverified.**
+  Turnstile tokens are single-use, so a form failing validation for an unrelated
+  reason re-renders with a spent token. Whether the same fault exists today under
+  reCAPTCHA v2 must be *determined*, not assumed — "fixes a long-standing defect"
+  and "introduces a new one" are different claims.
+- **`grep -ri recaptcha` still matches application code.** Task 02 is what makes
+  it match only `.agents/`.
+
 ## Step 16 task 07 — the smoke tool, and a Microsoft inbox — TOOLING DONE 2026-08-26, `4d77b672`, PUSHED
 
 **The acceptance criterion for Step 16 as a whole is met, repeatably.** A message
