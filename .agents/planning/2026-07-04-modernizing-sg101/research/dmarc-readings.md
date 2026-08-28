@@ -35,6 +35,13 @@ evidence, that one is the state.
 | 12 | 2026-08-27 | 08-26 | the policy line appears; one report of three did not get it |
 | 13 | 2026-08-28 | 08-27 | a fifth reporter, and the tool read its report as empty |
 
+**Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
+afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
+complaints measurably false and no deliverability data at this domain's volume;
+and a census of the Gmail spam folder, which holds one filtered message that is
+not a report, the one that was filtered having been removed from the folder by
+the act of reading it.
+
 **Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
 read 2026-08-26 13:12Z, which takes that window to 11 messages across four
 receiving domains and gives the `policy_published` timing property a second
@@ -2608,3 +2615,119 @@ fraction of a window.
 5. **Nothing here predicts where the next GMX report lands.** Record its folder
    as an observation either way, and read Gmail Postmaster Tools for
    `surfguitar101.com` before treating one spam filing as a pattern.
+
+#### Addendum, 2026-08-28 — Postmaster Tools cannot answer the question, and two of its three complaints are false
+
+Prediction 5 above sends the fourteenth reading to Gmail Postmaster Tools before
+treating one spam filing as a pattern. It was read the same afternoon.
+**It is discharged, not by an answer but by the instrument being unavailable at
+this domain's volume** — and the panel it does show is ten days stale.
+
+**The compliance dashboard is a snapshot from 2026-08-18 19:00 and has not
+refreshed since.** That date precedes the MX flip, the apex SPF rewrite, the
+Postmark cutover and `p=quarantine`. The only email change it could reflect is
+`p=none`, published 08-17, and it does not reflect that either.
+
+| Requirement | Status as shown |
+|---|---|
+| SPF and DKIM authentication | Compliant |
+| From: header alignment | Compliant |
+| DMARC authentication | **Needs work** — *set up DMARC with a minimum policy of none* |
+| Encryption | **Needs work** — *set up TLS encryption* |
+| User-reported spam rate | Compliant |
+| DNS records | **Needs work** — *set up forward and reverse DNS records* |
+| One-click unsubscribe | Compliant |
+| Honor unsubscribe | Compliant |
+
+**Two of the three complaints are false, measured rather than argued.**
+
+*DMARC* asks for a policy of at least `p=none`. `p=none` had been live for a day
+at the moment of the snapshot and the record has read `p=quarantine` since 08-25,
+verified authoritatively from two resolvers in the eleventh reading and again
+today.
+
+*DNS records* asks for forward-confirmed reverse DNS on the sending IP. It is
+complete, and has a name this project published:
+
+```
+173.255.245.115         ->  PTR  mail.surfguitar101.com
+mail.surfguitar101.com  ->  A    173.255.245.115
+```
+
+**Encryption is the one that stays open.** jaguar sends with
+`smtp_tls_security_level = may`, and its mail log carries TLS to Gmail both now
+and on the snapshot's own day:
+
+```
+Aug 18 19:56:37 jaguar postfix/smtp: Untrusted TLS connection established to
+  gmail-smtp-in.l.google.com[142.250.101.26]:25: TLSv1.2 with cipher
+  ECDHE-ECDSA-AES128-GCM-SHA256 (128/128 bits)
+```
+
+`Untrusted` is an unverified peer certificate, not an unencrypted session; 87
+such lines cover 08-23 to 08-28 and 4 cover 08-18. **Two limits keep this from
+closing the row.** `may` is opportunistic, so Postfix would fall back to
+plaintext without complaint against a peer that offered no STARTTLS; and
+`smtp_tls_loglevel = 1` logs once per *connection*, not per delivery, so 08-18's
+25 deliveries to `gmail-smtp-in` against 4 TLS lines is consistent with
+connection reuse but is not proof that each was encrypted. The Encryption tab
+holds the actual percentage and was not read.
+
+**`Not enough outgoing email` is what closes the reputation question.** The
+deliverability panels need volume Google does not publish exactly — the
+consistent figure in the field is 100–200 messages a day to Gmail addresses.
+The best window in this entire log is **13 messages at `google.com`**. So the
+`Feedback-ID: surfguitar101.com:1:1:Cloudflare` bucket named in the amendment
+above has no instrument at this domain's scale, and will not acquire one by
+waiting.
+
+**A third staleness mode, which makes this session's through-line.** Three
+independent measurement channels, three different ways of looking valid while
+saying nothing true: `policy_published`, a receiver's cached read of the zone,
+lagging publication by a day or two; `tools/dmarc_report.py`, returning a
+confident `0 messages` for a schema it could not parse; and this panel, a
+ten-day-old snapshot rendered without any indication that it is one other than a
+date in small type. None of the three fails loudly. [[suspect-the-measurer-before-the-record]]
+
+#### Addendum, 2026-08-28 — the spam folder is a census, and reading the one filtered report removed it from the count
+
+`in:spam to:admin@surfguitar101.com` returns **one message, and it is not a DMARC
+report** — a bounce from a member subscribed to a forum topic.
+
+**The GMX report is not in that count because retrieving it took it out.** It was
+opened and its attachment saved in order to be read at all, and it is no longer
+in the folder. [[probes-must-not-perturb-what-they-measure]] — the act of reading
+the only filtered report is what removed it from the measure of filtering. The
+honest tally is **one filtered report in the corpus of twenty-four**, and the
+folder can no longer show it.
+
+**The census is otherwise complete.** Gmail purges spam after 30 days; the
+reporting era is eleven days old, from 2026-08-17. Nothing has aged out, so the
+folder is a full record of that period rather than a sample — subject to the one
+thing not measurable from here, whether it was emptied by hand.
+
+**The denominator was not obtained, and the attempt is recorded as abandoned
+rather than left looking unasked.** `in:anywhere to:surfguitar101.com` returns
+hundreds and Gmail answers `1-50 of many` at every narrowing tried, including
+date-bounded ones. It is also the wrong population: Email Routing has forwarded
+for this domain only since roughly 08-23, so most of those hundreds never touched
+the stream in question. **Dropped deliberately** — the rate is one filtered
+message against a stream measured in hundreds, and no plausible exact figure
+changes what follows.
+
+**The reputation hypothesis is unsupported.** Two independent lines say so: the
+compliance panel's *User-reported spam rate: Compliant*, and filtering that is
+singular rather than systematic. A poisoned `Feedback-ID` bucket would filter
+broadly; this filtered once.
+
+**What survives is narrower and fits the evidence better.** The filtered message
+was the **first mail this inbox had ever received from `sicher.gmx.net`**, and it
+had passed three DKIM signatures, ARC, SPF on the SRS envelope and DMARC. That is
+per-message, first-contact classification, not stream reputation.
+
+**The silent-loss risk stands, and the narrowing makes it sharper rather than
+smaller.** The exposure is a reporter's *first* filing — which is exactly the
+case that cannot be detected, since reporters are discovered rather than
+enumerated and a first filing that was filtered is indistinguishable from a
+reporter that has never filed. Rare, specific, and invisible in the one place it
+matters.
