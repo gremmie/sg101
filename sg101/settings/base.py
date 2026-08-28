@@ -422,6 +422,21 @@ RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
 RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')
 
 #######################################################################
+# Cloudflare Turnstile settings
+#
+# The key defaults are Cloudflare's published test keys, which always pass and
+# work from any domain including localhost. They are defaults rather than blanks
+# so a checkout with no .env has working forms; production must override both.
+TURNSTILE_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+TURNSTILE_SITE_KEY = env('TURNSTILE_SITE_KEY',
+                         default='1x00000000000000000000AA')
+TURNSTILE_SECRET_KEY = env('TURNSTILE_SECRET_KEY',
+                           default='1x0000000000000000000000000000000AA')
+# Seconds. Without this a hung provider blocks the worker inside a user's
+# request, which is what the reCAPTCHA call it replaces did.
+TURNSTILE_TIMEOUT = env.int('TURNSTILE_TIMEOUT', default=20)
+
+#######################################################################
 # Open Graph Protocol related settings
 #######################################################################
 OGP_DEFAULT_IMAGE = SITE_SCHEME + '://surfguitar101.com/media/podcast/podcast_logo.jpg'
