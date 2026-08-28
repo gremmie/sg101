@@ -301,8 +301,21 @@ correct is recorded once in task 03's *Open* register and hangs on Step 20.
 
 `accounts/forms.py` protects registration with a static knowledge question
 (`question1`, "What number appears in the site name?" → `101`), a hidden honeypot
-(`question2`, logged CRITICAL), a visible honeypot (`question3`), and the
-two-stage emailed code word (`RegisterCodeForm`).
+(`question2`, logged CRITICAL), a visible honeypot (`question3`), and a
+registration code (`RegisterCodeForm`).
+
+**CORRECTED 2026-08-27, during task generation — the code word is not emailed,
+and calling it that overstated it.** The flow was read rather than assumed:
+`register` puts a generated code in the **session**, `register1` renders a
+placeholder, `static/js/accounts_code.js` fetches the code from the
+**`/register/code/` JSON endpoint** (`accounts/views.py:82`, no auth), and
+`register2` checks what the user types against the session copy. **The code is
+handed to the client and echoed back**, so what it actually tests is whether the
+client runs JavaScript. It is a JS-execution gate, not a possession check.
+
+**The possession check is a separate, later stage** — `register_confirm`, the
+emailed activation link, which does require control of a mailbox. It sits after
+the code, not in it.
 
 Measured from `auth.log` (**2025-01-10 → 2026-08-25, ~19.5 months** — this file
 retains far longer than `sg101.log`):
@@ -310,9 +323,18 @@ retains far longer than `sg101.log`):
 | | |
 |---|---|
 | Successful registrations | **1,038** |
-| Registration failure lines | **2,698** |
+| Registration failures | **1,499** |
 | Blocked by the anti-bot layers | **876** — 439 wrong answer, 276 visible honeypot, 161 hidden honeypot |
 | Registration events/month | 57–137 (last 12 months), peak **137** (Oct 2025) |
+
+**CORRECTED 2026-08-27 — the earlier "2,698 failure lines" was wrong.** 2,698 is
+*every* `Accounts/registration` line: 1,038 successes, 1,499 failures, and 161
+duplicate CRITICAL entries, because a filled hidden honeypot is logged twice —
+once by `clean_question2()` and once by `_validation_error()`. The 161 duplicates
+are a useful cross-check: they match the "Wrong answer #2" count exactly. **The
+error was reading a `grep -c` of the shared prefix as if it counted only
+failures**, which is the same shape as every miscount this project has recorded:
+the number was real, the population under it was not the one named.
 
 **And spam still gets through. Seven accounts registered successfully and were
 later deactivated for spam** between 2026-04-03 and 2026-07-24 — inside
@@ -323,11 +345,78 @@ ones caught; it is a floor, not a rate.
 the evidence: it stops generic crawlers — 439 of them — and is one line of code
 for anything targeting SG101 specifically.
 
-**Stated so a later reading does not over-claim: a challenge is not expected to
-close this.** Accounts that clear an emailed code word are likely human-assisted
-or using a solving service, which no CAPTCHA reliably stops. It raises cost
-rather than shutting the door. **The value of measuring it now is the baseline** —
-1.4/month is what "did it work" will be judged against.
+**REVISED 2026-08-27 by the correction above, and the revision runs toward
+Turnstile rather than away from it.** The original text here hedged that a
+challenge would not close the gap, because clearing an *emailed* code word
+implies a human or a solving service. That premise was wrong. What a bot needs
+today is: answer a fixed constant, leave two fields blank, run JavaScript (or
+simply GET `/register/code/`), echo the value back, and control a mailbox.
+**Every one of those is scriptable except the mailbox**, and disposable mailboxes
+are cheap. So 1.4/month getting through is what this design predicts rather than
+a surprise, and Turnstile substitutes a real bot check for the JS-execution gate
+that is currently doing that job.
+
+**The hedge is not withdrawn entirely.** A solving service still defeats any
+CAPTCHA, so this raises cost rather than shutting the door. What changed is the
+expected size of the effect: against the bots this flow actually admits, it
+should be larger than first stated. **The value of measuring 1.4/month now is
+that it is a pre-change baseline** — it is what "did it work" gets judged
+against.
+
+### Which layer stops bots and which stops people — measured 2026-08-27
+
+**Counting blocks cannot answer this**: a bot turned away and a human tripped up
+look identical in a tally. The discriminator is **whether that IP ever completed
+a registration afterwards** — a blocked bot does not come back and succeed, a
+fumbling human does. **Password-mismatch is the control group**, as close to a
+pure-human failure as the log offers, and it reads 68%.
+
+| Layer | Hits | Distinct IPs | IPs that later succeeded | Reading |
+|---|---|---|---|---|
+| `question2` — **hidden** honeypot | 161 | 111 | **8%** | near-pure bot |
+| `question3` — **visible** honeypot | 276 | 202 | 27% | mixed; ~55 real people tripped |
+| `question1` — the `101` question | 439 | 281 | 35% | mixed; ~98 real people tripped |
+| **registration code mismatch** | 214 | 134 | **77%** | **almost pure human** |
+| *(control)* password mismatch | 116 | 99 | 68% | humans by definition |
+
+**The code step performs worse than the control.** The people it stops are
+overwhelmingly humans who mistyped or lost the code and retried; it turns away
+about 1.6 IPs/month that never return. Its only anti-bot function is proving the
+client runs JavaScript — precisely what Turnstile does as a side effect of doing
+something much harder. It is close to pure friction.
+
+**`question1` costs more than it collects.** ~9 IPs/month turned away for good
+against ~5/month of real people who had to retry.
+
+**The hidden honeypot is the one genuinely worth keeping.** 8% is the cleanest
+bot signal in the system, it is free, and it costs users nothing because they
+never see it. It also catches a *different* class than a challenge widget does —
+naive form-fillers rather than headless browsers — so it complements Turnstile
+instead of duplicating it.
+
+**Caveat, stated because the metric is a proxy and not proof.** Shared and CGNAT
+addresses inflate the overlap; rotating IPv6 deflates it. The control at 68% is
+what calibrates the scale, and **the code step's 77% sits above the control** —
+that ordering is the robust part, whichever way the proxy errs. Separately, the
+log records only failures, so people who *abandoned* at the code page without
+failing are invisible: the friction cost is a floor, not an estimate.
+
+### DECIDED 2026-08-27 — simplify the flow rather than bolt Turnstile onto it
+
+Brian's own read, and the reason this was measured: the flow was built before
+reCAPTCHA existed, and predates the option it now duplicates.
+
+| Layer | Decision |
+|---|---|
+| `question1` (the `101` question) | **remove** — Turnstile covers the class at lower cost to users |
+| `question3` (visible honeypot) | **remove** — the hidden one does the job without confusing people |
+| `question2` (hidden honeypot) | **keep** — best discriminator measured, free, invisible |
+| The 2-step code flow (`register1`, `register2`, `RegisterCodeForm`, `accounts_code.js`, `/register/code/`) | **remove** — Turnstile subsumes the JS gate; the step is net friction |
+| Emailed activation (`register_confirm`) | **untouched** — this is the possession check, and the only one |
+| Turnstile | **on `register`, stage one** — cost imposed before a session, a `PendingUser` row, or an email exists |
+
+Registration goes from four pages and four checks to **`register` → `thanks`**
+plus the emailed confirmation, with Turnstile and one invisible honeypot.
 
 ### Volume if Turnstile goes on both forms
 
@@ -335,13 +424,56 @@ Worst case, assuming every registration event spends a verification: 137 + 71 =
 **~210/month**. Against reCAPTCHA's free tier that would be 2% of the cap; under
 Turnstile it is moot. **Brian's read that traffic is low enough was correct.**
 
+### Task files — four, generated 2026-08-27
+
+Sequence is **01 → 02 → 03 → 04**, strictly add-before-remove.
+
+- `step17/task-01-turnstile-verification-helper.code-task.md` — the shared
+  server-side helper in `antispam/`, which is what finally makes the plan's
+  "update the `antispam` app" true; the app was the wrong home for reCAPTCHA and
+  is the right one for a helper with two callers. Carries the settings, the
+  `.env.example` entries, and **the timeout fix** — `contact/forms.py:47` calls
+  `requests.post` with no `timeout=`, the same bug class as `EMAIL_TIMEOUT` in
+  Step 16 task 02, and a port that preserved it would be the one bad outcome.
+  Three outcomes, not two: passed, rejected, and could-not-determine, because a
+  provider outage and a failed challenge are different events.
+- `step17/task-02-contact-form-turnstile.code-task.md` — the swap, plus deleting
+  every remaining reCAPTCHA reference. Goes before registration because this
+  form's behaviour is measured, so a regression is visible.
+- `step17/task-03-registration-turnstile.code-task.md` — the widget on stage one,
+  **removing nothing**. Registration is deliberately over-protected at the end of
+  it.
+- `step17/task-04-retire-registration-code-flow.code-task.md` — the
+  simplification. Most of its diff is `accounts/tests/test_views.py`, not the
+  deletions.
+
+**Turnstile's test keys make this developable in Docker, which reCAPTCHA never
+was.** Cloudflare's dummy sitekeys and secrets work from any domain including
+`localhost`, with no account and no hostname allowlisting, and task 01 ships the
+always-passes pair as the committed `.env.example` defaults. Today
+`.env.example:43-45` holds blank reCAPTCHA keys, so a fresh checkout cannot
+exercise the contact form at all. **This matters more than convenience**: Step 16
+task 05 recorded six defects found in ten minutes of browser testing that 946
+green tests could not see, and reCAPTCHA has been obstructing exactly that.
+
+**One defect class flagged for task 02, unverified deliberately.** Turnstile
+tokens are single-use, so a form that fails validation for an unrelated reason
+re-renders with a spent token and confuses the next submit. Whether the same
+fault exists today under reCAPTCHA v2 was **not** checked — the task says to
+determine it rather than assume, because "fixes a long-standing defect" and
+"introduces a new one" are different claims and only measurement separates them.
+
 ### Still open
 
-- **The registration flow itself** — Brian wants to discuss it during task
-  generation. Whether Turnstile replaces `question1`, or joins it, is not decided
-  here.
-- **Where the widget goes on registration** — the form is two-stage, so "on
-  registration" is ambiguous between the details page and the code page.
+- ~~**The registration flow itself**~~ and ~~**where the widget goes**~~ —
+  **both CLOSED 2026-08-27** by the measurement and decision above.
+- **`requests.post` has no timeout** — `contact/forms.py:47` calls the verify
+  endpoint with no `timeout=`, so a hung provider blocks a worker indefinitely.
+  Same bug class as the `EMAIL_TIMEOUT` finding in Step 16 task 02. **The new
+  helper must fix this rather than port it.**
+- **The 1.4/month spam baseline needs re-reading after the change** — it is the
+  only thing "did it work" can be judged against, and `sg101.log`'s ~5-month
+  retention means it has to be read before it rotates away.
 
 ## Step 16 task 07 — the smoke tool, and a Microsoft inbox — TOOLING DONE 2026-08-26, `4d77b672`, PUSHED
 
