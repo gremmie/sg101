@@ -1,126 +1,57 @@
 # Data Models
 
-All models are standard Django ORM models (MySQL in production/dev,
-SQLite for tests). `django.contrib.auth.User` is the central identity —
-almost every content model has a `ForeignKey(User)`.
+**Generated 2026-08-27.**
 
-## Forums (the core content hierarchy)
+## Users
 
 ```mermaid
 erDiagram
-    Category ||--o{ Forum : contains
-    Forum ||--o{ Topic : contains
-    Topic ||--o{ Post : contains
-    Post ||--o{ Attachment : has
-    Attachment }o--|| Oembed : embeds
-    User ||--o{ Topic : creates
-    User ||--o{ Post : creates
-    User ||--o{ FlaggedPost : flags
-    User ||--o{ ForumLastVisit : tracks
-    User ||--o{ TopicLastVisit : tracks
-
-    Category {
-        string name
-        string slug
-        int position
-        ManyToMany groups
-    }
-    Forum {
-        string name
-        string slug
-        int topic_count
-        int post_count
-        OneToOne last_post
-    }
-    Topic {
-        string name
-        bool sticky
-        bool locked
-        int view_count
-        int post_count
-        ManyToMany subscribers
-        ManyToMany bookmarkers
-    }
-    Post {
-        text body
-        text html
-        string user_ip
-    }
+    User ||--|| UserProfile : "profile (OneToOne)"
+    User ||--o{ Post : authors
+    User ||--o{ Comment : authors
+    User ||--o{ PendingUser : "pre-activation"
 ```
 
-`Forum`/`Topic` denormalize `topic_count`/`post_count` and `last_post`
-for list-page performance rather than aggregating on every request.
-`ForumLastVisit`/`TopicLastVisit` back the unread-post feature
-(`forums/unread.py`); `core.tasks.cleanup` periodically deletes stale
-visit records via the `forum_cleanup` management command.
+**No custom `AUTH_USER_MODEL`.** `bio.UserProfile` attaches to `auth.User` via
+`OneToOneField(User, related_name='profile')`. Profile data lives there, not on
+`User`.
 
-## User profile (`bio`)
+`accounts.PendingUser` holds a registration between the form and the emailed
+activation link, with a key minted by `secrets` (Step 16 task 08) and compared
+with `secrets.compare_digest`.
 
-`UserProfile` is a `OneToOneField(User)` extension holding site-specific
-profile data: location/country/birthday/occupation/interests, rendered
-Markdown profile text and forum signature (stored as both raw and
-pre-rendered `_html` fields — see the Markdown rendering note in
-[workflows.md](workflows.md)), avatar image, timezone/24h-time
-preferences, denormalized `forum_post_count`, a `status` enum, and a
-`badges` M2M through `BadgeOwnership`. `UserProfileFlag` supports
-user-to-user reporting.
+**`User.email` is not unique.** 26 accounts share an address across 13 groups.
+`unique=True` remains a follow-on because those rows would fail the migration —
+recorded in `STATUS.md` under Step 16 task 05.
 
-## Pending/public moderation pattern
-
-Three unrelated apps share the same modeling idiom: an abstract-ish base
-class with common fields, subclassed into a `Pending*` model (awaiting
-moderator approval) and the live public model.
+## Moderation — split models, not a flag
 
 ```mermaid
 classDiagram
-    class DownloadBase { category, description, file, ... }
+    class DownloadBase
+    class PendingDownload
+    class Download
     DownloadBase <|-- PendingDownload
     DownloadBase <|-- Download
-
-    class LinkBase { category, name, url, description, ... }
-    LinkBase <|-- PendingLink
-    LinkBase <|-- Link
-
-    class StoryBase { category, title, body, ... }
-    StoryBase <|-- PendingStory
-    StoryBase <|-- Story
 ```
 
-`Download`, `Link`, and `Story` additionally expose a `public_objects`-style
-manager (`PublicDownloadManager`, `PublicLinkManager`,
-`PublicContestManager` for `contests.Contest`) that filters to
-publish-ready rows — used by `custom_search`'s indexing logic and by
-public-facing list views. `FlaggedLink`/`FlaggedPost`/`ShoutFlag`/`CommentFlag`
-are the moderation-report counterparts across different apps (no shared
-base class — each app defines its own).
+Same shape in `weblinks` and `news`. Each concrete model has its own
+`public_objects`-style manager. **Extend this rather than adding `is_approved`.**
 
-## Other notable models
+## Rendered-HTML sibling fields
 
-- **`accounts`**: `PendingUser` (registration awaiting email
-  confirmation), `IllegalUsername`/`IllegalEmail` (registration
-  blocklists).
-- **`messages`**: `Message`, per-user `Options`, and `Flag`
-  (read/deleted state per message per user).
-- **`podcast`**: `Channel` → `Item` (one channel, many episodes).
-- **`potd`**: `Photo` (the pool), `Current` (today's pick, one row),
-  `Sequence` (controls rotation order) — see the `pick_potd` Celery task
-  in [workflows.md](workflows.md).
-- **`polls`**: `Poll` → `Choice`.
-- **`gcalendar`**: `Event` with a `PendingEventManager` (mirrors the
-  pending/public split for calendar submissions).
-- **`ygroup`**: `Thread` → `Post`, a frozen archive imported from the
-  site's former Yahoo Group (see `tools/load_ygroup.py`).
-- **`oembed`**: `Provider` (known oEmbed providers) and `Oembed` (cached
-  responses, referenced by `forums.Attachment`).
-- **`banners`**: `Campaign` → `Banner`.
-- **`membermap`/`bandmap`**: `MapEntry` / `BandEntry` — geolocated
-  entries, no relation to each other despite similar shape.
+Markdown source and rendered HTML are stored side by side and rendered at save
+time: `UserProfile.profile_text`/`profile_html`, `Post.body`/`html`. A change to
+rendering needs a **data migration** to re-render existing rows.
 
-## Fields that store rendered HTML alongside source
+## Search index
 
-A recurring pattern: a model stores user-authored Markdown/text in one
-field and a pre-rendered HTML cache in a sibling `*_html` field (e.g.
-`UserProfile.profile_text`/`profile_html`, `UserProfile.signature`/
-`signature_html`, `forums.Post.body`/`html`). Rendering happens at
-save-time (see `core/markup.py`), trading storage for avoiding
-per-request Markdown parsing.
+`search.SearchDocument` holds a `tsvector` over eight content types, maintained
+incrementally by signals through Celery and reconciled weekly. It is derived
+data — rebuildable, and never the source of truth.
+
+## Collation caveat
+
+`ORDER BY` results differ between the old MySQL collation and PostgreSQL's.
+Audited 2026-08-13 and scheduled into Step 19; see `STATUS.md`. Do not assume
+ordering parity with pre-migration behaviour.

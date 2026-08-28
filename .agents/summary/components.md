@@ -1,102 +1,72 @@
 # Components
 
-Each entry below is a top-level Django app (a directory at the repo root).
-Grouped by role.
+**Generated 2026-08-27.** Grouped by role rather than listed alphabetically, so
+an agent can find the right app without reading all of them.
 
-## Platform / shared kernel
+## The kernel — `core`
 
-- **`core`** — Shared infrastructure used across the site: custom
-  middleware (`InactiveUserMiddleware`, `WhosOnline`), Redis connection
-  helper (`services.py`), S3 wrapper (`s3.py`), Markdown rendering
-  (`markup.py`), HTML sanitizing (`html.py`), custom paginator, download
-  helper (`download.py`), the `FixedView` generic view for static pages
-  (about/colophon/privacy/tos), and site-wide Celery tasks
-  (`cleanup`, `send_mail`, `max_users`).
-- **`accounts`** — User registration/login flows, `PendingUser` (email
-  confirmation before account activation), illegal username/email
-  blocklists.
-- **`antispam`** — reCAPTCHA decorator, a `SpamPhrase` blocklist model,
-  and signal receivers that log auth events to the `auth` logger for
-  fail2ban to consume.
-- **`custom_search`** — Glue between Haystack/Xapian and the rest of the
-  site: a custom `QueuedSignalProcessor` (`receivers.py`) that decides
-  which model saves/deletes get enqueued for re-indexing, plus search
-  form/view customizations.
-- **`banners`** — Ad campaign/banner rotation (`Campaign`, `Banner`).
-- **`countdown`** — Displays a countdown to an upcoming `Event`.
-- **`contact`** — Simple contact form (no models).
-- **`donations`** — PayPal IPN-based donation tracking (`Donation`
-  model), monthly goal display.
-- **`irc`** — Renders info about the site's IRC channel (no models).
+Importable by anything, imports nothing from the repo.
 
-## Community / content apps
+| Module | Responsibility |
+|---|---|
+| `functions.py` | `send_mail` wrapper (nearly all site mail funnels here), `get_ip`, `email_admins` |
+| `tasks.py` | the Celery task that actually sends mail |
+| `email_categories.py` | `EmailCategory` StrEnum + subject redaction rules for `email.log` |
+| `markup.py`, `html.py` | Markdown rendering and HTML cleaning |
+| `services.py` | Redis connection helper |
+| `s3.py` | S3 wrapper (user photos) |
+| `middleware.py` | site-wide middleware |
+| `whos_online.py` | Redis-backed presence |
+| `paginator.py` | shared pagination |
 
-- **`forums`** — The largest app: `Category` → `Forum` → `Topic` → `Post`
-  hierarchy, per-category/forum group-based permissions
-  (`permissions.py`), attachments, unread-post tracking
-  (`ForumLastVisit`/`TopicLastVisit`), RSS feeds, moderation
-  (`FlaggedPost`).
-- **`bio`** — User profile (`UserProfile`), badge system (`Badge`,
-  `BadgeOwnership`, `badges.py`), profile flags/reporting, and the
-  "elsewhere" section (social network/IM/website links, backed by the
-  third-party `elsewhere` app — see [dependencies.md](dependencies.md)).
-- **`bulletins`** — Site-wide announcement banners (`Bulletin`).
-- **`comments`** — Generic threaded/flat commenting (`Comment`,
-  `CommentFlag`) attachable to other models.
-- **`shoutbox`** — Ephemeral live chat-like shout stream (`Shout`,
-  `ShoutFlag`).
-- **`messages`** — Private user-to-user messaging (`Message`, `Options`,
-  `Flag`); relabeled at the Django app-registry level to avoid clashing
-  with `django.contrib.messages` (see `sg101/apps.py`).
-- **`polls`** — Site polls (`Poll`, `Choice`).
-- **`contests`** — Community contests (`Contest`).
-- **`wiki`** — No models; middleware/signal glue that issues a signed
-  cookie so a separate external MoinMoin wiki instance can authenticate
-  site users.
-- **`ygroup`** — Read-only archive of posts imported from the site's
-  former Yahoo Group (`Thread`, `Post`); see `tools/load_ygroup.py` and
-  `tools/translate_yahoo_group.py` for the one-time import scripts.
-- **`legacy`** — Data and helpers (`phpbb.py`, `html2md.py`) related to
-  migrating content from a prior phpBB-based forum.
+**Mail has one documented exception.** Django's `AdminEmailHandler` sends error
+reports *outside* this wrapper, so crash mail is neither categorised nor counted
+in `email.log`. `core/email_categories.py` says so in its docstring.
 
-## Media / surf-specific apps
+## Search — `search`
 
-- **`news`** — Site news stories, split into `PendingStory`/`Story`
-  (`StoryBase`), categories, RSS feed.
-- **`podcast`** — Podcast `Channel`/`Item`, searchable via Haystack.
-- **`potd`** — "Photo of the Day": `Photo` pool, `Current` (today's
-  pick), `Sequence` (ordering), with a Celery task (`pick_potd`) that
-  rotates the photo daily.
-- **`downloads`** — File download library with categories, moderation
-  (`PendingDownload`/`Download` via `DownloadBase`), allowed file
-  extensions, and vote/rating tracking (`VoteRecord`).
-- **`weblinks`** — Curated external link directory, same
-  pending/public split pattern as `downloads` and `news`
-  (`LinkBase` → `Link`/`PendingLink`), plus `FlaggedLink` moderation.
-- **`bandmap`** — Crowd-sourced map of surf bands (`BandEntry`).
-- **`membermap`** — Map of member locations (`MapEntry`).
-- **`user_photos`** — Member photo uploads (`Photo`), stored on S3
-  (`s3.py`), with rate limiting (`USER_PHOTOS_RATE_LIMIT`).
-- **`gcalendar`** — Google Calendar-backed event listing (`Event`,
-  `PendingEventManager`), synced via Google OAuth2 (`oauth.py`,
-  `calendar.py`).
-- **`oembed`** — oEmbed provider/response caching (`Provider`, `Oembed`)
-  so embedded media (YouTube, etc.) in posts doesn't re-fetch metadata
-  every render.
-- **`smiley`** — Custom emoticon/smiley set used in post rendering.
+`documents.py` (the index model), `indexer.py` (writes), `query.py` (reads),
+`receivers.py` (signals), `tasks.py` (Celery), `reconcile.py` (weekly drift
+sweep), `forms.py`/`views.py`/`urls.py` (the `/search/` UI).
 
-## Project package
+## Anti-abuse — `antispam`
 
-- **`sg101/`** — Not an "app" in the content sense; holds
-  `settings/` (see [architecture.md](architecture.md)), the root
-  `urls.py` that wires every app's `urls.py` together, `celery.py`
-  (Celery app bootstrap), and top-level `views.py` (`HomePageView`,
-  `StoreView`).
+- `models.py` — `SpamPhrase`
+- `utils.py` — phrase matching, `spam_check`, `suspend_user`, `deactivate_spammer`.
+  **Heavy imports**; see architecture.md.
+- `decorators.py` — `log_auth_failures`, wrapping auth views so failed POSTs
+  reach the auth log that `fail2ban` watches. Narrow imports.
+- `turnstile.py` — Cloudflare Turnstile verification (Step 17). Narrow imports.
 
-## Non-Django tooling
+## Identity — `accounts`, `bio`
 
-- **`tools/`** — Standalone scripts (not a Django app): data-migration
-  and maintenance scripts (`load_ygroup.py`, `translate_yahoo_group.py`,
-  `filter_posts.py`, `flag_data.py`, `post_sub.py`,
-  `sg101mp3comptool.py`, `tz.py`). Run directly with the project's
-  Python environment, not via `manage.py`.
+`accounts` owns registration, activation and password flows. `bio` owns
+`UserProfile`, attached to `auth.User` by `OneToOneField(related_name='profile')`
+— there is **no custom `AUTH_USER_MODEL`**.
+
+Registration is multi-stage: a details form, a session-held code echoed across
+two pages, then an emailed activation link. Step 17 task 04 collapses this;
+check `STATUS.md` for current state.
+
+## Community content
+
+`forums` (9 models — the largest), `news`, `downloads`, `weblinks`, `podcast`,
+`potd` (photo of the day), `bandmap`, `ygroup` (imported Yahoo group archive),
+`polls`, `contests`, `shoutbox`, `messages` (private messaging), `comments`,
+`elsewhere` (13 models — off-site profile links), `tagging`, `smiley`,
+`bulletins`, `countdown`, `banners`, `oembed`, `donations`, `contact`,
+`user_photos`, `snapshots`.
+
+**`messages` collides with `django.contrib.messages`.** Resolved in
+`sg101/apps.py` by `DjangoMessagesConfig`, which relabels the built-in app to
+`django_messages` (wired at `sg101/settings/base.py:158`). Do not rename this app
+or its `AppConfig` without understanding why it exists.
+
+## Integrations
+
+`gcalendar` (Google Calendar — carries a Step 8 stub awaiting Step 18),
+`donations` (PayPal IPN), `user_photos` (S3), `wiki`.
+
+**`wiki` has no models.** It exists to mint a signed cookie
+(`wiki/middleware.py`) that a separate external MoinMoin application validates
+against a Redis set. Wiki content is not in this repo. Step 19 retires it.

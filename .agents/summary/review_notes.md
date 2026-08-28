@@ -1,65 +1,70 @@
 # Review Notes
 
-Notes from generating and cross-checking this documentation set. No
-language-support gaps apply here — the entire codebase is Python, which
-is fully supported by the analysis tooling used.
+**Generated 2026-08-27.**
 
-## Corrections made during review
+## Why this regeneration happened
 
-- Initially guessed the `elsewhere` third-party app powered
-  cross-posting/sharing. Verified via `grep` that it actually backs the
-  "elsewhere" section of a user's `bio` profile (social network/IM/
-  website links) — corrected in [components.md](components.md) and
-  [dependencies.md](dependencies.md).
-- Initially attributed Celery integration to a `django-celery` package.
-  No such package appears in `requirements.txt`; only `celery` + `kombu`
-  are present. Corrected in [architecture.md](architecture.md).
-- Added the `irc` app's Redis-based channel-roster read
-  (`irc/channel.py`) to [interfaces.md](interfaces.md) after noticing it
-  during the models survey — it's an external integration point (an
-  IRC bot outside this repo writes the `irc:channel_members` key) that
-  wasn't captured in the first pass.
+The previous generation was written in one commit on **2026-07-12**, during
+Step 1. Between then and now the codebase changed by **638 files, ~23,000
+insertions and ~6,300 deletions**; four apps were removed (`custom_search`,
+`irc`, `legacy`, `membermap`) and five added (`.github`, `elsewhere`, `search`,
+`snapshots`, `tagging`).
 
-## Known documentation gaps
+Ten of the eleven documents still described Python 2, Django 1.8, Mercurial,
+MySQL, memcached, Xapian/Haystack or `secrets.json`. They did not describe a
+drifted codebase; they described one that no longer exists.
 
-- **Management commands are not individually catalogued.** Nearly every
-  app has a `management/commands/` directory (e.g. `forums/forum_cleanup`,
-  `bio/avatar_cleanup`, `donations/donations_report`,
-  `legacy/import_old_*` — a whole family of one-time phpBB migration
-  commands). [workflows.md](workflows.md) and [components.md](components.md)
-  mention the ones invoked by Celery tasks, but a full command-by-command
-  reference was judged too granular/volatile for this documentation set.
-  If you need to know what a specific management command does, read it
-  directly — `grep -rn "class Command" <app>/management/commands/`.
-- **Frontend/static asset structure is not documented.** `static/`
-  (`css/`, `js/`, `themes/`, `store/`) and the templating conventions in
-  `sg101/templates/` + per-app `templates/<app>/` directories exist but
-  weren't analyzed in depth — this docset is backend/architecture
-  focused. The `V3_DESIGN` context flag set by `HomePageView`/`StoreView`
-  (`sg101/views.py`) suggests an in-progress or dual frontend design
-  system worth investigating if you're doing frontend work.
-- **Test coverage is uneven across apps.** Tests exist for roughly half
-  the apps (see the `tests/` or `tests.py` list found during the survey);
-  apps like `bandmap`, `bulletins`, `contests` (partial), `polls`,
-  `smiley`, `countdown`, and several others have no test directory at
-  all. Not called out per-app in the docs since this is more of a
-  project-health observation than an architectural fact.
-- **`legacy` app's exact migration scope** (phpBB → this Django app) is
-  inferred from filenames (`phpbb.py`, `html2md.py`, the
-  `import_old_*` management commands) rather than fully read
-  line-by-line. Treat [components.md](components.md)'s description of
-  `legacy` as a reasonable summary, not an exhaustive one.
-- **`legacy/tools/tz.py` and other one-off `tools/` scripts** are listed
-  by filename in [components.md](components.md) but their internals
-  weren't read — they appear to be scripts run once for historical data
-  migrations rather than ongoing operational tools.
+**The most harmful content was the most confident.** The old `AGENTS.md`
+"Non-obvious things" section told agents `secrets.json` was required and that
+the `queues`/`queued_search` system was live — both removed in Steps 3 and 4.
+Those are precisely the claims an agent acts on without checking.
 
-## Consistency check
+## Claims carried forward, each re-verified
 
-Cross-referenced app names, model class names, URL prefixes, and
-settings keys mentioned in `architecture.md`, `components.md`,
-`interfaces.md`, `data_models.md`, `workflows.md`, and `dependencies.md`
-against each other and against the source — no remaining contradictions
-found as of this generation. If the codebase changes significantly,
-re-run this SOP rather than hand-editing individual generated files, to
-avoid drift between them.
+| Claim | Verified |
+|---|---|
+| `messages` app collides with `django.contrib.messages` | yes — `sg101/apps.py:7-8`, `base.py:158` |
+| `wiki` has no models | yes — no `models.py` in `wiki/` |
+| Split moderation models | yes — `downloads`, `weblinks`, `news` |
+| Rendered HTML in sibling fields | yes — `core/markup.py` and the model fields |
+
+## Claims dropped as false
+
+`secrets.json` required · Mercurial · Python 2 / Django 1.8 · MySQL ·
+`custom_search` and the `queues`/`queued_search` system · Xapian/Haystack search
+· "no CI pipeline and no linter config" (CI now exists; the linter half is still
+true).
+
+## Known gaps
+
+- **Per-app detail is shallow for the long tail.** `elsewhere` (13 models) and
+  `forums` (9) carry real complexity that is summarised in a line each. An agent
+  working in them should read the models directly.
+- **`gcalendar` carries a Step 8 stub** whose current state was not examined;
+  Step 18 revives it.
+- **Frontend/static assets were not analysed.** Templates, CSS and JS are
+  described only where they bear on a documented behaviour.
+- **`donations`' PayPal IPN integration was not verified against PayPal's
+  current API.** The planning record flags it as a legacy API.
+- **Transitional state will date fastest.** The reCAPTCHA/Turnstile overlap is
+  true on 2026-08-27 and will not be true for long.
+
+## Not verified, and deliberately not asserted
+
+- Whether `tools/` scripts beyond those named in `STATUS.md` still run.
+- Whether the `snapshots` app is developer tooling or user-facing — its name and
+  the `tools/pg_snapshot.sh` script suggest the former, but this was not
+  confirmed, so no claim is made in the other documents.
+
+## Recommendations
+
+1. **`README.md` is worse than `AGENTS.md` was.** Its setup steps instruct a new
+   contributor to create `secrets.json` and run MySQL, and its stack section is
+   wrong in six particulars. It was deliberately left out of this regeneration
+   because it is user-facing prose; it needs a decision, not a generator.
+2. **`fabfile.py` should go or be marked**, since it runs `hg pull --update`.
+3. **A `CODEASSIST.md` would pay for itself** — the two test commands and this
+   project's scratchpad/commit conventions are rediscovered on every code-assist
+   run.
+4. **Regenerate after Step 21**, not before. Steps 17-21 are comparatively small
+   deltas; the expensive churn is already behind this generation.

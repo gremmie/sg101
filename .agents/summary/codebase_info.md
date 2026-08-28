@@ -1,111 +1,66 @@
-# Codebase Info: SurfGuitar101 (sg101)
+# Codebase Information
+
+**Generated 2026-08-27.** Supersedes the 2026-07-12 generation, which described
+the pre-modernization codebase and had become wrong in every major particular.
 
 ## What this is
 
-The Django web application that powers **SurfGuitar101.com**, a community site
-for fans of instrumental surf music. It provides discussion forums, a news
-section, a podcast feed, a "photo of the day" (POTD) feature, a surf band
-database ("band map"), download library, weblink directory, private
-messaging, a shoutbox, polls, contests, donations, an event calendar, and a
-member map — all glued together by a shared `core` app.
+The Django application behind [SurfGuitar101.com](https://www.surfguitar101.com/),
+a community site for instrumental surf music: forums, news, a podcast, photo of
+the day, downloads, weblinks, a band map, private messaging, polls, contests,
+donations, and an event calendar.
 
-## Language & framework
+## Stack
 
-- **Python 2** (uses `iteritems()`, old-style `super(Class, self)` calls,
-  `unicode` literals) — this is a Django **1.8** codebase, pre-dating
-  Python 3 support in Django.
-- **Django 1.8.15**, using the old-style `MIDDLEWARE_CLASSES` list (not the
-  modern `MIDDLEWARE` setting) and function-based middleware classes
-  (`process_view` / `process_response`, no `__init__(get_response)`).
-- Version control is **Mercurial** (`.hg`), not Git — the `fabfile.py`
-  deploy tasks use `hg pull --update`.
+| | |
+|---|---|
+| Language | Python 3.12 (`Dockerfile`) |
+| Framework | Django 5.2 LTS |
+| Database | PostgreSQL 16 |
+| Cache / broker | Redis |
+| Async | Celery 5.6 (worker + beat) |
+| Search | **PostgreSQL native full-text search** — no Haystack, no Xapian, no third-party search package |
+| Object storage | Amazon S3 via boto3 (user photos) |
+| Config | `django-environ`; every setting reads from the environment |
+| VCS | **git** (`main` = preserved legacy history, `modernize` = active) |
+| CI | GitHub Actions, `modernize` branch only |
 
 ## Repository layout
 
-Each top-level directory is a Django "app" (`INSTALLED_APPS` in
-`sg101/settings/base.py`), following the standard `models.py` / `views.py`
-/ `urls.py` / `admin.py` convention. The Django project package itself is
-`sg101/` (settings, root `urls.py`, WSGI/celery entry points).
+Every top-level directory is a Django app, on the standard
+`models.py` / `views.py` / `urls.py` / `admin.py` / `forms.py` layout. The Django
+*project* package is `sg101/`, not to be confused with the repo root.
 
-```mermaid
-graph TB
-    subgraph Project
-        sg101p["sg101/ (settings, root urls, celery app)"]
-    end
+- `sg101/settings/` — `base.py` holds everything shared; `local.py`,
+  `docker.py`, `docker_test.py`, `production.py`, `test.py` import and override
+  it. `databases.py` is a shared helper.
+- `core/` — the shared kernel every other app may depend on, and which depends
+  on nothing in the repo. Middleware, Redis helper (`services.py`), S3 wrapper
+  (`s3.py`), Markdown/HTML rendering (`markup.py`, `html.py`), pagination, mail
+  (`functions.py`, `tasks.py`, `email_categories.py`), Who's Online.
+- `search/` — the PostgreSQL FTS subsystem built in Step 12: `documents.py`,
+  `indexer.py`, `query.py`, `receivers.py`, `reconcile.py`, `tasks.py`.
+- `tools/` — standalone scripts run directly, not via `manage.py`.
+- `.agents/planning/` — the modernization project's design, research and
+  `STATUS.md`. `STATUS.md` is the authoritative record of what has been done and
+  why.
+- `.agents/tasks/` — per-step code task files driving the work.
 
-    subgraph "Content & Community Apps"
-        forums["forums"]
-        news["news"]
-        bio["bio (user profiles/badges)"]
-        bulletins["bulletins"]
-        comments["comments"]
-        shoutbox["shoutbox"]
-        messages["messages (private messaging)"]
-        polls["polls"]
-        contests["contests"]
-        wiki["wiki (external MoinMoin bridge)"]
-        ygroup["ygroup (archived Yahoo Group posts)"]
-        legacy["legacy (phpBB migration data)"]
-    end
+## Apps by size (model count)
 
-    subgraph "Media & Surf-specific Apps"
-        podcast["podcast"]
-        potd["potd (photo of the day)"]
-        downloads["downloads"]
-        weblinks["weblinks"]
-        bandmap["bandmap"]
-        membermap["membermap"]
-        user_photos["user_photos"]
-        gcalendar["gcalendar (Google Calendar)"]
-        oembed["oembed"]
-        smiley["smiley"]
-    end
+`elsewhere` 13 · `forums` 9 · `downloads` 8 · `weblinks` 7 · `accounts` 6 ·
+`potd` 5 · `messages` 5 · `tagging` 4 · `news` 4 · `bio` 4 · `polls` 3 ·
+`comments` 3 — plus a long tail of two- and one-model apps.
 
-    subgraph "Platform / Cross-cutting Apps"
-        core["core (shared services, middleware, S3, tasks)"]
-        accounts["accounts"]
-        antispam["antispam"]
-        custom_search["custom_search (Haystack glue)"]
-        banners["banners"]
-        countdown["countdown"]
-        contact["contact"]
-        donations["donations"]
-        irc["irc"]
-    end
+`wiki` and `antispam` are behavioural apps; `wiki` has no models at all.
 
-    sg101p --> core
-    core --> forums
-    core --> news
-    core --> bio
-    core --> podcast
-    core --> potd
-    core --> downloads
-    core --> weblinks
-    core --> accounts
-    core --> antispam
-    core --> custom_search
-```
+## Modernization status
 
-## Third-party service integrations
+The repo is mid-project. `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`
+is authoritative; the short version is that Steps 1-16 are complete (Docker, git,
+12-factor config, dead-code prune, Python 3, Django 5.2, PostgreSQL, native
+search, S3, transactional email) and Step 17 (CAPTCHA) is in progress.
 
-- **MySQL** (production/local) / **SQLite** (test settings) — relational DB
-- **Redis** — Who's-Online tracking, the `queues`/`queued_search` async job
-  backend, and the Celery broker
-- **Celery** — scheduled/background jobs (`sg101/celery.py`,
-  `CELERYBEAT_SCHEDULE` in `settings/base.py`)
-- **Xapian** (via `django-haystack` + `xapian-haystack`) — full text search
-- **Amazon S3** (via `boto`) — user photo storage (`user_photos`,
-  `core/s3.py`)
-- **Google APIs** — Calendar integration (`gcalendar`, OAuth2 via
-  `google-api-python-client`)
-- **PayPal** — `donations` app processes IPN callbacks
-- **MoinMoin wiki** — external app, bridged via signed cookies
-  (`wiki/middleware.py`) and a shared Redis set
-- **reCAPTCHA** — spam prevention (`antispam`, settings `RECAPTCHA_*`)
-- **fail2ban** — reads the `auth` logger populated by
-  `antispam/receivers.py` login signal handlers
-
-## Where to look next
-
-See `.agents/summary/index.md` for a guided tour of the rest of the
-generated documentation.
+**A consequence worth knowing:** some subsystems are transitional. Both
+reCAPTCHA and Turnstile settings exist right now; the contact form still uses
+reCAPTCHA. Check `STATUS.md` before assuming either is the live one.

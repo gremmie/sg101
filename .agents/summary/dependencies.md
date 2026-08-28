@@ -1,84 +1,41 @@
 # Dependencies
 
-Pinned in `requirements.txt` (production + dev) and `requirements_dev.txt`
-(adds dev-only tooling on top via `-r requirements.txt`).
+**Generated 2026-08-27.** Versions from `requirements.txt`; treat that file as
+authoritative and this as orientation.
 
-## Framework & data layer
+## Core
 
-- **Django 1.8.15** — web framework (old-style `MIDDLEWARE_CLASSES`,
-  pre-`AppConfig.ready()` idioms in older apps)
-- **MySQL-python** — MySQL DB driver
-- **django-picklefield** — pickled-object model fields
-- **django-tagging** — tagging support (`FORCE_LOWERCASE_TAGS`,
-  `MAX_TAG_LENGTH` in settings)
+| Package | Version | Role |
+|---|---|---|
+| Django | 5.2.17 | LTS |
+| psycopg2 | 2.9.12 | PostgreSQL driver |
+| celery | 5.6.3 | background and scheduled work |
+| redis | 6.4.0 | cache, broker, presence |
+| django-environ | 0.14.0 | 12-factor config |
+| boto3 | 1.43.72 | S3 (user photos) |
+| requests | 2.34.2 | outbound HTTP |
+| Pillow | 12.3.0 | image handling |
 
-## Search
+Runtime is **Python 3.12** (`Dockerfile`).
 
-- **django-haystack 2.4.1** — search abstraction layer
-- **xapian-haystack** (installed from a pinned commit of
-  `github.com/notanumber/xapian-haystack`, not PyPI) — Xapian backend for
-  Haystack
-- **queued-search 2.1.0** + `-e hg+ssh://.../queues` (private Mercurial
-  dependency, "queues-dev") — the batching queue in front of Xapian
-  indexing described in [workflows.md](workflows.md)
+## Deliberately absent
 
-## Async / background jobs
+- **No Haystack, Xapian, or third-party search package.** Search is native
+  PostgreSQL FTS. `tools/xapian_installer.sh` is a leftover of the removed stack
+  and installs nothing this project uses.
+- **No `django-anymail`.** Email is SMTP through environment configuration; the
+  provider swap needed no package.
+- **No linter or formatter config** in the repo.
+- **No `secrets.json`.** Retired in Step 3.
 
-- **celery 3.1.86**, **kombu**, **amqp**, **billiard**, **anyjson** —
-  task queue stack
-- **redis**, **python-memcached** — Redis client (broker + Who's-Online
-  + wiki cookie set) and memcached client (production cache backend)
+## Services, not packages
 
-## External service SDKs
+PostgreSQL 16, Redis, Amazon S3, Postmark, Cloudflare (DNS/CDN/WAF, Email
+Routing, Turnstile), Google Calendar, PayPal, and an external MoinMoin wiki.
 
-- **boto 2.13.0** — Amazon S3 client (`core/s3.py`, `user_photos`)
-- **google-api-python-client**, **oauth2client**, **httplib2**,
-  **uritemplate**, **pyasn1**, **pyasn1-modules**, **rsa** — Google
-  Calendar OAuth2 integration (`gcalendar`)
-- **requests** — general HTTP client
+## Version discipline
 
-## Content processing
-
-- **Markdown 2.5.1** — renders user-authored profile/signature/post text
-  to HTML (`core/markup.py`)
-- **bleach 1.4**, **html5lib 1.0b3**, **lxml 3.4.2**, **docutils 0.10** —
-  HTML sanitizing/parsing pipeline for user-submitted content
-- **ftfy 2.0.1** — fixes mangled Unicode/mojibake in imported text (used
-  heavily by the `legacy`/`ygroup` phpBB and Yahoo Group import tooling)
-- **Pillow 2.7.0** — image processing (avatars, user photos, POTD)
-
-## Misc
-
-- **django-elsewhere** (installed from a pinned GitHub commit, app name
-  `elsewhere`) — backs the "elsewhere" section of a user's profile
-  (`bio`'s `edit_elsewhere` view/template): social network profiles,
-  instant messenger handles, and personal websites a member lists on
-  their profile page (`SocialNetworkForm`, `InstantMessengerForm`,
-  `WebsiteForm`, `WebsiteProfile` models)
-- **python-dateutil 1.5**, **pytz** — date/time handling
-- **repoze.timeago** — human-readable relative timestamps ("3 hours ago")
-- **simplejson**, **six** — JSON/Py2-3 compat shims
-
-## Dev-only (`requirements_dev.txt`)
-
-- **Fabric 1.4.1** — deployment automation (`fabfile.py`)
-- **django-debug-toolbar 1.4** — auto-enabled in `settings/local.py`
-  when `DEBUG=True` and the package is importable
-- **mock**, **testfixtures** — test helpers
-- **pycrypto**, **ssh** — dependencies of Fabric's SSH transport
-- **sqlparse** — SQL formatting (debug toolbar dependency)
-
-## Pinned VCS dependencies (not on PyPI)
-
-Three packages are installed via `-e` (editable) VCS URLs at specific
-commits rather than version numbers — treat these as vendored/forked code
-whose source lives outside this repo:
-
-```
-git+https://github.com/gremmie/django-elsewhere.git@1203bd3...
-git+https://github.com/notanumber/xapian-haystack.git@a3a3a4e...
-hg+ssh://brian@bobcat//svr/dvcs/hg/repos/public/queues@862e884...
-```
-
-Upgrading these requires access to the referenced repos/hosts, not just
-a PyPI version bump.
+The **deprecation gate** — the suite run with deprecation warnings promoted to
+errors — is the mechanism that has caught every Django removal a version before
+it landed. It is not optional tooling; it is how the upgrade ladder was climbed
+safely. See `workflows.md`.

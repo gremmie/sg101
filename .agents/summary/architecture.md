@@ -1,100 +1,105 @@
 # Architecture
 
-## Overall shape
+**Generated 2026-08-27.**
 
-sg101 is a monolithic Django application: one WSGI process serves all
-apps, backed by MySQL, with Redis + Celery handling anything asynchronous.
-There is no separate API service or SPA frontend — views render Django
-templates server-side (`sg101/templates/` plus each app's own
-`templates/<app>/` directory, loaded via `APP_DIRS: True`).
+## Runtime shape
+
+```mermaid
+graph TB
+    B[Browser] --> CF[Cloudflare<br/>DNS, CDN, TLS, WAF]
+    CF --> AP[Apache + mod_wsgi<br/>mod_remoteip rewrites REMOTE_ADDR]
+    AP --> DJ[Django 5.2 / Python 3.12]
+    DJ --> PG[(PostgreSQL 16<br/>relational + full-text search)]
+    DJ --> RD[(Redis<br/>cache, Celery broker, Who's Online)]
+    DJ --> S3[Amazon S3<br/>user photos]
+    DJ --> PM[Postmark<br/>transactional email]
+    CE[Celery worker] --> PG
+    CE --> RD
+    BT[Celery beat] --> RD
+    DJ -. enqueue .-> RD
+    RD -. consume .-> CE
+```
+
+**`mod_remoteip` is load-bearing and easy to miss.** Every `REMOTE_ADDR` reader
+in the codebase — `antispam`, `accounts`, `forums`, `comments`, `downloads`,
+`donations` — is correct only because Apache rewrites it from `CF-Connecting-IP`
+for Cloudflare's ranges. Nothing in the repo performs that rewrite and Django
+does not do it itself. `core.functions.get_ip` documents this deliberately and
+reads `REMOTE_ADDR` only, never `X-Forwarded-For`, which any client can forge.
+
+## Dependency direction
 
 ```mermaid
 graph LR
-    Browser -->|HTTP| WSGI[Apache mod_wsgi / Django]
-    WSGI --> MySQL[(MySQL)]
-    WSGI --> Memcached[(Memcached)]
-    WSGI --> Redis[(Redis)]
-    WSGI --> Xapian[(Xapian index files)]
-    WSGI --> S3[(Amazon S3)]
-    Redis --> Celery[Celery workers]
-    Celery --> MySQL
-    Celery --> Redis
-    WSGI -.signed cookie.-> MoinMoin[External MoinMoin Wiki]
-    Redis -.cookie verification set.-> MoinMoin
+    CORE[core<br/>depends on nothing in-repo]
+    FEATS[feature apps<br/>forums, news, downloads, ...]
+    SEARCH[search]
+    ANTI[antispam]
+    FEATS --> CORE
+    SEARCH --> CORE
+    ANTI --> CORE
+    SEARCH -. signals .-> FEATS
+    FEATS -. spam checks .-> ANTI
 ```
 
-## Settings module hierarchy
+`core` is the shared kernel: importable by anything, importing nothing from the
+repo. Treat that as an invariant — it is what keeps the app graph acyclic.
 
-`sg101/settings/base.py` holds all shared settings. Environment-specific
-files import `*` from it and override:
+**`antispam` has two shapes inside it.** `antispam/utils.py` reaches into `bio`,
+`comments`, `forums` and `user_photos`, so importing it drags four app graphs
+along. `antispam/decorators.py` and `antispam/turnstile.py` are deliberately
+narrow — stdlib and settings only — so form modules can use them without that.
+Follow the narrow shape when adding something with callers in several apps.
+
+## Search
+
+Native PostgreSQL full-text search, built in Step 12 to replace a
+Xapian/Haystack stack that had been disabled for years and was removed wholesale
+in Step 4.
+
+```mermaid
+graph LR
+    M[Model save/delete] --> SIG[search/receivers.py]
+    SIG --> T[Celery task]
+    T --> IDX[search/indexer.py]
+    IDX --> DOC[(SearchDocument<br/>tsvector)]
+    Q[search/query.py] --> DOC
+    REC[search/reconcile.py<br/>weekly sweep] --> DOC
+```
+
+Eight document types over one index. Maintenance is incremental via signals
+through Celery, and a weekly sweep reconciles drift rather than assuming the
+signals never miss.
+
+## Settings
 
 ```mermaid
 graph TD
-    base["base.py<br/>(INSTALLED_APPS, MIDDLEWARE_CLASSES,<br/>CELERYBEAT_SCHEDULE, all *_SETTINGS)"]
-    base --> local["local.py<br/>(dev: MySQL, debug toolbar, file logging)"]
-    base --> production["production.py<br/>(HTTPS, memcached cache, ManifestStaticFilesStorage)"]
-    base --> test["test.py<br/>(SQLite, CELERY_ALWAYS_EAGER, disabled logging)"]
-    base --> mac["mac.py"]
+    BASE[base.py<br/>everything shared] --> LOCAL[local.py]
+    BASE --> DOCKER[docker.py]
+    BASE --> DTEST[docker_test.py]
+    BASE --> PROD[production.py]
+    BASE --> TEST[test.py]
+    DBH[databases.py<br/>shared helper] -.-> BASE
 ```
 
-`manage.py` hardcodes `DJANGO_SETTINGS_MODULE=sg101.settings.local` as the
-default; other environments set `DJANGO_SETTINGS_MODULE` explicitly (see
-`fabfile.py`'s `collectstatic` task using `--settings=sg101.settings.production`).
+**12-factor since Step 3.** Every setting reads the environment through
+`django-environ`. `.env` is git-ignored and loaded by Compose via `env_file:`;
+`.env.example` is committed and is what CI seeds itself from. **There is no
+`secrets.json`** — retired in Step 3, and any doc mentioning it is stale.
 
-All settings files require `sg101/settings/secrets.json` to exist (loaded
-in `base.py` via `SECRETS = json.load(...)`) — it is not checked into
-version control (`.hgignore`). It supplies `SECRET_KEY`, DB credentials,
-AWS keys, Google OAuth client id/secret, and the reCAPTCHA keys.
+`manage.py` defaults to `sg101.settings.local`.
 
-## App conventions
+## Content rendering
 
-Nearly every app follows the same internal file layout:
+Markdown renders **at save time**, not per request, into a sibling field:
+`UserProfile.profile_text` → `profile_html`, `Post.body` → `html`. Changing how
+a field renders therefore needs a data migration to re-render existing rows — a
+template change alone will not do it. Rendering lives in `core/markup.py`.
 
-| File | Purpose |
-|---|---|
-| `models.py` | Django models, often with a custom `Manager` exposing a `public_objects`-style queryset for moderated/public content |
-| `views.py` | Function- or class-based views |
-| `urls.py` | App-local URL patterns, included from `sg101/urls.py` under a path prefix |
-| `admin.py` | `ModelAdmin` registrations |
-| `forms.py` | `ModelForm`/`Form` subclasses |
-| `receivers.py` | Django signal handlers, connected via the app's `AppConfig.ready()` (see `apps.py` where present) |
-| `search_indexes.py` | Haystack `SearchIndex` classes for full-text search |
-| `tasks.py` | Celery `@shared_task` functions |
+## Moderation
 
-Apps that pre-date Django 1.7's `AppConfig` (no `apps.py`) connect signals
-in a `receivers.py` imported directly instead.
-
-## Cross-cutting patterns
-
-- **Public/pending moderation split**: several content apps (`downloads`,
-  `weblinks`, `news`) split a base model (`DownloadBase`, `LinkBase`,
-  `StoryBase`) into a `Pending*` variant awaiting moderation and the live
-  public model, rather than a boolean flag on one table.
-- **Signal-driven decoupling**: apps avoid importing each other directly
-  in `models.py`; instead cross-app reactions (search indexing, spam
-  logging, wiki cookie issuance) are wired up in `receivers.py`/signal
-  handler modules. `custom_search/receivers.py` is the best example —
-  it centralizes which models feed the search index and under what
-  conditions (e.g., only if `is_public`).
-- **Async via a job queue, not just Celery**: two different async
-  mechanisms coexist — Celery (via `kombu`, broker on Redis) for
-  scheduled/background tasks, and the separate `queues` /
-  `queued_search` packages (also Redis-backed) specifically for
-  batching search-index updates so a spike in edits doesn't hammer
-  Xapian synchronously.
-- **`core` app as shared kernel**: cross-app utilities live in `core`
-  (S3 wrapper, Redis connection helper, Who's-Online tracking, custom
-  middleware, Markdown rendering, pagination, a `FixedView` for static
-  content pages). Most other apps depend on `core`; `core` depends on
-  none of them.
-- **External wiki bridge**: the `wiki` app has no models — it exists
-  purely to mint a signed cookie (`wiki/middleware.py`) that a separate
-  MoinMoin wiki application (outside this repo) validates, with the set
-  of valid cookie hashes maintained in Redis.
-
-## Naming gotcha
-
-The `messages` app (private user-to-user messaging) shares its name with
-`django.contrib.messages`. This is resolved in `sg101/apps.py` via
-`DjangoMessagesConfig`, which relabels the built-in app to
-`django_messages` so both can coexist in `INSTALLED_APPS`.
+`downloads`, `weblinks` and `news` use **split models rather than a boolean
+flag**: a `*Base` model subclassed into a `Pending*` model and the live public
+model (`DownloadBase` → `PendingDownload` / `Download`), each with its own
+manager. Extend that pattern rather than adding an `is_approved` field.

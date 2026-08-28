@@ -1,85 +1,59 @@
-# Interfaces
+# Interfaces and Integration Points
 
-## URL routing
+**Generated 2026-08-27.**
 
-`sg101/urls.py` is the single root URLconf. It mounts each app's own
-`urls.py` under a fixed prefix, plus a handful of routes defined directly
-(home page, static "fixed" pages, password reset, Haystack search views,
-RSS feeds).
+## URL structure
 
-```mermaid
-graph LR
-    root["sg101/urls.py"]
-    root -->|"/accounts/"| accounts
-    root -->|"/antispam/"| antispam
-    root -->|"/bandmap/"| bandmap
-    root -->|"/calendar/"| gcalendar
-    root -->|"/comments/"| comments
-    root -->|"/contact/"| contact
-    root -->|"/contests/"| contests
-    root -->|"/core/"| core
-    root -->|"/donations/"| donations
-    root -->|"/downloads/"| downloads
-    root -->|"/forums/"| forums
-    root -->|"/irc/"| irc
-    root -->|"/links/"| weblinks
-    root -->|"/member_map/"| membermap
-    root -->|"/messages/"| messages
-    root -->|"/news/"| news
-    root -->|"/oembed/"| oembed
-    root -->|"/podcast/"| podcast
-    root -->|"/polls/"| polls
-    root -->|"/potd/"| potd
-    root -->|"/profile/"| bio
-    root -->|"/shout/"| shoutbox
-    root -->|"/smiley/"| smiley
-    root -->|"/user_photos/"| user_photos
-    root -->|"/ygroup/"| ygroup
-    root -->|"/search/"| haystack["Haystack search views"]
-    root -->|"/feeds/news/, /feeds/forums/"| feeds["RSS feeds"]
-```
+`sg101/urls.py` mounts each app's own `urls.py` under a prefix. **Prefixes do not
+always match app names** — `bio` → `/profile/`, `weblinks` → `/links/`,
+`gcalendar` → `/calendar/`. Grep `sg101/urls.py` rather than guessing.
 
-Note the prefix doesn't always match the app name — `bio` is mounted at
-`/profile/`, `weblinks` at `/links/`, `gcalendar` at `/calendar/`.
+## External services
 
-## RSS/Atom feeds
-
-- `/feeds/news/` → `news.feeds.LatestNewsFeed` (cached 6h)
-- `/feeds/forums/` and `/feeds/forums/<forum_slug>/` →
-  `forums.feeds.ForumsFeed` (cached 5m)
-
-## Full-text search
-
-`/search/` and `/search/ajax/` are Haystack `search_view_factory` views
-using `custom_search.forms.CustomModelSearchForm` and
-`custom_search.views.UserSearchView`, querying a `SearchQuerySet` ordered
-by `-pub_date`. The searchable models are wired up in
-`custom_search/receivers.py`: `ygroup.Post`, `weblinks.Link` (if public),
-`podcast.Item`, `news.Story`, `downloads.Download` (if public),
-`forums.Topic`/`forums.Post` (if in a public forum), `bio.UserProfile`.
-Each searchable app has a `search_indexes.py` defining its Haystack
-`SearchIndex`.
-
-## External service integrations
-
-| Integration | Module(s) | Notes |
+| Service | Used by | Notes |
 |---|---|---|
-| PayPal IPN | `donations/views.py` (`ipn` view, `/donations/ipn/`) | `csrf_exempt` webhook; verifies the postback by re-POSTing to PayPal via `curl` (see `verify_request`). Sandbox vs. live selected by `DONATIONS_DEBUG`. |
-| Amazon S3 | `core/s3.py` (`S3Bucket`), used by `user_photos` | Uploads/deletes photos; bucket/keys come from `USER_PHOTOS_*` settings (secrets-backed). |
-| Google Calendar + OAuth2 | `gcalendar/oauth.py`, `gcalendar/calendar.py` | Reads/writes a shared Google Calendar (`GCAL_CALENDAR_ID`); credentials cached at `GCAL_CREDENTIALS_PATH`. |
-| oEmbed | `oembed/core.py`, `/oembed/fetch/`, `/oembed/fetch_saved/` | Fetches and caches oEmbed metadata (e.g., for embedded YouTube links) so it isn't refetched on every page render. |
-| reCAPTCHA | `antispam` (decorator + settings `RECAPTCHA_*`) | Verifies against `https://www.google.com/recaptcha/api/siteverify`. |
-| External MoinMoin wiki | `wiki/middleware.py` | Not an HTTP API call — issues a signed cookie (`WIKI_COOKIE_NAME`) and records a verification hash in a Redis set (`WIKI_REDIS_SET`) that the external wiki reads directly. |
-| IRC channel roster | `irc/channel.py` | Reads the `irc:channel_members` Redis key to display who's currently in the site's IRC channel; something outside this repo (an IRC bot) is responsible for writing that key. |
-| fail2ban | `antispam/receivers.py` → `auth` logger | Not code-level; fail2ban tails `logs/auth.log` for failed-login lines. |
+| PostgreSQL 16 | everything | also the search engine |
+| Redis | `core/services.py`, Celery, `whos_online`, `wiki` | cache + broker + presence |
+| Amazon S3 | `user_photos`, `core/s3.py` | boto3 |
+| Postmark | `core/functions.send_mail` → `core/tasks.py` | SMTP, via env config only |
+| Cloudflare Turnstile | `antispam/turnstile.py` | Step 17, not yet wired to forms |
+| Google reCAPTCHA | `contact/forms.py` | **being replaced**; see `STATUS.md` |
+| Google Calendar | `gcalendar` | carries a Step 8 stub |
+| PayPal IPN | `donations` | legacy API |
+| MoinMoin wiki | `wiki/middleware.py` | external app, signed-cookie handshake via Redis |
 
-## Admin & docs
+## Mail
 
-- Django admin at `/admin/` (every app registers models via its
-  `admin.py`).
-- `django.contrib.admindocs` mounted at `/admin/doc/`.
+Almost all site mail goes through `core.functions.send_mail` → a Celery task,
+which is why swapping providers was close to settings-only. Every message
+carries an `EmailCategory`, logged one line per send to `email.log` — never the
+body.
 
-## Celery task interface
+**Two paths bypass the wrapper**, and both are documented rather than accidental:
+Django's `AdminEmailHandler` (error reports), and historically the stock
+password-reset view — the latter now uses `SitePasswordResetForm`
+(`accounts/urls.py`) specifically to stop it sending inline and outside the
+wrapper.
 
-See [workflows.md](workflows.md) for the scheduled task list
-(`CELERYBEAT_SCHEDULE`) and the two async mechanisms in play.
+## Logging
+
+Configured in each settings module. Dedicated files with their own handlers:
+
+| Logger | File | Notes |
+|---|---|---|
+| `auth` | `auth.log` | `propagate: False`. Watched by `fail2ban`. Registration and login failures with IPs. |
+| `search` | `search.log` | `propagate: False` — keeps query volume out of `sg101.log` |
+| `email` | `email.log` | **`propagate: True`** — deliberately lands in both files |
+| root | `sg101.log` | everything else |
+
+**Retention differs sharply and decides what questions can be asked.**
+`sg101.log` rotates at 100 KB x 10 (~5 months in practice); `auth.log` at
+2 MB x 5 (over 19 months). A question about registration history is answerable;
+one about contact-form history five months back is not.
+
+## HTTP clients
+
+`requests` is the only HTTP client. **Pass a timeout.** `antispam/turnstile.py`
+takes `TURNSTILE_TIMEOUT` and is the pattern to copy;
+`contact/forms.py` predates it and passes none, which is a known defect awaiting
+Step 17 task 02.

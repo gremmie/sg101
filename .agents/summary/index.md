@@ -1,43 +1,61 @@
-# SG101 Knowledge Base Index
+# Knowledge Base Index
 
-This directory (`.agents/summary/`) contains generated documentation for
-the **sg101** codebase (the Django app behind SurfGuitar101.com). It is
-intended as the primary file an AI assistant loads into context before
-answering questions about this repo — it summarizes what each other file
-contains so you can decide which ones to actually read.
+**Generated 2026-08-27.** Start here. This file is designed to be the only one
+an assistant needs in context to know where to look next.
 
-**Also see the root-level `AGENTS.md`** — a shorter, navigation-focused
-version of this material meant to always be in context. This index and
-its linked files go deeper.
+## How to use this
 
-## How to use this index
+1. Read the "Read this first" facts below — they are the ones most likely to
+   make an assistant wrong if it assumes otherwise.
+2. Pick the file that matches the question from the table.
+3. For *why* something is the way it is, go to
+   `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`. It is
+   authoritative, and it records measurements, not just decisions.
 
-1. Read this file first.
-2. Based on the question, open only the specific file(s) below that are
-   relevant — you don't need to load all of them.
-3. If the question is about a specific app (e.g. "how does the forums
-   permission system work?"), start with [components.md](components.md)
-   to confirm which app owns that behavior, then check
-   [architecture.md](architecture.md) or [workflows.md](workflows.md)
-   for the cross-cutting pattern it follows.
+## Read this first
 
-## Files in this knowledge base
+- **Python 3.12, Django 5.2 LTS, PostgreSQL 16, git.** Any document saying
+  Python 2, Django 1.x, MySQL, Mercurial, `secrets.json`, Xapian or Haystack is
+  stale. `README.md` currently says several of these.
+- **The repo is mid-modernization.** Steps 1-16 done, Step 17 in progress. Some
+  subsystems are transitional — both reCAPTCHA and Turnstile settings exist
+  right now. Check `STATUS.md` before assuming which is live.
+- **Two test runs, not one.** The suite, then the deprecation gate. See
+  `workflows.md`; the gate script only prints a filter.
+- **`.env` is the config surface.** No `secrets.json`. `.env.example` is
+  committed and has working defaults.
+- **`fabfile.py` is stale** — it still runs `hg pull`. Deployment is Step 21 and
+  has not happened.
 
-| File | Contents | Read this when... |
-|---|---|---|
-| [codebase_info.md](codebase_info.md) | What the project is, language/framework versions, repo layout diagram, third-party service list | You need a first orientation to the whole codebase |
-| [architecture.md](architecture.md) | Deployment topology diagram, settings module hierarchy (`base`/`local`/`production`/`test`), shared app conventions, cross-cutting design patterns (public/pending split, signal-driven decoupling, `core` as shared kernel), the `messages` app-label collision gotcha | You're changing settings, adding a new app, or need to understand *why* the code is structured the way it is |
-| [components.md](components.md) | Every top-level app, grouped (platform/shared, community/content, media/surf-specific), with a one-paragraph description of each | You need to find which app owns a piece of functionality, or want a directory-by-directory tour |
-| [interfaces.md](interfaces.md) | Root URL routing map, RSS feeds, full-text search endpoints, external service integrations (PayPal IPN, S3, Google Calendar OAuth2, oEmbed, reCAPTCHA, the wiki cookie bridge, fail2ban) | You're adding a route, integrating a new external service, or tracing an HTTP entry point |
-| [data_models.md](data_models.md) | Forums ER diagram, `UserProfile` fields, the pending/public model-split pattern (`downloads`/`weblinks`/`news`), other notable models, the raw-text/rendered-HTML sibling-field pattern | You're adding/changing a model or writing a migration |
-| [workflows.md](workflows.md) | Celery beat schedule, the two async mechanisms (Celery vs. `queued_search`) and how they relate, the search-indexing signal flow, moderation/pending-content flow, Who's-Online tracking, the wiki auth cookie sequence, PayPal donation flow, deployment via Fabric | You're debugging a background job, a search-indexing gap, or the deploy process |
-| [dependencies.md](dependencies.md) | Every pinned dependency grouped by purpose, with special callout for the three VCS-pinned (non-PyPI) packages | You're upgrading a dependency or unsure what a third-party import is for |
-| [review_notes.md](review_notes.md) | Known documentation gaps and consistency notes from generating this knowledge base | You suspect these docs might be incomplete or stale in a specific area |
+## The files
 
-## Example queries and where to look
+| File | Consult it for |
+|---|---|
+| `codebase_info.md` | stack, repo layout, app inventory, modernization status |
+| `architecture.md` | runtime shape, dependency direction, search design, settings inheritance, the `mod_remoteip` dependency |
+| `components.md` | what each app does, grouped by role; the `core` kernel; the `messages` app collision |
+| `interfaces.md` | URL prefixes, external services, the mail path, **logging and its retention limits** |
+| `data_models.md` | user/profile relationship, split moderation models, rendered-HTML siblings, search index |
+| `workflows.md` | dev setup, **the two test commands**, test gotchas, CI, deployment status |
+| `dependencies.md` | package versions, what is deliberately absent |
+| `review_notes.md` | known gaps in this documentation and what was not verified |
 
-- *"Where do I add a new page like /about?"* → [interfaces.md](interfaces.md) (root URL routing), then `sg101/urls.py` + `core/views.py` (`FixedView`) directly.
-- *"How does content get moderated before going public?"* → [workflows.md](workflows.md) § Moderation, [data_models.md](data_models.md) § Pending/public pattern.
-- *"Why isn't my new model showing up in search results?"* → [workflows.md](workflows.md) § Search indexing flow — check `custom_search/receivers.py`'s `signal_chain`.
-- *"What needs to be in `secrets.json` to run this locally?"* → [architecture.md](architecture.md) § Settings module hierarchy.
-- *"What does the `queues` package do and where does it come from?"* → [dependencies.md](dependencies.md) § Pinned VCS dependencies, [workflows.md](workflows.md) § Two async mechanisms.
+## Example questions and where they go
+
+| Question | File |
+|---|---|
+| "How do I run the tests?" | `workflows.md` |
+| "Why does `assertLogs` see nothing?" | `workflows.md` |
+| "Where does search indexing happen?" | `architecture.md`, then `components.md` |
+| "Can I add an `is_approved` field?" | `data_models.md` (no — split models) |
+| "Why is `REMOTE_ADDR` trusted?" | `architecture.md` |
+| "How far back does the log go?" | `interfaces.md` |
+| "Why was X done this way?" | `STATUS.md`, not this tree |
+
+## Relationship to the planning record
+
+This tree describes **what the code is**. `.agents/planning/` describes **how it
+got that way and why**, with measurements attached. When the two disagree,
+`STATUS.md` is the more reliable, because it is maintained continuously while
+this tree is regenerated only occasionally — this generation replaced one that
+had been wrong for six weeks.

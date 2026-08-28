@@ -1,120 +1,88 @@
 # Workflows
 
-## Scheduled (Celery beat) jobs
+**Generated 2026-08-27.**
 
-Defined in `CELERYBEAT_SCHEDULE` (`sg101/settings/base.py`):
+## Local development
 
-```mermaid
-graph TD
-    beat["Celery beat"] -->|"daily @ 00:00"| potd["potd.tasks.pick_potd<br/>rotate photo of the day"]
-    beat -->|"daily @ 01:00"| cleanup["core.tasks.cleanup<br/>clear old sessions + forum last-visit rows"]
-    beat -->|"weekly Sun @ 01:30"| purge["messages.tasks.purge_messages<br/>hard-delete messages both parties deleted"]
-    beat -->|"every 15 min"| maxusers["core.tasks.max_users<br/>update who's-online peak stats"]
-    beat -->|"every 20 min"| searchq["custom_search.tasks.process_search_queue_task<br/>drain the queued_search backlog into Xapian"]
-    beat -->|"daily @ 02:00"| wikicookies["wiki.tasks.expire_cookies<br/>trim expired entries from the wiki auth Redis set"]
+The stack is Docker Compose. Services: `postgres` (16), `redis`, `web`,
+`worker`, `beat`, and `db` (mysql:5.7) which is **profile-gated behind
+`--profile mysql`** and exists only for snapshot conversion and verification
+against the pre-migration database.
+
+```
+docker compose up -d
+docker compose exec web python manage.py migrate
 ```
 
-## Two async mechanisms — don't conflate them
+`.env` is git-ignored and loaded via Compose's `env_file:`. Seed it from the
+committed `.env.example`, which carries working defaults — including
+Cloudflare's public Turnstile test keys, so a fresh checkout has working forms
+with no account anywhere.
 
-1. **Celery** — the scheduled jobs above, plus any one-off
-   `@shared_task` calls (e.g. `core.tasks.send_mail`). Broker is Redis
-   (`BROKER_URL`), tasks run eagerly/synchronously under
-   `sg101/settings/test.py` (`CELERY_ALWAYS_EAGER = True`).
-2. **`queues` / `queued_search`** — a separate Redis-backed job queue
-   used *specifically* to batch search-index updates
-   (`custom_search/receivers.py` enqueues on model save/delete;
-   `custom_search.tasks.process_search_queue_task`, itself a Celery
-   task run every 20 minutes, drains that queue into Xapian). This
-   indirection exists so bulk edits don't trigger synchronous Xapian
-   writes on every request. It can be disabled site-wide via
-   `SEARCH_QUEUE_ENABLED = False` — useful while rebuilding the search
-   index from scratch.
+## Testing — two runs, not one
 
-## Search indexing flow
-
-```mermaid
-sequenceDiagram
-    participant View
-    participant Model
-    participant Signal as Django/custom signal
-    participant Processor as QueuedSignalProcessor
-    participant RedisQ as Redis queue (queued_search)
-    participant CeleryTask as process_search_queue_task
-    participant Xapian
-
-    View->>Model: save() / delete()
-    Model->>Signal: post_save / post_delete (or custom content_update signal)
-    Signal->>Processor: dispatch
-    Processor->>Processor: check is_public / forum visibility
-    Processor->>RedisQ: enqueue_save or enqueue_delete
-    Note over CeleryTask: runs every 20 min via Celery beat
-    CeleryTask->>RedisQ: dequeue batch
-    CeleryTask->>Xapian: update index
+```
+docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 
-Forum `Topic`/`Post` use custom signals (`topic_content_update`,
-`post_content_update` in `forums/signals.py`) instead of plain
-`post_save`, because indexability depends on the *parent forum's*
-public/private status, not a field on the model itself.
+**The deprecation gate is a separate run**, and it is what has caught every
+Django removal on this project a version before it landed:
 
-## Moderation / pending-content workflow
-
-`downloads`, `weblinks`, and `news` share the same shape: a user
-submission lands in the `Pending*` model; a moderator (via `admin.py` or
-an app-specific moderation view) promotes it into the public model
-(`Download`, `Link`, `Story`). Only the public model is search-indexed
-and shown in public listings (`public_objects` managers). Flagging
-(`FlaggedLink`, `FlaggedPost`, `CommentFlag`, `ShoutFlag`) is the inverse
-flow — public content gets reported by users and routed to moderators.
-
-## User registration
-
-`accounts.PendingUser` holds a registration until the user confirms via
-an emailed link; `IllegalUsername`/`IllegalEmail` blocklists are checked
-at registration time before a `PendingUser` is even created.
-
-## Who's-Online tracking
-
-`core.middleware.WhosOnline.process_response` runs on every non-AJAX
-response: for an authenticated user it calls `report_user()` at most once
-per `ONLINE_TIMEOUT` (5 min, tracked via the `sg101_online` cookie); for
-anonymous visitors with cookies enabled it calls `report_visitor(ip)`
-instead. `core.tasks.max_users` (every 15 min) rolls this into peak
-online/visitor statistics (`core/whos_online.py`).
-
-## External wiki authentication bridge
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Django as sg101 Django app
-    participant Redis
-    participant Wiki as External MoinMoin wiki
-
-    User->>Django: authenticated request
-    Django->>Django: wiki.middleware.create_wiki_session()
-    Django->>Redis: ZADD verification hash, score=now
-    Django-->>User: Set-Cookie sg101_wiki=username#email#hash
-    User->>Wiki: request with sg101_wiki cookie
-    Wiki->>Redis: check hash exists in set
-    Redis-->>Wiki: valid / invalid
-    Note over Django,Redis: wiki.tasks.expire_cookies runs daily @ 02:00 to ZREMRANGEBYSCORE old entries
+```
+docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
+    python manage.py test --noinput --settings=sg101.settings.docker_test
 ```
 
-## PayPal donation flow
+`tools/deprecation_gate.sh` **only prints the filter**. Running the script and
+seeing exit 0 is not the gate passing — the gate is the suite run with that
+filter applied. The script exists so CI and a developer use one list; a second
+copy typed into the workflow would rot silently.
 
-`donations` renders a PayPal "Donate" button form (params vary by
-`DONATIONS_DEBUG` — sandbox vs. live endpoint). PayPal POSTs an IPN
-notification back to `/donations/ipn/` (`csrf_exempt`); the view
-re-POSTs the payload back to PayPal (`verify_request`, via `curl`) to
-confirm authenticity before recording a `Donation` row. Tests short-circuit
-this HTTP round-trip via `settings.DONATIONS_DEBUG_VERIFY_RESPONSE`.
+**`PYTHONWARNINGS` rather than `-W`, deliberately:** `-W` does not reach
+subprocesses, and `core/tests/test_settings.py` runs assertions through a
+subprocess helper that would otherwise sit outside the gate.
 
-## Deployment (`fabfile.py`)
+## Writing tests — two things that will bite
 
-Fabric tasks run over SSH against the production server:
-`update` (`hg pull --update`), `collectstatic` (runs Django's
-`collectstatic` with `--settings=sg101.settings.production`), `touch`
-(touches the WSGI file to trigger a mod_wsgi reload). There is no CI
-pipeline in this repo — deployment is manual via these three Fabric
-commands.
+**Logging is disabled wholesale in the test settings.** `assertLogs` sees nothing
+until you re-enable it, and the failure presents as a missing log line that is
+not missing:
+
+```python
+old_disable = logging.getLogger().manager.disable
+logging.disable(logging.NOTSET)
+self.addCleanup(logging.disable, old_disable)
+```
+
+`contact/tests/test_views.py` and `antispam/tests/test_turnstile.py` both do
+this.
+
+**`CELERY_TASK_ALWAYS_EAGER` hides worker faults by construction.** A broken
+deferred task passes the suite and fails in a browser. This has happened; see
+Step 16 task 05 in `STATUS.md`.
+
+## CI
+
+`.github/workflows/ci.yml`, on push and PR to **`modernize` only**. `main` is
+preserved legacy history and deliberately has no CI. CI seeds `.env` from
+`.env.example` and builds the same Compose image a developer runs, so the
+database is identical rather than merely similar.
+
+## Deployment
+
+`fabfile.py` exists and is **stale** — its `update` task runs `hg pull --update`,
+from before the Step 2 move to git. Deployment to a new host is Step 21 and has
+not happened. Do not treat `fabfile.py` as the live deploy path.
+
+## Changing anything rendered
+
+Markdown renders at save time into a sibling field. A rendering change needs a
+data migration to re-render existing rows; a template change alone will not.
+
+## Where the project record lives
+
+`.agents/planning/2026-07-04-modernizing-sg101/STATUS.md` is authoritative for
+what has been done and why, including the reasoning behind decisions that look
+odd. `.agents/tasks/.../stepNN/` holds the task files. **Search these before
+concluding something is undocumented** — a great deal of apparent mystery in
+this codebase is recorded there with the measurement attached.

@@ -1,77 +1,97 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this repository. For deeper
-background, see `.agents/summary/index.md` and the files it links to.
+Guidance for AI coding agents working in this repository. Deeper detail lives in
+[`.agents/summary/index.md`](.agents/summary/index.md).
 
 ## What this is
 
-The Django app behind **SurfGuitar101.com**, a community site for
-instrumental surf music fans: forums, news, podcast, photo-of-the-day,
-downloads, weblinks, a band map, private messaging, polls, contests,
-donations, an event calendar, and more. **Python 2 / Django 1.8.15**,
-version-controlled with **Mercurial** (`.hg`, not git).
+The Django application behind **SurfGuitar101.com**, a community site for
+instrumental surf music fans: forums, news, podcast, photo of the day, downloads,
+weblinks, a band map, private messaging, polls, contests, donations, an event
+calendar.
+
+**Python 3.12 / Django 5.2 LTS / PostgreSQL 16 / Redis / Celery. Git.**
+
+The repo is **mid-modernization**: Steps 1-16 are complete, Step 17 is in
+progress. `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md` is the
+authoritative record of what has been done and why.
 
 ## Layout
 
-Every top-level directory is a Django app, following the standard
-`models.py` / `views.py` / `urls.py` / `admin.py` / `forms.py` layout.
-The Django *project* package (settings, root urlconf, Celery bootstrap)
-is `sg101/`, not to be confused with the repo root.
+Every top-level directory is a Django app on the standard layout. The Django
+*project* package is `sg101/`, not the repo root.
 
-- `sg101/settings/base.py` — all shared settings; `local.py` /
-  `production.py` / `test.py` import `base.py` and override.
-- `sg101/urls.py` — root URLconf; mounts every app's own `urls.py` under
-  a prefix (prefixes don't always match app names — `bio` → `/profile/`,
-  `weblinks` → `/links/`, `gcalendar` → `/calendar/`).
-- `core/` — shared kernel other apps depend on: custom middleware, a
-  Redis connection helper (`core/services.py`), an S3 wrapper
-  (`core/s3.py`), Markdown/HTML rendering, pagination, site-wide Celery
-  tasks. `core` depends on nothing else in the repo.
-- `custom_search/` — glues Haystack/Xapian search indexing to the rest
-  of the site via a custom queued signal processor
-  (`custom_search/receivers.py`); this is the file to touch if a new
-  model needs to become searchable.
-- `tools/` — standalone one-off scripts (data migrations, maintenance),
-  run directly rather than via `manage.py`.
-- `.agents/summary/` — generated deep-dive documentation (architecture,
-  per-app component descriptions, data models, workflows, dependencies).
+- `sg101/settings/` — `base.py` holds everything shared; `local.py`,
+  `docker.py`, `docker_test.py`, `production.py`, `test.py` override it.
+- `core/` — the shared kernel: mail wrapper, Markdown rendering, Redis and S3
+  helpers, middleware, pagination. **It imports nothing else in the repo.** Keep
+  it that way.
+- `search/` — native PostgreSQL full-text search.
+- `antispam/` — spam phrases, auth-failure logging, Turnstile verification.
+- `tools/` — standalone scripts, run directly rather than via `manage.py`.
+- `.agents/planning/` and `.agents/tasks/` — the modernization record.
+
+`sg101/urls.py` mounts each app under a prefix, and **prefixes do not always
+match app names** (`bio` → `/profile/`, `weblinks` → `/links/`, `gcalendar` →
+`/calendar/`). Grep it rather than guessing.
+
+## Running things
+
+```
+docker compose up -d
+docker compose exec web python manage.py test --settings=sg101.settings.docker_test
+```
+
+**The deprecation gate is a second, separate run**, and it is what has caught
+every Django removal a version before it landed:
+
+```
+docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
+    python manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+`tools/deprecation_gate.sh` only *prints* the filter. Running it and seeing exit
+0 is **not** the gate passing.
 
 ## Non-obvious things
 
-- **`sg101/settings/secrets.json` is required and gitignored.** All
-  settings modules load it (`SECRETS = json.load(...)` in `base.py`) for
-  `SECRET_KEY`, DB credentials, AWS keys, Google OAuth credentials, and
-  reCAPTCHA keys. There is no committed example/template for it in the
-  repo — ask a maintainer for one rather than guessing its shape.
-- **The `messages` app collides with `django.contrib.messages`.**
-  Resolved in `sg101/apps.py` (`DjangoMessagesConfig`), which relabels
-  the built-in app to `django_messages`. Don't rename this app or its
-  `AppConfig` without understanding why this exists.
-- **Two separate async systems coexist and are easy to confuse**:
-  Celery (scheduled/background jobs, `CELERYBEAT_SCHEDULE` in
-  `base.py`) vs. the `queues`/`queued_search` Redis-backed job queue
-  (used only for batching search-index updates). A Celery task
-  (`custom_search.tasks.process_search_queue_task`, every 20 min) drains
-  the *other* queue — they are not the same thing.
-- **Content moderation uses split models, not a boolean flag.**
-  `downloads`, `weblinks`, and `news` each have a `*Base` model
-  subclassed into a `Pending*` model and the live public model (e.g.
-  `DownloadBase` → `PendingDownload` / `Download`), each with a
-  `public_objects`-style manager. Follow this pattern rather than adding
-  an `is_approved` field if extending these apps.
-- **Rendered HTML is cached in sibling model fields.** e.g.
-  `UserProfile.profile_text`/`profile_html`, `Post.body`/`html`. Markdown
-  is rendered at save time (`core/markup.py`), not per-request — if you
-  change how a field renders, you likely need a data migration to
-  re-render existing rows, not just a template change.
-- **No CI pipeline and no linter config in this repo.** Deployment is
-  manual via Fabric (`fabfile.py`: `update`, `collectstatic`, `touch`),
-  driven over SSH against the production host. There's nothing to check
-  for a "wire up CI" task because there isn't one to extend.
-- **The `wiki` app has no models.** It exists purely to mint a signed
-  cookie (`wiki/middleware.py`) that a separate external MoinMoin wiki
-  application validates against a Redis set — don't look for wiki
-  content models in this repo, they don't exist here.
+- **Config is 12-factor and there is no `secrets.json`.** Everything reads the
+  environment via `django-environ`. `.env` is git-ignored; `.env.example` is
+  committed with working defaults and is what CI seeds from.
+- **Logging is disabled wholesale in the test settings**, so `assertLogs` sees
+  nothing until you re-enable it — and the failure looks like a missing log line
+  that is not missing. Copy the enable-and-restore dance in
+  `contact/tests/test_views.py` or `antispam/tests/test_turnstile.py`.
+- **`CELERY_TASK_ALWAYS_EAGER` hides worker faults by construction.** A broken
+  deferred task passes the suite and fails in a browser. Browser-test anything
+  touching deferred work.
+- **`REMOTE_ADDR` is only correct because Apache rewrites it** from
+  `CF-Connecting-IP` via `mod_remoteip`. Nothing in this repo does that. Use
+  `core.functions.get_ip`, and never prefer `X-Forwarded-For` — any client can
+  forge it.
+- **Log retention differs per file and limits what you can ask.** `sg101.log`
+  rotates at 100 KB x 10 (~5 months); `auth.log` at 2 MB x 5 (19+ months).
+- **The `messages` app collides with `django.contrib.messages`.** Resolved in
+  `sg101/apps.py` (`DjangoMessagesConfig`), which relabels the built-in app to
+  `django_messages`. Don't rename this app or its `AppConfig` without
+  understanding why.
+- **Moderation uses split models, not a boolean.** `downloads`, `weblinks` and
+  `news` each have a `*Base` subclassed into `Pending*` and the live model.
+  Extend that; don't add `is_approved`.
+- **Rendered HTML is cached in sibling fields** (`Post.body`/`html`) and rendered
+  at save time. Changing rendering needs a data migration, not just a template
+  change.
+- **`wiki` has no models.** It mints a signed cookie for an external MoinMoin app
+  to validate against Redis. Step 19 retires it.
+- **`antispam/utils.py` imports `bio`, `comments`, `forums` and `user_photos`.**
+  For something with callers in several apps, follow the narrow shape of
+  `antispam/decorators.py` or `antispam/turnstile.py` instead.
+- **`fabfile.py` is stale** — it runs `hg pull --update`, from before the move to
+  git. It is not the deploy path; deployment is Step 21 and hasn't happened.
+- **`tools/xapian_installer.sh` is a leftover** of the search stack removed in
+  Step 4. Nothing uses it.
+- **Search `.agents/` before concluding something is undocumented.** A great deal
+  of apparent mystery here is recorded with the measurement attached.
 
 ## Custom Instructions
 
