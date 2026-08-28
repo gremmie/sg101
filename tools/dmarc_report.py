@@ -44,6 +44,22 @@ def _stamp(value):
     return moment.strftime('%Y-%m-%d %H:%M:%SZ')
 
 
+def _unqualify(root):
+    """Drop XML namespaces from every tag in a parsed report.
+
+    The original schema is namespace-free; the 2.0 schema puts the whole
+    document in `urn:ietf:params:xml:ns:dmarc-2.0`. An unqualified find() then
+    matches nothing, which yields a report that parses, prints '?' for its
+    metadata and claims zero messages -- a well-formed reading of a report that
+    was never read. Stripping the namespace keeps one set of paths working for
+    both, and prefixed documents come out the same way.
+    """
+    for node in root.iter():
+        if node.tag.startswith('{'):
+            node.tag = node.tag.split('}', 1)[1]
+    return root
+
+
 def _text(node, path, default=''):
     if node is None:
         return default
@@ -129,7 +145,7 @@ def receiver_name(filename):
 
 
 def summarize(xml_bytes, source=''):
-    root = ET.fromstring(xml_bytes)
+    root = _unqualify(ET.fromstring(xml_bytes))
     meta = root.find('report_metadata')
     policy = root.find('policy_published')
     date_range = meta.find('date_range') if meta is not None else None
@@ -149,10 +165,15 @@ def summarize(xml_bytes, source=''):
     if date_range is not None:
         print('Window   : %s  ->  %s' % (_stamp(_text(date_range, 'begin')),
                                          _stamp(_text(date_range, 'end'))))
+    # Absent tags print as '-' rather than as the value a receiver would
+    # default them to. The report says what the receiver parsed, so filling a
+    # default in here makes a tag nobody published indistinguishable from one
+    # that was -- and 'pct' is absent by design under the 2.0 schema, which
+    # drops it.
     print('Policy   : domain=%s p=%s sp=%s adkim=%s aspf=%s pct=%s' % (
         _text(policy, 'domain', '?'), _text(policy, 'p', '?'),
-        _text(policy, 'sp', '-'), _text(policy, 'adkim', 'r'),
-        _text(policy, 'aspf', 'r'), _text(policy, 'pct', '100')))
+        _text(policy, 'sp', '-'), _text(policy, 'adkim', '-'),
+        _text(policy, 'aspf', '-'), _text(policy, 'pct', '-')))
 
     total = 0
     failing = 0
