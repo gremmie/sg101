@@ -32,14 +32,26 @@ evidence, that one is the state.
 | 9 | 2026-08-25 | 08-24 | the Microsoft prediction held; an eighth receiving domain |
 | 10 | 2026-08-25 pm | 08-24 | one raw message closes three open questions |
 | 11 | 2026-08-26 | 08-25 | Postmark appears; the policy line does not |
+| 12 | 2026-08-27 | 08-26 | the policy line appears; one report of three did not get it |
+| 13 | 2026-08-28 | 08-27 | a fifth reporter, and the tool read its report as empty |
 
 **Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
 read 2026-08-26 13:12Z, which takes that window to 11 messages across four
 receiving domains and gives the `policy_published` timing property a second
 witness.
 
-**The twelfth reading, covering the 2026-08-26 window, is the decisive one** —
-every report for that window must read `p=quarantine`.
+**The twelfth reading was written against a prediction that every report for the
+2026-08-26 window must read `p=quarantine`.** Two of three did; `yahoo.com` read
+`p=none` beside a `quarantine` sibling from its own filing run. The thirteenth
+reading resolves that as a per-receiving-domain cache lag rather than a property
+of Yahoo's filing — `policy_published` records when a receiver last read the
+zone, and nothing else.
+
+**Read the thirteenth reading before trusting any earlier per-window total
+recomputed from a folder scan.** `tools/dmarc_report.py` rendered a valid report
+from a namespaced reporter as `0 messages` — a well-formed reading of a report it
+never read. Fixed there; the reports read before it are unaffected, all having
+used the original schema.
 
 ---
 
@@ -2277,3 +2289,322 @@ stands exactly as written.
 3. **No second `2001:470::/32` row.** A second fires the reopen trigger above.
 4. **Every row stays `disposition=none`**, with any failing row carrying an
    explicit `<reason>`.
+
+### Thirteenth reading — 2026-08-28, covering 2026-08-27: a fifth reporting organization, and the tool read its report as empty
+
+**Twenty-four files in `~/dmarc` — six new, eighteen re-reads.** Five were saved
+2026-08-28 14:51:10–14:52:08Z in one batch. The sixth arrived nine minutes later,
+15:00:31Z, and did not come from the batch at all: **Brian found it by hand in
+Gmail's spam folder.**
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `11933845663865527618` | 2026-08-27 | 13 | 0 |
+| `yahoo.com` | `Yahoo` | `1787896126.912788` | 2026-08-27 | 3 | 0 |
+| `aol.com` | `Yahoo` | `1787896126.912720` | 2026-08-27 | 3 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1787881526-surfguitar101.com` | 2026-08-27 | 2 | 0 |
+| `gmx.net` | **`GMX`** | `54376e1cb8874c6da5bbd085f1d3cdac` | 2026-08-27 | 1 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `584373c0c3594244a0638514059b7c76` | 2026-08-26 | 3 | 0 |
+
+**2026-08-27: 22 messages, five receiving domains, 0 aligned on neither
+mechanism**, every row `disposition=none`, every report `p=quarantine`. Microsoft
+is outstanding, so 22 is a floor.
+
+#### The tool reported a valid report as zero messages, and said so in the log's own words
+
+`tools/dmarc_report.py` on the GMX file, before anything was changed:
+
+```
+Receiver : gmx.net
+Reporter : ?   <>
+Report ID: ?
+Policy   : domain=? p=? sp=- adkim=r aspf=r pct=100
+
+  0 messages, 0 aligned on neither mechanism
+```
+
+GMX files under the DMARCbis schema, `xmlns="urn:ietf:params:xml:ns:dmarc-2.0"`.
+Every `find()` in the tool is unqualified, so `report_metadata`,
+`policy_published` and every `<record>` matched nothing. Nothing raised.
+
+**This is the dangerous shape of instrument failure, not the safe one.** It did
+not fail to read the file — it produced *a reading*, in the exact sentence this
+log has written as a real result in eleven of twelve readings, under a `Receiver`
+line that was still correct because it comes from the filename rather than the
+body. The only tells are `?` in fields that are read past. Had this file arrived
+inside the morning batch instead of nine minutes after it,
+**`0 messages, 0 aligned on neither mechanism` would have entered the record as a
+measurement of GMX's traffic.** [[suspect-the-measurer-before-the-record]] —
+here the measurer was wrong and the record it would have written was internally
+consistent with twelve prior readings.
+
+**Proven, not inferred.** The same bytes with only ` xmlns="…dmarc-2.0"` removed
+parse completely and print the row. The namespace is the whole cause.
+
+**The scratch aggregator used to recompute window totals in the twelfth and
+thirteenth readings had the identical defect** — `findtext('record/…')` over a
+`glob('*.xml')`. It was never exposed because no namespaced file had ever been in
+the folder. Two independent instruments, one blind spot, because the second was
+written against the same assumption as the first.
+
+**Fixed in `tools/dmarc_report.py`:** tags are unqualified after parse, so one
+set of paths serves both schemas. Verified three ways —
+
+- the GMX report now prints its metadata and its single row;
+- **output over the other twenty-three files is byte-identical**, `diff` confined
+  entirely to the GMX block, so the change is an addition and not a rewrite;
+- a synthetic *prefixed*-namespace variant of the same report (`<d:feedback
+  xmlns:d=…>`) parses identically, so the fix is not specific to a default
+  namespace.
+
+#### A second, quieter defect in the same line — the tool was filling in defaults
+
+The policy line printed `adkim`, `aspf` and `pct` as `r`, `r` and `100` when the
+report omitted them. **GMX's report contains no `pct` element at all** — the 2.0
+schema drops it — and the tool rendered that absence as `pct=100`, which is
+indistinguishable from the eight reporters that publish `pct=100` outright. A
+receiver's report says what the receiver parsed; a default filled in by the
+reader is not evidence about either the zone or the receiver. Absent tags now
+print `-`, the convention `sp` already used. The only line that changes across
+all twenty-four files is GMX's, to `pct=-`.
+
+#### GMX is the fifth reporting organization and the tenth receiving domain
+
+`GMX <noreply-dmarc@sicher.gmx.net>`, `extra_contact_info`
+`https://postmaster.gmx.net/en/case?c=r2002`. Reporting organizations were four
+for eleven readings — Google, Yahoo, Comcast, Microsoft. Receiving domains are
+now ten: `google.com`, `yahoo.com`, `aol.com`, `att.net`, `cox.net`,
+`comcast.net`, `protection.outlook.com`, `swbell.net`, `bellsouth.net`,
+`gmx.net`.
+
+Its one row is `173.255.245.115`, count 1, `spf:surfguitar101.com=pass/mfrom`,
+`dkim:surfguitar101.com=pass`, `disposition=none`, under `p=quarantine
+sp=quarantine`. Ordinary in every respect, which is the point: the file was
+nearly recorded as empty.
+
+**Provenance caveat — closed the same day.** The raw message was exported after
+this reading was first written. GMX's own signature verified at Gmail —
+`dkim=pass header.i=@sicher.gmx.net header.s=s31663417` — and a DKIM body hash
+covers the MIME body that carried the attachment, so the report is GMX's rather
+than something a spam folder happened to hold. One limit: the exported message
+omits the base64 attachment part, so the tie between the signed body and the
+bytes on disk is the extraction, not a recomputation here.
+
+#### The 2.0 schema brings four elements no prior report has carried
+
+```xml
+<policy_published>
+  <discovery_method>psl</discovery_method>   <!-- new -->
+  <testing>n</testing>                       <!-- new -->
+  ...                                        <!-- and no <pct> -->
+<identifiers>
+  <envelope_from>surfguitar101.com</envelope_from>   <!-- new -->
+<auth_results><spf>
+  <scope>mfrom</scope>                       <!-- first as an element -->
+```
+
+`discovery_method=psl` says GMX found the policy at the organizational domain via
+the public suffix list rather than at the exact name — expected for a report on
+the apex, and worth knowing the field exists before a subdomain question needs
+it. `testing=n` is the DMARCbis replacement for the `pct` experiment. The tool
+prints none of the first three; they are recorded here rather than added, since
+no reading has yet needed them.
+
+#### All four of the twelfth reading's predictions held
+
+1. **`yahoo.com` reads `p=quarantine` on 08-27** — Report-ID `1787896126.912788`,
+   from the same filing run as `aol.com`'s `.912720`, both `quarantine`.
+2. **08-26 gained and did not revise** — 16 → 19 messages across four receiving
+   domains.
+3. **No second `2001:470::/32` row.** The reopen trigger did not fire.
+4. **Every row `disposition=none`** across all twenty-four files; the 08-26
+   `forwarded` override remains the only `<reason>` anywhere in the corpus.
+
+**Prediction 2 held on its claim and failed on its named mechanism.** It said
+*"Comcast at minimum, on its established next-day cadence."* The gain came from
+Microsoft. **Comcast has still filed nothing for the 08-26 window, while its
+08-27 report is already in hand** — the first time any reporter has filed out of
+window order. Recorded as an observation; 08-26 may still gain, which is what the
+convention predicts.
+
+#### The Yahoo policy line was a lag, not a per-domain rendering property
+
+The twelfth reading found `bellsouth.net` reading `quarantine` beside
+`yahoo.com` reading `none` in one Yahoo filing run for one window, and named the
+test: *"if it reads `p=none` again beside a `quarantine` sibling, the per-domain
+rendering property is real."* It did not. **Both Yahoo-filed reports for 08-27
+read `quarantine`.**
+
+So the property is a **cache lag that resolves per receiving domain**, not a
+permanent difference in how Yahoo renders a report. `p=quarantine` was published
+2026-08-25; `bellsouth.net` had it for the 08-26 window, `yahoo.com` did not, and
+`yahoo.com` had it a window later. Roughly one to two days, against a record TTL
+of 300 seconds. **`policy_published` is a statement about when a receiver last
+read the zone, and nothing else** — a property of Yahoo's filing, as prediction 1
+required before it could be written down as one.
+
+#### `50.31.156.118` appears at last, in Microsoft's 08-26 report
+
+```
+source_ip 50.31.156.118   count 1   disposition none   dkim pass   spf pass
+  dkim  d=pm.mtasv.net        pass
+  dkim  d=surfguitar101.com   pass
+  spf   d=pm-bounces.surfguitar101.com   pass/mfrom
+```
+
+This is the Outlook send. The eleventh reading predicted it in the next batch on
+a four-consecutive-windows-late reading of Microsoft's cadence; the twelfth
+reading recorded that **only two Microsoft files existed**, so the prediction had
+no support as stated. **Both are now settled: the row landed, and the cadence
+claim was wrong.** Microsoft's three files cover 08-22, 08-23 and 08-26 — it files
+one window late *when it files*, and it skipped 08-24 and 08-25 entirely. The
+prediction was right by accident, which is worth more to note than a miss.
+
+It is also the **second Postmark IP** and the first to reach an aggregate report
+from the Microsoft side, passing on both mechanisms under `p=quarantine`.
+`50.31.156.116` appeared once, in Google's 08-25 report, and has not recurred.
+
+#### `2001:470:0:60::2` is `mink.he.net`
+
+The twelfth reading recorded the allocation as **UNIDENTIFIED**, a lead rather
+than an attribution. It is Hurricane Electric: PTR `mink.he.net`, and the AAAA
+for that name resolves back to the same address, so the lookup is
+forward-confirmed rather than a bare PTR. Consistent with the `forwarded`
+override Google applied to it and with the ordinary shape of a forwarded message
+altered in transit. It did not recur in the 08-27 window.
+
+#### The zone re-verified live, and what that says about every policy line in this log
+
+```
+_dmarc.surfguitar101.com.  TXT  "v=DMARC1; p=quarantine; rua=mailto:00fc…@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com"
+surfguitar101.com.         TXT  "v=spf1 ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 include:_spf.mx.cloudflare.net -all"
+```
+
+**The DMARC record carries `p` and `rua` and nothing else** — no `sp`, `np`,
+`pct`, `adkim` or `aspf`. Every one of those tags that has appeared in a
+`policy_published` block across thirteen readings is a receiver filling in an RFC
+default. `p` is the only field in that block that discriminates, which is exactly
+why the Yahoo lag above was visible at all.
+
+The apex SPF is unchanged and still correct on the tenth reading's requirement:
+`include:_spf.mx.cloudflare.net` retained, `include:spf.mtasv.net` still absent.
+Both Postmark observations passed SPF through `pm-bounces.surfguitar101.com`
+(CNAME to `pm.mtasv.net`, whose record is `v=spf1 include:spf.mtasv.net -all`),
+relaxed-aligned under `aspf=r`.
+
+#### The `rua` channel has a silent-loss mode
+
+One of six reports for this reading was in Gmail's spam folder, and it was
+recovered because Brian went looking. **The reporting pipeline is the whole
+instrument for this step, and it has now been observed dropping a report where
+nothing would have announced the loss** — no bounce, no gap in a sequence, since
+reporters are discovered rather than enumerated. A reporter that has never filed
+before is indistinguishable from one whose report was filtered.
+
+**Why it was filtered was unmeasured when this was written, and the raw message
+arrived the same day. The hypothesis it was written against is dead.** That
+hypothesis was *"a first-seen sender arriving over a Cloudflare SRS forward,"*
+which is an authentication story, and the message failed no authentication check
+at all:
+
+```
+dkim=pass  header.i=@sicher.gmx.net      header.s=s31663417   <- GMX's own, intact across the forward
+dkim=pass  header.i=@surfguitar101.com   header.s=cf2024-1    <- Cloudflare's, on this domain
+dkim=pass  header.i=@cloudflare-email.net header.s=cf2024-1
+arc=pass   (i=1 spf=pass spfdomain=mout-bounce.gmx.net dkim=pass dkdomain=sicher.gmx.net)
+spf=pass   SRS0=tvML=vg=mout-bounce.gmx.net=postmaster@surfguitar101.com via 104.30.8.104
+dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=gmx.net
+```
+
+Three signatures verified, ARC verified, SPF verified on the SRS envelope, DMARC
+passed on GMX's own domain. Cloudflare had scored it `X-CF-SpamH-Score: 0` and
+GMX stamped `X-Spam-Flag: NO`. **Nothing in the message is what Gmail objected
+to**, which means the objection is content or reputation — and no header a
+message carries can show that.
+
+**What the message does expose is a mechanism worth naming.** Cloudflare adds
+`Feedback-ID: surfguitar101.com:1:1:Cloudflare`. Gmail clusters sender reputation
+on that identifier, so **everything Email Routing forwards for this domain shares
+one reputation bucket** — the DMARC reports and whatever spam arrives at
+`admin@`, `abuse@` and `postmaster@` and is forwarded to the same inbox. If that
+bucket is what filed this report in spam, the mail being forwarded to the aliases
+is what fills it, and no report is individually at fault.
+
+**That is a hypothesis with a test, and the test has never been run:** Gmail
+Postmaster Tools reads that reputation directly for `surfguitar101.com`.
+[[search-the-artifacts-before-claiming-new]] — `Feedback-ID` and `ARC-*` appear
+in no other artifact in this project, so this is genuinely the first look at the
+forwarding stream's identity; `cf2024-1` is the opposite case, already recorded across
+four artifacts, and its appearance here is a re-observation in service rather
+than a discovery.
+
+#### Three measurements the raw message settles in passing
+
+1. **The SRS dependency reproduces on a fourth Cloudflare egress IP.**
+   `104.30.8.104`, inside `104.30.0.0/19` from `include:_spf.mx.cloudflare.net`.
+   `104.30.10.185`, `104.30.8.10` and `104.30.10.31` are already in the record.
+   The tenth reading's rule — that include must survive any apex rewrite — now
+   rests on four addresses spread across the range rather than the one it was
+   written from.
+2. **Forward latency, a second measurement.** Cloudflare received from
+   `mout-bounce.gmx.net` at 08:49:24Z; Gmail received at 08:49:28Z. **Four
+   seconds**, against the tenth reading's two on a different reporter.
+3. **A send time read from a clock rather than decoded from a string.** GMX's
+   `Date:` and Cloudflare's `Received:` agree at 08:49:24Z, 8h49m after the
+   window closed. Its Report-ID is bare hex and carries no timestamp at all —
+   the shape that cannot repeat the tenth reading's error of reading Comcast's
+   Report-ID as a send time.
+
+#### What held steady
+
+- **One sending source for site mail.** `173.255.245.115` in every window, now
+  across ten receiving domains and five reporting organizations.
+- **Zero messages aligned on neither mechanism** in the 08-27 window, and one in
+  the corpus — the 08-26 forwarded row, disposition none by explicit override.
+- **Windows gain and never revise.** 08-26 at 19 across four; the convention now
+  holds across six windows and ten readings.
+- **The member's Gmail forward (`209.85.220.41`) is absent from 08-27.** It has
+  always been intermittent; absence is not removal.
+- **Yahoo prints `sp=-`.** Unchanged on `aol.com` and `yahoo.com`.
+
+| Window | Msgs | Receiving domains | Neither |
+|---|---|---|---|
+| 2026-08-22 | 3 | 1 | 0 |
+| 2026-08-23 | 24 | 6 | 0 |
+| 2026-08-24 | 22 | 4 | 0 |
+| 2026-08-25 | 11 | 4 | 0 |
+| 2026-08-26 | 19 | 4 | 1 |
+| 2026-08-27 | **22** | **5** | 0 |
+
+#### Bearing on the policy decision
+
+`p=quarantine` is live at five reporting organizations and ten receiving domains,
+with 22 messages in the newest window and no message anywhere failing both
+mechanisms except the one Google itself exempted as forwarded. **Nothing argues
+for reversing step 7**, and the risk register is unchanged: the forwarding class
+is the exposure, and no receiver is obliged to make Google's exemption.
+
+What this reading adds is not about the policy but about the evidence for it.
+**Two of the six reports would have been misread by the instruments in use** —
+GMX as an empty report, and its absent `pct` as a published one — and the first
+of those would have produced a sentence indistinguishable from a real result.
+The corpus is small enough that one silently zeroed reporter is a visible
+fraction of a window.
+
+#### Predictions for the fourteenth reading
+
+1. **Comcast files for 08-26 late, or it never does.** Its 08-27 report is
+   already in hand, so a late 08-26 filing is a gain; a permanent absence is the
+   first window any reporter has skipped while filing the next one, and belongs
+   in the record as such.
+2. **Microsoft files for 08-27**, one window late, in the next batch — the
+   pattern its three filings support, stated as *when it files* rather than as a
+   cadence, per this reading's correction.
+3. **Every report reads `p=quarantine`.** The Yahoo lag is spent, and no receiver
+   should still be holding a `p=none` fetch three days after publication.
+4. **GMX's report parses with metadata and a row**, which is the regression test
+   for the fix above. A second `0 messages` from a namespaced reporter means the
+   unqualification did not survive whatever else changed.
+5. **Nothing here predicts where the next GMX report lands.** Record its folder
+   as an observation either way, and read Gmail Postmaster Tools for
+   `surfguitar101.com` before treating one spam filing as a pattern.
