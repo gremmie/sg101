@@ -7,15 +7,22 @@ photo feature, a downloads library, a curated weblink directory, a
 crowd-sourced surf band map, private messaging, polls, contests,
 donations tracking, and an event calendar.
 
+## Branches
+
+- **`modernize`** — the active branch. Everything below describes it.
+- **`main`** — preserved legacy history from before the modernization, kept
+  for reference. It has no CI and does not run on a modern stack.
+
 ## Tech stack
 
-- Python 2 / **Django 1.8**
-- MySQL (production/dev), SQLite (test settings)
-- Redis (Celery broker, Who's-Online tracking, search-queue backend,
-  external wiki auth)
-- Celery (scheduled/background jobs)
-- Xapian via django-haystack (full-text search)
-- Amazon S3 (user photo storage), Google Calendar API, PayPal (donations)
+- Python 3.12 / **Django 5.2 LTS**
+- PostgreSQL 16
+- Redis (cache, Celery broker, Who's-Online tracking, external wiki auth)
+- Celery (scheduled and background jobs)
+- **Native PostgreSQL full-text search** — no Haystack, no Xapian
+- Amazon S3 (user photo storage), Postmark (transactional email),
+  Cloudflare (DNS/CDN/WAF, inbound email routing), Google Calendar,
+  PayPal (donations)
 
 See [`.agents/summary/dependencies.md`](.agents/summary/dependencies.md)
 for the full dependency list and [`.agents/summary/architecture.md`](.agents/summary/architecture.md)
@@ -23,62 +30,64 @@ for how the pieces fit together.
 
 ## Setup
 
-1. Install dependencies:
-   ```
-   pip install -r requirements_dev.txt
-   ```
-2. Create `sg101/settings/secrets.json` (not checked into version
-   control). It must supply, at minimum:
-   ```json
-   {
-     "SECRET_KEY": "...",
-     "DB_NAME": "...",
-     "DB_USER": "...",
-     "DB_PASSWORD": "...",
-     "GCAL_CLIENT_ID": "...",
-     "GCAL_CLIENT_SECRET": "...",
-     "GCAL_CREDENTIALS_PATH": "...",
-     "AWS_ACCESS_KEY": "...",
-     "AWS_SECRET_KEY": "...",
-     "RECAPTCHA_SITE_KEY": "...",
-     "RECAPTCHA_SECRET_KEY": "..."
-   }
-   ```
-   Ask a project maintainer for real values — there is no bundled
-   example file.
-3. Have MySQL and Redis running locally (or point settings at existing
-   instances). `sg101/settings/local.py` expects MySQL via a local Unix
-   socket by default.
-4. Run migrations and start the dev server:
-   ```
-   python manage.py migrate
-   python manage.py runserver
-   ```
-   `manage.py` defaults to `DJANGO_SETTINGS_MODULE=sg101.settings.local`.
+Development runs in Docker. **[`DOCKER.md`](DOCKER.md) is the full guide** —
+prerequisites, loading a production snapshot, switching database engines,
+snapshots, and troubleshooting. The short version:
+
+```
+cp .env.example .env          # committed template; its defaults work as-is
+docker compose build web
+docker compose up -d
+docker compose exec web python manage.py migrate
+```
+
+The site is then on <http://localhost:8000/>.
+
+Configuration is 12-factor: every setting is read from the environment via
+`django-environ`. `.env` is git-ignored and loaded into the app services by
+Compose; `.env.example` is committed and carries working local defaults,
+including Cloudflare's public Turnstile test keys. There is **no
+`secrets.json`** — that was retired during the modernization.
 
 ## Running tests
 
 ```
-python manage.py test --settings=sg101.settings.test
+docker compose exec web python manage.py test --settings=sg101.settings.docker_test
 ```
 
-The test settings use SQLite and run Celery tasks eagerly, so no Redis
-or MySQL is required to run the test suite.
+There is a **second, separate run** — the deprecation gate, which promotes
+deprecation warnings to errors. It is what has caught every Django removal a
+version before it landed, so run it before proposing a change:
+
+```
+docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
+    python manage.py test --noinput --settings=sg101.settings.docker_test
+```
+
+`tools/deprecation_gate.sh` only *prints* the warning filter — running the
+script by itself is not the gate.
+
+## Continuous integration
+
+GitHub Actions runs the suite on every push and pull request to `modernize`
+(`.github/workflows/ci.yml`). CI seeds `.env` from `.env.example` and builds the
+same Compose image used locally, so the database in CI is identical to a
+developer's rather than merely similar.
 
 ## Deployment
 
-There is no CI pipeline. Deployment is manual via Fabric
-(`fabfile.py`), which runs over SSH against the production host:
-
-```
-fab update           # hg pull --update on the server
-fab collectstatic    # collect static assets for production
-fab touch            # touch the WSGI file to trigger a reload
-```
+**There is no current automated deployment.** `fabfile.py` remains from the
+pre-modernization setup and is stale — its `update` task still runs
+`hg pull --update`, from before the move to git. Deploying to a new host is the
+last step of the modernization and has not happened yet.
 
 ## Documentation
 
-Deeper architectural and per-app documentation is generated into
-[`.agents/summary/`](.agents/summary/index.md) — start at `index.md` for
-a guided index, or read the root [`AGENTS.md`](AGENTS.md) for a shorter
-navigation-oriented summary aimed at AI coding agents.
+- [`DOCKER.md`](DOCKER.md) — running the site locally, end to end.
+- [`AGENTS.md`](AGENTS.md) — a short orientation for AI coding agents, including
+  the non-obvious behaviours worth knowing before changing anything.
+- [`.agents/summary/index.md`](.agents/summary/index.md) — generated
+  architecture and per-app documentation; start at the index.
+- [`.agents/planning/`](.agents/planning/) — the modernization project's design,
+  research and status. `STATUS.md` there is the authoritative record of what has
+  been done and why.
