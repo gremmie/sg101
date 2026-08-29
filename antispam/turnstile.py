@@ -39,12 +39,16 @@ class TurnstileResult:
     error_codes: tuple = ()
 
 
-def verify(token, remoteip=None):
+def verify(token, remoteip=None, source=None):
     """Ask Cloudflare whether a Turnstile token is good.
 
     Never raises: transport and protocol failures become UNAVAILABLE, so a
     caller decides what an outage means rather than catching exceptions from a
     form's clean() method.
+
+    source names the calling form in the log line. One line per verification
+    has been this site's only measure of challenge volume since 2018, and it is
+    worth nothing if it cannot say which form was being protected.
     """
     payload = {
         'secret': settings.TURNSTILE_SECRET_KEY,
@@ -59,35 +63,44 @@ def verify(token, remoteip=None):
         response = requests.post(settings.TURNSTILE_URL, data=payload,
                                  timeout=settings.TURNSTILE_TIMEOUT)
     except requests.RequestException as exc:
-        return _unavailable('request failed: %s', exc)
+        return _unavailable(source, 'request failed: %s', exc)
 
     if response.status_code != 200:
-        return _unavailable('unexpected status %s', response.status_code)
+        return _unavailable(source, 'unexpected status %s',
+                            response.status_code)
 
     try:
         body = response.json()
     except ValueError as exc:
-        return _unavailable('unparseable body: %s', exc)
+        return _unavailable(source, 'unparseable body: %s', exc)
 
     if not isinstance(body, dict):
-        return _unavailable('unexpected body type: %s', type(body).__name__)
+        return _unavailable(source, 'unexpected body type: %s',
+                            type(body).__name__)
 
     if body.get('success'):
-        logger.info('Turnstile: %s', TurnstileOutcome.PASSED)
+        logger.info('Turnstile: %s%s', TurnstileOutcome.PASSED,
+                    _from(source))
         return TurnstileResult(TurnstileOutcome.PASSED)
 
     codes = tuple(body.get('error-codes') or ())
-    logger.info('Turnstile: %s %s', TurnstileOutcome.REJECTED, list(codes))
+    logger.info('Turnstile: %s%s %s', TurnstileOutcome.REJECTED,
+                _from(source), list(codes))
     return TurnstileResult(TurnstileOutcome.REJECTED, codes)
 
 
-def _unavailable(msg, *args):
+def _unavailable(source, msg, *args):
     """Log at WARNING and return UNAVAILABLE.
 
     WARNING rather than INFO because callers fail open: a passing verification
     and an unchecked one look identical downstream, so this line is the only
     record that the check did not actually happen.
     """
-    logger.warning('Turnstile: %s -- ' + msg,
-                   TurnstileOutcome.UNAVAILABLE, *args)
+    logger.warning('Turnstile: %s%s -- ' + msg,
+                   TurnstileOutcome.UNAVAILABLE, _from(source), *args)
     return TurnstileResult(TurnstileOutcome.UNAVAILABLE)
+
+
+def _from(source):
+    """Render the caller's name as a suffix, or nothing when unnamed."""
+    return ' (%s)' % source if source else ''

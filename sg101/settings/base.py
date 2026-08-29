@@ -416,11 +416,6 @@ if _upload_host not in USER_IMAGES_SOURCES:
         "USER_PHOTOS_BASE_URL." % (_upload_host,))
 del _upload_host
 
-# Google reCAPTCHA settings
-RECAPTCHA_URL = 'https://www.google.com/recaptcha/api/siteverify'
-RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
-RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')
-
 #######################################################################
 # Cloudflare Turnstile settings
 #
@@ -433,7 +428,7 @@ TURNSTILE_SITE_KEY = env('TURNSTILE_SITE_KEY',
 TURNSTILE_SECRET_KEY = env('TURNSTILE_SECRET_KEY',
                            default='1x0000000000000000000000000000000AA')
 # Seconds. Without this a hung provider blocks the worker inside a user's
-# request, which is what the reCAPTCHA call it replaces did.
+# request for as long as it takes to give up on its own.
 TURNSTILE_TIMEOUT = env.int('TURNSTILE_TIMEOUT', default=20)
 
 #######################################################################

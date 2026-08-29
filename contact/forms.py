@@ -1,19 +1,15 @@
 """forms for the contact application"""
 
-import logging
-
 from django import forms
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
-import requests
 
+from antispam import turnstile
+from antispam.turnstile import TurnstileOutcome
 from core.functions import get_ip
 from core.email_categories import EmailCategory
 from core.functions import send_mail
-
-
-logger = logging.getLogger(__name__)
 
 
 class ContactForm(forms.Form):
@@ -41,21 +37,21 @@ class ContactForm(forms.Form):
 
     def clean(self):
         super(ContactForm, self).clean()
-        captcha_response = self.request.POST.get('g-recaptcha-response')
-        if not captcha_response:
+        token = self.request.POST.get('cf-turnstile-response')
+        # Rejected here rather than sent on, so a bot that never loads the
+        # widget costs nothing.
+        if not token:
             raise forms.ValidationError("Please verify you aren't a robot")
-        r = requests.post(settings.RECAPTCHA_URL, data={
-                'secret': settings.RECAPTCHA_SECRET_KEY,
-                'response': captcha_response,
-                'remoteip': get_ip(self.request),
-            })
-        result = r.json()
-        logger.info("Contact Form captcha response: %s %s",
-                    result.get('success', '<Missing>'),
-                    result.get('error-codes', '<Missing>'))
-        success = result.get('success', False)
-        if not success:
-            raise forms.ValidationError('reCAPTCHA failure')
+
+        result = turnstile.verify(token, get_ip(self.request),
+                                  source='contact form')
+        if result.outcome is TurnstileOutcome.REJECTED:
+            raise forms.ValidationError(
+                    "We couldn't verify that you aren't a robot. Please try "
+                    "again.")
+        # UNAVAILABLE falls through: an outage must not take the form down.
+        # The honeypot above still applies, and turnstile.verify() has already
+        # logged the skipped check at WARNING.
 
     def save(self):
         # Send the feedback message email

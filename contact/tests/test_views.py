@@ -4,11 +4,13 @@ Unit tests for the contact application views.
 """
 import logging
 
-from unittest.mock import patch, Mock
-from django.test import TestCase
+from unittest.mock import patch
 from django.conf import settings
+from django.test import TestCase
 from django.urls import reverse
 from django.core import mail
+
+from antispam.turnstile import TurnstileOutcome, TurnstileResult
 
 
 class BaseTestCase(TestCase):
@@ -16,29 +18,28 @@ class BaseTestCase(TestCase):
 
     def setUp(self):
         self.url = reverse('contact-form')
-
-    @patch('contact.forms.requests.post')
-    def test_usage(self, post_mock):
-        post_response = Mock()
-        post_response.json.return_value = {'success': True}
-        post_mock.return_value = post_response
-
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
-
-        post_data = {
+        self.post_data = {
             'name': 'John Doe',
             'email': 'jdoe@example.com',
             'subject': 'Test message',
             'message': 'Testing contact form.',
-            'g-recaptcha-response': 'crazy-google-string',
+            'cf-turnstile-response': 'a-token',
         }
-        old_disable = logging.getLogger().manager.disable
-        logging.disable(logging.NOTSET)
-        self.addCleanup(logging.disable, old_disable)
 
-        with self.assertLogs('email', level='INFO') as logged:
-            response = self.client.post(self.url, data=post_data, follow=True)
+    def test_usage(self, ):
+        with patch('contact.forms.turnstile.verify') as verify:
+            verify.return_value = TurnstileResult(TurnstileOutcome.PASSED)
+
+            response = self.client.get(self.url)
+            self.assertEqual(response.status_code, 200)
+
+            old_disable = logging.getLogger().manager.disable
+            logging.disable(logging.NOTSET)
+            self.addCleanup(logging.disable, old_disable)
+
+            with self.assertLogs('email', level='INFO') as logged:
+                response = self.client.post(self.url, data=self.post_data,
+                                            follow=True)
 
         # A member wrote this subject, so the log records the category in its
         # place.
@@ -49,57 +50,70 @@ class BaseTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
         self.assertEqual(len(email.recipients()), 1)
-        self.assertEqual(email.extra_headers['Reply-To'], post_data['email'])
+        self.assertEqual(email.extra_headers['Reply-To'],
+                         self.post_data['email'])
         self.assertEqual(email.from_email, 'no_reply@example.com')
         self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
-        self.assertTrue(post_data['subject'] in email.subject)
+        self.assertTrue(self.post_data['subject'] in email.subject)
         msg = email.message().as_string()
-        self.assertTrue(post_data['name'] in msg)
-        self.assertTrue(post_data['email'] in msg)
-        self.assertTrue(post_data['message'] in msg)
+        self.assertTrue(self.post_data['name'] in msg)
+        self.assertTrue(self.post_data['email'] in msg)
+        self.assertTrue(self.post_data['message'] in msg)
 
-        post_mock.assert_called_once_with(settings.RECAPTCHA_URL, data={
-            'secret': settings.RECAPTCHA_SECRET_KEY,
-            'response': 'crazy-google-string',
-            'remoteip': '127.0.0.1',
-        })
+        verify.assert_called_once_with('a-token', '127.0.0.1',
+                                       source='contact form')
+
+    def test_widget_is_rendered(self):
+        """The view's context key and the template's must agree, and only a
+        rendered page can say they do."""
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'cf-turnstile')
+        self.assertContains(response, settings.TURNSTILE_SITE_KEY)
+        self.assertContains(response,
+                            'challenges.cloudflare.com/turnstile/v0/api.js')
 
     def test_honeypot(self):
-        post_data = {
-            'name': 'John Doe',
-            'email': 'jdoe@example.com',
-            'subject': 'Test message',
-            'message': 'Testing contact form.',
-            'honeypot': 'some spam',
-        }
-        response = self.client.post(self.url, data=post_data)
+        self.post_data['honeypot'] = 'some spam'
+        response = self.client.post(self.url, data=self.post_data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
 
     def test_no_captcha_response(self):
-        post_data = {
-            'name': 'John Doe',
-            'email': 'jdoe@example.com',
-            'subject': 'Test message',
-            'message': 'Testing contact form.',
-        }
-        response = self.client.post(self.url, data=post_data, follow=True)
+        """A missing token costs nothing: it must not reach Cloudflare."""
+        del self.post_data['cf-turnstile-response']
+
+        with patch('contact.forms.turnstile.verify') as verify:
+            response = self.client.post(self.url, data=self.post_data,
+                                        follow=True)
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+        verify.assert_not_called()
 
-    @patch('contact.forms.requests.post')
-    def test_captcha_failure(self, post_mock):
-        post_response = Mock()
-        post_response.json.return_value = {'success': False}
-        post_mock.return_value = post_response
+    def test_captcha_failure(self):
+        """A rejected challenge blocks the send and says so."""
+        with patch('contact.forms.turnstile.verify') as verify:
+            verify.return_value = TurnstileResult(
+                TurnstileOutcome.REJECTED, ('invalid-input-response',))
+            response = self.client.post(self.url, data=self.post_data,
+                                        follow=True)
 
-        post_data = {
-            'name': 'John Doe',
-            'email': 'jdoe@example.com',
-            'subject': 'Test message',
-            'message': 'Testing contact form.',
-            'g-recaptcha-response': 'crazy-google-string',
-        }
-        response = self.client.post(self.url, data=post_data, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+        self.assertIn("couldn't verify",
+                      response.context['form'].non_field_errors()[0])
+
+    def test_captcha_unavailable_fails_open(self):
+        """An outage must not take the form down with it.
+
+        The form is not naked during the window: the honeypot still applies,
+        and the helper logs the skipped check at WARNING.
+        """
+        with patch('contact.forms.turnstile.verify') as verify:
+            verify.return_value = TurnstileResult(TurnstileOutcome.UNAVAILABLE)
+            response = self.client.post(self.url, data=self.post_data,
+                                        follow=True)
+
+        self.assertRedirects(response, reverse('contact-thanks'))
+        self.assertEqual(len(mail.outbox), 1)

@@ -151,6 +151,34 @@ class LoggingTestCase(TestCase):
         self.assertIn('timeout-or-duplicate', logged.output[0])
         self.assertNotIn('super-secret-token', logged.output[0])
 
+    def test_source_names_the_calling_form(self):
+        """Two callers share this logger; a count is useless without the name."""
+        with patch('antispam.turnstile.requests.post') as post:
+            post.return_value = _response(json_value={'success': True})
+            with self.assertLogs('antispam.turnstile', level='INFO') as logged:
+                verify('a-token', source='contact form')
+
+        self.assertIn('(contact form)', logged.output[0])
+
+    def test_source_is_omitted_when_unnamed(self):
+        with patch('antispam.turnstile.requests.post') as post:
+            post.return_value = _response(json_value={'success': True})
+            with self.assertLogs('antispam.turnstile', level='INFO') as logged:
+                verify('a-token')
+
+        self.assertNotIn('(', logged.output[0])
+
+    def test_source_survives_the_unavailable_path(self):
+        """The path that most needs attribution: the check did not happen."""
+        with patch('antispam.turnstile.requests.post') as post:
+            post.side_effect = requests.Timeout('too slow')
+            with self.assertLogs('antispam.turnstile',
+                                 level='WARNING') as logged:
+                verify('a-token', source='contact form')
+
+        self.assertIn('(contact form)', logged.output[0])
+        self.assertIn('too slow', logged.output[0])
+
     def test_unavailable_logs_at_warning(self):
         """Callers fail open, so this line is the only record the check was
         skipped -- INFO would bury it beside ordinary passes."""
@@ -172,7 +200,7 @@ class SettingsTestCase(TestCase):
     TEST_SECRET_KEY = '1x0000000000000000000000000000000AA'
 
     def test_keys_are_not_blank(self):
-        """reCAPTCHA ships blank keys, so a clean clone cannot use the form."""
+        """A blank key is how a clean clone ends up with an unusable form."""
         self.assertTrue(settings.TURNSTILE_SITE_KEY)
         self.assertTrue(settings.TURNSTILE_SECRET_KEY)
 

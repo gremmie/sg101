@@ -52,7 +52,7 @@ Answers to common questions and problems can be found in the
    </div>
    <div class="row">
       <div class="small-12 medium-8 columns">
-         <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div>
+         <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}"></div>
       </div>
    </div>
    <div class="row">
@@ -63,5 +63,5 @@ Answers to common questions and problems can be found in the
 </form>
 {% endblock %}
 {% block custom_js %}
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {% endblock %}

@@ -31,7 +31,7 @@ def contact_form(request):
 
     return render(request, 'contact/contact_form.html', {
         'form': form,
-        'RECAPTCHA_SITE_KEY': settings.RECAPTCHA_SITE_KEY,
+        'TURNSTILE_SITE_KEY': settings.TURNSTILE_SITE_KEY,
         'V3_DESIGN': True,
     })
 
