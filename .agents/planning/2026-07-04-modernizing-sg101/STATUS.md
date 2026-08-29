@@ -551,7 +551,7 @@ second helper entry point or from a fourth `TurnstileOutcome` that `verify(None)
 returns without calling out. **DECIDED 2026-08-29: the fourth outcome.** Reasoning
 and consequences in the task 05 section below.
 
-## Step 17 task 05 — Turnstile gets its own file, and the invisible submissions become visible — DONE 2026-08-29, `634d93f3`, PUSHED
+## Step 17 task 05 — Turnstile gets its own file, and the invisible submissions become visible — DONE 2026-08-29, `634d93f3` + `f9d4de7f`, PUSHED, CI GREEN
 
 Six files. **994 → 1001 tests** green, suite and deprecation gate both run.
 `logs/turnstile.log` exists and carries all four outcomes; `sg101.log` carries
