@@ -424,9 +424,13 @@ Worst case, assuming every registration event spends a verification: 137 + 71 =
 **~210/month**. Against reCAPTCHA's free tier that would be 2% of the cap; under
 Turnstile it is moot. **Brian's read that traffic is low enough was correct.**
 
-### Task files — four, generated 2026-08-27
+### Task files — four, generated 2026-08-27; a fifth added 2026-08-28
 
-Sequence is **01 → 02 → 03 → 04**, strictly add-before-remove.
+Sequence is **01 → 02 → 03 → 04**, strictly add-before-remove. **Task 05**
+(the no-token line and a dedicated log file) came out of task 02's verification
+and is independent of 03 and 04 — worth running *before* 03, since registration
+is the more heavily targeted form and the file should exist before its volume
+arrives.
 
 - `step17/task-01-turnstile-verification-helper.code-task.md` — the shared
   server-side helper in `antispam/`, which is what finally makes the plan's
@@ -452,7 +456,9 @@ was.** Cloudflare's dummy sitekeys and secrets work from any domain including
 `localhost`, with no account and no hostname allowlisting, and task 01 ships the
 always-passes pair as the committed `.env.example` defaults. Today
 `.env.example:43-45` holds blank reCAPTCHA keys, so a fresh checkout cannot
-exercise the contact form at all. **This matters more than convenience**: Step 16
+exercise the contact form at all. **Both entries deleted by task 02, 2026-08-28**
+— true when written, and the sentence is kept because it is the argument for the
+test-key defaults, not a description of the current tree. **This matters more than convenience**: Step 16
 task 05 recorded six defects found in ten minutes of browser testing that 946
 green tests could not see, and reCAPTCHA has been obstructing exactly that.
 
@@ -474,6 +480,213 @@ determine it rather than assume, because "fixes a long-standing defect" and
 - **The 1.4/month spam baseline needs re-reading after the change** — it is the
   only thing "did it work" can be judged against, and `sg101.log`'s ~5-month
   retention means it has to be read before it rotates away.
+
+## PLANNING — Step 17 task 05: the contact form's real traffic, measured 2026-08-28
+
+Prompted by a question during task 02's browser checks — the always-blocks
+sitekey instance produced no log line at all. That is correct behaviour, and it
+is also the instrument's one blind spot. Whether closing it was affordable
+turned entirely on a number nobody had, so it was measured before being argued.
+
+**Source: `/svr/www/surfguitar101.com/log/access.log*` on jaguar — the vhost's
+own log, not `/var/log/apache2/`.** That distinction cost a false start: the
+system-wide log carries no sg101 traffic at all, and a first count there
+returned **zero** `POST /contact/` across its full retention. A zero that agrees
+with no other evidence is a wrong instrument, not a finding.
+[[suspect-the-measurer-before-the-record]]
+
+### 3,669 POSTs, 52 messages
+
+Window **2026-06-29 → 2026-08-28**, 61 days, the vhost log's full retention.
+
+| Status | Count | Reaches `ContactForm.clean()`? |
+|---|---|---|
+| 200 — form redisplayed | 2,296 | **yes** |
+| 403 — CSRF rejected | 1,318 | **no** |
+| 302 — message sent | **52** | yes |
+| 411 | 3 | — |
+
+**Roughly 70 POSTs for every message a human actually sent**, and about **37
+token-less submissions a day that no instrument on this site has ever
+counted.** The 225 reCAPTCHA verifications behind this step's rationale were
+counting only the traffic that got as far as a token; the form's real load is
+~25x that. The rationale is unaffected — 225 assessments against a 10,000/month
+cap is still 0.7% — but the picture of what the form *does* was wrong by an
+order of magnitude.
+
+**The 403s were verified, not assumed.** A POST with no CSRF token against the
+dev stack returned 403 and left the Turnstile line count unchanged: Django's
+middleware rejects before the view runs, so 36% of this traffic costs nothing
+and needs no line. That measurement is what took the estimate from ~60 lines a
+day to ~37.6.
+
+### The retention arithmetic, which is why this is not a one-line change
+
+`sg101.log`'s rotation set spans **2026-04-01 → 2026-08-28** — 149 days in
+~1,062 KB, so **7.1 KB/day**. That window is exactly the one the 225-verification
+measurement used; it consumed the entire retention.
+
+37.6 lines/day at ~63 bytes is **2.3 KB/day** → 9.4 KB/day → **149 days becomes
+~113, a 24% cut** to the file every volume measurement in this step depends on.
+Affordable, but not free, and paid by the instrument itself.
+
+**`auth.log` and `search.log` are this project's own answer** — separate files at
+2 MB x 5 with `propagate: False`, for exactly this reason. At that budget the
+new volume is thousands of days.
+
+### Split into task 05 rather than folded into task 02
+
+Brian's call, 2026-08-28. The work is a handler, a logger entry in two settings
+modules, and one line with a test — small, but it is `LOGGING` scope on a task
+whose diff was otherwise finished, and Step 19 already has a settings-module
+cleanup queued. `step17/task-05-turnstile-log-file-and-no-token-line.code-task.md`.
+
+**It carries one open design decision**, stated there rather than settled here:
+whether the no-token line comes from a second helper entry point or from a
+fourth `TurnstileOutcome` that `verify(None)` returns without calling out. The
+second is more coherent and more invasive, and moves task 02's criterion 4
+inside the helper where it must be re-proven.
+
+## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, UNSTAGED
+
+Nine files. **989 → 994 tests** green, suite and deprecation gate both run.
+`grep -ri recaptcha` now matches only `.agents/`, which is what requirement 7
+asked for. **The site's CAPTCHA is Cloudflare Turnstile as of this task**;
+registration still runs its own question-and-honeypot flow and gets the widget
+in task 03.
+
+### The old assertion was watched to fail, and it failed on three things at once
+
+The task file predicted `contact/tests/test_views.py:61` would break on the
+helper's timeout. Run against the swapped form, before repairing it:
+
+```
+Expected: post('https://www.google.com/recaptcha/api/siteverify',
+               data={'secret': '<the live reCAPTCHA secret>', 'response': ..., 'remoteip': '127.0.0.1'})
+  Actual: post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+               data={'secret': '1x0000...AA', 'response': ..., 'remoteip': '127.0.0.1'}, timeout=20)
+```
+
+URL, secret **and** `timeout=20` — the assertion sees the whole call shape, not
+just that a call happened. Reaching it took one adjustment worth recording: the
+first run errored at `@patch('contact.forms.requests.post')` instead, because
+the swap removes that attribute entirely. **A patch target that no longer
+exists errors before the assertion it guards ever runs**, so the test would
+have gone green-to-error rather than green-to-failure, and the demonstration
+the task wanted would have been lost. Retargeting the patch at
+`antispam.turnstile.requests.post` let the call actually happen and the
+assertion actually fail.
+
+### DECIDED 2026-08-28 — `verify()` takes a `source` label
+
+Brian's call, over a second form-level log line or an anonymous one.
+
+`contact/forms.py:52` has logged one line per verification since 2018, and it
+is the *only* instrument this site has for challenge volume — the 225
+assessments over 149 days that decided this step's rationale were read from it,
+and the Step 17 register still owes a re-read of the 1.4/month spam baseline.
+Task 01's helper logged one line per verification but named no caller, so the
+moment task 03 adds registration the two callers become indistinguishable in
+`sg101.log`.
+
+`verify(token, remoteip=None, source=None)` renders the label as a suffix,
+absent when unnamed. **One line per verification, and it says which form.**
+The helper stays policy-neutral — a caller's name is provenance, not policy.
+
+### Both log lines were read out of the real file, not asserted in a mock
+
+Two live submits against Cloudflare's actual siteverify endpoint, one per test
+secret, then `grep Turnstile sg101/logs/sg101.log*`:
+
+```
+2026-08-28 12:56:30,132 INFO Turnstile: passed (contact form)
+2026-08-28 12:56:30,357 INFO Turnstile: rejected (contact form) ['invalid-input-response']
+```
+
+`invalid-input-response` is Cloudflare's own code for the always-fails secret —
+the first `error-codes` value this project has ever seen populated, against 225
+reCAPTCHA verifications that never populated one. The lines land in `sg101.log`
+because `antispam.turnstile` has no logger entry and propagates to root, which
+is the same file and the same route the old `contact/forms.py` line took.
+
+### The spent-token defect exists in neither the old code nor the new — determined, not assumed
+
+The task file required this be *checked*, because "fixes a long-standing
+defect" and "introduces a new one" are different claims.
+
+A submit that fails validation for a non-challenge reason (empty `message`) was
+re-rendered and the response body searched for the token that had just been
+spent: **zero occurrences.** The page comes back with an empty
+`<div class="cf-turnstile" data-sitekey="...">` and nothing else — the token
+lives in an input the provider's script creates at render time, and a Django
+re-render is a full page load, so the script builds a new widget. `git show
+HEAD:` confirms the reCAPTCHA markup had the same shape, an empty
+`<div class="g-recaptcha">`. **Neither form ever echoed a spent token back**,
+so requirement 6 is satisfied by the mechanism rather than by new code.
+
+The residue is browser-side only — bfcache restore, or the script failing to
+re-render — and is listed as owed below.
+
+### Fail open, applied at the form
+
+`REJECTED` raises; `UNAVAILABLE` falls through to a send. That is task 01's
+recorded decision, and the message the user sees differs by construction:
+a rejection shows *"We couldn't verify that you aren't a robot"*, an outage
+shows the thanks page. The honeypot still applies in both.
+
+### Mutation verification — ten, each seen to fail
+
+| # | Mutation | Caught by |
+|---|---|---|
+| 1 | fail **closed** on `UNAVAILABLE` | `test_captcha_unavailable_fails_open` |
+| 2 | verify even when the token is absent | `test_no_captcha_response` |
+| 3 | accept a rejected token | `test_captcha_failure` |
+| 4 | drop `source` at the call site | `test_usage` |
+| 5 | stop passing the IP | `test_usage` |
+| 6 | helper ignores `source` entirely | two `LoggingTestCase` tests |
+| 7 | suffix always present, even unnamed | `test_source_is_omitted_when_unnamed` |
+| 8 | `UNAVAILABLE` path drops `source` | `test_source_survives_the_unavailable_path` |
+| 9 | view stops passing the site key | `test_widget_is_rendered` |
+| 10 | template loses the widget div | `test_widget_is_rendered` |
+
+**Mutations 9 and 10 exist because the first battery had a hole.** Nothing
+covered the view context key and the template variable agreeing; both could
+have been renamed to nonsense with the suite still green, and the failure would
+have been a form nobody could submit. `test_widget_is_rendered` was written to
+close it, and only then were 9 and 10 run. All four mutated files restored
+byte-identical, control run green.
+
+### Verified end to end against the live API, not against mocks
+
+A second web container on `:8001` carrying
+`TURNSTILE_SECRET_KEY=2x0000000000000000000000000000000AA` (Cloudflare's
+always-fails secret), the default `:8000` keeping the always-passes one. Real
+HTTP submits through the real form:
+
+| Instance | Result |
+|---|---|
+| `:8000`, always-passes secret | **302 → `/contact/thanks/`**, mail rendered by the console backend |
+| `:8001`, always-fails secret | **200**, `<ul class="errorlist nonfield">We couldn't verify that you aren't a robot.</ul>`, no mail |
+
+### Still owed
+
+- **The browser pass (acceptance criterion 7) was not run.** Chrome automation
+  was declined this session, so the widget's own JS — that it renders, issues a
+  token, and re-renders cleanly after a failed submit — has not been watched in
+  a browser. Everything above is HTTP-level. Step 16 task 05's six-defects-in-
+  ten-minutes finding is exactly the argument for not skipping this.
+- **`.env` still holds `RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET_KEY`**, now
+  orphaned — nothing reads them. `.env` is the project's one un-backed-up
+  artifact, so it is Brian's to edit. The secret is a live Google credential and
+  the key pair can also be deleted at Google's console once registration is off
+  reCAPTCHA for good, which it already is — registration never used it.
+- **The 1.4/month spam baseline re-read** still stands, unchanged by this task.
+  The line to grep is now `Turnstile: .* (contact form)` rather than
+  `Contact Form captcha response` — and **task 05 will move that file**, so read
+  it there once that task lands.
+- **The token-less submissions are still uncounted** — the guard raises before
+  anything is logged. Measured and scoped into **task 05**; see the planning
+  section above.
 
 ## Step 17 task 01 — the verification helper, and a default that is not blank — DONE 2026-08-27, `c96648dc`, PUSHED
 

@@ -46,8 +46,9 @@ true).
   described only where they bear on a documented behaviour.
 - **`donations`' PayPal IPN integration was not verified against PayPal's
   current API.** The planning record flags it as a legacy API.
-- **Transitional state will date fastest.** The reCAPTCHA/Turnstile overlap is
-  true on 2026-08-27 and will not be true for long.
+- **Transitional state will date fastest.** Turnstile covers the contact form
+  and not yet registration; that is true on 2026-08-28 and will not be true for
+  long.
 
 ## Not verified, and deliberately not asserted
 

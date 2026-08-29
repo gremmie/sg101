@@ -61,6 +61,7 @@ is authoritative; the short version is that Steps 1-16 are complete (Docker, git
 12-factor config, dead-code prune, Python 3, Django 5.2, PostgreSQL, native
 search, S3, transactional email) and Step 17 (CAPTCHA) is in progress.
 
-**A consequence worth knowing:** some subsystems are transitional. Both
-reCAPTCHA and Turnstile settings exist right now; the contact form still uses
-reCAPTCHA. Check `STATUS.md` before assuming either is the live one.
+**A consequence worth knowing:** some subsystems are transitional. The contact
+form runs on Turnstile; registration still runs its own question-and-honeypot
+flow and gets the widget in a later task. Check `STATUS.md` before assuming
+what is live.

@@ -17,9 +17,9 @@ an assistant needs in context to know where to look next.
 - **Python 3.12, Django 5.2 LTS, PostgreSQL 16, git.** Any document saying
   Python 2, Django 1.x, MySQL, Mercurial, `secrets.json`, Xapian or Haystack is
   stale. `README.md` currently says several of these.
-- **The repo is mid-modernization.** Steps 1-16 done, Step 17 in progress. Some
-  subsystems are transitional — both reCAPTCHA and Turnstile settings exist
-  right now. Check `STATUS.md` before assuming which is live.
+- **The repo is mid-modernization.** Steps 1-16 done, Step 17 in progress.
+  Turnstile protects the contact form; registration is still on its own
+  question-and-honeypot flow. Check `STATUS.md` before assuming what is live.
 - **Two test runs, not one.** The suite, then the deprecation gate. See
   `workflows.md`; the gate script only prints a filter.
 - **`.env` is the config surface.** No `secrets.json`. `.env.example` is

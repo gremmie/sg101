@@ -16,8 +16,7 @@ always match app names** — `bio` → `/profile/`, `weblinks` → `/links/`,
 | Redis | `core/services.py`, Celery, `whos_online`, `wiki` | cache + broker + presence |
 | Amazon S3 | `user_photos`, `core/s3.py` | boto3 |
 | Postmark | `core/functions.send_mail` → `core/tasks.py` | SMTP, via env config only |
-| Cloudflare Turnstile | `antispam/turnstile.py` | Step 17, not yet wired to forms |
-| Google reCAPTCHA | `contact/forms.py` | **being replaced**; see `STATUS.md` |
+| Cloudflare Turnstile | `antispam/turnstile.py` | wired to `contact/forms.py`; registration pending |
 | Google Calendar | `gcalendar` | carries a Step 8 stub |
 | PayPal IPN | `donations` | legacy API |
 | MoinMoin wiki | `wiki/middleware.py` | external app, signed-cookie handshake via Redis |
