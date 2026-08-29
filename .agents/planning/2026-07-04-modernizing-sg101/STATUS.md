@@ -478,8 +478,13 @@ determine it rather than assume, because "fixes a long-standing defect" and
   Same bug class as the `EMAIL_TIMEOUT` finding in Step 16 task 02. **The new
   helper must fix this rather than port it.**
 - **The 1.4/month spam baseline needs re-reading after the change** — it is the
-  only thing "did it work" can be judged against, and `sg101.log`'s ~5-month
-  retention means it has to be read before it rotates away.
+  only thing "did it work" can be judged against. **The two halves now live in
+  different files, as of task 05.** The *baseline* is still registration lines in
+  `sg101.log` — `grep 'Accounts/registration' sg101.log*` — and still races that
+  file's ~5-month retention, so it has to be read before it rotates away. The
+  *after* is `grep Turnstile turnstile.log*`, which at 2 MB x 5 does not race
+  anything. Reading both from `sg101.log` is no longer possible and a single-file
+  read will silently answer only half the question.
 
 ## PLANNING — Step 17 task 05: the contact form's real traffic, measured 2026-08-28
 
@@ -541,11 +546,150 @@ modules, and one line with a test — small, but it is `LOGGING` scope on a task
 whose diff was otherwise finished, and Step 19 already has a settings-module
 cleanup queued. `step17/task-05-turnstile-log-file-and-no-token-line.code-task.md`.
 
-**It carries one open design decision**, stated there rather than settled here:
-whether the no-token line comes from a second helper entry point or from a
-fourth `TurnstileOutcome` that `verify(None)` returns without calling out. The
-second is more coherent and more invasive, and moves task 02's criterion 4
-inside the helper where it must be re-proven.
+**It carried one open design decision** — whether the no-token line comes from a
+second helper entry point or from a fourth `TurnstileOutcome` that `verify(None)`
+returns without calling out. **DECIDED 2026-08-29: the fourth outcome.** Reasoning
+and consequences in the task 05 section below.
+
+## Step 17 task 05 — Turnstile gets its own file, and the invisible submissions become visible — DONE 2026-08-29, `634d93f3`, PUSHED
+
+Six files. **994 → 1001 tests** green, suite and deprecation gate both run.
+`logs/turnstile.log` exists and carries all four outcomes; `sg101.log` carries
+none of them.
+
+### DECIDED 2026-08-29 — the fourth outcome, not a second entry point
+
+Brian's call, over shape A (`turnstile.no_token(source)` beside the form's own
+guard).
+
+**The deciding argument was task 03, not elegance.** Under shape A the
+"never call Cloudflare without a token" property is a convention each calling
+form re-implements, and forgetting it is silent — the form still works, it just
+spends a request on every bot that never loaded the widget. Under shape B the
+property belongs to `verify()` and is proven once for every caller that will
+ever exist. Registration is the second caller and the more heavily targeted
+form.
+
+**Two costs were accepted with the decision and both are discharged here.**
+
+1. *The no-HTTP-request guarantee moved.* It was a property of
+   `ContactForm.clean()` and is now a property of `verify()`. The visible sign
+   is `contact/tests/test_views.py`, where `verify.assert_not_called()` became
+   `verify.assert_called_once()` plus a falsy-argument check. **That is a
+   deliberate weakening at the form level**, compensated by two helper-level
+   tests that no form can bypass. Recorded so it is not later read as an
+   accidental loss.
+2. *`TurnstileOutcome` stopped meaning "what Cloudflare said".* Its docstring
+   said exactly that and is rewritten: four values, of which the first two
+   describe something Cloudflare said and the other two say why it did not.
+
+### The blind spot had a wire cost nobody had counted
+
+Writing the failing test first exposed something the task file did not predict.
+Before the change, `verify(None)` did not merely fail to log — **it posted
+`{'response': None}` to Cloudflare and waited for the answer.** The form's guard
+was what kept that from happening in production, so the defect was latent rather
+than live, but it was one careless caller away from real traffic. The RED run
+says so in the mock's own words:
+
+```
+AssertionError: Expected 'post' to not have been called. Called 1 times.
+Calls: [call('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+             data={'secret': ..., 'response': None}, timeout=20)]
+```
+
+This is the argument for shape B arriving as evidence rather than as reasoning:
+the invariant was already being relied on and was already not held by the helper.
+
+### Eight mutations, all caught
+
+Per the standing rule that a passing test proves nothing until watched to fail.
+All seven new tests were written before the implementation and watched to fail;
+the battery below re-checks that each fails for the *right* reason, since three
+of the seven first failed only with `AttributeError: NO_TOKEN`, which proves the
+enum member is missing and nothing else.
+
+| # | Mutation | Test that caught it |
+|---|---|---|
+| M1 | no-token returns `REJECTED` | `test_none_is_no_token` |
+| M2 | `if not token` narrowed to `if token is None` | `test_empty_string_is_no_token` |
+| M3 | the no-token line is not logged | `test_no_token_logs_at_info_naming_the_form` |
+| M4 | the `source` suffix is dropped | `test_no_token_logs_at_info_naming_the_form` |
+| M5 | no-token logged at WARNING | `test_no_token_logs_at_info_naming_the_form` |
+| M6 | form gives no-token the *rejected* message | `test_no_captcha_response` |
+| M7 | the guard comes back into the form | `test_no_captcha_response` |
+| M8 | the early return is deleted entirely | `test_no_token_makes_no_request` |
+
+**M8 was added after the first battery of seven, which had a hole:** nothing in
+it forced `test_no_token_makes_no_request` to fail, so the test carrying
+criterion 1's "no HTTP request may be made" was the one test not yet shown to
+discriminate. M2 is the same shape of care — `request.POST.get()` returns `''`
+for a present-but-empty field, and a truthiness test narrowed to `is None` would
+pass every other test in the file.
+
+**M7 was fixed rather than accepted.** It was caught, but by
+`AttributeError: 'NoneType' object has no attribute 'args'` rather than by an
+assertion — a regression would have read as a broken test. Asserting the call
+before reading its arguments makes it fail as a failure.
+
+### Verified against the running stack, because the suite cannot see `LOGGING`
+
+Four `verify()` calls through the real docker settings, then both files read:
+
+```
+2026-08-29 15:37:34,122 INFO    Turnstile: no token (stack check)
+2026-08-29 15:37:34,187 INFO    Turnstile: passed (stack check)
+2026-08-29 15:37:34,324 INFO    Turnstile: rejected (stack check) ['invalid-input-response']
+2026-08-29 15:37:34,326 WARNING Turnstile: unavailable (stack check) -- request failed: ...
+```
+
+and one real POST through the view, which is what proves the form path rather
+than the helper in isolation:
+
+```
+2026-08-29 15:37:51,370 INFO Turnstile: no token (contact form)
+```
+
+**`sg101.log` received no Turnstile line.** It did receive two `urllib3` DEBUG
+lines about the POSTs to `challenges.cloudflare.com` — a different logger, not
+this one, and **local/docker-only**: production's root logger is at INFO, which
+drops them. Named here because a future reader greps `sg101.log` for
+`turnstile`, finds two lines, and needs to know they are not these.
+
+**The no-token case produced no `urllib3` line at all**, which corroborates
+criterion 1 outside the mock: nothing reached the network.
+
+### The WARNING moves too, and the cost is bounded by where monitoring is going
+
+DECIDED 2026-08-29, Brian's call. `propagate: False` is per-logger, not
+per-level, so the `unavailable` WARNING leaves `sg101.log` along with the INFO
+volume. **That line is the only record that a check did not happen**, and
+`sg101.log` is where an incident is debugged first — the exact reasoning that
+made the `email` logger `propagate: True`.
+
+**Brian's answer, and it is the one that settles it: file placement is a
+human-grep concern, and monitoring is expected to become a dashboard that reads
+every log.** An aggregator does not care which file a line is in, so the loss is
+real only for as long as the answer to "was there an outage" is a person running
+`grep`. The retention argument that motivated the split is unaffected by any of
+that — it is about bytes per day in `sg101.log`, not about who reads it.
+
+The alternative is recorded so the trade is not re-litigated blind: a second
+handler on `sg101.log` filtered to WARNING would put two `RotatingFileHandler`
+instances on one file, which can rotate out from under each other and lose
+records, and would complicate the settings-module cleanup Step 19 has queued.
+**Until an aggregator exists, `turnstile.log` is the only place a Cloudflare
+outage appears** — worth knowing during the cutover window, and not worth
+engineering around.
+
+### Files
+
+`antispam/turnstile.py`, `antispam/tests/test_turnstile.py`,
+`contact/forms.py`, `contact/tests/test_views.py`,
+`sg101/settings/production.py`, `sg101/settings/local.py`.
+
+The two settings modules differ only in handler level (`INFO` / `DEBUG`), which
+is how they already differ for `auth`, `search` and `email`.
 
 ## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, `e8f8f47d` + `1dd06d52`, PUSHED, CI GREEN
 
