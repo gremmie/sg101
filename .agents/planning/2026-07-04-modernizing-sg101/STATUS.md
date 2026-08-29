@@ -473,10 +473,9 @@ determine it rather than assume, because "fixes a long-standing defect" and
 
 - ~~**The registration flow itself**~~ and ~~**where the widget goes**~~ —
   **both CLOSED 2026-08-27** by the measurement and decision above.
-- **`requests.post` has no timeout** — `contact/forms.py:47` calls the verify
-  endpoint with no `timeout=`, so a hung provider blocks a worker indefinitely.
-  Same bug class as the `EMAIL_TIMEOUT` finding in Step 16 task 02. **The new
-  helper must fix this rather than port it.**
+- ~~**`requests.post` has no timeout**~~ — **CLOSED 2026-08-27 by task 01.**
+  `antispam/turnstile.py` posts with `timeout=settings.TURNSTILE_TIMEOUT`, and
+  the old un-timed call at `contact/forms.py:47` went with reCAPTCHA in task 02.
 - **The 1.4/month spam baseline needs re-reading after the change** — it is the
   only thing "did it work" can be judged against. **The two halves now live in
   different files, as of task 05.** The *baseline* is still registration lines in
@@ -484,7 +483,10 @@ determine it rather than assume, because "fixes a long-standing defect" and
   file's ~5-month retention, so it has to be read before it rotates away. The
   *after* is `grep Turnstile turnstile.log*`, which at 2 MB x 5 does not race
   anything. Reading both from `sg101.log` is no longer possible and a single-file
-  read will silently answer only half the question.
+  read will silently answer only half the question. **Task 03 made this
+  urgent rather than pending**: the widget is on registration, so every day that
+  passes is an *after* day, and the *before* it will be compared against is
+  sitting in a file that rotates.
 
 ## PLANNING — Step 17 task 05: the contact form's real traffic, measured 2026-08-28
 
@@ -551,11 +553,194 @@ second helper entry point or from a fourth `TurnstileOutcome` that `verify(None)
 returns without calling out. **DECIDED 2026-08-29: the fourth outcome.** Reasoning
 and consequences in the task 05 section below.
 
+## Step 17 task 03 — the widget on registration, and nothing removed — DONE 2026-08-29, browser pass included
+
+Four files. **1001 → 1007 tests** green, suite and deprecation gate both run.
+Registration now has **five** layers and is deliberately over-protected: task 04
+is what takes four of them away.
+
+### DECIDED 2026-08-29 — the token arrives as a view kwarg, not as a read of `self.data`
+
+Brian's call, over reading `self.data.get('cf-turnstile-response')` inside
+`clean()`. Both spellings work; the argument that settled it is that
+`RegisterForm` already refuses to take the request. It asks for `ip` because it
+needs one datum, not a request object, and the token is the same shape of thing:
+
+```
+form = RegisterForm(request.POST,
+                    ip=request.META.get('REMOTE_ADDR', '?'),
+                    token=request.POST.get('cf-turnstile-response'))
+```
+
+The contact form reads its token off `self.request.POST` because it *is* handed
+the request. The two callers differ because the forms differ, not by accident.
+
+**The failure mode of the kwarg is loud**, which is the other half of the case: a
+view that forgets it hands over `None`, the helper returns `NO_TOKEN`, and every
+submission is refused with a line in two log files. Mutation 10 is exactly that
+defect, and `test_success` fails on it.
+
+### The page had to stop saying it has no CAPTCHA
+
+`register.html` told the user *"Hey at least we don't have one of those annoying
+CAPTCHA things, right?"* directly above where the widget now sits. One sentence
+deleted; the rest of the apology paragraph is left for task 04 to rewrite, since
+that is the task that removes the questions it apologises for.
+
+**This is the only copy change**, and it is not a behaviour change: requirement
+6's "change nothing else" is about the anti-spam layers.
+
+### Eleven mutations, all caught
+
+Each defect was introduced, the named test watched to fail, the file restored and
+checked byte-identical by md5.
+
+| # | Defect | Test | What it said |
+|---|---|---|---|
+| 1 | `TURNSTILE_SITE_KEY` dropped from the view context | `test_widget_is_rendered` | site key absent from the page |
+| 2 | api.js `<script>` removed | `test_widget_is_rendered` | script URL absent |
+| 3 | widget div added to `register2.html` | `test_the_widget_is_only_on_stage_one` | the widget reached stage three |
+| 4 | REJECTED branch deleted | `test_a_rejected_token_blocks_registration` | registration proceeded |
+| 5 | `self.token or 'x'` | `test_a_missing_token_costs_no_request` | "Expected 'post' to not have been called. Called 1 times." |
+| 6 | UNAVAILABLE fails closed | `test_an_outage_fails_open` | no redirect to `register1` |
+| 7 | `raise ValidationError` in place of `_validation_error` | `test_a_rejection_is_logged_for_the_instrument` | "the rejection is not greppable in the usual shape" |
+| 8 | `source='register'` | `test_success` | expected call not found |
+| 9 | honeypot `logger.critical` removed | `test_question2` | no CRITICAL record |
+| 10 | the view stops passing `token=` | `test_success` | NO_TOKEN, no redirect |
+| 11 | `remoteip` passed as `None` | `test_success` | `verify('a-token', None, ...)` |
+
+**Mutation 5 is the one worth keeping.** Criterion 4 asks that a missing token
+cost no HTTP request, and a test that mocks `verify()` cannot show that — it can
+only show what the form did with the answer. That one test stands the class-wide
+mock down and stubs `antispam.turnstile.requests.post` instead, so the real
+helper runs and the assertion is about the wire. The contact form's equivalent
+test does not: task 02 deferred the property to `antispam`'s own tests, which is
+defensible and is one assertion weaker.
+
+### Verified against the running stack, because the suite cannot see `LOGGING`
+
+Test settings disable logging wholesale, so no unit test can say which file a
+line lands in. One POST with no token, against the dev stack on `.env`'s test
+keys, produced both lines:
+
+```
+turnstile.log:  INFO  Turnstile: no token (registration)
+auth.log:       ERROR Accounts/registration [192.168.65.1]: Please verify you aren't a robot (None)
+```
+
+`turnstile.log` is task 05's file and needed no settings change to carry a second
+source. The `auth.log` line is the shape requirement 5 asked for — the IP in
+brackets, greppable beside every other registration failure this site has logged
+since 2018.
+
+### The order of the layers, and what a rejected submission costs
+
+`clean()` runs after every `clean_<field>`, so a submission that fails the
+honeypot or `question1` **still spends its token**: the challenge is verified,
+the token is consumed, and the re-rendered widget issues a new one. That is the
+contact form's behaviour too, watched in a browser during task 02, and it is
+kept rather than optimised away — skipping verification when the form is already
+invalid would make the log a measure of *valid* submissions rather than of
+traffic, which is not what the instrument is for.
+
+### What task 04 inherits
+
+- **`RegistrationTest` mocks the helper once, in `setUp`**, with
+  `self.verify.return_value` as the per-test dial. Twenty POSTs reach
+  `accounts-register`; without a class-wide mock each unmocked one would reach
+  Cloudflare from the suite.
+- `self.post_vals` and one inline POST body carry `'cf-turnstile-response'`.
+- The five layers are all still live, each with its own test and its own log
+  line. Task 04 removes `question1`, `question2`, `question3` and the
+  `register1`/`register2` code flow, leaving Turnstile.
+
+### The browser pass — DONE 2026-08-29, by Brian, and the log carries the proof
+
+Chrome automation was unavailable again, so this ran by hand, against the dev
+stack with the keys swapped in `.env` between instances. All four instances of
+the widget's own JavaScript behaviour were watched — the same table task 02 used:
+
+| Instance | Keys | Watched |
+|---|---|---|
+| solve and proceed | defaults | widget renders, resolves, complete form reaches the code page |
+| **re-render** | defaults | an unrelated field error redisplays the form and **the widget reappears and re-solves** |
+| server-side refusal | secret `2x…AA` | widget goes green, siteverify says no, form refuses |
+| client-side block | sitekey `2x…AB` | the widget itself refuses and issues no token |
+
+**`.env` held no Turnstile lines at all** — the site runs on task 01's test-key
+defaults in `base.py`, which is what made this swappable at all. Each instance
+was one added line and a `docker compose up -d web`; a plain `restart` re-uses
+the old environment and silently tests nothing. `.env` was restored and verified
+byte-identical afterwards.
+
+**The re-render instance is the one the logs settle, and it could not be settled
+any other way:**
+
+```
+18:42:16,824  auth   Accounts/registration [192.168.65.1]: A user with that username already exists. (Brian)
+18:42:17,054  turn   Turnstile: passed (registration)
+18:42:54,567  auth   Accounts/registration [192.168.65.1]: Please choose a password of 6 characters or more. (None)
+18:42:54,767  turn   Turnstile: passed (registration)
+18:43:09,236  turn   Turnstile: passed (registration)      <- no auth failure after it: stage one succeeded
+```
+
+**Three `passed` in a row and not one `rejected`.** Tokens are single-use, so a
+widget that came back green on the re-rendered page *without* re-solving would
+have sent a spent token on the next submit and logged `rejected (registration)`
+— a rejection the user did not cause, and the defect task 02 flagged as
+unverified. It is not there.
+
+**The same five lines confirm the ordering** that was reasoned rather than
+measured above: the field errors land at `:16.824`, the Turnstile line at
+`:17.054`. Field cleans run first and `clean()` verifies afterwards, so an
+already-invalid submission still spends its token.
+
+### Two findings from the browser pass, neither of them this task's
+
+**The registration code page hung on "Please wait for the registration code to
+appear…"**, and it was not a hang: `/accounts/register/code/` returned 500 with
+`ValueError: Another profiling tool is already active` from
+django-debug-toolbar's `ProfilingPanel`. A concurrency race, not a code path —
+`register1` fires its AJAX at `$(document).ready` alongside the page's other
+loads, and `cProfile.enable()` refuses while another request is being profiled.
+The same error appears four more times in the rotated log, all four at
+`2026-08-28 13:02:47` across four parallel `/media/…` requests. **Dev only**:
+`local.py:29` installs the toolbar under `DEBUG` and an importable package;
+`production.py` never does. The endpoint itself answers `200 {"code":
+"FAIL-123"}` to a direct request. Not fixed — disabling `ProfilingPanel` would
+contradict the deliberate decision recorded at `local.py:60-69`; a reload wins
+the race.
+
+**`accounts/static/js/accounts_code.js` is a `$.get()` with no error handler**,
+so *any* failure of that endpoint renders as an eternal "Please wait…" with no
+way forward — identical in a browser to what a production 500 would look like,
+and the user is stranded mid-registration. Pre-existing. **Not worth fixing:
+task 04 requirement 6 deletes the whole mechanism** — the `register1`/`register2`
+views, their routes and templates, `get_code`, and this JS file.
+
+### Still owed
+
+- **The 1.4/month baseline re-read is now the *before* of a change that is
+  live.** `grep 'Accounts/registration' sg101.log*` on jaguar, against ~5 months
+  of retention. The *after* is `grep Turnstile turnstile.log*` on the new host.
+
+### Files
+
+`accounts/forms.py`, `accounts/views.py`,
+`sg101/templates/accounts/register.html`, `accounts/tests/test_views.py`.
+
 ## Step 17 task 05 — Turnstile gets its own file, and the invisible submissions become visible — DONE 2026-08-29, `634d93f3` + `f9d4de7f`, PUSHED, CI GREEN
 
 Six files. **994 → 1001 tests** green, suite and deprecation gate both run.
 `logs/turnstile.log` exists and carries all four outcomes; `sg101.log` carries
 none of them.
+
+**One qualifier, measured 2026-08-29 during task 03's browser pass**: *none of
+the outcomes* is the claim, and it holds — but in **dev** `sg101.log` still gets
+a `DEBUG … "POST /turnstile/v0/siteverify HTTP/1.1" 200` line per verification.
+That is urllib3, not this helper, and it lands there because `local.py`'s root
+logger runs at DEBUG. `production.py`'s root is INFO, so it does not happen on
+the host the retention arithmetic was about.
 
 ### DECIDED 2026-08-29 — the fourth outcome, not a second entry point
 
