@@ -12,6 +12,8 @@ from django.template.loader import render_to_string
 from django.contrib.sites.models import Site
 from django.conf import settings
 
+from antispam import turnstile
+from antispam.turnstile import TurnstileOutcome
 import core.functions
 from core.email_categories import EmailCategory
 from core.functions import send_mail
@@ -92,6 +94,9 @@ class RegisterForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
+        # Both come from the view rather than the request: this form asks for
+        # the two values it needs and never sees the request itself.
+        self.token = kwargs.pop('token', None)
         super(RegisterForm, self).__init__(*args, **kwargs)
 
     def clean_username(self):
@@ -166,6 +171,23 @@ class RegisterForm(forms.Form):
         if answer:
             self._validation_error('Oops, that should be blank', answer)
         return answer
+
+    def clean(self):
+        super(RegisterForm, self).clean()
+        # Handed over unchecked: verify() recognises an absent token and
+        # returns without calling out, so a submission that never loaded the
+        # widget costs nothing and still leaves a line in the log.
+        result = turnstile.verify(self.token, self.ip, source='registration')
+        if result.outcome is TurnstileOutcome.NO_TOKEN:
+            self._validation_error("Please verify you aren't a robot")
+
+        if result.outcome is TurnstileOutcome.REJECTED:
+            self._validation_error(
+                    "We couldn't verify that you aren't a robot. Please try "
+                    "again.", list(result.error_codes))
+        # UNAVAILABLE falls through: an outage must not take registration down.
+        # The questions above still apply, and turnstile.verify() has already
+        # logged the skipped check at WARNING.
 
     def save(self, request):
         request.session['reg_info'] = {

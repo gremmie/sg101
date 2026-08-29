@@ -21,6 +21,7 @@ from accounts.models import PendingUser
 from accounts.models import IllegalUsername
 from accounts.models import IllegalEmail
 from accounts.utils import make_confirmation_token
+from antispam.turnstile import TurnstileOutcome, TurnstileResult
 
 
 class RegistrationTest(TestCase):
@@ -53,7 +54,16 @@ class RegistrationTest(TestCase):
             'question1': '101',
             'question2': '',
             'question3': '',
+            'cf-turnstile-response': 'a-token',
         }
+
+        # Every POST to the register view reaches the verification helper, so
+        # it is mocked here rather than in twenty tests; what a test varies is
+        # the outcome it returns.
+        self.turnstile = patch('accounts.forms.turnstile.verify')
+        self.verify = self.turnstile.start()
+        self.addCleanup(self.turnstile.stop)
+        self.verify.return_value = TurnstileResult(TurnstileOutcome.PASSED)
 
     def test_get_view(self):
         """
@@ -62,6 +72,106 @@ class RegistrationTest(TestCase):
         """
         response = self.client.get(reverse('accounts-register'))
         self.assertEqual(response.status_code, 200)
+
+    def test_widget_is_rendered(self):
+        """
+        The view's context key and the template's must agree, and only a
+        rendered page can say they do.
+
+        """
+        response = self.client.get(reverse('accounts-register'))
+
+        self.assertContains(response, 'cf-turnstile')
+        self.assertContains(response, settings.TURNSTILE_SITE_KEY)
+        self.assertContains(response,
+                            'challenges.cloudflare.com/turnstile/v0/api.js')
+
+    def test_the_widget_is_only_on_stage_one(self):
+        """
+        The challenge is paid before a session, a pending user or an email
+        exists. The later stages are unchanged.
+
+        """
+        for name in ['accounts-register1', 'accounts-register2']:
+            response = self.client.get(reverse(name))
+            self.assertNotContains(response, 'cf-turnstile')
+
+    def test_a_rejected_token_blocks_registration(self):
+        """
+        A rejected challenge stops stage one before anything is written.
+
+        """
+        self.verify.return_value = TurnstileResult(
+                TurnstileOutcome.REJECTED, ('invalid-input-response',))
+
+        response = self.client.post(reverse('accounts-register'),
+                                    self.post_vals)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertIn("couldn't verify",
+                      response.context['form'].non_field_errors()[0])
+
+    def test_a_missing_token_costs_no_request(self):
+        """
+        A submission that never loaded the widget must not reach Cloudflare.
+
+        The class-wide mock stands down for this one: what is under test is
+        that nothing goes on the wire, which a mocked verify() cannot show.
+
+        """
+        del self.post_vals['cf-turnstile-response']
+        self.turnstile.stop()
+        try:
+            with patch('antispam.turnstile.requests.post') as request_post:
+                response = self.client.post(reverse('accounts-register'),
+                                            self.post_vals)
+        finally:
+            self.turnstile.start()
+
+        request_post.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertIn('Please verify',
+                      response.context['form'].non_field_errors()[0])
+
+    def test_an_outage_fails_open(self):
+        """
+        An outage must not take registration down with it.
+
+        The other layers still apply and the helper has already logged the
+        skipped check at WARNING, which is the only record that the challenge
+        did not actually happen.
+
+        """
+        self.verify.return_value = TurnstileResult(TurnstileOutcome.UNAVAILABLE)
+
+        response = self.client.post(reverse('accounts-register'),
+                                    self.post_vals)
+
+        self.assertRedirects(response, reverse('accounts-register1'))
+        self.assertIsNotNone(self.client.session.get('reg_info'))
+
+    def test_a_rejection_is_logged_for_the_instrument(self):
+        """
+        The auth log is the only measure this flow has, and a failure mode
+        invisible to it would be a blind spot in that measurement.
+
+        """
+        self.verify.return_value = TurnstileResult(
+                TurnstileOutcome.REJECTED, ('invalid-input-response',))
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('auth', level='ERROR') as logged:
+            self.client.post(reverse('accounts-register'), self.post_vals)
+
+        self.assertTrue(
+                any('Accounts/registration [127.0.0.1]:' in line and
+                    'robot' in line for line in logged.output),
+                msg='the rejection is not greppable in the usual shape')
 
     def test_existing_user(self):
         """
@@ -79,6 +189,7 @@ class RegistrationTest(TestCase):
             'question1': '101',
             'question2': '',
             'question3': '',
+            'cf-turnstile-response': 'a-token',
             })
 
         self.assertEqual(response.status_code, 200)
@@ -311,16 +422,29 @@ class RegistrationTest(TestCase):
              self.post_vals)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Incorrect answer to our anti-spam question")
+        self.assertIsNone(self.client.session.get('reg_info'))
 
     def test_question2(self):
         """
         Ensure our honeypot question check works.
 
+        A passing challenge must not excuse a filled honeypot: the layers are
+        additive until task 04 removes them.
+
         """
         self.post_vals['question2'] = 'non blank'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
+
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('auth', level='CRITICAL') as logged:
+            response = self.client.post(reverse('accounts-register'),
+                                        self.post_vals)
+
         self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertIn('Honeypot filled [127.0.0.1]', logged.output[0])
 
     def test_question3(self):
         """
@@ -331,6 +455,7 @@ class RegistrationTest(TestCase):
         response = self.client.post(reverse('accounts-register'),
              self.post_vals)
         self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.client.session.get('reg_info'))
 
     def test_success(self):
         """
@@ -340,6 +465,10 @@ class RegistrationTest(TestCase):
         response = self.client.post(reverse('accounts-register'),
                 self.post_vals)
         self.assertRedirects(response, reverse('accounts-register1'))
+
+        # The ip the form was handed, not a second look at the request.
+        self.verify.assert_called_once_with('a-token', '127.0.0.1',
+                                            source='registration')
 
         # No pending user should exist yet
         try:

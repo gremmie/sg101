@@ -31,7 +31,9 @@ def register(request):
         return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == 'POST':
-        form = RegisterForm(request.POST, ip=request.META.get('REMOTE_ADDR', '?'))
+        form = RegisterForm(request.POST,
+                            ip=request.META.get('REMOTE_ADDR', '?'),
+                            token=request.POST.get('cf-turnstile-response'))
         if form.is_valid():
             form.save(request)
             return redirect('accounts-register1')
@@ -40,6 +42,7 @@ def register(request):
 
     return render(request, 'accounts/register.html', {
         'form': form,
+        'TURNSTILE_SITE_KEY': settings.TURNSTILE_SITE_KEY,
         'V3_DESIGN': True,
     })
 
