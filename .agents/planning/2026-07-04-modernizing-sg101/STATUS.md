@@ -553,7 +553,7 @@ second helper entry point or from a fourth `TurnstileOutcome` that `verify(None)
 returns without calling out. **DECIDED 2026-08-29: the fourth outcome.** Reasoning
 and consequences in the task 05 section below.
 
-## Step 17 task 03 — the widget on registration, and nothing removed — DONE 2026-08-29, browser pass included
+## Step 17 task 03 — the widget on registration, and nothing removed — DONE 2026-08-29, `93e50cab` + `8d160757`, PUSHED, CI GREEN
 
 Four files. **1001 → 1007 tests** green, suite and deprecation gate both run.
 Registration now has **five** layers and is deliberately over-protected: task 04
