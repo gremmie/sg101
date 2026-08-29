@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twelve DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the fourteen DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone

@@ -2731,3 +2731,227 @@ case that cannot be detected, since reporters are discovered rather than
 enumerated and a first filing that was filtered is indistinguishable from a
 reporter that has never filed. Rare, specific, and invisible in the one place it
 matters.
+
+### Fourteenth reading — 2026-08-29, covering 2026-08-28: an eleventh receiving domain, and a fourfold volume day that the sending host explains
+
+**Thirty-one files in `~/dmarc` — seven new, twenty-four re-reads.** All seven
+were saved in one batch, 2026-08-29 16:31:46–16:33:16Z, ninety seconds end to
+end. No hand-retrieved straggler this time; see *Where the GMX report landed*
+below for what that does and does not establish.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `11396979217634472737` | 2026-08-28 | 55 | 0 |
+| `yahoo.com` | `Yahoo` | `1787982481.681225` | 2026-08-28 | 17 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1787967754-surfguitar101.com` | 2026-08-28 | 8 | 0 |
+| `gmx.net` | `GMX` | `54ee4a9fdd8e402798bf750c5f1a78e7` | 2026-08-28 | 8 | 0 |
+| **`verizon.net`** | `Yahoo` | `1787982481.681096` | 2026-08-28 | 6 | 0 |
+| `aol.com` | `Yahoo` | `1787982481.681040` | 2026-08-28 | 2 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `5492a6c1019f4462a187e2d93e1580f1` | 2026-08-27 | 3 | 0 |
+
+**2026-08-28: 96 messages, six receiving domains, 0 aligned on neither
+mechanism**, every row `disposition=none`, every report `p=quarantine`. Microsoft
+is outstanding for 08-28, so 96 is a floor.
+
+**The floor convention held again, and this time it was worth 3.** The thirteenth
+reading recorded 08-27 as 22 with Microsoft outstanding. Microsoft filed, and
+08-27 closes at **25**.
+
+#### All four testable predictions held, and the fifth resolved as a skip
+
+1. **Comcast never filed for 08-26.** It has now filed 08-27 and 08-28 while that
+   window stays empty. Recorded as the prediction required: **the first window any
+   reporter has skipped while filing the ones after it.** Two windows have passed;
+   it is a skip rather than a lag until something contradicts that.
+2. **Microsoft filed for 08-27, one window late** — its fourth filing, arriving in
+   the batch after the window it covers. Stated as *when it files*, not a cadence.
+3. **Every report reads `p=quarantine`** — all seven.
+4. **GMX parsed with metadata and a row.** The regression test passes: reporter,
+   Report-ID, policy and an 8-message row all present, where the thirteenth
+   reading's tool printed `?` and `0 messages`. `pct` is absent again and prints
+   `-`, which is the 2.0 schema behaving as the fix assumed rather than a gap.
+
+#### `verizon.net` is the eleventh receiving domain, and Yahoo's filing pattern reproduces a third time
+
+Yahoo files one report per hosted domain, and the count of domains it files for is
+now six: `yahoo.com`, `att.net`, `cox.net`, `aol.com`, `bellsouth.net`, and now
+`verizon.net`. The three Yahoo reports in this batch share the Report-ID prefix
+`1787982481` — `.681040`, `.681096`, `.681225` — one generation run, exactly as the
+ninth and twelfth readings found.
+
+**All three read `p=quarantine`.** The twelfth reading's `bellsouth.net`/`yahoo.com`
+split, which the thirteenth resolved as a cache lag that clears per receiving
+domain rather than a rendering property, gets a third clean window. Nothing here
+reopens it.
+
+#### The volume quadrupled, and the sending host accounts for it
+
+08-27 closed at 25 messages. 08-28 is at 96 — **3.8× the day before it, and the
+largest window in the log by a factor of four.** A jump that size in an
+authentication instrument is worth explaining before it is filed away, because the
+two explanations that matter — ordinary traffic, and a loop or misconfiguration —
+look identical in the aggregate reports.
+
+**jaguar's own mail log says ordinary traffic.** Its Postfix `status=sent` lines
+per day:
+
+```
+Aug 23  15     Aug 26  18     Aug 29  34 (partial)
+Aug 24  43     Aug 27  20
+Aug 25  15     Aug 28  125
+```
+
+**125 sends went to 32 distinct recipients in eight bursts**, each burst delivering
+to ten to twelve addresses inside the same second with one queue ID per recipient:
+
+```
+00:31:52  02:10:48  07:59:13  09:58:03  13:49:47  14:29:09  17:42:54  18:08:11
+```
+
+That is application fan-out — one event, N subscribers — repeated eight times.
+08-27 has exactly one such burst. **121 of the 125 are `from=<admin@surfguitar101.com>`.**
+So 08-28 was a busy day on a subscribed forum topic, not a retry loop: a loop
+would repeat recipients rather than spread across 32 of them, and would not
+distribute itself across eight separate hours.
+
+**The per-domain agreement is close but must not be read as a reconciliation.**
+
+| Recipient domain | jaguar sends | DMARC report |
+|---|---|---|
+| `gmail.com` | 45 | 47 (`google.com`, direct row) |
+| `yahoo.com` | 18 | 17 |
+| `comcast.net` | 8 | 8 |
+| `gmx.at` | 8 | 8 (`gmx.net`) |
+| `verizon.net` | 6 | 6 |
+| `aol.com` | 3 | 2 |
+
+**jaguar runs CDT, so its syslog day is not the DMARC window.** `Aug 28` in that
+log is 2026-08-28 05:00Z through 2026-08-29 05:00Z; the report window is
+00:00:00Z–23:59:59Z. The two populations overlap on nineteen hours of twenty-four
+and are *not* the same set. The agreement above is therefore corroboration that
+the volume is real and that no third party is sending, **not** an exact match —
+and the rows that differ by one or two are the expected consequence of the shift
+rather than a discrepancy to chase. [[probes-must-not-perturb-what-they-measure]]
+
+**`email.log` could not be used, and the reason is worth recording.** Step 16
+task 09 built exactly the instrument this question wants — one line per message
+with a category — but it lives on the `modernize` branch and jaguar runs the
+pre-cutover code. There is no `email.log` on that host. Categorising this day's
+mail by `category=` is available only after cutover; until then the finest
+available cut is Postfix's `from=`, which is why the paragraph above says
+"a subscribed forum topic" and stops there.
+
+#### The forwarding class quadrupled, and every message survived on DKIM alone
+
+`209.85.220.41` — Google's forwarder — carried **8 messages on 08-28, against 2 on
+08-26**, and every one of them:
+
+```
+209.85.220.41   8  none  fail  pass  spf:gmail.com=pass/? dkim:surfguitar101.com=pass
+```
+
+SPF authenticates `gmail.com`, which is not the header-from domain, so
+`policy_evaluated` records `spf=fail`. DKIM survives the hop with the
+`surfguitar101.com` signature intact, so DMARC passes on DKIM alone and
+`disposition=none` needs no exemption to reach it.
+
+**This is the risk register's forwarding class, and it is the good half of it.**
+The twelfth reading's `2001:470:0:60::2` row is the bad half — DKIM broken in
+transit, aligned on neither, delivered only because Google applied a local
+forwarding exemption it is under no obligation to apply. **That row did not
+recur**, and no row in this batch aligned on neither mechanism. Eight forwarded
+messages at four times the prior volume, all passing on the mechanism that is
+supposed to survive forwarding, is the strongest evidence yet that the exposure is
+narrow — but it is evidence about the path that works, and says nothing about the
+path where a forwarder rewrites the body.
+
+#### Postmark's third distinct IP in three appearances
+
+```
+50.31.156.116   google.com, 08-25
+50.31.156.118   protection.outlook.com, 08-26
+50.31.156.113   protection.outlook.com, 08-27   <- new
+```
+
+Every one passes on both mechanisms, `spf:pm-bounces.surfguitar101.com=pass/mfrom`
+plus two DKIM signatures, `pm.mtasv.net` and `surfguitar101.com`. Three
+appearances, three addresses, no repeat: **the `include:` in the SPF record is
+doing the work an enumerated IP list could not**, which is the eleventh reading's
+point arriving with a third witness.
+
+#### The GMX report landed in the inbox — the spam filing was first contact, not a pattern
+
+The thirteenth reading found GMX's first filing in Gmail's spam folder, and
+prediction 5 asked only that the next one's folder be recorded. **Brian reports it
+arrived in the inbox.** The files could not answer this — mtime records when a file
+was saved, not which folder it came from — so the source is his observation, named
+here rather than inferred from the batch ordering that merely hinted at it.
+
+**This discharges the reputation hypothesis rather than leaving it narrowed.** The
+thirteenth reading's addendum argued from two independent lines — *User-reported
+spam rate: Compliant*, and filtering that was singular rather than systematic —
+that the filtered report was per-message, first-contact classification of a sender
+this inbox had never seen, not a judgement on the stream. **The second filing from
+`sicher.gmx.net` was not filtered.** That is the prediction the hypothesis makes
+and the one a stream-reputation account does not: a poisoned `Feedback-ID` bucket
+filters the second message too.
+
+**The silent-loss mode stands untouched, and this is the reading where that
+becomes clear rather than pessimistic.** The exposure the thirteenth reading named
+is a reporter's *first* filing — exactly the case just observed, and exactly the
+case that cannot be detected, since a first filing that was filtered is
+indistinguishable from a reporter that has never filed. GMX was caught only
+because Brian went looking in spam by hand. **Two reporting organizations have
+appeared since the `rua` channel opened; if a third's first filing is filtered,
+nothing in this log will show it.** The risk is unchanged in kind and unchanged in
+size — what changed is that it is now the *only* thing the GMX episode supports.
+
+#### What held steady
+
+- Every row in all thirty-one reports is `disposition=none`.
+- `173.255.245.115` is still the only unsigned-path sender, and still passes both
+  mechanisms everywhere it appears.
+- Policy renders `adkim=r aspf=r` in every report; the relaxed alignment the
+  eleventh reading flagged as load-bearing-but-unchosen remains both.
+- The twenty-four re-reads reproduce exactly, including the `p=none`/`p=quarantine`
+  boundary at the 08-25 publication and the twelfth reading's Yahoo split.
+- `sp` is still absent from every Yahoo report and present in every other
+  reporter's, and still prints `-` rather than a filled-in default.
+
+#### Bearing on the policy decision
+
+`p=quarantine` is live at five reporting organizations and eleven receiving
+domains. **The heaviest window in the log is also the cleanest**: 96 messages,
+six receivers, zero aligned on neither mechanism, zero quarantined. The volume
+that arrived was a 3.8× step and nothing in the authentication results moved with
+it, which is the property that matters — the configuration scaled without a
+single alignment failure.
+
+**Nothing argues for reversing step 7, and this is the first reading that says
+something positive about tightening further.** The case against `p=reject` has
+been the forwarding class, and the only measured instance of it failing both
+mechanisms is one message on 08-26 that Google chose to exempt. Against that,
+08-28 put eight forwarded messages through the same path with DKIM intact. **That
+is not yet enough**: one clean day at volume does not establish a rate for an
+event that appeared once in twelve readings, and `p=reject` converts Google's
+discretionary exemption into someone else's bounce. The register is unchanged;
+what changed is that the argument now has a number on both sides.
+
+#### Predictions for the fifteenth reading
+
+1. **Microsoft files for 08-28**, one window late, in the next batch — the pattern
+   its four filings support. 08-28 then closes above 96.
+2. **Comcast's 08-26 stays empty.** Three windows on, a late arrival would be the
+   surprise; record either outcome, since a skip that resolves is a different
+   property from a skip that does not.
+3. **08-29 comes in far below 96** — jaguar's partial day is 34 sends against 125,
+   so the fourfold window should read as a one-day event rather than a new level.
+   If 08-29 lands near 96, the fan-out has a cause worth finding before cutover.
+4. **Every report reads `p=quarantine`**, and GMX parses with metadata and a row
+   for the second consecutive window.
+5. **GMX's third filing lands in the inbox**, as the second did. A return to spam
+   after an unfiltered delivery would break the first-contact account and put
+   stream reputation back on the table, so it is worth a glance rather than an
+   assumption. **The standing exposure is a reporter this log has never seen** —
+   check spam by hand for a filing from an unfamiliar organization, since that is
+   the one loss mode the corpus cannot reveal on its own.
