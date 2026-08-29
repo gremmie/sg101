@@ -547,7 +547,7 @@ fourth `TurnstileOutcome` that `verify(None)` returns without calling out. The
 second is more coherent and more invasive, and moves task 02's criterion 4
 inside the helper where it must be re-proven.
 
-## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, UNSTAGED
+## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, `e8f8f47d` + `1dd06d52`, PUSHED, CI GREEN
 
 Nine files. **989 → 994 tests** green, suite and deprecation gate both run.
 `grep -ri recaptcha` now matches only `.agents/`, which is what requirement 7
@@ -624,8 +624,34 @@ HEAD:` confirms the reCAPTCHA markup had the same shape, an empty
 `<div class="g-recaptcha">`. **Neither form ever echoed a spent token back**,
 so requirement 6 is satisfied by the mechanism rather than by new code.
 
-The residue is browser-side only — bfcache restore, or the script failing to
-re-render — and is listed as owed below.
+**Watched in a browser 2026-08-29, and the prediction held.** Brian submitted
+with an invalid email, Django re-rendered with the field error, and the
+Turnstile widget reappeared and resolved to a green checkmark on its own. The
+residue that reasoning could not reach — the script failing to re-issue — is
+closed by observation.
+
+### HTML5 validation narrows the defect's reach, and it broke the first attempt to see it
+
+The browser test could not be run as designed. Django renders `required` on the
+textarea, so submitting with an empty `message` **never leaves the browser**: a
+"Please fill out this field" tooltip appears and no request is made. The path
+had to be reached with an email the browser accepts and Django rejects — `a@b`,
+which needs only an `@` under HTML5 and fails `EmailField` — or by setting
+`form.noValidate` from the console.
+
+**That is a correction to the HTTP evidence above, not only a procedural note.**
+The curl test that established "zero occurrences" produced a page no browser
+could have produced, because curl skips client-side validation. Its conclusion
+survives — the server never echoes a spent token — but the path it walked is
+not one a user can walk, which is the same shape as the `/var/log/apache2` zero
+in task 05's measurement: an instrument answering a slightly different question
+than the one asked. [[probes-must-not-perturb-what-they-measure]]
+
+**And it makes the original concern rarer than the task file assumed.** For a
+real user the browser catches the common non-challenge failures before a token
+is ever spent. What still reaches the server and re-renders is the honeypot
+tripping, a Turnstile rejection, and server-only validation like this email
+case.
 
 ### Fail open, applied at the form
 
@@ -668,18 +694,32 @@ HTTP submits through the real form:
 | `:8000`, always-passes secret | **302 → `/contact/thanks/`**, mail rendered by the console backend |
 | `:8001`, always-fails secret | **200**, `<ul class="errorlist nonfield">We couldn't verify that you aren't a robot.</ul>`, no mail |
 
+### The browser pass — DONE 2026-08-29, by Brian, and every criterion is now met
+
+Chrome automation was unavailable, so this ran by hand. All four instances of
+the widget's own JavaScript behaviour were watched, which is what no HTTP-level
+test in this task could see:
+
+| Instance | Watched |
+|---|---|
+| `:8000` | widget renders and resolves to a checkmark; a complete form sends |
+| `:8000`, invalid email | re-render, and **the widget reappears and re-solves** — criterion 5 |
+| `:8001`, always-fails secret | refused, server-side — criterion 7 |
+| `:8002`, always-blocks sitekey | refused, client-side — criterion 7 |
+
+**`:8002` is where the log question came from**, and its answer became task 05:
+a widget that never issues a token produces no line at all, because the guard
+raises before anything is logged.
+
+The three throwaway instances have been removed; `:8000` is the ordinary stack.
+
 ### Still owed
 
-- **The browser pass (acceptance criterion 7) was not run.** Chrome automation
-  was declined this session, so the widget's own JS — that it renders, issues a
-  token, and re-renders cleanly after a failed submit — has not been watched in
-  a browser. Everything above is HTTP-level. Step 16 task 05's six-defects-in-
-  ten-minutes finding is exactly the argument for not skipping this.
-- **`.env` still holds `RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET_KEY`**, now
-  orphaned — nothing reads them. `.env` is the project's one un-backed-up
-  artifact, so it is Brian's to edit. The secret is a live Google credential and
-  the key pair can also be deleted at Google's console once registration is off
-  reCAPTCHA for good, which it already is — registration never used it.
+- ~~**`.env` still holds `RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET_KEY`**~~ —
+  **DONE 2026-08-29, by Brian.** Zero references remain and the stack restarts
+  on the edited file, which also confirms nothing was reading them. The key pair
+  can still be deleted at Google's console; registration never used it, so
+  nothing anywhere depends on it now.
 - **The 1.4/month spam baseline re-read** still stands, unchanged by this task.
   The line to grep is now `Turnstile: .* (contact form)` rather than
   `Contact Form captcha response` — and **task 05 will move that file**, so read
