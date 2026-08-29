@@ -16,19 +16,26 @@ logger = logging.getLogger(__name__)
 
 
 class TurnstileOutcome(StrEnum):
-    """The result of asking Cloudflare about a token.
+    """What came of a verification attempt.
 
-    Three values rather than a bool, because a failed challenge and an
-    unreachable provider are different events and call for different responses.
-    Collapsing them is how an outage becomes "the form rejects everyone" with
-    nothing in the log saying why.
+    Four values rather than a bool, because a failed challenge, an unreachable
+    provider and a submission that never carried a token are different events
+    and call for different responses. Collapsing them is how an outage becomes
+    "the form rejects everyone" with nothing in the log saying why.
+
+    Only the first two describe something Cloudflare said. The other two say
+    why it did not, which is the distinction to keep in mind when adding a
+    member here.
     """
 
     PASSED = 'passed'
     REJECTED = 'rejected'
     # Timeout, connection error, non-200, or a body that is not the JSON the
-    # API documents. Nothing was learned about the token.
+    # API documents. Cloudflare was asked and nothing was learned.
     UNAVAILABLE = 'unavailable'
+    # No token to ask about. Cloudflare was never asked, and no request was
+    # made -- a submission that never loaded the widget costs nothing.
+    NO_TOKEN = 'no token'
 
 
 @dataclass(frozen=True)
@@ -46,10 +53,20 @@ def verify(token, remoteip=None, source=None):
     caller decides what an outage means rather than catching exceptions from a
     form's clean() method.
 
+    An absent token returns NO_TOKEN without calling out. Callers hand theirs
+    over unchecked and branch on the result: keeping the test here means a form
+    cannot forget it and spend a request on a submission that never loaded the
+    widget.
+
     source names the calling form in the log line. One line per verification
     has been this site's only measure of challenge volume since 2018, and it is
     worth nothing if it cannot say which form was being protected.
     """
+    if not token:
+        logger.info('Turnstile: %s%s', TurnstileOutcome.NO_TOKEN,
+                    _from(source))
+        return TurnstileResult(TurnstileOutcome.NO_TOKEN)
+
     payload = {
         'secret': settings.TURNSTILE_SECRET_KEY,
         'response': token,

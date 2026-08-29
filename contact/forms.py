@@ -38,13 +38,14 @@ class ContactForm(forms.Form):
     def clean(self):
         super(ContactForm, self).clean()
         token = self.request.POST.get('cf-turnstile-response')
-        # Rejected here rather than sent on, so a bot that never loads the
-        # widget costs nothing.
-        if not token:
-            raise forms.ValidationError("Please verify you aren't a robot")
-
+        # Handed over unchecked: verify() recognises an absent token and
+        # returns without calling out, so a bot that never loads the widget
+        # still costs nothing and still leaves a line in the log.
         result = turnstile.verify(token, get_ip(self.request),
                                   source='contact form')
+        if result.outcome is TurnstileOutcome.NO_TOKEN:
+            raise forms.ValidationError("Please verify you aren't a robot")
+
         if result.outcome is TurnstileOutcome.REJECTED:
             raise forms.ValidationError(
                     "We couldn't verify that you aren't a robot. Please try "

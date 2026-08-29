@@ -22,7 +22,7 @@ def _response(status_code=200, json_value=None, json_exc=None):
 
 
 class VerifyTestCase(TestCase):
-    """The three outcomes and the failure modes that produce them."""
+    """The three Cloudflare outcomes and the failure modes that produce them."""
 
     def test_success_passes(self):
         with patch('antispam.turnstile.requests.post') as post:
@@ -80,9 +80,50 @@ class VerifyTestCase(TestCase):
         self.assertEqual(result.outcome, TurnstileOutcome.UNAVAILABLE)
 
     def test_rejected_and_unavailable_are_distinguishable(self):
-        """The whole reason the helper returns three outcomes and not a bool."""
+        """The whole reason the helper returns outcomes and not a bool."""
         self.assertNotEqual(TurnstileOutcome.REJECTED,
                             TurnstileOutcome.UNAVAILABLE)
+
+
+class NoTokenTestCase(TestCase):
+    """The fourth outcome: Cloudflare was never asked.
+
+    A submission carrying no token is not a verification, but it gets an
+    outcome anyway so that every caller refuses it the same way and so that
+    the never-call-out-without-a-token property is proven here once instead of
+    re-implemented in each form.
+    """
+
+    def test_none_is_no_token(self):
+        with patch('antispam.turnstile.requests.post'):
+            result = verify(None)
+
+        self.assertEqual(result.outcome, TurnstileOutcome.NO_TOKEN)
+
+    def test_no_token_makes_no_request(self):
+        """A bot that never loads the widget must cost nothing."""
+        with patch('antispam.turnstile.requests.post') as post:
+            verify(None)
+
+        post.assert_not_called()
+
+    def test_empty_string_is_no_token(self):
+        """A present-but-empty form field arrives as '', not None."""
+        with patch('antispam.turnstile.requests.post') as post:
+            result = verify('')
+
+        self.assertEqual(result.outcome, TurnstileOutcome.NO_TOKEN)
+        post.assert_not_called()
+
+    def test_no_token_carries_no_error_codes(self):
+        """Nothing was asked, so there is nothing for Cloudflare to have said."""
+        with patch('antispam.turnstile.requests.post'):
+            result = verify(None)
+
+        self.assertEqual(result.error_codes, ())
+
+    def test_all_four_outcomes_are_distinct(self):
+        self.assertEqual(len(set(TurnstileOutcome)), 4)
 
 
 class CallSignatureTestCase(TestCase):
@@ -191,6 +232,27 @@ class LoggingTestCase(TestCase):
         self.assertIn('unavailable', logged.output[0])
         self.assertTrue(logged.output[0].startswith('WARNING'))
         self.assertNotIn('super-secret-token', logged.output[0])
+
+
+    def test_no_token_logs_at_info_naming_the_form(self):
+        """The blind spot this line exists to close: without it an absent
+        entry means nobody visited, the widget broke, or bots are posting
+        direct, and there is no way to tell which."""
+        with patch('antispam.turnstile.requests.post'):
+            with self.assertLogs('antispam.turnstile', level='INFO') as logged:
+                verify(None, source='contact form')
+
+        self.assertEqual(len(logged.output), 1)
+        self.assertIn('no token', logged.output[0])
+        self.assertIn('(contact form)', logged.output[0])
+        self.assertTrue(logged.output[0].startswith('INFO'))
+
+    def test_no_token_omits_the_source_when_unnamed(self):
+        with patch('antispam.turnstile.requests.post'):
+            with self.assertLogs('antispam.turnstile', level='INFO') as logged:
+                verify(None)
+
+        self.assertNotIn('(', logged.output[0])
 
 
 class SettingsTestCase(TestCase):

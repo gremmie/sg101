@@ -80,16 +80,28 @@ class BaseTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_no_captcha_response(self):
-        """A missing token costs nothing: it must not reach Cloudflare."""
+        """A missing token is refused, and the helper is what decides.
+
+        The form does not guard: it always calls verify(), which recognises an
+        absent token and returns without reaching Cloudflare. That nothing goes
+        on the wire is proven in antispam's tests, once for every caller,
+        rather than here for this one.
+        """
         del self.post_data['cf-turnstile-response']
 
         with patch('contact.forms.turnstile.verify') as verify:
+            verify.return_value = TurnstileResult(TurnstileOutcome.NO_TOKEN)
             response = self.client.post(self.url, data=self.post_data,
                                         follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
-        verify.assert_not_called()
+        self.assertIn('Please verify',
+                      response.context['form'].non_field_errors()[0])
+        # Handed over rather than short-circuited here. Asserting the call
+        # first keeps a regression reading as a failure, not an AttributeError.
+        verify.assert_called_once()
+        self.assertFalse(verify.call_args.args[0])
 
     def test_captcha_failure(self):
         """A rejected challenge blocks the send and says so."""

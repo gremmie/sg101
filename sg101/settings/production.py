@@ -155,6 +155,21 @@ LOGGING = {
             'backupCount': 5,
             'encoding': 'utf-8',
         },
+        # Every Turnstile verification, one line each, plus the submissions
+        # that arrive with no token at all. Its own file for the same reason as
+        # auth and search: the contact form alone reaches clean() dozens of
+        # times a day, and that volume would cut sg101.log's retention by a
+        # quarter.
+        'turnstile': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'INFO',
+            'formatter': 'simple',
+            'filename': os.path.join(PROJECT_PATH, 'logs', 'turnstile.log'),
+            'mode': 'a',
+            'maxBytes': 2 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+        },
         'mail_admins': {
             'class': 'django.utils.log.AdminEmailHandler',
             'level': 'ERROR',
@@ -198,6 +213,15 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
             'handlers': ['email'],
+        },
+        # propagate: False for the same reason as auth and search. Note that
+        # it also moves the unavailable WARNING out of sg101.log, because
+        # propagation is per-logger and not per-level: an outage leaves its
+        # only trace in this file.
+        'antispam.turnstile': {
+            'level': 'INFO',
+            'propagate': False,
+            'handlers': ['turnstile'],
         },
         # Symmetry with local.py, where this entry does real work. Here it
         # changes nothing: Markdown's per-render chatter is DEBUG and the root
