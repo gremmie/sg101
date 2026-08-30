@@ -483,10 +483,16 @@ determine it rather than assume, because "fixes a long-standing defect" and
   file's ~5-month retention, so it has to be read before it rotates away. The
   *after* is `grep Turnstile turnstile.log*`, which at 2 MB x 5 does not race
   anything. Reading both from `sg101.log` is no longer possible and a single-file
-  read will silently answer only half the question. **Task 03 made this
-  urgent rather than pending**: the widget is on registration, so every day that
-  passes is an *after* day, and the *before* it will be compared against is
-  sitting in a file that rotates.
+  read will silently answer only half the question. **The clock on it is
+  `sg101.log`'s rotation and nothing else — corrected 2026-08-29.** An earlier
+  version of this bullet said task 03 made the read urgent because the widget was
+  now live; it is not live anywhere but the dev stack. Production still serves
+  the **`main`** branch on Python 2.7 and keeps doing so until the Step 21 DNS
+  flip, so registration there still runs the old flow with no Turnstile, the
+  *before* period is still accruing, and no *after* data exists yet or can. What
+  a delay costs is only the oldest end of the window: the seven deactivated
+  accounts the 1.4/month figure counts were found inside a sliding ~5 months, and
+  those particular lines age out. Read it before cutover, unhurried.
 
 ## PLANNING — Step 17 task 05: the contact form's real traffic, measured 2026-08-28
 
@@ -651,8 +657,12 @@ traffic, which is not what the instrument is for.
   Cloudflare from the suite.
 - `self.post_vals` and one inline POST body carry `'cf-turnstile-response'`.
 - The five layers are all still live, each with its own test and its own log
-  line. Task 04 removes `question1`, `question2`, `question3` and the
-  `register1`/`register2` code flow, leaving Turnstile.
+  line. Task 04 removes `question1`, `question3` and the `register1`/`register2`
+  code flow. **`question2` — the hidden honeypot — stays**, requirement 2,
+  including its CRITICAL log line: it costs a real user nothing, it is invisible
+  in the rendered page, and it catches a class of bot that never runs JavaScript
+  and so never reaches Turnstile at all. Registration ends task 04 with two
+  layers, not one.
 
 ### The browser pass — DONE 2026-08-29, by Brian, and the log carries the proof
 
@@ -720,9 +730,9 @@ views, their routes and templates, `get_code`, and this JS file.
 
 ### Still owed
 
-- **The 1.4/month baseline re-read is now the *before* of a change that is
-  live.** `grep 'Accounts/registration' sg101.log*` on jaguar, against ~5 months
-  of retention. The *after* is `grep Turnstile turnstile.log*` on the new host.
+- **The 1.4/month baseline re-read**, which task 03 does *not* make urgent —
+  nothing shipped here reaches production until the Step 21 cutover. See the
+  *Still open* register in the Step 17 planning section, which owns this claim.
 
 ### Files
 
