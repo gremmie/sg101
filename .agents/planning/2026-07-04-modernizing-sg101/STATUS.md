@@ -448,8 +448,11 @@ arrives.
   **removing nothing**. Registration is deliberately over-protected at the end of
   it.
 - `step17/task-04-retire-registration-code-flow.code-task.md` — the
-  simplification. Most of its diff is `accounts/tests/test_views.py`, not the
-  deletions.
+  simplification. **DONE 2026-08-30**, see its own section. Most of its diff is
+  `accounts/tests/test_views.py`, not the deletions — **half right, measured
+  after the fact**: the test file is the largest single file at 142 changed
+  lines, but the diff as a whole is 329 deletions against 56 insertions, so the
+  removals dominate it.
 
 **Turnstile's test keys make this developable in Docker, which reCAPTCHA never
 was.** Cloudflare's dummy sitekeys and secrets work from any domain including
@@ -660,7 +663,9 @@ traffic, which is not what the instrument is for.
   line. Task 04 removes `question1`, `question3` and the `register1`/`register2`
   code flow. **`question2` — the hidden honeypot — stays**, requirement 2,
   including its CRITICAL log line. Registration ends task 04 with two layers,
-  not one.
+  not one. **Done 2026-08-30, exactly as written** — two layers, and the
+  honeypot's CRITICAL line is still asserted by `test_question2`, which the
+  mutation battery's M5 confirmed still discriminates.
 
   **Measured 2026-08-29, on jaguar, because the argument for keeping it was
   running on reasoning alone.** The honeypot's CRITICAL line goes to the `auth`
@@ -913,6 +918,198 @@ engineering around.
 
 The two settings modules differ only in handler level (`INFO` / `DEBUG`), which
 is how they already differ for `auth`, `search` and `email`.
+
+## Step 17 task 04 — registration collapses to one page — DONE 2026-08-30, UNCOMMITTED, awaiting review
+
+Nine files. **1007 → 1006 tests** green, suite and deprecation gate both run,
+`check` clean. Registration is now `register` → `thanks` plus the emailed
+confirmation, with Turnstile and one invisible honeypot.
+
+Removed: `question1` (the `101` question), `question3` (the visible honeypot),
+`RegisterCodeForm`, `CODE_WORD_CHOICES`, `generate_registration_code`, views
+`register1` / `register2` / `get_code`, routes `accounts-register1` /
+`accounts-register2` / `accounts-code`, templates `register1.html` /
+`register2.html`, and `accounts/static/js/accounts_code.js`. Kept: `question2`
+and its CRITICAL line, and `register_confirm` untouched.
+
+### Three findings that changed the task as written
+
+**1. Requirement 8's premise was wrong, and checking cost one `git log`.** The
+task file says `@log_auth_failures('Register')` "currently decorates
+`register2`". It decorated **both** stages, and has decorated `register` since
+`3eef6754` (2013-09-01). So the deliberate decision it asked for is *keep what
+stage one already has*, and deleting `register2` removed a duplicate rather than
+the only instance. **What changes in the auth log:** the ~214 code-mismatch
+failures the layer measurement counted stop appearing as `Register failure`
+lines, because the layer that produced them is gone. fail2ban still sees every
+stage-one failure, which is the property that matters to it.
+
+**2. `tools/email_smoke.py` was an unlisted fifth caller.** Its
+`registration_confirmation()` producer fabricated a `reg_info` session and drove
+`RegisterCodeForm.save()`. The task's file list named four files and did not
+include it; requirement 9's grep is what surfaced it. Repointed at
+`RegisterForm` and **run** — `--only registration`, 4/4 checks passed — rather
+than left to a parse check.
+
+**3. `RegisterForm.save()` lost its `request` parameter.** Everything the moved
+work uses is `cleaned_data` plus `self.ip`, both already on the form. That also
+made the smoke-tool producer match the shape `forgot_username()` already used
+for `ForgotUsernameForm`, so the two producers now read the same way.
+
+### The page had to stop apologising for questions it no longer asks
+
+Requirement 7 asked only for the two field blocks. Two other things on
+`register.html` became false the moment they went, both user-visible, and
+**Brian chose to fix both**:
+
+- the `warning callout` — *"We are really sorry about all the crazy questions in
+  the registration form"* — had nothing left to apologise for. Turnstile is a
+  checkbox and the honeypot is invisible. Deleted.
+- the submit button read **Next Step →**. There is no next step. Now **Register**.
+
+Same class as task 03's *"the page had to stop saying it has no CAPTCHA"*: copy
+that a change falsifies is part of the change.
+
+### Ten mutations, all caught
+
+Tests followed the code here, so the battery is what makes them evidence. Each
+defect was applied, the class run, the file restored, and the restored file
+confirmed byte-identical by sha256.
+
+| | Mutation | Caught by |
+|---|---|---|
+| M1 | an old route resolves again | `test_the_old_routes_are_gone` |
+| M2 | the success log line is reworded | `test_the_success_line_keeps_its_shape` |
+| M3 | the redirect goes somewhere else | `test_success` |
+| M4 | the confirmation email is not sent | `test_success` |
+| M5 | the honeypot stops discriminating | `test_question2` |
+| M6 | a rejected token is allowed through | `test_a_rejected_token_blocks_registration` |
+| M7 | a missing token is allowed through | `test_a_missing_token_costs_no_request` |
+| M8 | an outage fails closed | `test_an_outage_fails_open` |
+| M9 | `verify()` called with another `source` | `test_success` |
+| M10 | the pending user is created under another name | `test_success` |
+
+M10 is the one that earns its place: M3 and M4 prove the redirect and the mail,
+but only M10 forces the assertion that the row created is the row the form was
+asked for.
+
+### Verified against the running stack, because the suite cannot see `LOGGING`
+
+The suite asserts the success line through `assertLogs`; what `STATUS.md`'s
+counting greps is a file written through the real `LOGGING` config, which the
+test settings disable. So the whole flow was walked over HTTP against the dev
+stack — real routing, real form, a real Turnstile call on the always-passes test
+secret, and the real Celery worker rather than `CELERY_TASK_ALWAYS_EAGER`:
+
+```
+1. GET  register page          : widget present
+2. POST registration           : 302 -> /accounts/register/thanks/
+3. PendingUser created         : walkthrough_u1 <walkthrough_u1@example.com>
+5. GET  activation link        : account active=True, pending rows left=0
+6. POST login                  : 302 -> /profile/me/
+7. old routes /1/ /2/ /code/   : 404, 404, 404
+```
+
+and the three log files then read:
+
+```
+auth.log      Accounts/registration conf. email sent to walkthrough_u1@example.com
+              for user walkthrough_u1; IP = 127.0.0.1
+turnstile.log Turnstile: passed (registration)
+email.log     category=registration to=walkthrough_u1@example.com outcome=sent
+```
+
+**That first line is requirement 4 discharged against the instrument rather than
+against a mock.** It is the success signal the 1,038-registration denominator is
+built on, and it is byte-compatible. The scratch account was deleted afterwards.
+
+### The browser pass — DONE 2026-08-30, by Brian
+
+Chrome automation was unavailable again. **The four-instance key sweep was
+deliberately not repeated:** the widget `div` and the script tag are
+byte-identical after this task — the template diff is three removals and the
+button text — so nothing about the widget's own JavaScript changed, and task
+03's sweep still covers it.
+
+| Checked | Result |
+|---|---|
+| layout after three blocks came out of the grid | fine |
+| the honeypot, now the only question left | not visible |
+| re-render, via a reused username | **the widget came back solved** |
+| the button | reads *Register* |
+| a full successful registration | no problems |
+
+**The re-render instance was worth repeating even though the sweep was not**,
+because what *triggers* a re-render changed: `question1` and `question3` errors
+are gone as causes, so the path was re-entered through a duplicate username.
+
+**The logs settle it, as they did for task 03**, and this is the pass read back
+out of the instrument rather than reported from the screen:
+
+```
+15:20:06,528  auth   Accounts/registration [192.168.65.1]: A user with that username already exists. (Brian)
+15:20:06,722  turn   Turnstile: passed (registration)
+15:20:06,743  auth   Register failure from [192.168.65.1] for Brian
+15:22:36,957  turn   Turnstile: passed (registration)
+15:22:37,082  auth   Accounts/registration conf. email sent to xy@e.com for user tester; IP = 192.168.65.1
+```
+
+**Two `passed`, no `rejected`, and the first one is what makes the second mean
+anything.** The field error at `:06,528` lands *before* the Turnstile line at
+`:06,722` — field cleans run first and `clean()` verifies afterwards — so the
+rejected submission **spent its token**. Tokens are single-use, so the `passed`
+at `15:22:36` cannot be that same token: the widget issued a fresh one, which is
+only possible if it re-solved on the re-rendered page. A widget that came back
+green without re-solving would have logged `rejected (registration)` with
+`timeout-or-duplicate`. Task 02's single-use defect stays closed for this form,
+now on this task's own evidence.
+
+The `tester` / `xy@e.com` `PendingUser` row from that registration is still on
+the dev stack unactivated, and expires 24 hours after `2026-08-30 20:22`.
+
+### A ten-year-old defect in the block Brian asked about, not this task's
+
+Reviewing the checkbox layout surfaced that **all three agreement labels are
+dead**. The template writes `for="form.agree_age.id_for_label"` — the `{{ }}`
+are missing, so the attribute renders as that literal string while the inputs
+carry `id_agree_age`, `id_agree_tos`, `id_agree_privacy`:
+
+```html
+<input type="checkbox" name="agree_age" required id="id_agree_age">
+<label for="form.agree_age.id_for_label">I certify that I am over the age of 13</label>
+```
+
+Clicking any of the three label texts does nothing; only the box itself
+responds. Introduced **2016-07-12 in `2e7e8f79`** ("Convert registration views
+to V3 design") and present nowhere else in the templates — the honeypot's label
+two rows below renders `for="id_question2"` correctly.
+
+**It is on this step's theme and cannot be measured from the logs.** Three
+*required* checkboxes with unclickable labels is exactly the registration
+friction Step 17 exists to remove. But the `agree_*` fields raise Django's own
+`BooleanField` required error rather than going through `_validation_error()`,
+so no auth-log line names them and the layer measurement never counted them. How
+many people this cost is **not recoverable** — recorded as a defect found, not
+as a quantity.
+
+**Not fixed here.** It is unrelated to retiring the code flow, and folding it
+into a 329-deletion diff would hide it.
+
+### Still owed
+
+- **The agreement labels**, above — a three-line fix, plus Brian's suggestion to
+  stack the three checkboxes vertically rather than inline. Same three lines;
+  worth one small commit of its own.
+- **The 1.4/month baseline re-read**, unchanged and still owned by the Step 17
+  *Still open* register. Nothing here reaches production before Step 21.
+
+### Files
+
+`accounts/forms.py`, `accounts/views.py`, `accounts/urls.py`,
+`accounts/tests/test_views.py`, `sg101/templates/accounts/register.html`,
+`tools/email_smoke.py`, and three deletions:
+`sg101/templates/accounts/register1.html`, `register2.html`,
+`accounts/static/js/accounts_code.js`.
 
 ## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, `e8f8f47d` + `1dd06d52`, PUSHED, CI GREEN
 
