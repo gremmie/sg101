@@ -1231,13 +1231,70 @@ composed.
 `real=0` every day — which is the month **244 spam accounts registered**, the
 worst in the corpus. The proxy was live and did not stop it.
 
-So the cliff is not "Cloudflare went in front". Registration attempts reaching
-Django never fell either, before or after. Whatever ended the wave in August
-2025 was not the proxy's arrival and was not a registration code change —
-`accounts/` and `antispam/` have no commits between 2025-04 and 2026-01. **A
-Cloudflare setting changed after the proxy was already running is the obvious
-candidate and the dashboard's audit log would date it**, but that has not been
-read and the cause is recorded as unidentified rather than guessed.
+So the cliff is not "Cloudflare went in front". Whatever ended the wave in
+August 2025 was not the proxy's arrival and was not a registration code change —
+`accounts/` and `antispam/` have no commits between 2025-04 and 2026-01.
+
+**IDENTIFIED 2026-08-30 from the Cloudflare audit log, and it is not a
+Cloudflare feature — it is fail2ban.** Brian exported 2025-08-04 → 2025-09-30,
+229 events:
+
+```
+2025-08-10 13:47 CDT   mod_remoteip enabled            (jaguar filesystem)
+2025-08-10 15:34 CDT   IP list "block_list" created    "List of IP addresses
+                                                        to block", num_items 0
+2025-08-10 15:38 CDT   WAF rule created, phase http_request_firewall_custom
+                         action: block
+                         expression: (ip.src in $block_list)
+2025-08-12 onward      111 further list operations, kind append/delete,
+                       "bulk operation accepted" -- i.e. automated
+2025-08-13, 08-14      API tokens created: "Fail2ban", "Fail2ban attempt 2"
+```
+
+**fail2ban on jaguar pushes bans into a Cloudflare IP list and a WAF rule drops
+them at the edge.** Built in one afternoon, 1h45m after `mod_remoteip`.
+
+**The ordering is the mechanism, not a coincidence.** Before 2025-08-10 fail2ban
+was blind: jaguar saw only Cloudflare edge addresses, so there were no client
+IPs to ban, and banning what it *could* see would have banned Cloudflare.
+`mod_remoteip` restored real client IPs, which is what made IP banning
+meaningful — and the block list was built the same afternoon. **The 52-day
+window was not merely a logging defect: for its duration the site's IP-based
+defences could not work at all.**
+
+**This also corrects an earlier sentence in this section.** "Registration
+attempts reaching Django never fell" was too strong. July's 886 fell back to
+~135 and held at the pre-wave baseline of ~100/month, while spam *successes*
+fell far below their own prior baseline — 14.5/month to ~1.25. That is the
+signature of banning repeat offenders: the long tail of one-off attempts
+continues, the persistent sources stop getting through.
+
+**Caveat, and it is why this reads "identified" rather than "proved".** The
+audit log records configuration, not blocked requests. Cloudflare Security
+Events would show actual blocks, but that retention is short on this plan and
+August 2025 is long gone. This is a precisely dated, mechanistically coherent
+correlation, not a measured causal chain.
+
+### The consequence for Step 21, which is the part that matters going forward
+
+**The ~1.25/month floor is held by fail2ban plus edge blocking, not by the
+registration form.** Nothing in `accounts/` is doing this work. Three
+consequences:
+
+1. **The blocking has to be rebuilt on the new VM, and it will not come along by
+   itself.** fail2ban's jails and the Cloudflare API credentials are host
+   configuration, not repo content — nothing in this repository would recreate
+   them.
+2. **It has to be rebuilt in the right order, and the 52-day window is the
+   lesson.** The new VM also sits behind Cloudflare, so **the real-client-IP
+   rewrite must be working before fail2ban is enabled**, or the new host repeats
+   2025's mistake and bans the edge. Step 20 already carries that rewrite
+   (`ngx_http_realip_module`, the same 15 ranges) as its own item; this makes it
+   a **prerequisite of the blocking** rather than an independent task.
+3. **Turnstile will be judged against a floor fail2ban is holding down.** If the
+   blocking is not carried over, spam rises at cutover for reasons that have
+   nothing to do with the registration flow — and that rise would read as
+   Turnstile failing. See *the spam baseline, read from the database*.
 
 ## Step 17 — the spam baseline, read from the database — 2026-08-30
 
