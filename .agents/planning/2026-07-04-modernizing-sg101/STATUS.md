@@ -379,6 +379,17 @@ pure-human failure as the log offers, and it reads 68%.
 | **registration code mismatch** | 214 | 134 | **77%** | **almost pure human** |
 | *(control)* password mismatch | 116 | 99 | 68% | humans by definition |
 
+> **CORRECTED 2026-08-30 — 35% of this corpus has no client IPs in it.** Between
+> 2025-06-19 and 2025-08-10 the site logged Cloudflare's edge addresses as
+> `REMOTE_ADDR`, so the "IPs that later succeeded" column — which keys on IP
+> identity — is inflated for every row. Recomputed with that window excluded the
+> ordering holds, but the honeypot reads **0%**, `question3` **12%**, `question1`
+> **21%** and the code step **89%** against a **78%** control. The table above is
+> left as it was measured; see *Cloudflare dated, and 35% of the layer
+> measurement had no client IPs*. **`question1` and `question3` were roughly 3x
+> more bot-catching than these numbers say**, which is the half of this table
+> that argued for removing them.
+
 **The code step performs worse than the control.** The people it stops are
 overwhelmingly humans who mistyped or lost the code and retried; it turns away
 about 1.6 IPs/month that never return. Its only anti-bot function is proving the
@@ -479,23 +490,32 @@ determine it rather than assume, because "fixes a long-standing defect" and
 - ~~**`requests.post` has no timeout**~~ — **CLOSED 2026-08-27 by task 01.**
   `antispam/turnstile.py` posts with `timeout=settings.TURNSTILE_TIMEOUT`, and
   the old un-timed call at `contact/forms.py:47` went with reCAPTCHA in task 02.
-- **The 1.4/month spam baseline needs re-reading after the change** — it is the
-  only thing "did it work" can be judged against. **The two halves now live in
-  different files, as of task 05.** The *baseline* is still registration lines in
-  `sg101.log` — `grep 'Accounts/registration' sg101.log*` — and still races that
-  file's ~5-month retention, so it has to be read before it rotates away. The
-  *after* is `grep Turnstile turnstile.log*`, which at 2 MB x 5 does not race
-  anything. Reading both from `sg101.log` is no longer possible and a single-file
-  read will silently answer only half the question. **The clock on it is
-  `sg101.log`'s rotation and nothing else — corrected 2026-08-29.** An earlier
-  version of this bullet said task 03 made the read urgent because the widget was
-  now live; it is not live anywhere but the dev stack. Production still serves
-  the **`main`** branch on Python 2.7 and keeps doing so until the Step 21 DNS
-  flip, so registration there still runs the old flow with no Turnstile, the
-  *before* period is still accruing, and no *after* data exists yet or can. What
-  a delay costs is only the oldest end of the window: the seven deactivated
-  accounts the 1.4/month figure counts were found inside a sliding ~5 months, and
-  those particular lines age out. Read it before cutover, unhurried.
+- ~~**The 1.4/month spam baseline needs re-reading before `sg101.log` rotates**~~
+  — **the deadline was wrong and is withdrawn 2026-08-30.** The read itself is
+  done; see *the spam baseline, read from the database* below.
+
+  **What this bullet got wrong, twice.** It said the baseline is registration
+  lines in `sg101.log`, greppable as `grep 'Accounts/registration' sg101.log*`.
+  That file contains **zero** such lines — they are all in `auth.log`, which is
+  what the measurement section 160 lines above this one already said and what
+  this bullet contradicted. Anyone following the grep would have got an empty
+  result and concluded the evidence had rotated away.
+
+  **The urgency was real but attributed to the wrong half.** The *numerator* —
+  `User deactivated for spam:` lines — genuinely is in `sg101.log`, which
+  retains ~5 months and did bound the seven events to 2026-04-03 → 2026-07-24.
+  The *denominator*, registrations, is in `auth.log` at 19.7 months.
+
+  **And the whole clock is moot, because the logs were never the only
+  instrument.** `antispam.utils.deactivate_spammer()` writes the fact to the
+  database — `UserProfile.status = STA_SPAMMER`, `status_date` set explicitly —
+  so the history is durable, complete, and reaches back to **2011**. Nothing
+  perishes. Read it whenever.
+
+  **Still true, and unchanged:** production serves the **`main`** branch on
+  Python 2.7 until the Step 21 DNS flip, so registration there runs the old flow
+  with no Turnstile, the *before* period is still accruing, and no *after* data
+  exists yet or can. The *after* remains `grep Turnstile turnstile.log*`.
 
 ## PLANNING — Step 17 task 05: the contact form's real traffic, measured 2026-08-28
 
@@ -763,9 +783,10 @@ views, their routes and templates, `get_code`, and this JS file.
 
 ### Still owed
 
-- **The 1.4/month baseline re-read**, which task 03 does *not* make urgent —
-  nothing shipped here reaches production until the Step 21 cutover. See the
-  *Still open* register in the Step 17 planning section, which owns this claim.
+- ~~**The 1.4/month baseline re-read**~~ — **DONE 2026-08-30 from the database**,
+  which is where it should always have been read; see *the spam baseline, read
+  from the database*. This bullet's own point stood: nothing shipped here reaches
+  production until the Step 21 cutover.
 
 ### Files
 
@@ -1099,8 +1120,9 @@ into a 329-deletion diff would hide it.
 
 - ~~**The agreement labels**~~ — **DONE 2026-08-30**, with the stacking, in its
   own section below.
-- **The 1.4/month baseline re-read**, unchanged and still owned by the Step 17
-  *Still open* register. Nothing here reaches production before Step 21.
+- ~~**The 1.4/month baseline re-read**~~ — **DONE 2026-08-30**, from
+  `UserProfile.status` rather than from any log. Nothing here reaches production
+  before Step 21.
 
 ### Files
 
@@ -1109,6 +1131,193 @@ into a 329-deletion diff would hide it.
 `tools/email_smoke.py`, and three deletions:
 `sg101/templates/accounts/register1.html`, `register2.html`,
 `accounts/static/js/accounts_code.js`.
+
+## Step 17 — Cloudflare dated, and 35% of the layer measurement had no client IPs — 2026-08-30
+
+**Brian's hypothesis, that the spam cliff coincided with putting Cloudflare in
+front, and his recollection that `mod_remoteip` came "some time later".** Both
+are confirmed, and chasing the gap between them found a defect in the
+measurement that drove this entire step.
+
+### The dates, from two instruments that share nothing
+
+Before `mod_remoteip`, Apache recorded Cloudflare's *edge* IP as the client, so
+the corpus dates the change itself. Every bracketed IP in `auth.log` classified
+against Cloudflare's published ranges:
+
+```
+2025-06-18   all real client IPs
+2025-06-19   Cloudflare edge IPs appear      cf=38   real=110
+2025-06-20                                   cf=203  real=53
+2025-06-21   100% Cloudflare edge            cf=265  real=0
+   ...        (52 days)
+2025-08-10   mod_remoteip enabled            cf=37   real=30
+2025-08-11   all real client IPs again       cf=0    real=64
+```
+
+**2025-06-19 is the day Brian's Cloudflare account was created**, read off the
+dashboard and volunteered independently of this measurement. `mod_remoteip`'s
+symlinks in `mods-enabled` and `conf-enabled` are stamped **2025-08-10** 13:47
+and 14:00. The logs, the account page and the filesystem agree.
+
+### The consequence: a 52-day hole where IP identity means nothing
+
+For 2025-06-19 → 2025-08-10 every `REMOTE_ADDR` the site recorded was one of a
+small pool of Cloudflare edge addresses. Unrelated actors collapse onto the same
+"IP". **954 of 2,700 registration lines — 35% of the corpus — fall inside it**,
+including the largest spam wave on record.
+
+**That corpus is what the layer decision table was computed from**, and its
+discriminator is *"did this IP ever complete a registration afterwards"* —
+precisely the quantity a shared address destroys. Contamination by layer:
+
+| Layer | Hits inside the window |
+|---|---|
+| `question1`, removed | **221 / 439 — 50%** |
+| `question3`, removed | **110 / 276 — 40%** |
+| registration code | 67 / 216 — 31% |
+| `question2`, kept | 38 / 161 — 24% |
+
+### Recomputed with the window excluded
+
+The method was first validated by reproducing the recorded numbers from the
+whole corpus — 8 / 27 / 35 / 68 / 76% against the recorded 8 / 27 / 35 / 68 /
+77%, so this is the same instrument and not a second one that happens to agree.
+
+| Layer | IPs | Later succeeded | As recorded |
+|---|---|---|---|
+| `question2` hidden honeypot | 73 | **0%** | 8% |
+| `question3` visible honeypot | 106 | **12%** | 27% |
+| `question1` the 101 question | 131 | **21%** | 35% |
+| *(control)* password mismatch | 68 | 78% | 68% |
+| registration code mismatch | 79 | **89%** | 76% |
+
+**The ordering is unchanged, which is exactly what the original caveat said was
+the robust part.** That caveat — "the robust part is the *ordering*, not the
+absolute percentages" — is vindicated rather than embarrassed.
+
+**The magnitudes move a long way, and not all in the same direction:**
+
+- **The honeypot is a cleaner signal than recorded** — **0 of 73** IPs that
+  filled it ever registered successfully, against 8%. Keeping it was right, more
+  strongly than the record claimed.
+- **The code step is more purely human than recorded** — 89% against 76%, now
+  well clear of the 78% control. Removing it was right, more strongly than the
+  record claimed.
+- **But `question1` and `question3` were more bot-catching than recorded** —
+  21% and 12%, not 35% and 27%. The record read those as "~98 real people
+  tripped" and "~55 real people tripped"; outside the window it is 28 of 131 and
+  13 of 106. **The friction those two layers imposed was overstated by roughly
+  3x, which is the half of the decision table that argued for removing them.**
+
+**The removals still stand, on arguments that never depended on these
+percentages:** `question1`'s answer is a fixed constant and one line of code for
+anything targeting this site by name; `question3` was visible, so it confused
+real people by construction; and Turnstile now covers the classes both were
+catching. **What is corrected is the evidence base, not the decision** — and the
+distinction matters, because the record presented those percentages as the
+measurement that settled it.
+
+**Why excluding the window is correct rather than convenient:** inside it, IP
+identity does not exist, so those events cannot contribute to an IP-keyed
+discriminator at all. They are not being discarded for being inconvenient; they
+carry no signal for this question. The cost is that the excluded period contains
+the July 2025 wave, so the remaining population is smaller and differently
+composed.
+
+### And it answers the spam-cliff question in the negative
+
+**Cloudflare was fully in front for the whole of July 2025** — 100% edge IPs,
+`real=0` every day — which is the month **244 spam accounts registered**, the
+worst in the corpus. The proxy was live and did not stop it.
+
+So the cliff is not "Cloudflare went in front". Registration attempts reaching
+Django never fell either, before or after. Whatever ended the wave in August
+2025 was not the proxy's arrival and was not a registration code change —
+`accounts/` and `antispam/` have no commits between 2025-04 and 2026-01. **A
+Cloudflare setting changed after the proxy was already running is the obvious
+candidate and the dashboard's audit log would date it**, but that has not been
+read and the cause is recorded as unidentified rather than guessed.
+
+## Step 17 — the spam baseline, read from the database — 2026-08-30
+
+**Prompted by Brian asking why a baseline read was owed at all**, which turned
+out to be the right question: the answer was recorded against the wrong file and
+the deadline did not exist.
+
+### The instrument, and why it beats both logs
+
+`antispam.utils.deactivate_spammer()` sets `UserProfile.status = STA_SPAMMER`
+(4) and assigns `status_date` explicitly — `auto_now_add` binds only on insert,
+so the assignment survives the update. `User.date_joined` gives the registration
+date. So every spam deactivation the site has ever made is in the database with
+both dates, **1,601 profiles, `status_date` spanning 2011-02-28 → 2026-07-24.**
+
+Against that, `sg101.log` offers 7 events over 5 months and `auth.log` offers
+registrations only. The logs were never the limiting instrument; nobody had
+looked at the durable one.
+
+### The read, monthly, since 2024-09
+
+`flagged` counts by `status_date`; `spam-regs` counts the same accounts by
+`date_joined`; `all-regs` is every registration in the month.
+
+```
+month     flagged  spam-regs  all-regs        month     flagged  spam-regs  all-regs
+2024-09       37        37        69          2025-09       10        10        34
+2024-10       74        79       101          2025-10        4         6        31
+2024-11       67        61        93          2025-11       12        11        41
+2024-12        3         5        27          2025-12        5         4        28
+2025-01       12        10        54          2026-01        1         1        32
+2025-02       10        11        42          2026-02        2         2        26
+2025-03       12        12        36          2026-03        1         1        21
+2025-04       16        16        34          2026-04        3         2        27
+2025-05       25        27        63          2026-05        2         2        36
+2025-06       13        11        45          2026-06        1         1        27
+2025-07      245       244       298          2026-07        1         1        25
+2025-08       25        24        54
+```
+
+**The 1.4/month figure is corroborated by an independent instrument.** 2026-01
+through 2026-07 reads 1, 2, 1, 3, 2, 1, 1 — **11 over 7 months, ~1.6/month**,
+against ~1.4/month derived from an entirely different source over a different
+window. Two instruments that share no code agree.
+
+### What the 3.7-month window could not show, and it matters more than the number
+
+**The baseline sits at the bottom of a cliff.** 2025-07 flagged **245** spam
+registrations; 2026 runs 1–3 a month. Total registrations fell too — ~100/month
+in late 2024 to ~25/month now — but nothing like as far: **the spam share went
+from 78% of registrations in 2024-10 to about 4% now.**
+
+**Nothing in the registration code explains it.** `accounts/` and `antispam/`
+have no commits between 2025-04 and 2026-01; the repo activity in that window is
+`robots.txt`, bot disallow rules, wiki links and tests. **The cause is not
+identified and is not guessed at here.**
+
+**Two consequences for Step 17, and they cut against the plan as written:**
+
+1. **The effect may be undetectable.** At ~1.6/month, roughly 19 events a year,
+   a reduction from Turnstile needs a long observation window before it is
+   distinguishable from noise. "Did it work" was always going to be judged
+   against this number; the number is now known to be too small to answer the
+   question quickly.
+2. **A rate that fell for reasons outside the flow can rise for the same
+   reasons.** Whatever ended the 2025-07 wave was not a registration change, so
+   the current quiet is not evidence the current layers are strong — and a
+   post-cutover rise would not be evidence Turnstile failed.
+
+**Right-censoring, stated because it is easy to miss:** recent registrations have
+had less time to be caught and flagged, so the newest months understate. The last
+flag in the corpus is 2026-07-24, which is why 2026-08 has no row rather than a
+zero row.
+
+### The read is done; what is still owed is smaller
+
+The *before* number is now measured from a durable source and needs no
+re-reading. What remains is the *after*, which cannot exist until the Step 21
+cutover puts Turnstile in front of real traffic — and, on the evidence above,
+will take a long time to say anything.
 
 ## Step 17 — `question2` becomes `question` — DONE 2026-08-30, UNCOMMITTED
 
