@@ -1097,9 +1097,8 @@ into a 329-deletion diff would hide it.
 
 ### Still owed
 
-- **The agreement labels**, above — a three-line fix, plus Brian's suggestion to
-  stack the three checkboxes vertically rather than inline. Same three lines;
-  worth one small commit of its own.
+- ~~**The agreement labels**~~ — **DONE 2026-08-30**, with the stacking, in its
+  own section below.
 - **The 1.4/month baseline re-read**, unchanged and still owned by the Step 17
   *Still open* register. Nothing here reaches production before Step 21.
 
@@ -1110,6 +1109,108 @@ into a 329-deletion diff would hide it.
 `tools/email_smoke.py`, and three deletions:
 `sg101/templates/accounts/register1.html`, `register2.html`,
 `accounts/static/js/accounts_code.js`.
+
+## Step 17 — the agreement labels, dead since 2016, and the form's layout with them — DONE 2026-08-30, UNCOMMITTED
+
+Five files, **1006 → 1007 tests** green, suite and deprecation gate both run. The
+defect and how it was found are recorded in task 04's section above; this is
+what was done about it.
+
+```
+-  {{ form.agree_age }}<label for="form.agree_age.id_for_label">...
++  <div>{{ form.agree_age }}<label for="{{ form.agree_age.id_for_label }}">...</div>
+```
+
+**The `for` fix and the stacking are the same three lines, which is why they are
+one change.** Nothing else on the page shares the fault: every other field in
+the template already writes `for="{{ ... }}"`.
+
+### Why a wrapping `div` rather than CSS
+
+The three sat inline because of one Foundation rule:
+
+```css
+[type=checkbox]+label,[type=radio]+label{display:inline-block;...;margin-right:1rem}
+```
+
+**That rule needs the label to be the input's adjacent sibling**, so wrapping
+each *pair* in a block element stacks them while leaving the rule — and its
+`.5rem` gap between box and text — still applying. Overriding the rule instead
+would have meant new CSS at equal specificity loaded after Foundation, which is
+a worse trade for three checkboxes. The label keeps its explicit `for` rather
+than being wrapped around the input, for the same reason: wrapping breaks the
+sibling adjacency the rule is written against.
+
+### The test asserts the association, not the layout
+
+`test_the_agreement_labels_name_their_own_boxes` regexes each input's `id`
+against the `for` of the label beside it, tolerant of whitespace and strict on
+the pairing. **Three mutations, all caught:**
+
+| | Mutation | |
+|---|---|---|
+| M1 | the 2016 defect restored verbatim | caught |
+| M2 | a label points at a different box | caught |
+| M3 | the label separated from its input | caught |
+
+M1 is the one that matters — the historical defect, put back exactly as it was,
+now fails.
+
+**The stacking is deliberately not tested.** It is presentation, it is visible
+in a browser and nowhere else, and a test asserting a `div` wrapper would fix
+the markup rather than the property. Brian eyeballs it; the suite guards the
+part that has a right answer.
+
+**This is the shape of defect the suite was never going to find on its own.** A
+label whose `for` names nothing renders without error, validates as HTML, and
+looks correct in a screenshot. It took someone asking about the layout.
+
+### The submit button stops being pulled to the right
+
+```
+-  <div class="clearfix"><button class="primary button float-right">Register</button></div>
++  <div class="row"><div class="columns"><button class="primary button">Register</button></div></div>
+```
+
+Brian's call, looking at the simplified page: with the form down to one screen
+the far-right button reads as detached, and directly under the widget is where
+the eye already is.
+
+**The `row`/`columns` wrapper is not decoration — it is what makes "directly
+under" true.** `.columns` carries `padding-left: .625rem`, so a button left in
+its `clearfix` div would sit that much left of the Turnstile widget, which is
+inside `.columns`. Reusing the widget's own wrapper aligns the two left edges
+exactly. The `clearfix` went with the float: it existed only to contain it, and
+no float remains anywhere in the form.
+
+Untested, for the same reason the stacking is: it is presentation, and there is
+no right answer a test could hold it to.
+
+### The widget needed a bottom margin, and that meant touching the built CSS
+
+`.cf-turnstile` is not a form control, so it inherits none of the
+`margin: 0 0 1rem` Foundation gives inputs, and sat directly on the button once
+the button stopped floating away from it. The rule is one line:
+
+```scss
+.cf-turnstile { margin-bottom: 1rem; }
+```
+
+**1rem is not a taste choice** — it is the same bottom margin every text input
+on the form already carries, so the widget now sits in the rhythm the rest of
+the fields established.
+
+**Written twice, deliberately, following `39aceca4`'s procedure.** The v3
+stylesheet is built from `sg101/scss/` by a gulp-sass toolchain that does not
+run on a current Node, and the build product is committed. So the rule goes in
+`_sg101.scss`, which is the source of truth, **and** the compiled form is
+appended by hand to `main.min.css` at the position a rebuild would place it —
+last, since it is last in the source. Verified served by the dev stack rather
+than assumed from the file.
+
+**A rebuild should produce the same bytes; if it ever does not, the SCSS
+wins.** That is `39aceca4`'s rule, restated here only because this is the second
+time it has been applied and a procedure used twice is worth being findable.
 
 ## Step 17 task 02 — the contact form on Turnstile, and reCAPTCHA is gone — DONE 2026-08-28, `e8f8f47d` + `1dd06d52`, PUSHED, CI GREEN
 

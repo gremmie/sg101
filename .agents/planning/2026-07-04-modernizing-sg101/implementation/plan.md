@@ -1470,10 +1470,15 @@ suspected:**
    Bower is sunset. Neither `node_modules` nor `bower_components` is present.
 
 **There is a small outstanding debt to reconcile on the first successful
-rebuild.** The logout fix appended the compiled rule to `main.min.css` by hand,
-at the position a rebuild would place it — immediately after `.friends-logos`,
-matching where it sits in `_sg101.scss`. So a correct rebuild should produce
-essentially the same file. **Diff the rebuild against the committed artifact
+rebuild — now two rules, not one.** Each was appended to `main.min.css` by hand
+at the position a rebuild would place it, matching its order in `_sg101.scss`:
+
+| Rule | Added | Sits after |
+|---|---|---|
+| `.menu>li>form.logout-form{…}` | `39aceca4`, 2026-08-13, the logout fix | `.friends-logos` |
+| `.cf-turnstile{margin-bottom:1rem}` | 2026-08-30, Step 17 task 04's page cleanup | the logout rules, last in the file |
+
+So a correct rebuild should produce essentially the same file. **Diff the rebuild against the committed artifact
 before replacing it**: bytes that differ *elsewhere* mean the toolchain
 reconstruction changed the output (a different Sass implementation, a newer
 autoprefixer target, a different minifier), which is worth seeing rather than
