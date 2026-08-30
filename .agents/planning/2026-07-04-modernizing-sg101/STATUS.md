@@ -5161,6 +5161,49 @@ Email Routing handles that) and 365-day retention over Basic's 45.
   monitoring in-house — it trades $180/yr for keeping the headache this step
   exists to remove.
 
+**NOT CONSIDERED, and found by Brian 2026-08-30: Cloudflare Email Service.**
+`https://developers.cloudflare.com/email-service/` — transactional sending over
+SMTP (`smtps://smtp.mx.cloudflare.net:465`), a REST API, or a Workers binding,
+around $5/mo for 3,000 messages against Postmark's $15.
+
+**It was not an oversight in the comparison so much as a stale premise.**
+`research/hosting.md` recorded "Cloudflare **Email Routing is inbound forwarding
+only**", which was true of Email Routing and is why Cloudflare never entered the
+sending shortlist. Whether the sending product existed on 2026-08-16 has not
+been established and is not assumed here.
+
+**Two things rule it out for this step, both on the criteria already used:**
+
+1. **Email Sending is in Beta.** This is the site's entire transactional path —
+   registration confirmations, password resets, forum notifications — and the
+   cutover is the worst moment to put it on a beta.
+2. **The daily quota is unstated and ramped**: *"New accounts start with a
+   conservative daily quota and scale up over time based on your sending
+   behavior, deliverability rates, and account standing."* **That is the exact
+   criterion Resend was rejected on** — a 100/day cap against a measured
+   207-message peak day, breached on 35 of 711 active days, with the breach
+   landing on a registration confirmation. Cloudflare publishes no starting
+   number, so unlike Resend it cannot even be checked against the peak-day
+   figure before committing. The monthly 3,000 clears ~900/mo typical and
+   ~1,675 peak month comfortably; **the monthly number was never the binding
+   constraint.**
+
+**A third cost, less obvious:** this step **dropped the graduated warm-up on
+2026-08-20, on measurement**, replacing it with a two-week bounce-dashboard
+watch. A provider that imposes its own reputation-based ramp reintroduces
+precisely what was measured away.
+
+**REVISIT AFTER MODERNIZATION, and the case for it is real.** Consolidating DNS,
+inbound routing and outbound sending at one provider is a genuine
+simplification, and Cloudflare already holds two of the three — the apex SPF
+would lose an `include:` rather than gain one. Same shape as the PaaS revisit
+Step 21 defers to its own `/pdd`. **Preconditions for looking again: GA rather
+than beta, and a published daily quota that can be checked against the
+peak-day figure.** Against ~$120/yr saved, switching now would redo a step whose
+acceptance criterion is already met at a Microsoft inbox, with DKIM published,
+SPF and DMARC live and monitored across fifteen readings, the backend written
+and tested, and the smoke tool built.
+
 ### The diagnosis — found, and it is not what either of us assumed
 
 Brian's standing belief was that SPF/DKIM/DMARC were configured but somehow
