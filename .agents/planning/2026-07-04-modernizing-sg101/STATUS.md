@@ -659,10 +659,38 @@ traffic, which is not what the instrument is for.
 - The five layers are all still live, each with its own test and its own log
   line. Task 04 removes `question1`, `question3` and the `register1`/`register2`
   code flow. **`question2` — the hidden honeypot — stays**, requirement 2,
-  including its CRITICAL log line: it costs a real user nothing, it is invisible
-  in the rendered page, and it catches a class of bot that never runs JavaScript
-  and so never reaches Turnstile at all. Registration ends task 04 with two
-  layers, not one.
+  including its CRITICAL log line. Registration ends task 04 with two layers,
+  not one.
+
+  **Measured 2026-08-29, on jaguar, because the argument for keeping it was
+  running on reasoning alone.** The honeypot's CRITICAL line goes to the `auth`
+  logger, so it is in `auth.log` — 2 MB x 5, reaching back over 19 months — not
+  in `sg101.log`, which is where an earlier draft of this bullet put it and where
+  it would have been unanswerable.
+
+  `grep -c Honeypot auth.log*` over **2025-01-09 → 2026-08-29 (19.7 months)**:
+
+  | | |
+  |---|---|
+  | honeypot hits | **161**, about **8.2/month** |
+  | months with at least one | **19 of 20** (only 2025-08 empty) |
+  | distinct source IPs | **111**; the busiest contributed 14 |
+  | successful registrations in the same corpus | **1,038** |
+
+  The 1,038 matches the denominator every other measurement in this step uses,
+  which is the check that this is the same corpus and not a different window.
+
+  **The layer is doing work: 8.2 submissions a month stopped against 1.4 spam
+  accounts a month that got through.** Those two rates come from different
+  windows — 1.4/month was read over `sg101.log`'s ~5 months, this over 19.7 — so
+  the ratio is indicative, not a computed multiple.
+
+  **What this does not establish**, and the reason the original sentence was
+  wrong to state it as fact: nothing here says these are bots that never run
+  JavaScript, nor that Turnstile would fail to catch them. A hidden field filled
+  in is an automated form-filler *or* an aggressive password manager, and hits
+  are not distinct actors — one IP accounts for 14. What is now measured is the
+  volume this layer catches, not that Turnstile would miss it.
 
 ### The browser pass — DONE 2026-08-29, by Brian, and the log carries the proof
 
