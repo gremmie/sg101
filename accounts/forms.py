@@ -58,7 +58,10 @@ class RegisterForm(forms.Form):
         error_messages={
             'required': 'You have not agreed to our Privacy Policy.',
             })
-    question2 = forms.CharField(label='', required=False,
+    # Named for what it appears to be, not for what it is: a field called
+    # honeypot invites a form-filler to skip it. It is the only question left
+    # on the form, hence the bare name.
+    question = forms.CharField(label='', required=False,
         widget=forms.TextInput(attrs={'style': 'display: none;'}))
 
     def __init__(self, *args, **kwargs):
@@ -111,14 +114,14 @@ class RegisterForm(forms.Form):
             self._validation_error("Please choose a password of 6 characters or more.")
         return password2
 
-    def clean_question2(self):
+    def clean_question(self):
         """
         Honeypot field should be empty.
         """
-        answer = self.cleaned_data.get('question2')
+        answer = self.cleaned_data.get('question')
         if answer:
             logger.critical('Accounts/registration: Honeypot filled [%s]', self.ip)
-            self._validation_error('Wrong answer #2', answer)
+            self._validation_error('Wrong answer', answer)
         return answer
 
     def clean(self):

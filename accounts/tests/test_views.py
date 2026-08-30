@@ -51,7 +51,7 @@ class RegistrationTest(TestCase):
             'agree_age': 'on',
             'agree_tos': 'on',
             'agree_privacy': 'on',
-            'question2': '',
+            'question': '',
             'cf-turnstile-response': 'a-token',
         }
 
@@ -203,7 +203,7 @@ class RegistrationTest(TestCase):
             'agree_age': 'on',
             'agree_tos': 'on',
             'agree_privacy': 'on',
-            'question2': '',
+            'question': '',
             'cf-turnstile-response': 'a-token',
             })
 
@@ -427,28 +427,40 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "The two password fields didn&#x27;t match")
 
-    def test_question2(self):
+    def test_the_honeypot_is_caught_and_logged(self):
         """
         Ensure our honeypot question check works.
 
-        A passing challenge must not excuse a filled honeypot: the layers are
-        additive until task 04 removes them.
+        A passing challenge must not excuse a filled honeypot: it and the
+        widget are the two remaining layers and they are additive.
+
+        Both log lines are asserted, not just the CRITICAL one. A filled
+        honeypot is deliberately logged twice, and the pair is what lets a
+        count of honeypot hits be checked against a count of registration
+        failures; a silent drop of either line would leave both counts looking
+        healthy while disagreeing.
 
         """
-        self.post_vals['question2'] = 'non blank'
+        self.post_vals['question'] = 'non blank'
 
         old_disable = logging.getLogger().manager.disable
         logging.disable(logging.NOTSET)
         self.addCleanup(logging.disable, old_disable)
 
-        with self.assertLogs('auth', level='CRITICAL') as logged:
+        with self.assertLogs('auth', level='ERROR') as logged:
             response = self.client.post(reverse('accounts-register'),
                                         self.post_vals)
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(
             PendingUser.objects.filter(username='a_new_user').exists())
-        self.assertIn('Honeypot filled [127.0.0.1]', logged.output[0])
+        self.assertTrue(
+                any('Honeypot filled [127.0.0.1]' in line
+                    for line in logged.output),
+                msg='the honeypot hit is not greppable in the counted shape')
+        self.assertTrue(
+                any('Wrong answer' in line for line in logged.output),
+                msg='the paired failure line is missing')
 
     def test_success(self):
         """
