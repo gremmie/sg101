@@ -94,6 +94,22 @@ class RegistrationTest(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 404, msg=url)
 
+    def test_the_agreement_labels_name_their_own_boxes(self):
+        """
+        A label whose `for` does not resolve to an input is inert when
+        clicked, and the page renders identically either way -- which is how
+        three required checkboxes went a decade without working labels.
+
+        """
+        response = self.client.get(reverse('accounts-register'))
+        html = response.content.decode()
+
+        for field in ['agree_age', 'agree_tos', 'agree_privacy']:
+            self.assertRegex(
+                    html,
+                    r'id="id_%s"\s*>\s*<label for="id_%s"' % (field, field),
+                    msg='%s: the label does not name the box beside it' % field)
+
     def test_a_rejected_token_blocks_registration(self):
         """
         A rejected challenge stops stage one before anything is written.

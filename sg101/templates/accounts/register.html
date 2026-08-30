@@ -54,9 +54,9 @@ registering for your account here:</p>
    {{ form.agree_privacy.errors }}
    <div class="row">
       <fieldset class="columns">
-         {{ form.agree_age }}<label for="form.agree_age.id_for_label">{{ form.agree_age.label }}</label>
-         {{ form.agree_tos }}<label for="form.agree_tos.id_for_label">{{ form.agree_tos.label }}</label>
-         {{ form.agree_privacy }}<label for="form.agree_privacy.id_for_label">{{ form.agree_privacy.label }}</label>
+         <div>{{ form.agree_age }}<label for="{{ form.agree_age.id_for_label }}">{{ form.agree_age.label }}</label></div>
+         <div>{{ form.agree_tos }}<label for="{{ form.agree_tos.id_for_label }}">{{ form.agree_tos.label }}</label></div>
+         <div>{{ form.agree_privacy }}<label for="{{ form.agree_privacy.id_for_label }}">{{ form.agree_privacy.label }}</label></div>
       </fieldset>
    </div>
    {{ form.question2.errors }}
@@ -72,8 +72,10 @@ registering for your account here:</p>
          <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}"></div>
       </div>
    </div>
-   <div class="clearfix">
-      <button type="submit" class="primary button float-right">Register</button>
+   <div class="row">
+      <div class="columns">
+         <button type="submit" class="primary button">Register</button>
+      </div>
    </div>
 </form>
 {% endblock %}

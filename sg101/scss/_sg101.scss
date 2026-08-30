@@ -247,3 +247,10 @@ table.sg101-stack {
       cursor: pointer;
    }
 }
+
+// The Turnstile widget is not a form control, so it inherits none of the bottom
+// margin Foundation gives inputs, and sat directly on the submit button below
+// it. Same 1rem the controls above it carry.
+.cf-turnstile {
+   margin-bottom: 1rem;
+}
