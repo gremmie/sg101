@@ -9,9 +9,6 @@ import accounts.views
 
 urlpatterns = [
     path('register/', accounts.views.register, name='accounts-register'),
-    path('register/1/', accounts.views.register1, name='accounts-register1'),
-    path('register/2/', accounts.views.register2, name='accounts-register2'),
-    path('register/code/', accounts.views.get_code, name='accounts-code'),
     path('register/thanks/', accounts.views.register_thanks, name='accounts-register_thanks'),
     # Regex kept: both segments are length-bounded and the key is URL-safe
     # base64 -- no stock path converter expresses that. The range starts at 20

@@ -51,9 +51,7 @@ class RegistrationTest(TestCase):
             'agree_age': 'on',
             'agree_tos': 'on',
             'agree_privacy': 'on',
-            'question1': '101',
             'question2': '',
-            'question3': '',
             'cf-turnstile-response': 'a-token',
         }
 
@@ -86,15 +84,15 @@ class RegistrationTest(TestCase):
         self.assertContains(response,
                             'challenges.cloudflare.com/turnstile/v0/api.js')
 
-    def test_the_widget_is_only_on_stage_one(self):
+    def test_the_old_routes_are_gone(self):
         """
-        The challenge is paid before a session, a pending user or an email
-        exists. The later stages are unchanged.
+        The two-stage code flow left three URLs behind it.
 
         """
-        for name in ['accounts-register1', 'accounts-register2']:
-            response = self.client.get(reverse(name))
-            self.assertNotContains(response, 'cf-turnstile')
+        for url in ['/accounts/register/1/', '/accounts/register/2/',
+                    '/accounts/register/code/']:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 404, msg=url)
 
     def test_a_rejected_token_blocks_registration(self):
         """
@@ -108,7 +106,8 @@ class RegistrationTest(TestCase):
                                     self.post_vals)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertFalse(
+            PendingUser.objects.filter(username='a_new_user').exists())
         self.assertIn("couldn't verify",
                       response.context['form'].non_field_errors()[0])
 
@@ -131,7 +130,8 @@ class RegistrationTest(TestCase):
 
         request_post.assert_not_called()
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertFalse(
+            PendingUser.objects.filter(username='a_new_user').exists())
         self.assertIn('Please verify',
                       response.context['form'].non_field_errors()[0])
 
@@ -149,8 +149,9 @@ class RegistrationTest(TestCase):
         response = self.client.post(reverse('accounts-register'),
                                     self.post_vals)
 
-        self.assertRedirects(response, reverse('accounts-register1'))
-        self.assertIsNotNone(self.client.session.get('reg_info'))
+        self.assertRedirects(response, reverse('accounts-register_thanks'))
+        self.assertTrue(
+                PendingUser.objects.filter(username='a_new_user').exists())
 
     def test_a_rejection_is_logged_for_the_instrument(self):
         """
@@ -186,9 +187,7 @@ class RegistrationTest(TestCase):
             'agree_age': 'on',
             'agree_tos': 'on',
             'agree_privacy': 'on',
-            'question1': '101',
             'question2': '',
-            'question3': '',
             'cf-turnstile-response': 'a-token',
             })
 
@@ -412,18 +411,6 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "The two password fields didn&#x27;t match")
 
-    def test_question1(self):
-        """
-        Ensure our anti-spam question is answered.
-
-        """
-        self.post_vals['question1'] = 'huh'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Incorrect answer to our anti-spam question")
-        self.assertIsNone(self.client.session.get('reg_info'))
-
     def test_question2(self):
         """
         Ensure our honeypot question check works.
@@ -443,90 +430,29 @@ class RegistrationTest(TestCase):
                                         self.post_vals)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertFalse(
+            PendingUser.objects.filter(username='a_new_user').exists())
         self.assertIn('Honeypot filled [127.0.0.1]', logged.output[0])
-
-    def test_question3(self):
-        """
-        Ensure our non-hidden honeypot question check works.
-
-        """
-        self.post_vals['question3'] = 'non blank'
-        response = self.client.post(reverse('accounts-register'),
-             self.post_vals)
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self.client.session.get('reg_info'))
 
     def test_success(self):
         """
         Ensure we can successfully register.
 
         """
-        response = self.client.post(reverse('accounts-register'),
-                self.post_vals)
-        self.assertRedirects(response, reverse('accounts-register1'))
-
-        # The ip the form was handed, not a second look at the request.
-        self.verify.assert_called_once_with('a-token', '127.0.0.1',
-                                            source='registration')
-
-        # No pending user should exist yet
-        try:
-            pending = PendingUser.objects.get(username='a_new_user')
-        except PendingUser.DoesNotExist:
-            pass
-        else:
-            self.fail("PendingUser was created early")
-
-        # Should have created a reg_info dict in the session
-        reg_info = self.client.session.get('reg_info')
-        self.assertEqual(reg_info, {
-            'username': self.post_vals['username'],
-            'email': self.post_vals['email'],
-            'password': self.post_vals['password1'],
-            'code': reg_info['code'],
-            })
-        code = reg_info['code']
-        match = re.match(r'\w+-\d{3}', code)
-        self.assertIsNotNone(match)
-
-        # Get the next page
-        response = self.client.get(reverse('accounts-register2'))
-        self.assertEqual(response.status_code, 200)
-
-        # No pending user should exist yet
-        try:
-            pending = PendingUser.objects.get(username='a_new_user')
-        except PendingUser.DoesNotExist:
-            pass
-        else:
-            self.fail("PendingUser was created early")
-
-        # Try bad code
-        response = self.client.post(reverse('accounts-register2'),
-                                    {'code': code + code })
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "The registration code does not match")
-
-        # No pending user should exist yet
-        try:
-            pending = PendingUser.objects.get(username='a_new_user')
-        except PendingUser.DoesNotExist:
-            pass
-        else:
-            self.fail("PendingUser was created early")
-
-        # Try good code
         old_disable = logging.getLogger().manager.disable
         logging.disable(logging.NOTSET)
         self.addCleanup(logging.disable, old_disable)
 
         with self.assertLogs('email', level='INFO') as logged:
-            response = self.client.post(reverse('accounts-register2'),
-                                        {'code': code })
-        self.assertIn('category=registration', logged.output[0])
+            response = self.client.post(reverse('accounts-register'),
+                                        self.post_vals)
+
         self.assertRedirects(response, reverse('accounts-register_thanks'))
-        self.assertIsNone(self.client.session.get('reg_info'))
+        self.assertIn('category=registration', logged.output[0])
+
+        # The ip the form was handed, not a second look at the request.
+        self.verify.assert_called_once_with('a-token', '127.0.0.1',
+                                            source='registration')
 
         try:
             pending = PendingUser.objects.get(username='a_new_user')
@@ -557,7 +483,7 @@ class RegistrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         try:
-            pending = PendingUser.objects.get(username='a_new_user')
+            PendingUser.objects.get(username='a_new_user')
         except PendingUser.DoesNotExist:
             pass
         else:
@@ -575,6 +501,26 @@ class RegistrationTest(TestCase):
         self.assertFalse(user.is_staff)
         self.assertTrue(user.is_active)
         self.assertFalse(user.is_superuser)
+
+    def test_the_success_line_keeps_its_shape(self):
+        """
+        The 'conf. email sent' line is the success signal the registration
+        measurements are counted from, so its shape is load-bearing rather
+        than cosmetic.
+
+        """
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('auth', level='INFO') as logged:
+            self.client.post(reverse('accounts-register'), self.post_vals)
+
+        self.assertTrue(
+                any('Accounts/registration conf. email sent to '
+                    'test@example.com for user a_new_user; IP = 127.0.0.1'
+                    in line for line in logged.output),
+                msg='the success line is not greppable in the recorded shape')
 
 
 class ForgotUsernameTest(TestCase):

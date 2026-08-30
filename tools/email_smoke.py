@@ -64,7 +64,7 @@ from django.core.mail import mail_admins  # noqa: E402
 from django.test import override_settings  # noqa: E402
 from django.utils import timezone  # noqa: E402
 
-from accounts.forms import (ForgotUsernameForm, RegisterCodeForm,  # noqa: E402
+from accounts.forms import (ForgotUsernameForm, RegisterForm,  # noqa: E402
                             SitePasswordResetForm)
 from accounts.models import PendingEmailChange, PendingUser  # noqa: E402
 from accounts.utils import (make_confirmation_token,  # noqa: E402
@@ -151,10 +151,10 @@ def check(label, fn):
 ###############################################################################
 
 def registration_confirmation(to):
-    """accounts.forms.RegisterCodeForm.save()"""
-    session = {'reg_info': {'username': SCRATCH, 'email': to,
-                            'password': 'smoke-password', 'code': 'smoke'}}
-    form = RegisterCodeForm(session=session, ip='127.0.0.1')
+    """accounts.forms.RegisterForm.save()"""
+    form = RegisterForm(ip='127.0.0.1')
+    form.cleaned_data = {'username': SCRATCH, 'email': to,
+                         'password1': 'smoke-password'}
     try:
         form.save()
     finally:

@@ -1,7 +1,6 @@
 """forms for the accounts application"""
 
 import logging
-import secrets
 
 from django import forms
 from django.contrib.auth.forms import PasswordResetForm
@@ -27,31 +26,6 @@ logger = logging.getLogger('auth')
 # Mail failures belong with the rest of the site's mail logging, not in the auth
 # log, so they are all readable in one place.
 email_logger = logging.getLogger('email')
-
-
-CODE_WORD_CHOICES = [
-    'reverb',
-    'sg101',
-    'guitar',
-    'showman',
-    'surf',
-    'surfer',
-    'tank',
-    'splash',
-    'gremmie',
-    'hodad',
-    'stomp',
-    'belairs',
-    'dickdale',
-    'chantays',
-    'astronauts',
-    'fender',
-]
-
-def generate_registration_code():
-    """Generates a simple, random registration code for the user to enter."""
-    return '{}-{}'.format(secrets.choice(CODE_WORD_CHOICES),
-                          secrets.randbelow(900) + 100)
 
 
 class RegisterForm(forms.Form):
@@ -84,13 +58,8 @@ class RegisterForm(forms.Form):
         error_messages={
             'required': 'You have not agreed to our Privacy Policy.',
             })
-    question1 = forms.CharField(label="What number appears in the site name?",
-        widget=forms.TextInput(attrs={'class': 'text'}))
     question2 = forms.CharField(label='', required=False,
         widget=forms.TextInput(attrs={'style': 'display: none;'}))
-    question3 = forms.CharField(label="Don't put anything in this box",
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'text'}))
 
     def __init__(self, *args, **kwargs):
         self.ip = kwargs.pop('ip', '?')
@@ -142,20 +111,6 @@ class RegisterForm(forms.Form):
             self._validation_error("Please choose a password of 6 characters or more.")
         return password2
 
-    def clean_question1(self):
-        answer = self.cleaned_data.get('question1')
-        success = False
-        if answer:
-            try:
-                val = int(answer)
-            except ValueError:
-                pass
-            else:
-                success = val == 101
-        if not success:
-            self._validation_error("Incorrect answer to our anti-spam question.", answer)
-        return answer
-
     def clean_question2(self):
         """
         Honeypot field should be empty.
@@ -164,12 +119,6 @@ class RegisterForm(forms.Form):
         if answer:
             logger.critical('Accounts/registration: Honeypot filled [%s]', self.ip)
             self._validation_error('Wrong answer #2', answer)
-        return answer
-
-    def clean_question3(self):
-        answer = self.cleaned_data.get('question3')
-        if answer:
-            self._validation_error('Oops, that should be blank', answer)
         return answer
 
     def clean(self):
@@ -189,48 +138,11 @@ class RegisterForm(forms.Form):
         # The questions above still apply, and turnstile.verify() has already
         # logged the skipped check at WARNING.
 
-    def save(self, request):
-        request.session['reg_info'] = {
-            'username': self.cleaned_data['username'],
-            'email': self.cleaned_data['email'],
-            'password': self.cleaned_data['password1'],
-            'code': generate_registration_code(),
-        }
-
-    def _validation_error(self, msg, param=None):
-        logger.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)
-        raise forms.ValidationError(msg)
-
-
-class RegisterCodeForm(forms.Form):
-    """Form for processing anti-spam code."""
-    code = forms.CharField(
-            label="Registration code",
-            widget=forms.TextInput(attrs={'class': 'text'}))
-
-    def __init__(self, *args, **kwargs):
-        self.session = kwargs.pop('session', None)
-        self.ip = kwargs.pop('ip', '?')
-        super(RegisterCodeForm, self).__init__(*args, **kwargs)
-
-    def clean_code(self):
-        reg_info = self.session.get('reg_info')
-        saved_code = reg_info.get('code') if reg_info else None
-        if not saved_code:
-            self._validation_error("Registration code error")
-        user_code = self.cleaned_data['code']
-        if user_code:
-            user_code = user_code.strip()
-
-        if user_code != saved_code:
-            self._validation_error("The registration code does not match")
-
     def save(self):
-        """Process successful registration."""
-        reg_info = self.session['reg_info']
-        username = reg_info['username']
-        email = reg_info['email']
-        password = reg_info['password']
+        """Create the pending user and send the confirmation email."""
+        username = self.cleaned_data['username']
+        email = self.cleaned_data['email']
+        password = self.cleaned_data['password1']
 
         pending_user = PendingUser.objects.create_pending_user(
                 username,
@@ -262,7 +174,6 @@ class RegisterCodeForm(forms.Form):
                   category=EmailCategory.REGISTRATION)
         logger.info('Accounts/registration conf. email sent to %s for user %s; IP = %s',
                     email, pending_user.username, self.ip)
-        del self.session['reg_info']
 
     def _validation_error(self, msg, param=None):
         logger.error('Accounts/registration [%s]: %s (%s)', self.ip, msg, param)

@@ -2,12 +2,10 @@
 Views for the accounts application.
 
 """
-import json
 import logging
 import secrets
 
 from django.contrib.auth.models import User
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.views.generic import TemplateView
@@ -15,7 +13,6 @@ from django.views.generic import TemplateView
 from accounts.models import PendingEmailChange
 from accounts.models import PendingUser
 from accounts.forms import RegisterForm
-from accounts.forms import RegisterCodeForm
 from accounts.forms import ForgotUsernameForm
 from accounts.utils import create_new_user
 from antispam.decorators import log_auth_failures
@@ -35,8 +32,8 @@ def register(request):
                             ip=request.META.get('REMOTE_ADDR', '?'),
                             token=request.POST.get('cf-turnstile-response'))
         if form.is_valid():
-            form.save(request)
-            return redirect('accounts-register1')
+            form.save()
+            return redirect('accounts-register_thanks')
     else:
         form = RegisterForm()
 
@@ -45,50 +42,6 @@ def register(request):
         'TURNSTILE_SITE_KEY': settings.TURNSTILE_SITE_KEY,
         'V3_DESIGN': True,
     })
-
-#######################################################################
-
-def register1(request):
-    """Displays the registration code."""
-    if request.user.is_authenticated:
-        return redirect(settings.LOGIN_REDIRECT_URL)
-
-    return render(request, 'accounts/register1.html', {
-        'V3_DESIGN': True,
-    })
-
-#######################################################################
-
-@log_auth_failures('Register')
-def register2(request):
-    """Processes the registration code and creates the user."""
-    if request.user.is_authenticated:
-        return redirect(settings.LOGIN_REDIRECT_URL)
-
-    if request.method == 'POST':
-        form = RegisterCodeForm(request.POST,
-                                session=request.session,
-                                ip=request.META.get('REMOTE_ADDR', '?'))
-        if form.is_valid():
-            form.save()
-            return redirect('accounts-register_thanks')
-    else:
-        form = RegisterCodeForm()
-
-    return render(request, 'accounts/register2.html', {
-        'form': form,
-        'V3_DESIGN': True,
-    })
-
-#######################################################################
-
-def get_code(request):
-    code = {'code': 'FAIL-123'}
-    reg_info = request.session.get('reg_info')
-    if reg_info:
-        code['code'] = reg_info.get('code', code['code'])
-
-    return HttpResponse(json.dumps(code), content_type='application/json')
 
 #######################################################################
 
