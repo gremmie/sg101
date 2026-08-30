@@ -1110,6 +1110,86 @@ into a 329-deletion diff would hide it.
 `sg101/templates/accounts/register1.html`, `register2.html`,
 `accounts/static/js/accounts_code.js`.
 
+## Step 17 — `question2` becomes `question` — DONE 2026-08-30, UNCOMMITTED
+
+Three files, **1007 tests** green, suite and deprecation gate both run. The `2`
+indexed a sequence whose other members task 04 deleted.
+
+### Why not `honeypot`, and why not `secret_question`
+
+**`honeypot` names the trap in the HTML.** That argument is weaker than it
+sounds — the field already carries `style="display: none;"` inline, so anything
+inspecting the markup can spot it — but at equal clarity there is no reason to
+choose the self-describing name.
+
+**`secret_question` was the proposal and was rejected on maintainer
+confusion.** "Secret question" is the established term for account-recovery
+security questions, and on a *registration* form a maintainer meeting that
+field would reasonably go looking for where the answer is stored. Same
+objection Brian raised to `website`, and stronger: `question2` is meaningless,
+`secret_question` points at a different feature that exists.
+
+**`question` is accurate and keeps the baseline comparable.** It is now
+literally the only question on the form. It also stays in the same family as
+`question2`, which matters because **a rename is unmeasurable against the
+8.2/month honeypot baseline** — a form-filler sees the wire name, and Turnstile
+already confounds that rate. A name from the same family keeps a filler's
+behaviour as close to the measured condition as a rename allows. The field name
+carries no meaning on its own; the docstring and the `Honeypot filled` log line
+do, which is where the meaning has always been.
+
+### `Wrong answer #2` becomes `Wrong answer`, and the cross-check survives it
+
+The `#2` was the same stale index. Dropping it rather than rewording the line
+is what preserves continuity: **`grep 'Wrong answer' auth.log*` now matches both
+the historical `Wrong answer #2` lines and every new one**, so the cross-check
+spans the rename instead of being split by it. Verified unique — no other
+message in the codebase begins with those words, and neither retired layer's
+message did (`question1` logged "Incorrect answer to our anti-spam question",
+`question3` "Oops, that should be blank").
+
+**The `Honeypot filled` CRITICAL line is untouched**, so `grep -c Honeypot` —
+the counter every honeypot measurement uses — is unaffected in either
+direction.
+
+### The test now asserts both lines, and four mutations say it discriminates
+
+`test_question2` is now `test_the_honeypot_is_caught_and_logged` and captures at
+`ERROR` rather than `CRITICAL`, so it sees the pair rather than half of it.
+**Asserting both is the point:** a filled honeypot is deliberately logged twice,
+and it is the pair that lets a count of hits be checked against a count of
+failures. A silent drop of either line leaves both counts looking healthy while
+disagreeing — which is the shape of the miscount corrected on 2026-08-27.
+
+| | Mutation | |
+|---|---|---|
+| M1 | the honeypot stops discriminating | caught |
+| M2 | the CRITICAL hit line is dropped | caught |
+| M3 | the paired failure line is reworded | caught |
+| M4 | the field name drifts from the template | caught |
+
+**M4 is the one the rename made necessary** — form and template agreeing on a
+field name is a property nothing checked before, and a rename is exactly when
+it breaks.
+
+### Verified on the running stack
+
+One POST with the field filled, through real routing and the real logging
+config:
+
+```
+15:55:39,409  CRITICAL  Accounts/registration: Honeypot filled [127.0.0.1]
+15:55:39,409  ERROR     Accounts/registration [127.0.0.1]: Wrong answer (a bot filled this)
+15:55:39,486  ERROR     Register failure from [127.0.0.1] for honeypot_probe
+```
+
+No `PendingUser` created, form refused, rendered field reads
+`name="question"`.
+
+**Earlier sections in this file name `question2` and `test_question2`.** They
+are the record of what was true when written and are left alone; this section
+is where the rename lives.
+
 ## Step 17 — the agreement labels, dead since 2016, and the form's layout with them — DONE 2026-08-30, UNCOMMITTED
 
 Five files, **1006 → 1007 tests** green, suite and deprecation gate both run. The
