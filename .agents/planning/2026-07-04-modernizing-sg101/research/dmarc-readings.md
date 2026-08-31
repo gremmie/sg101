@@ -36,6 +36,7 @@ evidence, that one is the state.
 | 13 | 2026-08-28 | 08-27 | a fifth reporter, and the tool read its report as empty |
 | 14 | 2026-08-29 | 08-28 | an eleventh endpoint, and a fourfold day the sending host explains |
 | 15 | 2026-08-30 | 08-29 | one Microsoft report is three mailbox domains; the spike does not repeat |
+| 16 | 2026-08-31 | 08-30 | the eleventh endpoint was never in the corpus; a rotation hole in the sending baseline |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -59,10 +60,19 @@ zone, and nothing else.
 **"Receiving domain" means *reporting endpoint* everywhere it appears before the
 fifteenth reading**, which found that Microsoft's single `protection.outlook.com`
 filing covers `hotmail.com`, `outlook.com` and `live.com` in a per-record
-`envelope_to` the tool does not print. The endpoint count — eleven — is the only
-figure comparable across reporters, since Google, Comcast and GMX omit
-`envelope_to` and file one report each. Earlier counts are correct under that
-reading and are not recomputed.
+`envelope_to` the tool does not print. The endpoint count is the only figure
+comparable across reporters, since Google, Comcast and GMX omit `envelope_to` and
+file one report each. Earlier counts are correct under that reading and are not
+recomputed.
+
+**⚠️ CORRECTED 2026-08-31 — that count is ten in the corpus, not eleven.** The
+sixteenth reading measured the distinct receiver field across all forty-four files
+and found ten. The eleventh, `swbell.net`, was read in the sixth reading from the
+*sender names of the report mail in Gmail* and flagged in the eighth as the one not
+read from the filename convention — so it is exactly what the definition above
+excludes, and it has never been a file in `~/dmarc`. State it as **ten by filename,
+plus `swbell.net` by sender name**. Nothing here says `swbell.net` was not a
+receiving domain.
 
 **Read the thirteenth reading before trusting any earlier per-window total
 recomputed from a folder scan.** `tools/dmarc_report.py` rendered a valid report
@@ -3234,3 +3244,268 @@ it.** The register is unchanged; nothing argues for reversing step 7.
    instrument here.** Checking spam by hand for an unfamiliar organization
    remains the only cover, and it is the one thing on this list that no report
    can prompt.
+
+### Sixteenth reading — 2026-08-31, covering 2026-08-30: the eleventh endpoint was never in the corpus, and the sending-side baseline had a rotation hole
+
+**Forty-four files in `~/dmarc` — five new, thirty-nine re-reads.** All five were
+saved in one batch, 2026-08-31 12:09:06–12:09:53, 47 seconds end to end. No
+hand-retrieved straggler.
+
+**Provenance, because the mtimes are load-bearing and this batch's are not what
+they look like.** Brian saved these five to `~/Downloads`, not `~/dmarc`, and they
+were moved across at 12:1x today. `mv` within `/Users` preserves mtime, so the
+47-second batch signature above is the original save and is comparable to every
+earlier batch. What it is *not* is evidence about the folder they were retrieved
+into, which for this batch is not recorded. The distinction matters only if a
+later reading tries to read retrieval folder from mtime; it cannot, here or
+anywhere. [[probes-must-not-perturb-what-they-measure]]
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `15631526755668090699` | 2026-08-30 | 15 | 0 |
+| `yahoo.com` | `Yahoo` | `1788154499.178904` | 2026-08-30 | 6 | 0 |
+| `att.net` | `Yahoo` | `1788154499.178819` | 2026-08-30 | 4 | 0 |
+| `gmx.net` | `GMX` | `366a002cd58e4bcf94304cc955361e30` | 2026-08-30 | 2 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `02b5da2389a6407d8115b1bd6e97e00e` | 2026-08-29 | 7 | 0 |
+
+**2026-08-30: 27 messages, four reporting endpoints, 0 aligned on neither
+mechanism**, every row `disposition=none`, every report `p=quarantine`. 27 is a
+floor, and this time the floor is softer than usual — see below.
+
+**The floor convention paid a fifth time, and 08-29 closes at 51.** The fifteenth
+reading recorded 08-29 as 44 with Microsoft outstanding; Microsoft filed 7, and
+44 + 7 = 51 against that reading's "closes near 50".
+
+#### Four of five predictions held; the fifth is directionally right and not yet settled
+
+1. **Microsoft filed for 08-29, one window late** — its sixth filing in the
+   corpus, six times the same offset. Its `envelope_to` records read
+   `hotmail.com` 5 and `live.com` 2, which is what the prediction named
+   (`hotmail.com` and at least one of `outlook.com` / `live.com`). Still stated as
+   *when it files*, not as a cadence.
+2. **Comcast's 08-26 stays empty**, six windows on. It has filed 08-27, 08-28 and
+   08-29 across that gap and did not backfill.
+3. **08-30 landed near 44 rather than near 112 — but at 27 the window is too
+   incomplete to close.** Held in direction; not settled. See the outstanding-
+   endpoint note below, which is the part that is different this time.
+4. **Every report reads `p=quarantine`** — all five. **GMX parsed with metadata
+   and a row** for the third consecutive window.
+5. **GMX's folder was dropped from the list** and no observation was taken. Nothing
+   to record, which is what dropping it was for.
+
+#### What is outstanding for 08-30 is not just Microsoft, and the batch clock is why
+
+Every prior window closed with exactly one endpoint outstanding — Microsoft's,
+whose one-window-late filing is the best-attested regularity in the log. 08-30 is
+outstanding at **Microsoft, `comcast.net`, `aol.com` and `verizon.net`**, and only
+the first of those is predictable.
+
+The reason is retrieval time, not receiver behaviour. Batch save times across the
+corpus:
+
+```
+08-24 09:21   08-26 09:03 (+13:12)   08-28 09:51   08-30 14:26
+08-25 09:11   08-27 12:29            08-29 11:31   08-31 12:09
+```
+
+Comcast's 08-29 report was saved at 08-30 14:26; today's batch closed at 12:09,
+**2h17m earlier in the day**. Whether Comcast, AOL and Verizon had filed for 08-30
+by 12:09 is not answerable from these files — a report that had not arrived and a
+report that will never arrive produce identical evidence at retrieval time.
+
+**So 08-30's 27 is a weaker floor than 08-29's 44 was**, and the fourth prediction
+below is written to close it rather than to re-assert it. Yahoo's filing run
+`1788154499` covered only `att.net` and `yahoo.com` this time — two domains against
+four in run `1788068018` — which is consistent either with `aol.com` and
+`verizon.net` having no 08-30 traffic or with a later run not yet retrieved.
+
+#### The endpoint count is ten in the corpus, and the eleventh has different provenance
+
+The running count of reporting endpoints reads **eleven**. Measured across all
+forty-four files, the distinct receiver field of the filename yields **ten**:
+
+```
+aol.com  att.net  bellsouth.net  comcast.net  cox.net
+gmx.net  google.com  protection.outlook.com  verizon.net  yahoo.com
+```
+
+The eleventh is **`swbell.net`**, and the log already says where it came from. The
+sixth reading read it from the *sender names of the report mail in Gmail*, and the
+eighth recorded it explicitly as *"the one of the seven not read from the file
+naming convention."* **That qualifier survived into the count but not into the
+count's definition.** The fifteenth reading defines the figure as *"reporting
+endpoints — the receiver field of the filename — and that is the only quantity
+comparable across reporters,"* and `swbell.net` is precisely the member that
+definition excludes.
+
+**Nothing here says `swbell.net` was not a receiving domain.** It says the number
+eleven and the sentence attached to it measure different things, and that
+`swbell.net` has not appeared as a file in `~/dmarc` in forty-four files across
+nine windows. The honest form is **ten by filename, plus `swbell.net` observed
+once by report-mail sender name**, and that is how this reading states it.
+[[measure-before-recording-in-planning-docs]]
+
+This does not disturb the fifteenth reading's actual finding — that
+`protection.outlook.com` is one endpoint covering `hotmail.com`, `outlook.com` and
+`live.com`, none of which are endpoints. The mailbox-domain count remains unknown
+for Google, Comcast and GMX, which omit `envelope_to` entirely.
+
+#### The sending-side baseline had a hole in it, and two readings reproduced it
+
+The fifteenth reading recorded jaguar's remote sends per day and stated the
+counting convention it had recovered — `grep status=sent | grep -v relay=local`.
+Applying that convention across **the rotated logs as well as the live one** gives:
+
+```
+Aug 23  45      Aug 26  18      Aug 29  66
+Aug 24  43      Aug 27  20      Aug 30  37
+Aug 25  15      Aug 28  125     Aug 31  27 (partial)
+```
+
+**Aug 23 was recorded as 15. It is 45.** The other six days reproduce exactly.
+
+The cause is log rotation, and it is checkable per file:
+
+| File | `Aug 23` remote sends | Range |
+|---|---|---|
+| `/var/log/mail.log` | 0 | Aug 30 06:41 → Aug 31 12:19 |
+| `/var/log/mail.log.1` | **15** | Aug 23 06:38 → Aug 30 06:20 |
+| `/var/log/mail.log.2.gz` | **30** | Aug 17 06:36 → Aug 23 06:29 |
+
+Aug 23 straddles the boundary at ~06:30. The fourteenth and fifteenth readings
+read the uncompressed logs only, so they counted the tail of the day and called it
+the day. **Aug 30 has the same shape** — 30 lines in `mail.log`, 7 more in
+`mail.log.1` — which is why the table above reads 37 where the live file alone
+says 30.
+
+**The reproduction across two readings is the part worth keeping.** The fifteenth
+reading verified its figures by reproducing the fourteenth's on six of seven days
+and treated the agreement as corroboration. It was not: both readings ran the same
+command against the same truncated file set, so the agreement measured determinism,
+not correctness. Two runs of one instrument are one measurement.
+[[suspect-the-measurer-before-the-record]]
+
+**What it changes in the record is small but real.** 08-28's "fourfold day" rests on
+125 against 08-27's 20 and is untouched. What moves is 08-23: 45 remote sends
+against a DMARC window of 24 messages, where the old figure said 15 sent against 24
+reported — more reports than sends, which no arrangement of receivers can produce
+and which nothing flagged at the time.
+
+#### The UTC-aligned comparison, recovered from the twelfth reading
+
+jaguar runs CDT, so its syslog day is not the report window. The fourteenth and
+fifteenth readings noted the five-hour shift and compared anyway, calling the
+result corroboration. The twelfth reading did it properly — counting the UTC
+window as `Aug 29 19:00`–`Aug 30 18:59` CDT — and that technique is used here.
+
+**The offset is verified rather than assumed.** A log line at `Aug 30 06:46:44`
+carries Google's own response id `1788090404`, which is 2026-08-30 11:46:44Z:
+UTC−5, confirmed from the receiver's clock inside the same line.
+
+**41 remote sends fall in the 08-30 UTC window**, against 37 in the CDT syslog day.
+39 of the 41 are `from=<admin@surfguitar101.com>` (one `root@`, one `brian@`),
+delivered in bursts of six to seven — 19:02 and 20:02 on Aug 29, then 02:01, 02:46,
+05:22, 06:46, 09:25, 11:34, 12:14, 14:10. Application fan-out, the same shape as
+every window since 08-27.
+
+| Recipient domain | jaguar, UTC window | DMARC report |
+|---|---|---|
+| `yahoo.com` | 6 | **6** |
+| `att.net` | 4 | **4** |
+| `gmx.at` | 2 | **2** (`gmx.net`) |
+| `gmail.com` | 16 | 13 direct (+2 forwarded) |
+| `hotmail.com` | 2 | outstanding |
+| non-reporting | 11 | — |
+
+**Three of the four reporting domains with traffic agree exactly**, and the reason
+is the alignment rather than anything about the mail — the fourteenth and fifteenth
+readings each had exact rows too, on domains whose counts were small enough that the
+five-hour shift had nothing to move. The
+non-reporting eleven are `msorensen.net` 6, `hushmail.com` 4, `muohio.edu` 1.
+
+**The `gmail.com` residual is 3 and is left unexplained.** Aligning the window
+removed the five-hour shift, so the shift can no longer be offered for it. Two
+candidates remain and neither is measured here: a report window records when the
+*receiver evaluated* a message, not when jaguar sent it, so a send near 18:59 CDT
+can be evaluated in the next window; and Google's two forwarded messages
+(`209.85.220.41`) were addressed by jaguar to some other domain entirely, so they
+cannot close a gap in the direct row. **Recorded as a residual, not resolved.**
+
+#### What held steady across all forty-four
+
+- **All 54 rows are `disposition=none`.** Nothing has been quarantined under
+  `p=quarantine` at any receiver in any window.
+- Evaluated alignment across those 54 rows: **49 `pass`/`pass`, 4 `fail`/`pass`,
+  1 `fail`/`fail`.**
+- `173.255.245.115` remains the only unsigned-path sender and passes both
+  mechanisms in all 46 rows it appears in.
+- Policy renders `adkim=r aspf=r` in **all forty-four** reports — the relaxed
+  alignment the eleventh reading flagged as load-bearing-but-unchosen, still both.
+- **`sp` is absent in exactly the 20 Yahoo reports and present in all 24 others**,
+  a clean split with no exceptions, and still prints `-` rather than a default.
+- **`pct` is absent in exactly the 4 GMX reports**, the 2.0 schema which drops it.
+  All four GMX files now parse with metadata and a row, including the 08-27 one the
+  thirteenth reading read as empty — that was the namespace defect in the tool, and
+  the re-read confirms the fix rather than a change in GMX's output.
+- The thirty-nine re-reads reproduce exactly, including the `p=none`/`p=quarantine`
+  boundary at the 08-25 publication and the twelfth reading's `yahoo.com` 08-26
+  cache lag.
+- **Five reporting organizations; no sixth appeared.**
+
+#### The forwarding class fell again, and the failing forward has not recurred in four windows
+
+`209.85.220.41` carried **2 messages on 08-30**, against 5 on 08-29 and 8 on 08-28,
+every one the same shape:
+
+```
+209.85.220.41   2  none  fail  pass  spf:gmail.com=pass/? dkim:surfguitar101.com=pass
+```
+
+Seventeen forwarded messages now across four windows, all surviving on DKIM. The
+twelfth reading's `2001:470:0:60::2` row — aligned on neither, delivered only under
+a discretionary forwarding exemption — remains the single instance in sixteen
+readings and **has not recurred in four windows**.
+
+#### Postmark absent for a third consecutive window
+
+`50.31.156.x` appears in no report for 08-28, 08-29 or 08-30. Its three appearances
+were test sends on distinct IPs — `.116` (08-25, Google), `.118` (08-26, Microsoft),
+`.113` (08-27, Microsoft). The cutover has not happened, so a window with no
+Postmark row means no test was sent that day. The eleventh reading's property —
+that the `include:` covers addresses an enumerated list would not — rests on those
+three distinct IPs and is not weakened by a quiet window.
+
+#### Bearing on the policy decision
+
+`p=quarantine` is live at five reporting organizations and ten reporting endpoints.
+**The three heaviest windows in the log are its three cleanest**: 112 on 08-28,
+51 on 08-29, 27 so far on 08-30, zero aligned on neither mechanism in any of them,
+zero quarantined.
+
+**The case for `p=reject` gained a third clean day and still is not made.** This
+reading adds two more forwarded messages that survived on DKIM and a fourth window
+without the failing forward recurring. The exposure is unchanged in kind: one
+measured instance in sixteen readings of a forward that broke DKIM, delivered only
+because Google chose to exempt it, and `p=reject` converts that discretion into
+someone else's bounce. **Three clean days at volume is a rate estimate with three
+observations in it.** The register is unchanged; nothing argues for reversing
+step 7.
+
+#### Predictions for the seventeenth reading
+
+1. **Microsoft files for 08-30**, one window late — seven filings, seven times the
+   same offset — and its `envelope_to` records name `hotmail.com` plus at least one
+   of `outlook.com` / `live.com`. jaguar sent 2 to `hotmail.com` in the window, so
+   the report should be small.
+2. **Comcast's 08-26 stays empty**, seven windows on.
+3. **08-30 closes between 30 and 40**, not near 112. jaguar's UTC-window sends to
+   reporting domains are 30, of which 2 are Microsoft's; 27 are already measured.
+   A close above 45 would mean a receiver reported mail jaguar has no record of
+   sending, which is the outcome worth chasing rather than the number.
+4. **`comcast.net`, `aol.com` and `verizon.net` either file for 08-30 in the next
+   batch or are confirmed absent** — this is the retrieval-clock question above, and
+   one more batch separates "not yet arrived" from "did not file". If they are still
+   missing after a batch retrieved later in the day than 12:09, absence becomes the
+   finding.
+5. **Every report reads `p=quarantine`**, and GMX parses with metadata and a row for
+   the fourth consecutive window.

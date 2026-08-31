@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the fourteen DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the sixteen DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -3817,6 +3817,38 @@ below, which is the live state this step is steered by.
   2026-08-22** — five reports tabulated with all three — and it paid immediately:
   the 08-20 Google report was recognised as one already read from its Report-ID
   alone, at no cost.
+- **Count jaguar's sends across the rotated logs, not just `/var/log/mail.log`** —
+  new 2026-08-31, found in the sixteenth reading. The convention the fifteenth
+  reading recorded is right as far as it goes — `grep status=sent | grep -v
+  relay=local` — but it was applied to the uncompressed logs only, and jaguar
+  rotates weekly at ~06:30. **Aug 23 was recorded as 15 and is 45**: 15 in
+  `mail.log.1`, 30 in `mail.log.2.gz`, split across the boundary. Aug 30 has the
+  same shape (30 + 7 = 37). The full form is `{ cat /var/log/mail.log;
+  cat /var/log/mail.log.1; zcat /var/log/mail.log.*.gz; }` before the greps, and
+  any day within ~6h30m of a rotation is truncated without it. **The reason it
+  survived two readings is the part to keep**: the fifteenth reading verified its
+  numbers by reproducing the fourteenth's and called the agreement corroboration,
+  but both ran one command against one truncated file set — two runs of one
+  instrument are one measurement. The old figure had 15 sent against 24 reported
+  for the 08-23 window, more reports than sends, and nothing flagged it.
+  [[suspect-the-measurer-before-the-record]]
+- **"Reporting endpoints" is ten by filename plus `swbell.net` by sender name — not
+  eleven** — new 2026-08-31, corrected in the sixteenth reading and in the
+  `dmarc-readings.md` header note. The count and its definition had drifted apart:
+  the fifteenth reading defines the figure as *"the receiver field of the
+  filename"*, which is the one thing `swbell.net` is not — it was read in the sixth
+  reading from report-mail sender names in Gmail and flagged in the eighth as the
+  member not read from the filename convention. Measured across all 44 files the
+  distinct receiver field yields **ten**, and `swbell.net` has never been a file in
+  `~/dmarc`. **This does not say `swbell.net` was not a receiving domain**, and it
+  does not disturb the fifteenth reading's `protection.outlook.com` finding. When
+  the figure is quoted, say ten, or say ten-plus-one with the provenance attached.
+  **One live instance in this document**: step 7's `p=quarantine` justification above
+  reads *"eight receiving domains"* for the `p=none` era, and that eight is the ninth
+  reading's list, which includes `swbell.net` — so it is seven by filename. Correct in
+  context and left as written; noted here so it is not recomputed into a different
+  number by a later reader.
+  [[measure-before-recording-in-planning-docs]]
 - **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter was
   an inference** — noted 2026-08-21, **CLOSED 2026-08-22**. The organization list on the dashboard
   reads **Akamai and Google**, which are the two *sending sources* already on
