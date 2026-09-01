@@ -174,7 +174,10 @@ def birthday_block(context):
     """
     A template tag to display all the users who have birthdays this month.
     """
-    today = datetime.date.today()
+    # localdate() reads the date in TIME_ZONE. date.today() read it off the
+    # process clock, which agrees only because Django exports TIME_ZONE to $TZ
+    # when it loads settings -- a side effect to lean on, not a guarantee.
+    today = timezone.localdate()
     profiles = list(UserProfile.objects
                     .filter(birthday__month=today.month)
                     .select_related('user'))

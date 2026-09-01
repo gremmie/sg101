@@ -194,15 +194,19 @@ class BirthdayBlockTestCase(TestCase):
     TEMPLATE = Template('{% load core_tags %}{% birthday_block %}')
 
     def setUp(self):
-        now = timezone.now()
+        # The tag picks the month in TIME_ZONE, so the fixtures have to be
+        # placed by the same clock. timezone.now() is UTC, which names a
+        # different month for the first hours of the 1st and put both users in
+        # the wrong one.
+        today = timezone.localdate()
         u1 = User.objects.create_user('paul', '', 'pw')
         u1.save()
-        u1.profile.birthday = date(1946, now.month, 4)
+        u1.profile.birthday = date(1946, today.month, 4)
         u1.profile.save()
         u2 = User.objects.create_user('eddie', '', 'pw')
         u2.save()
         u2.profile.birthday = date(
-                1946, 1 if now.month == 12 else now.month + 1 , 17)
+                1946, 1 if today.month == 12 else today.month + 1, 17)
         u2.profile.save()
 
     def test_render(self):
