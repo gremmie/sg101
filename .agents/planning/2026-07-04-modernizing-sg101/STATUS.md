@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the sixteen DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the seventeen DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -4100,7 +4100,19 @@ below, which is the live state this step is steered by.
   instrument are one measurement. The old figure had 15 sent against 24 reported
   for the 08-23 window, more reports than sends, and nothing flagged it.
   [[suspect-the-measurer-before-the-record]]
-- **"Reporting endpoints" is ten by filename plus `swbell.net` by sender name — not
+- **"Reporting endpoints" is eleven by filename plus `swbell.net` by sender name**
+  — **UPDATED 2026-09-01.** `sbcglobal.net` filed for the 08-31 window in the
+  seventeenth reading, which puts the filename count back at eleven by a different
+  route than the one that was wrong. That reading also corroborated `swbell.net`
+  from the *sending* side — jaguar sent it 2 messages in the 08-21 UTC window, and
+  the file was never retrieved because `~/dmarc` did not exist yet — so the
+  provenance distinction survives and the doubt it carried does not. **Twelve
+  receiving domains have been observed; eleven of them as files.** The correction
+  below is what the figure meant for one day, kept for its reasoning.
+
+  <details><summary>The 2026-08-31 correction, superseded</summary>
+
+- **"Reporting endpoints" was ten by filename plus `swbell.net` by sender name — not
   eleven** — new 2026-08-31, corrected in the sixteenth reading and in the
   `dmarc-readings.md` header note. The count and its definition had drifted apart:
   the fifteenth reading defines the figure as *"the receiver field of the
@@ -4117,6 +4129,44 @@ below, which is the live state this step is steered by.
   context and left as written; noted here so it is not recomputed into a different
   number by a later reader.
   [[measure-before-recording-in-planning-docs]]
+
+  </details>
+
+- **Sends and reports reconcile exactly at every receiver but Google** — new
+  2026-09-01, the seventeenth reading. Across ten windows and eleven endpoints,
+  every one of the forty-one non-Google reports states exactly the number of
+  messages jaguar's mail log says were sent to that endpoint in the UTC window —
+  155 messages in all: Yahoo over nine windows and 56, Microsoft over seven and 33,
+  Comcast over seven and 24, six smaller endpoints besides. **Not one disagreement.** This is
+  the log's strongest check on its own send-side instrument — the rotated-log fix,
+  the UTC binning and the verified UTC−5 offset are all load bearing in it, and a
+  fault in any would scatter near-misses across ten independent receivers.
+  **Consequence for how absences are read**: eight endpoint/window pairs the log
+  had treated as a receiver failing to file — Comcast's 08-26 hole above all, plus
+  `comcast.net`/`aol.com`/`verizon.net` on 08-30 and GMX on 08-31 — are windows in
+  which jaguar sent that domain nothing. Check the send log before predicting a
+  filing, and before calling an absence a finding. The only cells with sends and no
+  file are 08-22 and 08-23, which are a retrieval gap: the corpus begins with the
+  batch saved 2026-08-24.
+
+- **Google's aggregate day may not be the UTC day its `date_range` claims** —
+  new 2026-09-01, the seventeenth reading, **open and stated as a hypothesis.**
+  Google is the sole receiver whose reports do not match the send log: residuals of
+  +14, +2, +14, 0, −5, −1, 0, +4, 0 across 08-23 → 08-31, Σ40 over 166 reported
+  messages. Scanning the window offset, a **UTC−7 day** (US Pacific) takes Σ to 14
+  and makes the last six consecutive windows exact, including 08-28 at 47 messages,
+  while every report is stamped `00:00:00Z → 23:59:59Z`. It is one free parameter
+  fitted to nine points; what keeps it above curve-fitting is that no other reporter
+  needs an offset at all. **The eighteenth reading tests it forward on the 09-01
+  window rather than backward.** Two send-side corrections are already folded in and
+  are not hypotheses: `muohio.edu` and `rarr.org.uk` are Google-hosted by MX, so
+  their mail is in `google.com`'s report, and readings fourteen through sixteen
+  counted `muohio.edu` as non-reporting. Residual not explained by the offset: 14
+  messages across 08-23/24/25, all in the direction of jaguar sending more than
+  Google reported. One alternative was tested and falsified — every one of the 669
+  sends in the corpus has exactly one recipient per queue ID, so postfix logging per
+  recipient while Google counts per message is not the cause.
+  [[suspect-the-measurer-before-the-record]]
 - **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter was
   an inference** — noted 2026-08-21, **CLOSED 2026-08-22**. The organization list on the dashboard
   reads **Akamai and Google**, which are the two *sending sources* already on
