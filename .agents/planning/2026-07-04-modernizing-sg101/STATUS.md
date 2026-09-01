@@ -202,6 +202,274 @@ running it from inside a subdirectory silently answers a narrower question.
 
 **Next: Step 13 task 04** — the Django 4.1 rung.
 
+## PLANNING — Step 18: the sync died in 2021, and the Step 8 stub is not why (2026-08-31)
+
+**`plan.md`'s framing was wrong, and the correction came from Brian.** The step
+reads "resolve the Step 8 `gcalendar` stub", which implies the Python 3 flip is
+what took the calendar out. It is not. **Google deprecated the client library
+gcalendar used; upgrading was impossible because the site was pinned to Python
+2.7 behind a wall of dependencies** (Brian, 2026-08-31). The stub, added
+2026-07-19, disabled a code path that had already been dead for five years.
+
+That reverses the relationship between this step and the ladder below it.
+Step 18 is not repairing damage Step 8 did — **Steps 8 and 13 removed the thing
+that made this unfixable**, and that is why the step is reachable at all.
+
+### The sync has been dead since 2020 — measured against the database, 2026-08-31
+
+`gcalendar_event`, 1,510 rows:
+
+| | |
+|---|---|
+| Events on the Google calendar (`status=ON_CAL`) | **1,478** |
+| Last one to reach Google | submitted **2020-03-03** |
+| Stranded (`NEW` or `NEW_APRV`) | **32** |
+| Last submission of any kind | **2023-01-12** |
+
+Stranded by year of submission: **2021 → 16, 2022 → 12, 2023 → 4.** Nothing
+submitted after 2020-03-03 ever reached the calendar.
+
+**Three of the 32 sit in `NEW_APRV`, all approved on 2021-02-22.** That is the
+load-bearing row in this table: someone approved them by hand and Google never
+got them. It is the difference between a feature nobody used and a feature that
+was tried and failed. The other 29 are in `NEW` — never approved — which reads
+as the natural consequence of learning that approving does nothing.
+
+**8 of the 29 carry `create_forum_thread`.** None of the 32 are all-day events.
+
+### The credentials file dates the last attempt — from jaguar, 2026-08-31
+
+```
+/home/brian/google/gcal.dat      mtime 2021-10-17   1146 bytes
+/home/brian/google/myrsakey.pem  Apr 2013            887 bytes
+```
+
+`gcal.dat` was last written **2021-10-17 — eight months after the three
+stranded approvals.** So the credentials were successfully refreshed or
+re-authorized *after* the failure, and events still did not sync. This is
+independent corroboration of the library-deprecation cause and it rules out
+"the token went stale", which is what an mtime this old would otherwise suggest.
+
+`myrsakey.pem` (2013) and the single `gcalendar_accesstoken` row (`auth_date`
+**2011-07-01**) are two earlier auth generations, both dead.
+
+### Two corrections, both mine, both from guessing at a cause
+
+1. **I proposed token expiry as the likely 2021 failure** and used it to argue
+   for a service account. Brian supplied the actual cause. The service-account
+   case had to be re-argued on simplification grounds alone, which is where it
+   now rests — it does not get to claim it prevents what broke this.
+2. **I twice wrote that the two-step approve-then-sync workflow stranded the
+   three events**, and recommended moving the push onto Celery to close the gap.
+   The deprecation stranded them: they were approved, sync was pressed, it
+   failed. **The recommendation was withdrawn**, and the manual button stays.
+
+Both are the same error — reading a cause off a shape in the data instead of
+measuring it — and in both cases the correction came from the person who was
+there. See `suspect-the-measurer-before-the-record`.
+
+### The public calendar never used the API
+
+`sg101/templates/gcalendar/index.html:44` is an `<iframe>` to
+`google.com/calendar/embed` aggregating two calendar IDs, one of them not
+SG101's. It needs no credentials and has kept working throughout. **Everything
+Step 18 restores is the member submission → admin approval → push pipeline**,
+which is invisible to logged-out visitors. This bounds the step: no public page
+changes.
+
+### DECIDED 2026-08-31 — service account, not OAuth user consent
+
+Brian's call, after an explanation of the two models: *"a service account makes
+the most sense now and will be less to maintain."*
+
+The current design has the app act **as Brian's Google account**, with all the
+machinery that consent requires. A service account is **its own identity**, and
+the calendar is shared with its address the way it would be shared with a
+person. What that deletes:
+
+| | OAuth | Service account |
+|---|---|---|
+| `gcalendar/oauth.py` (147 lines) | rewritten | ~5 lines, folds into `calendar.py` |
+| `EventAdmin.authorize` / `auth_return` + 2 admin URLs | stay | delete |
+| Redis flow cache (`FLOW_CACHE_KEY`, 60s window) | stays | deletes |
+| Authorize button + credentials-status block in `google_sync.html` | stay | delete |
+| `GCAL_CLIENT_ID`, `GCAL_CLIENT_SECRET` | stay | retire |
+| `check_credentials_status()` | stays, and *means* something | deletes — nothing expires, so an mtime stops being a health signal |
+
+`calendar.py` sheds the `httplib2.Http()` + `credentials.authorize(http)` dance
+under either option; the modern library takes credentials directly.
+
+**The argument that carried it is not failure-mode, it is surface.** ~150 lines
+stop existing, nobody ever re-authorizes, and there is no OAuth consent screen —
+which matters because an External app in *Testing* status on the calendar scope
+gets refresh tokens that expire in **7 days**, and *In production* on a sensitive
+scope can require verification. None of that machinery existed in 2011 when this
+was written. A service account does not touch it.
+
+### The console checks — Brian, 2026-08-31
+
+| Check | Result |
+|---|---|
+| Project `786263548002` (from the client ID in `.env`) | **alive** |
+| The 2011 OAuth client | present, **warned as unused and subject to deletion** |
+| Calendar API enabled | **yes** |
+| Owner of `i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com` | **Brian** |
+
+The last row is the one the decision needed: sharing the calendar with a service
+account requires owning it.
+
+**A calibration recorded because I overstated it first:** I predicted the OAuth
+client would likely be purged and said that would remove OAuth's "already
+configured" advantage *entirely*. What Brian found is milder — the client exists
+and carries a dormancy warning that using it again would clear. It is not a
+strike against OAuth; it is a statement about how long nothing here has run.
+
+### DECIDED 2026-08-31 — the manual sync button stays; no Celery
+
+Considered and rejected: queueing the push from the admin approve action on
+`transaction.on_commit`, the way Step 12 routes every search index write.
+
+Rejected on two grounds, after the evidence for it collapsed (see corrections):
+
+- **Volume does not justify a queue.** The busiest year on record is 302
+  submissions (2011); the last three years total 32, and the last one arrived in
+  January 2023.
+- **The button gives synchronous errors.** `google_sync` renders `err_msg` into
+  the page at the moment it is pressed. A Celery task writes to the worker log.
+  For a feature that has just spent six years failing silently, the version that
+  reports into the browser is the safer one.
+
+### DECIDED 2026-08-31 — the stranded events are deleted by hand, not migrated
+
+Brian's call: the 32 will not be published, and he will delete the `NEW` ones
+**from the Django admin**. No data migration, no task file.
+
+**This is the better shape, and a hazard was avoided by taking it.** A migration
+keyed on `status=NEW` would also delete any genuinely new submission arriving
+between merge and production deploy — `NEW` is exactly the state a fresh
+submission occupies. That is the same class of problem as the PayPal
+`payment_date` backfill's "what does it key on" question in Step 19. Selecting
+rows by hand has no cutoff to get wrong.
+
+Safe to do at any time: **nothing has a foreign key to `gcalendar_event`**
+(checked against `pg_constraint`), and none of the 32 ever reached Google, so no
+Google-side event is orphaned by the deletion.
+
+**Settled 2026-08-31: all 32 go, `NEW` and `NEW_APRV` alike** — Brian's call
+after the `NEW_APRV` three were raised separately. He deletes them **in
+production as well as locally**, which is the part that matters beyond tidiness:
+Step 21 converts a *fresh* production snapshot, so rows deleted only in the dev
+database would return with it and land in the pending queue on the new host.
+
+### The app has no tests, and Step 18 is where it gets some
+
+There is no test module anywhere under `gcalendar/`. Reported coverage is
+entirely incidental — other apps' tests importing the URLconf and the admin:
+
+| | line rate |
+|---|---|
+| `calendar.py` | **22%** |
+| `oauth.py` | 33% (deleted by this step) |
+| `views.py` | 30% |
+| `forms.py` | 34% |
+| `models.py` | 71% |
+
+`Calendar._make_time()` — the UTC conversion that decides what time an event
+appears at — has no coverage at all, and it was rewritten from `pytz` to
+`zoneinfo` during Step 13 task 09 without a test proving the conversion.
+
+### Two live probes before the sync is trusted
+
+Neither is answerable from the code, and both change what the batch can do:
+
+1. **Does `anyoneCanAddSelf: True` still work** on an event inserted by a service
+   account? `calendar.py:120` sets it on every event body. It is a guest-list
+   feature, and service accounts have had limits there without domain-wide
+   delegation.
+2. **Can the service account edit and delete the 1,478 existing events**, which
+   were created by Brian's account rather than by it? Sharing with "Make changes
+   to events" should grant this, but the update and delete paths are worth
+   proving against one real event before the batch is trusted with them.
+
+### `gcalendar_accesstoken` → Step 19
+
+One row, `auth_date` 2011-07-01, no model behind it, already listed in
+`tools/pgloader/compare_schema.py`'s `LEGACY_TABLES`. It is a pruning job, not a
+revival job — recorded against Step 19 with the other verify-then-prune work
+rather than widening this step's diff.
+
+### The links were removed in 2023, and the page has been unreachable since
+
+**Brian, 2026-08-31:** when the problem surfaced he removed the calendar links
+from the sidebar in both designs. Found and dated: **`7073a406`, 2023-03-19**,
+"Remove links to calendar & member map", deleting
+`<li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>` from
+`sg101/templates/base.html` and `sg101/templates/v3/base.html`.
+
+**The order rules out a story worth not telling.** The last event of any kind was
+submitted **2023-01-12** — *two months before* the links came out. The removal
+did not cause the collapse in submissions; the sync failure did, and the removal
+is what has kept `/calendar/` unreachable from the site since. A write-up saying
+members stopped submitting because they could not find the page would have the
+sequence backwards.
+
+**Both base templates are live**, so restoration is two edits, not one:
+
+| Template | Templates extending it |
+|---|---|
+| `sg101/templates/base.html` | **26** — the forums, flatpages |
+| `sg101/templates/v3/base.html` | **55** |
+
+**The trap, recorded because it would take the whole site down:** `7073a406`
+removed *two* links, the calendar's and the Member Map's. `membermap` was
+**pruned in Step 4**, so `membermap-index` no longer exists. Reverting that
+commit puts `{% url 'membermap-index' %}` back into both base templates, and
+`NoReverseMatch` fires **at render time** — every page that extends either base,
+which is every page. The link must be restored by hand, never by revert.
+
+**This became task 04**, gated on task 03: restoring the link before the sync is
+proven re-advertises a submission form feeding a queue nobody drains, which is
+exactly the state that produced the 32 stranded events.
+
+### Task files — four, generated 2026-08-31
+
+At `.agents/tasks/2026-07-04-modernizing-sg101/step18/`:
+
+| | |
+|---|---|
+| **01** | the calendar client on a service account — deps, settings, the `calendar.py` port, and the tests `calendar.py` has never had |
+| **02** | delete the OAuth surface — `oauth.py`, both admin views and URLs, the template furniture, `GCAL_CLIENT_ID`/`SECRET`, plus the admin's first tests |
+| **03** | verify against the real calendar — the two probes, the end-to-end run, and the console setup written down for Step 21 |
+| **04** | restore the calendar links to both base templates — added after Brian recalled removing them; gated on 03 |
+
+**01 and 02 are deliberately not merged**, though 01 must touch `admin.py`
+anyway. Splitting matches how Step 17 ran — build the new path, then adopt it
+and delete the old — and it keeps the deletion diff readable on its own.
+
+**There is no task 04 for tests.** Tests are written inside 01 and 02 under
+`/agent-sops:code-assist`, and mutation-verified before each task closes. Task 03
+is not a test task: it exists because two questions are unanswerable by any mock,
+and a mock would only assert our assumptions back at us.
+
+**Explicit non-goal: the member-facing views.** `views.py` (30%) and `forms.py`
+(34%) have no dedicated tests either, but this step does not touch the add / edit
+/ delete views. Covering them is real work worth doing and is recorded here
+rather than folded in silently.
+
+### A nine-year-old no-op found while reading the template
+
+`sg101/templates/gcalendar/google_sync.html:29` wraps each event in
+`{% if not event.on_calendar %}`. **`Event` has no `on_calendar` attribute** —
+the model has `status`, `is_approved()` and `google_html()`. Django resolves the
+miss to `string_if_invalid` (`''` by default), so the condition is always true
+and has never filtered anything.
+
+It is also redundant by construction: the view passes
+`Event.pending_events.all()`, and that manager already restricts to the three
+approved-and-pending states, so an `ON_CAL` event cannot reach the loop. **Task
+02 deletes the condition rather than repairing it** — a working version would
+express a second time what the manager already guarantees.
+
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
 **R23's premise is true about reCAPTCHA and false about this site.** The step was
