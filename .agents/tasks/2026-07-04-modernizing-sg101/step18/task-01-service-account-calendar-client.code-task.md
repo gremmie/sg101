@@ -90,6 +90,13 @@ implementation. Read additional references as needed for context.
    comment, which says blank disables the integration.
 3. Leave `GCAL_CLIENT_ID` and `GCAL_CLIENT_SECRET` in place — task 02 removes
    them. They must simply stop being read by `calendar.py`.
+3a. **Add a `.gitignore` entry for the service account key before the key exists
+   on disk.** `docker-compose.yml` bind-mounts the repo root at `/app`, so the
+   natural place to put a key the container can read is inside the repo, and
+   nothing in `.gitignore` currently matches a `.json` key. Choose a committed,
+   documented filename (and put it in `.env.example`'s comment), then ignore it.
+   Getting this in first is the point — a key that reaches a commit has to be
+   rotated, not deleted.
 4. Build the service with
    `service_account.Credentials.from_service_account_file(path, scopes=[...])`
    and `build('calendar', 'v3', credentials=creds)`. The `httplib2.Http()` +

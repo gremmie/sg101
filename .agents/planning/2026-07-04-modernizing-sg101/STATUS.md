@@ -391,6 +391,10 @@ Neither is answerable from the code, and both change what the batch can do:
    to events" should grant this, but the update and delete paths are worth
    proving against one real event before the batch is trusted with them.
 
+**Update 2026-09-01: probe 2's *update* half is answered YES** — see *Task 03
+probe 2, the update half* below, which holds the evidence. `delete` and probe 1
+remain open, and the delete probe has a subject-selection hazard recorded there.
+
 ### `gcalendar_accesstoken` → Step 19
 
 One row, `auth_date` 2011-07-01, no model behind it, already listed in
@@ -469,6 +473,237 @@ It is also redundant by construction: the view passes
 approved-and-pending states, so an `ON_CAL` event cannot reach the loop. **Task
 02 deletes the condition rather than repairing it** — a working version would
 express a second time what the manager already guarantees.
+
+### Task 01 — DONE 2026-09-01: the client runs on a service account
+
+`gcalendar/calendar.py` authenticates as a service account through
+`google-auth` and builds its batch from the service. Pins:
+**`google-api-python-client==2.200.0`**, **`google-auth==2.57.0`**.
+`gcalendar/tests/` exists for the first time — **23 tests**, suite **1,007 →
+1,030**, gate green. `oauth.py` still stands; task 02 takes it.
+
+**Two requirements files, and only one of them is installed.** The image and CI
+build from **`requirements-docker.txt`**; `requirements.txt` mirrors it for
+production. Pinning the packages in `requirements.txt` alone rebuilt cleanly and
+changed nothing — `import googleapiclient` still failed. Both files carry the
+pins now. The same trap applies to any later dependency in this project.
+
+**The `apiclient` compatibility shim still ships in v2, so installing the
+libraries by itself flipped `_GCAL_API_AVAILABLE` to true.** The Step 8 guard
+was not inert once its dependencies came back: `from apiclient.discovery import
+build` resolves under 2.200.0, and the old constructor would then have built an
+**unauthenticated** service instead of raising. The guard was deleted in the
+same change that added the pins, so the window never opened, but a task that had
+added the dependencies first and ported later would have had one.
+
+### What was measured against the real libraries, not mocked
+
+| | |
+|---|---|
+| `google-auth` 2.57 requires | **`cryptography`** — not `rsa`/`cachetools`, which 2.x used to pull |
+| A generated key loads and **signs** in the image | 256-byte signature |
+| `build('calendar','v3')` with outbound sockets blocked | **succeeds** — static discovery, no network at construction |
+| `new_batch_http_request()` batch URI | **`https://www.googleapis.com/batch/calendar/v3`** |
+
+The last row is the concrete form of why v2 will not let you construct a
+`BatchHttpRequest()` yourself: that bare constructor posted to the global
+`/batch` endpoint Google retired in 2019. The third row matters for the admin
+page — constructing a `Calendar` cannot hang on a network call.
+
+### `_make_time()` — the baseline was measured before it was tested
+
+Run against the pre-change implementation and encoded into the tests, so they
+describe behavior this task did not alter rather than behavior it assumed:
+
+| input | output |
+|---|---|
+| 2026-07-04 20:30 `US/Pacific` | `2026-07-05T03:30:00Z` (UTC-7) |
+| 2026-01-10 20:30 `US/Pacific` | `2026-01-11T04:30:00Z` (UTC-8) |
+| 20:30, no zone | `2026-07-04T20:30:00` |
+| date only, `US/Pacific` | `2026-07-04T07:00:00Z` |
+| `Not/AZone`, `US/Pacific/extra`, `../../etc/passwd` | `CalendarError` |
+| **`''`** | `2026-07-04T20:30:00` — **not an error** |
+
+**The blank case corrected a comment that had it backwards.** The `except` clause
+said "ValueError covers empty and path-shaped input", but `''` never reaches
+`ZoneInfo` — it short-circuits on `if not tz_name` and comes back naive. That is
+the *right* behavior, since `Event.time_zone` is `blank=True` and blank is the
+ordinary case; only the comment was wrong, and it now says path-shaped only.
+
+### 21 mutations, all caught
+
+17 against `calendar.py`, 4 against `admin.py`, each restored byte-identical
+(sha256-checked) with the suite green after.
+
+**The one worth recording is M12**, which replaces the zone lookup with a fixed
+UTC-8: it fails the **July** test and leaves the **January** test green. That is
+the pair earning its keep — either date alone cannot tell a real `zoneinfo`
+lookup from a hardcoded offset, and the `pytz`→`zoneinfo` rewrite in Step 13
+task 09 shipped with no test at all.
+
+A4 is the other one with something to say: making a bad key escape as `OSError`
+rather than `CalendarError` turns the admin sync page into a **500**. That is
+what requirement 7 forbids, and it is now held down by a test that posts to the
+view.
+
+### The sync button was a 500 before this task, not a stub message
+
+`google_sync` called `oauth.get_credentials()` **before** constructing a
+`Calendar`, and that hit the oauth stub's `NotImplementedError`. So the polite
+"temporarily disabled" message in `calendar.py` was unreachable from the admin —
+pressing Synchronize raised. The view now constructs the `Calendar` directly and
+renders `CalendarError` into the page.
+
+### Left deliberately for task 02
+
+`cred_status` still means "a file exists at `GCAL_CREDENTIALS_PATH`", and the
+page still says *Credentials file status* with a *Request new credentials* link
+next to it. With a service account nothing expires, so that block is about to
+mean nothing — task 02 deletes it, along with `oauth.py`, the two auth views and
+the `{% if not event.on_calendar %}` no-op. Three admin tests were written here
+rather than deferred, because requirement 7's justification is a rendered page
+and nothing else proved it.
+
+**Not browser-tested, and this is the reason:** the page is admin furniture task
+02 rewrites, and the render is proven through the real template
+(`assertContains` on the submit button, which also proves the
+`{% url 'admin:gcalendar-authorize' %}` tag still resolves) plus a live 302 to
+the login page from the running dev server. Task 03 is the one that puts a
+person in front of it.
+
+
+### Against the live calendar, 2026-09-01 — the key is in and read access works
+
+The service account is **`sg101-calendar@api-project-786263548002.iam.gserviceaccount.com`**,
+project `api-project-786263548002` — the same project number Brian's console
+checks found. Key at `secrets/gcal-service-account.json` (git-ignored as a whole
+directory, `0600`), `GCAL_CREDENTIALS_PATH=/app/secrets/gcal-service-account.json`.
+Reading `calendars().get` and `events().list` both succeed, which is what proves
+the calendar is **shared** with the account.
+
+**`.env` edits do not reach a running container.** Compose loads `env_file:` at
+container *creation*, so the first attempt still saw the old
+`/home/brian/google/gcal.dat`. `docker compose up -d --force-recreate web worker
+beat` is the fix, and the symptom — `FileNotFoundError` on a path you just
+changed — reads like a bad key.
+
+### Task 03 probe 2, the update half: ANSWERED YES
+
+**The service account can edit events created by Brian's account.** Proven on a
+real, wanted change rather than a throwaway: the two endless recurring gigs below
+were patched with an `UNTIL`, and both had `creator: bgneal@gmail.com` and an
+`updated` of 2019-03-17, so they were unambiguously his and not the service
+account's.
+
+**Still unproven: `delete`, and `anyoneCanAddSelf` (probe 1).** Neither is
+answered by an update, and neither should be assumed from it.
+
+### The endless recurring events — 11, and only 2 of them are stale
+
+Measured across 1,516 events (`singleEvents=False`, so masters count once):
+**17 recurring masters, 11 with no `UNTIL` or `COUNT`.** They are two different
+things and the distinction is the whole finding:
+
+- **9 annual commemorations** — Valentines Day, SG101 Birthday, and the birthdays
+  of Link Wray, Dick Dale, Don Wilson, Paul Johnson, Leo Fender, Eddie Bertrand
+  and Bob Bogle. A birthday recurring yearly forever is *working*, not stale.
+  Whether to keep them is editorial. **None has a `gcalendar_event` row** — they
+  were created directly in Google.
+- **2 stale gigs**, both monthly since April 2019 and still generating instances
+  into 2027: *Matt Heaton's Retrosonic Surf Noir Guitar - Solo* (1st Thursday)
+  and *The Electric Heaters at Shore Leave - Surfin' Sundays* (1st Sunday).
+
+**Both stale ones DO have `gcalendar_event` rows at `ON_CAL`, and that is
+diagnostic.** `_make_event` never sets `recurrence` and the submission form has
+no way to — so both were submitted through the site as single events, pushed,
+and **made recurring by hand in the Google UI afterwards** (Brian confirms).
+
+**DONE 2026-09-01: ended rather than deleted**, `UNTIL=20260901T235959Z`.
+0 future instances remain; **89 past instances preserved on each.** Deleting
+would have left two `ON_CAL` rows pointing at a 404 and would break any later
+edit/delete request against them; truncating keeps the database and Google
+consistent for free.
+
+### The database and the calendar reconcile exactly — after a false alarm
+
+**All 1,478 `ON_CAL` rows match a live Google event. Zero orphans.** 38 events on
+Google have no row, which is the 9 birthdays, the other recurring masters, and
+~23 others created directly in the UI.
+
+**The first reading said 1,012 rows were orphaned — 68% — and it was the
+measurement.** `google_id` is stored in two formats, split cleanly by year:
+
+| stored form | rows | submitted |
+|---|---|---|
+| GData v2 feed URL, `https://…/private/full/<id>` | **1,012** | 2011–2014 |
+| bare v3 event id | **466** | 2014–2020 |
+
+2014 is the overlap — the year the site crossed from GData to Calendar v3.
+Normalizing to the last path segment reconciles all 1,478. See
+`suspect-the-measurer-before-the-record`: the alarming number was the instrument.
+
+### DEFECT found by that reconciliation: edit and delete are broken for 68% of events
+
+`sync_events` passes `event.google_id` straight into `eventId=`, so a pre-2015
+row sends the whole URL as an event id. **Verified against the live API: a
+`events().get()` with a URL-form id returns 404**, the URL percent-encoded into
+the request path; the same call with a bare id returns the event.
+
+So `EDIT_APRV` and `DEL_APRV` **cannot work on any event submitted before 2015**
+— 1,012 of 1,478. Latent, because nobody edits a 2013 gig, and invisible until
+now because the sync has been dead since 2020.
+
+**Immediate consequence for task 03: its delete probe MUST use a post-2014
+event.** Picking an old one fails with a 404 that looks exactly like a
+permissions problem, and would be read as "the service account cannot delete."
+
+**DECIDED 2026-09-01, and DONE: normalize on read.** `Event.google_event_id` is
+a property returning `google_id.rsplit('/', 1)[-1]`, and `sync_events` addresses
+both the update and delete calls through it. No data is rewritten and the split
+is a no-op on the 466 rows already bare, so it cannot disturb the modern half.
+
+A data migration over the 1,012 rows was the alternative and buys nothing extra:
+the URL form is what Step 21's fresh production snapshot contains either way, so
+a migration would have to run there too. Hiding old events from the member edit
+list was considered and rejected — it fixes nothing and removes a member's
+ability to correct their own event.
+
+**Verified against the live calendar: all 1,478 `ON_CAL` rows now resolve to a
+real Google event through the property**, up from 466. The extracted segment was
+confirmed to be the v3 id by `events().get()` on three pre-2015 events before
+the fix was written, which is the assumption the whole option rested on.
+
+**Exposure that made it worth doing rather than documenting.** 166 members own a
+pre-2015 event and **74 have logged in since 2024**, several within the last two
+months. And the failure is not a single failed edit: a failed callback does not
+save the row, so it stays `EDIT_APRV` / `DEL_APRV`, `pending_events` keeps
+returning it, and the sync page shows an error on *every* subsequent sync until
+an admin resets the row by hand. A poison pill in the queue, not a one-off.
+
+**5 mutations, all caught.** The one worth recording is N3 — a *plausible* wrong
+implementation, `split('/private/full/')[1]`, which handles the URL form
+correctly and raises `IndexError` on an already-bare id. It was caught by the
+bare-id and empty-id tests plus two existing sync tests, which is what those
+two otherwise-trivial-looking tests are for.
+
+### Task 04 also carries two template fixes on the public calendar page
+
+Brian looked at `/calendar/` for the first time in years (2026-09-01) and
+Google's embed UI has moved on underneath the copy:
+
+- `index.html:29-30` tells members to use "the pull-down menu in the upper right
+  corner". It is now a **calendar icon, second from the right** in the embed's
+  toolbar.
+- The callout's "This calendar is **now** aggregating several Google calendars"
+  has read oddly for years; worth rewriting while in there.
+
+**The timezone handling is correct and needs no change** — `views.py:22-31` sets
+`tz` from `user.profile.time_zone` (falling back to `US/Pacific` when logged
+out), and the template feeds it to the embed as `ctz=` *and* states it in prose.
+The calendar's own zone is `America/Chicago`, which affects only Google's own UI,
+not what members see. Three zones can be on screen at once — the event's, the
+viewer's, and the calendar's — which is worth knowing before reading a task 03
+result as a conversion bug.
 
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
