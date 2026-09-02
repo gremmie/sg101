@@ -345,10 +345,13 @@ OEMBED_MAXHEIGHT = 295
 # GCalendar settings
 GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 
+# Path to the JSON key of the service account the calendar is shared with.
+# Blank disables the integration: the sync page offers no button without it.
+GCAL_CREDENTIALS_PATH = env('GCAL_CREDENTIALS_PATH', default='')
+
 # GCalendar/Google OAuth settings
 GCAL_CLIENT_ID = env('GCAL_CLIENT_ID', default='')
 GCAL_CLIENT_SECRET = env('GCAL_CLIENT_SECRET', default='')
-GCAL_CREDENTIALS_PATH = env('GCAL_CREDENTIALS_PATH', default='')
 
 # MoinMoin Wiki integration settings
 WIKI_COOKIE_NAME = 'sg101_wiki'

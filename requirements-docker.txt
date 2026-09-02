@@ -78,10 +78,13 @@ requests==2.34.2
 # core/s3.py -- member photo uploads and deletes. Replaces the boto (v2) dropped
 # at the Python 3 flip; see the note in requirements.txt.
 boto3==1.43.72
+# gcalendar/calendar.py -- pushes approved member events onto the Google
+# calendar as a service account; see the note in requirements.txt.
+google-api-python-client==2.200.0
+google-auth==2.57.0
 
-# django-elsewhere is now vendored into the repo (was an editable git dep); the
-# google-api-python-client / oauth2client / httplib2 / uritemplate / rsa /
-# pyasn1 lines are gone with the stubbed gcalendar integration.
+# django-elsewhere is now vendored into the repo (was an editable git dep), so
+# it no longer appears here.
 
 # --- Dev/test-only (from requirements_dev.txt) -------------------------------
 testfixtures==12.3.0

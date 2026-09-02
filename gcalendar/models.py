@@ -79,6 +79,21 @@ class Event(models.Model):
         return self.status not in (self.NEW, self.EDIT_REQ, self.DEL_REQ)
     is_approved.boolean = True
 
+    @property
+    def google_event_id(self):
+        """The bare event id, whatever form google_id happens to be stored in.
+
+        Events submitted before 2015 stored the whole GData v2 feed URL --
+        https://www.google.com/calendar/feeds/<calendar>/private/full/<id> --
+        where later ones store just the id. The v3 API wants the id: handed the
+        URL, it percent-encodes the whole thing into the request path and
+        answers 404, so editing or deleting one of those events fails. Splitting
+        on the last slash yields the id from either form, and leaves an id that
+        is already bare untouched.
+
+        """
+        return self.google_id.rsplit('/', 1)[-1]
+
     def google_html(self):
         """Returns a HTML <a> tag to the event if it exits."""
         if self.google_url:

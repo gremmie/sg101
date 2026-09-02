@@ -84,21 +84,16 @@ class EventAdmin(admin.ModelAdmin):
         msgs = []
         err_msg = ''
         if request.method == 'POST':
-            credentials = oauth.get_credentials()
-            if credentials:
-                try:
-                    cal = Calendar(calendar_id=settings.GCAL_CALENDAR_ID,
-                            credentials=credentials)
-                    cal.sync_events(events)
-                except CalendarError as e:
-                    err_msg = str(e)
-                    events = Event.pending_events.all()
-                else:
-                    msgs.append('All events processed successfully.')
-                    events = Event.objects.none()
+            try:
+                cal = Calendar(calendar_id=settings.GCAL_CALENDAR_ID,
+                        credentials_path=settings.GCAL_CREDENTIALS_PATH)
+                cal.sync_events(events)
+            except CalendarError as e:
+                err_msg = str(e)
+                events = Event.pending_events.all()
             else:
-                self.message_user(request, "Invalid or missing credentials",
-                        level=messages.ERROR)
+                msgs.append('All events processed successfully.')
+                events = Event.objects.none()
 
         return render(request, 'gcalendar/google_sync.html', {
             'current_app': self.admin_site.name,

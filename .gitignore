@@ -16,6 +16,10 @@ __pycache__/
 
 # Secrets & local config (never commit)
 secrets.json
+# The whole directory, not a filename: Google's console hands you a service
+# account key named after the project and a key id, and a rule naming only the
+# file we meant to see would not match one downloaded straight into the repo.
+secrets/
 .env
 .claude/settings.local.json
 

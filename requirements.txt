@@ -1,9 +1,9 @@
 # SG101 runtime requirements -- Python 3.12 / Django 5.2 LTS.
 #
-# Apps whose old external libraries aren't Python-3 ready are temporarily
-# stubbed, and their dependencies dropped here:
-#   google-api-python-client / oauth2client /
-#     httplib2 / uritemplate / rsa / pyasn1 (gcalendar) -> modern google-auth later
+# Editing a pin here is half the change: requirements_dev.txt follows through
+# `-r requirements.txt`, but requirements-docker.txt is a hand-maintained copy
+# and is the file Docker and CI install. A pin added here alone rebuilds
+# cleanly and changes nothing.
 #
 # django-elsewhere used to be an editable git dependency; it's now vendored into
 # the repo (the fork is tiny and frozen upstream, and needed Py3 patches), so it
@@ -154,3 +154,9 @@ requests==2.34.2
 # deprecating TLS 1.0/1.1 in May 2023. boto3 pulls botocore at a matching
 # version, which is why only one pin appears here.
 boto3==1.43.72
+# gcalendar/calendar.py, which pushes approved member events onto the Google
+# calendar as a service account. Replaces the apiclient / oauth2client / httplib2
+# stack Google deprecated; httplib2 returns underneath these two, as a
+# dependency rather than something we drive.
+google-api-python-client==2.200.0
+google-auth==2.57.0

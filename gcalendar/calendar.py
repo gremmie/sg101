@@ -6,25 +6,18 @@ with Google Calendars.
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import datetime
 
-# Temporarily disabled at the Python 3 flip: the Google API client stack
-# (httplib2 / apiclient / oauth2client) pinned here is Py2-era and dropped from
-# the requirements. gcalendar is slated for revival with the modern google-auth
-# libraries in a later step. Until then this module still imports (so the admin
-# imports cleanly), but constructing a Calendar raises.
-try:
-    import httplib2
-    from apiclient.discovery import build
-    from apiclient.http import BatchHttpRequest
-    _GCAL_API_AVAILABLE = True
-except ImportError:  # Google API client not installed on Python 3 yet
-    httplib2 = None
-    build = None
-    BatchHttpRequest = None
-    _GCAL_API_AVAILABLE = False
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 from django.utils.timezone import get_fixed_timezone
 
 from gcalendar.models import Event
+
+
+# We reach the calendar as a service account -- an identity of its own, which
+# the calendar is shared with the way it would be shared with a person. Nothing
+# here asks a human for consent, and no token is stored or refreshed.
+SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 
 class CalendarError(Exception):
@@ -40,23 +33,29 @@ class Calendar(object):
     DATE_TIME_FMT = '%Y-%m-%dT%H:%M:%S'
     DATE_TIME_TZ_FMT = DATE_TIME_FMT + 'Z'
 
-    def __init__(self, calendar_id='primary', credentials=None):
-        if not _GCAL_API_AVAILABLE:
-            raise NotImplementedError(
-                "Google Calendar sync is temporarily disabled: the Google API "
-                "client stack is not available on Python 3 yet. It will be "
-                "revived with the modern google-auth libraries.")
+    def __init__(self, calendar_id, credentials_path):
+        """calendar_id is the calendar to write to; credentials_path is the
+        service account's JSON key file.
+        """
         self.calendar_id = calendar_id
-        http = httplib2.Http()
-        if credentials:
-            http = credentials.authorize(http)
-        self.service = build('calendar', 'v3', http=http)
+        try:
+            credentials = service_account.Credentials.from_service_account_file(
+                    credentials_path, scopes=[SCOPE])
+        except (OSError, ValueError) as ex:
+            # Missing, unreadable, or not a service account key. The admin's
+            # sync view renders a CalendarError into the page; letting either of
+            # these out would make it a 500 instead.
+            raise CalendarError('Could not read the credentials file: %s' % ex)
+
+        self.service = build('calendar', 'v3', credentials=credentials)
 
     def sync_events(self, qs):
         """Process the pending events in a batch request to the Google calendar
         API.
         """
-        batch = BatchHttpRequest()
+        # Built from the service so the batch posts to the calendar API's own
+        # endpoint; the global batch endpoint the bare constructor used is gone.
+        batch = self.service.new_batch_http_request()
 
         err_msgs = []
         def insert_callback(request_id, event, exception):
@@ -93,13 +92,13 @@ class Calendar(object):
                         request_id=str(n))
             elif event.status == Event.EDIT_APRV:
                 batch.add(self.service.events().update(calendarId=self.calendar_id,
-                            eventId=event.google_id,
+                            eventId=event.google_event_id,
                             body=self._make_event(event)),
                         callback=update_callback,
                         request_id=str(n))
             elif event.status == Event.DEL_APRV:
                 batch.add(self.service.events().delete(calendarId=self.calendar_id,
-                            eventId=event.google_id),
+                            eventId=event.google_event_id),
                         callback=delete_callback,
                         request_id=str(n))
             else:
@@ -153,8 +152,8 @@ class Calendar(object):
             try:
                 tz = ZoneInfo(tz_name)
             except (ZoneInfoNotFoundError, ValueError):
-                # ValueError covers empty and path-shaped input; see the same
-                # validator in bio/forms.py.
+                # ValueError covers path-shaped input; see the same validator in
+                # bio/forms.py.
                 raise CalendarError('Invalid time zone: %s' % tz_name)
             local = d.replace(tzinfo=tz)
             zulu = local.astimezone(get_fixed_timezone(0))
