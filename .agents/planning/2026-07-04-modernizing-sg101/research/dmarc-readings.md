@@ -38,6 +38,7 @@ evidence, that one is the state.
 | 15 | 2026-08-30 | 08-29 | one Microsoft report is three mailbox domains; the spike does not repeat |
 | 16 | 2026-08-31 | 08-30 | the eleventh endpoint was never in the corpus; a rotation hole in the sending baseline |
 | 17 | 2026-09-01 | 08-31 | ten of eleven endpoints reconcile exactly with the send log; Google alone does not |
+| 18 | 2026-09-02 | 09-01 | the UTC−7 day passes a forward test; the second unsigned message is a bounce |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -83,6 +84,16 @@ read from the filename convention — so it is exactly what the definition above
 excludes, and it has never been a file in `~/dmarc`. State it as **ten by filename,
 plus `swbell.net` by sender name**. Nothing here says `swbell.net` was not a
 receiving domain.
+
+**The seventh reading's unsigned-message known-unknown is CLOSED by the
+eighteenth.** It was closed in 2026-08-23 with an explicit reopen condition — a
+second occurrence — which fired on 2026-09-01. The message is a Postfix
+non-delivery notification: null envelope sender, SPF falling back to the HELO name
+`mail.surfguitar101.com`, no signature because DSNs bypass the milters. Its
+hypothesis A was correct and died on an absence in one window. **The class is every
+Postfix DSN**, visible in a report only on days something bounces, so a
+`pass`/`fail` row from `173.255.245.115` is now expected rather than anomalous — and
+checkable against `grep 'from=<>'` on the mail log.
 
 **Read the thirteenth reading before trusting any earlier per-window total
 recomputed from a folder scan.** `tools/dmarc_report.py` rendered a valid report
@@ -3759,3 +3770,254 @@ for reversing step 7.
    a prediction after this one: the send log says there was nothing to file.
 5. **Every report reads `p=quarantine`**, and no report carries a `disposition`
    other than `none`.
+
+### Eighteenth reading — 2026-09-02, covering 2026-09-01: the UTC−7 day survives its first forward test, and the second unsigned message names itself
+
+**Fifty-three files in `~/dmarc` — three new, fifty re-reads.** All three saved
+2026-09-02 12:11:29–12:12:06, 37 seconds end to end.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `13593836314853818654` | 2026-09-01 | 8 | 0 |
+| `gmx.net` | `GMX` | `a3178967e5be4f10adfd147fd327e14e` | 2026-09-01 | 1 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `63ba685afa844e57950b7433dfb5939e` | 2026-08-31 | 6 | 0 |
+
+**09-01 stands at 9 messages across two endpoints**, every row `disposition=none`,
+every report `p=quarantine`. Microsoft is outstanding, as always.
+
+**08-31 closes at 52** — 46 plus Microsoft's 6, exactly as predicted.
+
+#### Four of five predictions held, and the fifth was retired before it was made
+
+1. **Microsoft filed for 08-31, one window late — its eighth filing, eight times the
+   same offset — and reported 6 messages, all `envelope_to: hotmail.com`.** The
+   first Microsoft prediction stated as an exact count, and it is exact on both
+   halves. jaguar sent 6 to `hotmail.com` in that window and nothing to
+   `outlook.com` or `live.com`; the report says the same. Predicting the endpoint
+   from the send log rather than from the last report's shape worked the first time
+   it was tried.
+2. **08-31 closed at 52**, and no endpoint filed that jaguar did not send to.
+3. **Google's 09-01 report reads the UTC−7 day.** Held, and it is the reading's
+   main result; see below.
+4. Comcast's holes were retired last reading, not predicted.
+5. **Every report reads `p=quarantine`** — all three — **and no row carries a
+   `disposition` other than `none`.** GMX filed for 09-01 after skipping 08-31,
+   which the send log had already explained: zero `gmx.*` traffic in 08-31, one
+   message in 09-01.
+
+#### The UTC−7 hypothesis passes a test made before the report existed
+
+The seventeenth reading fitted a UTC−7 aggregation day to nine of Google's windows
+and refused to call it a finding, because one free parameter fitted to nine points
+is curve-fitting until it predicts. It predicted, and here is the result. Sends are
+binned exactly as before — `status=sent`, minus `relay=local`, across `mail.log`,
+`mail.log.1` and `mail.log.2.gz`, at jaguar's verified UTC−5 — but by a script
+written from scratch for this reading rather than the previous one's.
+
+| Window | 08-23 | 08-24 | 08-25 | 08-26 | 08-27 | 08-28 | 08-29 | 08-30 | 08-31 | **09-01** |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Google reported | 12 | 15 | 5 | 6 | 13 | 47 | 22 | 13 | 33 | **8** |
+| jaguar sent, UTC day | 26 | 17 | 19 | 6 | 8 | 46 | 22 | 17 | 33 | **6** |
+| jaguar sent, UTC−7 day | 20 | 19 | 7 | 6 | 13 | 47 | 22 | 13 | 33 | **8** |
+
+| Alignment | Σ\|residual\| | Exact windows |
+|---|---|---|
+| UTC (as stamped) | 42 | 3 of 10 |
+| UTC−7 | 14 | **7 of 10** |
+
+**09-01 lands exactly at UTC−7 and misses by 2 at UTC, and the miss is in the
+direction that cannot be explained away.** Google reported 8 messages for a window
+into which jaguar sent 6. A receiver cannot report mail nobody sent, and this
+report names exactly one source IP — `173.255.245.115`, ours — so the surplus is
+not forwarded mail arriving from somewhere else. Under UTC the 09-01 window is the
+third where Google reports more than was sent (08-27 by 5, 08-28 by 1); under
+UTC−7 there is no such window in ten, and the last **seven consecutive** windows,
+08-26 through 09-01, are exact.
+
+The four messages that decide it went out in one burst at `Sep 1 20:40:39` local,
+which is `2026-09-02 01:40:39Z`. They belong to the UTC 09-02 window and to the
+UTC−7 09-01 day, and Google put them in the report stamped 09-01.
+
+**This is now stronger than a fit, and still short of a mechanism.** What is
+established is that Google's `date_range` — `00:00:00Z → 23:59:59Z`, checked on all
+ten — does not describe which messages the report contains, and that a US Pacific
+day does. Why Google stamps one day and aggregates another is not measured here and
+is not guessed at. The corollary is a sharp test rather than another fit: **those
+four messages must not appear again in Google's 09-02 report**, because they have
+already been counted.
+
+**The three earliest windows are still unexplained**, 08-23/24/25, 14 messages all
+in the direction of jaguar sending more than Google reported. The offset does not
+touch them and nothing else has been proposed. Unchanged from last reading.
+
+**Every other endpoint reproduces at UTC and only at UTC.** GMX is the sharpest
+case, because it falls in the same window as the Google result: jaguar sent GMX 1
+message in the 09-01 UTC day and 2 in the UTC−7 day, and GMX reported 1. So one
+window contains a receiver that fits UTC and a receiver that does not, measured off
+the same log with the same script. The offset is a property of Google's reporting,
+not of our clock. [[suspect-the-measurer-before-the-record]]
+
+#### The seventh reading's known-unknown is closed, and the answer was hypothesis A
+
+The seventh reading found one message in Google's 08-22 report with no DKIM
+signature and SPF evaluated against the HELO name, raised four hypotheses, watched
+all four die, and closed it with an explicit reopen condition: *"Reopen only if a
+later reading shows a second unsigned message — one is an anomaly, two is a pattern
+with something to grep for."*
+
+**The second one is in Google's 09-01 report, and the mail log names it.**
+
+```
+173.255.245.115   1  none  pass  fail  spf:mail.surfguitar101.com=pass/?
+```
+
+Identical shape to 08-22's. The whole chain is in `/var/log/mail.log`:
+
+```
+Sep  1 09:44:17  63D35586572: from=<admin@surfguitar101.com>, nrcpt=1
+Sep  1 09:44:18  63D35586572: to=<member20@example.com>, ...
+                 status=bounced (554 5.7.1 [VI-1] Message blocked due to
+                 spam content in the message)
+Sep  1 09:44:18  bounce[25637]: 63D35586572: sender non-delivery
+                 notification: BECCA5869B6
+Sep  1 09:44:18  BECCA5869B6: from=<>, size=3907, nrcpt=2
+Sep  1 09:44:18  BECCA5869B6: to=<dmarc@localhost>, relay=local
+Sep  1 09:44:20  BECCA5869B6: to=<bgneal@gmail.com>,
+                 orig_to=<admin@surfguitar101.com>,
+                 relay=gmail-smtp-in.l.google.com, status=sent
+```
+
+Site mail to `comporium.net` was rejected as spam; Postfix generated the
+non-delivery notification; it went to `admin@surfguitar101.com`, which fans out to
+the local maildir and to Brian's Gmail; Google evaluated it with an empty MAIL
+FROM, fell back to the HELO name `mail.surfguitar101.com`, found the SPF record
+published there, and found no signature because DSNs bypass the milters.
+
+**`BECCA5869B6` is the only `from=<>` message in the entire live log** — Aug 30
+06:41 through Sep 2 12:13 — and the report carries exactly one such row, count 1.
+The identification does not depend on the UTC−7 result: the bounce falls inside the
+09-01 window under either alignment.
+
+**Hypothesis A was right all along.** It read *"a null-sender message — MAIL FROM
+empty, so SPF fell to HELO"*, and it died in the seventh reading on an absence:
+that window's only null sender had `status=expired` and was never delivered. That
+was correctly reported as an absence of evidence for one window, and it was.
+[[measure-before-recording-in-planning-docs]]
+
+**What this makes it is not a fault but a designed outcome, observed end to end for
+the first time.** `mail.surfguitar101.com` publishes `v=spf1 ip4:173.255.245.115
+-all`, and that record exists precisely so unsigned bounces have an aligned
+mechanism to pass on. Under `p=quarantine`, one did: SPF pass, DKIM absent, relaxed
+`aspf` aligning the HELO subdomain to the org domain, `disposition=none`, delivered.
+The class is not two anomalies eleven windows apart — it is every Postfix DSN, and
+it appears in a report only on the days something bounces.
+
+#### A bug in this reading's own instrument, caught before it was written down
+
+The first run of the send-side binning produced 6 messages for the whole 09-01
+window against 9 reported. The regex required `to=<...>, relay=` and Postfix writes
+`to=<...>, orig_to=<...>, relay=` for anything delivered through an alias — 93 lines
+across the corpus, every one of them to Gmail, which is where `admin@` and `root@`
+forward. **The three messages the reading turns on were all in the dropped set**,
+including the bounce.
+
+Caught by the impossibility rather than by inspection: a receiver reporting more
+than was sent is the same signal that exposed the rotated-log hole in the sixteenth
+reading, and it is worth keeping as the check it has now been twice. **The
+seventeenth reading's table is unaffected** — the corrected script reproduces all
+eleven of its endpoint rows across all ten windows exactly, from an independently
+written binning, which is the first time that table has had a second instrument
+behind it.
+
+#### A correction to how that falsification was worded
+
+The seventeenth reading falsified "multiple Google recipients sharing one SMTP
+transaction" with the claim that *"every one of the 669 sends in the corpus has
+exactly one recipient per queue ID."* **Five queue IDs in the live log carry
+`nrcpt=2`**, four from `no_reply@surfguitar101.com` and the bounce above. In all
+five the second recipient is `dmarc@localhost` over `relay=local` — the `admin@`
+alias fanning out to the maildir that feeds `~/dmarc` — so there is exactly one
+*remote* recipient per queue ID, and never two at Google. **The falsification
+stands; the sentence was broader than the measurement.**
+
+#### Two policy elements the tool has never printed
+
+Reading the raw XML for the bounce turned up fields `dmarc_report.py` does not
+render, present all along:
+
+- **Google emits `<np>quarantine</np>`** in all ten of its reports — the
+  non-existent-subdomain policy, which our `_dmarc` record does not set, so Google
+  is reporting its own default derived from `p`.
+- **GMX emits `<discovery_method>psl</discovery_method>` and `<testing>n</testing>`**
+  in all five of its reports. `psl` says GMX located the policy via the public
+  suffix list; `testing=n` says it is not treating the record as a test.
+
+Neither changes anything and neither is new — they are recorded because the log has
+claimed for seventeen readings to be reading `policy_published`, and it has been
+reading five of its seven elements. Our published record remains
+`v=DMARC1; p=quarantine; rua=...` with no `sp`, `pct`, `np` or `fo`; every `sp`,
+`pct` and `np` value in every report is a receiver-side default.
+
+#### What held steady across all fifty-three
+
+- **All 64 rows are `disposition=none`, 357 messages.** Nothing has been quarantined
+  under `p=quarantine` at any receiver in any window.
+- Evaluated alignment across those 64 rows: **58 `pass`/`pass`, 4 `fail`/`pass`,
+  1 `pass`/`fail`, 1 `fail`/`fail`.** The `pass`/`fail` is the bounce above and the
+  first of its kind in the local corpus.
+- `173.255.245.115` appears in 56 rows and 336 messages, and passes both mechanisms
+  in 55 of them.
+- Policy renders `adkim=r aspf=r` in **all fifty-three**.
+- **`sp` is absent in exactly the 23 Yahoo reports and present in all 30 others.**
+- **`pct` is absent in exactly the 5 GMX reports.**
+- The fifty re-reads reproduce exactly, the `p=none`/`p=quarantine` boundary at the
+  08-25 publication included — 16 reports read `none`, 37 read `quarantine`.
+
+#### The forwarding class is at zero for a second window
+
+`209.85.220.41` carried no messages on 08-31 or 09-01. The class reads 8, 5, 2, 0, 0
+across 08-28 → 09-01, 17 messages total across four windows, every one surviving on
+DKIM. The twelfth reading's `2001:470:0:60::2` row — aligned on neither mechanism,
+delivered only under a discretionary forwarding exemption — remains the single
+instance in eighteen readings and has not recurred in six windows.
+
+#### Postmark absent for a fifth consecutive window
+
+`50.31.156.x` last appears in the 08-27 window. Three messages in the corpus, all
+`pass`/`pass`. The cutover has not happened, so no window since has had a test to
+report. Unchanged.
+
+#### Bearing on the policy decision
+
+`p=quarantine` is live at five reporting organizations and eleven reporting
+endpoints, and **09-01 is the fifth clean day** — zero messages aligned on neither
+mechanism, zero quarantined.
+
+**The unsigned-bounce identification argues against `p=reject` slightly more than
+last reading, not less.** The class is now understood: every Postfix DSN goes out
+unsigned and passes DMARC on the HELO SPF record alone. That is one mechanism deep
+with no margin — the same single point of failure as the forwarded mail that breaks
+SPF and survives on DKIM, in the mirror image. Under `p=reject` a DSN that lost its
+SPF pass would be rejected outright, and a rejected bounce is a delivery failure
+nobody is told about. jaguar's outbound moves to Postmark at Step 21 and the DSN
+path goes with it, so **the honest reading is that this class should be re-measured
+after cutover, not legislated before it.** Nothing argues for reversing step 7.
+
+#### Predictions for the nineteenth reading
+
+1. **Microsoft files for 09-01, one window late — nine filings, nine times the same
+   offset — and reports 1 message, `envelope_to: hotmail.com`.** jaguar sent it one,
+   at `Aug 31 22:03:24` local.
+2. **09-01 closes at 10** — 9 measured plus Microsoft's 1 — and no endpoint files
+   that jaguar did not send to.
+3. **Google's 09-02 report does not contain the four messages sent at
+   `Sep 1 20:40:39` local.** They are already inside the 8 it reported for 09-01. If
+   they appear again, the UTC−7 result is wrong in a way no offset can repair, and
+   that is the point of stating it this way.
+4. **GMX files for 09-02 and reports 2** — jaguar sent `member15@example.com` two messages in
+   that UTC window, at `Sep 1 21:10:47` and `Sep 2 03:57:48` local. GMX has fit UTC
+   in all five of its filings.
+5. **Every report reads `p=quarantine`**, no row carries a `disposition` other than
+   `none`, and **no `pass`/`fail` row appears unless the mail log shows a bounce** —
+   the reopen condition from the seventh reading, restated now that it has an
+   instrument behind it.

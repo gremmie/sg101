@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the seventeen DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the eighteen DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -4384,6 +4384,22 @@ below, which is the live state this step is steered by.
   file are 08-22 and 08-23, which are a retrieval gap: the corpus begins with the
   batch saved 2026-08-24.
 
+- **Google's aggregate day is not the UTC day its `date_range` claims** —
+  new 2026-09-01, **upgraded from hypothesis to result 2026-09-02 by the eighteenth
+  reading, which tested it forward.** Google reported 8 messages for the 09-01
+  window; jaguar sent 6 into the UTC day and 8 into the UTC−7 day, and the report
+  names one source IP — ours — so the surplus cannot be forwarded mail arriving
+  elsewhere. Residuals over ten windows now run Σ42 / 3 exact at UTC against Σ14 /
+  **7 consecutive exact** at UTC−7, and UTC requires Google to report mail nobody
+  sent in three of the ten. **GMX decides the same window the other way** — 1 sent
+  at UTC, 2 at UTC−7, 1 reported — so the offset is a property of Google's
+  reporting and not of our clock or our binning. *Why* Google stamps
+  `00:00:00Z → 23:59:59Z` and aggregates a US Pacific day is **not measured and not
+  guessed at.** Next test: Google's 09-02 report must not re-count the four
+  messages sent at `Sep 1 20:40:39` local. The original hypothesis form follows.
+
+  <details><summary>Stated as a hypothesis, 2026-09-01</summary>
+
 - **Google's aggregate day may not be the UTC day its `date_range` claims** —
   new 2026-09-01, the seventeenth reading, **open and stated as a hypothesis.**
   Google is the sole receiver whose reports do not match the send log: residuals of
@@ -4402,6 +4418,35 @@ below, which is the live state this step is steered by.
   sends in the corpus has exactly one recipient per queue ID, so postfix logging per
   recipient while Google counts per message is not the cause.
   [[suspect-the-measurer-before-the-record]]
+
+  </details>
+
+- **Correction to that falsification's wording** — 2026-09-02. Five queue IDs in
+  jaguar's live log carry `nrcpt=2`; in every one the second recipient is
+  `dmarc@localhost` over `relay=local`, the `admin@` alias fanning out to the
+  maildir that feeds `~/dmarc`. There is exactly one **remote** recipient per queue
+  ID and never two at Google, so the falsification holds — but "exactly one
+  recipient per queue ID" was broader than what was measured.
+  [[measure-before-recording-in-planning-docs]]
+
+- **The unsigned message from `173.255.245.115` is a Postfix bounce — CLOSED
+  2026-09-02**, the eighteenth reading, on the reopen condition the seventh reading
+  set. The second occurrence arrived in Google's 09-01 report and the mail log names
+  it end to end: site mail to `comporium.net` rejected as spam, Postfix DSN
+  `BECCA5869B6` generated `from=<>`, delivered to `admin@surfguitar101.com` and so
+  to Brian's Gmail, evaluated by Google with an empty MAIL FROM, SPF falling back to
+  the HELO name `mail.surfguitar101.com` and passing on the record published there,
+  no signature because DSNs bypass the milters. It is the only `from=<>` message in
+  the whole live log and the report carries exactly one such row. **Hypothesis A
+  from the seventh reading was correct**; it died there on an absence in one window,
+  which was reported correctly as an absence. **The class is every Postfix DSN**,
+  not an anomaly — visible in a report only on days something bounces — so a
+  `pass`/`fail` row from our IP is expected from here and checkable against
+  `grep 'from=<>'` on the mail log. **Bearing on `p=reject`:** DSNs pass DMARC on
+  one mechanism with no margin, the mirror image of forwarded mail surviving on DKIM
+  alone. Under `p=reject` a DSN that lost its SPF pass is rejected and nobody is
+  told. Outbound moves to Postmark at Step 21 and the DSN path goes with it, so
+  **re-measure this class after cutover rather than legislating it before.**
 - **Cloudflare shows sending sources, not reporters — and Comcast-as-reporter was
   an inference** — noted 2026-08-21, **CLOSED 2026-08-22**. The organization list on the dashboard
   reads **Akamai and Google**, which are the two *sending sources* already on
@@ -4525,7 +4570,9 @@ below, which is the live state this step is steered by.
   opendkim logs nothing when it signs, so elimination is impossible from these
   instruments. **Reopen only on a second occurrence** — one is an anomaly, two is
   a pattern. Full account, including what killed each hypothesis, in the seventh
-  reading above.
+  reading above. **REOPENED AND CLOSED 2026-09-02 by the eighteenth reading**: the
+  second occurrence is a Postfix non-delivery notification, identified from the mail
+  log, and hypothesis A was right. See the entry above.
 
 - **The new VM needs a real-client-IP rewrite before cutover** — new 2026-08-21
   (fifth reading above). `mod_remoteip` on jaguar sets `REMOTE_ADDR` from
