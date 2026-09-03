@@ -138,14 +138,20 @@ python-dateutil==2.9.0.post0
 # What makes replacing it a decision rather than a swap is that it rounds to
 # NEAREST and stops at days, and the obvious alternatives truncate and escalate:
 # 90 seconds is "2 minutes ago" here and "1 minute ago" in both `timeago` and
-# django.utils.timesince, and a 2015 post reads "3800 days ago" here and "1 year
-# ago" there. Those strings render on every forum topic and post listing, so any
-# swap restyles the whole archive.
+# django.utils.timesince, and a 2015 post reads "3800 days ago" here. Those
+# strings render on every forum topic and post listing, so any swap restyles the
+# whole archive. (This last figure said "1 year ago" until 2026-09-03, when it
+# was measured rather than recalled: timesince answers "10 years, 4 months ago".
+# Only timesince was measured; the `timeago` package was not.)
 #
-# The whole library is 79 BSD-licensed lines and this project calls exactly one
-# function from it, get_elapsed(), so vendoring it -- as `tagging` and
-# `elsewhere` already are -- is the option with no display change, and the
-# deprecation is then a one-line fix. Recommended into Step 19; not decided here.
+# DECIDED 2026-09-03: replace it with django.utils.timesince, which is already in
+# the stack -- so this is a deletion rather than a swap, and it takes the gate's
+# last third-party ignore with it. Vendoring the 79 lines was the standing
+# recommendation here, on the grounds that it changes no rendered string; the
+# measurement is what reversed it. Not escalating past days means a 2015 post
+# reads "3800 days ago", so preserving the display is the cost of vendoring
+# rather than its benefit. The swap restyles every forum listing, which is why
+# it waits for its own change rather than riding a dependency bump.
 repoze.timeago==0.5
 requests==2.34.2
 # core/s3.py, which stores and deletes member photo uploads in S3. This replaces
