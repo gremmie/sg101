@@ -155,8 +155,10 @@ class EventEntryForm(forms.ModelForm):
         end_date = self.cleaned_data.get('end_date')
         end_time = self.cleaned_data.get('end_time')
 
-        if start_date and start_time and (all_day or (end_date and end_time)):
-            if all_day:
+        if start_date and end_date:
+            # Without both times there is nothing to compare but the dates, and
+            # an all day event has no times to compare in the first place.
+            if all_day or not (start_time and end_time):
                 start = start_date
                 end = end_date
             else:

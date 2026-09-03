@@ -99,17 +99,42 @@ class CrossFieldValidationTestCase(FormTestCase):
         self.assertFalse(form.is_valid())
         self.assertEqual(form.non_field_errors(), [self.ERROR])
 
-    def test_an_all_day_event_with_no_start_time_is_not_compared_at_all(self):
-        """Characterization, and the least obvious thing this form does. The
-        guard reads `if start_date and start_time and (...)`, and `start_time`
-        is optional -- so dropping it skips the comparison and an event ending
-        the day before it begins validates cleanly. The page always posts an
-        hour, the select having no blank option, so this is reachable by other
-        submitters rather than through the form as rendered.
+    def test_an_all_day_event_with_no_start_time_is_still_compared(self):
+        """The times are optional and the check once required them, so an
+        event ending the day before it began validated cleanly whenever one was
+        missing -- and for an all-day event the times are not even part of the
+        comparison it was skipping.
 
         """
         form = EventEntryForm(self._payload(all_day='on', start_time=None,
                                             end_date='07/03/2026'))
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.non_field_errors(), [self.ERROR])
+
+    def test_a_timed_event_with_no_times_is_compared_by_date(self):
+        """Neither hour was given, so the dates are all there is to compare."""
+        form = EventEntryForm(self._payload(start_time=None, end_time=None,
+                                            end_date='07/03/2026'))
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.non_field_errors(), [self.ERROR])
+
+    def test_an_event_with_no_times_on_one_day_is_accepted(self):
+        """The companion: comparing the dates must not reject an event whose
+        ordering the missing times leave nothing to object to.
+
+        """
+        form = EventEntryForm(self._payload(start_time=None, end_time=None))
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_an_event_with_only_a_start_time_is_compared_by_date(self):
+        """An hour on one end and not the other cannot order two datetimes,
+        and the same day with only a start time is not an error.
+
+        """
+        form = EventEntryForm(self._payload(end_time=None))
 
         self.assertTrue(form.is_valid(), form.errors)
 
