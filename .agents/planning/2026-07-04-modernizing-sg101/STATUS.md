@@ -994,9 +994,120 @@ been the first of its kind.
 
 ### Step 18's original scope is complete
 
-Tasks 01–04 were the step as planned on 2026-08-31. **Task 05 is the only one
-outstanding**, and it was added on 2026-09-01 to cover the member-facing half
-that no other task opened.
+Tasks 01–04 were the step as planned on 2026-08-31. Task 05 was added on
+2026-09-01 to cover the member-facing half that no other task opened, and it
+closed on 2026-09-03 — see the section below. **Step 18 is complete.**
+
+## Step 18 task 05 — the member-facing views, covered — DONE 2026-09-03, UNCOMMITTED, awaiting review
+
+`gcalendar/tests/test_forms.py` (16 tests) and `gcalendar/tests/test_views.py`
+(36) give `forms.py` and `views.py` their first tests. Suite **1,045 → 1,097**,
+green, and green under the deprecation gate. Line coverage, measured with
+`coverage run --source=gcalendar`:
+
+| | before | after |
+|---|---|---|
+| `views.py` | 30% | **100%** |
+| `forms.py` | 34% | **100%** |
+
+Both figures before were incidental — other apps' tests importing the URLconf.
+
+### The edit page 500'd on three of Brian's own events
+
+**Found while writing the tests, measured, and fixed on Brian's call.**
+`EventEntryForm.__init__` prefills an existing event's times for the hour
+selects, and formatted them unconditionally:
+
+```python
+initial['start_time'] = instance.start_time.strftime(self.TIME_FORMAT)
+```
+
+Both time columns are `null=True`. For an event with `all_day` False and no
+start time, that is `AttributeError` raised while the form is being *built*, so
+`edit_event` never renders — it 500s.
+
+**Reproduced through the real view against the dev database**, not inferred from
+reading: calling `edit_event` for each row as its owner raised
+`AttributeError: 'NoneType' object has no attribute 'strftime'`.
+
+| | |
+|---|---|
+| Rows with `start_time` NULL and `all_day` False | **3** — pks 2, 376, 377 |
+| Their status | all `ON_CAL` |
+| Their owner | all `Brian` |
+| Where they appear | `/calendar/change/` pages **4** (rows 93, 94 of 128) and **6** (row 126) |
+
+So they were live links on Brian's own change page, and every one of them
+answered a 500. **Not reachable through the member form**: the Start Time widget
+is a `Select` over `TIME_CHOICES` with no blank option, so a browser always posts
+an hour. The admin can create one, and the three that exist are from 2011–2012,
+predating this form. Measured on the dev database, which carries the same 1,478
+events as the live calendar; production itself was not queried.
+
+**The fix** falls back to the same hours a new event opens on (`19:00`/`20:00`),
+which is what the `all_day` branch two lines above already does, rather than to
+midnight — a select with no blank option cannot express "no time", so the edit
+will set one either way, and the house gig hours are the less surprising value
+to hand back. After it, all three render 200 with `19:00` preselected.
+
+### `event.repeat = 'none'` is gone
+
+The two dead assignments in `add_event` and `edit_event`, on the decision
+recorded 2026-09-02. `Event` has no `repeat` field, so each set an instance
+attribute that was never persisted and never read; `repeat` now appears nowhere
+in the tree. The save-path tests (`test_the_submitted_values_are_stored`,
+`test_the_edited_values_are_stored`) were written and seen green **before** the
+lines came out, so the deletion had something to regress against.
+
+### The delete button: still no defect, and now covered
+
+Nothing new to report — this confirms the 2026-09-02 correction rather than
+revisiting it. The mechanism is more local than that correction knew: **the
+change page sets the `csrftoken` cookie itself** (measured — `gcalendar-index`,
+`gcalendar-edit_events`, `home` and `accounts-login` all do), so
+`sg101.js`'s global `$.ajaxSetup` has a cookie to read on the very page carrying
+the button. `DeleteEventCsrfTestCase` runs a client with
+`enforce_csrf_checks=True` and performs that sequence — load the list, post the
+id with the cookie's value as `X-CSRFToken` — which succeeds, paired with an
+untokened post that is 403.
+
+### Two characterizations pinned as they stand, not changed
+
+- **`edit_events` lists only `ON_CAL` events, `edit_event` filters on nothing.**
+  A member cannot see an event they just submitted, but one who kept the URL can
+  move a `NEW` event to `EDIT_REQ` directly. Both are tested as they are.
+- **`clean()` skips its own cross-field check without a start time.** The guard
+  reads `if start_date and start_time and (...)` and `start_time` is
+  `required=False`, so an all-day event ending the day before it begins
+  validates cleanly. Unreachable from the page for the same reason as the 500
+  above — the select always posts an hour. **Left open**, recorded here rather
+  than fixed inside a task about coverage.
+
+### The mutation battery found a test with no teeth, and two mutations with none
+
+33 behaviours, each broken deliberately with the specific test that must notice;
+files restored and verified byte-identical after every run, suite green at the
+end. 27 of the first 32 were caught outright. The five that were not are the
+reason the battery is worth running:
+
+- **Two were my own bad anchors.** The `edit_events` queryset line is indented
+  four spaces, not eight, so the mutation was never applied and the "survival"
+  was an artifact of the instrument. Both caught once anchored correctly.
+- **Two mutations did not reproduce their fault**, because `delete_event` guards
+  each case twice. Disabling `if request.user.is_authenticated` changes nothing:
+  `AnonymousUser != event.user`, so the ownership check answers the same 403.
+  And disabling the `event_id is None` half of the input guard changes nothing
+  either — `Event.objects.get(pk=None)` raises `DoesNotExist` (measured; not
+  `ValueError`), so a missing id reaches the same 400 by the other route. Both
+  were caught once the mutation broke *both* convergent paths.
+- **One test really had no teeth.** `test_the_dates_and_times_are_prefilled_...`
+  used a fixture whose start time was `19:00` — the form's own
+  `DEFAULT_START_TIME` — so replacing the instance's value with the default was
+  invisible. Fixture changed to `18:30`/`21:30`, and the mutation is caught.
+
+Two docstrings were also cut back to what their assertions prove: one claimed to
+distinguish `add_event`'s save path from `edit_event`'s, which no assertion can
+— both call `site_markup` with the same arguments and produce identical HTML.
 
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
