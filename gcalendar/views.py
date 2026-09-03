@@ -41,7 +41,6 @@ def add_event(request):
         if form.is_valid():
             event = form.save(commit=False)
             event.user = request.user
-            event.repeat = 'none'
             event.save(html=form.html)
             return HttpResponseRedirect(reverse('gcalendar-add') + '?thanks=1')
     else:
@@ -86,7 +85,6 @@ def edit_event(request, event_id):
         if form.is_valid():
             event = form.save(commit=False)
             event.user = request.user
-            event.repeat = 'none'
             event.status = Event.EDIT_REQ
             event.save()
             return HttpResponseRedirect(reverse('gcalendar-edit_events') + '?thanks=1')
