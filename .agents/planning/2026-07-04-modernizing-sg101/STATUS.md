@@ -1073,15 +1073,17 @@ untokened post that is 403.
 
 ### Two characterizations pinned as they stand, not changed
 
+Both were **closed the same day** in the follow-up below; the tests written here
+are what made them visible, and what caught the change when it came.
+
 - **`edit_events` lists only `ON_CAL` events, `edit_event` filters on nothing.**
   A member cannot see an event they just submitted, but one who kept the URL can
-  move a `NEW` event to `EDIT_REQ` directly. Both are tested as they are.
+  move a `NEW` event to `EDIT_REQ` directly.
 - **`clean()` skips its own cross-field check without a start time.** The guard
   reads `if start_date and start_time and (...)` and `start_time` is
   `required=False`, so an all-day event ending the day before it begins
-  validates cleanly. Unreachable from the page for the same reason as the 500
-  above — the select always posts an hour. **Left open**, recorded here rather
-  than fixed inside a task about coverage.
+  validates cleanly. Unreachable from the page — the select always posts an
+  hour.
 
 ### The mutation battery found a test with no teeth, and two mutations with none
 
@@ -1108,6 +1110,65 @@ reason the battery is worth running:
 Two docstrings were also cut back to what their assertions prove: one claimed to
 distinguish `add_event`'s save path from `edit_event`'s, which no assertion can
 — both call `site_markup` with the same arguments and produce identical HTML.
+
+## Step 18 follow-up — the two characterizations, closed — DONE 2026-09-03, UNCOMMITTED, awaiting review
+
+Both were recorded above as behaviour to pin rather than change. Brian's call to
+fix them, once the tests made the shape of each clear. Suite **1,097 → 1,101**,
+green under both runs, `views.py` and `forms.py` still at 100%.
+
+### `edit_event` now applies the rule `edit_events` lists by
+
+One line: `get_object_or_404(Event, pk=event_id, status=Event.ON_CAL)`. The
+ownership check is untouched, so another member's event is still a 403 rather
+than a 404.
+
+**The direction was a real choice and Brian picked the narrower one.** The
+alternative was to list every event with a status column, so a submitter could
+see what they had just sent — a wider change to the list, the template, and to
+which statuses stay editable mid-sync. Enforcing the existing rule instead
+changes no workflow: it makes the view agree with what `edit.html` already tells
+the member, that an event with a pending change is waiting on the staff.
+
+**Why it is worth closing at all is the sync queue, not tidiness.** The only
+link into `edit_event` is the event title in `edit.html`, inside the loop over
+the `ON_CAL`-filtered list — so the reachable case is a URL the member
+legitimately had a moment ago, in history or behind the Back button, for an
+event that has since left the list. `edit_event` sets `EDIT_REQ` *whatever the
+status was*, and `PendingEventManager` selects the three `_APRV` statuses. So a
+member who pressed Back after staff approved their change could put the row back
+to `EDIT_REQ` and **drop it out of the sync queue with nothing said** — no
+error, nothing pushed, and the calendar simply not updating. Same shape after a
+delete: posting from a kept URL turned `DEL_REQ` into `EDIT_REQ` and cancelled
+the member's own deletion request.
+
+`test_an_approved_event_cannot_be_taken_out_of_the_sync_queue` is the test named
+after that, and it asserts membership of `Event.pending_events` rather than the
+status alone, since the queue is the thing that was at risk.
+
+### `clean()` compares the dates when it has no times to compare
+
+The guard required `start_time`, an optional field, before comparing anything —
+so a submission missing an hour skipped the check entirely, and for an all-day
+event the times were not even part of the comparison being skipped.
+
+```python
+if start_date and end_date:
+    if all_day or not (start_time and end_time):
+        start, end = start_date, end_date
+```
+
+**It falls back to the dates rather than inventing an hour.** With only one time,
+or none, the date ordering is the whole of what can honestly be asserted; an
+event on a single day with no times stays valid, which the two companion tests
+pin so the stricter check cannot start rejecting what it should not.
+
+### Mutation battery — 4 of 4 caught
+
+`status=Event.ON_CAL` removed from the lookup; the old `clean()` guard restored
+whole; the fallback narrowed to `if all_day:` alone; and `>` widened to `>=` to
+give the two must-stay-valid cases teeth. Files restored byte-identical, suite
+green after.
 
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
