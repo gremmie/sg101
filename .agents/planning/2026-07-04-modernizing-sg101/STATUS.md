@@ -6679,6 +6679,62 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## PLANNING — Step 19 restructured into five phases (2026-09-03)
+
+**The step was a junk drawer, and the giveaway was its objective.** "Complete
+pruning per the triage" described four of the eighteen items it had accumulated.
+The other fourteen arrived as deferrals out of Steps 11–18, each with a reason of
+the form *not a version bump*, *belongs with the other model-level work*, or *app
+modernization, not an engine switch*. **Every one of those is a reason not to do
+something then, and none of them is a reason the work belongs together** — so the
+step was grouped by provenance rather than by kind. That is why it read as a list
+instead of a claim, and why nobody could say what finishing it would mean.
+
+Full restructure in `implementation/plan.md` under Step 19, which is the one home
+for it; this section records only why, and what was decided rather than deferred
+again.
+
+**The numbers could not move**, which shaped the fix. The Jaguar decommission
+project (`~/workspaces/bgn/planning/2026-08-23-jaguar-decommission/`) names "SG101
+Step 19" for the wiki retirement and declares a hard dependency edge into Step 21
+**by number**. Renumbering would break another project's plan, so the restructure
+is internal: five ordered phases inside the step, an idiom this plan already uses.
+
+| Phase | What it is |
+|---|---|
+| **0 — Decide** | Six open questions, no code |
+| **A — Delete-path safety** | The three items that can lose data |
+| **B — Prune** | The step as originally designed |
+| **C — Schema and data migrations** | Four migrations against real production data |
+| **D — Cleanups** | Independent one-diff items, formatter last |
+
+**Four ordering constraints, each with a reason rather than a preference:** A
+before B, because bulk-deleting 1,540 legacy rows while a cascade hazard that has
+already eaten a forum is live is the wrong order. `django-tagging` before the
+collation decision's tag-cloud half, because that finding is about a table the
+`ArrayField` option deletes. The formatter dead last, because it rewrites every
+file — run early it formats code about to be deleted, run mid-step it gives every
+later bisect two candidate causes. And the settings extraction before Step 20,
+which will touch settings anyway.
+
+**Phase 0 is the recommendation, not just the first phase.** It is an afternoon of
+measuring and deciding, it needs Brian more than it needs an agent, and it
+plausibly removes four to six items outright: the collation audit is already
+measured and needs only a decision written down, the five `tools/` scripts are
+likely "delete four, port one", and both the `banners`/`oembed` verification and
+the timezone dropdown could legitimately close as "leave it". **Shrinking the step
+before generating task files is much cheaper than generating tasks for work that
+turns out not to exist.**
+
+**Two items flagged as probably not belonging here at all.** The timezone dropdown
+is explicitly quality rather than correctness — its own measurement found nothing
+broken and nothing at risk, and "leave it" is one of the three answers on offer.
+And the linter/formatter may want to be its own step between 19 and 20, since it
+touches every file in the repo and nothing else here does.
+
+**Task files: per phase, not per step.** So that what Phase A learns can change
+Phase B.
+
 ## ORDER BY collation — audited 2026-08-13 (`4d5104a`, pushed), scheduled into Step 19
 
 **Brian noticed `/profile/members/user/` listing members in a different order

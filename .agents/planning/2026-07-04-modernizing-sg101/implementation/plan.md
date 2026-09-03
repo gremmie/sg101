@@ -1129,17 +1129,93 @@ table carried to Step 19's pruning.
 **Demo:** A member follows the restored Calendar link, submits an event, an admin
 approves it, the sync button pushes it, and it appears on the Google calendar.
 
-### Step 19: Retire `wiki`/MoinMoin; verify-then-prune peripheral apps
-**Objective:** Complete pruning per the triage.
-**Guidance:** If confirmed, archive MoinMoin content, then remove the `wiki` app,
+### Step 19: Close the deferral backlog — delete-path safety, pruning, data migrations
+**Objective:** Land everything Steps 11–18 deferred, in an order that puts the
+data-loss hazards first and the whole-tree reformat last.
+
+**Restructured 2026-09-03, and the reason is worth keeping.** The step had
+grown to eighteen items and its objective — "complete pruning per the triage" —
+described four of them. Everything else arrived because it was deferred out of
+an earlier step with a reason like *not a version bump*, *belongs with the other
+model-level work*, or *app modernization, not an engine switch*. Those are
+reasons not to do something **then**; none of them is a reason the work belongs
+**together**. So the step was grouped by provenance rather than by kind, which
+is what made it read as a list instead of a claim.
+
+**The numbers do not move.** The Jaguar decommission project names "SG101 Step
+19" for the wiki retirement and declares a hard dependency edge into Step 21, by
+number. Renumbering would break another project's plan, so the restructure is
+internal: phases inside the step, which is an idiom this plan already uses.
+
+#### The five phases, in order
+
+| Phase | Contents | Why it is a unit |
+|---|---|---|
+| **0 — Decide** | ORDER BY collation; `repoze.timeago`; triage the five `tools/` scripts; verify `banners`/`oembed`; whether to correct donation history at all; the timezone dropdown | No code. Every open question answered and recorded. Cheap, and it is the phase that makes the step smaller. |
+| **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
+| **B — Prune** | `wiki`/MoinMoin; whatever Phase 0 decided for `banners`/`oembed`; the 7 model-less legacy tables; the `tools/` scripts | The step as originally designed. Mechanical, low risk, one shared exit test. |
+| **C — Schema and data migrations** | Donation `payment_date` backfill; `elsewhere` rework; retire `django-tagging`; the 12 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
+| **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; **then** the linter/formatter, last | Independent one-diff items. |
+
+#### Orderings that are not obvious, each with its reason
+
+- **A before B.** Do not bulk-delete 1,540 rows of legacy tables while a cascade
+  hazard that has already eaten a forum is still live.
+- **`django-tagging` before the collation decision's tag-cloud half.** That
+  finding is about `tagging_tag.name`, a table that stops existing if the
+  `ArrayField` option wins. Do not record a decision about a table you may
+  delete.
+- **The linter/formatter dead last.** It rewrites every file: run it before the
+  prune and it formats code that is about to be deleted; run it mid-step and
+  every later bisect has two candidate causes. This is the same argument that
+  deferred the weblinks form change past the Django rungs.
+- **The settings extraction before Step 20.** Step 20 is production hardening
+  and will touch settings; extracting `LOGGING` first means it edits one file
+  rather than two.
+
+#### Two items that should probably leave
+
+- **The timezone dropdown** is explicitly quality rather than correctness — the
+  measurement found nothing broken and nothing at risk, and "leave it" is one of
+  the three answers offered. Decide it in Phase 0; it only becomes work if
+  option 3 (a real `ChoiceField`) is chosen, and then it is a Phase D task.
+- **The linter/formatter** may want to be its own step between 19 and 20. It
+  touches every file in the repo, which makes it unlike everything else here.
+
+#### Phase B guidance
+
+If confirmed, archive MoinMoin content, then remove the `wiki` app,
 `WikiMiddleware`, and `wiki.tasks.expire_cookies`. Verify usage of `banners` and
 `oembed` against the snapshot; keep or prune each. (`contests`, `countdown`, and
 `bandmap` were **confirmed KEEP on 2026-07-24** during Step 11 planning, since
 they hold latin1 tables the Postgres conversion must transcode; `membermap` was
-already pruned in Step 4.) Also carries the deferred `elsewhere` rework —
-`post_migrate` seeding as a real data migration, and possibly `network_id`→FK.
+already pruned in Step 4.)
 
-**Also carries the `last_post` cascade hazard, added 2026-08-05 after it fired.**
+**Generate task files per phase, not for the whole step**, so that what Phase A
+learns can change Phase B — the same reason Step 12's tasks were generated in
+one pass but ordered to put a populated index before the code that reads it.
+
+#### The item detail
+
+Everything below is the per-item record, each with the measurement that put it
+here. Phase tags were added 2026-09-03; the content is unchanged.
+
+**Four items have no block below**, their record having been written in the step
+that deferred them. They are listed here so the phase table does not name work a
+reader of this file cannot find, and they live in
+`STATUS-archive-steps-01-15.md`:
+
+| Item | Phase | Where the detail is |
+|---|---|---|
+| The 7 model-less legacy tables (~1,540 rows, `gcalendar_accesstoken` among them) | B | Step 11 task 04's carried-forward list |
+| The 12 duplicate-email account pairs — **trap: a naive uniqueness check locks those 26 members out of profile edits** | C | same list |
+| `repoze.timeago`, dead upstream since 2011 and owner of the gate's only third-party ignore; replacing it trades it for a semi-active dependency needing a compatibility wrapper | 0 | Step 14's carried-forward section, including the 2026-08-15 correction |
+| Pick a linter, possibly a formatter — **deferred three times**, and the "a reformat would bury the migration" objection expired with Step 14 | D, last | Step 15's notes |
+
+**[Phase C] Carries the deferred `elsewhere` rework** — `post_migrate` seeding
+as a real data migration, and possibly `network_id`→FK.
+
+**[Phase A] Also carries the `last_post` cascade hazard, added 2026-08-05 after it fired.**
 `Forum.last_post` and `Topic.last_post` are `OneToOneField('Post',
 on_delete=models.CASCADE)` and the cascade **points the wrong way**: deleting
 the post a forum happens to point at deletes *the forum*, and with it every
@@ -1153,7 +1229,7 @@ migration, with tests proving a post deletion no longer propagates past the
 post. Brian's call to schedule it here rather than mid-ladder, schema changes
 belonging with the other model-level work.
 
-**Also carries `Post.delete()`'s return type, found 2026-08-15** by the language
+**[Phase A] Also carries `Post.delete()`'s return type, found 2026-08-15** by the language
 server the Step 14 venv made usable — the first defect that tooling surfaced.
 `forums/models.py:311` overrides `delete()`, calls `super().delete()` and
 discards its result, so it returns `None` where `Model.delete()` returns
@@ -1164,7 +1240,7 @@ return it, which cannot be a blind one-liner because the `if self.id ==
 first_post_id` block has to run before the return — so it wants a test, and it
 belongs beside the cascade work rather than alone.
 
-**Worth confirming while in there, not yet a finding:** `forums/tools.py:71`
+**[Phase A] Worth confirming while in there, not yet a finding:** `forums/tools.py:71`
 deletes posts as a queryset (`Post.objects.filter(pk__in=post_ids).delete()`),
 which does **not** call `Post.delete()`, so the "first post deleted, therefore
 delete the topic" rule never runs on that path. It reads as deliberate — the
@@ -1174,7 +1250,7 @@ override's behavior is not guaranteed merely because a post was deleted. Given
 this project has already lost a forum to a delete path, the assumption is worth
 writing a test around rather than leaving in a comment.
 
-**Also carries retiring vendored `django-tagging`** (vendored during Step 13
+**[Phase C] Also carries retiring vendored `django-tagging`** (vendored during Step 13
 task 03; see `tagging/__init__.py`). 0.5.0 is the final release, upstream
 stopped in 2018, and it did not import on Django 4.0 — vendoring was the move
 that kept the 4.0 rung to one variable, not an endorsement. The surface is
@@ -1201,7 +1277,7 @@ django-tagging with a link to `code.google.com/p/django-tagging/`, which has
 been dead for years. Whatever replaces it, that line needs updating — and it is
 a live page.
 
-**Also carries the settings-module cleanup, added 2026-08-07 out of Step 13 task
+**[Phase D] Also carries the settings-module cleanup, added 2026-08-07 out of Step 13 task
 06** (Brian's call to defer it rather than grow that task's diff). Three small
 independent changes:
 
@@ -1236,7 +1312,7 @@ independent changes:
    deleted its template-loader block once measurement showed it reproduced a
    Django default, so it performs no in-place mutation at all now.)
 
-**Also carries the PayPal `payment_date` timezone truncation, added 2026-08-09
+**[Phase 0 decides, Phase C builds] Also carries the PayPal `payment_date` timezone truncation, added 2026-08-09
 out of Step 13 task 09.** PayPal sends the IPN `payment_date` as a Pacific wall
 clock with the zone as a trailing abbreviation —
 `'04:14:08 Jan 21, 2011 PST'`. `donations/views.py` does
@@ -1275,7 +1351,7 @@ Three things to settle before touching it:
   rows from uncorrected ones, so the migration has to be all-or-nothing over
   `payment_date < <cutover>` and must be idempotent enough not to double-apply.
 
-**Also carries the timezone dropdown, `static/js/timezone.js`, added 2026-08-09
+**[Phase 0] Also carries the timezone dropdown, `static/js/timezone.js`, added 2026-08-09
 out of Step 13 task 09.** Low stakes and no deadline — recorded because task 09
 touched every other part of this and deliberately left this part alone.
 
@@ -1322,7 +1398,7 @@ Three ways to go, roughly in order of effort:
    two-select area/location UI would need either rebuilding server-side or
    keeping its JS and feeding it JSON from the view.
 
-**Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
+**[Phase 0 triages, Phase B removes] Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
 from Step 14 task 01.** They do not compile on any Python 3 and have not since
 the flip: `filter_posts.py`, `flag_data.py` and `translate_yahoo_group.py` use
 `print` statements, `load_ygroup.py` and `post_sub.py` use unparenthesized
@@ -1344,7 +1420,7 @@ which is data that can still change. Decide each one: port, or delete. Deleting
 four and porting one is the likely shape, and either outcome should be recorded
 so the next compile sweep does not rediscover them as a surprise.
 
-**Also carries the weblinks add form's URL field, added 2026-08-13 from Step 14
+**[Phase D] Also carries the weblinks add form's URL field, added 2026-08-13 from Step 14
 task 02.** `weblinks/forms.py`'s `AddLinkForm` declares `url` as a
 `forms.CharField`, and it should be a `forms.URLField`.
 
@@ -1379,7 +1455,7 @@ against settled behavior rather than re-examining it at each rung. **It needs a
 test either way**: `weblinks` has no coverage of the scheme-less case at all,
 which is the only case the conversion changes.
 
-**Also carries the ORDER BY collation change, added 2026-08-13 after Brian
+**[Phase 0] Also carries the ORDER BY collation change, added 2026-08-13 after Brian
 noticed `/profile/members/user/` listing members in a different order than
 production.** He was right about the cause. It is collation, and the row sets are
 identical everywhere — this changes *order*, never *membership* or *counts*.
@@ -1459,12 +1535,22 @@ until the escaping was undone — the measurement, not the data. And a `while re
 loop feeding `docker compose exec` silently processes only its first line,
 because `exec` consumes the loop's stdin; redirect it from `/dev/null`.
 
-**Tests:** App-boot tests without `wiki`; adjust/trim tests for any pruned apps;
-a compile sweep over the whole tree — not just app and migrations — that would
-fail on a Python 2 file surviving in `tools/`; a `weblinks` add-form test
-covering scheme-less, schemed and invalid URL input; suite green.
+**Not yet carried by any phase, and needing a home:** the three apps whose
+`ready()` can be neutered with the suite still green — `downloads`, `potd` and
+`weblinks`, whose receivers maintain denormalized counts, delete uploaded files
+and drive the photo-of-the-day sequence. Measured during the Django 5.0 rung and
+recorded as a pre-existing coverage gap. Assigned to **Phase D**.
+
+**Tests:** Per phase. A: a post deletion that does not propagate past the post,
+and the queryset-delete path's actual behaviour pinned. B: app-boot tests without
+`wiki`, trimmed tests for pruned apps, and a compile sweep over the **whole
+tree** — not just app and migrations — that would fail on a Python 2 file
+surviving in `tools/`. C: each migration verified against the converted data,
+with the donation backfill proved idempotent. D: a `weblinks` add-form test
+covering scheme-less, schemed and invalid URL input, and receiver tests that fail
+with `ready()` neutered. Suite green throughout.
 **Demo:** Site runs cleanly without the wiki bridge; INSTALLED_APPS reflects final
-app set.
+app set; a post deleted from the admin takes nothing with it.
 
 ---
 
