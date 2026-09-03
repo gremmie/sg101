@@ -971,6 +971,27 @@ Both fixed here, as this section assigned on 2026-09-01:
   word on a page about gigs, and the payoff was written from the site's side
   ("lets **us** give **you**") about a rationale the reader has no use for.
 
+### The page now recruits calendar owners — added 2026-09-02, outside task 04
+
+A `secondary callout` under the Add / Change buttons:
+
+> Keep your own Google calendar of shows? You don't have to add events here one
+> at a time — contact us and we'll add your calendar alongside ours.
+
+**Placement was the decision, not the wording.** The main callout at the top of
+the page explains that the calendar carries listings from friends' calendars, so
+the offer is thematically at home there — but that callout is the first thing
+every visitor reads, and this offer is for the few who run a gig calendar of
+their own. Under the buttons, it answers the button: the person looking at *Add
+New Event* is exactly who "you don't have to do this one at a time" is for. The
+button group is **not** auth-gated, so the offer is public, which suits a band
+that has never registered.
+
+A `<p class="help-text">` variant was rendered alongside it for comparison and
+dropped. Worth noting for a future editor: in this codebase `help-text` is used
+*only* as form-field help, always under a label, so a standalone use would have
+been the first of its kind.
+
 ### Step 18's original scope is complete
 
 Tasks 01–04 were the step as planned on 2026-08-31. **Task 05 is the only one
