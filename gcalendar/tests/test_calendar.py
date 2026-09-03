@@ -77,10 +77,17 @@ class CredentialsTestCase(unittest.TestCase):
         with self.assertRaises(CalendarError):
             Calendar('cal-id', '/no/such/service-account.json')
 
-    def test_a_blank_credentials_path_is_a_calendar_error(self):
-        """Blank is the default -- an install that never configured this."""
-        with self.assertRaises(CalendarError):
+    def test_a_blank_credentials_path_says_so(self):
+        """Blank is the default -- an install that never configured this. The
+        message reaches the admin's sync page, so it has to say which setting
+        is empty rather than report a stat of ''.
+
+        """
+        with self.assertRaises(CalendarError) as caught:
             Calendar('cal-id', '')
+
+        self.assertIn('GCAL_CREDENTIALS_PATH', str(caught.exception))
+        self.assertNotIn('No such file', str(caught.exception))
 
     def test_a_key_file_that_is_not_json_is_a_calendar_error(self):
         with self._key_file('this is not json') as path:

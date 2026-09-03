@@ -1,5 +1,4 @@
 {% extends 'admin/base_site.html' %}
-{% load core_tags %}
 {% block title %}Sync Events w/Google Calendar{% endblock %}
 {% block breadcrumbs %}
 <div class="breadcrumbs">
@@ -16,28 +15,18 @@
 </ul>
 {% endif %}
 
-<p>Credentials file status: {% bool_icon cred_status %}
-{% if cred_status %}
-&mdash; <em>Last modified: {{ cred_status|date:"r" }}</em>
-{% endif %}
-&mdash; <a href="{% url 'admin:gcalendar-authorize' %}">Request new credentials</a></p>
-
 {% if events %}
 <p>The following pending events have been approved and are ready to be synchronized with the Google calendar.</p>
 <ol>
 {% for event in events %}
-{% if not event.on_calendar %}
 <li><a href="../{{ event.id }}">{{ event.start_date|date:"M d, Y" }} - {{ event.what }}</a>
 &bull; Submitted by {{ event.user.username }} &bull; <strong>{{ event.get_status_display }}</strong></li>
-{% endif %}
 {% endfor %}
 </ol>
 
-{% if cred_status %}
 <form action="." method="POST">{% csrf_token %}
    <p><input type="submit" name="synchronize" value="Synchronize Events" /></p>
 </form>
-{% endif %}
 {% else %}
 <p>No events to synchronize at this time.</p>
 {% endif %}

@@ -4,15 +4,11 @@ This file contains the automatic admin site definitions for the gcalendar applic
 """
 from django.conf import settings
 from django.contrib import admin
-from django.contrib import messages
-from django.contrib.sites.models import Site
-from django.urls import path, reverse
-from django.http import HttpResponseRedirect
+from django.urls import path
 from django.shortcuts import render
 
 from gcalendar.models import Event
 from gcalendar.calendar import Calendar, CalendarError
-from gcalendar import oauth
 
 import bio.badges
 
@@ -40,12 +36,6 @@ class EventAdmin(admin.ModelAdmin):
             path('google_sync/',
                 self.admin_site.admin_view(self.google_sync),
                 name="gcalendar-google_sync"),
-            path('authorize/',
-                self.admin_site.admin_view(self.authorize),
-                name="gcalendar-authorize"),
-            path('auth_return/',
-                self.admin_site.admin_view(self.auth_return),
-                name="gcalendar-auth_return"),
         ]
         return my_urls + urls
 
@@ -78,9 +68,6 @@ class EventAdmin(admin.ModelAdmin):
         # Get pending events
         events = Event.pending_events.all()
 
-        # Check status of credentials file
-        cred_status = oauth.check_credentials_status()
-
         msgs = []
         err_msg = ''
         if request.method == 'POST':
@@ -97,36 +84,10 @@ class EventAdmin(admin.ModelAdmin):
 
         return render(request, 'gcalendar/google_sync.html', {
             'current_app': self.admin_site.name,
-            'cred_status': cred_status,
             'messages': msgs,
             'err_msg': err_msg,
             'events': events,
             })
-
-    def authorize(self, request):
-        """
-        This view generates the authorization URL and redirects the user to it.
-        """
-        site = Site.objects.get_current()
-        callback_url = '%s://%s%s' % (
-                settings.SITE_SCHEME,
-                site.domain,
-                reverse('admin:gcalendar-auth_return'))
-        auth_url = oauth.get_auth_url(callback_url)
-        return HttpResponseRedirect(auth_url)
-
-    def auth_return(self, request):
-        """
-        This view is called by Google after the user has authorized us access to
-        their data. We call into the oauth module to process the authorization
-        code and exchange it for tokens.
-        """
-        try:
-            oauth.auth_return(request)
-        except oauth.OAuthError as e:
-            self.message_user(request, str(e), level=messages.ERROR)
-
-        return HttpResponseRedirect(reverse('admin:gcalendar-google_sync'))
 
 
 admin.site.register(Event, EventAdmin)

@@ -38,6 +38,12 @@ class Calendar(object):
         service account's JSON key file.
         """
         self.calendar_id = calendar_id
+        if not credentials_path:
+            # Nothing is configured at all. Stat'ing '' would say "No such file
+            # or directory: ''", which reads like a fault rather than a setting
+            # nobody has filled in.
+            raise CalendarError('No service account key is configured: '
+                                'GCAL_CREDENTIALS_PATH is blank.')
         try:
             credentials = service_account.Credentials.from_service_account_file(
                     credentials_path, scopes=[SCOPE])
