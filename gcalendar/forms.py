@@ -115,10 +115,19 @@ class EventEntryForm(forms.ModelForm):
                     initial['start_time'] = self.DEFAULT_START_TIME
                     initial['end_time'] = self.DEFAULT_END_TIME
                 else:
+                    # Both times are nullable, and events predating this form
+                    # have them unset; those fall back to the hours a new
+                    # event opens on rather than failing to build a form.
                     if 'start_time' not in initial:
-                        initial['start_time'] = instance.start_time.strftime(self.TIME_FORMAT)
+                        initial['start_time'] = (
+                                instance.start_time.strftime(self.TIME_FORMAT)
+                                if instance.start_time
+                                else self.DEFAULT_START_TIME)
                     if 'end_time' not in initial:
-                        initial['end_time'] = instance.end_time.strftime(self.TIME_FORMAT)
+                        initial['end_time'] = (
+                                instance.end_time.strftime(self.TIME_FORMAT)
+                                if instance.end_time
+                                else self.DEFAULT_END_TIME)
 
             kwargs['initial'] = initial
 
