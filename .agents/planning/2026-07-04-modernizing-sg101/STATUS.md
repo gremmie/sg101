@@ -912,6 +912,71 @@ was meant to be, and `cred_status` no longer exists to be confused with a health
 signal. Task 03's remaining probes are unchanged: `delete`, and
 `anyoneCanAddSelf`.
 
+## Step 18 task 04 — the calendar is reachable again — DONE 2026-09-02, UNCOMMITTED, awaiting review
+
+`<li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>` is back in both
+live base templates, in the positions `7073a406` took it from: `base.html`
+between Submit News and Contact, `v3/base.html` at the top of the Surf Music
+dropdown. **Restored by hand, not by reverting** — that commit also removed the
+Member Map link, and `membermap-index` was pruned in Step 4, so a reverse-apply
+would have put a `{% url %}` for a dead route into both bases and 500'd every
+page on the site. The copyright bump in the same commit is unrelated and was left
+alone.
+
+`/calendar/` has been unreachable from anywhere on the site since 2023-03-19.
+It is reachable from both designs again as of today, which is what the whole step
+was for.
+
+### The tests render pages, because that is the only thing that catches this
+
+`gcalendar/tests/test_navigation.py` fetches `forums-index` (`base.html`, still
+worn by the busiest part of the site) and `home` (`v3/base.html`), asserting the
+anchor with `html=True` and building its href from `reverse()`. Suite
+**1,043 → 1,045**, green, and green under the deprecation gate.
+
+**A `{% url %}` naming a missing route raises at render, not at import.** A
+string search of the template or an import-level check passes while the page
+500s in a browser — which is exactly the failure a revert would have introduced.
+**Mutation P3 proves the tests catch it**: pointing the link at
+`membermap-index` fails the forums test. P1 and P2 delete the link from one
+template each and fail exactly one test apiece.
+
+Neither nav sits inside an auth conditional — measured, not assumed — so the
+tests need no login and the link shows for anonymous visitors.
+
+### Nothing else needed the link
+
+Checked per requirement 6: **this project has no sitemap**, and the only other
+`gcalendar-index` references are breadcrumbs inside the calendar app's own
+templates. `core/tests/test_pruned.py` already asserts `membermap-index` does not
+reverse, so criterion 2 needed no new test — and `git grep membermap -- '*.html'`
+is empty.
+
+### The two pieces of stale copy on the public page
+
+Both fixed here, as this section assigned on 2026-09-01:
+
+- *"the pull-down menu in the upper right corner"* → **"the calendar icon at the
+  top of the calendar, second from the right"**, which is where Google's embed
+  now keeps it. The first attempt said "in the toolbar above" and Brian caught
+  it: the callout sits *above* the iframe, so "above" pointed the reader away
+  from the control. The wording carries no page-relative direction now, which is
+  what makes it survive the callout moving.
+- The callout was **rewritten rather than patched**, on Brian's pick from three
+  drafts: *"Along with our own events, this calendar carries listings from
+  friends' calendars around the surf music world — so you can find more shows in
+  one place."* The original said *"This calendar is now aggregating several
+  Google calendars… without duplicating efforts in the community"* — the "now"
+  dated from whenever the second calendar was added, "aggregates" is a machinery
+  word on a page about gigs, and the payoff was written from the site's side
+  ("lets **us** give **you**") about a rationale the reader has no use for.
+
+### Step 18's original scope is complete
+
+Tasks 01–04 were the step as planned on 2026-08-31. **Task 05 is the only one
+outstanding**, and it was added on 2026-09-01 to cover the member-facing half
+that no other task opened.
+
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
 **R23's premise is true about reCAPTCHA and false about this site.** The step was

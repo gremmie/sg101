@@ -92,12 +92,17 @@ has no `repeat` field** — not in `models.py`, not in any migration, and not in
 lands on the instance, is never persisted, and has no effect. It is a leftover
 from a schema that predates this app's initial migration.
 
-Leave it alone and **do not write an assertion about it**: a test asserting
-`event.repeat == 'none'` on the in-memory instance would pass while proving
-nothing, and one asserting it on a reloaded row would fail with
-`AttributeError`. Note it in `STATUS.md` alongside the CSRF finding; deleting
-two dead lines is Brian's call, and it belongs with the Step 19 sweep rather
-than inside a test task.
+**DECIDED 2026-09-02 — delete both lines in this task.** Brian's call, taken
+once the re-verification held. They are two dead assignments with no reader and
+no persistence, and deferring them to a later sweep would mean carrying a known
+no-op through a task that is reading these exact functions line by line.
+
+**Do not write an assertion about `repeat` either way**: on the in-memory
+instance it passes while proving nothing, and on a reloaded row it fails with
+`AttributeError`. What must be covered instead is the surrounding save path --
+that `add_event` and `edit_event` persist what the form supplied -- written and
+seen to pass *before* the two lines come out, so the deletion has something to
+regress against.
 
 ### `clean()` skips its cross-field check more often than it looks
 `EventEntryForm.clean` guards with
