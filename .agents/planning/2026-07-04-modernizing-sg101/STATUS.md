@@ -705,6 +705,126 @@ not what members see. Three zones can be on screen at once — the event's, the
 viewer's, and the calendar's — which is worth knowing before reading a task 03
 result as a conversion bug.
 
+## Step 18 task 02 — the OAuth surface is gone — DONE 2026-09-02, UNCOMMITTED, awaiting review
+
+`gcalendar/oauth.py` (142 lines), both admin auth views and their two URLs, the
+credentials-status block and its Authorize link, `GCAL_CLIENT_ID`/`SECRET`, and
+the nine-year-old `{% if not event.on_calendar %}` no-op all stop existing.
+**227 lines deleted against 176 added, and all but 14 of the additions are
+tests.** Nothing about the sync's behavior changes.
+
+`{% load core_tags %}` went with the block: `bool_icon` was checked first and was
+its only use in that template.
+
+### The admin's first tests: 46% → 100%, and 22 mutations
+
+`gcalendar/admin.py` is **49 statements at 100%**, from 46% incidental. Suite
+**1,035 → 1,043**, green, and green again under the deprecation gate as a
+separate run.
+
+Written in two phases, which is what made the deletion safe to do at all:
+
+- **Seven characterization tests first**, green against the *pre-deletion* code —
+  the page's queryset, what it renders, an unreadable key reported in the page, a
+  clean sync, a `CalendarError` out of `sync_events`, and three over
+  `approve_events`. These are what the deletion had to survive.
+- **Two more written to fail**, and watched failing for the right reason: the
+  credentials furniture absent with the button still rendering, and
+  `NoReverseMatch` for both removed route names.
+
+The `approve_events` tests drive the action **through a changelist POST**, not a
+direct call to the method. A direct call passes just as well with `actions`
+empty, which would be a live defect no test could see.
+
+**`admin:gcalendar-google_sync` is asserted to still reverse in the same test as
+the two `NoReverseMatch` assertions.** Dropping every custom URL — the plausible
+over-broad edit — satisfies the negative assertions perfectly, and M14 confirms
+that guard fires.
+
+**22 mutations, each seen to fail the assertion it targets.** Three of the first
+round were the interesting part: they were *caught*, but by an assertion earlier
+in the same test, so the assertion actually under test never ran. Splitting
+`test_the_page_selects…` from `test_the_page_renders…`, and splitting the
+credentials-furniture and clean-sync mutations one string at a time, is what made
+each claim independently falsifiable. See
+`mutation-verify-or-it-is-not-coverage`: catching the mutation is not the bar,
+catching it *with the assertion that claims to* is.
+
+**The badge assertion needed a fixture to mean anything.** `award_badge` logs and
+returns when no `Badge` row carries the id, so a test that forgets to create the
+`CALENDAR_PIN` row passes while proving nothing. The row is created explicitly
+and M12/M13 confirm the assertion discriminates.
+
+### DECIDED 2026-09-02 — a blank key is invisible until the button is pressed
+
+Unwrapping the submit form changes what an unconfigured deploy sees: the button
+now renders whenever events are pending, and a blank `GCAL_CREDENTIALS_PATH`
+surfaces only when it is **pressed**. Brian's call, taken over gating the form on
+the setting instead.
+
+**The button gives no advance sign either way** — same label, same page. Gating
+it was costed on 2026-09-02 (`os.access` plus a notice naming the setting, ~15
+lines and three tests) and **declined**: Brian is the only user of this page and
+will know at once whether the key is in place. Recorded because the reasoning is
+what makes it revisitable — the answer changes the day anyone else syncs.
+
+One failure path that says what is wrong beats a button-less page that explains
+nothing. **The consequence is that task 01's settings comment became false** —
+`base.py:349` and the `.env.example` header both said blank "disables the
+integration: the sync page offers no button without it", which now describes a
+gate that does not exist. Both are corrected to say that blank is invisible until
+the button is pressed.
+
+### The blank-key message said `''`, and now names the setting
+
+Measured through the real constructor, a blank path reported
+`Could not read the credentials file: [Errno 2] No such file or directory: ''` —
+accurate, and it reads like a fault in the site rather than a setting nobody
+filled in. A wrong *path* reported the path and was always useful; blank was the
+one case that told you nothing.
+
+`Calendar.__init__` now raises before touching the filesystem:
+**`No service account key is configured: GCAL_CREDENTIALS_PATH is blank.`**
+This is `calendar.py`, task 01's file, amended here because task 02's decision is
+what made the message reachable from the page.
+
+`test_a_blank_credentials_path_is_a_calendar_error` asserted only the exception
+*type*, so it passed against both messages. It now asserts the setting name is in
+the text and the stat wording is not, and **three mutations** say it
+discriminates: no guard at all, a guard that does not name the setting, and — the
+one worth keeping — a guard that names the setting *and* still says "No such
+file", which the `assertNotIn` is the only thing that catches.
+
+### The removed URLs do not 404 — they land on the admin index
+
+Checked against the running server while logged in:
+`/admin/gcalendar/event/authorize/` and `.../auth_return/` now fall into the
+`ModelAdmin` `<path:object_id>/` catch-all, redirect to `authorize/change/`, find
+no `Event` with that id, and bounce to `/admin/` with the admin's "doesn't exist"
+message. **Two redirects and a 200, not a 404** — worth knowing before reading a
+bookmarked Authorize link's behavior as the route still being live. The suite
+asserts the thing that is actually true: neither name reverses.
+
+### Rendered in the running stack, not just the suite
+
+A `{% url %}` to a deleted route raises at *render*, not at import, so a missed
+reference would not show up as a failing import. The page was fetched from the
+dev server as a logged-in superuser: **200, the event listed, the Synchronize
+button present, and no credentials line or Authorize link.** The button was not
+pressed — that would have posted to the live calendar.
+
+The probe needed a pending event and a superuser, and the dev database had
+neither (`pending: 0`, and Brian's own account's password is his). Both were
+created, used, and deleted; the database is back at **1,478 events, 0 pending**,
+probe user gone.
+
+### What task 03 inherits
+
+Nothing from this task is owed. The sync page is now the single failure path it
+was meant to be, and `cred_status` no longer exists to be confused with a health
+signal. Task 03's remaining probes are unchanged: `delete`, and
+`anyoneCanAddSelf`.
+
 ## PLANNING — Step 17: the cost rationale is dead, registration is the real target (2026-08-27)
 
 **R23's premise is true about reCAPTCHA and false about this site.** The step was
