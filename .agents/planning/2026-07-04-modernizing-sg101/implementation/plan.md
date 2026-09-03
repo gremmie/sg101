@@ -1151,11 +1151,16 @@ internal: phases inside the step, which is an idiom this plan already uses.
 
 | Phase | Contents | Why it is a unit |
 |---|---|---|
-| **0 — Decide** | ORDER BY collation; `repoze.timeago`; triage the five `tools/` scripts; verify `banners`/`oembed`; whether to correct donation history at all; the timezone dropdown | No code. Every open question answered and recorded. Cheap, and it is the phase that makes the step smaller. |
+| **0 — Decide** ✅ **DONE 2026-09-03** | Six questions, all answered — see the decision record in `STATUS.md` | No code. Every open question answered and recorded. It closed three items outright. |
 | **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
-| **B — Prune** | `wiki`/MoinMoin; whatever Phase 0 decided for `banners`/`oembed`; the 7 model-less legacy tables; the `tools/` scripts | The step as originally designed. Mechanical, low risk, one shared exit test. |
-| **C — Schema and data migrations** | Donation `payment_date` backfill; `elsewhere` rework; retire `django-tagging`; the 12 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
-| **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; **then** the linter/formatter, last | Independent one-diff items. |
+| **B — Prune** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
+| **C — Schema and data migrations** | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 12 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
+| **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; replace `repoze.timeago` with `django.utils.timesince`; **then** the linter/formatter, last | Independent one-diff items. |
+
+**Closed by Phase 0, no work carried:** the ORDER BY collation (decision recorded,
+keep PostgreSQL's), `oembed` (verified live), `banners` (kept dormant on Brian's
+call), and the timezone dropdown (left as it is). The step went from eighteen
+items to fifteen.
 
 #### Orderings that are not obvious, each with its reason
 
@@ -1185,11 +1190,18 @@ internal: phases inside the step, which is an idiom this plan already uses.
 #### Phase B guidance
 
 If confirmed, archive MoinMoin content, then remove the `wiki` app,
-`WikiMiddleware`, and `wiki.tasks.expire_cookies`. Verify usage of `banners` and
-`oembed` against the snapshot; keep or prune each. (`contests`, `countdown`, and
+`WikiMiddleware`, and `wiki.tasks.expire_cookies`. (`contests`, `countdown`, and
 `bandmap` were **confirmed KEEP on 2026-07-24** during Step 11 planning, since
 they hold latin1 tables the Postgres conversion must transcode; `membermap` was
 already pruned in Step 4.)
+
+**`banners` and `oembed` were the verify-then-prune pair, and Phase 0 settled
+both — neither is pruned.** `oembed` is live: 14,751 rows behind 14,581 forum
+attachments, most recent embed 2026-07-10. `banners` is dormant and **stays that
+way on Brian's call** — one campaign from 2012, eleven images, and its template
+included by nothing. The measurement supported pruning; the decision was to keep
+the option of a future campaign rather than rebuild one later, and it is recorded
+in `STATUS.md` with the downside attached.
 
 **Generate task files per phase, not for the whole step**, so that what Phase A
 learns can change Phase B — the same reason Step 12's tasks were generated in
@@ -1209,7 +1221,7 @@ reader of this file cannot find, and they live in
 |---|---|---|
 | The 7 model-less legacy tables (~1,540 rows, `gcalendar_accesstoken` among them) | B | Step 11 task 04's carried-forward list |
 | The 12 duplicate-email account pairs — **trap: a naive uniqueness check locks those 26 members out of profile edits** | C | same list |
-| `repoze.timeago`, dead upstream since 2011 and owner of the gate's only third-party ignore; replacing it trades it for a semi-active dependency needing a compatibility wrapper | 0 | Step 14's carried-forward section, including the 2026-08-15 correction |
+| `repoze.timeago` — **DECIDED 2026-09-03: replace with `django.utils.timesince`**, which is already in the stack, so this is a deletion rather than a swap. Restyles every forum listing; see the decision record for the measured comparison. **While in there:** `sg101/templates/fixed/colophon.html:17` credits it with a PyPI link, on a live page | D | Step 14's carried-forward section, including the 2026-08-15 correction |
 | Pick a linter, possibly a formatter — **deferred three times**, and the "a reformat would bury the migration" objection expired with Step 14 | D, last | Step 15's notes |
 
 **[Phase C] Carries the deferred `elsewhere` rework** — `post_migrate` seeding
@@ -1312,7 +1324,7 @@ independent changes:
    deleted its template-loader block once measurement showed it reproduced a
    Django default, so it performs no in-place mutation at all now.)
 
-**[Phase 0 decides, Phase C builds] Also carries the PayPal `payment_date` timezone truncation, added 2026-08-09
+**[Phase 0 DECIDED 2026-09-03: fix forward and backfill; Phase C builds] Also carries the PayPal `payment_date` timezone truncation, added 2026-08-09
 out of Step 13 task 09.** PayPal sends the IPN `payment_date` as a Pacific wall
 clock with the zone as a trailing abbreviation —
 `'04:14:08 Jan 21, 2011 PST'`. `donations/views.py` does
@@ -1351,7 +1363,7 @@ Three things to settle before touching it:
   rows from uncorrected ones, so the migration has to be all-or-nothing over
   `payment_date < <cutover>` and must be idempotent enough not to double-apply.
 
-**[Phase 0] Also carries the timezone dropdown, `static/js/timezone.js`, added 2026-08-09
+**[Phase 0 — CLOSED 2026-09-03: leave it as it is] Also carries the timezone dropdown, `static/js/timezone.js`, added 2026-08-09
 out of Step 13 task 09.** Low stakes and no deadline — recorded because task 09
 touched every other part of this and deliberately left this part alone.
 
@@ -1398,7 +1410,7 @@ Three ways to go, roughly in order of effort:
    two-select area/location UI would need either rebuilding server-side or
    keeping its JS and feeding it JSON from the view.
 
-**[Phase 0 triages, Phase B removes] Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
+**[Phase 0 DECIDED 2026-09-03: delete four, port `flag_data.py`; Phase B executes] Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
 from Step 14 task 01.** They do not compile on any Python 3 and have not since
 the flip: `filter_posts.py`, `flag_data.py` and `translate_yahoo_group.py` use
 `print` statements, `load_ygroup.py` and `post_sub.py` use unparenthesized
@@ -1455,7 +1467,7 @@ against settled behavior rather than re-examining it at each rung. **It needs a
 test either way**: `weblinks` has no coverage of the scheme-less case at all,
 which is the only case the conversion changes.
 
-**[Phase 0] Also carries the ORDER BY collation change, added 2026-08-13 after Brian
+**[Phase 0 — DECIDED 2026-09-03: keep PostgreSQL's ordering] Also carries the ORDER BY collation change, added 2026-08-13 after Brian
 noticed `/profile/members/user/` listing members in a different order than
 production.** He was right about the cause. It is collation, and the row sets are
 identical everywhere — this changes *order*, never *membership* or *counts*.

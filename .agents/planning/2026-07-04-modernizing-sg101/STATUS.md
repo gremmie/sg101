@@ -6679,6 +6679,117 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase 0 — the six decisions — DONE 2026-09-03
+
+All six questions answered in one sitting, asked one at a time at Brian's
+request. **Three items closed outright with no work carried, and a fourth was
+verified rather than pruned**, taking the step from eighteen items to fifteen —
+which is what Phase 0 was for. Structure and phase assignments live in
+`implementation/plan.md`; this section is the decision record.
+
+### 1. ORDER BY collation — **keep PostgreSQL's ordering**
+
+Closed on the audit already recorded below; no fresh measurement needed. It is
+cosmetic and deterministic — same rows, same counts, same page count — and
+Postgres filing `-Bong-` under B beats MySQL exiling it to page 1. `C` was
+rejected on the record: it sorts by byte, making it case-*sensitive*, which is a
+larger change than the one it would be fixing and does not reproduce MySQL's
+case-insensitive order either. The tag-cloud half of the audit still waits on
+Phase C, since the `ArrayField` option deletes the table it is about.
+
+### 2. `repoze.timeago` — **replaced by `django.utils.timesince`** (Phase D)
+
+**This reverses the recommendation standing in `requirements.txt`,** which
+argued for vendoring the 79 lines because it would mean no display change. The
+measurement is what turned it around — "no display change" is the *cost* here,
+not the benefit:
+
+| age | `repoze.timeago` | `django.utils.timesince` |
+|---|---|---|
+| 90 seconds | 2 minutes ago | 1 minute ago |
+| 45 minutes | 45 minutes ago | 45 minutes ago |
+| 3 days | 3 days ago | 3 days ago |
+| 40 days | 40 days ago | 1 month, 1 week ago |
+| a 2015 post | **3800 days ago** | 10 years, 4 months ago |
+
+Measured in the container against both libraries, not read from documentation.
+`repoze.timeago` rounds to nearest and **never escalates past days**, so every
+forum listing older than roughly 2023 currently renders a four-digit day count.
+`timesince` is already in the stack, so this is a deletion rather than a swap:
+the dependency goes, and so does the deprecation gate's last third-party ignore
+(`_NOW = datetime.utcnow`). **It restyles the whole archive, which is why it was
+Brian's call rather than a cleanup.** The call site is single —
+`core/templatetags/core_tags.py:154`. `colophon.html:17` credits the library on a
+live page and needs updating with it.
+
+### 3. The five Python 2 `tools/` scripts — **delete four, port one** (Phase B)
+
+Compile status re-verified first-hand rather than taken from the earlier record:
+all five still fail, `filter_posts.py` / `flag_data.py` /
+`translate_yahoo_group.py` on `print` statements and `load_ygroup.py` /
+`post_sub.py` on unparenthesized `except`.
+
+**Deleted:** `load_ygroup.py`, `translate_yahoo_group.py` and `post_sub.py`, all
+three of which exist to feed `mysqlimport` — which Step 21 retires with the MySQL
+box — and `filter_posts.py`, which fixed orphaned posts from a migration that
+finished years ago.
+
+**Ported:** `flag_data.py`, the one with a live output. It generates
+`bio/flag_data.json` — 222 countries, rendered on every profile and forum post —
+and reports missing flag icons, a job that recurs whenever a country changes.
+The port is one line. **One thing to check before doing it:** it reads Debian's
+ISO-3166 **XML**, and `iso-codes` is believed to have moved to JSON some years
+ago. That is unverified — flagged as a thing to measure, not a finding.
+
+### 4. `oembed` **kept** (verified), `banners` **kept dormant** (Brian's call)
+
+`oembed` was never really in question once measured: **14,751 rows behind 14,581
+forum attachments, most recent embedded post 2026-07-10**. It is live
+infrastructure for forum media, not a peripheral app.
+
+`banners` measured as dead: one campaign, *Radio Free Bakersfield*, created
+2012-02-03, eleven images, rendered by `core/rfb_block.html` — **which is
+included by no other template**, and whose last commit was a 2012 Django 1.4
+restructure. So it has rendered on zero pages for over a decade.
+
+**The measurement supported pruning and Brian chose to keep it dormant**, for the
+option of a future ad or promo campaign without rebuilding the app. Recorded with
+the downside attached, because it is the honest one: leaving it installed is how
+it reached fourteen years dormant in the first place. Nothing changes — the app
+stays in `INSTALLED_APPS`, the orphaned template stays, and the twelve rows ride
+the Step 21 snapshot to the new host.
+
+### 5. PayPal `payment_date` — **fix forward and backfill** (Phase C)
+
+**The deciding argument was that "do nothing" is not static.** The amounts and
+dates are right and only the times are off, by a constant two hours across all
+1,421 donations — but the code keeps recording every *new* donation two hours
+early, so the error grows rather than sitting still. And because Step 21 loads a
+fresh production snapshot, the correction has to be a data migration rather than
+a one-off script in any case, which is what the plan already specified.
+
+"Fix forward only" was put up and **rejected on the record** rather than by
+omission: it would leave the column holding two conventions two hours apart with
+nothing marking which row is which, and `monthly_stats()` summing across both.
+
+Constraints carried into Phase C: map `PST`/`PDT` to `America/Los_Angeles` and
+**raise on anything else rather than guessing**; the backfill keys on
+`payment_date < <cutover>` and must be idempotent, since nothing distinguishes a
+corrected row from an uncorrected one.
+
+### 6. The timezone dropdown — **leave it, item closed**
+
+Nothing is broken: all 95 distinct values stored across 15,227 profiles resolve,
+and `clean_time_zone` already rejects junk including path-shaped input.
+Regenerating is purely additive (401 zones across 11 areas → 553 across 16) but
+is **not obviously an improvement** — a longer picker whose additions are mostly
+`Etc/*`, `Brazil/*` and `Mexico/*`.
+
+The `ChoiceField` option keeps its argument — it would make invalid input
+impossible by construction rather than by a hand-written validator — and is
+**recorded as a future improvement rather than carried as an open question**,
+since it was the most work in Phase 0 for the least risk removed.
+
 ## PLANNING — Step 19 restructured into five phases (2026-09-03)
 
 **The step was a junk drawer, and the giveaway was its objective.** "Complete
