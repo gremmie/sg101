@@ -76,7 +76,11 @@ def edit_events(request):
 
 @login_required
 def edit_event(request, event_id):
-    event = get_object_or_404(Event, pk=event_id)
+    # Only an event actually on the calendar can be changed, which is the same
+    # rule edit_events lists by. An event with a change already pending is
+    # waiting on the staff, and its status is what puts it in the sync queue:
+    # editing one out of a kept URL would take it back out again silently.
+    event = get_object_or_404(Event, pk=event_id, status=Event.ON_CAL)
     if event.user != request.user:
         raise PermissionDenied
 

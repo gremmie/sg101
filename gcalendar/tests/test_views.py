@@ -305,19 +305,41 @@ class EditEventTestCase(CalendarTestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    def test_an_event_not_yet_on_the_calendar_can_still_be_edited(self):
-        """Characterization. `edit_events` will not list a `NEW` event, so this
-        is only reachable by a member who kept the URL -- but `edit_event`
-        filters on nothing, and moves it straight to `EDIT_REQ`.
+    def test_an_event_that_is_not_on_the_calendar_cannot_be_edited(self):
+        """The list shows only events on the calendar, and this is the same
+        rule: an event waiting on the staff is not the member's to change.
 
         """
-        event = self._event(status=Event.NEW)
+        for status in (Event.NEW, Event.EDIT_REQ, Event.DEL_REQ):
+            with self.subTest(status=status):
+                event = self._event(status=status)
+                url = reverse('gcalendar-edit_event', args=[event.pk])
 
-        self.client.post(reverse('gcalendar-edit_event', args=[event.pk]),
-                         self._payload())
+                self.assertEqual(self.client.get(url).status_code, 404)
 
+                self.assertEqual(
+                        self.client.post(url, self._payload()).status_code, 404)
+                event.refresh_from_db()
+                self.assertEqual(event.status, status)
+
+    def test_an_approved_event_cannot_be_taken_out_of_the_sync_queue(self):
+        """The reason the rule is enforced here rather than only in the list.
+        An approved event is waiting for the admin sync page to push it, and
+        `edit_event` sets `EDIT_REQ` whatever the status was -- so a member
+        posting from a URL they still had would drop it out of
+        `Event.pending_events` with nothing said.
+
+        """
+        event = self._event(status=Event.EDIT_APRV)
+
+        response = self.client.post(
+                reverse('gcalendar-edit_event', args=[event.pk]),
+                self._payload())
+
+        self.assertEqual(response.status_code, 404)
         event.refresh_from_db()
-        self.assertEqual(event.status, Event.EDIT_REQ)
+        self.assertEqual(event.status, Event.EDIT_APRV)
+        self.assertIn(event, Event.pending_events.all())
 
     def test_another_members_event_cannot_be_read(self):
         url = reverse('gcalendar-edit_event',
