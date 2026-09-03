@@ -598,6 +598,93 @@ account's.
 **Still unproven: `delete`, and `anyoneCanAddSelf` (probe 1).** Neither is
 answered by an update, and neither should be assumed from it.
 
+### Task 03 probe 1 and the delete half: BOTH ANSWERED YES, 2026-09-02
+
+**Probe 1 — `anyoneCanAddSelf` is accepted and stored.** An event inserted
+through the sync button came back from `events().get()` carrying
+`"anyoneCanAddSelf": true`. Read back from what Google stored, not inferred from
+the insert not erroring — and since `_make_event` sets the field on every body, a
+rejection would have failed every insert rather than this one.
+
+**The delete half, twice, because the two runs answer different questions.**
+
+| Run | Subject | Proves |
+|---|---|---|
+| Event 1656 through the site | created by the **service account** minutes earlier | our `DEL_APRV` code path end to end |
+| *Delete Me*, direct API call | created by **`bgneal@gmail.com`** in the Google UI | the permission production actually needs |
+
+The second run is the one that matters. All 1,478 rows point at events a human
+account created, so deleting the service account's own event proves nothing about
+them. `events().delete()` returned no exception, the event went to `cancelled`,
+and it is gone from a normal listing. The ACL reads `sg101-calendar@…` = **writer**
+and `bgneal@gmail.com` = owner, which documents delete as included — recorded as
+documentation, not as the answer.
+
+**Trap for whoever probes this next: a deleted event answers `events().get()`
+with 200, not 404.** It returns the tombstone with `status: 'cancelled'`, and it
+disappears only from `list()` without `showDeleted`. A probe written to expect a
+404 would read a successful delete as a failure — and the 404 you *do* get from
+this API is the pre-2015 URL-form id, a different fault that looks identical if
+only status codes are read.
+
+**The insert also ran the pipeline end to end**: submitted and approved by Brian,
+pushed by the Synchronize button, row to `ON_CAL` with `google_id` and
+`google_url` populated, `00:41:38Z` rendering as `19:41:38-05:00` from US/Central
+input. `delete_callback` then destroyed the row rather than re-statusing it, so
+the table is back at 1,478 and the pending queue is empty.
+
+### The whole cycle, through the member and admin views — Brian, 2026-09-02
+
+Insert, **edit** and delete each ran end to end, and the public `/calendar/`
+iframe was checked at every stage: created → approved → synced → visible in the
+iframe; edit request → approved → synced → the change visible in the iframe;
+delete request → approved → synced → gone from the iframe.
+
+That closes criteria 4 and 5, including the edit half, which until now had only
+been proven by a direct API patch on 2026-09-01. Criterion 1 is met too: the key
+is `0600` at `secrets/gcal-service-account.json`, ignored by `.gitignore:22` as a
+whole directory, and absent from `git status --untracked-files=all`.
+
+### CORRECTED — the member Delete button is not broken, and the probe is why
+
+**Task 05's file recorded the member Delete button as dead on CSRF. It is not**,
+and this cycle is what caught it: Brian's delete request went through the member
+UI and worked.
+
+The recorded claim was that `gcalendar_edit.js` sends no token and that **no
+`$.ajaxSetup` exists anywhere in the tree**. The first half is true; the second is
+false. `sg101/static/js/v3/sg101.js:4` installs a global `beforeSend` that sets
+`X-CSRFToken` from the cookie on every relative URL, and `gcalendar/edit.html`
+extends `v3/base.html`, which loads jQuery (281) and then that file (284). The
+header is attached before the delete handler ever runs.
+
+**The instrument could not see the mechanism.** The 403 was measured with the
+Django test client under `enforce_csrf_checks=True`, and the test client does not
+execute JavaScript. Posting the shipped payload by hand measures "an untokened
+POST is rejected" — true of every view behind `CsrfViewMiddleware`, and silent on
+whether the button works. `git grep ajaxSetup` answers it in one second and was
+not run outside `gcalendar/`.
+
+Two rules this breaks, both already written down. `measure-before-recording-in-planning-docs`:
+the grep's *absence* of a hit was recorded as an absence in the tree.
+And AGENTS.md's own warning that `CELERY_TASK_ALWAYS_EAGER` hides worker faults
+because the suite cannot see them generalizes — **a test-client probe cannot
+answer a question whose answer is in the browser.** Task 05's file is corrected;
+its tests stay, since a tokened-accepted / untokened-403 pair is real coverage of
+`delete_event`, but neither is a defect.
+
+**Task 05's other reported defect was re-checked on the strength of this one, and
+it stands.** `event.repeat = 'none'` (`views.py:44` and `:89`) assigns to a field
+`Event` does not have — absent from `_meta.get_fields()`, from `0001_initial`,
+and from the tree apart from those two lines. So task 05 now carries one real
+finding rather than two, and its scope shrinks accordingly.
+
+### What task 03 still owes
+
+Nothing measurable. Both probes are answered, all five verification criteria are
+met, and the console setup was written down on 2026-08-31. The task can be closed
+when its write-up is read back against the file.
+
 ### The endless recurring events — 11, and only 2 of them are stale
 
 Measured across 1,516 events (`singleEvents=False`, so masters count once):

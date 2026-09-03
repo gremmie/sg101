@@ -27,25 +27,31 @@ there is no functional task to fold this into.
 Coverage before this task is entirely incidental — other apps importing the
 URLconf: `views.py` **30%**, `forms.py` **34%**.
 
-### Measured 2026-09-01: the delete button is dead, and CSRF is why
-`gcalendar/static/js/gcalendar_edit.js` POSTs to `/calendar/delete/` with
-`data: { id: ... }` and **nothing else** — no `csrfmiddlewaretoken` field, no
-`X-CSRFToken` header, and there is no `$.ajaxSetup` anywhere in the tree that
-would add one. `delete_event` carries no `csrf_exempt`, and
-`django.middleware.csrf.CsrfViewMiddleware` is installed
-(`sg101/settings/base.py:114`).
+### CORRECTED 2026-09-02: the delete button works, and the probe was wrong
 
-Probed with the test client under `enforce_csrf_checks=True`, sending exactly
-what the shipped JS sends: **403, and the event's status is unchanged**. The
-button is rendered and wired on the live page (`edit.html:51` and the `<script>`
-at line 71), so a member clicking Delete today gets the JS error alert.
+**An earlier version of this file recorded the member Delete button as dead on
+CSRF. It is not.** Brian deleted an event through the member UI on 2026-09-02 and
+it worked end to end.
 
-**Report it, do not fix it here.** The fix is a line of JavaScript, but which
-line depends on whether Brian wants the token in the page or a global
-`ajaxSetup` for the site's other AJAX callers, and that is a decision, not a
-detail. Write the test that proves the view *accepts* a properly-tokened POST
-and a second that pins the 403 for the untokened one, and put the finding in
-`STATUS.md`.
+`gcalendar/static/js/gcalendar_edit.js` does POST to `/calendar/delete/` with
+`data: { id: ... }` and no `csrfmiddlewaretoken` — that part was right. What was
+wrong is the claim that no `$.ajaxSetup` exists in the tree. There is one:
+`sg101/static/js/v3/sg101.js:4` installs a global `beforeSend` that sets
+`X-CSRFToken` from the cookie on every **relative** URL. `gcalendar/edit.html`
+extends `v3/base.html`, which loads jQuery (line 281) and then that file (line
+284), so the header is attached before `gcalendar_edit.js` ever fires.
+
+**Why the probe said 403: the Django test client does not execute JavaScript.**
+Posting the shipped payload by hand under `enforce_csrf_checks=True` measures
+"an untokened POST is rejected", which is true of every view behind
+`CsrfViewMiddleware` and says nothing about the button. The instrument could not
+see the mechanism that makes the real request work.
+
+**Consequence for this task: there is nothing to report and nothing to fix.**
+Still write both tests — one that the view accepts a properly-tokened POST, one
+that pins the 403 for an untokened one — because that pair is real coverage of
+`delete_event`. Do not describe either as a defect, and do not add a token to the
+page or a second `ajaxSetup`.
 
 ### The hidden `time_zone` field is required in practice
 `EventEntryForm.time_zone` is `required=False`, so an absent value arrives as
@@ -73,6 +79,13 @@ reachable path is `ON_CAL → EDIT_REQ`, but a member who kept the URL can move 
 change them. Step 18 is not the place to redesign the member workflow.
 
 ### `event.repeat = 'none'` assigns to a field that does not exist
+
+**RE-VERIFIED 2026-09-02**, because the CSRF finding above turned out to be
+wrong and that is reason to doubt its neighbour. `repeat` is absent from
+`Event._meta.get_fields()` (17 fields), absent from `0001_initial`, and the only
+two occurrences in the whole tree are the assignments themselves. The assignment
+is legal Python that sets an instance attribute and never reaches the database.
+This one stands.
 `views.py:44` and `views.py:89` both set `event.repeat` before saving. **`Event`
 has no `repeat` field** — not in `models.py`, not in any migration, and not in
 `Event._meta.get_fields()`, checked against the running model. The assignment
