@@ -39,6 +39,7 @@ evidence, that one is the state.
 | 16 | 2026-08-31 | 08-30 | the eleventh endpoint was never in the corpus; a rotation hole in the sending baseline |
 | 17 | 2026-09-01 | 08-31 | ten of eleven endpoints reconcile exactly with the send log; Google alone does not |
 | 18 | 2026-09-02 | 09-01 | the UTC−7 day passes a forward test; the second unsigned message is a bounce |
+| 19 | 2026-09-04 | 09-02, 09-03 | UTC−7 passes a second forward test; a DKIM failure class that is not the bounce class — **addendum: cause found, Postfix wraps at 998 bytes post-signing** |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -46,6 +47,15 @@ complaints measurably false and no deliverability data at this domain's volume;
 and a census of the Gmail spam folder, which holds one filtered message that is
 not a report, the one that was filtered having been removed from the folder by
 the act of reading it.
+
+**⚠️ CORRECTED 2026-09-04 — the eighteenth reading's "two policy elements the
+tool has never printed" is three.** `fo` is present in all 7 Comcast and all 10
+Microsoft reports and was missed; the nineteenth reading carries the full census.
+
+**Reading 19 carries an addendum** — the raw message for `44C7F5864DF`, read out
+of the Gmail spam folder the same evening, which identifies the DKIM failure as a
+body-hash mismatch caused by Postfix's 998-byte line wrap running after `opendkim`
+signs. It kills that reading's own size fit and replaces it with a mechanism.
 
 **Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
 read 2026-08-26 13:12Z, which takes that window to 11 messages across four
@@ -4021,3 +4031,467 @@ after cutover, not legislated before it.** Nothing argues for reversing step 7.
    `none`, and **no `pass`/`fail` row appears unless the mail log shows a bounce** —
    the reopen condition from the seventh reading, restated now that it has an
    instrument behind it.
+
+---
+
+### Nineteenth reading — 2026-09-04, covering 2026-09-02 and 2026-09-03: the UTC−7 offset passes a second forward test, and a DKIM failure class appears that is not the bounce class
+
+**Sixty files in `~/dmarc` — seven new, fifty-three re-reads.** Two windows arrive
+at once because the corpus was last copied on 09-02; Brian's note says the reports
+came in "yesterday and today."
+
+**Instrument caveat, new this reading: per-report arrival times are not measurable
+here.** All seven files carry mtimes of 2026-09-04 14:50–14:51, one copy operation
+spanning two days of delivery. Previous readings used the save timestamp to measure
+Microsoft's filing offset directly. This one cannot, and the offset below is
+inferred from Brian's note plus the established pattern rather than observed.
+[[measure-before-recording-in-planning-docs]]
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `protection.outlook.com` | `Outlook.com` | `76533edf4fd140fc8e2f2222e2645cc2` | 2026-09-01 | 1 | 0 |
+| `google.com` | `google.com` | `12690854149145162803` | 2026-09-02 | 10 | **1 DKIM** |
+| `gmx.net` | `GMX` | `b7aa391f8331469db5994d68ce13d307` | 2026-09-02 | 2 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `93bf7b56a14b4ee3993108f971585cb6` | 2026-09-02 | 1 | 0 |
+| `google.com` | `google.com` | `1585020204032193119` | 2026-09-03 | 7 | **2 DKIM** |
+| `cox.net` | `Yahoo` | `1788500709.189162` | 2026-09-03 | 1 | 0 |
+| `sbcglobal.net` | `Yahoo` | `1788500709.189191` | 2026-09-03 | 1 | 0 |
+
+**09-01 closes at 10** — 9 measured last reading plus Microsoft's 1, exactly as
+predicted. **09-02 closes at 13** across three endpoints. **09-03 stands at 9**
+across three endpoints, and Microsoft should not file for it at all; see the
+predictions.
+
+Every row in all sixty files is `disposition=none`. Nothing has been quarantined
+under `p=quarantine` at any receiver in any window.
+
+#### Four predictions held, and the fifth's reopen condition fired
+
+1. **Microsoft filed for 09-01 and reported 1 message, `envelope_to: hotmail.com`.**
+   Exact on all three halves — the window, the count and the endpoint — for the
+   second consecutive reading in which the endpoint was predicted from the send log
+   rather than from the previous report's shape. It also filed for 09-02, 1 message,
+   `envelope_to: outlook.com`, which jaguar's log matches exactly. Ten filings now,
+   and the two-day offset is consistent with both arriving in this batch, though for
+   the first time it was not measured.
+2. **09-01 closed at 10**, and no endpoint filed that jaguar did not send to. That
+   holds for 09-02 and 09-03 as well.
+3. **Google's 09-02 report does not contain the four messages sent at
+   `Sep 1 20:40:39` local** — held, but the single-window test was degenerate and
+   the two-window pair is what settles it. See below.
+4. **GMX filed for 09-02 and reported 2.** Exact. jaguar sent `member15@example.com` two
+   messages in that UTC window; GMX has now fit UTC in all six of its filings.
+5. **Every report reads `p=quarantine` and no row carries a `disposition` other
+   than `none`** — held. **The rest of that prediction failed: three `pass`/`fail`
+   messages appeared and the mail log shows no bounce.** This is the reading's
+   second result, and the class is not the one the prediction was written about.
+
+#### The UTC−7 aggregation day gets its second forward test, and 09-03 is decisive
+
+Sends are binned as in the last two readings — `status=sent`, minus `relay=local`,
+at jaguar's UTC−5, which `date -u` on the host confirms again — by a third
+independently written script. Google's figures are its rows from `173.255.245.115`
+only, excluding the forwarding and Postmark sources, which is the basis the
+seventeenth and eighteenth readings used.
+
+| Window | 08-23 | 08-24 | 08-25 | 08-26 | 08-27 | 08-28 | 08-29 | 08-30 | 08-31 | 09-01 | **09-02** | **09-03** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Google reported | 12 | 15 | 5 | 6 | 13 | 47 | 22 | 13 | 33 | 8 | **10** | **7** |
+| jaguar sent, UTC day | 26 | 17 | 19 | 6 | 8 | 46 | 22 | 17 | 33 | 6 | **10** | **11** |
+| jaguar sent, UTC−7 day | 20 | 19 | 7 | 6 | 13 | 47 | 22 | 13 | 33 | 8 | **10** | **7** |
+
+| Alignment | Σ\|residual\| | Exact windows |
+|---|---|---|
+| UTC (as stamped) | 46 | 4 of 12 |
+| UTC−7 | 14 | **9 of 12** |
+
+**09-02 does not discriminate, by coincidence.** Both alignments predict 10 and
+Google reported 10. The four messages of `Sep 1 20:40:39` left the UTC−7 window at
+its start and four others — `Sep 2 21:37:16` through `Sep 3 01:39:23` local —
+entered at its end. The prediction was written to be decisive and the window
+happened to be the one shape in which it cannot be: worth recording, because a
+prediction that survives a test it could not have failed has not been tested.
+
+**09-03 discriminates, and it is not close.** Google reported 7. The UTC day holds
+11 Google-bound messages; the UTC−7 day holds exactly 7. The four that separate
+them went out at `Sep 3 15:49:02`–`15:51:20` local, which is `20:49`–`20:51Z` on
+09-03 — inside the UTC 09-03 window and inside the UTC−7 09-04 day. Google put them
+in neither report yet, which is what the offset requires.
+
+**Taken as a pair the two windows are decisive even though one of them is not.**
+UTC requires (10, 11); UTC−7 requires (10, 7); Google filed (10, 7). The last
+**nine consecutive** windows, 08-26 through 09-03, are exact under UTC−7 and four
+of those nine are wrong under UTC.
+
+**Still short of a mechanism, and the three earliest windows are still unexplained.**
+08-23/24/25 hold 14 messages of residual in the direction of jaguar sending more
+than Google reported, the offset does not touch them, and nothing else has been
+proposed. Unchanged for the third reading.
+
+**`muohio.edu` is inside the `google.com` endpoint**, delivered through
+`aspmx.l.google.com`. It has been folded into these figures since the seventeenth
+reading — 2 messages in the UTC 09-02 window — but the log has never said so
+plainly, and the endpoint is not the same set as `gmail.com`.
+
+**One caution on "09-02 closes at 13."** jaguar sent 13 in the UTC 09-02 day and the
+three filers report 13, but Google's 10 covers a shifted day while GMX's 2 and
+Microsoft's 1 cover the stamped one. The totals agree; they are not measuring the
+same interval, and the agreement should not be read as a like-for-like
+reconciliation. [[suspect-the-measurer-before-the-record]]
+
+#### A second DKIM failure class, and it is not the unsigned-bounce class
+
+Google's 09-02 report carries one `pass`/`fail` message and its 09-03 report carries
+two. The seventh reading's reopen condition — *"a second unsigned message"* — is not
+what fired, because these are not unsigned:
+
+```
+09-01  n=1  eval[spf=pass dkim=fail]  dkim: ABSENT              spf: mail.surfguitar101.com pass
+09-02  n=1  eval[spf=pass dkim=fail]  dkim: surfguitar101.com sel=dkim FAIL   spf: surfguitar101.com pass
+09-03  n=2  eval[spf=pass dkim=fail]  dkim: surfguitar101.com sel=dkim FAIL   spf: surfguitar101.com pass
+```
+
+**The 09-01 row is the bounce: no `dkim` block at all, SPF evaluated against the
+HELO name.** The three new ones carry a full `dkim` block with our selector and
+`result=fail`, and SPF evaluated against the org domain — a message that was signed
+by `opendkim` and whose signature did not verify at Google. Across all sixty files
+the only other signed-and-failed row is `2001:470:0:60::2` on 08-26, which failed
+SPF as well and is the known forwarding instance. **Signature present, SPF aligned,
+signature broken is a new shape in this corpus.**
+
+`BECCA5869B6` remains the only `from=<>` message in the live log, Aug 30 06:41
+through Sep 4 14:54, so the bounce class did not recur and cannot explain these.
+
+**Two hypotheses were fitted and both are dead.**
+
+*Injection path.* jaguar signs through `opendkim` on both `smtpd_milters` and
+`non_smtpd_milters`, but locally-injected mail is the obvious suspect for a broken
+signature, and the counts fit perfectly: the UTC−7 09-02 window holds exactly one
+`pickup` message and the 09-03 window holds one `pickup` plus one `root@` message —
+1 and 2, matching the failures. **Falsified by the windows that were clean.** The
+same daily cron message from `brian` at 02:01 local goes out every day, including
+Aug 31 and Sep 1, and it sits inside the UTC−7 08-31 and 09-01 windows, both of
+which Google reported with zero signed failures.
+
+*Message size.* The three failures are 5,653, 6,050 and 9,309 bytes and every other
+message in those two windows is at most 4,186. **Falsified at a threshold of 5,000
+by 08-31**, which carried eight messages of 5,296–5,312 bytes to Google and reported
+no failure at all.
+
+**What survives is a fit, not a finding.** No message of 5,653 bytes or more went to
+a Google endpoint in any clean window, and all three failures are at or above it —
+one free parameter, fitted to four windows, with the threshold falling in the gap
+between 5,312 and 5,653 because that is where the data has a gap. The seventeenth
+reading called that curve-fitting when it was the UTC−7 offset, and it is
+curve-fitting here. It is recorded as the next thing to test, not as the cause.
+
+**No mechanism is proposed and none is guessed at.** `opendkim.conf` leaves
+`Canonicalization` at the default `simple/simple` and sets `OversignHeaders From`,
+which is the fragile configuration, but that has been true since 2016 and does not
+by itself explain three failures in two days. `opendkim` writes nothing to
+`mail.log` — zero lines in 5,128 across five days, despite `Syslog yes` — so the
+signer's own verdict is not available, and `/home/dmarc/mail` is not readable as
+`brian`.
+
+**The way to close this is one raw message, as it was in the tenth reading.** All
+three failures were delivered to `bgneal@gmail.com`; their `Authentication-Results`
+and `DKIM-Signature` headers say directly what broke:
+
+| Queue ID | Sent (jaguar local) | Size | From |
+|---|---|---|---|
+| `44C7F5864DF` | Sep 2 16:39:03 | 5,653 | `no_reply@surfguitar101.com` |
+| `B4EFD5864BF` | Sep 3 02:02:37 | 6,050 | `no_reply@surfguitar101.com` |
+| `0077E586513` | Sep 3 03:07:45 | 9,309 | `root@surfguitar101.com` |
+
+#### A correction to the eighteenth reading's field census
+
+That reading recorded "two policy elements the tool has never printed." **There are
+three.** `fo` is present in all 7 Comcast reports and all 10 Microsoft reports and
+was missed. The full census across sixty files:
+
+| Field | Present | Absent |
+|---|---|---|
+| `sp` | 35 — Comcast, GMX, Google, Microsoft | 25 — exactly the Yahoo reports |
+| `pct` | 54 | 6 — exactly the GMX reports |
+| `np` | 12 — exactly the Google reports | 48 |
+| `fo` | **17 — exactly Comcast and Microsoft** | 43 |
+| `discovery_method`, `testing` | 6 — exactly the GMX reports | 54 |
+
+Our published record is still `v=DMARC1; p=quarantine; rua=...` with no `sp`, `pct`,
+`np` or `fo`. Every value above is a receiver-side default.
+
+#### What held steady across all sixty
+
+- **73 rows, 380 messages, every one `disposition=none`.**
+- Evaluated SPF/DKIM across those rows: **65 `pass`/`pass`, 4 `fail`/`pass`,
+  3 `pass`/`fail`, 1 `fail`/`fail`.**
+- `173.255.245.115` appears in 65 rows and 359 messages.
+- Policy renders `adkim=r aspf=r` in all sixty.
+- The `p=none`/`p=quarantine` boundary at the 08-25 publication reproduces exactly:
+  16 reports read `none`, 44 read `quarantine`.
+- **Eleven reporting endpoints by filename**, unchanged, plus `swbell.net` by sender
+  name. Five reporting organizations. No new endpoint this reading.
+- Yahoo filed for `cox.net` and `sbcglobal.net` on 09-03 and for nothing on 09-01 or
+  09-02, and `yahoo.com` itself has not filed since the 08-31 window. The send log
+  explains all three absences: no Yahoo-family traffic in those windows.
+
+#### The forwarding class is at zero for a fourth window, and Postmark for a seventh
+
+`209.85.220.41` carried no messages on 09-02 or 09-03. The class reads 8, 5, 2, 0,
+0, 0, 0 across 08-28 → 09-03, 17 messages total, every one surviving on DKIM. The
+twelfth reading's `2001:470:0:60::2` row remains the single instance in nineteen
+readings and has not recurred in eight windows. `50.31.156.x` last appears in the
+08-27 window; the cutover has not happened, so there is nothing for it to report.
+
+#### Bearing on the policy decision
+
+`p=quarantine` is live at five reporting organizations and eleven reporting
+endpoints, and nothing has been quarantined anywhere in any window.
+
+**This reading argues against moving to `p=reject` more firmly than the last one,
+and for a new reason.** The eighteenth reading's argument was that the DSN class
+passes on SPF alone with no margin. That still stands. What is added is that **our
+own signing breaks intermittently, on ordinary site mail, for a reason we cannot
+yet name.** Three messages in two days lost their DKIM signature and survived only
+because SPF was aligned — the same one-mechanism-deep position as the bounces, in
+mail that is not an edge case. Under `p=reject` those three would still have been
+delivered, since SPF passed; but a signing fault of unknown cause is not a thing to
+tighten policy on top of. **Step 7 is not reversed and `p=reject` is not
+recommended until this class is identified.** jaguar's outbound moves to Postmark at
+Step 21, which replaces the signer entirely, so the honest sequence is: identify the
+cause, then re-measure after cutover, then decide.
+
+#### Predictions for the twentieth reading
+
+1. **Microsoft does not file for 09-03 at all.** jaguar sent nothing to
+   `hotmail.com`, `outlook.com` or `live.com` in that UTC window, and receivers in
+   this corpus skip empty windows rather than filing zeroes. **09-03 closes at 9.**
+2. **Google's 09-04 report reads the UTC−7 day and contains the four messages sent
+   `Sep 3 15:49:02`–`15:51:20` local**, which the 09-03 report did not.
+3. **Google's 09-04 report carries no signed-DKIM-fail row, provided no Google-bound
+   message of 5,653 bytes or more leaves jaguar between `Sep 4 14:54` and
+   `Sep 5 02:00` local.** As of the log's end the window holds 5 messages, the
+   largest 3,934 bytes. This is the size fit's first forward test and it is stated
+   so it can fail: **the dead injection-path hypothesis predicts exactly one failure
+   here**, because the `brian` cron message went out at `Sep 4 02:01:13`.
+4. **GMX files for nothing.** jaguar sent no `gmx.*` traffic in the UTC 09-03 window.
+5. **Every report reads `p=quarantine`** and no row carries a `disposition` other
+   than `none`.
+
+---
+
+#### Addendum, 2026-09-04 — the raw message closes it: Postfix wraps at 998 bytes after `opendkim` has signed
+
+**Brian found `44C7F5864DF` in the Gmail spam folder hours after the reading was
+written, and Google's own header names the failure the aggregate report could
+not:**
+
+```
+Authentication-Results: mx.google.com;
+  dkim=neutral (body hash did not verify)
+         header.i=@surfguitar101.com header.s=dkim header.b=fBr0dlU7;
+  spf=pass  ... smtp.mailfrom=no_reply@surfguitar101.com;
+  dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=surfguitar101.com
+```
+
+**Body hash, not signature.** The key verified, the headers verified, the body
+Google hashed is not the body jaguar signed.
+
+**The mechanism, measured rather than inferred.** The message is a contact-form
+submission carrying a long Cyrillic body. *(The second message, below, shows the
+Cyrillic and the `8bit` encoding are incidental — line length alone is the
+trigger.)*
+
+```
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=surfguitar101.com; s=dkim;
+    bh=YA7b8JVSGndETbItyVWMM2eH6ODPU+odl2+PtYrybYQ=; h=Subject:From:To:Date:Reply-To:From
+```
+
+The delivered body carries line breaks that the site never wrote, each followed by
+a space, and one of them **splits a two-byte UTF-8 character down the middle** —
+`вашего <D0>` ending one line and `<BF>редприятия` starting the next. No
+application wraps text mid-character. A byte-oriented line-length enforcer does.
+
+**The first wrap point is at exactly 998 bytes**, counted from the start of the
+paragraph to the inserted break. jaguar answers with the matching constant:
+
+```
+smtp_line_length_limit = 998        # Postfix default; breaks longer lines with CRLF+SPACE
+line_length_limit      = 2048       # input chopping, reconstructed on delivery
+```
+
+So the chain is:
+
+1. `core.functions.send_mail` hands Django a `text/plain; charset=utf-8` body.
+   **jaguar runs the `main` branch on Django 1.8.15 / Python 2.7**, where
+   `utf8_charset.body_encoding = None` is set unconditionally — utf-8 goes out as
+   `8bit` with no transfer encoding and therefore no wrapping. The contact form's
+   `message` field allows 3,000 characters, about 6,000 bytes of Cyrillic on one
+   line.
+2. `opendkim` signs in `cleanup`, computing `bh=` over that unwrapped body.
+3. Postfix's `smtp` client enforces `smtp_line_length_limit` on delivery and breaks
+   the line by inserting CRLF+SPACE, at a byte offset, splitting a character.
+4. Google hashes the wrapped body. Mismatch. `dkim=neutral`.
+
+**The size fit is dead, and it was a proxy.** The predictor is not size but *a body
+line longer than 998 bytes*; long lines simply live in large messages. That also
+explains 08-31's eight messages of 5,296–5,312 bytes passing — large, but nothing
+in them on one line. The seventeenth reading's rule earned its keep twice in one
+day: the fit was recorded as a fit, and the mechanism replaced it within hours.
+
+**Two of the three are now directly established** — see the next subsection for
+`0077E586513`. `B4EFD5864BF` (6,050 bytes, `no_reply@`) is still assigned by shape
+rather than observed.
+
+##### Two things not to fix it with
+
+- **`Canonicalization relaxed/relaxed` does not help.** Relaxed body canonicalization
+  collapses whitespace *within* a line and drops trailing whitespace and trailing
+  empty lines. An inserted line break makes two lines, and it survives. This is the
+  tempting one-line change and it would leave the failure exactly where it is.
+- **Raising `smtp_line_length_limit` is worse than the bug.** RFC 5321 §4.5.3.1.6
+  caps a line at 1,000 octets including CRLF. Postfix's 998 *is* that limit, and
+  the site is the thing violating it.
+
+##### The modernize branch already fixes it, and no code change is needed
+
+**This is a defect in the deployed `main` branch, not in the branch that replaces
+it.** Django grew the fix in `SafeMIMEText.set_payload` (ticket #22561, quoted in
+the source as *"Quoted-Printable encoding has the side effect of shortening long
+lines"*): a second charset object, `utf8_charset_qp`, is selected whenever any body
+line exceeds `RFC5322_EMAIL_LINE_LENGTH_LIMIT`.
+
+```
+charset = utf8_charset_qp if has_long_lines else utf8_charset
+```
+
+| Running | Behaviour on a 3,440-byte body line |
+|---|---|
+| jaguar, Django 1.8.15 | `Content-Transfer-Encoding: 8bit`, line delivered whole, Postfix wraps it, signature breaks |
+| modernize, Django 5.2.17 | `Content-Transfer-Encoding: quoted-printable`, **zero lines over 998 bytes on the wire** |
+
+Measured, not read off the changelog: the same `EmailMessage` built under this
+repo's venv emits quoted-printable for a long line and 8bit for short ones, and no
+line of either reaches 998 bytes. Postfix therefore never wraps, and the signature
+survives. **`core.functions.send_mail` needs no change**, and hard-wrapping the
+body there would be the wrong fix anyway — it edits what the member wrote, where a
+transfer encoding leaves the logical content untouched.
+
+**So Step 21 fixes this at the source rather than hiding it.** The earlier reading
+of the sequence — that cutover would mask an unfixed defect behind Postmark's
+edge-signing — was wrong, and wrong for a specific reason worth keeping: **the
+`django` in this working tree is not the `django` that sent the message.** jaguar
+runs `main`. Checking the venv at hand and calling it the site's behaviour is the
+same error as reading a cause off a shape in the data.
+[[measure-before-recording-in-planning-docs]]
+
+**What remains open is not the code but the interval.** Every over-long line the
+legacy site emits between now and the Step 21 deploy loses its DKIM signature and
+rides on SPF alone. That is an argument for not tightening to `p=reject` before the
+deploy, not an argument for patching a branch that is being retired.
+
+##### Two incidentals worth keeping
+
+- **Google renders a `neutral` verdict as `fail` in the aggregate XML.** The header
+  says `dkim=neutral (body hash did not verify)`; the report says
+  `<result>fail</result>`. The aggregate format gave no way to tell a body-hash
+  mismatch from a bad key or a stripped signature — this is the third time a raw
+  message has closed what the reports could only describe, after the tenth and
+  eighteenth readings.
+- **`dmarc=pass ... dis=NONE`** confirms from the receiving side what all sixty
+  reports say: the policy is live, nothing was quarantined, and this message was
+  carried by SPF alignment alone.
+- **The message is contact-form spam that cleared Turnstile and the honeypot**,
+  which is not this reading's subject and is not evidence about the antispam work
+  either way — one message says nothing about a rate. Recorded only because it is
+  the reason a 6,000-byte line existed to break the signature.
+
+##### Second confirmation, `0077E586513` — 7-bit ASCII, and the wrap lands on 998 again
+
+Brian produced the `root@` message the same evening. Same verdict:
+
+```
+Authentication-Results: mx.google.com;
+  dkim=neutral (body hash did not verify) header.i=@surfguitar101.com header.s=dkim
+  spf=pass ... smtp.mailfrom=root@surfguitar101.com;
+  dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE)
+```
+
+**Measured from its own body, the first inserted break falls at exactly 998 bytes** —
+a second independent hit on the constant, from a different sender, a different code
+path and a different day. The break again cuts mid-token, this time splitting the
+literal escape `с` after `\u044`.
+
+**And it corrects the mechanism as the first message left it.** This body is
+`Content-Transfer-Encoding: 7bit` and **pure ASCII** — it is a Celery error report,
+so every Cyrillic character appears as a literal `\uXXXX` escape rather than as
+8-bit bytes. The Cyrillic content and the `8bit` encoding in `44C7F5864DF` were
+incidental. **The trigger is one thing only: a body line longer than 998 bytes.**
+Charset and transfer encoding do not enter into it.
+
+**Django's fix still covers it**, which had to be checked rather than assumed
+because the guard is reached through a `charset == "utf-8"` branch and this body is
+ASCII. Measured on the bench: a 1,838-byte ASCII line still selects
+`quoted-printable` and still produces zero lines over 998 on the wire.
+
+##### What that message actually is, and why it was 9,309 bytes
+
+It is not spam. It is Celery's error report *about* a rejected spam submission, and
+the chain is worth having:
+
+1. A contact-form submission arrived with `Subject: ...Сварочная Робота\r\n` — a
+   trailing CRLF, which is a header-injection attempt.
+2. Django's `forbid_multi_line_headers` refused it: `BadHeaderError: Header values
+   can't contain newlines`. **The protection worked.**
+3. The exception escaped `core.tasks.send_mail` (jaguar's version, the bare
+   `msg.send()` that Step 16 task 02 replaced on the modernize branch).
+4. Celery emailed the admins its standard failure report, which **`repr()`s the
+   whole task kwargs onto one physical line** — the entire 3,000-character
+   submission inlined. That is where a 998-byte line comes from in a message nobody
+   composed.
+
+So the long-line class is not confined to what members type. **A failure report can
+manufacture one out of any large argument**, which is the more general statement of
+the defect.
+
+##### A defect that survives the modernization, found by reading this error
+
+The live payload is fixed by the upgrade for a reason unrelated to mail:
+`forms.CharField` gained `strip=True` as its default after 1.8, so the trailing CRLF
+is removed during `clean()` and the subject never reaches the header layer. Measured
+on both sides:
+
+| Subject | Django 1.8.15 (jaguar) | Django 5.2.17 (modernize) |
+|---|---|---|
+| `...Робота\r\n` — the live payload | `BadHeaderError` | stripped, sends fine |
+| `Сварочная\r\nРобота` — newline in the middle | `BadHeaderError` | **`BadHeaderError` still** |
+
+**`strip()` only touches the ends.** A newline in the middle of the subject still
+reaches `forbid_multi_line_headers` on the modernize branch, and because
+`core.functions.send_mail` defers to Celery there, the result is a task crash and an
+admin error report rather than a form error the submitter sees. `ContactForm.subject`
+is a plain `forms.CharField()` with no newline validation.
+
+**This is a hardening, not an emergency** — the header injection is blocked either
+way, which is the part that matters. What it buys is a clean rejection at the form
+instead of a crash report containing the whole submission. Filed as an open item
+rather than fixed here, because it belongs to the contact form rather than to this
+reading.
+
+##### Revised prediction 3 for the twentieth reading
+
+Supersedes the size formulation. **Google's 09-04 report carries one signed-DKIM-fail
+row for each message jaguar sent it whose body contains a line over 998 bytes, and no
+others.** As of `Sep 4 14:54` local the window holds 5 messages, the largest 3,934
+bytes, and a 3,934-byte message can still hold a 998-byte line — so unlike the size
+version this does not predict zero without reading the bodies, and the count is the
+test.
+
+**And a standing one, for after Step 21 rather than for the twentieth reading:
+this class goes to zero at the deploy and stays there.** It is the cleanest
+before/after the modernization has offered so far — a defect measured in the wild
+on the old stack, with the replacement's fix measured on the bench, and an
+instrument already running that will report the result without anyone arranging
+it.

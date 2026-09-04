@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-08-26
+**Last updated:** 2026-09-04
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the eighteen DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the nineteen DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -4002,6 +4002,87 @@ not upgrade key size. Postmark issues 1024 by default and supports rotation to
 2048. Not acted on — it passed at both Gmail and Outlook today — but the finding
 that prompted the audit is not actually resolved by the migration that was
 supposed to resolve it.
+
+### DEFECT found 2026-09-04 in the DEPLOYED `main` BRANCH — over-long body lines break DKIM, and the modernize branch already fixes it
+
+**Three messages signed by jaguar's `opendkim` failed DKIM verification at Google**
+— one in the 09-02 window, two in 09-03 — and survived only because SPF was
+aligned. The raw message for `44C7F5864DF` closed it the same evening; the
+nineteenth reading and its addendum in `research/dmarc-readings.md` carry the
+evidence, including two hypotheses fitted and falsified on the way.
+
+**The mechanism, measured on two of the three messages.** jaguar runs `main` on
+**Django 1.8.15 / Python 2.7**, which never wraps a body: `utf8_charset.body_encoding
+= None` is unconditional there. `opendkim` signs the unwrapped body in `cleanup`
+with `c=simple/simple`. Postfix's `smtp` client then enforces
+`smtp_line_length_limit = 998` on delivery, inserting CRLF+SPACE **at a byte
+offset** — both observed breaks cut a token in half — so Google hashes a body that
+is not the one that was signed: `dkim=neutral (body hash did not verify)`. **The
+first wrap point measured at exactly 998 bytes in both messages**, independently.
+
+**The trigger is line length alone.** `44C7F5864DF` is 8-bit Cyrillic and
+`0077E586513` is 7-bit pure ASCII, and both fail identically — charset and transfer
+encoding do not enter into it. Long lines have two sources: a member (or spammer)
+typing 3,000 characters into the contact form, and **Celery's failure reports, which
+`repr()` the whole task kwargs onto one physical line** and can manufacture one out
+of any large argument.
+
+**No code change is needed: the modernize branch already fixes it.** Django's
+`SafeMIMEText.set_payload` (ticket #22561) selects a quoted-printable charset
+whenever a body line exceeds `RFC5322_EMAIL_LINE_LENGTH_LIMIT`, and 1.8.15 predates
+it. Verified on the bench under this repo's venv rather than read off a changelog:
+
+| Running | 3,440-byte body line |
+|---|---|
+| jaguar, Django 1.8.15 | `8bit`, Postfix wraps it, signature breaks |
+| modernize, Django 5.2.17 | `quoted-printable`, **zero lines over 998 bytes on the wire** |
+
+**Two fixes to avoid, if it is ever tempting to patch `main`.**
+`Canonicalization relaxed/relaxed` does not help — an inserted line break survives
+relaxed body canonicalization. Raising `smtp_line_length_limit` is worse than the
+defect: RFC 5321 §4.5.3.1.6 caps a line at 1,000 octets including CRLF, so 998 is
+the standard and the site is what violates it. Hard-wrapping in
+`core.functions.send_mail` would also be wrong — it edits what the member wrote,
+where a transfer encoding leaves the content untouched.
+
+**Step 21 fixes this at the source rather than hiding it**, which corrects this
+entry's first draft. What remains is the interval: until the deploy, every
+over-long line the legacy site emits loses its DKIM signature and rides on SPF
+alone.
+
+**Bearing on step 7's successor.** `p=reject` stays unrecommended until after the
+Step 21 deploy — not because the cause is unknown, but because the fix is not
+deployed yet. The DSN class remains one mechanism deep by design. Nothing argues
+for reversing `p=quarantine`; every disposition in all sixty reports is `none`, and
+the captured message itself reads `dmarc=pass ... dis=NONE`.
+
+**Still open:** whether `B4EFD5864BF` (6,050 bytes) is the same class — the one of
+the three still assigned by shape rather than observed — and the standing prediction
+that this class goes to zero at the Step 21 deploy, which the reading log will
+report without anyone arranging it.
+
+### OPEN 2026-09-04 — `ContactForm.subject` accepts newlines, and on the modernize branch that is a task crash rather than a form error
+
+Found by reading the production error that turned out to be `0077E586513`. A
+contact-form submission arrived with a trailing CRLF in the subject — a header
+injection attempt — and Django's `forbid_multi_line_headers` refused it. **The
+protection worked and still works.** What follows it is the problem.
+
+| Subject | Django 1.8.15 (jaguar) | Django 5.2.17 (modernize) |
+|---|---|---|
+| trailing `\r\n` — the live payload | `BadHeaderError` | stripped by `CharField(strip=True)`, sends fine |
+| newline in the **middle** | `BadHeaderError` | **`BadHeaderError` still** |
+
+`strip()` only touches the ends, and `contact/forms.py` declares
+`subject = forms.CharField()` with no newline validation. Because
+`core.functions.send_mail` defers to Celery, the exception lands as a task failure
+and an admin error report containing the entire submission, rather than as a
+validation error the submitter sees — and that report is itself a source of
+over-long lines.
+
+**A hardening, not an emergency.** The injection is blocked either way. The fix is
+a validator on that field so the rejection happens at the form. Not done here; it
+belongs to the contact form rather than to a DMARC reading.
 
 ### Rollback
 
