@@ -51,8 +51,8 @@ STORAGES = {
 # host already runs Redis for the Celery broker and for the application data in
 # core/services.py, so caching here retires a service rather than replacing one.
 # Its own database, because clearing the cache must not touch what the site
-# keeps in Redis permanently -- db 0 holds who's-online, the forums' latest-post
-# lists and the wiki's cookies, and db 1 is the broker.
+# keeps in Redis permanently -- db 0 holds who's-online and the forums'
+# latest-post lists, and db 1 is the broker.
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',

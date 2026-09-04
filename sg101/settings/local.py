@@ -18,8 +18,6 @@ DATABASES = {
     },
 }
 
-WIKI_COOKIE_DOMAIN = None
-
 # Django Debug Toolbar support
 #
 # Probe for the package with find_spec rather than importing it: debug-toolbar

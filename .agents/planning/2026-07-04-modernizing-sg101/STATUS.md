@@ -6845,6 +6845,164 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase B — the wiki is archived and the bridge is gone — DONE 2026-09-04, UNCOMMITTED
+
+**Brian's call: shelve it.** The wiki content is copied into the repo, and MoinMoin
+keeps running on jaguar until the host is decommissioned. No static publication, no
+redirect — `archive/wiki/` is a shelf copy, not a replacement.
+
+### What the wiki actually was, measured before anything was touched
+
+| | |
+|---|---|
+| Pages with content | **30**, of 8,670 page directories — the rest are empty shells from MoinMoin's shipped help system |
+| Last edit of any kind | **2022-06-07**; 17 of the 30 untouched since the wiki's setup day in 2013 |
+| Data directory | 1.7 GB, of which **1.5 GB is `event-log`** — an append-only record of page views |
+| Traffic, 5 days | 15,281 requests; the two most-requested things are `action=login` (7,670) and `action=newaccount` (5,680), across 5,463 IPs |
+| Real content reads, same window | `ReverbFaq` 81, `GearFaq` 69, `FrontPage` 46 |
+| Accounts | 994, essentially all residue of that `newaccount` hammering |
+
+**The irreplaceable part is 8.6 MB, not 1.7 GB** — 158 KB of current markup, 1.7 MB
+across all 261 revisions, and 6.9 MB of attachments. Everything fits in the repo, so
+"which pages are worth keeping" stopped being a question.
+
+**A planning question is answered by this.** `implementation/plan.md` asked on
+2026-08-24 whether the wiki retirement had been code-only and the vhost was stale.
+It is not stale: Apache is serving MoinMoin through mod_wsgi right now.
+
+### The archive — `archive/wiki/`, 10 MB, 399 files
+
+Five layers: `markdown/` (the usable copy), `moinmoin/` (**authoritative**, all 261
+revisions), `html/` (MoinMoin's own rendering), `attachments/`, `mirrored/` and
+`static/`. `MANIFEST.json` records every page's current revision and a SHA-256 of
+its markup, so before jaguar is destroyed one command says whether anything was
+edited after today rather than anyone having to remember.
+
+**Conversion went MoinMoin renders → HTML → Markdown**, never through a
+hand-written MoinMoin parser: MoinMoin is the only thing that correctly reads its
+own dialect, and HTML→Markdown is well-trodden. A bespoke parser for `||tables||`
+is how a row goes missing silently.
+
+#### Fetching through Cloudflare would have silently destroyed content
+
+The first capture went through the public hostname. **Cloudflare's email obfuscation
+had rewritten all 30 pages** — 61 occurrences — replacing real addresses with
+`/cdn-cgi/l/email-protection` links, so `info@therevomatics.com` and its like were
+simply absent from the result. Caught only because the converted Markdown looked
+wrong. Re-fetched from the origin on jaguar with a `Host` header: zero occurrences.
+**The obvious way to take this archive loses data, and nothing would have reported
+it.** [[probes-must-not-perturb-what-they-measure]]
+
+#### A dead hotlink recovered, from the wiki's own edit-log
+
+`BandDatabase/TheRevomatics` hotlinked a photo from `therevomatics.com` that now
+404s, and carried a 6.7 MB attachment **no revision ever referenced** — 70% of the
+archive's size, and it had been written up here as junk worth deleting. Brian
+remembered an image on that page. The edit-log settles it:
+
+```
+2017-08-31 01:33:21Z  SAVE    192.0.2.2
+2017-08-31 01:35:55Z  ATTNEW  192.0.2.2  TheRevomatics.jpg
+```
+
+Same editor, 154 seconds after their last edit, never linked in because the hotlink
+still worked in 2017. EXIF copyright is Joe Weigel, a guitarist the page lists.
+**This archive holds the only surviving copy**, and `markdown/` now shows it in
+place of the dead link; `moinmoin/` is untouched. *The record nearly threw it away
+because it asked the revisions and not the log.*
+
+#### The hotlinks, counted rather than assumed
+
+An earlier draft of the archive's README claimed the Google Photos links were "gone
+long before today." **Wrong — 11 of the 16 external images still serve an image**,
+checked one by one with content types, because a `200` can be a parked domain (one
+was). The 11 live ones are now mirrored into `mirrored/` (808 KB); the 5 dead ones
+keep pointing where they always pointed, since rewriting them would hide that the
+image is gone. `mirrored/` is deliberately separate from `attachments/`: one was
+uploaded *to* the wiki, the other pulled *from* elsewhere.
+
+**Link validation had a hole worth remembering.** The first check reported 54 links
+and 0 broken — it only examined `.md` links and never images, and all four
+attachment paths were wrong by one directory level. Checking both classes found 73
+broken. Now: **73 page links and 16 images, zero broken.**
+
+### The bridge removal
+
+`wiki/` (5 modules, 3 tests), `WikiMiddleware`, the `'wiki'` app, the
+`expire_wiki_cookies` beat entry, four `WIKI_*` settings, and stale comments in
+`docker-compose.yml`, `production.py`, `docker_test.py`, `README.md` and
+`AGENTS.md`. No models, so no migration; `makemigrations --check` clean.
+
+**Verified by asking the running settings object, not by reading the diff** — which
+is what caught `WIKI_COOKIE_DOMAIN` still defined in `local.py` after the first
+pass. The sweep had been `grep -rn "wiki"`, case-sensitive, which never matches
+`WIKI_`. For a removal, ask the system what it still has rather than the source what
+it still says.
+
+### The three template links went too, and the reasoning that nearly kept them
+
+`base.html` and `v3/base.html` carried a Wiki menu entry; `contact_form.html`
+pointed at `Sg101Faq`. **They were nearly left in place on the argument that the
+wiki is still live and removing them would cut off readable content early — which
+confuses this branch with production.** jaguar serves its own templates from the hg
+`default` branch and keeps its links until decommission; nothing here is deployed
+anywhere. Leaving them would only have meant launching the new site with menu
+entries aimed at a hostname about to stop resolving. Brian caught it; the same
+error had been made about the bridge itself an hour earlier.
+
+The contact page's FAQ sentence was **removed rather than repointed** — there is no
+other FAQ on the site to point at.
+
+`core/tests/test_navigation.py`, 3 tests, modelled on the calendar's navigation
+tests: render real pages in both live designs rather than grepping templates.
+Mutation battery 3 of 3, each caught by the expected test. Restoring the link to
+`v3/base.html` also fails the contact test, since `contact_form.html` extends it;
+the third mutation isolates the contact page.
+
+#### The mutation battery destroyed a template, and its own check said otherwise
+
+**The first run of that battery overwrote `sg101/templates/base.html` with the
+contents of `sg101/templates/v3/base.html`.** It saved each file's backup under
+`$(basename $f)` — and `sg101/templates/base.html` and `sg101/templates/v3/base.html`
+share the basename `base.html`, so the second copy clobbered the first's backup and
+the restore wrote v3's content into the forums design. The two files ended up with
+the same git blob.
+
+**Three separate checks failed to notice.**
+
+1. The battery's own "restored byte-identical?" step used the same colliding name,
+   so it compared v3's backup against the file that now held v3's content and
+   reported `ok`. *The verification shared the defect it existed to catch.*
+2. The full suite stayed green at 1,117. Nothing asserts that the forums design
+   renders the forums design; the new tests only ask whether a string is absent,
+   and it was absent from both.
+3. The write-up above was drafted claiming "files restored byte-identical",
+   sourced from that check rather than from the diff.
+
+**Caught by Brian reading the diff** — a 413-line change to a file whose intended
+diff was one line. Restored with `git checkout` and the single line re-applied; the
+diffstat is now 6 deletions across the three templates, which is what it should
+always have been. The battery was re-run with backup names derived from the full
+path and all three mutations caught again.
+
+**The rule this earns: a mutation battery must verify against `git`, not against
+its own copies.** A backup scheme is state the battery itself manages, and it can
+be wrong in exactly the way the battery is meant to detect. `git diff --stat` knew
+the truth the entire time. [[mutation-verify-or-it-is-not-coverage]]
+[[suspect-the-measurer-before-the-record]]
+
+**Verification:** 1,117 tests green under `docker_test` and green again under the
+deprecation gate. Count unchanged — 3 wiki tests removed, 3 navigation tests added.
+
+### Still open for Step 21
+
+The vhost, the Let's Encrypt certificate and the DNS record for
+`wiki.surfguitar101.com` all live on jaguar and die with it. Nothing in this repo
+references the hostname any more.
+
+**Remaining in Phase B:** the 7 model-less legacy tables; delete four `tools/`
+scripts and port `flag_data.py`.
+
 ## Step 19 Phase A — the delete paths are safe — DONE 2026-09-03, `b24b4286`, PUSHED
 
 `forums/tests/test_delete_paths.py`, 12 tests. Suite **1,101 → 1,113**, green

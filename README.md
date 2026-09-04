@@ -17,7 +17,7 @@ donations tracking, and an event calendar.
 
 - Python 3.12 / **Django 5.2 LTS**
 - PostgreSQL 16
-- Redis (cache, Celery broker, Who's-Online tracking, external wiki auth)
+- Redis (cache, Celery broker, Who's-Online tracking)
 - Celery (scheduled and background jobs)
 - **Native PostgreSQL full-text search** — no Haystack, no Xapian
 - Amazon S3 (user photo storage), Postmark (transactional email),

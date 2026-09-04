@@ -4,10 +4,6 @@
 <h2>Contact Us</h2>
 <p>Please use the following form to contact the site management. Your feedback and comments are very
 important to us.</p>
-<p>
-Answers to common questions and problems can be found in the
-<a href="http://wiki.surfguitar101.com/Sg101Faq">site FAQ</a>.
-</p>
 
 <form action="{% url 'contact-form' %}" method="post">{% csrf_token %}
    {{ form.non_field_errors }}

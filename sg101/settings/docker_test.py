@@ -25,7 +25,7 @@ DATABASES = for_engine('postgresql')
 
 # On the Mac the suite talked to a real redis at /tmp/redis.sock; the faithful
 # container equivalent is the `redis` service over the network. This lets the
-# integration-style tests (who's-online, wiki middleware) exercise a real redis,
+# integration-style tests (who's-online) exercise a real redis,
 # just as they did on the Mac. core/tests/test_services.py was updated to pass
 # explicit args rather than depend on these ambient defaults.
 REDIS_UNIX_SOCKET = None

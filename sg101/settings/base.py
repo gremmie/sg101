@@ -118,7 +118,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',
-    'wiki.middleware.WikiMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
@@ -188,7 +187,6 @@ INSTALLED_APPS = [
     'smiley',
     'user_photos',
     'weblinks',
-    'wiki',
     'ygroup',
 ]
 
@@ -305,10 +303,6 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.max_users",
         "schedule": crontab(minute='*/15'),
     },
-    "expire_wiki_cookies": {
-        "task": "wiki.tasks.expire_cookies",
-        "schedule": crontab(minute=0, hour=2),
-    },
     # Reports drift between the search index and the models it indexes; repairs
     # nothing. Weekly is generous for a job whose cost is a few seconds, and the
     # interval can be tightened freely if it ever finds anything.
@@ -349,12 +343,6 @@ GCAL_CALENDAR_ID = 'i81lu3fkh57sgqqenogefd9v78@group.calendar.google.com'
 # Blank is invisible on the admin's sync page -- the button renders the same
 # either way, and pressing it reports the missing key instead of pushing.
 GCAL_CREDENTIALS_PATH = env('GCAL_CREDENTIALS_PATH', default='')
-
-# MoinMoin Wiki integration settings
-WIKI_COOKIE_NAME = 'sg101_wiki'
-WIKI_COOKIE_DOMAIN = '.surfguitar101.com'
-WIKI_COOKIE_AGE = SESSION_COOKIE_AGE
-WIKI_REDIS_SET = 'wiki_cookie_keys'
 
 # User photo upload settings
 USER_PHOTOS_ENABLED = True
