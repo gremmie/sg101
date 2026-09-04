@@ -21,6 +21,17 @@ only way that goes unnoticed.
 its own growth rate; so does a record of finished steps. Splitting on size alone
 is what produced the file that had to be split.
 
+**Heading sweep 2026-09-04.** Eight section headings still read `UNCOMMITTED,
+awaiting review` for work that was committed and pushed days earlier — Step 17
+task 04, `question2`, the agreement labels; Step 18 tasks 02, 04, 05 and the
+follow-up; Step 19 Phase A. Nothing was pending: the tree was clean and the branch
+level with `origin`. Corrected to name each commit.
+
+**The rule that prevents the next one: a heading claiming a state is a claim, and
+it goes stale the moment the state changes.** This is rule 1 below failing in the
+one place nobody re-reads — the heading they scrolled past to reach the content.
+When work is committed, the heading is part of the commit.
+
 **Two rules this document is kept under, both of them earned:**
 
 1. **One claim, one home.** A decision lives in exactly one place and everything
@@ -792,7 +803,7 @@ not what members see. Three zones can be on screen at once — the event's, the
 viewer's, and the calendar's — which is worth knowing before reading a task 03
 result as a conversion bug.
 
-## Step 18 task 02 — the OAuth surface is gone — DONE 2026-09-02, UNCOMMITTED, awaiting review
+## Step 18 task 02 — the OAuth surface is gone — DONE 2026-09-02, `ee1b9b7c`, PUSHED
 
 `gcalendar/oauth.py` (142 lines), both admin auth views and their two URLs, the
 credentials-status block and its Authorize link, `GCAL_CLIENT_ID`/`SECRET`, and
@@ -912,7 +923,7 @@ was meant to be, and `cred_status` no longer exists to be confused with a health
 signal. Task 03's remaining probes are unchanged: `delete`, and
 `anyoneCanAddSelf`.
 
-## Step 18 task 04 — the calendar is reachable again — DONE 2026-09-02, UNCOMMITTED, awaiting review
+## Step 18 task 04 — the calendar is reachable again — DONE 2026-09-02, `1e53962e`, PUSHED
 
 `<li><a href="{% url 'gcalendar-index' %}">Calendar</a></li>` is back in both
 live base templates, in the positions `7073a406` took it from: `base.html`
@@ -998,7 +1009,7 @@ Tasks 01–04 were the step as planned on 2026-08-31. Task 05 was added on
 2026-09-01 to cover the member-facing half that no other task opened, and it
 closed on 2026-09-03 — see the section below. **Step 18 is complete.**
 
-## Step 18 task 05 — the member-facing views, covered — DONE 2026-09-03, UNCOMMITTED, awaiting review
+## Step 18 task 05 — the member-facing views, covered — DONE 2026-09-03, `c6d56849` + `6c920b0d` + `725cb3f4`, PUSHED
 
 `gcalendar/tests/test_forms.py` (16 tests) and `gcalendar/tests/test_views.py`
 (36) give `forms.py` and `views.py` their first tests. Suite **1,045 → 1,097**,
@@ -1111,7 +1122,7 @@ Two docstrings were also cut back to what their assertions prove: one claimed to
 distinguish `add_event`'s save path from `edit_event`'s, which no assertion can
 — both call `site_markup` with the same arguments and produce identical HTML.
 
-## Step 18 follow-up — the two characterizations, closed — DONE 2026-09-03, UNCOMMITTED, awaiting review
+## Step 18 follow-up — the two characterizations, closed — DONE 2026-09-03, `89b88fad` + `386bcff9`, PUSHED
 
 Both were recorded above as behaviour to pin rather than change. Brian's call to
 fix them, once the tests made the shape of each clear. Suite **1,097 → 1,101**,
@@ -1908,7 +1919,7 @@ engineering around.
 The two settings modules differ only in handler level (`INFO` / `DEBUG`), which
 is how they already differ for `auth`, `search` and `email`.
 
-## Step 17 task 04 — registration collapses to one page — DONE 2026-08-30, UNCOMMITTED, awaiting review
+## Step 17 task 04 — registration collapses to one page — DONE 2026-08-30, `f4144435`, PUSHED
 
 Nine files. **1007 → 1006 tests** green, suite and deprecation gate both run,
 `check` clean. Registration is now `register` → `thanks` plus the emailed
@@ -2344,7 +2355,7 @@ re-reading. What remains is the *after*, which cannot exist until the Step 21
 cutover puts Turnstile in front of real traffic — and, on the evidence above,
 will take a long time to say anything.
 
-## Step 17 — `question2` becomes `question` — DONE 2026-08-30, UNCOMMITTED
+## Step 17 — `question2` becomes `question` — DONE 2026-08-30, `85edcd34`, PUSHED
 
 Three files, **1007 tests** green, suite and deprecation gate both run. The `2`
 indexed a sequence whose other members task 04 deleted.
@@ -2424,7 +2435,7 @@ No `PendingUser` created, form refused, rendered field reads
 are the record of what was true when written and are left alone; this section
 is where the rename lives.
 
-## Step 17 — the agreement labels, dead since 2016, and the form's layout with them — DONE 2026-08-30, UNCOMMITTED
+## Step 17 — the agreement labels, dead since 2016, and the form's layout with them — DONE 2026-08-30, `816a4312`, PUSHED
 
 Five files, **1006 → 1007 tests** green, suite and deprecation gate both run. The
 defect and how it was found are recorded in task 04's section above; this is
@@ -6834,7 +6845,7 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase A — the delete paths are safe — DONE 2026-09-03, UNCOMMITTED, awaiting review
+## Step 19 Phase A — the delete paths are safe — DONE 2026-09-03, `b24b4286`, PUSHED
 
 `forums/tests/test_delete_paths.py`, 12 tests. Suite **1,101 → 1,113**, green
 under both runs, `makemigrations --check` clean. The hazard that cost forum 3 and
