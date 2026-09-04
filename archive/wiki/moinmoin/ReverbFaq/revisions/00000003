@@ -1,0 +1,64 @@
+= Fender 6G15 Reverb Unit =
+{{{
+Contents
+
+1. General description
+2. Variants (original, 70's reissue, 90's reissue)
+3. Theory of operation
+4. Other (Kendrick, Texotica, G-Spring, etc.)
+5. Honorable Mention (Vibro-King, Dual Professional Reverb)
+6. Mods
+}}}
+1. General Description
+
+The '''Fender Reverb Unit''' (6G15) was a tube, spring reverb-equipped effects unit made by [[http://en.wikipedia.org/wiki/Fender_Musical_Instrument_Corporation|Fender]]. The Reverb Unit was originally introduced in 1961. It was discontinued in 1966 and was replaced by a solid-state model, the FR1000.^[[http://en.wikipedia.org/wiki/Fender_Reverb_Unit#cite_note-1|[1]]]^ The unit features three controls: Dwell, Mix and Tone and is run by two pre-amp tubes and a power tube. Physically the unit looks like a small ampilfier head and since the early '60s the unit has become synonymous with surf music.
+
+OK, so I stole this from Wikipedia.  Sue me.
+
+2. Variants
+
+1961-1966 - Handwired, 6K6 powertube, Hammond reverb pan (61-64)Gibbs reverb pan(64-66), appeared in every cosmetic variation in that era.
+
+1976-1978 - Handwired, 6V6 power tube, Accutronics reverb pan, silverface cosmetics. Super rare, I think somebody here owns one. I've never seen one is person. I think they are just the same as 61-66...
+
+1994- Present Reissue - PCB, 6V6 powertube, Accutronics pan, Blonde/oxblood, brown/wheat, black/silver, tweed.
+
+3. Theory of Operation (it's based on the Fender service manual  A block diagram is probably a good idea.  This is pretty detailed and would put most people to sleep, but the techs need to know this)
+
+a. Reverb Drive Path
+
+The first stage uses one half of the 12AT7 and provides a voltage gain  A voltage divider reduce the signal and then it is sent to the Dwell control (250K pot), which determines the amount of signal sent to the reverb drive circuit.
+
+The reverb drive circuit consists of the second half of the 12AT7 preamp tube, a high-pass filter, a 6K6 power tube, and the reverb transformer.
+
+The signal is amplified by the 12AT7 and sent through an RC high-pass filter which rolls off low frequencies below 300Hz.
+
+The 6K6GT power tube supplies power necessary to drive the reverb transformer.  Although a 6V6 driver tube is used in the 90's reissue, the power tube biasing resistor is the same value used by the 6K6 circuit.  This larger value causes the 6V6 to be overbiased (cold), limiting output power and causing early distortion.
+
+b. Reverb Recovery Path
+
+The footswitch turns the reverb on and off by grounding the input to the reverb recovery circuit.  One half of the 12AX7 tube amplifies the reverb return signal.
+
+The Tone control attenuates the high frequencies ( I can run a PSpice simulation to illustrate the effect of the tone control settings)
+
+c. Dry Signal Path
+
+1/2 of the 12AX7 is used as a cathode follower buffer amplifier for the dry signal.  The input to the dry signal path is directly in parallel with the reverb drive path!
+
+d. Mixer Circuit
+
+The Mixer circuit is a simple resistive mixer consisting of a 50K linear taper pot.  One side of the pot is fed by the dry signal path and the other is fed by the reverb recovery circuit.  The control is essentially a pan pot that favors the dry signal at 0 and the wet signal when set to 10.  This is in contrast to the Reverb control used in the combo amps, which simply controls the amount of reverb recovery signal mixed into the dry signal path.
+
+As the Mixer control is turned up from zero, additional resistance is placed in series with the output of the dry signal path (the cathode follower).  This additional resistance forms a low-pass RC filter with the capacitance of the cable used to connect the reverb unit to the amplifier.  The resultant filter removes high frequencies from the dry signal, and effect known as 'tone suck'. (I can run PSpice simulations to illustrate the amount of high-frequency loss in the dry signal caused by the Mixer control settings)
+
+e. Output Buffer Circuit (70's reissue only)
+
+A 4th preamp tube is added.  A cathode follower is used to isolate the Mixer output from the guitar cable/amplifier load imedance.  The goal is to prevent tonal variations (tone suck) as the Mixer control is turned up.  The buffer prevents the patch cable capacitance from interacting with the Mixer control resistance, mitigating the RC filtering effect.
+
+4. Others
+
+TBD
+
+5. Honorable Mention
+
+The Fender amps that have a 3-knob reverb circuit

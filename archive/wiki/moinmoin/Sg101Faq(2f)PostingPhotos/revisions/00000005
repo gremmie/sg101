@@ -1,0 +1,51 @@
+= Posting Photos in the Forums at SG101 =
+
+<<TableOfContents()>>
+
+== General Instructions ==
+
+When you post a photo in the forums at SG101, you aren't actually uploading a photo, you are ''hot-linking'' to a photo hosted elsewhere on the internet. This is in contrast to sites like Facebook where you actually do upload an image off your local computer.
+
+To hot-link to a photo, you need the link, or ''URL'' to the photo you want to post. This can sometimes be tricky to determine. Most of the time, you can simply right-click on an image, and your browser will have a menu where you can choose something like "Copy image location". This will copy the URL to your computer's clipboard, ready to be pasted with `CTRL-V`.
+
+In the text below, I will assume you have a URL to an image that is `http://www.example.com/image.jpg`.
+
+Once you have the URL for the image, there are a couple of ways to post it in the forums. The first way is to just type the Markdown syntax directly into your post:
+
+{{{
+![description of your image](http://www.example.com/image.jpg)
+}}}
+
+The second way is to click the little Photo icon in the toolbar of the posting box. A pop-up dialog will ask you to paste in the URL. Just paste (`CTRL-V`) your URL into this box and hit OK. Notice that it added text similar to the above to your forum post.
+
+A shortcut for clicking the photo icon is to type `CTRL-P`, which works in most browsers. This will bring up the image dialog as before.
+
+So in summary, here is a recipe you can use to hot-link a photo that should work most of the time:
+
+ 1. Navigate to the photo you want to hot-link to in your browser.
+ 1. Right-click and choose something like "Copy image location" (exact wording depends on your browser).
+ 1. Navigate back to SG101. In the new post box type `CTRL-P`.
+ 1. Type `CTRL-V` to paste in the URL of the image.
+ 1. Edit your post as usual.
+ 1. You can use the green check mark icon to preview your post before you submit it.
+ 1. Submit your new post.
+
+== Instructions for specific services ==
+
+The instructions above should in general work for just about any image. Please note however that some sites do not appreciate hot-linking, and they will block attempts to hot-link their images. If you want to regularly post images to the forums, we suggest you obtain an account on a third-party image hosting or storage service. Some instructions for various services appear below. Please feel free to add instructions for a service not shown here.
+
+=== Photobucket ===
+
+Say you have a photo in Photobucket and this is the Photobucket page:
+
+http://s210.photobucket.com/albums/bb150/mikegeibel/?action=view&current=049.jpg
+
+On this page will be a list of image links? You want the one that says "Direct link". Clicking on it will copy it to your clipboard. Just for reference, here is what that link looks like:
+
+http://i210.photobucket.com/albums/bb150/mikegeibel/049.jpg
+
+Now you can follow the general instructions above to paste this link into the new post form at SG101.
+
+=== Dropbox ===
+
+Sign up for http://www.dropbox.com, a very cool service that keeps files synchronized across all your computers and devices, and makes it really easy to share files with friends. After creating an account and installing a dropbox client, you'll get a Dropbox folder on your computer. Inside of that there will be a Public folder. Make a new folder in Public, say SG101. Now you can just drag photos from your computer to the SG101 folder. Right click on the file, and you should see a Dropbox menu. In there is a menu choice called "Copy Public Link". Choose that and that is the link you paste into the post box, as described above.

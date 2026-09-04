@@ -1,0 +1,33 @@
+= Posting Photos in the Forums at SG101 =
+
+<<TableOfContents()>>
+
+== General Instructions ==
+
+When you post a photo in the forums at SG101, you aren't actually uploading a photo, you are ''hot-linking'' to a photo hosted elsewhere on the internet. This is in contrast to sites like Facebook where you actually do upload an image off your local computer.
+
+To hot-link to a photo, you need the link, or ''URL'' to the photo you want to post. This can sometimes be tricky to determine. Most of the time, you can simply right-click on an image, and your browser will have a menu where you can choose something like "Copy image location". This will copy the URL to your computer's clipboard, ready to be pasted with `CTRL-V`.
+
+In the text below, I will assume you have a URL to an image that is `http://www.example.com/image.jpg`.
+
+Once you have the URL for the image, there are a couple of ways to post it in the forums. The first way is to just type the Markdown syntax directly into your post:
+
+{{{ 
+![description of your image](http://www.example.com/image.jpg)
+}}}
+
+== Instructions for specific services ==
+
+The instructions above should in general work for just about any image. Please note however that some sites do not appreciate hot-linking, and they will block attempts to hot-link their images. If you want to regularly post images to the forums, we suggest you obtain an account on a third-party image hosting service or storage service. Some instructions for various services appear below. Please feel free to add instructions for a service not shown here.
+
+=== Photobucket ===
+
+Say you have a photo in Photobucket and this is the Photobucket page:
+
+http://s210.photobucket.com/albums/bb150/mikegeibel/?action=view&current=049.jpg
+
+On this page will be a list of image links? You want the one that says "Direct link". Clicking on it will copy it to your clipboard. Just for reference, here is what that link looks like:
+
+http://i210.photobucket.com/albums/bb150/mikegeibel/049.jpg
+
+Now you can follow the general instructions above to paste this link into the new post form at SG101.

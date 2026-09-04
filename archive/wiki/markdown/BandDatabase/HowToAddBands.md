@@ -1,0 +1,24 @@
+<!-- Archived from wiki.surfguitar101.com (MoinMoin), page "BandDatabase/HowToAddBands", revision 3.
+     Lossless original: archive/wiki/moinmoin/BandDatabase(2f)HowToAddBands/revisions/00000003 -->
+
+# How to Add a Band to the Wiki
+
+1. Choose a WikiName for the band, e.g. TheHalibuts, LaikaAndTheCosmonauts.
+2. Edit the [BandDatabase](../BandDatabase.md) page.
+3. If necessary, add a new section for the first letter of the band's name. Don't count leading articles like "The". In other words, The Halibuts should be filed under "H" not "T".
+4. Add a line under the appropriate section for your new band by adding a leading slash to your WikiName. This will create a subpage for the band under [BandDatabase](../BandDatabase.md). Your line should look something like this:
+   * /MyNewBand - My New Band (location).
+5. Save changes.
+6. Click on the new link to /MyNewBand
+7. The next page will ask you if you want to create a new page, or start from a template. You want to use our new band template, so click on [BandTemplate](../BandTemplate.md) from the list of templates in the left column.
+8. You can then begin entering the band information by changing the default template information. Please remember to enter facts only in a neutral tone. This isn't the place to hype your band.
+9. If you have any questions please ask in the SG101 forums.
+
+## Tips
+
+* Don't feel like you have to have all the information before starting an entry. Someone else will fill in the blanks, or you can return to it later.
+* Feel free to contact the band (if you have contact info) and ask for key dates and bio information.
+
+---
+
+[CategoryBands](../CategoryBands.md)

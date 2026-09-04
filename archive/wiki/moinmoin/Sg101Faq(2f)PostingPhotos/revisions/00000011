@@ -1,0 +1,97 @@
+= Posting Photos in the Forums at SG101 =
+
+<<TableOfContents()>>
+
+== General Instructions ==
+
+When you post a photo in the forums at SG101, you aren't actually uploading a photo, you are ''hot-linking'' to a photo hosted elsewhere on the internet. This is in contrast to sites like Facebook where you actually do upload an image off your local computer.
+
+You must host your photos somewhere on the Internet before they can be displayed on SG101. If you have your own website or web space this isn't very difficult. Otherwise you can use various services to host your photos for you. There are instructions for some of these services below.
+
+To hot-link to a photo, you need the link, or ''URL'', to the photo you want to post. This can sometimes be tricky to determine. Most of the time, you can simply right-click on an image, and your browser will have a menu where you can choose something like "Copy image location". This will copy the URL to your computer's clipboard, ready to be pasted with `CTRL-V`.
+
+In the text below, I will assume you have a URL to an image that is `http://www.example.com/image.jpg`.
+
+Once you have the URL for the image, there are a couple of ways to post it in the forums. The first way is to just type the Markdown syntax directly into your post:
+
+{{{
+![description of your image](http://www.example.com/image.jpg)
+}}}
+
+The second way is to click the little Photo icon in the toolbar of the posting box. A pop-up dialog will ask you to paste in the URL. Just paste (`CTRL-V`) your URL into this box and hit OK. Notice that it added text similar to the above to your forum post.
+
+A shortcut for clicking the photo icon is to type `CTRL-P`, which works in most browsers. This will bring up the image dialog as before.
+
+So in summary, here is a recipe you can use to hot-link a photo that should work most of the time:
+
+ 1. Navigate to the photo you want to hot-link to in your browser.
+ 1. Right-click and choose something like "Copy image location" (exact wording depends on your browser).
+ 1. Navigate back to SG101. In the new post box type `CTRL-P`.
+ 1. Type `CTRL-V` to paste in the URL of the image.
+ 1. Edit your post as usual.
+ 1. You can use the green check mark icon to preview your post before you submit it.
+ 1. Submit your new post.
+
+{{{#!wiki warning
+'''Please don't post large images'''
+
+Try to keep your images less than say 700 pixels wide. If the image is larger than that, please resize it if you can. Otherwise just post the link to the photo and don't try to embed it in the post.
+}}}
+
+== Instructions for specific services ==
+
+The instructions above should in general work for just about any image. Please note however that some sites do not appreciate hot-linking, and they will block attempts to hot-link their images. If you want to regularly post images to the forums, we suggest you obtain an account on a third-party image hosting or storage service. Some instructions for various services appear below. Please feel free to add instructions for a service not shown here.
+
+=== Photobucket ===
+
+Say you have a photo in Photobucket and this is the Photobucket page:
+
+http://s210.photobucket.com/albums/bb150/mikegeibel/?action=view&current=049.jpg
+
+On this page will be a list of image links. You want the one that says "Direct link". Clicking on it will copy it to your clipboard. Just for reference, here is what that link looks like:
+
+http://i210.photobucket.com/albums/bb150/mikegeibel/049.jpg
+
+Now you can follow the general instructions above to paste this link into the new post form at SG101.
+
+=== Google Photos (Picassa) ===
+
+For Google Photos (Picasa) you can always right-click on the photo to get the direct URL.
+
+Alternatively, if you want a different size:
+
+ 1. Go to the right part of the screen and click on "Link to this Photo".
+ 1. Click the bottom checkbox "Image only (no link)".
+ 1. Select the desired size from the drop-down box.
+ 1. Click the text box labeled "Embed Image"; right-click and choose "Copy" (or just click in the box and then type control-c to copy).
+
+Now you can follow the general instructions above to paste this link into the new post form at SG101.
+
+=== Dropbox ===
+
+Sign up for http://www.dropbox.com, a very cool service that keeps files synchronized across all your computers and devices, and makes it really easy to share files with friends. After creating an account and installing a dropbox client, you'll get a Dropbox folder on your computer. Inside of that there will be a Public folder. Make a new folder in Public, say SG101. Now you can just drag photos from your computer to the SG101 folder. Right click on the file, and you should see a Dropbox menu. In there is a menu choice called "Copy Public Link". Choose that and that is the link you paste into the post box, as described above.
+
+=== Flickr ===
+
+Flickr is one of those sites that does not want you to hot-link to your photos. For this reason, as per the Flickr rules, we can't really recommend you use them to hot-link photos. You can however paste links to Flickr photos and galleries; you just aren't supposed to embed hot-linked images.
+
+However, if you really want to do this :)
+
+ 1. Log into your account and find a photo you want to share.
+ 1. Above the photo you'll see a pull-down menu next to the Facebook and Twitter icons that has the tool-tip "More ways to share". Click on that.
+ 1. Select "Grab the HTML/BBCode".
+ 1. Pick the size you want and make sure the HTML radio button is mashed down.
+ 1. Now unfortunately, Flickr includes some junk you don't want in the copy/paste box. You need to remove this junk. See the example below:
+
+{{{
+<a href="http://www.flickr.com/photos/bgneal/164365583/" title="v64 by Brian Neal, on Flickr">
+<img src="http://farm1.static.flickr.com/62/164365583_9423d16a72.jpg" width="432" height="500" alt="v64"></a>
+}}}
+
+You want to copy out the URL that ends in .jpg, i.e. this part:
+
+{{{
+http://farm1.static.flickr.com/62/164365583_9423d16a72.jpg
+}}}
+
+I suspect that may be too difficult for non-techie folks, so again, for that reason don't use Flickr if you want to embed images in forum posts.

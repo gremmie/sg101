@@ -1,0 +1,77 @@
+= Fender 6G15 Reverb Unit =
+{{{
+Contents
+
+1. General description
+2. Variants (original, 70's reissue, 90's reissue)
+3. Theory of operation
+4. Other (Kendrick, Texotica, G-Spring, etc.)
+5. Mods
+}}}
+1. General Description
+
+The '''Fender Reverb Unit''' (6G15) was a tube, spring reverb-equipped effects unit made by [[http://en.wikipedia.org/wiki/Fender_Musical_Instrument_Corporation|Fender]]. The Reverb Unit was originally introduced in 1961. It was discontinued in 1966 and was replaced by a solid-state model, the FR1000.^[[http://en.wikipedia.org/wiki/Fender_Reverb_Unit#cite_note-1|[1]]]^ The unit features three controls: Dwell, Mix and Tone and is run by two pre-amp tubes and a power tube. Physically the unit looks like a small ampilfier head and since the early '60s the unit has become synonymous with surf music.
+
+OK, so I stole this from Wikipedia.  Sue me.
+
+2. Variants
+
+1961-1966 - Handwired, 6K6 powertube, Hammond reverb pan (61-64)Gibbs reverb pan(64-66), appeared in every cosmetic variation in that era.
+
+1976-1978 - Handwired, 6V6 power tube, Accutronics reverb pan, silverface cosmetics. Super rare, I think somebody here owns one. I've never seen one is person. I think they are just the same as 61-66...
+
+1994- Present Reissue - PCB, 6V6 powertube, Accutronics pan, Blonde/oxblood, brown/wheat, black/silver, tweed.
+
+3. Theory of Operation (it's based on the Fender service manual  A block diagram is probably a good idea)
+
+a. Reverb Drive Path
+
+The first stage uses one half of the 12AT7 and provides a voltage gain  A voltage divider reduce the signal and then it is sent to the Dwell , which determines the amount of signal sent to the reverb drive circuit.
+
+The reverb drive circuit consists of the second half of the 12AT7 preamp tube, a high-pass filter, a 6K6 power tube, and the reverb transformer.
+
+The signal is amplified by the 12AT7 and sent through an RC high-pass filter which rolls off low frequencies below 300Hz.
+
+The 6K6GT power tube supplies power necessary to drive the reverb transformer.
+
+b. Reverb Recovery Path
+
+The footswitch turns the reverb on and off by grounding the input to the reverb recovery circuit.  The senses the reverb return signal and amplifies it with a gain of about 37.
+
+The Tone control (R17) attenuates the high frequencies above 3kHz, through C9. C10 provides a slight bass roll off
+
+which is affected by the position of the Mix control in relation to the input impedance of the guitar amplifier.
+
+c. Dry Signal Path
+
+Cathode follower, unity gain buffer amplifier for the dry signal.  The input to the dry signal path is directly in parallel with the reverb drive path!
+
+C11 is a non-polarized, metalized polyester film capacitor, which is located across the high voltage transformer
+
+secondary, suppresses EMI frequencies from 20kHz to 30mHz. This is necessary to conform to modern day NEMKO
+
+safety requirements.
+
+The pot mounting brackets are all connected together via traces on the circuit board. The trace connects to the star
+
+audio ground through R22, R22 places 15 ohms of resistance between audio ground and the pot mounting brackets.
+
+This is done for two reasons. Fist, with the circuit board installed, the pot brackets are physically connected to
+
+chassis/earth ground. R22 isolates audio ground from earth ground through the pot brackets. This eliminates internal
+
+ground loops. Secondly, when the circuit board is removed for repair and testing, R22 provides a ground reference
+
+(15 ohms) for the pot brackets. R23 places 15 ohms of resistance between audio ground and chassis/earth ground.
+
+This minimizes hum by eliminating ground loops internally and externally when connection with other units. R22 and
+
+R23 are Flame Proof/Fusible resistors. If excessive current flows through theses resistors, they will not burn, they will
+
+simply open.
+
+CR5 & 6 (across R23) provide an important safety feature. IF the guitar amp chassis becomes electrified, current will
+
+flow through the coax cable to the power supply ground of the Fender Reverb unit. The current will seek earth ground
+
+through R23. When R23 opens, the earth ground connection is broken. This will electrify the reverb unit’s ground and

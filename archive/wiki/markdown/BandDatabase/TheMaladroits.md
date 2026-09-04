@@ -1,0 +1,47 @@
+<!-- Archived from wiki.surfguitar101.com (MoinMoin), page "BandDatabase/TheMaladroits", revision 5.
+     Lossless original: archive/wiki/moinmoin/BandDatabase(2f)TheMaladroits/revisions/00000005 -->
+
+# The Maladroits
+
+**Years active**: 1998 - present   
+**Location**: Cincinnati, Ohio, USA
+
+## Biography
+
+Biography or other band information goes here. Please stick to the facts only.
+
+## Current Band Members
+
+Ron White - guitar 1964 - present
+
+Bryce Rhude - guitar 1999 - present
+
+David Freeman - sax 2001 - present
+
+Tamina White - bass 2010 - present
+
+Brad Grawe - drums 2011 - present
+
+## Past Band Members
+
+Jason Wagner - guitar 1998-1999
+
+Sky White - organ 2000-2004, 2006
+
+Ken Davis - drums 2003
+
+Brett Davis - drums 1998 - 2010
+
+Eli White - bass guitar 1983 - 2010
+
+## Links
+
+* [website](http://faculty.msj.edu/whiter/maladroits.htm)
+* Myspace
+* Bandcamp
+* [Facebook](http://https://www.facebook.com/pages/The-Maladroits/111147658914017)
+* Etc.
+
+---
+
+[CategoryBands](../CategoryBands.md)

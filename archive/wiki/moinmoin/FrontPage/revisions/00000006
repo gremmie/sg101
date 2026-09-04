@@ -1,0 +1,38 @@
+## Please edit system and help pages ONLY in the master wiki!
+## For more information, please see MoinMoin:MoinDev/Translation.
+##master-page:FrontPage
+#format wiki
+#language en
+#pragma section-numbers off
+= SurfGuitar101.com Wiki =
+
+Welcome to the [[http://surfguitar101.com|SurfGuitar101.com]] wiki! This is a resource for the SurfGuitar101 community to capture knowledge about SurfGuitar101 (the website), surf music, gear, bands, and just about anything else the community thinks is worth sharing.
+
+All members of SurfGuitar101 (SG101) can edit and contribute to this wiki. Please read the WikiGuidelines before getting started.
+
+Interesting starting points:
+ * RecentChanges: see where people are currently working
+ * WikiSandBox: play in the sandbox to get a feel for how the wiki works without "hurting" anything :)
+ * FindPage: find some content, explore the wiki
+ * HelpOnMoinWikiSyntax: quick access to wiki markup
+
+
+== How to use this site ==
+
+A wiki is a collaborative site, all members of [[http://surfguitar101.com|SurfGuitar101]] can contribute and share:
+ * Edit any page by pressing '''<<GetText(Edit)>>''' at the top or the bottom of the page
+ * Create a link to another page with joined capitalized words (like WikiSandBox) or with {{{[[words in brackets]]}}}
+ * Search for page titles or text within pages using the search box at the top of any page
+ * See HelpForBeginners to get you going, HelpContents for all help pages, and WikiCourse for an in-depth guide
+ * Please read our WikiGuidelines before diving in
+
+To learn more about what a WikiWikiWeb is, read about MoinMoin:WhyWikiWorks and the MoinMoin:WikiNature.
+
+This wiki is powered by [[http://moinmo.in/|MoinMoin]].
+
+== Contents ==
+
+ * Sg101Faq - Frequently Asked Questions (FAQ) about SG101
+ * SurfMusicFaq - Surf Music FAQ (placeholder)
+ * GearFaq - Musician's gear FAQ (placeholder)
+ * BandDatabase - Surf Band encyclopedia

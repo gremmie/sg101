@@ -1,0 +1,44 @@
+##master-page:HelpTemplate
+##master-date:Unknown-Date
+#format wiki
+#language en
+= Name of Band =
+
+'''Years active''': 2000 - present <<BR>>
+'''Location''': Los Angeles, California, USA
+
+== Biography ==
+
+Biography or other band information goes here. Please stick to the facts only. 
+
+== Band Members ==
+
+ * John Doe, lead guitar
+ * Jane Doe, rhythm guitar
+ * George Doe, bass guitar
+ * Don Doe, drums
+ * Felix Doe, drums (2002 - 2004)
+
+== Releases ==
+
+ * Album 1, Record Label Name, release date
+
+   1. Track 1
+   1. Track 2
+   1. Track 3
+
+ * Album 2, Record Label Name, release date
+
+   1. Track 1
+   1. Track 2
+   1. Track 3
+
+== Links ==
+
+ * Links to external band related sites
+ * Myspace
+ * Bandcamp
+ * Etc.
+
+----
+CategoryBands

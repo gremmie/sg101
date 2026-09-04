@@ -1,0 +1,59 @@
+= SG101 IRC Chat =
+
+What is IRC? IRC stands for '''Internet Relay Chat'''. IRC has been around since the late 1980's, and is a form of real-time Internet text messaging, or chatting. We have our own IRC server here at SurfGuitar101.com, and it is a fun way to talk to your fellow SG101-ers. We often gather in IRC to listen to a podcast or Internet radio show, to plan site events, or to just shoot the breeze. IRC is an excellent way for SG101 wiki editors to collaborate together. Come on in, all are welcome!
+
+If you are an IRC pro, here are the details for getting connected with your favorite IRC client.
+
+ * Server address: surfguitar101.com
+ * Port: 6667 (the default) or 6697 (for encrypted connections)
+ * Server password: morereverb
+ * Main channel: #ShallowEnd
+
+== ChatZilla Instructions ==
+
+If you are new to IRC, here are some instructions for using !ChatZilla, a basic IRC client that is an add-on for the popular Firefox web browser.
+
+Okay, to start, visit https://addons.mozilla.org/en-US/firefox/addon/16
+Click the "Add to Firefox" button. It should download and install. You will then be prompted to restart your browser. Do it!
+
+Now you can fire up ChatZilla by clicking on the '''cZ''' icon in the upper right of Firefox. You can also launch it from the Firefox menu; look for it under the "Add-ons" menu item. You should see something like this:
+
+{{http://lh6.google.com/bgneal/R8dXqFpSMyI/AAAAAAAAApo/g0OerYX6CEk/s800/chat1.jpg}}
+
+In the bottom text box, type the following command exactly as shown. Yes, you need that first forward slash!!!
+
+{{{#!wiki note
+'''Note on the server name'''
+
+In the images below, the server name is `irc.surfguitar101.com`. That might still work, but please use `surfguitar101.com` as the text indicates.
+}}}
+
+`/server surfguitar101.com 6667 morereverb`
+
+{{http://lh6.google.com/bgneal/R8dYmFpSM5I/AAAAAAAAAqo/J4Jst6N2YNE/s800/chat2.jpg}}
+
+Hit return, and then you should connect and see something like this:
+
+{{http://lh3.google.com/bgneal/R8dXqVpSM0I/AAAAAAAAAp4/sJThQv9om4E/s800/chat3.jpg}}
+
+Now use the button to the left of where you typed that command to change your IRC nickname. Type your SG101 username here.
+
+{{http://lh4.google.com/bgneal/R8dXqlpSM1I/AAAAAAAAAqA/wnxRfm0b20E/s800/chat4.jpg}}
+
+Now you need to "change channels". In the ChatZilla menu, pick IRC / Join Channel. 
+
+{{http://lh4.google.com/bgneal/R8dXqlpSM2I/AAAAAAAAAqI/CbS6rBupgOU/s800/chat5.jpg}}
+
+Select the ShallowEnd Channel. Then you should be in the chat room!
+
+{{http://lh5.google.com/bgneal/R8dXv1pSM3I/AAAAAAAAAqQ/add_S-9Ezkw/s800/chat6.jpg}}
+
+Now right click on the URL irc://surfguitar101.com/ShallowEnd,needpass at the top of the window and select "Open This Channel At Startup".
+
+{{http://lh6.google.com/bgneal/R8dXwFpSM4I/AAAAAAAAAqY/3e6eEW4LjGA/s800/chat7.jpg}}
+
+Now you should be all set. In the future when you launch ChatZilla it will automatically try to connect and prompt you for the password. The password is currently '''`morereverb`'''.
+
+If you need assistance please [[http://surfguitar101.com/contact/|Contact Us]].
+
+You can see who is in the IRC chat room at any time by checking the '''IRC Status''' block on the left side bar of SG101, or by consulting http://surfguitar101.com/irc/.

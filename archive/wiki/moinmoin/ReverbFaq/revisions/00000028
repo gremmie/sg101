@@ -1,0 +1,79 @@
+## page was renamed from GearFaq
+= Fender 6G15 Reverb Unit =
+<<TableOfContents()>>
+
+== General Description ==
+The '''Fender Reverb Unit''' (6G15) was a tube, spring reverb-equipped effects unit made by [[http://en.wikipedia.org/wiki/Fender_Musical_Instrument_Corporation|Fender]]. The Reverb Unit was originally introduced in 1961. It was discontinued in 1966 and was replaced by a solid-state model, the FR1000.^[[http://en.wikipedia.org/wiki/Fender_Reverb_Unit#cite_note-1|[1]]]^ The unit features three controls: Dwell, Mix and Tone and is run by two pre-amp tubes and a power tube. Physically the unit looks like a small ampilfier head and since the early '60s the unit has become synonymous with surf music.
+
+
+
+== Variants ==
+ * 1961-1966 - Handwired, 6K6 powertube, Hammond reverb pan (61-64)Gibbs reverb pan(64-66), appeared in every cosmetic variation in that era.
+ * 1976-1978 - Handwired, 6V6 power tube, Accutronics reverb pan, silverface cosmetics. Super rare, I think somebody here owns one. I've never seen one is person. I think they are just the same as 61-66...
+ * 1994- Present Reissue - PCB, 6V6 powertube, Accutronics pan, Blonde/oxblood, brown/wheat, black/silver, tweed.
+
+== Theory of Operation ==
+Block diagram from the Fender Owner's Manual, (Fender P/N 047980) Note: Reissue unit depicted with 6V6 tube in lieu of original 6K6, see discussion below.
+
+{{attachment:FenderReverbBlockDiagram.JPG||align="left",height="453",width="1279"}}
+
+=== Reverb Drive Path ===
+The first stage uses one half of the 12AT7 and provides a voltage gain.   A voltage divider reduces the signal and then it is sent to the Dwell control (250K pot), which determines the amount of signal sent to the reverb drive circuit.
+
+The reverb drive circuit consists of the second half of the 12AT7 preamp tube, a high-pass filter, a 6K6 power tube, and the reverb transformer.
+
+The signal is amplified by the 12AT7 and sent through an RC high-pass filter which rolls off low frequencies below 300Hz.
+
+The 6K6GT power tube supplies power necessary to drive the reverb transformer.  Although a 6V6 driver tube is used in the 90's reissue, the power tube biasing resistor is the same value used by the 6K6 circuit.  This larger value causes the 6V6 to be overbiased (cold), limiting output power and causing early distortion.
+
+=== Reverb Recovery Path ===
+The footswitch turns the reverb on and off by grounding the input to the reverb recovery circuit.  One half of the 12AX7 tube amplifies the reverb return signal.
+
+The Tone control attenuates the high frequencies ( I can run a PSpice simulation to illustrate the effect of the tone control settings)
+
+=== Dry Signal Path ===
+1/2 of the 12AX7 is used as a cathode follower buffer amplifier for the dry signal.  The input to the dry signal path is directly in parallel with the reverb drive path!
+
+=== Mixer Circuit ===
+The Mixer circuit is a simple resistive mixer consisting of a 50K linear taper pot.  One side of the pot is fed by the dry signal path and the other is fed by the reverb recovery circuit.  The control is essentially a pan pot that favors the dry signal at 0 and the wet signal when set to 10.  This is in contrast to the Reverb control used in the combo amps, which simply controls the amount of reverb recovery signal mixed into the dry signal path.
+
+As the Mixer control is turned up from zero, additional resistance is placed in series with the output of the dry signal path (the cathode follower).  This additional resistance forms a low-pass RC filter with the capacitance of the cable used to connect the reverb unit to the amplifier.  The resultant filter removes high frequencies from the dry signal, and effect known as 'tone suck'. (I can run PSpice simulations to illustrate the amount of high-frequency loss in the dry signal caused by the Mixer control settings)
+
+=== Output Buffer Circuit (70's reissue only) ===
+A 4th preamp tube is added.  A cathode follower is used to isolate the Mixer output from the guitar cable/amplifier load imedance.  The goal is to prevent tonal variations (tone suck) as the Mixer control is turned up.  The buffer prevents the patch cable capacitance from interacting with the Mixer control resistance, mitigating the RC filtering effect.
+
+== Issues ==
+=== Troubleshooting ===
+- Did you unlock the reverb spring pan?
+
+- Check or replace the RCA connector cables.
+
+- Check and/or replace the tubes one by one.
+
+- Check and/or replace the pan.
+
+- Also inspect the inside of the pan. Some pans have pieces of foam on the inside to avoid spring movement when the lock is engaged. These foam pads sometimes crumble or fall off, blocking   the springs.
+
+[description of tone suck here]
+
+[description of ground loop; components added to the reissue that mitigate internal loops]
+
+=== Grounding of the Reissue-Unit ===
+A resistor (R23) places 15 ohms of resistance between audio ground and chassis/earth ground. This minimizes hum by eliminating ground loops internally and externally when connection with other units.  Two Diodes (wired back to back, CR5 & 6) across R23 provide an alternate path to earth ground if R23 opens. Source: Fender '63 Reverb Reissue Service Manual, June 1994, Rev. A.
+
+== Others ==
+Kendrick, Texotica, Gomez, etc.
+
+Kits, both tube and solid-state
+
+== Popular Modifications ==
+'''The reissue "Cap Mod":'''  One popular modification that is made (based on individual tone objectives) is to replace a capacitor (C10) which, per the Fender Service Manual (June 1994 Rev. A), "provides a slight bass roll off which is affected by the position of the Mix control in relation to the input impedance of the guitar amplifier."  The manufacturer specification calls for a 250pF capacitor in that position; the most common replacement value is 390pF, although values up to 500pF have been used to good effect depending upon the amount of "warmth" the owner may wish to restore and gaining some additional degree of range in use of the Mixer control.  A good description of this modification can be found at [[http://home.comcast.net/~rmessick2/Cap%20Mod/Cap%20Mod_Body.htm|this page]]. Based on the author of that page recovering a 270pF cap from the unit (vs. the Service Manual spec) it's clear that some tolerance exists in the manufacturing process, likely based on what values are available in terms of parts supply.
+
+== Honorable Mention (placeholders, Under Construction) ==
+The Fender amps that have a 3-knob reverb circuit (Vibro-King, Dual Professional)
+
+Modules that can be added to a combo amp.
+
+Pedals that allege to duplicate the sound of the 6G15 circuit, e.g., Boss FRV-1 & others.
+
+Popular mods/tube swaps. (Example: What is the effect of substituting a 5751 (which has 70% of the gain of a 12AX7 and a reputation for being 'smoother') for the 12AX7 given that tube position's dual-roles as both buffer & reverb return?)

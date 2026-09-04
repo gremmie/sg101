@@ -1,0 +1,89 @@
+<!-- Archived from wiki.surfguitar101.com (MoinMoin), page "BandDatabase/TheGoldentones", revision 1.
+     Lossless original: archive/wiki/moinmoin/BandDatabase(2f)TheGoldentones/revisions/00000001 -->
+
+# The Goldentones
+
+**Years active**: 1992 - 199x?   
+**Location**: Detroit, Michigan, USA
+
+## Biography
+
+Formed in the front room of a house on the east side of Detroit in 1990, the brothers Zito (Dominic-guitar Joe-bass) teamed up with local rockabilly drummer Chad Lewis to launch The Goldentones.
+
+Chad found Dominic playing a fender stratocaster through a marshall amp with a randy rhoades / ted nugent influence. Recognizing dominics talents chad introduced him to the ventures and quickly dominic was trading in his equiptment for a 1966 fender jaguar a 1970 mosrite and a fender super reverb amp.
+
+The song writing flowed like magic and they quickly became a local favorite playing most of detroits legendary music venues. In a short time they were playing with many of the bands that had influenced them, opening for the Stray Cats, the Breeders, the B-52's , Shadowy men on a Shadowy planet, Laika & The Cosmonauts and their hero Mr. Dick Dale himself.
+
+The surf revival was under way and The Goldentones found themselves at the forefront receiving airplay on hundreds of college radio stations, endless magazine reviews and write ups, fan mail from several countries. Unfortunately their star burned out as fast as it was lit.
+
+While performing at the SXSW music festival in austin texas 1995 they received a phone call 15 minutes after exiting the stage that the zito brothers dad had passed away due to a sudden heart attack. this crippling news sent the band back to detroit leaving their dreams behind.
+
+They left behind 2 full length cd recordings (Atmosphere, Atlantis) and a 7' vinyl ep (in stereo).
+
+## Band Members
+
+* Dominic Zito, lead guitar
+* Joe Zito, bass guitar
+* Chad Lewis, drums
+
+## Releases
+
+### Full Length
+
+* Atmosphere, BigMom, 1993
+  1. O.J., The World Traveler
+  2. The Loner
+  3. Junior
+  4. Holeshot
+  5. The Soul of Doom
+  6. The Ever Expanding Head
+  7. Ginger Grant
+  8. Keen Aqua Pie
+  9. Fudge
+  10. Rooftop Baby
+  11. The Greatest Story Ever Told
+  12. Miserlou
+  13. Pinball Pat (the multi-dimensional guy)
+  14. Lolly Vegas
+  15. Thats Why
+  16. Gash
+  17. Eppis (Estep)
+  18. Surf-A-Billy
+* Atlantis, BigMom, 1994
+  1. F\*FWD
+  2. Aurora
+  3. Midnight
+  4. Kalypso
+  5. Spitfire
+  6. Praying Mantis
+  7. Moon Pair
+  8. Palms Motel
+  9. Departure
+  10. Summer Vacation
+  11. Tornado Warning
+  12. Freestyle
+  13. Outbound
+  14. 1961
+
+### EP's / 7" / Singles
+
+* In Stereo, Self-Released, October 15, 1992
+  1. Junior
+  2. Lolly Vegas
+  3. Green Avalanche
+  4. Miserlou
+  5. Ode to Jim Essian
+
+### Compilations
+
+* Album 1, Record Label Name, release date
+  1. Track 1
+
+## Links
+
+* <https://thegoldentonesdetroit.bandcamp.com>
+* <https://surfguitar101.com/forums/topic/29026/>
+
+---
+
+[CategoryBands](../CategoryBands.md)

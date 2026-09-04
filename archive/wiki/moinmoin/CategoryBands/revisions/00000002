@@ -1,0 +1,13 @@
+##master-page:CategoryTemplate
+##master-date:Unknown-Date
+#format wiki
+#language en
+
+The SG101 surf band database. 
+
+'''List of pages in this category:'''
+
+<<FullSearchCached(category:CategoryBands)>>
+
+----
+CategoryCategory
