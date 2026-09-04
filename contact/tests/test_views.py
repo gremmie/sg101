@@ -129,3 +129,74 @@ class BaseTestCase(TestCase):
 
         self.assertRedirects(response, reverse('contact-thanks'))
         self.assertEqual(len(mail.outbox), 1)
+
+
+class SubjectNewlineTests(TestCase):
+    """A newline in the subject is a header injection.
+
+    Django's forbid_multi_line_headers already refuses one, but it refuses it
+    at the mail layer -- which send_mail() reaches through Celery, so the
+    rejection arrives as a task crash and an admin error report carrying the
+    whole submission, and the person who typed it is told nothing. These pin
+    the refusal to the form, where it can be answered.
+    """
+
+    def setUp(self):
+        self.url = reverse('contact-form')
+        self.post_data = {
+            'name': 'John Doe',
+            'email': 'jdoe@example.com',
+            'subject': 'Test message',
+            'message': 'Testing contact form.',
+            'cf-turnstile-response': 'a-token',
+        }
+
+    def post(self, subject):
+        self.post_data['subject'] = subject
+        with patch('contact.forms.turnstile.verify') as verify:
+            verify.return_value = TurnstileResult(TurnstileOutcome.PASSED)
+            return self.client.post(self.url, data=self.post_data, follow=True)
+
+    def assertRefused(self, subject):
+        response = self.post(subject)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertIn('line breaks',
+                      response.context['form'].errors['subject'][0])
+
+    def test_embedded_crlf_is_refused(self):
+        """The shape that arrived in production, minus the trailing newline.
+
+        Also the one case that checks the message reaches the page. The form
+        object having an error and the reader being told are different claims,
+        and only the rendered body settles the second.
+        """
+        response = self.post('Test message\r\nX-Injected: 1')
+
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertContains(response, 'Subject cannot contain line breaks')
+
+    def test_embedded_lf_is_refused(self):
+        self.assertRefused('Test\nmessage')
+
+    def test_embedded_cr_is_refused(self):
+        """A lone CR terminates no header, but it has no business here."""
+        self.assertRefused('Test\rmessage')
+
+    def test_trailing_newline_is_stripped_not_refused(self):
+        """The payload that actually arrived, which is already safe.
+
+        CharField strips it before clean_subject() ever sees it, so the subject
+        reaches the header clean and the mail goes out. That safety is a Django
+        default rather than anything this form does, which is why it is pinned
+        here: an upgrade that changed it would otherwise go unnoticed.
+        """
+        response = self.post('Test message\r\n')
+
+        self.assertRedirects(response, reverse('contact-thanks'))
+        self.assertEqual(len(mail.outbox), 1)
+        subject = mail.outbox[0].subject
+        self.assertTrue(subject.endswith('Test message'))
+        self.assertNotIn('\n', subject)
+        self.assertNotIn('\r', subject)

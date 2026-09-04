@@ -4061,7 +4061,7 @@ the three still assigned by shape rather than observed — and the standing pred
 that this class goes to zero at the Step 21 deploy, which the reading log will
 report without anyone arranging it.
 
-### OPEN 2026-09-04 — `ContactForm.subject` accepts newlines, and on the modernize branch that is a task crash rather than a form error
+### FIXED 2026-09-04 — `ContactForm.subject` refuses newlines at the form, uncommitted
 
 Found by reading the production error that turned out to be `0077E586513`. A
 contact-form submission arrived with a trailing CRLF in the subject — a header
@@ -4080,9 +4080,83 @@ and an admin error report containing the entire submission, rather than as a
 validation error the submitter sees — and that report is itself a source of
 over-long lines.
 
-**A hardening, not an emergency.** The injection is blocked either way. The fix is
-a validator on that field so the rejection happens at the form. Not done here; it
-belongs to the contact form rather than to a DMARC reading.
+**A hardening, not an emergency.** The injection is blocked either way. What was
+wrong is *where* the rejection surfaced.
+
+#### The fix: `clean_subject()`, four tests, four mutations
+
+`contact/forms.py` gains one field-level clean beside `clean_honeypot`, raising
+`forms.ValidationError` on `'\n'` or `'\r'`. Both characters rather than
+`splitlines()`: a lone CR terminates no header, but it has no business in a
+single-line field.
+
+**Two alternatives were considered and rejected**, and the reasoning is the part
+worth keeping:
+
+- **Flatten in `save()`**, copying `accounts/forms.py:247`
+  (`''.join(subject.splitlines())`). **The precedent does not transfer.** There the
+  newline comes from a template file that ends with one — known, benign, authored
+  by us. Here it is adversarial input, and flattening would silently accept an
+  injection attempt while rewriting what a member typed.
+- **Guard in `core.functions.send_mail`.** It duplicates Django's
+  `forbid_multi_line_headers`, which is already the backstop and is not going
+  anywhere — and it would still raise inside the Celery task, so it does not fix
+  the defect that was actually observed.
+
+**Scope is `subject` alone, and the boundary was measured rather than assumed.**
+`email` also reaches a header as `Reply-To`, but `EmailField` already rejects
+`"a@b.com\r\nX-Injected: 1"`. `name` and `message` reach the body only.
+`contact/views.py` reads `?subject=` into `initial`, which is re-validated on POST.
+
+| Test | Pins |
+|---|---|
+| `test_embedded_crlf_is_refused` | the production shape; **asserts the message reaches the rendered page**, not just the form object |
+| `test_embedded_lf_is_refused` | bare LF |
+| `test_embedded_cr_is_refused` | bare CR |
+| `test_trailing_newline_is_stripped_not_refused` | the payload that actually arrived, which `CharField(strip=True)` already made safe |
+
+**The RED run reproduced the production defect in the suite.** Before the fix the
+three refusal tests failed by redirecting to the thanks page — the form validated,
+`save()` ran, and the send died unseen inside eager Celery. **`mail.outbox` is
+empty in both the broken and the fixed case**, so that assertion does not
+discriminate and the tests' teeth come from the form error and the rendered body.
+A test that had asserted only "no mail was sent" would have passed against the bug.
+[[mutation-verify-or-it-is-not-coverage]]
+
+**Mutation battery — 5 of 5 caught**, each by the expected test, file restored
+byte-identical each time:
+
+| Mutation | Caught by |
+|---|---|
+| `if False:` — guard neutered | all three refusal tests |
+| drop the `'\r'` check | `test_embedded_cr_is_refused` |
+| drop the `'\n'` check | `test_embedded_lf_is_refused` |
+| reword the error message | all three refusal tests |
+| `CharField(strip=False)` | `test_trailing_newline_is_stripped_not_refused` |
+
+Dropping `'\n'` does **not** fail the CRLF test, because `\r\n` still contains a
+CR. That test is caught by either half of the condition and so discriminates
+neither; the two single-character tests are what separate them.
+
+**One mutation initially reported a false pass** — a shell-quoting slip meant the
+pattern never matched, the file was never modified, and the run printed `OK`
+against unmutated code. Caught by an assertion on the replacement count. A
+mutation that does not apply is indistinguishable from a mutation that is caught,
+which is why the count is asserted rather than the edit assumed.
+[[suspect-the-measurer-before-the-record]]
+
+**Verification:** 1,117 tests green under `docker_test`, and green again under the
+deprecation gate as a separate run. Test count 1,113 → 1,117.
+
+**Browser pass — 2026-09-04, by Brian.** Confirmed in the running stack, which is
+the only thing that can confirm it: a plain `<input type="text">` cannot carry a
+newline at all, because the HTML value-sanitization algorithm strips CR and LF —
+`input.value = 'a\nb'` is silently cleaned. The field was replaced with a
+`textarea` from the DevTools console to get the character in. **That is the finding
+the browser trip actually produced: this defect is unreachable from a browser and
+only a scripted POST can raise it**, which is consistent with the payload that
+arrived, and is why the suite is the primary evidence here rather than the
+exception.
 
 ### Rollback
 

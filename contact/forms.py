@@ -29,6 +29,16 @@ class ContactForm(forms.Form):
         self.request = kwargs.pop('request', None)
         super(ContactForm, self).__init__(*args, **kwargs)
 
+    def clean_subject(self):
+        subject = self.cleaned_data['subject']
+        # This goes out as a header, where a newline is an injection. Django
+        # refuses one too, but it does so from inside the Celery task the mail
+        # is handed to -- so the send dies out of sight and the person who
+        # typed it is told nothing. Refuse it here, where the form can answer.
+        if '\n' in subject or '\r' in subject:
+            raise forms.ValidationError('Subject cannot contain line breaks')
+        return subject
+
     def clean_honeypot(self):
         value = self.cleaned_data['honeypot']
         if value:
