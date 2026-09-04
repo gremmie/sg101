@@ -96,7 +96,7 @@ class Forum(models.Model):
     post_count = models.IntegerField(blank=True, default=0)
     last_post = models.OneToOneField(
             'Post', blank=True, null=True, related_name='parent_forum',
-            on_delete=models.CASCADE)
+            on_delete=models.SET_NULL)
 
     objects = ForumManager()
 
@@ -191,7 +191,7 @@ class Topic(models.Model):
     update_date = models.DateTimeField(db_index=True)
     last_post = models.OneToOneField(
             'Post', blank=True, null=True, related_name='parent_topic',
-            on_delete=models.CASCADE)
+            on_delete=models.SET_NULL)
 
     class Meta:
         ordering = ('-sticky', '-update_date', )
@@ -307,12 +307,6 @@ class Post(models.Model):
         if self.html is None:
             self.html = site_markup(self.body)
         super(Post, self).save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        first_post_id = self.topic.posts.all()[0].id
-        super(Post, self).delete(*args, **kwargs)
-        if self.id == first_post_id:
-            self.topic.delete()
 
     def has_been_edited(self):
         return self.update_date > self.creation_date

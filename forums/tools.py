@@ -29,7 +29,10 @@ def delete_user_posts(user):
     pending_delete = []
 
     for topic in topics:
-        if topic.last_post.pk in post_ids:
+        # A null last_post is drift rather than a state to step around: this is
+        # the branch that recomputes the counts and requeues an empty topic, so
+        # skipping it would leave the one row that was already wrong.
+        if topic.last_post is None or topic.last_post.pk in post_ids:
             topic_posts = Post.objects.filter(topic=topic).exclude(
                     pk__in=post_ids)
             topic.post_count = topic_posts.count()
@@ -44,7 +47,7 @@ def delete_user_posts(user):
                 pending_delete.append(topic)
 
     for forum in forums:
-        if forum.last_post.pk in post_ids:
+        if forum.last_post is None or forum.last_post.pk in post_ids:
             forum_posts = Post.objects.filter(topic__forum=forum).exclude(
                     pk__in=post_ids)
             forum.post_count = forum_posts.count()
