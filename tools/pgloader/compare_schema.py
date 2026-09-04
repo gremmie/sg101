@@ -47,9 +47,12 @@ from collections import OrderedDict
 
 import psycopg2
 
-# Tables that exist in the converted database and have no model behind them.
-# They come across by decision -- a conversion is not the place to prune -- so
-# the reference schema will never contain them.
+# Tables that have no model behind them. pgloader copies them across because a
+# conversion is not the place to prune, and `core.0002_drop_legacy_tables` drops
+# them afterwards -- so whether the converted database still has them depends on
+# whether migrations have run against it yet. The reference schema is built from
+# the models and never contains them either way, so filtering them out here keeps
+# this comparison honest at both moments.
 LEGACY_TABLES = {
     'auth_message',
     'core_anonlastvisit',

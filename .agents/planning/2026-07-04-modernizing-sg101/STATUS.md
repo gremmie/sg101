@@ -6845,6 +6845,85 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase B — the seven model-less tables are dropped — DONE 2026-09-04, UNCOMMITTED
+
+`core/migrations/0002_drop_legacy_tables.py`. They arrived with the MySQL→Postgres
+conversion, which copied the old database as it stood rather than pruning it, and
+nothing has ever described them in Python.
+
+| Table | Rows | What made it |
+|---|---|---|
+| `core_userlastvisit` | 540 | superseded tracking |
+| `membermap_mapentry` | 524 | `membermap`, pruned in Step 4 |
+| `core_anonlastvisit` | 472 | superseded tracking |
+| `irc_ircchannel` | 1 | an `irc` app that no longer exists |
+| `gcalendar_accesstoken` | 1 | the OAuth credential the calendar stopped using when it moved to a service account |
+| `auth_message` | 0 | Django's own, from before 1.4 |
+| `mailer_message` | 0 | a mail queue this project does not use |
+
+**1,538 rows, matching the ~1,540 the conversion recorded.** No table references any
+of them — the only foreign keys run the other way, into `auth_user` — so nothing
+depended on them and no `CASCADE` was needed. It is deliberately absent: a table
+that turns out to have a dependent should stop the migration rather than take the
+dependent with it.
+
+### Two decisions in the migration worth keeping
+
+**`DROP TABLE IF EXISTS`, because almost no database has them.** A test database, or
+any database built by running the migrations, starts from the models and contains
+none of these — verified by building one and counting: zero of seven. Without
+`IF EXISTS` the migration would fail everywhere except the single place it has work
+to do. This also means **the 1,117-test suite exercises the migration on every run**,
+which is where its real coverage comes from.
+
+**Deliberately irreversible.** Recreating seven empty tables would restore the shape
+and none of the contents, which is a worse answer than an error: the rows are still
+in the MySQL database this one was converted from.
+
+### No unit test, and the reason is that one would have no teeth
+
+A test asserting the tables are absent passes on a migrations-built database
+*without* the migration, because that database never had them. The verification
+that means anything is running it against the converted production data, which is
+what the dev database holds: **seven tables before, zero after**.
+[[mutation-verify-or-it-is-not-coverage]]
+
+### The drop closes the schema gap the conversion left
+
+`compare_schema.py` compares the converted database against one the migrations
+build. Against a freshly built reference, after the drop:
+
+| Dimension | Converted | Reference |
+|---|---|---|
+| columns | 537 | **537** |
+| foreign keys | 90 | **90** |
+| indexes | 277 | 278, the 1 difference already accepted |
+
+**One difference remains, and it is not from this work:**
+`accounts_pendingemailchange_id_seq` is a sequence not owned by its column. That
+table postdates the conversion and the migration here only drops tables. Recorded
+for Step 21 rather than chased.
+
+**A stale reference database briefly made this look worse than it was.** The first
+run reported 31 differences and exit 1 — every one of them naming
+`accounts_pendingemailchange`, `accounts_pendinguser` or `search_searchdocument`,
+all tables created by migrations that postdate the leftover `sg101_reference`
+database in the dev stack. DOCKER.md's procedure drops and rebuilds that reference
+before comparing; running it as documented cut 31 differences to 1. **None of the 31
+ever named a legacy table**, which is what said the staleness was not this work.
+[[suspect-the-measurer-before-the-record]]
+
+`compare_schema.py`'s `LEGACY_TABLES` set stays. Its comment was corrected: whether
+the converted database still holds these tables now depends on whether migrations
+have run against it, and the filter keeps the comparison honest at both moments.
+
+**Verification:** `check` clean, `makemigrations --check` clean, 1,117 tests green
+under `docker_test` and again under the deprecation gate. Live smoke against the
+converted dev database — home, forums, news, calendar, downloads, links, podcast,
+contact, member list — all 200 or an expected redirect.
+
+**Remaining in Phase B:** delete four `tools/` scripts and port `flag_data.py`.
+
 ## Step 19 Phase B — the wiki is archived and the bridge is gone — DONE 2026-09-04, UNCOMMITTED
 
 **Brian's call: shelve it.** The wiki content is copied into the repo, and MoinMoin
