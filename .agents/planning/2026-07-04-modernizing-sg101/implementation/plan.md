@@ -1238,8 +1238,30 @@ hand -- `tools/pgloader/smoke.py` does it correctly and a second script written
 without it did not. **This is latent in production**: an admin deleting the
 wrong post is all it takes. Fix is `on_delete=SET_NULL` on both fields plus a
 migration, with tests proving a post deletion no longer propagates past the
-post. Brian's call to schedule it here rather than mid-ladder, schema changes
-belonging with the other model-level work.
+post. Brian's call to schedule it here rather than mid-ladder.
+
+**Measured 2026-09-03, because this had been described as schema work and it is
+not.** `on_delete` is enforced by Django's deletion collector in Python; it never
+reaches the DDL. Both live constraints say so:
+
+```
+forums_topic   last_post_id_refs_id_a0749907   ON DELETE NO ACTION
+forums_forum   last_post_id_refs_id_e3773179   ON DELETE NO ACTION
+```
+
+**The database does not cascade at all.** And both fields are already declared
+`blank=True, null=True`, with `information_schema` agreeing that
+`last_post_id` is nullable on both tables -- so `SET_NULL`, which requires a
+nullable column, already has one. The fix is therefore a **two-word model edit
+and a state-only migration**: Django still generates an `AlterField`, because
+`on_delete` is tracked in migration state, but it emits no SQL. Phase A does no
+schema work; that is all Phase C.
+
+**A consequence worth stating, because it decides what the tests must do:**
+since the cascade lives in the collector rather than in the database, it fires on
+*any* delete that runs the collector -- `QuerySet.delete()` included. So the
+tests here have to exercise a queryset delete as well as `post.delete()`, or they
+prove `SET_NULL` only for the path that goes through the model override.
 
 **[Phase A] Also carries `Post.delete()`'s return type, found 2026-08-15** by the language
 server the Step 14 venv made usable — the first defect that tooling surfaced.
@@ -1261,6 +1283,43 @@ comment says the foreign keys are already accounted for — but it means that
 override's behavior is not guaranteed merely because a post was deleted. Given
 this project has already lost a forum to a delete path, the assumption is worth
 writing a test around rather than leaving in a comment.
+
+**Read in full 2026-09-03, and the entry above is right: it is deliberate.**
+`delete_user_posts()` says so in its own docstring — *"This function adjusts the
+last post foreign keys before deleting the posts to avoid the cascading delete
+behavior"* — and the sixty lines before that bulk delete do exactly that. It
+repoints `topic.last_post` for every affected topic, repoints and saves
+`forum.last_post` for every affected forum, defers topic deletions into
+`pending_delete` under the comment *"We can't delete it now as it could cascade
+and take out a forum"*, and only then deletes, under *"All foreign keys are
+accounted for."* **This function is guarded — it simply does the guard work
+inline instead of calling `last_post_pre_delete()`.**
+
+*(A 2026-09-03 note claimed the opposite — that this line was an unguarded live
+path into the hazard. It was wrong, and it was reached by reading the single
+quoted line rather than the function around it. Removed rather than left
+standing, since a wrong claim about a delete path is worse than no claim.)*
+
+**[Phase A] A None-guard asymmetry, found 2026-09-03 while reading the above.**
+`forums/tools.py` reaches through `last_post` without checking it:
+
+```python
+if topic.last_post.pk in post_ids:      # and, further down
+if forum.last_post.pk in post_ids:
+```
+
+`views/main.py:_delete_topic` guards the same access — `if parent_forum.last_post
+and parent_forum.last_post.topic == topic:` — so the two delete paths disagree
+about whether `last_post` can be absent. It is nullable on both models, and both
+`post_count_update()` and `last_post_pre_delete()` set it to `None` when a count
+reaches zero, so a `None` there raises `AttributeError`.
+
+**Scope of what was checked:** the asymmetry is read off the source, and the
+`None` is reachable through denormalization drift. Whether ordinary use can
+produce it was **not** established — a topic in that set has at least one of the
+user's posts, which normally implies a non-null `last_post`. Folded into Phase A
+on Brian's call rather than recorded and left, since it sits in the same function
+the phase is already opening.
 
 **[Phase C] Also carries retiring vendored `django-tagging`** (vendored during Step 13
 task 03; see `tagging/__init__.py`). 0.5.0 is the final release, upstream

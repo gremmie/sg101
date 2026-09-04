@@ -6679,6 +6679,178 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase A — the delete paths are safe — DONE 2026-09-03, UNCOMMITTED, awaiting review
+
+`forums/tests/test_delete_paths.py`, 12 tests. Suite **1,101 → 1,113**, green
+under both runs, `makemigrations --check` clean. The hazard that cost forum 3 and
+its 4,626 topics / 24,107 posts cannot fire any more.
+
+**Four changes, and one of them is a deletion nobody planned.**
+
+| File | Change |
+|---|---|
+| `forums/models.py` | `CASCADE` → `SET_NULL` on both `last_post` fields |
+| `forums/models.py` | `Post.delete()` override **removed entirely** — see below |
+| `forums/tools.py` | null guards on `topic.last_post` / `forum.last_post` |
+| `forums/migrations/0004_…` | `AlterField` ×2, and `sqlmigrate` prints `(no-op)` for both |
+
+### The tests failed by destroying the forum, which is the point
+
+Group A was written first and run under `CASCADE`: 3 failures and 2 errors, the
+errors being `Forum.DoesNotExist` raised while *reloading* the forum the test had
+just deleted a post from. The fault reproduced itself rather than being argued
+for. After `SET_NULL`, 4 of 5 passed — and the fifth found something.
+
+### `Post.delete()`'s topic rule had never once run
+
+```python
+first_post_id = self.topic.posts.all()[0].id
+super(Post, self).delete(*args, **kwargs)
+if self.id == first_post_id:      # self.id is None by now
+    self.topic.delete()
+```
+
+**Django nulls the instance's primary key during `delete()`**, so the comparison
+is always False. Measured on this exact model: `p.id = 1` before,
+`first_post_id = 1`, `p.id = None` after, comparison `False`.
+
+**The cascade was standing in for it, which is why nobody noticed.** Deleting a
+topic's only post meant deleting the post `Topic.last_post` pointed at, so the
+topic vanished by cascade and the dead branch looked alive — while the same
+cascade took the forum. For a *multi-post* topic the masking never applied, so
+that half has been visibly wrong for years: deleting the opening post of a thread
+leaves the thread. Removing the cascade is what exposed it.
+
+**And the real path never used it.** `forums/views/main.py:491` decides
+explicitly, on a *different* rule — `delete_single_post()` routes on **sole
+post** (`post_count == 1 and post == topic.last_post`), where the override tested
+**first post**.
+
+**DECIDED (Brian, 2026-09-03): delete the block, do not repair it.** Repairing it
+— capturing `self.id` before the super call — would *introduce* a destructive
+behaviour that has never actually run: deleting the first post of a 200-reply
+thread would silently delete the thread. That is shipping a new hazard, not
+restoring an intended one. With the block gone the override was a pure
+pass-through, so the whole method went; `Model.delete()` already returns the
+`tuple[int, dict]` that the original item asked for.
+
+**This dissolved a question the plan was going to ask** — what the return value
+should report when the topic is also deleted. There is no second delete to
+account for.
+
+### The pointer heals itself, so the tests assert the new value
+
+`forums/receivers.py:on_post_delete` recomputes `last_post` on both the topic and
+the forum after a post goes. Django's collector applies `SET_NULL` *before*
+deleting rows and *before* sending `post_delete`, so the sequence is: null the
+pointer, delete the row, recompute from the survivors. **Surviving is not the
+assertion — being repointed at the previous post is.**
+
+`last_post_pre_delete()` is untouched and stays the normal path. It repoints
+before; the receiver repoints after.
+
+### One worry that turned out to be already handled
+
+`sg101/templates/forums/last_post_info.html` has always branched
+`{% if post %}…{% else %}<i>No posts</i>{% endif %}`, so a null pointer renders
+"No posts" on the forum index. That earned an assertion rather than a fix.
+
+### The null-guard asymmetry, fixed
+
+`forums/tools.py` reached through `last_post` unguarded where
+`views/main.py:_delete_topic` guards the same access. Both loops now read
+`if X.last_post is None or X.last_post.pk in post_ids:` — **treating null as
+drift to repair rather than a state to step around**, since that branch is
+exactly the code that recomputes counts and requeues an emptied topic. Guarding
+with `and` instead would have skipped the one row that was already wrong.
+
+### Mutation battery — 12 behaviours, 12 caught, but one needed two mutations
+
+Eleven fell to a single mutation each. The twelfth survived and was worth
+chasing: setting `forum.last_post = None` inside `delete_user_posts` left the
+test green, and so did neutering the `post_delete` receiver — **each alone**.
+
+**Neither mutation reproduced a fault, because the two mechanisms are
+independent and either suffices.** `tools.py` repoints before the delete; the
+receiver recomputes after it. Breaking both at once fails the assertion
+(`AssertionError: None != <Post: theirs>`), so the test has teeth and the
+behaviour simply has two guarantors. Consequence worth recording: **after
+`SET_NULL`, `tools.py`'s inline repointing is no longer load-bearing** — it is
+belt-and-braces, like `last_post_pre_delete()`. It was left in place.
+
+That is the third time this project has met a mutation that did not reproduce its
+fault, and the second in two days.
+
+## Step 19 Phase A — corrected before it started: it is not schema work (2026-09-03)
+
+**Phase A had been described as schema changes, and it is not.** The framing came
+from the entry that scheduled the `last_post` fix — *"schema changes belonging
+with the other model-level work"* — and it survived into the phase table
+unexamined until Brian asked why Phase A was a schema migration. It is not.
+Corrected at source in `plan.md`, which is where the item detail lives.
+
+**`on_delete` never reaches the DDL.** Django enforces it in the deletion
+collector, in Python. The live constraints say so:
+
+```
+forums_topic   last_post_id_refs_id_a0749907   ON DELETE NO ACTION
+forums_forum   last_post_id_refs_id_e3773179   ON DELETE NO ACTION
+```
+
+The database does not cascade at all. And both fields are already
+`blank=True, null=True`, with `information_schema` confirming `last_post_id` is
+nullable on both tables — so `SET_NULL`, which needs a nullable column, already
+has one. **The fix is a two-word model edit and a state-only migration**: Django
+still generates an `AlterField`, `on_delete` being tracked in migration state,
+but it emits no SQL. All of Step 19's schema work is in Phase C.
+
+### What the cascade living in the collector does and does not imply
+
+It fires on **any** delete that runs the collector, `QuerySet.delete()` included.
+Consequence for Phase A: the tests have to exercise a queryset delete as well as
+`post.delete()`, or they prove `SET_NULL` only for the path that goes through the
+model override.
+
+**A claim written here on 2026-09-03 went further than that and was wrong.** It
+said `forums/tools.py:71` was therefore an unguarded live application path into
+the hazard. Retracted the same day, on reading the function rather than the line:
+`delete_user_posts()` **is** guarded, and says so in its docstring — *"This
+function adjusts the last post foreign keys before deleting the posts to avoid
+the cascading delete behavior."* The sixty lines before its bulk delete repoint
+`topic.last_post` and `forum.last_post`, defer topic deletions into
+`pending_delete` explicitly *"as it could cascade and take out a forum"*, and
+close with *"All foreign keys are accounted for."* It does the guard work inline
+instead of calling `last_post_pre_delete()`.
+
+**How the wrong claim was reached, since that is the reusable part:** the plan
+entry quotes exactly one line of that function, and the reasoning was done on the
+quoted line plus general knowledge of queryset-delete semantics, without opening
+the file. The entry's own verdict — *"It reads as deliberate"* — was correct, and
+was overwritten by a worse one. **Suspect the measurer before the record applies
+to a record you are about to improve, not only to one you are about to trust.**
+
+### A None-guard asymmetry, found by reading it properly — folded into Phase A
+
+`forums/tools.py` reaches through `last_post` unguarded (`topic.last_post.pk`,
+`forum.last_post.pk`) while `views/main.py:_delete_topic` guards the same access
+(`if parent_forum.last_post and ...`). The field is nullable on both models and
+is set to `None` whenever a count reaches zero, so a `None` there is an
+`AttributeError`.
+
+**Stated to the limit of what was checked:** the asymmetry is read off the source
+and the `None` is reachable through denormalization drift. Whether ordinary use
+can produce it was not established — a topic in that set has at least one of the
+user's posts, which normally implies a non-null `last_post`. Brian's call to fold
+it into Phase A rather than record and defer, since the phase already opens that
+function.
+
+### One worry removed: `SET_NULL` has no rendering surprise
+
+`sg101/templates/forums/last_post_info.html` already branches on it —
+`{% if post %}…{% else %}<i>No posts</i>{% endif %}` — so a NULL `last_post`
+renders "No posts" on the forum index and topic lists today. That earns an
+assertion in Phase A's tests, not a fix.
+
 ## Step 19 Phase 0 — the six decisions — DONE 2026-09-03
 
 All six questions answered in one sitting, asked one at a time at Brian's
