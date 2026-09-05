@@ -4769,6 +4769,10 @@ Nothing here was forgotten; each has a destination.
   came across deliberately: conversion is not the place to prune.
 - **The 12 duplicate-email account pairs → Step 19** (data hygiene; note the trap
   that a naive uniqueness check locks those 26 members out of profile edits).
+  *(Corrected 2026-09-05: **13** pairs. Migration `0003` turned the case-variant
+  group into a byte-identical one rather than removing it, so the 26 was right and
+  the 12 was not. Re-measurement and per-pair activity in
+  `research/collation-audit.md`.)*
 - **`bio_tags.flag_icon` leaves `name` unbound on an unrecognised country code**
   — a latent crash on either engine, masked because `''` is falsy. Not scheduled;
   fix when someone is next in that file.
@@ -5152,7 +5156,8 @@ plan.md; note the trap that a naive uniqueness check would lock the 26 existing
 duplicate-pair members out of saving any profile edit.
 
 **Carried forward:** the 12 duplicate-address account pairs are data hygiene
-for Step 19. `detailed-design.md` and `database-migration.md` both still say
+for Step 19. *(Corrected 2026-09-05: 13 pairs — see
+`research/collation-audit.md`.)* `detailed-design.md` and `database-migration.md` both still say
 "add `CITEXT`" — superseded by the deprecation finding, correct at close-out.
 `AGENTS.md` at the repo root is badly stale (Python 2, Django 1.8, Mercurial,
 `custom_search`).

@@ -1154,7 +1154,7 @@ internal: phases inside the step, which is an idiom this plan already uses.
 | **0 — Decide** ✅ **DONE 2026-09-03** | Six questions, all answered — see the decision record in `STATUS.md` | No code. Every open question answered and recorded. It closed three items outright. |
 | **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
 | **B — Prune** ✅ **DONE 2026-09-05** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
-| **C — Schema and data migrations** | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 12 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
+| **C — Schema and data migrations** | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 13 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
 | **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; replace `repoze.timeago` with `django.utils.timesince`; **then** the linter/formatter, last | Independent one-diff items. |
 
 **Closed by Phase 0, no work carried:** the ORDER BY collation (decision recorded,
@@ -1220,7 +1220,7 @@ reader of this file cannot find, and they live in
 | Item | Phase | Where the detail is |
 |---|---|---|
 | The 7 model-less legacy tables (~1,540 rows, `gcalendar_accesstoken` among them) | B | Step 11 task 04's carried-forward list |
-| The 12 duplicate-email account pairs — **trap: a naive uniqueness check locks those 26 members out of profile edits** | C | same list |
+| The 13 duplicate-email account pairs — **trap: a naive uniqueness check locks those 26 members out of profile edits** | C | same list, but the live detail is `research/collation-audit.md`: **re-measured 2026-09-05 as 13 pairs, not 12** (migration `0003` converted the case variant into a duplicate rather than removing it), with each pair's activity — two already half-deactivated, one with both accounts used this year |
 | `repoze.timeago` — **DECIDED 2026-09-03: replace with `django.utils.timesince`**, which is already in the stack, so this is a deletion rather than a swap. Restyles every forum listing; see the decision record for the measured comparison. **While in there:** `sg101/templates/fixed/colophon.html:17` credits it with a PyPI link, on a live page | D | Step 14's carried-forward section, including the 2026-08-15 correction |
 | Pick a linter, possibly a formatter — **deferred three times**, and the "a reformat would bury the migration" objection expired with Step 14 | D, last | Step 15's notes |
 

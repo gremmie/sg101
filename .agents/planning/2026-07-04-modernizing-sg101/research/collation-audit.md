@@ -94,7 +94,7 @@ a wrong first answer here until `BINARY` was forced.
 | **username case-collision groups** | **0** |
 | emails containing uppercase | 1,043 |
 | `auth_user.email` collision groups (CI) | 13 |
-| — byte-identical duplicates | **12** |
+| — byte-identical duplicates | **12** *(13 after `0003` — see below)* |
 | — differing **only** by case | **1** |
 | blank emails | 4 |
 | `accounts_pendinguser` / `illegalusername` / `illegalemail` | 1 / 4 / 0 rows, no collisions |
@@ -132,6 +132,52 @@ One group was a true case variant, normalized by
 id 2373  SurfBeat  member03@example.com   is_active=0
 id 2947  Joey      member03@example.com   is_active=1   -> lowercased
 ```
+
+### Re-measured 2026-09-05 on the converted database — it is **13 pairs**, not 12
+
+The figures above are correct as measured, and they were measured *before*
+`accounts/0003_normalize_case_variant_emails` ran. **That migration did not remove
+the thirteenth group — it converted it.** Lowercasing `member03@example.com`
+made `SurfBeat` and `Joey` byte-identical, so the case variant became a duplicate
+pair of exactly the same kind as the other twelve.
+
+Measured against the running PostgreSQL, `GROUP BY email HAVING count(*) > 1` on
+15,227 users: **13 groups, 26 accounts, every group of size 2, all byte-identical.**
+So the "26 members" in the trap note downstream has been right all along, and every
+"12 pairs" that contradicts it is the stale half of the pair of numbers.
+
+### The 26 accounts, with the activity that bears on resolving them
+
+Recorded because the item has always carried the *count* and never the *shape*, and
+the shape is what decides whether "delete one" is a decision or a judgement call.
+
+| Address | Account A | Account B | Reads as |
+|---|---|---|---|
+| `member11@example.com` | `alphaking` 6981, active, 2022-06-17 | `alphaking1` 13092, **inactive**, 2022-05-16 | already resolved by deactivation |
+| `member03@example.com` | `SurfBeat` 2373, **inactive**, 2019-03-18 | `Joey` 2947, active, 2016-09-22 | already resolved by deactivation |
+| `member05@example.com` | `mudbone99` 4769, 2011-03-07 | `LouSeefer` 5898, 2012-04-05 | A never returned after joining |
+| `member12@example.com` | `Turnip` 142, 2024-11-07 | `Turnip_Returns` 14260, 2024-04-19 | B never returned after joining |
+| `member08@example.com` | `kinghawaii` 892, 2023-07-21 | `kinghawaii50` 1279, 2007-10-20 | B abandoned in 2007 |
+| `member04@example.com` | `guitarbrad` 379, 2006-07-05 | `knucklesnuclear` 5180, 2016-06-06 | A abandoned in 2006 |
+| `member01@example.com` | `Drippy` 3111, 2011-08-13 | `Hydronaught` 3566, 2013-08-19 | both long dormant |
+| `member10@example.com` | `UnmannedBassPlayer` 2592, 2010-03-18 | `SpitfireMkI` 4053, 2015-03-01 | both long dormant |
+| `member09@example.com` | `TastyGrog` 3757, 2017-07-11 | `NothingDies…` 4045, 2020-01-04 | both long dormant |
+| `member06@example.com` | `MajorReverb` 2922, 2012-02-08 | `Admiral_Fishwich` 4456, 2024-01-20 | B still current |
+| `member02@example.com` | `JesterR` 7707, 2013-09-29 | `Jester` 10107, 2025-04-08 | B still current |
+| `member07@example.com` | `scoot` 540, 2016-08-07 | `sdubose` 1114, **2026-03-15** | B currently active |
+| `member13@example.com` | `terma_reverb` 6177, **2026-05-31** | `ymastorak` 11446, **2025-07-21** | **both currently active** |
+
+Dates are `last_login`. Two pairs are already half-deactivated and need no member
+contacted; three more have a half that logged in once and never came back. **The
+hard case is `member13@example.com`, where both accounts have been used this year**,
+and `member12@example.com` and `member07@example.com` are the next hardest — one
+live account each, with forum history behind the other.
+
+**No resolution is decided.** Merge, deactivate one side, blank one address, or
+leave the data and guard only in the form — the record has never chosen, and the
+choice edits real members' accounts, so it belongs to a decision sitting rather
+than to a cleanup. What the shape above establishes is that a single blanket rule
+will not fit all thirteen. [[measure-before-recording-in-planning-docs]]
 
 ## Decisions
 
