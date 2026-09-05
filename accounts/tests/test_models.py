@@ -1,6 +1,7 @@
 """
 Tests for accounts.models -- registration-key generation, the
-case-insensitive uniqueness of usernames, and pending email address changes.
+case-insensitive uniqueness of usernames and addresses, and pending email
+address changes.
 
 The registration key is a CSPRNG token from accounts.utils. These lock in
 its shape at the point registration actually mints one, so a change to the
@@ -68,6 +69,41 @@ class UsernameUniquenessTests(TestCase):
         User.objects.create_user('brianneal2', 'other@example.com', 'pw')
 
         self.assertEqual(User.objects.count(), 2)
+
+
+class EmailUniquenessTests(TestCase):
+    """An address belongs to one account, regardless of case -- except a blank.
+
+    The same argument as for usernames: the registration and profile forms both
+    reject an address another account holds, and neither is the only way a user
+    is written. The partial functional index on LOWER(email) states it where the
+    admin and a shell cannot go around it.
+
+    Blank is the deliberate exception. Anonymous, which absorbed the posts of
+    every user deleted under the site's phpBB predecessor, must never carry an
+    address, and it is not the only account holding none.
+
+    """
+
+    def test_case_variant_email_is_rejected(self):
+        User.objects.create_user('one', 'shared@example.com', 'pw')
+
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                User.objects.create_user('two', 'Shared@Example.com', 'pw')
+
+    def test_distinct_emails_are_still_allowed(self):
+        User.objects.create_user('one', 'one@example.com', 'pw')
+        User.objects.create_user('two', 'two@example.com', 'pw')
+
+        self.assertEqual(User.objects.count(), 2)
+
+    def test_any_number_of_accounts_may_hold_no_address(self):
+        User.objects.create_user('one', '', 'pw')
+        User.objects.create_user('two', '', 'pw')
+        User.objects.create_user('three', '', 'pw')
+
+        self.assertEqual(User.objects.filter(email='').count(), 3)
 
 
 class PendingEmailChangeTests(TestCase):

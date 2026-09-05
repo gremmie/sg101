@@ -1,14 +1,20 @@
 """Lowercase the addresses that collide with another account only by case.
 
-Thirteen addresses in the production database are held by two accounts each.
-Twelve of those pairs are byte-identical -- two accounts genuinely sharing an
-address, which predates this work and is left alone. One pair differs only in
-capitalisation, so MySQL considers it a single address and Postgres would
-consider it two. Folding it removes the last place where the two engines
-disagree about who owns an address.
+Some addresses are held by more than one account. Most such groups are
+byte-identical -- accounts genuinely sharing an address, which predates this
+work and is left alone here. A group differing only in capitalisation is a
+different thing: MySQL considers it one address and Postgres considers it two,
+so folding it removes the last place where the two engines disagree about who
+owns an address.
 
-Only rows inside such a pair are touched. The other thousand-odd addresses
-carrying uppercase are not collisions, and the case-insensitive lookups handle
+Note what that does to the groups that follow. Folding a case variant makes its
+group byte-identical too, so this migration leaves *more* genuinely-shared
+addresses than it found -- clearing those is 0008's job, not this one's. An
+earlier version of this docstring counted the groups it inherited, which read
+ever after as a count of what it left behind, and cost real time to untangle.
+
+Only rows inside such a group are touched. Addresses carrying uppercase that
+collide with nothing are not collisions, and the case-insensitive lookups handle
 them.
 """
 from collections import defaultdict

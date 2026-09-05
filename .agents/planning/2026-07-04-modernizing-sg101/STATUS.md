@@ -3300,6 +3300,31 @@ would have meant changing something the task forbids.** Corrected the criterion
 rather than the code, and recorded why. `wiki/middleware.py` stays untouched
 deliberately; Step 19 deletes that app, so fixing it is work thrown away.
 
+### Counts came out of the shipped code, including one that was already wrong
+
+Brian's review caught comments like *"thirteen addresses in this database"* as
+stale-prone, and he was right in a way that had already bitten: the test module
+docstring said the migration "has to clear twelve of them", when it clears
+thirteen — the byte-identical figure carried across, two turns after the same
+confusion had been untangled. Ten count-claims removed across five files;
+comments now describe shape (*"an address held by more than one account"*) and
+the numbers stay in this file and `research/collation-audit.md`, which are dated
+records where a figure is the point.
+
+`0008`'s docstring gained the reason rather than just losing the count:
+
+> The groups are computed rather than listed. The database this runs against is
+> not the one it was written against: a snapshot taken later may hold a group
+> this author never saw, and listing today's would silently skip it.
+
+**`0003`'s docstring is rewritten too**, since it is where this started —
+*"Thirteen addresses... Twelve of those pairs are byte-identical"* described the
+state it inherited and read ever after as the state it left. It now says plainly
+that folding a case variant makes its group byte-identical, so it leaves *more*
+genuinely-shared addresses than it found, and names the earlier wording as the
+thing that cost time. Editing an applied migration's docstring is safe; Django
+does not hash migration files. [[measure-before-recording-in-planning-docs]]
+
 ### Verification
 
 877 green under `docker_test` and under the deprecation gate; `check` and
@@ -6897,6 +6922,119 @@ cutover, not to the idea.
 **Knock-on:** Step 20's guidance said "R2 media", which is now wrong twice over —
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
+
+## Step 19 Phase C task 01 — an address has one owner, and the thirteen pairs are cleared
+
+**Committed and pushed 2026-09-05.** *(No hash, and the state is in the body
+rather than the heading. Both deliberate. The 2026-09-04 sweep found eight
+headings still claiming `UNCOMMITTED` for pushed work, and a heading is the line
+nobody re-reads — but the fix that sweep prescribed, naming the commit, cannot
+be applied by the commit to itself: stamping a hash and amending changes the
+hash. It works when a later commit names an earlier one. `git log --
+<path>` finds this one.)*
+
+`accounts/migrations/0008_auth_user_email_lower_unique.py` blanks the losing
+address in every duplicate group and creates
+`UNIQUE (LOWER(email)) WHERE email <> ''`, in that order, in one migration.
+Decision record: *Step 19 Phase C — the duplicate-email pairs, DECIDED
+2026-09-05*.
+
+### Verified on a freshly converted production snapshot, which is the real gate
+
+`MYSQL_DB=sg101_pristine PG_DB=sg101_rehearsal tools/pgloader/convert.sh`, then
+`post_convert.py` against that target. **`PG_DB` must be overridden** — it
+defaults to `DB_NAME`, so an unqualified run drops and recreates the working
+database.
+
+The pristine snapshot reproduced the 12-vs-13 story exactly, which is the first
+time it has been observed rather than reasoned about:
+
+| On the pristine pre-conversion data | |
+|---|---|
+| byte-identical duplicate groups | **12** |
+| case-insensitive duplicate groups | **13** |
+
+`0003` folds the case variant on its way past, and that is what makes the
+thirteenth byte-identical. After the chain:
+
+| After `post_convert.py` | |
+|---|---|
+| remaining duplicate groups | **0** |
+| rows blanked | **13** |
+| blank-address accounts | 4 → **17** |
+| total users | 15,227, unchanged |
+| index present | yes |
+| **all 13 keepers** | **match the decided table exactly** |
+| second pass would blank | **0 rows** — idempotent on real data |
+| posts still on the blanked accounts | **55**, untouched |
+| blanked accounts deactivated | **none** — 12 active, 1 already inactive |
+
+### The suite found the real consequence, and it was not the 13 rows
+
+Adding the index broke **29 existing tests**, all from one cause: three places
+build "one address, two accounts", which the index makes unrepresentable.
+
+| Where | Errors | Why it existed |
+|---|---|---|
+| `RegistrationTest.setUp` | 27 | a second account on one address, so the duplicate check met more than one match |
+| `ForgotUsernameTest.test_email_shared_by_two_accounts` | 1 | pins the multi-match listing; a 500 before the lookup stopped calling `get()` |
+| `bio` `test_member_sharing_an_address_can_still_save` | 1 | **the trap test itself** |
+
+**The point worth keeping: after this migration the trap cannot occur.**
+`EditUserForm.clean_email`'s early return protects nobody, `ForgotUsernameForm`'s
+multi-match handling can never fire, and registration's `.count()` can never see
+two. All three stay — they are still correct, and the state is still reachable
+from a backup taken before the index and on MySQL, which does not get it — but
+their tests can no longer build the world they assert about.
+
+Resolved on Brian's call: `RegistrationTest.setUp` drops its second account,
+which those 27 tests never needed. The other two keep their coverage by dropping
+the index inside their own transaction and letting the rollback restore it.
+
+### Tests, and what the battery taught
+
+The task's acceptance criteria were **amended before any code was written**, on
+Brian's challenge that migrations mostly do not need tests. He is right: a
+migration is append-only, so a test guards a regression that cannot happen, and
+the snapshot rehearsal is stronger evidence than a unit test. What is kept is
+narrow — the branches production data cannot reach (a never-logged-in account, an
+exact tie, a group of three), because the rehearsal is blind to them.
+
+**The index guarantee is tested, and that reversed an earlier judgement of mine.**
+I claimed neither `0002` nor `0003` had any coverage. `0002`'s does — as
+`UsernameUniquenessTests` in `accounts/tests/test_models.py`, which never names
+the index, so a grep for the index name missed it. Its docstring makes the case
+this project had already settled: the assertion is not about PostgreSQL, it is
+about the guarantee holding on every engine, by a different mechanism on each.
+`EmailUniquenessTests` now mirrors it, plus the blank case that has no username
+equivalent. [[search-the-artifacts-before-claiming-new]]
+
+**Ten mutations, all caught, file restored byte-identical.** Two rounds, because
+the first found two problems that were not in the tests:
+
+- **A mutation that changed nothing.** Removing `last_login is not None` from the
+  ranking key did not fail anything — and could not, because `last_login or
+  _NEVER` already partitions the same way and `_NEVER` sorts below every real
+  timestamp. **The term was redundant**, and the battery is what found it. It is
+  gone.
+- **A mutation aimed at the wrong test.** `len(members) < 2` → `< 3` skips
+  *two*-member groups, which the three-member test never exercises, so its
+  passing proved nothing. Replaced by a mutation that blanks only the first
+  non-keeper — which the three-member test does catch — and the original paired
+  with a two-member test, which catches it. [[mutation-verify-or-it-is-not-coverage]]
+
+### Verification
+
+- Suite: **1,129 tests, OK**
+- Deprecation gate: **1,129 tests, OK**
+- `makemigrations --check --dry-run`: no changes detected
+- `tools/pg_snapshot.sh dump before-0008-rehearsal` taken first, 129 MB
+
+### Left behind deliberately
+
+`sg101_rehearsal` still exists in the Postgres service, holding the converted
+snapshot with `0008` applied. It costs nothing and is the artifact any re-check
+would want; dropping it is a one-liner whenever it stops being useful.
 
 ## Step 19 Phase C — the duplicate-email pairs, DECIDED 2026-09-05
 

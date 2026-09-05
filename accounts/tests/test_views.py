@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import check_password
+from django.db import connection
 from django.conf import settings
 from django.utils import timezone
 
@@ -24,15 +25,32 @@ from accounts.utils import make_confirmation_token
 from antispam.turnstile import TurnstileOutcome, TurnstileResult
 
 
+
+def suspend_email_uniqueness():
+    """Drop the LOWER(email) unique index for the rest of this transaction.
+
+    For tests that have to build two accounts on one address to prove the code
+    handling that state still works. A TestCase rolls back, which restores the
+    index; nothing outside the test sees it gone.
+
+    """
+    if connection.vendor == 'mysql':
+        return
+
+    with connection.cursor() as cursor:
+        cursor.execute('DROP INDEX IF EXISTS auth_user_email_lower_uniq')
+
+
 class RegistrationTest(TestCase):
 
     def setUp(self):
         u = User.objects.create_user('existing_user', 'existing_user@example.com', 'pw')
         u.save()
 
-        # a 2nd user has the same email as another
-        u = User.objects.create_user('existing_user2', 'existing_user@example.com', 'pw')
-        u.save()
+        # A second account on the same address used to sit here, so that the
+        # duplicate check was exercised against more than one match. The unique
+        # index on LOWER(email) forbids that row now, and the tests below never
+        # needed it: one existing account is enough to be rejected by.
 
         PendingUser.objects.create(username='pending_user',
             email='pending_user@example.com',
@@ -621,12 +639,18 @@ class ForgotUsernameTest(TestCase):
     def test_email_shared_by_two_accounts(self):
         """Two accounts on one address get one email listing both usernames.
 
-        Some addresses in the production database are held by more than one
-        account, so this is reachable in the wild -- and was a 500 before the
-        lookup stopped assuming a single match. Whoever reads the mailbox owns
-        all of them, so naming only one would leave them stuck on the rest.
+        No address in this database is held twice any more -- the unique index
+        on LOWER(email) forbids it, and the accounts that were sharing one have
+        been cleared. The lookup still refuses to assume a single match, and
+        this still tests it, because the state is reachable by other routes: a
+        restored backup from before the index, and MySQL, which does not get the
+        index at all. It was a 500 before the lookup stopped calling get().
+
+        The index is dropped inside this test's transaction and comes back with
+        the rollback.
 
         """
+        suspend_email_uniqueness()
         u = User.objects.create_user('second_user', 'existing_user@example.com',
                                      'pw')
         u.save()

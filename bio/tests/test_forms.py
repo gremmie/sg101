@@ -7,6 +7,7 @@ from io import BytesIO
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase
 from django.utils import timezone
 from PIL import Image
@@ -18,6 +19,20 @@ from bio.forms import EditUserProfileForm
 from bio.forms import SearchUsersForm
 from bio.forms import UploadAvatarForm
 from core.tests.images.imagemakers import jpeg_bytes, png_bytes
+
+
+def _suspend_email_uniqueness():
+    """Drop the LOWER(email) unique index for the rest of this transaction.
+
+    A TestCase rolls back, which restores it; nothing outside the test sees it
+    gone.
+
+    """
+    if connection.vendor == 'mysql':
+        return
+
+    with connection.cursor() as cursor:
+        cursor.execute('DROP INDEX IF EXISTS auth_user_email_lower_uniq')
 
 
 class EditUserProfileFormTestCase(TestCase):
@@ -155,11 +170,16 @@ class EditUserFormTestCase(TestCase):
     """Validation on the email field of the profile edit form.
 
     The constraint that shapes every test here: some addresses in the
-    production database are held by more than one account. A uniqueness check
-    that ran on every submission would lock every one of those members out of
+    production database were held by more than one account. A uniqueness check
+    that ran on every submission would lock every member in that position out of
     saving any profile edit at all, forever, including edits that never touch
     the email field. So the check must fire only when the address actually
     changes.
+
+    Those pairs have since been cleared and a unique index keeps new ones from
+    forming, so the state is no longer reachable through the site -- but the
+    guard is still the right shape, and the test below builds the state by hand
+    to prove it.
 
     """
 
@@ -230,14 +250,21 @@ class EditUserFormTestCase(TestCase):
     def test_member_sharing_an_address_can_still_save(self):
         """The regression a naive uniqueness check invites.
 
-        This is the specific test the task called for: a member who shares an
-        address with another account, saving an edit that does not touch the
-        email field at all. Against an implementation that runs the uniqueness
-        check unconditionally -- exclude(pk=self.instance.pk) and nothing else
-        -- this fails, and every member in that position can never save a
-        profile edit again.
+        A member who shares an address with another account, saving an edit
+        that does not touch the email field at all. Against an implementation
+        that runs the uniqueness check unconditionally -- exclude(pk=
+        self.instance.pk) and nothing else -- this fails, and every member in
+        that position can never save a profile edit again.
+
+        Members were in that position when this guard was written. The
+        unique index on LOWER(email) has since made the state unreachable
+        through the site, so the test builds it by dropping the index for the
+        duration of its own transaction. The guard is kept because the state is
+        not unreachable everywhere -- a backup restored from before the index,
+        and MySQL, which does not carry it.
 
         """
+        _suspend_email_uniqueness()
         twin = User.objects.create_user('twin', 'paul@example.com', 'pw')
 
         form = EditUserForm(self.post_data('paul@example.com'), instance=twin)

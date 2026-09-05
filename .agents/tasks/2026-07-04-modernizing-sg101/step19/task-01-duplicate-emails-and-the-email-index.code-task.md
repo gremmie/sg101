@@ -181,6 +181,23 @@ implementation. Read additional references as needed for context.
 
 ## Acceptance Criteria
 
+**Amended 2026-09-05, on Brian's challenge: migrations mostly do not need
+tests.** A migration runs once per database and is append-only, so a test guards
+a regression that structurally cannot happen — and `0002` and `0003` both shipped
+untested, with `0003`'s effect visible in the production data today, which is
+better evidence than a unit test. **The primary gate here is criterion 9**, the
+rehearsal on a freshly converted snapshot, because it exercises the rule against
+13 real groups and can assert every keeper against the decided table.
+
+Tests are kept for exactly one thing: **the branches the production data cannot
+reach** — a null `last_login`, an exact tie, a group of three. Those exist only
+to serve a fourteenth pair appearing in the cutover snapshot, which is the same
+risk the compute-don't-hardcode requirement addresses. Their value is getting the
+rule right before it touches a snapshot, not regression protection.
+
+Criteria 3 and 4 were originally written as unit tests and are not. Asserting
+that a PostgreSQL unique index rejects a duplicate is testing PostgreSQL.
+
 1. **The pairs are cleared by the stated rule**
    - Given a database holding the 13 duplicate groups
    - When the migration runs
@@ -193,31 +210,36 @@ implementation. Read additional references as needed for context.
    - Then its `is_active`, its posts, its topics and its profile are untouched,
      and it can still authenticate
 
-3. **The index exists and enforces case-insensitive uniqueness**
+3. **The index exists and enforces case-insensitive uniqueness** *(verified on
+   the converted snapshot and by the migration applying at all, not by a unit
+   test)*
    - Given the migration has run on PostgreSQL
    - When a second account is given an address another account already holds, in
      any combination of case, by the admin or the shell
    - Then the write fails on `auth_user_email_lower_uniq`
 
-4. **Blank addresses remain legal, without limit**
+4. **Blank addresses remain legal, without limit** *(the suite is the evidence —
+   most of its 165 `create_user()` calls pass `''`, so a predicate that did not
+   exempt blanks would fail the suite loudly)*
    - Given `Anonymous` and the three other blank-address accounts
    - When the index is in place
    - Then all four coexist, and a fifth account may also be blanked
 
-5. **Tie-breaks behave as specified**
+5. **Tie-breaks behave as specified** *(unit-tested — production has no such
+   group, so the rehearsal is blind to this)*
    - Given a group where one account has a null `last_login`, and a group where
      two are exactly equal
-   - When the migration runs
+   - When the resolution rule runs
    - Then the null loses, and the equal case is settled by lowest `id`
 
-6. **A group of three is handled**
+6. **A group of three is handled** *(unit-tested, same reason)*
    - Given three accounts sharing one address
-   - When the migration runs
+   - When the resolution rule runs
    - Then one keeps it and two are blanked
 
-7. **Idempotent**
-   - Given the migration has already run
-   - When it is run again against the same database
+7. **Idempotent** *(unit-tested)*
+   - Given the rule has already run
+   - When it is run again against the same rows
    - Then no row changes and no error is raised
 
 8. **MySQL is guarded**
@@ -238,12 +260,15 @@ implementation. Read additional references as needed for context.
     - Then it either restores the addresses or refuses with a stated reason, and
       the choice is explained in the docstring
 
-11. **The suite is green and the tests are mutation-verified**
-    - Given the full test suite under the deprecation gate on `docker_test`
-    - When it is run in the container
-    - Then it passes, and each new assertion has been observed to fail against a
-      deliberate mutation — in particular, reversing the keeper rule must break a
-      test
+11. **The suite is green, and the rule's tests are mutation-verified**
+    - Given the full test suite, and separately the deprecation gate, on
+      `docker_test`
+    - When each is run in the container
+    - Then both pass — this also checks that the new index does not break the 165
+      existing `create_user()` calls, which is a separate question from whether
+      the migration is correct — and each new assertion about the rule has been
+      observed to fail against a deliberate mutation, reversing the keeper rule
+      included
 
 ## Metadata
 - **Complexity**: Medium
