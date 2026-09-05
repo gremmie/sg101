@@ -1154,7 +1154,7 @@ internal: phases inside the step, which is an idiom this plan already uses.
 | **0 — Decide** ✅ **DONE 2026-09-03** | Six questions, all answered — see the decision record in `STATUS.md` | No code. Every open question answered and recorded. It closed three items outright. |
 | **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
 | **B — Prune** ✅ **DONE 2026-09-05** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
-| **C — Schema and data migrations** | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 13 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
+| **C — Schema and data migrations** — *four task files generated 2026-09-05 in `.agents/tasks/2026-07-04-modernizing-sg101/step19/`* | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 13 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
 | **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; replace `repoze.timeago` with `django.utils.timesince`; **then** the linter/formatter, last | Independent one-diff items. |
 
 **Closed by Phase 0, no work carried:** the ORDER BY collation (decision recorded,
@@ -1226,6 +1226,20 @@ reader of this file cannot find, and they live in
 
 **[Phase C] Carries the deferred `elsewhere` rework** — `post_migrate` seeding
 as a real data migration, and possibly `network_id`→FK.
+
+**AUDITED 2026-09-05 against production, at Brian's suggestion, and the seed list
+is mostly dead.** Of **57 seeded social networks only 15 have ever been used** —
+327 rows across 222 members, `facebook` alone 181 of them — so **42 have never
+been chosen by anyone**. Of **6 instant messengers, 5 are in use and every one of
+those services has shut down**: `msn` 7, `skype` 6, `gtalk` 3, `aim` 2, `y` 1,
+19 rows across 18 members. The row counts are measured; which services still
+exist is an assessment, and the long tail is mixed — `multiply` and `myspace` are
+gone, `lastfm`, `goodreads` and `github` are not. **This turns the seeding rework
+into three decisions rather than a mechanical port** — what belongs in the seed
+list, whether the IM half survives at all, and the `network_id`→FK question,
+which interacts with the first because a shorter seed list manufactures orphans
+that do not exist today. Carried into
+`.agents/tasks/2026-07-04-modernizing-sg101/step19/task-03-elsewhere-seeding-as-a-data-migration.code-task.md`.
 
 **[Phase A] Also carries the `last_post` cascade hazard, added 2026-08-05 after it fired.**
 `Forum.last_post` and `Topic.last_post` are `OneToOneField('Post',
