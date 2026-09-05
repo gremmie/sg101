@@ -17,6 +17,11 @@ Report-ID and the window. Applied in full from the sixth reading onward.
 in `STATUS.md`** under Step 16 task 03's *Open* register — this file is the
 evidence, that one is the state.
 
+**This log has an end.** Set 2026-09-05: weekly until the Step 21 cutover window,
+daily across it, then stopped. The three items that keep it running and the reason
+the send-side baseline cannot outlive jaguar are in `STATUS.md` under *When the
+reading log stops*.
+
 **Reading index**
 
 | # | Date read | Window | Headline |
@@ -40,6 +45,7 @@ evidence, that one is the state.
 | 17 | 2026-09-01 | 08-31 | ten of eleven endpoints reconcile exactly with the send log; Google alone does not |
 | 18 | 2026-09-02 | 09-01 | the UTC−7 day passes a forward test; the second unsigned message is a bounce |
 | 19 | 2026-09-04 | 09-02, 09-03 | UTC−7 passes a second forward test; a DKIM failure class that is not the bounce class — **addendum: cause found, Postfix wraps at 998 bytes post-signing** |
+| 20 | 2026-09-05 | 09-04 | UTC−7's strongest window yet, contradicted by Yahoo in the same window; the size hypothesis dies on a forward test |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -4495,3 +4501,233 @@ before/after the modernization has offered so far — a defect measured in the w
 on the old stack, with the replacement's fix measured on the bench, and an
 instrument already running that will report the result without anyone arranging
 it.
+
+---
+
+### Twentieth reading — 2026-09-05, covering 2026-09-04: Google's offset survives its strongest window yet, Yahoo contradicts it in the same window, and the size hypothesis dies on a forward test
+
+**Sixty-two files in `~/dmarc` — two new, sixty re-reads.** Both new files carry
+mtimes of 2026-09-05 09:49 and both cover the same window, so the arrival-time
+caveat the nineteenth reading raised does not bite here: there is nothing to
+separate.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `google.com` | `google.com` | `18325381486835571284` | 2026-09-04 | 16 | 0 |
+| `yahoo.com` | `Yahoo` | `1788587309.31603` | 2026-09-04 | 1 | 0 |
+
+**09-03 closed at 9** across three endpoints, exactly as predicted, and did not
+gain. **09-04 stands at 17** across two, with Microsoft still to file.
+
+Every row in all sixty-two files is `disposition=none`. Nothing has been
+quarantined under `p=quarantine` at any receiver in any window.
+
+#### Four predictions held; the fifth was wrong, and the fault is in the nineteenth reading
+
+1. **Microsoft does not file for 09-03 at all — held, and 09-03 closed at 9.** No
+   `protection.outlook.com` file for that window exists a full day after the one
+   for 09-02 arrived, which is when a window-late filing would have landed. jaguar
+   sent nothing to `hotmail.com`, `outlook.com` or `live.com` in the UTC 09-03 day,
+   and the prediction was made from the send log rather than from the last report's
+   shape for the third time running.
+2. **"Google's 09-04 report contains the four messages sent `Sep 3 15:49:02`–
+   `15:51:20` local" — FALSIFIED, and it was falsified before it was written.**
+   Those four sit in the UTC−7 **09-03** day and were already inside the 09-03
+   report. See the correction below. The headline half of the prediction — that the
+   report reads a UTC−7 day — is confirmed by a different and stronger route.
+3. **No signed-DKIM-fail row — held, and it kills the rival hypothesis outright.**
+   See two subsections down; this is the reading's second result.
+4. **GMX files for nothing — held.** No `gmx.*` traffic in the UTC 09-03 window and
+   no GMX report for it.
+5. **Every report reads `p=quarantine` and no row carries a `disposition` other
+   than `none` — held**, both reports.
+
+#### A correction to the nineteenth reading: the right count, the wrong four messages
+
+That reading's 09-03 arithmetic is sound — the UTC day holds 11 Google-bound
+messages, the UTC−7 day holds 7, Google reported 7, and this reading reproduces all
+three figures. **What it got wrong is which four messages the offset moves.**
+
+It named `Sep 3 15:49:02`–`15:51:20` local, and reasoned that `20:49`–`20:51Z` on
+09-03 falls "inside the UTC−7 09-04 day." It does not. Subtracting seven hours from
+`20:49Z` gives `13:49` on 09-03, which is the middle of the UTC−7 **09-03** day —
+the same day the UTC stamp names. Those four messages never moved.
+
+The four that do move are the ones at the *other* end of the window:
+
+| Queue ID | Sent (jaguar local) | UTC | UTC day | UTC−7 day |
+|---|---|---|---|---|
+| `B7F35586513` | Sep 2 21:37:16 | 09-03 02:37:16Z | 09-03 | **09-02** |
+| `2B23958650C` | Sep 2 22:02:18 | 09-03 03:02:18Z | 09-03 | **09-02** |
+| `B53F45864B2` | Sep 3 01:19:08 | 09-03 06:19:08Z | 09-03 | **09-02** |
+| `3B067586513` | Sep 3 01:39:23 | 09-03 06:39:23Z | 09-03 | **09-02** |
+
+They leave the UTC−7 09-03 day at its *start*, not its end, which is the same shape
+the eighteenth reading described correctly for 09-01. The UTC−7 09-03 set is then
+exactly seven: the `02:01`, `02:02` and `03:07` messages of Sep 3 plus the four at
+`15:49`–`15:51`. Google reported seven.
+
+**So the 09-03 report already contained the four messages the nineteenth reading
+said were in neither report**, and the twentieth reading's prediction 2 inherited
+that. The error is arithmetic in a sentence, not in the script that produced the
+table — the table was right — which is exactly the kind of slip that survives when
+the prose is written after the numbers and not checked back against them.
+[[suspect-the-measurer-before-the-record]]
+
+#### The UTC−7 aggregation day, tested a third time, on the window that discriminates hardest
+
+Sends are binned as in the last three readings — `status=sent`, minus
+`relay=local`, at jaguar's UTC−5, which `date -u` on the host confirms again — by a
+**fourth independently written script**, and this time across `mail.log`,
+`mail.log.1` and `mail.log.2.gz` together rather than the live file alone. Google's
+figures are its rows from `173.255.245.115` only.
+
+| Window | 08-23 | 08-24 | 08-25 | 08-26 | 08-27 | 08-28 | 08-29 | 08-30 | 08-31 | 09-01 | 09-02 | 09-03 | **09-04** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Google reported | 12 | 15 | 5 | 6 | 13 | 47 | 22 | 13 | 33 | 8 | 10 | 7 | **16** |
+| jaguar sent, UTC day | 26 | 17 | 19 | 6 | 8 | 46 | 22 | 17 | 33 | 6 | 10 | 11 | **12** |
+| jaguar sent, UTC−7 day | 20 | 19 | 7 | 6 | 13 | 47 | 22 | 13 | 33 | 8 | 10 | 7 | **16** |
+
+| Alignment | Σ\|residual\| | Exact windows |
+|---|---|---|
+| UTC (as stamped) | 50 | 4 of 13 |
+| UTC−7 | 14 | **10 of 13** |
+
+**Every one of the twelve carried-over columns reproduces in both alignments**, off
+three log files and a script that had not seen the previous one. That is the first
+time the whole table has been re-measured end to end rather than extended at the
+right-hand edge, and it is worth the paragraph: the seventeenth reading's figures
+have now been produced three times by three scripts, and the offset is not an
+artifact of any of them. [[mutation-verify-or-it-is-not-coverage]]
+
+**09-04 is the sharpest window in the series.** Google reported 16 into a UTC day
+holding 12 — a surplus of four, in the direction a receiver cannot manufacture,
+from a report naming exactly one source IP. The UTC−7 day holds exactly 16, and the
+four that decide it went out at `Sep 4 19:11:49`, `19:12:32`, `21:25:30` and
+`23:03:07` local, all after `19:00` and therefore in the UTC **09-05** window. The
+last **ten consecutive** windows, 08-26 through 09-04, are exact under UTC−7; five
+of those ten are wrong under UTC.
+
+**And the corollary is again a test rather than a fit: those four must not appear
+in Google's 09-05 report.**
+
+**Still short of a mechanism, and the three earliest windows are still
+unexplained.** 08-23/24/25 hold 14 messages of residual in the direction of jaguar
+sending more than Google reported, the offset does not touch them, and nothing else
+has been proposed. Unchanged for the fourth reading.
+
+#### Yahoo contradicts the offset in the same window, off the same log
+
+The eighteenth reading found its cleanest control in GMX, which fit UTC in the same
+window Google fit UTC−7. **09-04 repeats it with Yahoo, and more sharply**, because
+Yahoo is the only other filer for this window:
+
+| Endpoint | Reported | jaguar sent, UTC 09-04 | jaguar sent, UTC−7 09-04 |
+|---|---|---|---|
+| `google.com` | 16 | 12 | **16** |
+| `yahoo.com` | 1 | **1** | 2 |
+
+The second Yahoo-bound message, `3A004586572` to `member27@example.com` at
+`Sep 4 23:03:06` local, is `09-05 04:03:06Z` — inside the UTC−7 09-04 day and
+outside the UTC one. Yahoo left it out. **One window, one log, one script: the
+receiver that fits UTC−7 and the receiver that fits UTC are measured against the
+same twenty-four hours.** The offset is a property of Google's reporting, not of
+jaguar's clock, and this is now established twice rather than once.
+
+`yahoo.com` itself had not filed since the 08-31 window, and the send log explains
+that as it explained the others: no `yahoo.com` traffic at all in 09-01, 09-02 or
+09-03, one message in 09-04.
+
+#### The size hypothesis dies on its first forward test, and so does the injection path
+
+The nineteenth reading recorded a fit — no message of 5,653 bytes or more had gone
+to a Google endpoint in a clean window, and all three signed-DKIM failures were at
+or above it — and called it curve-fitting rather than a cause. The addendum then
+replaced it with a mechanism measured from two raw messages: **a body line longer
+than 998 bytes**, which Postfix breaks after `opendkim` has signed.
+
+The 09-04 window tests both, and the reports carry **no signed-DKIM-fail row at
+all**:
+
+| Hypothesis | Predicted failures in UTC−7 09-04 | Observed |
+|---|---|---|
+| Message size ≥ 5,653 bytes | **3** — `7A9AB58650F` (5,971), `C4C685864B2` (5,963), `8ED7C586505` (6,079) | **0** |
+| Local injection path | **1** — the `brian` cron message `B1E095864BF`, `Sep 4 02:01:13` | **0** |
+| Body line > 998 bytes | 0, if none of the sixteen carries one | 0 |
+
+**The size proxy is now falsified from both sides.** 08-31 killed it below the
+threshold — eight messages of 5,296–5,312 bytes, no failure — and 09-04 kills it
+above: three messages larger than any of the three that failed, all clean. The
+addendum had already demoted it to a proxy on mechanistic grounds; this is the
+independent measurement, made against a prediction stated in advance.
+
+**The injection-path hypothesis, falsified retrospectively last reading, fails
+forward too.** The same daily `brian` cron message sits in this window and the
+window is clean.
+
+**What the line-length mechanism gets from this window is consistency, not
+confirmation.** Zero failures is what it predicts *if* none of the sixteen bodies
+holds a line over 998 bytes, and those bodies were not read — the two that were
+read, in the addendum, are the only direct evidence there is. A window with no
+long line cannot distinguish a correct mechanism from an absent one. The test that
+would confirm it is the next window that contains a long line, and the standing
+prediction is unchanged: **this class goes to zero at the Step 21 deploy and stays
+there.** [[measure-before-recording-in-planning-docs]]
+
+`B4EFD5864BF` (6,050 bytes) is still the one of the three assigned by shape rather
+than observed, and nothing this reading measured changes that.
+
+#### What held steady across all sixty-two
+
+- **75 rows, 397 messages, every one `disposition=none`.**
+- Evaluated SPF/DKIM across those rows: **67 `pass`/`pass`, 4 `fail`/`pass`,
+  3 `pass`/`fail`, 1 `fail`/`fail`** — the `pass`/`fail` count is unchanged, which
+  is the whole of the DKIM result above.
+- `173.255.245.115` appears in 67 rows and 376 messages.
+- Policy renders `adkim=r aspf=r` in all sixty-two.
+- The `p=none`/`p=quarantine` boundary at the 08-25 publication reproduces exactly:
+  16 reports read `none`, 46 read `quarantine`.
+- **Eleven reporting endpoints by filename**, five reporting organizations. No new
+  endpoint and no new organization this reading.
+- The published-policy field census tracks the corpus without surprises: `sp` in 36
+  and absent in exactly the 26 Yahoo reports, `pct` in 56 and absent in exactly the
+  6 GMX reports, `np` in exactly the 13 Google reports, `fo` in exactly the 17
+  Comcast and Microsoft reports, `discovery_method` and `testing` in exactly the 6
+  GMX reports. Our record still publishes none of them.
+
+#### The forwarding class is at zero for a fifth window, and Postmark for an eighth
+
+`209.85.220.41` carried nothing on 09-04. The class reads 8, 5, 2, 0, 0, 0, 0, 0
+across 08-28 → 09-04, 17 messages total, every one surviving on DKIM, and the
+twelfth reading's `2001:470:0:60::2` row has not recurred in nine windows.
+Postmark's `50.31.156.*` has not appeared since the 08-27 window; jaguar
+is still the only thing sending, which is expected until Step 21 and is the reason
+the Postmark path remains measured only by the two hand-sent test messages.
+
+#### Bearing on the policy decision
+
+Nothing moves. `p=quarantine` continues to cost nothing measurable — 397 messages,
+zero non-`none` dispositions, and the one class of DKIM failure that has a known
+cause is fixed by the branch waiting to deploy rather than by any change to the
+zone. `p=reject` stays unrecommended until after the Step 21 deploy, for the reason
+the nineteenth reading gave: not that the cause is unknown, but that the fix is not
+deployed yet.
+
+#### Predictions for the twenty-first reading
+
+1. **Microsoft files for 09-04 with exactly 1 message**, a window late, from
+   `hotmail.com` — `15AA2586558` at `Sep 4 18:19:36` local, `23:19:36Z`, the only
+   Microsoft-bound message in either alignment of that day. **09-04 then closes at
+   18.**
+2. **Google's 09-05 report does not contain the four messages of `Sep 4 19:11:49`–
+   `23:03:07` local**, because the 09-04 report has already counted them. This is
+   the offset's sharpest available test and it fails if the 09-05 count exceeds the
+   UTC−7 09-05 total measured against a complete log.
+3. **Yahoo files for 09-05 and its report contains `3A004586572`**, the
+   `23:03:06` local message, giving a count of at least 1. Yahoo's UTC alignment
+   and Google's UTC−7 alignment make opposite claims about this single message, and
+   the two 09-05 reports settle it independently of any count.
+4. **GMX and Comcast file for nothing.** No `gmx.*` or `comcast.net` traffic in the
+   UTC 09-04 window.
+5. **Every report reads `p=quarantine`** and no row carries a `disposition` other
+   than `none`.

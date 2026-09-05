@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the nineteen DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty DMARC aggregate readings — a periodic instrument log |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -4064,7 +4064,7 @@ alone.
 **Bearing on step 7's successor.** `p=reject` stays unrecommended until after the
 Step 21 deploy — not because the cause is unknown, but because the fix is not
 deployed yet. The DSN class remains one mechanism deep by design. Nothing argues
-for reversing `p=quarantine`; every disposition in all sixty reports is `none`, and
+for reversing `p=quarantine`; every disposition in all sixty-two reports is `none`, and
 the captured message itself reads `dmarc=pass ... dis=NONE`.
 
 **Still open:** whether `B4EFD5864BF` (6,050 bytes) is the same class — the one of
@@ -4072,7 +4072,15 @@ the three still assigned by shape rather than observed — and the standing pred
 that this class goes to zero at the Step 21 deploy, which the reading log will
 report without anyone arranging it.
 
-### FIXED 2026-09-04 — `ContactForm.subject` refuses newlines at the form, uncommitted
+**Confirmed 2026-09-05 by the twentieth reading:** the 09-04 window carried three
+Google-bound messages of 5,963–6,079 bytes — all larger than any of the three that
+failed — and Google reported no signed-DKIM failure at all. **The size fit is dead
+from both sides**, 08-31 below the threshold and 09-04 above it, and the
+line-length mechanism is the only surviving account. A clean window cannot confirm
+it, only fail to contradict it; the confirming test is the next window that carries
+a body line over 998 bytes.
+
+### FIXED 2026-09-04 — `ContactForm.subject` refuses newlines at the form — `c2c84441`
 
 Found by reading the production error that turned out to be `0077E586513`. A
 contact-form submission arrived with a trailing CRLF in the subject — a header
@@ -4214,6 +4222,51 @@ override on the one failing row. So the split is a per-receiving-domain renderin
 question inside Yahoo rather than a defect in the zone, and the property above is
 insufficient rather than refuted: it predicts both Yahoo reports agree, and they
 do not. The 08-27 window settles it.
+
+### When the reading log stops — exit condition set 2026-09-05
+
+**Until now this was an open-ended commitment.** Twenty readings exist and nothing
+in the plan, this file or the log's own preamble said what ends them. The readings
+were opened to prove the authentication records correct and to raise the policy
+safely, and **that job is finished**: `p=quarantine` has been live since
+2026-08-25 across 62 reports, 397 messages, five reporting organizations and
+eleven reporting endpoints, with every disposition `none`.
+
+**Three open items keep the instrument running, and all three close at the Step 21
+cutover:**
+
+1. **The over-long-line DKIM defect** — the standing prediction is that the class
+   goes to zero at the deploy. It is the cleanest before/after this project has,
+   and it is worthless without readings on both sides of the cutover.
+2. **The `p=reject` decision**, deferred by the nineteenth reading to *after* the
+   deploy: identify the cause, re-measure on the new signer, then decide.
+3. **Postmark has never appeared in an aggregate report** — absent since the 08-27
+   window. The only evidence for that path is the two hand-sent test messages of
+   08-25. The cutover is what makes it a reporting source, and these reports are
+   the instrument that confirms it.
+
+The UTC−7 aggregation offset is the one live thread that gates no decision. It is
+instrument characterization — a report whose day cannot be aligned is a report
+that cannot be reconciled — and it should be finished on its own merits, not
+because a step is waiting on it.
+
+**The cadence, from here:**
+
+| Period | Cadence | Why |
+|---|---|---|
+| now → ~1 week before Step 21 | **weekly** | the last several readings confirm steady state; daily re-derives "nothing moved" at full cost |
+| Step 21 window: ~1 week before → ~2 weeks after | **daily** | all three items above resolve in this interval, and the before/after needs both halves at the same resolution |
+| after that | **stopped** | keep `tools/dmarc_report.py` for spot checks; a closed log with an exit condition is worth more than an open one nobody decided to end |
+
+**One constraint that is not negotiable with the schedule: the send-side baseline
+dies with jaguar.** Every reconciliation in this log — the endpoint-by-endpoint
+agreement, the UTC−7 finding, both falsified DKIM hypotheses — rests on
+`/var/log/mail.log`, which rotates at roughly two weeks and exists only while that
+host runs. **Anything to be measured against jaguar's own outbound must be
+measured before it is decommissioned.** After cutover the sending baseline comes
+from Postmark's activity data instead: a different instrument, with different
+retention, different granularity and no `status=sent` line to bin.
+[[jaguar-decommission-planning]]
 
 ## Step 16 — Postmark measured at two receivers, 2026-08-25 — the new path is proven before cutover
 
