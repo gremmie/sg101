@@ -6898,7 +6898,102 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase B — the seven model-less tables are dropped — DONE 2026-09-04, UNCOMMITTED
+## Step 19 Phase B — the four dead `tools/` scripts are gone and `flag_data.py` reads JSON — DONE 2026-09-05
+
+**Phase B is complete.** Phase 0 decided this item on 2026-09-03 — delete four,
+port one — and left one thing unverified, which turned out to be the only part
+of it worth measuring.
+
+### The four deletions
+
+Compile status re-verified first-hand before deleting anything, since a script
+that had quietly started working would change the decision. All five still fail
+on Python 3.12, each at the syntax the record predicted:
+
+| Script | Fails on | Why it goes |
+|---|---|---|
+| `filter_posts.py` | `print reader.next()` | fixed orphaned posts after a migration that finished years ago |
+| `load_ygroup.py` | `except MySQLdb.DatabaseError, e:` | feeds `mysqlimport`, which Step 21 retires with the MySQL box |
+| `post_sub.py` | `except IOError, ex:` | same |
+| `translate_yahoo_group.py` | `print "Processing "` | same |
+
+### The unverified assumption was the whole job, and it was half right
+
+Phase 0 flagged that the script reads Debian's ISO-3166 **XML** and that
+`iso-codes` was *believed* to have moved to JSON — recorded as a thing to
+measure rather than a finding. Measured in a `python:3.12` container against
+`iso-codes` **4.18.0-1**:
+
+- **The XML still ships.** `/usr/share/xml/iso-codes/iso_3166.xml` exists and the
+  old parser still works against it — 249 `iso_3166_entry` elements, every one
+  with `alpha_2_code`.
+- **And it is a symlink to `iso_3166-1.xml`, whose own header reads `WARNING:
+  THIS FILE IS DEPRECATED. PLEASE USE THE JSON DATA INSTEAD.`**
+
+So "the port is one line" was right about the *code* and wrong about the
+*target*. The one-line version would have compiled, run, produced correct output
+today, and left the script reading a file upstream has marked for removal. The
+port reads `/usr/share/iso-codes/json/iso_3166-1.json` instead; the attribute
+names are the only real difference (`alpha_2_code` → `alpha_2`, same 249
+countries, same 11 carrying a `common_name`).
+
+**This is the second time in three days that an item's "unverified" note was the
+only interesting thing in it.** Phase 0 was right to record it as a measurement
+rather than resolve it from memory. [[measure-before-recording-in-planning-docs]]
+
+### Verified against the real package and the real icons, not a fixture
+
+Regenerated in the container against `iso-codes` 4.18.0-1 and the repo's 241 PNGs
+in `static/flags/64`:
+
+| Check | Result |
+|---|---|
+| Entries produced | **222** — the same count as the committed `bio/flag_data.json` |
+| Key set vs. committed | **identical**; no country added, none removed |
+| Countries reported as missing an icon | 27, which is 249 − 222 |
+| Under `LC_ALL=C` | byte-identical output, so `print(s)` on a non-ASCII payload is not a hazard here |
+
+**Mutation-checked rather than assumed:** dropping the `common_name` fallback
+changes 11 of the 222 entries, so that branch is load-bearing and the port
+preserves it. [[mutation-verify-or-it-is-not-coverage]]
+
+### Thirteen country names have changed since 2013 — NOT applied
+
+Regenerating would change what renders on every profile and forum post, so it is
+Brian's call and the data file is untouched. The 13 split into two causes, which
+is worth knowing before deciding:
+
+**Genuine renames** — `cv` Cape Verde → Cabo Verde, `cz` Czech Republic →
+Czechia, `mk` Macedonia, Republic of → North Macedonia, `sz` Swaziland →
+Eswatini, `tr` Turkey → Türkiye, `ps` Palestinian Territory, Occupied →
+Palestine, State of.
+
+**`common_name` added upstream after 2013** — `ir` Iran, `kp` North Korea, `kr`
+South Korea, `la` Laos, `sy` Syria, `tz` Tanzania, `vn` Vietnam all shorten. The
+2013 data already had `common_name` for `bo`, `md`, `tw` and `ve`, which is why
+those four read short in the committed file and do not move.
+
+**Nothing is at risk in the stored data either way.** `UserProfile.country` holds
+the two-letter code and `bio/flags.py` maps code → name at render time, so a
+rename is display-only. What it does change is the dropdown's order, since
+`FLAG_CHOICES` sorts by name under the active locale.
+
+### Two files the deletions emptied
+
+**`pyrightconfig.json`'s exclude block is gone entirely.** It listed exactly these
+five files, with a comment explaining they were "still Python 2 and unparseable by
+a py3 checker" — so porting one and deleting four removes the reason for the
+block, not just its entries. pyright now analyses 464 files and `tools/flag_data.py`
+contributes **zero** diagnostics; the errors that remain under `tools/` are
+pre-existing ones in `email_smoke.py` and `image_smoke.py`.
+
+**`DOCKER.md`'s `mysqlclient` note** named `tools/load_ygroup.py` as one of three
+`MySQLdb` importers. Two remain, both under `tools/pgloader/`, and the reasoning
+for omitting the pin from the local venv is unchanged.
+
+**Gate: 1117 tests, OK**, under the deprecation gate on `docker_test`.
+
+## Step 19 Phase B — the seven model-less tables are dropped — DONE 2026-09-04, `6fccdc4a`, PUSHED
 
 `core/migrations/0002_drop_legacy_tables.py`. They arrived with the MySQL→Postgres
 conversion, which copied the old database as it stood rather than pruning it, and
@@ -6976,8 +7071,9 @@ converted dev database — home, forums, news, calendar, downloads, links, podca
 contact, member list — all 200 or an expected redirect.
 
 **Remaining in Phase B:** delete four `tools/` scripts and port `flag_data.py`.
+*(Closed 2026-09-05 — Phase B is complete; see the section above.)*
 
-## Step 19 Phase B — the wiki is archived and the bridge is gone — DONE 2026-09-04, UNCOMMITTED
+## Step 19 Phase B — the wiki is archived and the bridge is gone — DONE 2026-09-04, `4dc6da25` + `bb37bcef`, PUSHED
 
 **Brian's call: shelve it.** The wiki content is copied into the repo, and MoinMoin
 keeps running on jaguar until the host is decommissioned. No static publication, no
@@ -7134,6 +7230,7 @@ references the hostname any more.
 
 **Remaining in Phase B:** the 7 model-less legacy tables; delete four `tools/`
 scripts and port `flag_data.py`.
+*(Closed 2026-09-05 — Phase B is complete; see the section above.)*
 
 ## Step 19 Phase A — the delete paths are safe — DONE 2026-09-03, `b24b4286`, PUSHED
 

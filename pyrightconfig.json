@@ -26,14 +26,7 @@
     "media",
     "static_serve",
     "sg101/node_modules",
-    "sg101/bower_components",
-    // Still Python 2 and unparseable by a py3 checker: `print` statements and
-    // `except IOError, ex` syntax. Excluded so they do not sit permanently red.
-    "tools/filter_posts.py",
-    "tools/flag_data.py",
-    "tools/load_ygroup.py",
-    "tools/post_sub.py",
-    "tools/translate_yahoo_group.py"
+    "sg101/bower_components"
   ],
 
   "reportMissingImports": "error",

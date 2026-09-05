@@ -483,9 +483,9 @@ Neither `mysql_config` nor `pg_config` exists on this host, and both packages
 build from source rather than shipping wheels. Homebrew could supply both, but
 neither is worth installing:
 
-- **`mysqlclient` is omitted.** Only `tools/load_ygroup.py` and
-  `tools/pgloader/{verify,verify_data}.py` import `MySQLdb`, all of them
-  migration tooling — nothing in the application touches it. The cost is two
+- **`mysqlclient` is omitted.** Only `tools/pgloader/{verify,verify_data}.py`
+  import `MySQLdb`, both of them migration tooling — nothing in the application
+  touches it. The cost is two
   `reportMissingModuleSource` *warnings*, not errors, because pyright ships
   typeshed stubs for `MySQLdb` and still gives full type information for it.
 - **`psycopg2` is replaced by `psycopg2-binary`.** Same `psycopg2` module and the

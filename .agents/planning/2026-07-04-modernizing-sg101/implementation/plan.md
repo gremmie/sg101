@@ -1153,7 +1153,7 @@ internal: phases inside the step, which is an idiom this plan already uses.
 |---|---|---|
 | **0 — Decide** ✅ **DONE 2026-09-03** | Six questions, all answered — see the decision record in `STATUS.md` | No code. Every open question answered and recorded. It closed three items outright. |
 | **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
-| **B — Prune** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
+| **B — Prune** ✅ **DONE 2026-09-05** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
 | **C — Schema and data migrations** | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 12 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
 | **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; replace `repoze.timeago` with `django.utils.timesince`; **then** the linter/formatter, last | Independent one-diff items. |
 
@@ -1469,7 +1469,7 @@ Three ways to go, roughly in order of effort:
    two-select area/location UI would need either rebuilding server-side or
    keeping its JS and feeding it JSON from the view.
 
-**[Phase 0 DECIDED 2026-09-03: delete four, port `flag_data.py`; Phase B executes] Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
+**[Phase 0 DECIDED 2026-09-03: delete four, port `flag_data.py`; Phase B DID IT 2026-09-05 — the port reads `iso-codes`' JSON, since the XML it used is now a deprecated symlink] Also carries five `tools/` scripts that are still Python 2, added 2026-08-12
 from Step 14 task 01.** They do not compile on any Python 3 and have not since
 the flip: `filter_posts.py`, `flag_data.py` and `translate_yahoo_group.py` use
 `print` statements, `load_ygroup.py` and `post_sub.py` use unparenthesized
