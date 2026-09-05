@@ -179,6 +179,71 @@ choice edits real members' accounts, so it belongs to a decision sitting rather
 than to a cleanup. What the shape above establishes is that a single blanket rule
 will not fit all thirteen. [[measure-before-recording-in-planning-docs]]
 
+### Provenance, and a re-measurement against production — 2026-09-05
+
+**The table above was read from the Docker snapshot, and that needs saying.** The
+newest `date_joined` in it is 2026-07-07, so it is a production snapshot roughly
+two months old. Four rows in the whole 15,227 carry sub-second `last_login`
+precision — ids 1, 2, 5 and 12 — which is Django writing to Postgres rather than a
+value converted from MySQL, i.e. someone logging in locally. **None of the 26 pair
+accounts is among them**, so the figures were not perturbed by local use.
+
+**Re-read through jaguar's own Django on 2026-09-05**, and every id, username,
+`is_active` and `last_login` in the 13 groups matches the snapshot exactly. One
+row in the database does not: `c4logic` reads `is_active=False` in production and
+`True` in the snapshot, because Brian deactivated it there directly. **A known
+production change absent from the snapshot is the cleanest possible demonstration
+of the caveat**, and it arrived by itself.
+
+### Post counts, which are the signal `last_login` is not
+
+| Address | Account | Status | Last login | Posts | Topics |
+|---|---|---|---|---|---|
+| `member01@example.com` | `Drippy` 3111 | active | 2011-08-13 | 6 | 1 |
+| | `Hydronaught` 3566 | active | 2013-08-19 | 12 | 4 |
+| `member02@example.com` | `JesterR` 7707 | active | 2013-09-29 | 0 | 0 |
+| | `Jester` 10107 | active | 2025-04-08 | 17 | 1 |
+| `member03@example.com` | `SurfBeat` 2373 | inactive | 2019-03-18 | 285 | 30 |
+| | `Joey` 2947 | inactive *(2026-09-05)* | 2016-09-22 | 11 | 2 |
+| `member04@example.com` | `guitarbrad` 379 | active | 2006-07-05 | 0 | 0 |
+| | `knucklesnuclear` 5180 | active | 2016-06-06 | 60 | 0 |
+| `member05@example.com` | `mudbone99` 4769 | active | 2011-03-07 | 0 | 0 |
+| | `LouSeefer` 5898 | active | 2012-04-05 | 1 | 0 |
+| `member06@example.com` | `MajorReverb` 2922 | active | 2012-02-08 | 4 | 2 |
+| | `Admiral_Fishwich` 4456 | active | 2024-01-20 | 118 | 13 |
+| `member07@example.com` | `scoot` 540 | active | 2016-08-07 | 1 | 0 |
+| | `sdubose` 1114 | active | 2026-03-15 | 9 | 2 |
+| `member08@example.com` | `kinghawaii` 892 | active | 2023-07-21 | 4 | 3 |
+| | `kinghawaii50` 1279 | active | 2007-10-20 | 15 | 9 |
+| `member09@example.com` | `TastyGrog` 3757 | active | 2017-07-11 | 11 | 4 |
+| | `NothingDiesWithBlueSkies` 4045 | active | 2020-01-04 | 36 | 7 |
+| `member10@example.com` | `UnmannedBassPlayer` 2592 | active | 2010-03-18 | 6 | 1 |
+| | `SpitfireMkI` 4053 | active | 2015-03-01 | 30 | 4 |
+| `member11@example.com` | `alphaking` 6981 | active | 2022-06-17 | 195 | 23 |
+| | `alphaking1` 13092 | inactive | 2022-05-16 | 1 | 0 |
+| `member12@example.com` | `Turnip` 142 | active | 2024-11-07 | 30 | 7 |
+| | `Turnip_Returns` 14260 | active | 2024-04-19 | 0 | 0 |
+| `member13@example.com` | `terma_reverb` 6177 | active | 2026-05-31 | 52 | 3 |
+| | `ymastorak` 11446 | active | 2025-07-21 | 0 | 0 |
+
+**Five pairs have a half that never posted at all**, which login dates alone did
+not reveal — and one of them, `member13@example.com`, had been written up as the
+hardest case in the set on the strength of two recent logins. It is the easiest.
+**The lesson is not that `last_login` is wrong but that it was the only column
+asked for**, and a second column reversed the reading. [[measure-before-recording-in-planning-docs]]
+
+### The four blank-address accounts
+
+| id | username | active | last login | what it is |
+|---|---|---|---|---|
+| 1 | `Anonymous` | no | — | **phpBB inheritance.** An early version of this site ran phpBB, where deleting a user reassigned their posts to `Anonymous`. It holds **796 posts and 78 topics**, has an unusable password (`!`), and must never carry an address |
+| 345 | `c4logic` | no | 2006-08-15 | deactivated in production 2026-09-05 |
+| 808 | `Huatulphonic` | yes | 2006-12-30 | logged in the day after joining, never again |
+| 7819 | `Clevedale_Renamed_By_Admin` | no | 2013-11-15 | the username records an admin action |
+
+`Anonymous` is the reason the unique index must be partial rather than plain, and
+it is a permanent reason rather than a transitional one.
+
 ## Decisions
 
 1. **No unique index on `auth_user.email`.** The data cannot satisfy one in

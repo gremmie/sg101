@@ -6898,6 +6898,117 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase C — the duplicate-email pairs, DECIDED 2026-09-05
+
+Phase 0's six decisions did not cover this item; it was carried into Phase C as
+"data hygiene" with no resolution chosen. Decided here, in one sitting, on data
+measured from production rather than from the July snapshot. The per-pair
+evidence lives in `research/collation-audit.md`; this is the decision record.
+
+### What was already true, and nearly closed the item outright
+
+**The trap this item is famous for has been handled since 2026-08-22.** Step 16
+task 05 wrote `bio.forms.EditUserForm.clean_email` the way the trap requires: it
+returns early when the address is unchanged, so none of the 26 is locked out of
+saving a profile edit, and it rejects only *changing to* an address another
+account holds. `accounts.forms.RegistrationForm.clean_email` has checked
+`email__iexact` all along, and `ForgotUsernameForm` deliberately lists every
+match rather than calling `get()`. **No new pair can be created through the
+site**, and the standing cost of the existing 13 is one extra password-reset
+email per member, each naming its own account.
+
+So the item could have closed as done. It did not, for one reason:
+
+**The admin and the shell go around both form checks, and this maintainer uses
+them.** `c4logic` was deactivated by hand in production during this very
+conversation. That is exactly the argument
+`accounts/0002_auth_user_username_lower_unique.py` already makes for usernames —
+*"the admin, a management shell, and two registrations racing each other all go
+around it"* — and it has never been stated for email.
+
+### Decision 1 — build the partial unique index
+
+```sql
+CREATE UNIQUE INDEX auth_user_email_lower_uniq ON auth_user (LOWER(email))
+    WHERE email <> ''
+```
+
+Same shape and the same MySQL guard as `0002`. **It has to be partial, and not
+because of the pairs.** Four accounts hold a blank address and one of them is
+`Anonymous` — the phpBB-era sentinel this site inherited, which absorbed the
+posts of every deleted user and today owns **796 posts and 78 topics**. It must
+never hold an address, so `WHERE email <> ''` is the permanent correct shape
+rather than a workaround. The other three blanks are `c4logic` (inactive),
+`Huatulphonic` (last seen 2006-12-30) and `Clevedale_Renamed_By_Admin`.
+
+**This reverses the Step 11 collation audit's Decision 1** — *"No unique index on
+`auth_user.email`. The data cannot satisfy one in either direction."* That was
+correct as a statement about a *plain* unique index on the column, which the four
+blanks alone defeat. A partial functional index was not considered there.
+
+### Decision 2 — the losing account keeps everything except its address
+
+`email = ''`, and nothing else. No deactivation, no merge, no content moved. The
+account keeps its posts, its profile and its ability to log in; the one thing it
+loses is self-serve password reset, until someone gives it an address back.
+
+**This is why decision 3 is cheap.** With blanking, the keeper rule does not
+decide which content survives — it decides which of two accounts can use the
+reset form. Both accounts belong to the same person reading the same mailbox, so
+the other one is recoverable by asking.
+
+### Decision 3 — most recent login wins
+
+The two candidate rules — most posts, most recent login — **agree on 12 of the 13
+pairs.** They differ only on `member08@example.com`, and the tie is broken toward the
+account the member actually uses:
+
+| Address | Keeps the address | Blanked |
+|---|---|---|
+| `member13@example.com` | `terma_reverb` 6177 · 2026-05-31 · 52 posts | `ymastorak` 11446 · 0 posts |
+| `member07@example.com` | `sdubose` 1114 · 2026-03-15 · 9 | `scoot` 540 · 1 |
+| `member02@example.com` | `Jester` 10107 · 2025-04-08 · 17 | `JesterR` 7707 · 0 |
+| `member12@example.com` | `Turnip` 142 · 2024-11-07 · 30 | `Turnip_Returns` 14260 · 0 |
+| `member06@example.com` | `Admiral_Fishwich` 4456 · 2024-01-20 · 118 | `MajorReverb` 2922 · 4 |
+| `member08@example.com` | **`kinghawaii` 892 · 2023-07-21 · 4** | **`kinghawaii50` 1279 · 15** |
+| `member11@example.com` | `alphaking` 6981 · 2022-06-17 · 195 | `alphaking1` 13092 · 1 · inactive |
+| `member09@example.com` | `NothingDiesWithBlueSkies` 4045 · 2020-01-04 · 36 | `TastyGrog` 3757 · 11 |
+| `member03@example.com` | `SurfBeat` 2373 · 2019-03-18 · 285 · inactive | `Joey` 2947 · 11 · inactive |
+| `member04@example.com` | `knucklesnuclear` 5180 · 2016-06-06 · 60 | `guitarbrad` 379 · 0 |
+| `member10@example.com` | `SpitfireMkI` 4053 · 2015-03-01 · 30 | `UnmannedBassPlayer` 2592 · 6 |
+| `member01@example.com` | `Hydronaught` 3566 · 2013-08-19 · 12 | `Drippy` 3111 · 6 |
+| `member05@example.com` | `LouSeefer` 5898 · 2012-04-05 · 1 | `mudbone99` 4769 · 0 |
+
+**`member08@example.com` is the only pair where the rules disagree**, and the losing
+account has more history than the winner: `kinghawaii50` keeps its 15 posts and 9
+topics and stays active, and only loses the address it has not used since 2007.
+
+**`member03@example.com` is immaterial either way** — Brian deactivated
+`Joey` on 2026-09-05 and `SurfBeat` was already inactive, and Django's
+`PasswordResetForm` only considers active users, so neither account could reset
+regardless of which holds the address.
+
+### What Phase C has to build
+
+A data migration that **computes the groups rather than hardcoding them**, applies
+the rule, and creates the index in the same migration, so it is self-consistent on
+any database it meets — including the fresh production snapshot Step 21 loads. A
+hardcoded list would silently skip a fourteenth pair created between now and the
+cutover; a dynamic rule handles it by the same standard.
+
+Points the task file must settle rather than discover:
+
+- **Tie-breaks.** No account in the current 13 has a null `last_login`, but the
+  migration will meet databases where one does. A null must lose, and equal
+  timestamps need a deterministic fallback (lowest `id` keeps the address).
+- **Idempotency comes free** — once the groups are gone the migration finds
+  nothing — but it must be verified rather than assumed.
+- **Reverse.** Blanking cannot be undone from the row itself. Either the reverse
+  restores from addresses written into the migration, or the migration declares
+  itself irreversible and says why. Decide it, do not leave it to `RunPython`'s
+  default.
+- **MySQL guard**, as in `0002`: no functional indexes in 5.7, and none needed.
+
 ## Step 19 Phase B — the four dead `tools/` scripts are gone and `flag_data.py` reads JSON — DONE 2026-09-05
 
 **Phase B is complete.** Phase 0 decided this item on 2026-09-03 — delete four,
