@@ -23,9 +23,9 @@ retire it.
 | 2 — `root` entry in the virtual alias table | **done** 2026-08-18 |
 | 3 — authenticable sender for local mail | **done** 2026-08-18 |
 | 4 — SPF at the HELO name | **done** 2026-08-20 |
-| 5 — verify the backscatter stopped | verification, open — needs the DSN-per-day count run on the box |
+| 5 — verify the backscatter stopped | **MEASURED** 2026-08-18 — ~1 DSN/day reaches outsiders, and the answer is to change nothing |
 | 6 — retire the two dead certificates | **done** 2026-08-18 |
-| 8 — Comcast delisting | **CLEARED** 2026-08-19 |
+| 8 — Comcast delisting | **CLEARED** 2026-08-18, 20:44:52–20:54:52 CDT |
 | 9 — opportunistic outbound TLS | **done** 2026-08-18 |
 
 **The diagnosis of fault 3 is confirmed from the receiving side.** Requirement 4
@@ -42,10 +42,21 @@ late on three consecutive observations, so its 08-24 report is still outstanding
 That cannot weaken the result: windows have only ever gained reports, and a
 Microsoft filing has never yet carried a failure.
 
-**Still open:** requirement 5 is a check, not a change, and it has to be run on
-jaguar — the DSN-per-day count across the retained logs. The DMARC reports cannot
-substitute: they show what receivers saw of mail that left, not what bounces the
-box generated toward strangers.
+**Requirement 5 has been run, and the metric it prescribed was the wrong one.**
+A raw DSN-per-day count answers a question nobody asked: most of what the box
+generates is internal — root's twice-daily `5.1.1`, one per Gmail refusal — and
+counting those buries the two that matter. Classified by recipient instead, the
+28 DSNs of 2026-08-17/18 put **exactly two outside the box in two days**, one of
+them *after* the PTR repair. **The real rate is about one a day**, both survivors
+are the forwarding pattern, and one is a Mailchimp VERP address rather than spam.
+
+So the PTR fix removed the dominant trigger, not the mechanism, and the
+requirement resolves to **no change**: at that volume, on a host being
+decommissioned, task 06's move to Cloudflare Email Routing retires it
+structurally. The DMARC reports could never have substituted — they show what
+receivers saw of mail that left, not what bounces the box generated toward
+strangers. Full working in the planning `STATUS.md`, *The backscatter finding*.
+[[suspect-the-measurer-before-the-record]]
 
 ## Background
 
@@ -298,11 +309,25 @@ which is the same failure wearing a different hat.
    appears to require editing local delivery routing, stop and record it as
    something the migration retires instead.
 
-8. **~~Request delisting from Comcast.~~ CLEARED 2026-08-19** — both MX hosts
-   now answer `220 … ESMTP server ready` where they answered `554 … #BL000100`
-   the day before, same box, same command, same two targets. Delivery itself is
-   still unconfirmed: a `220` is the connection being accepted, not a message
-   reaching an inbox. History below.
+8. **~~Request delisting from Comcast.~~ CLEARED 2026-08-18, 20:44:52–20:54:52
+   CDT** — dated from the Postfix log, corrected 2026-08-20. Both MX hosts answer
+   `220 … ESMTP server ready` where they answered `554 … #BL000100`, same box,
+   same command, same two targets.
+
+   **The greeting is not what dated it.** That check was run on the 19th and
+   recorded the 19th, but it observed a state that had already changed about 22
+   hours earlier: the log puts the change in a ten-minute window on the evening
+   of the 18th, the same evening the removal request went in. An instrument that
+   reports when it was read, not when the thing changed, will always date a
+   change late. [[measure-before-recording-in-planning-docs]]
+
+   **Delivery is confirmed further than the greeting.** All 23 queued messages
+   went out between 20:54 and 21:54 CDT — **delivered, not expired**, the oldest
+   at `delay=424510`, clearing Postfix's 5-day lifetime with 2.1 hours to spare,
+   so nothing returned to `no_reply@` and no bounces died locally. Comcast's MX
+   answered `250 … mail accepted for delivery` on all 23. **Inbox placement
+   remains unobserved** — spam-foldering is downstream and invisible from here —
+   which is the part a `250` still cannot tell us. History below.
 
    **~~Request delisting from Comcast.~~ CHASED TO ITS SOURCE 2026-08-18.**
    The Blocked Provider form covers `BL000000`; our error is `BL000100`, and
