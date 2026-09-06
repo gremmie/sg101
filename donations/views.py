@@ -4,6 +4,7 @@ Views for the donations application.
 import decimal
 import datetime
 import logging
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -12,14 +13,27 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.http import HttpResponse
 from django.contrib.auth.models import User
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 
 
+from core.functions import email_admins
 from donations.models import Donation
 
 PP_DATE_FMT = '%H:%M:%S %b %d, %Y'
+
+# Paypal reports payment_date as a Pacific wall clock with the zone as a
+# trailing abbreviation. An abbreviation does not identify a zone on its own --
+# PST is also Philippine Standard Time, sixteen hours the other way -- so these
+# two are recognised because Paypal is known to report from Pacific, and any
+# other is refused rather than guessed at. The offset comes from the date, not
+# from the abbreviation, so a summer reading lands at -07:00 with no branch.
+PP_TIME_ZONE = ZoneInfo('America/Los_Angeles')
+
+# Which pass through an ambiguous wall clock the reading is. It matters for one
+# hour a year: when the clocks go back, 01:30 happens twice and only the
+# abbreviation can say which is meant. fold=1 is the second pass, standard time.
+PP_ZONE_FOLD = {'PST': 1, 'PDT': 0}
 
 def paypal_params():
     """
@@ -141,6 +155,27 @@ def ipn(request):
     return HttpResponse()
 
 
+def parse_payment_date(value):
+    """
+    Turn Paypal's payment_date into an aware datetime.
+
+    Raises ValueError if the clock cannot be read, or if the zone is not one
+    Paypal reports from -- the caller treats that as a refusal, since a wrong
+    guess here is silently wrong data rather than a visible failure.
+    """
+    parts = value.rsplit(None, 1)
+    if len(parts) != 2:
+        raise ValueError('no timezone in payment_date "%s"' % value)
+
+    clock, zone = parts
+    if zone not in PP_ZONE_FOLD:
+        raise ValueError('unexpected timezone "%s" in payment_date "%s"'
+                         % (zone, value))
+
+    naive = datetime.datetime.strptime(clock, PP_DATE_FMT)
+    return naive.replace(tzinfo=PP_TIME_ZONE, fold=PP_ZONE_FOLD[zone])
+
+
 def process_donation(item_number, params):
     """
     A few validity and duplicate checks are made on the donation params.
@@ -207,21 +242,17 @@ def process_donation(item_number, params):
         logging.error('IPN: missing payment_date')
         return
 
-    # strip off the timezone
-    payment_date = payment_date[:-4]
     try:
-        payment_date = datetime.datetime.strptime(payment_date, PP_DATE_FMT)
-    except ValueError:
-        logging.error('IPN: invalid payment_date "%s"', params['payment_date'])
+        payment_date = parse_payment_date(payment_date)
+    except ValueError as error:
+        # The listener answers Paypal 200 whatever happens here, so Paypal will
+        # not retry and this donation has no second chance to be recorded. A log
+        # line would be found only by someone already looking.
+        logging.error('IPN: %s', error)
+        email_admins('Donation IPN refused',
+                     'A donation could not be recorded and Paypal will not '
+                     'send it again:\n\n%s' % error)
         return
-
-    # PayPal sends the zone as a trailing abbreviation ("PST"/"PDT"), which the
-    # line above throws away, so what was parsed is a Pacific wall clock. It has
-    # always then been recorded as if it were TIME_ZONE, which is what
-    # make_aware() continues to do here -- deliberately, because every donation
-    # on file was stored that way and a report that mixed the two conventions
-    # would be worse than one that is uniformly a couple of hours off.
-    payment_date = timezone.make_aware(payment_date)
 
     try:
         donation = Donation(

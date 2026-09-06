@@ -6923,6 +6923,146 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase C task 02 — the donations are recorded at the instant Paypal reported
+
+**Built 2026-09-06. Unstaged, awaiting review** — nothing committed or pushed.
+
+`donations/views.py` gains `parse_payment_date()`, and
+`donations/migrations/0002_payment_date_pacific_backfill.py` moves every existing
+row forward two hours. Both halves in one change, for the reason Phase 0 gave:
+correcting new rows alone would leave the column holding two conventions two
+hours apart with nothing marking which row is which.
+
+### The boundary: the moment the migration is applied, not a date chosen in advance
+
+Decided at the planning checkpoint, and it corrects an assumption in the task
+file. The task offered "a hardcoded UTC timestamp chosen at release" as an
+obvious candidate; **a timestamp chosen today would be wrong.** jaguar runs
+Django 1.9.13 on Python 2.7 and the corrected parse cannot be deployed there, so
+the fix first runs at the Step 21 cutover, and every donation recorded between
+now and then is written by the old handler — *after* any constant chosen now.
+
+So the boundary is the migration's own application time. This is safe rather
+than merely convenient: the corrected parse ships in the same deploy, so no
+database can hold a correctly-stamped row before the migration is applied, and
+each database it runs against is a full conversion of a pre-cutover snapshot.
+
+**The assumption it rests on is stated in the migration's docstring:** a full
+rebuild, not an incremental top-up. Topping up an already-migrated database with
+donations the old site recorded later would smuggle in uncorrected rows, and
+nothing here would find them. That hole is not particular to this choice — an
+applied migration does not re-run whatever its constant says — but it is the one
+thing that would break the design, so it is written down where it will be read.
+
+### Refusing an unknown zone has to reach a person
+
+`ipn()` answers Paypal `HttpResponse()` unconditionally (`views.py:141`), so a
+refusal returns 200, Paypal never retries, and the donation record is lost for
+good. Every other rejection branch in `process_donation()` only logs, which is
+right for the cases where the notification was not ours to record; this one is a
+donation we could not read. It logs *and* calls `email_admins()`.
+
+### Why the two abbreviations are mapped and everything else raises
+
+Measured against this machine's tzdata rather than assumed: **`PST` is not
+unique.** Ten IANA zones use it, at two offsets sixteen hours apart —
+`America/Los_Angeles` at -08:00 and `Asia/Manila`, Philippine Standard Time, at
++08:00. `CST` is worse, spanning -06:00, -05:00 and +08:00 across 45 zone/season
+pairs. The stdlib offers no decoder and cannot: `strptime` with `%Z` refuses
+`'PST'` outright, and for `'UTC'`, which it accepts, returns `tzinfo=None`.
+
+So the mapping is legitimate because of the *source*, not the token: this
+merchant's IPN reports Pacific. The abbreviation selects the zone, and the date
+selects the offset — which is why a summer `PDT` reading lands at -07:00 with no
+branch of its own.
+
+**`fold` is set from the abbreviation.** For one hour a year the wall clock is
+ambiguous: when the clocks go back, `01:30` happens twice, and the abbreviation
+is the only thing that says which pass is meant. Ignoring it would mean
+discarding the abbreviation's information a second time, in a fix about
+discarding it the first time.
+
+### The reverse recovers the forward's boundary from `django_migrations.applied`
+
+Not from a fresh `now()`. The case is a rollback *after* cutover: the site would
+have taken new, correctly-stamped donations in between, and an unbounded reverse
+would walk those back two hours as well.
+
+### One acceptance criterion could not be met as written, and why
+
+Criterion 6 asks that running the migration twice not shift a row four hours.
+With an apply-time boundary a second *manual* call of the helper would shift
+again — nothing in the row distinguishes a corrected donation from an
+uncorrected one, which the task file states itself. The guarantee therefore
+comes from Django's applied-migrations record, and that is what is tested. A
+marker column would make the helper self-guarding and is more schema than the
+problem is worth.
+
+### Rehearsed on the snapshot the figures were measured on
+
+`MYSQL_DB=sg101_pristine PG_DB=sg101_rehearsal tools/pgloader/convert.sh`, then
+`post_convert.py` against that target with `DB_NAME` overridden. `sg101_pristine`
+holds 1,421 donations spanning 2011-03-01 to 2026-07-06, which is the task file's
+2026-08-09 measurement exactly, so it is the snapshot those figures came from.
+
+| After the chain | |
+|---|---|
+| rows moved | **1,421** — all of them |
+| distinct deltas | **one bucket, exactly +2:00:00** |
+| changed calendar month | **5** (ids 241, 290, 361, 381, 912) |
+| changed calendar year | **0** |
+| the five, read through `in_month()` | each now files under the later month, and no longer under the earlier one |
+
+All five month-crossers are late-evening on the last day of a month, which is
+what makes them the only rows a two-hour shift can move. **The single delta
+bucket is the load-bearing number**: it says no row moved by any other amount,
+which a count of affected rows alone would not.
+
+### Two existing tests were pinning the defect
+
+`test_ipn_post_1` and `test_ipn_post_2` asserted
+`timezone.make_aware(datetime(2011, 1, 21, 4, 14, 8))` — which *is* the defect,
+the Pacific clock stamped with `TIME_ZONE`. They now state the instant Paypal
+reported, written as the reported clock in the zone it was reported in rather
+than as a UTC literal. Nothing else in the suite had an opinion about the column.
+
+### The mutation battery found a test of mine that proved nothing
+
+Nine mutations, each aimed at one assertion. **One survived on the first pass**,
+and it was the test for the requirement that the abbreviation's length not be
+assumed. Restoring the `[:-4]` discard leaves the zone as `KDT` instead of
+`AKDT`, and the assertion was `assertIn('AKDT', str(exception))` — which passed,
+because the message echoes the whole input string and the echo supplied the
+letters. The assertion was satisfied by data the mutation had not touched.
+Tightened to `assertIn('timezone "AKDT"', ...)`, which names it as the zone.
+[[mutation-verify-or-it-is-not-coverage]]
+
+**A coverage gap turned up while designing the battery, before it was run.** The
+reverse's boundary recovery had no test at all: the existing reverse tests call
+the helper with an explicit boundary, so swapping `applied` for `now()` in
+`back_to_chicago()` would have survived untouched. Two tests were added that
+discriminate — the discriminator is a row dated *after* the recorded apply time,
+which the correct implementation leaves alone and the mutant shifts.
+
+Second pass: **nine of nine caught**, each by the test that claims to cover it,
+both files byte-identical after restore.
+
+### Verification
+
+- Suite: **1,148 tests, OK**
+- Deprecation gate (separate run): **1,148 tests, OK**
+- `makemigrations --check --dry-run`: no changes detected
+- 20 tests added, and `sg101_rehearsal` is left in the Postgres service holding
+  the converted snapshot with `0002` applied
+
+### Not done here
+
+**No browser test.** CODEASSIST asks for one on anything touching a rendered
+page, and the donations report renders `monthly_stats()` — but exercising the
+path that matters would mean posting a live IPN, so the reporting check was made
+through `in_month()` against the rehearsal data instead. Worth ten minutes on the
+donations admin page before this is called finished.
+
 ## Step 19 Phase C task 01 — an address has one owner, and the thirteen pairs are cleared
 
 **Committed and pushed 2026-09-05.** *(No hash, and the state is in the body

@@ -3,6 +3,7 @@ Tests for the donations application.
 """
 from urllib.parse import parse_qs
 from decimal import Decimal
+from importlib import import_module
 import datetime
 from zoneinfo import ZoneInfo
 
@@ -10,6 +11,11 @@ import requests
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
+from django.core import mail
+from django.core.management import call_command
+from django.apps import apps as global_apps
+from django.db import connection
+from django.db.migrations.recorder import MigrationRecorder
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -17,7 +23,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from donations.models import Donation
-from donations.views import verify_request, paypal_params
+from donations.views import verify_request, paypal_params, parse_payment_date
 import bio.badges
 
 
@@ -69,8 +75,10 @@ class DonationsIpnTestCase(TestCase):
             self.assertEqual(d.mc_gross, Decimal('5.00'))
             self.assertEqual(d.memo, '')
             self.assertEqual(d.payer_status, 'verified')
+            # The clock Paypal reported, in the zone Paypal reported it in.
             self.assertEqual(d.payment_date,
-                    timezone.make_aware(datetime.datetime(2011, 1, 21, 4, 14, 8)))
+                    datetime.datetime(2011, 1, 21, 4, 14, 8,
+                                      tzinfo=ZoneInfo('America/Los_Angeles')))
 
             # user should have got a badge for donating
             p = user.profile
@@ -111,7 +119,8 @@ class DonationsIpnTestCase(TestCase):
             self.assertEqual(d.memo, '')
             self.assertEqual(d.payer_status, 'unverified')
             self.assertEqual(d.payment_date,
-                    timezone.make_aware(datetime.datetime(2011, 1, 16, 5, 40, 33)))
+                    datetime.datetime(2011, 1, 16, 5, 40, 33,
+                                      tzinfo=ZoneInfo('America/Los_Angeles')))
 
             # user should not have got a badge for donating
             p = user.profile
@@ -378,3 +387,233 @@ class MonthBoundaryTestCase(TestCase):
         with timezone.override('UTC'):
             pct = Donation.objects.monthly_goal_pct(year=2026, month=1)
         self.assertEqual(pct, 20)   # (20.00 - 1.00) / 94.00
+
+
+UTC = datetime.timezone.utc
+
+# The backfill migration, imported by path because its module name begins with a
+# digit. Only its pure helper and its constants are used here; the migration
+# itself is run by the test runner like any other.
+backfill = import_module(
+    'donations.migrations.0002_payment_date_pacific_backfill')
+
+
+class PaymentDateParseTestCase(TestCase):
+    """
+    Paypal reports payment_date as a Pacific wall clock with the zone as a
+    trailing abbreviation. The abbreviation says which side of a DST change the
+    reading is on; it is not itself decodable, since PST alone is also
+    Philippine Standard Time, sixteen hours the other way. So these assert that
+    the two abbreviations Paypal sends are honoured and that everything else is
+    refused rather than guessed at.
+    """
+
+    def test_pst_is_stored_at_the_instant_paypal_reported(self):
+        parsed = parse_payment_date('04:14:08 Jan 21, 2011 PST')
+        self.assertEqual(parsed.astimezone(UTC),
+                         datetime.datetime(2011, 1, 21, 12, 14, 8, tzinfo=UTC))
+
+    def test_pst_is_not_the_old_chicago_reading(self):
+        """Guard the premise. The defect stamped this same clock with
+        TIME_ZONE, two hours ahead of Pacific -- if that value ever passes
+        here, the test above is asserting about the wrong instant."""
+        parsed = parse_payment_date('04:14:08 Jan 21, 2011 PST')
+        self.assertNotEqual(parsed.astimezone(UTC),
+                            datetime.datetime(2011, 1, 21, 10, 14, 8,
+                                              tzinfo=UTC))
+
+    def test_pdt_takes_the_daylight_offset(self):
+        """A summer date must come out at -07:00. The zone is mapped rather
+        than the offset, so this is zoneinfo reading the date, not the
+        abbreviation being trusted for an offset."""
+        parsed = parse_payment_date('10:00:00 Jul 15, 2011 PDT')
+        self.assertEqual(parsed.utcoffset(), datetime.timedelta(hours=-7))
+        self.assertEqual(parsed.astimezone(UTC),
+                         datetime.datetime(2011, 7, 15, 17, 0, 0, tzinfo=UTC))
+
+    def test_the_ambiguous_hour_is_resolved_by_the_abbreviation(self):
+        """On the morning the clocks go back, 01:30 happens twice and the wall
+        clock cannot say which pass it is. The abbreviation can, and it is the
+        only thing that can."""
+        pdt = parse_payment_date('01:30:00 Nov 2, 2025 PDT')
+        pst = parse_payment_date('01:30:00 Nov 2, 2025 PST')
+        self.assertEqual(pdt.astimezone(UTC),
+                         datetime.datetime(2025, 11, 2, 8, 30, tzinfo=UTC))
+        self.assertEqual(pst.astimezone(UTC),
+                         datetime.datetime(2025, 11, 2, 9, 30, tzinfo=UTC))
+
+    def test_an_unknown_zone_is_refused(self):
+        with self.assertRaises(ValueError) as caught:
+            parse_payment_date('04:14:08 Jan 21, 2011 EST')
+        self.assertIn('timezone "EST"', str(caught.exception))
+
+    def test_the_abbreviation_length_is_not_assumed(self):
+        """The old parse chopped a fixed four characters off the end. A
+        four-letter zone must be reported by its whole name -- naming 'AKD' or
+        'KDT' would mean the split had cut into the token, and the same cut
+        applied to a shorter one would eat the year."""
+        with self.assertRaises(ValueError) as caught:
+            parse_payment_date('04:14:08 Jan 21, 2011 AKDT')
+        # Named as the zone, not merely present: the message echoes the whole
+        # input too, so a looser assertion would be satisfied by that echo
+        # while the split quietly cut the token down to "KDT".
+        self.assertIn('timezone "AKDT"', str(caught.exception))
+
+    def test_a_date_with_no_zone_is_refused(self):
+        with self.assertRaises(ValueError):
+            parse_payment_date('04:14:08 Jan 21, 2011')
+
+    def test_junk_is_refused(self):
+        with self.assertRaises(ValueError):
+            parse_payment_date('not a date XYZ')
+
+
+@override_settings(ADMINS=[('Admin', 'admin@example.com')])
+class IpnPaymentDateTestCase(TestCase):
+    """The parse as the listener uses it: what reaches the database, and what
+    happens when a zone we do not map arrives."""
+    fixtures = ['badges']
+
+    def setUp(self):
+        User.objects.create_user('test_user', 'test_user@example.com',
+                                 'password')
+
+    def post_ipn(self, **overrides):
+        response = self.client.post(reverse('donations-ipn'),
+                                    valid_ipn(**overrides))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_a_donation_is_stored_at_the_reported_instant(self):
+        self.post_ipn()
+        donation = Donation.objects.get()
+        self.assertEqual(donation.payment_date.astimezone(UTC),
+                         datetime.datetime(2011, 1, 21, 12, 14, 8, tzinfo=UTC))
+
+    def test_an_unknown_zone_creates_no_donation(self):
+        self.post_ipn(payment_date='04:14:08 Jan 21, 2011 EST')
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_an_unknown_zone_reaches_a_person(self):
+        """The listener answers Paypal 200 whatever happens, so Paypal never
+        retries and a refusal is a donation record lost for good. A log line
+        alone would be found only by someone already looking."""
+        self.post_ipn(payment_date='04:14:08 Jan 21, 2011 EST')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('EST', mail.outbox[0].body)
+
+
+class PaymentDateBackfillTestCase(TestCase):
+    """
+    The backfill helper. Every donation on file was recorded by the old parse
+    and is two hours early; the boundary is what keeps the correction off rows
+    written after the fixed parse went live.
+    """
+
+    def setUp(self):
+        self.boundary = timezone.now()
+        self.before = self._donation('before', self.boundary
+                                     - datetime.timedelta(days=1))
+        self.after = self._donation('after', self.boundary
+                                    + datetime.timedelta(days=1))
+
+    def _donation(self, txn_id, payment_date):
+        return Donation.objects.create(txn_id=txn_id, txn_type='web_accept',
+                                       mc_gross=Decimal('10.00'),
+                                       mc_fee=Decimal('1.00'),
+                                       payment_date=payment_date)
+
+    def test_a_row_before_the_boundary_moves_two_hours(self):
+        original = self.before.payment_date
+        backfill.shift_donations(Donation, self.boundary, backfill.SHIFT)
+        self.before.refresh_from_db()
+        self.assertEqual(self.before.payment_date - original,
+                         datetime.timedelta(hours=2))
+
+    def test_a_row_after_the_boundary_does_not_move(self):
+        original = self.after.payment_date
+        backfill.shift_donations(Donation, self.boundary, backfill.SHIFT)
+        self.after.refresh_from_db()
+        self.assertEqual(self.after.payment_date, original)
+
+    def test_the_shift_is_exactly_reversible(self):
+        original = self.before.payment_date
+        backfill.shift_donations(Donation, self.boundary, backfill.SHIFT)
+        backfill.shift_donations(Donation, self.boundary, -backfill.SHIFT)
+        self.before.refresh_from_db()
+        self.assertEqual(self.before.payment_date, original)
+
+    def test_reversing_leaves_a_later_row_alone(self):
+        """A rollback after the site is live is the case this guards: rows
+        written by the corrected parse in the meantime are already right, and
+        an unbounded reverse would break them."""
+        original = self.after.payment_date
+        backfill.shift_donations(Donation, self.boundary, -backfill.SHIFT)
+        self.after.refresh_from_db()
+        self.assertEqual(self.after.payment_date, original)
+
+
+class BackfillAppliedOnceTestCase(TestCase):
+    """
+    Nothing in a row says whether it has been corrected, so the migration must
+    not run twice. That guarantee comes from Django's applied-migrations record
+    rather than from anything in the helper.
+    """
+
+    def test_the_migration_is_recorded_as_applied(self):
+        applied = MigrationRecorder(connection).applied_migrations()
+        self.assertIn(('donations',
+                       '0002_payment_date_pacific_backfill'), applied)
+
+    def test_a_second_migrate_moves_nothing(self):
+        donation = Donation.objects.create(
+                txn_id='second-migrate', txn_type='web_accept',
+                mc_gross=Decimal('10.00'), mc_fee=Decimal('1.00'),
+                payment_date=timezone.now() - datetime.timedelta(days=1))
+        original = donation.payment_date
+        call_command('migrate', 'donations', verbosity=0)
+        donation.refresh_from_db()
+        self.assertEqual(donation.payment_date, original)
+
+
+class BackfillReverseTestCase(TestCase):
+    """
+    The reverse takes its boundary from Django's record of when the forward
+    ran, not from the clock at the moment of the rollback. The difference only
+    shows once the site has been live in between -- which is exactly when a
+    rollback happens.
+    """
+
+    def setUp(self):
+        self.applied = MigrationRecorder(connection).migration_qs.get(
+                app='donations', name=backfill.NAME).applied
+
+    def _donation(self, txn_id, payment_date):
+        return Donation.objects.create(txn_id=txn_id, txn_type='web_accept',
+                                       mc_gross=Decimal('10.00'),
+                                       mc_fee=Decimal('1.00'),
+                                       payment_date=payment_date)
+
+    def _reverse(self):
+        with connection.schema_editor() as schema_editor:
+            backfill.back_to_chicago(global_apps, schema_editor)
+
+    def test_a_row_the_forward_corrected_goes_back(self):
+        donation = self._donation('pre-applied', self.applied
+                                  - datetime.timedelta(days=1))
+        original = donation.payment_date
+        self._reverse()
+        donation.refresh_from_db()
+        self.assertEqual(original - donation.payment_date,
+                         datetime.timedelta(hours=2))
+
+    def test_a_donation_taken_after_the_forward_is_left_alone(self):
+        """Recorded by the corrected parse while the site was live, so it is
+        already right. Reversing against the current clock instead of the
+        recorded one would walk it back two hours."""
+        donation = self._donation('post-applied', self.applied
+                                  + datetime.timedelta(seconds=1))
+        original = donation.payment_date
+        self._reverse()
+        donation.refresh_from_db()
+        self.assertEqual(donation.payment_date, original)
