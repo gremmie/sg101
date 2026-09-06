@@ -7055,13 +7055,43 @@ both files byte-identical after restore.
 - 20 tests added, and `sg101_rehearsal` is left in the Postgres service holding
   the converted snapshot with `0002` applied
 
+### Confirmed outside the suite, on the dev database — 2026-09-06
+
+The migration was applied to the working database and the correction checked on
+the two surfaces a person actually reads. **`donations_report` is a management
+command, not a page** (`donations/management/commands/donations_report.py`); the
+rendered page is `/donations/`, which calls `monthly_stats()` with no arguments
+and so reports the *current* month — empty, since the snapshot ends 2026-07-06.
+That page is therefore not where this is visible, which is worth knowing before
+anyone goes looking there for it.
+
+**Admin.** `DonationAdmin` sets `date_hierarchy = 'payment_date'`, so its
+drill-down buckets by exactly the semantics the shift affects. Donation 241 now
+reads `2013-06-01 00:06:39`, having been `2013-05-31 22:06:39`.
+
+**`donations_report`, run for all three years holding a crosser.** Nine month
+rows moved across the three, and **no annual total moved a cent** — which is the
+"0 changed year" claim made visible rather than asserted, since money
+redistributed between months of the same year cannot alter the year.
+
+| Year | Months that moved (gross, before → after) | Annual total, unchanged |
+|---|---|---|
+| 2013 | May 185.00 → 160.00, Jun 135.00 → 160.00; Nov 190.77 → 188.77, Dec 190.00 → 192.00 | 1945.88 / 1853.52 |
+| 2014 | Jul 155.00 → 150.00, Aug 160.00 → 165.00; Sep 132.00 → 127.00, Oct 130.00 → 135.00 | 1763.30 / 1672.77 |
+| 2020 | Apr 180.00 → 170.00, May 78.00 → 88.00 | 1530.00 / 1452.01 |
+
+The "before" figures are not from memory: they were derived by shifting the
+rehearsal data back two hours in SQL, so the printed output could be checked
+against a computed expectation rather than eyeballed. Every row matched.
+
+All five crossers are accounted for: 241 and 290 in 2013, 361 and 381 in 2014,
+912 in 2020.
+
 ### Not done here
 
-**No browser test.** CODEASSIST asks for one on anything touching a rendered
-page, and the donations report renders `monthly_stats()` — but exercising the
-path that matters would mean posting a live IPN, so the reporting check was made
-through `in_month()` against the rehearsal data instead. Worth ten minutes on the
-donations admin page before this is called finished.
+**No live IPN was posted.** The parse is covered by the suite against the real
+payloads, but nothing here has exercised the path with Paypal actually sending —
+that belongs with the Step 21 cutover, not before it.
 
 ## Step 19 Phase C task 01 — an address has one owner, and the thirteen pairs are cleared
 
