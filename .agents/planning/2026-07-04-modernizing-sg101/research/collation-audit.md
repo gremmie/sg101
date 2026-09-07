@@ -98,8 +98,53 @@ a wrong first answer here until `BINARY` was forced.
 | — differing **only** by case | **1** |
 | blank emails | 4 |
 | `accounts_pendinguser` / `illegalusername` / `illegalemail` | 1 / 4 / 0 rows, no collisions |
-| tags | 1,006 (all lowercase, 0 collisions) |
+| tags | 1,006 (all lowercase, 0 collisions) — **1,001 of them live; see below** |
 | forum slugs non-lowercase | 0 |
+
+## `tagging_tag` does not survive — resolved 2026-09-07
+
+The tag-cloud half of the ORDER BY audit was blocked on Step 19 Phase C under the
+rule *do not record a decision about a table you may delete*. **Task 04 settled
+it: `django-tagging` is replaced by a PostgreSQL `ArrayField`, so `tagging_tag`
+and `tagging_taggeditem` both go.** Decision record and numbers in `STATUS.md`
+§ "Step 19 Phase C task 04".
+
+**The cloud's ordering decision carries over unchanged.** `ORDER BY
+tagging_tag.name` becomes an ordering on the unnested array element — the same
+strings under the same `en_US.utf8` collation — and the two orderings were
+measured identical across all 1,001 live tags. "Keep PostgreSQL's ordering"
+stands.
+
+### The one finding here that outlives the table
+
+Two stories' tags disagree between `news_story.tags` and the join table:
+
+```
+story 1539 (2021-10-31)   column: jay-poisön    join table: jay-poison
+story 1730 (2024-10-12)   column: thálasses     join table: thalasses
+```
+
+**This is MySQL's accent-insensitive collation on `tagging_tag.name`'s unique
+index, and it is production data — the MySQL snapshot holds the same bytes, so
+the PostgreSQL conversion did not cause it.** In both cases an ASCII-spelled tag
+already existed (`jay-poison` 2020-11-08, `thalasses` 2024-06-04), so
+`Tag.objects.get_or_create()` matched the later accented submission to it: the
+join table points at the ASCII tag while the column keeps what the author typed.
+Four other accented tags — `bárujárn`, `diabolico-coupè`, `electrohúmedos`,
+`taner-öngür` — kept their accents precisely because each has one story and never
+had an ASCII twin to be folded into.
+
+**It is also a latent behaviour change from the engine switch**, of the same
+family as the rest of this audit: PostgreSQL's index is not accent-insensitive,
+so re-saving story 1539 today would create a *second* tag and split the two
+spellings across two tag pages. Nothing has re-saved it, so nothing has fired —
+and the `ArrayField` migration takes the join table's ASCII spelling, which is
+what every page renders today, closing it.
+
+**The live tag figures, also from task 04:** 1,001 tags across 3,931 rows on
+1,208 stories. The 1,006/4,561 recorded above counts **630 orphaned join rows**
+(616 pointing at deleted `news_pendingstory` rows, 14 at deleted stories) and
+**5 tags reachable only through them**, plus 3 tags used by nothing at all.
 
 ### The 13 email groups
 

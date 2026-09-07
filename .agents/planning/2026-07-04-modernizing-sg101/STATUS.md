@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-04
+**Last updated:** 2026-09-07
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -6924,7 +6924,295 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase C task 03 — the `elsewhere` seed list, DECIDED AND BUILT 2026-09-06 — unstaged, awaiting review
+## Step 19 Phase C task 04 — `django-tagging` is replaced by a PostgreSQL `ArrayField`, DECIDED 2026-09-07
+
+The task changed no schema, moved no data and shipped no code: its output is
+this record and the numbers under it. The implementation is task 05, which can
+now be written because the shape is settled.
+
+**Brian's call on both questions, put to him with the measurements below: the
+`ArrayField` wins, and the join table is the migration's source of truth.**
+
+### What was measured, 2026-09-07, on the converted production database
+
+Both read paths, at the ORM level rather than through the templates, because the
+templates are the part that does not change. Warm, min of 11 runs. A throwaway
+`varchar(50)[]` column on `news_story`, populated from `tagging_taggeditem` and
+GIN-indexed, is what the right-hand column measures; it was dropped before the
+task closed.
+
+| path | today (join table) | `ArrayField` + GIN |
+|---|---|---|
+| `/news/tag/release/` (567 stories) | 4 queries, 1.94 ms | **2 queries, 1.04 ms** |
+| `/news/tag/video/` (57) | 4 queries, 1.79 ms | **2 queries, 0.82 ms** |
+| `/news/tag/thalasses/` (2) | 4 queries, 1.44 ms | **2 queries, 0.67 ms** |
+| `/news/tags/`, 1,001 tags incl. `calculate_cloud` | 1 query, 2.41 ms | **1 query, 1.69 ms** |
+
+**The two shapes return identical results** — the same story sets on every tag
+page, and a cloud of 1,001 tags with identical counts *and* identical font
+sizes. That equivalence is what makes the timings comparable at all.
+
+Whole pages, through the test client with the debug toolbar removed from
+`MIDDLEWARE`: `/news/tag/release/` 5.0 ms, `/news/tags/` 13.5 ms. **So the SQL is
+a small share of either page** — the cloud's real cost is rendering 1,001 links,
+not counting them. Nobody should expect this change to be visible in a browser.
+
+Query surface across the whole app, which is the number that actually moves:
+
+| page | today | `ArrayField` | `taggit` |
+|---|---|---|---|
+| `/news/date/` | 3 (1 tagging) | **2** | 3 |
+| `/news/story/<id>/` | 2 (1 tagging) | **1** | 2 |
+| `/news/archive/<y>/<m>/` | 3 (1 tagging) | **2** | 3 |
+| `/news/categories/` | 12 (0 tagging) | 12 | 12 |
+| `/news/tag/<name>/` | 4 (4 tagging) | **2** | 4 |
+| `/news/tags/` | 1 | 1 | 1 |
+
+Storage: the change removes 928 kB (`tagging_taggeditem` 720 kB,
+`tagging_tag` 208 kB) and adds a 96 kB GIN index. The migration was rehearsed
+end to end inside one transaction and rolled back: **70 ms total** — `ALTER` 0.6 ms,
+backfill of 1,694 rows 65.5 ms, `CREATE INDEX` 3.2 ms.
+
+**`django-taggit` is alive** — 6.1.0 is current on PyPI, checked from the
+container rather than assumed. It was rejected on shape, not on health.
+
+### The performance argument runs the other way, and the decision does not rest on it
+
+**In raw SQL the join table wins where the two differ.** The common-tag `COUNT`
+is 0.26 ms through the join and **0.96 ms** on `tags @> ARRAY['release']`: at
+567 of 1,694 rows the tag is 33% selective, so the planner ignores the GIN index
+and sequentially scans a 5,568 kB table instead of a 720 kB one. The GIN index
+only earns its place at the tail — the rare tag is a 0.023 ms bitmap scan.
+
+The `ArrayField` is faster *at the ORM level* for a different reason: it deletes
+two round trips per tag page — the `Tag` lookup and `attach_extra_attrs`' bulk
+`TaggedItem` fetch — along with the Python that assembles them. **That is a
+structural saving, not a faster query**, and it is worth recording that way
+because the raw-SQL number would mislead anyone who re-measures only the `WHERE`
+clause later.
+
+### Five findings that were not predicted, and two of them changed the case
+
+**1. 630 of the 4,561 join rows are orphans — 13.8%.** 616 point at
+`news_pendingstory` rows that no longer exist and 14 at deleted stories. The
+mechanism is in the source: `news/admin.py:85`, `_approve_story`, ends with
+`pending_story.delete()`, and django-tagging registers no delete handler, so
+every story ever approved left its pending tag rows behind. **The live figures
+are 3,931 rows across 1,208 stories and 1,001 tags**, not the 4,561/1,006 the
+plan has carried since 2026-08-04. The 1,001 is the same number the Step 14
+rungs recorded for the rendered cloud, which is the cross-check that the live
+set is the set the site displays.
+
+**This is the argument the measurement produced and taste would not have.** The
+`ArrayField` makes the failure mode structurally impossible: tags live on the row
+they describe, so deleting the row deletes them. `taggit` keeps
+`content_type_id`/`object_id` and a `GenericForeignKey`, so nothing at the
+database level stops the next 630 — whatever it does or does not do in Python.
+
+**2. Two models are tagged, not one.** `Story` **and** `PendingStory`, both
+inheriting `tags` from `StoryBase` (`news/models.py:49`). The task file's
+premise — "this site tags exactly one model" — is wrong, and it was the premise
+the whole `ArrayField` case rested on. It survives the correction: two concrete
+models in one app is still not what a content-type indirection is for, and each
+takes its own array column. But the record should say the case was re-argued
+rather than confirmed.
+
+**3. The `tags` column is four characters from its cap.** `TagField` is
+`CharField(max_length=255)`; story 635 (2011, *Instro Summit returns to Chapel
+Hill*) holds 20 tags in 251 characters. Production's MySQL runs a permissive
+`sql_mode`, so a 21st tag would truncate there silently rather than raise. One
+story, from 2011, and nobody is editing it — the caveat belongs with the number.
+The `ArrayField` removes the cap rather than raising it.
+
+**4. Two stories' tags disagree between the column and the join table.** Story
+1539 holds `jay-poisön` in `news_story.tags` while the join table says
+`jay-poison`; story 1730 holds `thálasses` against `thalasses`. **Cause: MySQL's
+accent-insensitive collation on the `tagging_tag.name` unique index.** In both
+cases an ASCII-spelled tag already existed — `jay-poison` from 2020-11-08,
+`thalasses` from 2024-06-04 — and `Tag.objects.get_or_create()` matched the later
+accented submission to it, so the join table points at the ASCII tag while the
+column keeps what the author typed. Four other accented tags (`bárujárn`,
+`diabolico-coupè`, `electrohúmedos`, `taner-öngür`) kept their accents precisely
+because each has exactly one story and never had an ASCII twin to be folded into.
+
+**The MySQL snapshot was checked before this was written down, and holds exactly
+the same bytes** (`tagging_tag.name` = `jay-poison`, `news_story.tags` =
+`jay-pois\xc3\xb6n`). The conversion is faithful; this is production data, and it
+predates PostgreSQL.
+
+**It is also a latent behaviour change from the engine switch.** PostgreSQL's
+`name` index is not accent-insensitive, so re-saving story 1539 today would
+create a *second* tag and split the two spellings across two tag pages. Nothing
+has re-saved it, so nothing has fired.
+
+**5. The admin's tag rename half-applies, and then erodes.** Found because
+Brian asked whether the old system could rename or merge tags at all — the claim
+that it could was mine and it was wrong. `tagging/admin.py` registers `Tag`, so
+`/admin/tagging/tag/` does offer a rename form. Measured 2026-09-07 in a
+rolled-back transaction:
+
+```
+BEFORE            /news/tag/video/ -> 57 stories   /news/tag/clips/ -> 0
+
+AFTER THE RENAME  /news/tag/video/ -> 0            /news/tag/clips/ -> 57
+   story 634   page shows clips,eliminators    column holds 'eliminators video'
+   story 717   page shows chicchi,clips        column holds 'chicchi video'
+
+AFTER STORY 634 IS SAVED (its tags untouched)
+   /news/tag/video/ -> 1 story      /news/tag/clips/ -> 56 stories
+```
+
+The rename reaches all 57 stories at once, which is why it looks like it works.
+But it never touches `news_story.tags`, so every one of those stories still holds
+the old string — and `TagField._save` re-runs `update_tags` from that column on
+the next save, recreating the old tag and pulling that story back. **A renamed
+tag does not revert; it erodes, one story at a time**, splitting the set across
+two tag pages with nothing going red. **Merging is not possible at all**:
+renaming a tag onto an existing name raises `duplicate key value violates unique
+constraint "idx_600078_name"`.
+
+**Exposure, with the caveat attached to the number:** 779 of 1,694 stories (46%)
+have been edited after posting at some point, but only **8 in the last two
+years** — so the erosion is real, slow, and permanent. It is a live defect in
+production today.
+
+**No separate fix.** The `ArrayField` deletes the mechanism: there is no second
+copy of the string to go stale. Task 07 supplies a correct rename and merge as
+management commands, which is **new capability rather than restored capability** —
+a distinction worth keeping, because the first version of this record had it
+backwards.
+
+### Decision 1 — a PostgreSQL `ArrayField` with a GIN index
+
+```python
+# news/models.py
+class StoryBase(models.Model):
+    ...
+    tags = ArrayField(models.CharField(max_length=50), default=list, blank=True)
+```
+
+with `GinIndex(fields=['tags'])` on the concrete models. `tagging_tag`,
+`tagging_taggeditem` and the vendored `tagging/` package all go.
+
+The reasons, in the order they weigh:
+
+1. **Referential integrity.** Finding 1, above. This is the one difference
+   between the candidates that is about correctness rather than shape.
+2. **Half the queries on five of six news pages**, including the story page,
+   which drops from 2 to 1.
+3. **No dependency at all**, rather than a maintained dependency in place of a
+   dead one. The generic machinery exists to tag *any* model; two concrete models
+   in one app do not need it.
+4. The 255-character cap goes away with it.
+
+**What it gives up, stated plainly:** a tag is no longer an addressable row, so
+a tag cannot exist with zero stories — 3 such tags exist today, plus 5 reachable
+only through the dead `pendingstory` rows, and none is missed. Renaming or
+merging a tag stops being an admin edit and becomes
+`UPDATE news_story SET tags = array_replace(tags, 'old', 'new')` — one statement
+either way, but it needs a management command rather than a form. And the admin's tag box changes
+separator, since `SimpleArrayField` splits on commas where today's `TagField` box
+is space-separated.
+
+**Brian's call 2026-09-07, after the task files were generated: no custom form
+field for that — help text instead.** The stock `SimpleArrayField` already
+renders existing values comma-separated and strips whitespace around the commas,
+so the only exposure is habit. **It is a silent exposure, which is why a
+validator goes in beside the help text**: measured, typing `surf reverb twang`
+*validates* and stores one tag named `surf reverb twang`, which no URL resolves.
+A validator rejecting a space cannot reject existing data — 0 of the 1,006 tags
+contain one, and no story ever used django-tagging's quoted multi-word syntax.
+
+**The PostgreSQL tie is not a new commitment.** Step 11 moved the engine and Step
+12 put `/search/` on native full-text search; this adds nothing that was not
+already load-bearing.
+
+### Decision 2 — the join table is the migration's source of truth
+
+For the two stories in finding 4, the migration takes `jay-poison` and
+`thalasses`. **The join table is what every page renders today** — the tag page
+and the news index through `attach_extra_attrs`, the story page through
+`{% tags_for_object %}` — so migrating from it produces no visible change
+anywhere on the site. The accented spellings survive only in the admin edit box
+and in the search index, which reads the column (`search/documents.py:256`); that
+one search match for `thálasses` is the whole cost, and it is accepted.
+
+### Decision 3 — the tag-cloud half of the collation audit is released
+
+`tagging_tag` does not survive, so the finding about `tagging_tag.name` has no
+table to be about. Recorded in `research/collation-audit.md`, along with finding
+4, which is the concrete instance of the same claim and is worth keeping after
+the table is gone: **the two folded pairs are the surviving trace of MySQL's
+accent-insensitive index, and the ASCII spelling is the one the array keeps.**
+
+### What task 05 has to build
+
+1. `ArrayField` on `StoryBase`, `GinIndex` on `Story` and `PendingStory`.
+2. A data migration from `tagging_taggeditem` (content type `news.story` /
+   `news.pendingstory`), reversible back into the join table for the live rows;
+   the 630 orphans are not recreated by the reverse, and the record should say so.
+3. `news/views.py`: the tag page loses its `Tag` lookup and 404s on
+   `paginator.count == 0`; `.lower()` on the URL segment reproduces
+   `name__iexact` faithfully, since all 1,001 live tags are lowercase with no
+   case variants (`FORCE_LOWERCASE_TAGS`, already pinned by a test at
+   `news/tests/test_display_views.py:94`). The cloud becomes `unnest` + `GROUP BY`
+   feeding the existing `calculate_cloud`.
+4. `news/utils.py`: `attach_extra_attrs` loses its tag query entirely.
+5. Templates: `story.html:52`'s `{% tags_for_object %}` and
+   `story_summary.html:81`'s `story.tag_list` both become `story.tags`; the two
+   `{% load tagging_tags %}` lines go.
+6. `search/documents.py:256`: `obj.tags` is a list now, so `' '.join(obj.tags)`.
+   **A reindex is required** — the two accented stories change in the index.
+7. Delete `tagging/` and its `INSTALLED_APPS` entry; drop both tables; port
+   `news/tests/test_tag_queries.py` and the tagging tests in
+   `test_display_views.py` to the new shape.
+8. An admin form field that splits the tag box on whitespace.
+9. A `rename_tag` / `merge_tags` management command, since the admin loses it.
+10. `sg101/templates/fixed/colophon.html:14` credits django-tagging with a link
+    to `code.google.com/p/django-tagging/`, dead for years, on a live page.
+
+### Verification
+
+- Suite **1,181 tests, OK**, and the deprecation gate **1,181, OK** — two
+  separate runs, both after the throwaway column was dropped.
+- `git status` clean: no model, migration, dependency or template changed.
+- The throwaway column is gone (`information_schema.columns` returns 0 rows for
+  `news_story.tags_arr`), and `news_story` / `tagging_tag` / `tagging_taggeditem`
+  hold 1,694 / 1,006 / 4,561 rows, identical to the pre-task counts.
+- Snapshot `sg101-20260907-131203-step19-task04-pre.dump` taken before any write.
+
+### Three task files generated 2026-09-07
+
+`/agent-sops:code-task-generator`, into
+`.agents/tasks/2026-07-04-modernizing-sg101/step19/`:
+
+- **`task-05-news-tags-as-an-arrayfield`** — the field, both migrations, every
+  read path, the search document, and the admin's comma separator with its
+  help text and space validator. **`tagging/` stays installed and its tables stay populated at the end of
+  this task**, deliberately: that is what lets the old and new shapes be compared
+  on the same 1,208 stories, the same argument that put a populated index before
+  the code reading it in Step 12. It also has to carry `calculate_cloud` out of
+  `tagging/utils.py:250` into `news/`, or the cloud loses its font sizes one task
+  later.
+- **`task-06-remove-the-vendored-tagging-app`** — delete the package and its
+  `INSTALLED_APPS` entry, drop both tables *and* the `tagging` rows in
+  `django_migrations`, delete `news/tests/test_tag_queries.py` (its subject
+  ceases to exist), and take django-tagging out of the live colophon. Two admin
+  pages go with it, `Tag` and `TaggedItem` — named explicitly there so it is a
+  decision rather than a surprise.
+- **`task-07-rename-and-merge-tag-commands`** — `rename_tag` and `merge_tags`,
+  both models, `--dry-run`, transactional, de-duplicating on merge.
+
+**The split puts the deletion after the equivalence check**, which is the same
+shape Phase B used for the wiki (`4dc6da25` then `bb37bcef`). The admin form
+field sits in task 05 rather than 06 because the separator changes the moment
+`TagField` becomes `ArrayField`, so it cannot wait a task.
+
+### Not done here
+
+No code. Tasks 05–07 are written but not run.
+
+## Step 19 Phase C task 03 — the `elsewhere` seed list, DECIDED AND BUILT 2026-09-06, `cd2e93e7`, PUSHED
 
 The task file carried three decisions. Two more came out of the investigation
 before any of the three could be answered honestly, so five were taken in one

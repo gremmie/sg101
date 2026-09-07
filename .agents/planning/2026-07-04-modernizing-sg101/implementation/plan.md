@@ -1152,9 +1152,9 @@ internal: phases inside the step, which is an idiom this plan already uses.
 | Phase | Contents | Why it is a unit |
 |---|---|---|
 | **0 — Decide** ✅ **DONE 2026-09-03** | Six questions, all answered — see the decision record in `STATUS.md` | No code. Every open question answered and recorded. It closed three items outright. |
-| **A — Delete-path safety** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
+| **A — Delete-path safety** ✅ **DONE 2026-09-03** | `last_post` cascade; `Post.delete()`'s return type; `forums/tools.py`'s queryset delete | The only items here that can lose data, and one has already fired. Nothing to do with pruning. |
 | **B — Prune** ✅ **DONE 2026-09-05** | `wiki`/MoinMoin; the 7 model-less legacy tables; delete four `tools/` scripts and port `flag_data.py` | The step as originally designed. Mechanical, low risk, one shared exit test. |
-| **C — Schema and data migrations** — *four task files generated 2026-09-05 in `.agents/tasks/2026-07-04-modernizing-sg101/step19/`* | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 13 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
+| **C — Schema and data migrations** — *four task files generated 2026-09-05 in `.agents/tasks/2026-07-04-modernizing-sg101/step19/`; tasks 01, 02 and 03 **DONE and pushed**, task 04 **DECIDED 2026-09-07**, its implementation generated the same day as tasks 05 (the `ArrayField` and the read paths), 06 (delete the vendored app) and 07 (`rename_tag`/`merge_tags`)* | Donation `payment_date` fix **and** backfill; `elsewhere` rework; retire `django-tagging`; the 13 duplicate-email pairs | Each is a migration plus a backfill against real production data, and they share a method: snapshot, reversibility, verify on the converted database. Highest risk after A, because a bad data migration is found late. |
 | **D — Cleanups** | Settings/`LOGGING` extraction; weblinks `URLField`; the three uncovered `ready()` receivers; replace `repoze.timeago` with `django.utils.timesince`; **then** the linter/formatter, last | Independent one-diff items. |
 
 **Closed by Phase 0, no work carried:** the ORDER BY collation (decision recorded,
@@ -1169,7 +1169,11 @@ items to fifteen.
 - **`django-tagging` before the collation decision's tag-cloud half.** That
   finding is about `tagging_tag.name`, a table that stops existing if the
   `ArrayField` option wins. Do not record a decision about a table you may
-  delete.
+  delete. **Released 2026-09-07: the `ArrayField` won, so the table goes.** The
+  cloud's `ORDER BY` moves from `tagging_tag.name` to the unnested array
+  element — same values, same collation, and the two orderings were measured
+  identical across all 1,001 tags, so the "keep PostgreSQL's ordering" decision
+  carries over unchanged.
 - **The linter/formatter dead last.** It rewrites every file: run it before the
   prune and it formats code that is about to be deleted; run it mid-step and
   every later bisect has two candidate causes. This is the same argument that
@@ -1351,19 +1355,35 @@ small and fully mapped as of 2026-08-04: **only the `news` app uses it** —
 `TagField` on `Story` (`news/models.py:9`), `Tag`/`TaggedItem` in
 `news/views.py` and `news/utils.py`, the `tagging_tags` templatetags in
 `sg101/templates/news/story.html` and `story_summary.html`, and the
-`/news/tags/` + `/news/tag/<name>/` routes. Live data is **1,006 tags across
-4,561 tagged items**.
+`/news/tags/` + `/news/tag/<name>/` routes.
+
+**Two of those figures were corrected on 2026-09-07 by task 04's measurement.**
+The live data is **1,001 tags across 3,931 tagged items on 1,208 stories**, not
+1,006/4,561: **630 of the join rows are orphans** — 616 pointing at
+`news_pendingstory` rows deleted by `_approve_story` (`news/admin.py:85`) and 14
+at deleted stories, because django-tagging registers no delete handler. And the
+`news` app tags **two** models, not one: `Story` *and* `PendingStory`, both
+inheriting `tags` from `StoryBase`.
 
 Two candidate replacements, and the choice is not obvious:
 `django-taggit` is the maintained like-for-like, but keeps the generic
 foreign-key + content-type machinery. **A Postgres `ArrayField` (with a GIN
 index) is the more interesting option**, because that machinery is sized for
-tagging *any* model and this site tags exactly one — the whole `TaggedItem`
+tagging *any* model and this app tags two concrete ones — the whole `TaggedItem`
 join table and its content-type indirection exist to support a generality
-nothing here uses. Either way it is a schema change plus a data migration for
-the existing 4,561 rows, which is why it is not a version-rung item. Measure
-the tag-page query cost before choosing; `/news/tag/<name>/` is the read path
-that would change shape most.
+nothing here uses. Either way it is a schema change plus a data migration, which
+is why it is not a version-rung item.
+
+**DECIDED 2026-09-07, on the measurement — the `ArrayField` wins, and the join
+table is the migration's source of truth. Brian's call on both. See `STATUS.md`
+§ "Step 19 Phase C task 04" for the numbers.** The deciding argument is *not*
+speed: in raw SQL the join table is faster on a common tag (0.26 ms against
+0.96 ms, since a 33%-selective tag makes the planner ignore the GIN index). It
+is referential integrity — the array makes the 630-orphan failure mode
+structurally impossible, where `taggit` keeps the `GenericForeignKey` and with it
+the failure — plus half the queries on five of six news pages, and no dependency
+at all in place of one that died. **The implementation is tasks 05, 06 and 07**, generated
+2026-09-07.
 
 **While in there:** `sg101/templates/fixed/colophon.html:14` credits
 django-tagging with a link to `code.google.com/p/django-tagging/`, which has
