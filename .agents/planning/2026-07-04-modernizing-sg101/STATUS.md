@@ -6924,7 +6924,144 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase C task 05 — news tags are a PostgreSQL `ArrayField`, BUILT 2026-09-07 — unstaged, awaiting review
+## Step 19 Phase C task 06 — the vendored `tagging` app is gone, BUILT 2026-09-07 — unstaged, awaiting review
+
+The package, its two tables, the `tags_legacy` column task 05 kept as a safety
+net, the migration history that named the app, and the content types and
+permissions Django had created for its models. **No rendered page changes** — the
+site has been reading tags from the array since task 05.
+
+`django-tagging` was vendored in Step 13 task 03 because 0.5.0 imports
+`smart_text`, which Django 4.0 removed, and the import failure aborted
+`django.setup()`. It has needed hand-fixing on two rungs since. The retirement
+has been carried in the plan ever since; this closes it.
+
+### Two things the task file did not list, both found by measuring first
+
+**1. Content types and permissions.** The database held 2 `django_content_type`
+rows for `tagging` and **8 `auth_permission` rows** hanging off them, 0 of them
+granted to any user or group. Left behind they would have offered
+`tagging | tag | Can add tag` in the admin's permission picker forever, naming a
+model that no longer exists.
+
+**2. The requirements notes had become false.** Both `requirements.txt` and
+`requirements-docker.txt` carried a paragraph explaining that django-tagging "is
+vendored into the repo as `tagging/`". Both removed — and both, because
+`requirements.txt` already warns at the top that the two files are hand-mirrored.
+
+### The DDL has no cascade, and raw SQL does not get one
+
+The first version of the migration deleted the content types directly and failed:
+
+```
+IntegrityError: update or delete on table "django_content_type" violates foreign
+key constraint "content_type_id_refs_id_728de91f" on table "auth_permission"
+```
+
+**This is the same fact Phase A recorded about `Forum.last_post`:
+`on_delete=CASCADE` is enforced by Django's deletion collector in Python and
+never reaches the DDL**, so the database's own foreign keys are plain
+`NO ACTION`. The ORM would have cascaded; raw SQL in a migration does not. The
+migration now deletes `auth_group_permissions`, `auth_user_user_permissions`,
+`auth_permission` and `django_content_type` in dependency order.
+
+Nothing holds those permissions today, so the group and user rows delete nothing
+— they are there because the migration must not depend on that staying true
+between now and the cutover, and one of the mutations below proves the
+dependency was real.
+
+### Four of the six tests were vacuous, and only the mutation battery said so
+
+The obvious tests — *a migrated database has no tagging tables, no migration
+history, no content types* — **cannot fail.** Once the app leaves
+`INSTALLED_APPS`, a fresh database never creates any of it, so those assertions
+hold whether the migration does anything at all or nothing. A fifth read
+`Story._meta` for `tags_legacy`, which reflects `models.py` — where the field was
+removed in the same change — rather than the schema.
+
+All four passed on the first run and all four survived having the migration's
+statements deleted. **They were rewritten to build the rows the migration is
+supposed to remove and then run it**, which is the only database this migration
+will ever meet in production, and to read the column list out of the database
+rather than out of the model.
+
+**This is the rule earning its keep twice in two tasks.** Task 05's version was a
+mutation that reproduced no fault; this one was four tests that could not fail.
+Both looked green.
+
+### Two findings from Brian's browser session, one of them a cutover hazard
+
+**1. Celery does not autoreload, and a stale worker fails silently.** Brian found
+a traceback in the worker log: every `search.tasks.reindex_document` for a news
+story raising `AttributeError: 'list' object has no attribute 'lower'` from
+`/app/tagging/fields.py:75` — **a file that no longer existed on disk.** The web
+container had picked up the new code because `runserver` autoreloads; the worker
+had been up 18 hours and was still holding the deleted module, so its cached
+`TagField` descriptor kept calling `.lower()` on what is now a list.
+
+Not a defect in this change — `--force-recreate worker beat` cleared it and the
+same save reindexed cleanly — **but a real cutover hazard, and worse there than
+a traceback.** A story saved after the flip would simply not reach the search
+index, and `reconcile_search` would report it as drift days later rather than as
+a deploy fault. Nothing in the site's own output says a word about it. **Added to
+`cutover-runbook.md` as C4a**, which had no worker item at all.
+
+**2. `/news/tag/Thalasses/` served the page rather than redirecting.** Correct as
+designed — every case variant resolves to the same lowercase tag, as
+`name__iexact` did before — but it meant one page had many URLs, each rendering a
+heading echoing whatever casing was typed: *Stories with tag: "Thalasses"*. Two
+addresses for one page, and a title naming a spelling no tag has.
+
+**Now a 301 to the canonical URL, on Brian's call**, with the query string
+carried so a visitor on page 4 of a paginated tag stays on page 4. A mixed-case
+unknown tag redirects and then 404s. Permanent rather than temporary, because the
+lowercase URL is the only correct address and always will be — the model
+lowercases on save.
+
+### Verification
+
+- **Suite 1,220** and the **deprecation gate 1,220**, two separate runs.
+  1,210 - 3 (`test_tag_queries.py`, whose subject no longer exists) + 13 new.
+  `check` clean, `makemigrations --check` clean.
+- **Mutation battery: 11 behaviours, 11 caught**, every file restored
+  byte-identical — including that a granted permission blocks the content-type
+  delete without the manual cascade, and **that task 05's `0001_initial` fix is
+  load-bearing**: restoring `import tagging.fields` to that migration makes
+  `migrate` from zero die with
+  `ModuleNotFoundError: No module named 'tagging.fields'` before it applies
+  anything.
+- **Migrate from zero** on a scratch database with the package deleted: clean,
+  `news_story.tags` is `_varchar`, both GIN indexes present, no `tags_legacy`, no
+  tagging content types. **This is the check the whole task exists to protect**,
+  because Step 21 migrates a freshly converted snapshot.
+- **On the dev database:** 0 tagging tables, 0 `tags_legacy` columns, 0
+  `django_migrations` rows, 0 content types, **0 orphaned permissions**, and the
+  tags themselves untouched at 1,208 stories / 3,931 pairs.
+- **The reverse refuses rather than pretending**: reversing raises
+  `RuntimeError` naming the snapshot and `news.0010` as the two real recovery
+  paths, instead of recreating two empty tables that would look like a restore.
+- **Browser**: the cloud still renders 1,001 tag links, story 1539 its 3, and the
+  colophon's library list reads `PIL, pytz, django-elsewhere,
+  gdata-python-client` — no stray comma where the entry came out.
+  `/news/tag/Thalasses/` 301s to `/news/tag/thalasses/`,
+  `/news/tag/RELEASE/?page=3` keeps its page, `/news/tag/asdf/` 404s.
+
+### Found, out of scope, and worth its own change
+
+**The colophon is stale well beyond django-tagging, and it is a live page.** It
+still credits **pytz** (removed in Step 13 task 09), **python-memcached**
+(dropped in Step 13 task 05 when memcached became Redis), **Haystack** and
+**xapian-haystack** (removed in Steps 4 and 12), **MySQLdb** (the site runs on
+PostgreSQL; `mysqlclient` survives only for conversion tooling), **html5lib** and
+**Blueprint**.
+
+Its next paragraph is worse, because it is present tense: the site "runs on" an
+**Apache server** with **mod_wsgi**, a **MySQL database**, the **Xapian** search
+engine and **memcached** — four claims, none of them true today, and Step 21
+changes the first two again. **A rewrite wants to wait for Step 21**, since the
+host and the web server are decided there.
+
+## Step 19 Phase C task 05 — news tags are a PostgreSQL `ArrayField`, BUILT 2026-09-07, `7064614b` + `7fc3c37c`, PUSHED
 
 Task 04's decision, implemented. The vendored `tagging` app is still installed
 and both its tables are still populated: that is what the equivalence check

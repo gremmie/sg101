@@ -123,6 +123,25 @@ with a restore. `manage.py reindex_search`, then `manage.py reconcile_search` to
 confirm.
 *Source: `tools/pg_snapshot.sh` restore output; Step 12 record.*
 
+### C4a. Restart the worker and beat, not just the web process
+**Celery does not autoreload, and a stale worker fails silently.** Demonstrated
+on 2026-09-07 while removing the vendored `tagging` app: the web container picked
+the new code up (runserver autoreloads), the worker had been up 18 hours and was
+still holding the deleted `tagging/fields.py` in memory, so every
+`search.tasks.reindex_document` for a news story raised
+`AttributeError: 'list' object has no attribute 'lower'` from a file that no
+longer existed on disk. Nothing in the site's own output said so; the trace was
+only in `docker compose logs worker`.
+
+The consequence at cutover is worse than a traceback: **a story or post saved
+after the flip would not reach the search index**, and `reconcile_search` would
+report it as drift days later rather than as a deploy fault.
+
+`docker compose up -d --force-recreate web worker beat`, then save one story and
+watch the worker log for `reindex_document ... succeeded`. This applies to any
+deploy, not only this one.
+*Source: task 06's browser session, Brian spotted it in the worker log.*
+
 ### C5. Final media delta, then the DNS flip
 Low-TTL cutover in Cloudflare.
 
