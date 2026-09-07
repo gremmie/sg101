@@ -16,14 +16,12 @@ from django.core.paginator import InvalidPage
 from django.urls import reverse
 from django.http import Http404
 
-from tagging.models import Tag
-from tagging.models import TaggedItem
-
 from core.functions import get_page
 from core.paginator import DiggPaginator
 from news.models import Category
 from news.models import Story
 from news.forms import AddNewsForm
+from news.tag_cloud import tag_cloud
 from news.utils import attach_extra_attrs
 
 
@@ -37,9 +35,7 @@ def create_paginator(stories):
 #######################################################################
 
 def index(request):
-    # Defer the tags field because we are going to get all the
-    # tags out in 1 query later...
-    stories = Story.objects.all().defer('tags').select_related(
+    stories = Story.objects.all().select_related(
             'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
 
@@ -49,8 +45,8 @@ def index(request):
     except InvalidPage:
         raise Http404
 
-    # Go get the tags and comment counts for all these stories in bulk rather
-    # than one at a time in the template; this saves database queries
+    # Go get the comment counts for all these stories in bulk rather than one
+    # at a time in the template; this saves database queries
     attach_extra_attrs(the_page.object_list)
 
     return render(request, 'news/index.html', {
@@ -84,7 +80,7 @@ def archive(request, year, month):
     # tzinfo, not the active zone: this queryset is paginated, so it is
     # evaluated well after this function returns.
     site_tz = ZoneInfo(settings.TIME_ZONE)
-    stories = Story.objects.defer('tags').annotate(
+    stories = Story.objects.annotate(
             _year=ExtractYear('date_submitted', tzinfo=site_tz),
             _month=ExtractMonth('date_submitted', tzinfo=site_tz),
         ).filter(_year=year, _month=month).select_related(
@@ -113,7 +109,7 @@ def category_index(request):
     categories = Category.objects.all().select_related()
     cat_list = []
     for cat in categories:
-        cat_list.append((cat, cat.story_set.defer('tags')[:10]))
+        cat_list.append((cat, cat.story_set.all()[:10]))
 
     return render(request, 'news/category_index.html', {
         'cat_list': cat_list,
@@ -125,7 +121,7 @@ def category_index(request):
 
 def category(request, slug):
     category = get_object_or_404(Category, slug=slug)
-    stories = Story.objects.defer('tags').filter(category=category).select_related(
+    stories = Story.objects.filter(category=category).select_related(
                     'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
     page = get_page(request.GET)
@@ -182,7 +178,7 @@ def submit_thanks(request):
 #######################################################################
 
 def tags(request):
-    tags = Tag.objects.cloud_for_model(Story)
+    tags = tag_cloud(Story)
     return render(request, 'news/tag_index.html', {
         'tags': tags,
         'section': 'tags',
@@ -192,13 +188,17 @@ def tags(request):
 #######################################################################
 
 def tag(request, tag_name):
-    # Tags are stored lowercased (FORCE_LOWERCASE_TAGS), so a mixed-case tag in
-    # the URL has to be matched without regard to case.
-    tag = get_object_or_404(Tag, name__iexact=tag_name)
-    stories = TaggedItem.objects.get_by_model(
-            Story.objects.defer('tags').select_related(
-                'submitter', 'category', 'forums_topic'), tag)
+    # Tags are stored lowercased, so a mixed-case tag in the URL has to be
+    # matched without regard to case.
+    stories = Story.objects.filter(
+            tags__contains=[tag_name.lower()]).select_related(
+                'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
+    # There is no tag table left to 404 on a missing row, so a tag nothing
+    # carries has to be caught here or it would render an empty page. The count
+    # is a query the paginator runs regardless.
+    if paginator.count == 0:
+        raise Http404
     page = get_page(request.GET)
     try:
         the_page = paginator.page(page)

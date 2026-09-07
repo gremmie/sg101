@@ -88,7 +88,7 @@ class DocumentTestCase(TestCase):
                 category=NewsCategory.objects.create(title='Shows', slug='shows'),
                 short_markup='Bands played all afternoon.',
                 long_markup='A jaguar through a blackface amp.',
-                tags='surfabilly')
+                tags=['surfabilly'])
 
         # is_public is an admin's approval and defaults to False, so a link or
         # download only reaches the index once it has been granted.

@@ -11,14 +11,14 @@ from django.core import mail
 from django.urls import reverse
 from django.test import TestCase
 
-from tagging.models import Tag
-
 from news.models import Category, Story
 
 
-def make_story(submitter, category, title='A News Story', markup='story body'):
+def make_story(submitter, category, title='A News Story', markup='story body',
+               tags=None):
     return Story.objects.create(title=title, submitter=submitter,
-                                category=category, short_markup=markup)
+                                category=category, short_markup=markup,
+                                tags=tags or [])
 
 
 class NewsDisplayTests(TestCase):
@@ -73,38 +73,64 @@ class NewsDisplayTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_tag_page_lists_tagged_stories(self):
-        Tag.objects.update_tags(self.story, 'surf')
+        self.story.tags = ['surf']
+        self.story.save()
         response = self.client.get(
             reverse('news-tag_page', kwargs={'tag_name': 'surf'}))
         self.assertEqual(response.status_code, 200)
         self.assertIn('Front Page News', response.content.decode())
 
     def test_tag_page_differing_case(self):
-        Tag.objects.update_tags(self.story, 'surf')
+        self.story.tags = ['surf']
+        self.story.save()
         response = self.client.get(
             reverse('news-tag_page', kwargs={'tag_name': 'Surf'}))
         self.assertEqual(response.status_code, 200)
         self.assertIn('Front Page News', response.content.decode())
+
+    def test_tag_page_lists_only_the_stories_carrying_the_tag(self):
+        self.story.tags = ['surf']
+        self.story.save()
+        make_story(self.author, self.category, title='Unrelated',
+                   tags=['tremolo'])
+
+        response = self.client.get(
+            reverse('news-tag_page', kwargs={'tag_name': 'surf'}))
+
+        body = response.content.decode()
+        self.assertIn('Front Page News', body)
+        self.assertNotIn('Unrelated', body)
 
     def test_unknown_tag_is_404(self):
         response = self.client.get(
             reverse('news-tag_page', kwargs={'tag_name': 'nonexistent'}))
         self.assertEqual(response.status_code, 404)
 
-    def test_tagging_is_case_normalized(self):
-        """A case variant must reuse the existing tag, not create a second.
+    def test_a_tag_no_story_carries_is_404(self):
+        """A change from the tagging app, and a deliberate one: a Tag row could
+        outlive every story that used it, and its page then rendered empty with
+        a 200. There is no tag row to outlive anything now."""
+        self.story.tags = ['surf']
+        self.story.save()
+        self.story.tags = []
+        self.story.save()
 
-        django-tagging looks tags up with get_or_create(name=...), which is
-        case-sensitive on any engine but MySQL. What saves us is
-        FORCE_LOWERCASE_TAGS, which lowercases the name first -- hence 1,006
-        tags in production with no case variants among them. Pinned here
-        because turning that setting off would quietly start splitting tags in
-        two once we are on Postgres.
+        response = self.client.get(
+            reverse('news-tag_page', kwargs={'tag_name': 'surf'}))
 
-        """
-        Tag.objects.update_tags(self.story, 'surf')
-        Tag.objects.add_tag(self.story, 'Surf')
+        self.assertEqual(response.status_code, 404)
 
-        self.assertEqual(Tag.objects.filter(name__iexact='surf').count(), 1)
-        self.assertEqual(list(Tag.objects.values_list('name', flat=True)),
-                         ['surf'])
+    def test_tags_are_stored_lowercased(self):
+        """The tag page lowercases what it looks up, so a tag stored with a
+        capital in it would be unreachable. django-tagging did this with
+        FORCE_LOWERCASE_TAGS, which is why all 1,006 production tags are
+        lowercase with no case variants; the model has to keep doing it."""
+        self.story.tags = ['Surf', 'REVERB']
+        self.story.save()
+        self.story.refresh_from_db()
+
+        self.assertEqual(self.story.tags, ['surf', 'reverb'])
+
+        response = self.client.get(
+            reverse('news-tag_page', kwargs={'tag_name': 'Surf'}))
+        self.assertEqual(response.status_code, 200)

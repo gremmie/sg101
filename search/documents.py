@@ -253,7 +253,7 @@ class StoryDocument(Document):
         # archive; the markup they came from exists only for stories saved
         # since news version 2. tags were indexed by the old stack's template,
         # though the model method beside it left them out.
-        return body_text(obj.short_text, obj.long_text, obj.tags)
+        return body_text(obj.short_text, obj.long_text, ' '.join(obj.tags))
 
     def author(self, obj):
         return obj.submitter.username

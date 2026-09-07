@@ -3,16 +3,37 @@ Models for the news application.
 """
 
 from django.urls import reverse
+from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.indexes import GinIndex
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from tagging.fields import TagField
 
 from core.markup import site_markup
 
 
 # News App versions
 NEWS_VERSION = 2
+
+def validate_tags(tags):
+    """Reject a tag containing a space.
+
+    Tags are entered as one comma-separated string, so a space means the editor
+    typed the old separator: "surf reverb twang" is otherwise accepted as a
+    single tag, which no tag URL resolves and which appears alone in the cloud.
+    This validates the whole list rather than each item, because Django's
+    per-item wrapper reports only "Item 1 in the array did not validate:" and
+    drops the reason.
+
+    """
+    spaced = [tag for tag in tags if ' ' in tag]
+    if spaced:
+        raise ValidationError(
+                'Tags cannot contain spaces; separate them with commas. '
+                'Did you mean "%(fixed)s"?',
+                code='tag_with_space',
+                params={'fixed': ', '.join(' '.join(tags).split())})
 
 
 class Category(models.Model):
@@ -48,7 +69,15 @@ class StoryBase(models.Model):
     long_text = models.TextField(default='', blank=True)
     date_submitted = models.DateTimeField(db_index=True)
     allow_comments = models.BooleanField(default=True)
-    tags = TagField()
+    tags = ArrayField(
+            models.CharField(max_length=50),
+            default=list,
+            blank=True,
+            validators=[validate_tags],
+            help_text="Separate tags with commas, e.g. surf, reverb, twang.")
+    # The space-separated string tags used to live in, kept until the tagging
+    # tables it was kept in step with are dropped.
+    tags_legacy = models.CharField(max_length=255, blank=True)
     front_page_expiration = models.DateField(null=True, blank=True)
     update_date = models.DateTimeField(db_index=True, blank=True)
     priority = models.IntegerField(db_index=True, default=0, blank=True)
@@ -67,6 +96,10 @@ class StoryBase(models.Model):
             self.update_date = self.date_submitted
         else:
             self.update_date = timezone.now()
+
+        # The tag page lowercases the name it looks up, so a tag stored with a
+        # capital in it would have no reachable page.
+        self.tags = [tag.lower() for tag in self.tags]
 
         if self.version >= 2:
             self.short_text = kwargs.pop('short_text', '')
@@ -89,6 +122,7 @@ class PendingStory(StoryBase):
     class Meta:
         ordering = ['-date_submitted']
         verbose_name_plural = 'Pending Stories'
+        indexes = [GinIndex(fields=['tags'], name='news_pendingstory_tags_gin')]
 
 
 class Story(StoryBase):
@@ -108,6 +142,7 @@ class Story(StoryBase):
         ordering = ['-date_submitted']
         verbose_name = 'news story'
         verbose_name_plural = 'news stories'
+        indexes = [GinIndex(fields=['tags'], name='news_story_tags_gin')]
 
     def can_comment_on(self):
         # Only used for version 0 stories

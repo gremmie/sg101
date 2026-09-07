@@ -1,5 +1,4 @@
 {% extends 'news/base.html' %}
-{% load tagging_tags %}
 {% load bio_tags %}
 {% load comment_tags %}
 {% load script_tags %}
@@ -49,12 +48,11 @@
    </li>
 </ul>
 
-{% tags_for_object story as story_tags %}
-{% if story_tags %}
+{% if story.tags %}
 <div class="news-tags">
    <i class="fi-pricetag-multiple size-21"></i> Tags:
    <ul class="inline-no-bullet-list">
-      {% for tag in story_tags %}
+      {% for tag in story.tags %}
          <li><a href="{% url 'news-tag_page' tag_name=tag %}">{{ tag }}</a></li>
       {% endfor %}
    </ul>

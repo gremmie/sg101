@@ -2,7 +2,6 @@
 
 from django.db import models, migrations
 from django.conf import settings
-import tagging.fields
 
 
 class Migration(migrations.Migration):
@@ -35,7 +34,7 @@ class Migration(migrations.Migration):
                 ('long_text', models.TextField(blank=True)),
                 ('date_submitted', models.DateTimeField(db_index=True)),
                 ('allow_comments', models.BooleanField(default=True)),
-                ('tags', tagging.fields.TagField(max_length=255, blank=True)),
+                ('tags', models.CharField(max_length=255, blank=True)),
                 ('front_page_expiration', models.DateField(null=True, blank=True)),
                 ('update_date', models.DateTimeField(db_index=True, blank=True)),
                 ('priority', models.IntegerField(default=0, db_index=True, blank=True)),
@@ -60,7 +59,7 @@ class Migration(migrations.Migration):
                 ('long_text', models.TextField(blank=True)),
                 ('date_submitted', models.DateTimeField(db_index=True)),
                 ('allow_comments', models.BooleanField(default=True)),
-                ('tags', tagging.fields.TagField(max_length=255, blank=True)),
+                ('tags', models.CharField(max_length=255, blank=True)),
                 ('front_page_expiration', models.DateField(null=True, blank=True)),
                 ('update_date', models.DateTimeField(db_index=True, blank=True)),
                 ('priority', models.IntegerField(default=0, db_index=True, blank=True)),
