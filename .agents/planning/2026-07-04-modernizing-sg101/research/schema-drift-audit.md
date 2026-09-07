@@ -139,6 +139,10 @@ already satisfied on the Postgres side.
 
 ## Gotcha for the cutover runbook
 
+**The runbook exists as of 2026-09-06** — `cutover-runbook.md`, which
+carries this as item C2. This section stays the home of the explanation;
+that file holds the action.
+
 Backfilling made an already-recorded migration retroactively inconsistent.
 `forums/migrations/0001_initial.py` has declared `('oembed', '__first__')` as a
 dependency since 2015. That was inert while oembed had no migrations; the moment

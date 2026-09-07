@@ -1839,6 +1839,12 @@ serving, static + media from disk, provider email, search — all green.
 
 ### Step 21: Deploy to new host + cutover + fallback
 **Objective:** Go live on modern, supported infrastructure.
+
+**The day-of checklist is `cutover-runbook.md`** (started 2026-09-06, at Brian's
+suggestion). Items that only matter on cutover day had been accumulating across
+four files for two months; that file collects them, and anything this step adds
+belongs there rather than here. It is explicitly incomplete and lists its own
+gaps.
 **Guidance:** Provision the VM (below); deploy the prod compose; load a **fresh
 production snapshot**; **transfer the media tree** (below); run migrations +
 rebuild the search vectors; run the smoke checklist on the new host (behind

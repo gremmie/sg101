@@ -16,6 +16,7 @@ only way that goes unnoticed.
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
 | **`research/dmarc-readings.md`** | the twenty DMARC aggregate readings — a periodic instrument log |
+| **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
 its own growth rate; so does a record of finished steps. Splitting on size alone
@@ -7250,17 +7251,10 @@ look. Two tests cover it — that a rescue is reported with its filename, and th
 nothing is logged when nothing needed rescuing — and both mutations against the
 reporting are caught.
 
-**To get the answer in advance rather than at cutover**, this run against
-production settles it, and an empty result means there is nothing to do:
-
-```sql
-SELECT network_id, COUNT(*) FROM elsewhere_socialnetworkprofile
- WHERE network_id NOT IN ('facebook','twitter','youtube','myspace','tumblr',
-   'linkedin','reddit','lastfm','flickr','foursquare','pandora','goodreads',
-   'multiply','github','redbubble') GROUP BY network_id;
-SELECT network_id, COUNT(*) FROM elsewhere_instantmessengerprofile
- WHERE network_id NOT IN ('aim','gtalk','msn','skype','y') GROUP BY network_id;
-```
+**To get the answer in advance rather than at cutover**, a query against
+production settles it. It lives in `cutover-runbook.md` as **A1**, not here — the
+decision is this document's, the cutover-day action is that one's. Brian asked
+for the checklist on 2026-09-06 and this item is why the file now exists.
 
 ### Not done here
 
