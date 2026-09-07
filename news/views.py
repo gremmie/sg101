@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils import timezone
+from django.http import HttpResponsePermanentRedirect
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
@@ -188,10 +189,17 @@ def tags(request):
 #######################################################################
 
 def tag(request, tag_name):
-    # Tags are stored lowercased, so a mixed-case tag in the URL has to be
-    # matched without regard to case.
+    # Tags are stored lowercased, so every case variant of a tag names the same
+    # page. Send those to the canonical URL rather than serving one page at
+    # several addresses under a heading echoing whatever the visitor typed.
+    if tag_name != tag_name.lower():
+        url = reverse('news-tag_page', kwargs={'tag_name': tag_name.lower()})
+        query = request.META.get('QUERY_STRING')
+        return HttpResponsePermanentRedirect(
+                '%s?%s' % (url, query) if query else url)
+
     stories = Story.objects.filter(
-            tags__contains=[tag_name.lower()]).select_related(
+            tags__contains=[tag_name]).select_related(
                 'submitter', 'category', 'forums_topic')
     paginator = create_paginator(stories)
     # There is no tag table left to 404 on a missing row, so a tag nothing

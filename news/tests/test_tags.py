@@ -193,3 +193,28 @@ class StoryDocumentTests(TagTestCase):
 
         self.assertIn('surfabilly', summary)
         self.assertIn('reverb', summary)
+
+
+class TagAdminWidgetTests(TagTestCase):
+    """The tag box is the one field an editor types a long value into, and an
+    ArrayField does not get the admin's text-input styling by default."""
+
+    def rendered_tag_field(self, model):
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+
+        request = RequestFactory().get('/')
+        request.user = User.objects.create_superuser(
+            'admin-%s' % model.__name__.lower(), '', 'pw')
+        form = dj_admin.site._registry[model].get_form(request)()
+        return str(form['tags'])
+
+    def test_the_tag_box_is_styled_like_the_admin_s_other_text_inputs(self):
+        for model in (Story, PendingStory):
+            with self.subTest(model=model.__name__):
+                self.assertIn('vTextField', self.rendered_tag_field(model))
+
+    def test_the_tag_box_fills_the_row(self):
+        for model in (Story, PendingStory):
+            with self.subTest(model=model.__name__):
+                self.assertIn('width: 100%', self.rendered_tag_field(model))

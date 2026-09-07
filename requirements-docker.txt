@@ -7,8 +7,6 @@ Django==5.2.17
 # 12-factor env-var config -- see the note in requirements.txt for why the
 # 0.4.5 pin was a Python-2.7 fossil.
 django-environ==0.14.0
-# django-tagging is vendored into the repo as `tagging/` -- see the note in
-# requirements.txt and in tagging/__init__.py.
 # The IANA timezone database. Required, not incidental -- the base image carries
 # no "backward" zone names and most profiles are stored under one. See the note
 # in requirements.txt.

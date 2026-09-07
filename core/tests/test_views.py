@@ -75,6 +75,24 @@ class FixedViewsTestCase(TestCase):
         response = self.client.get(reverse('colophon'))
         self.assertEqual(response.status_code, 200)
 
+    def test_colophon_does_not_credit_django_tagging(self):
+        """It is a live page, and the credit linked to a Google Code URL that
+        has been dead for years."""
+        body = self.client.get(reverse('colophon')).content.decode()
+
+        self.assertNotIn('django-tagging', body)
+        self.assertNotIn('code.google.com/p/django-tagging', body)
+
+    def test_colophon_library_list_is_not_left_mispunctuated(self):
+        """Removing an item from a comma-joined list is how a stray comma or a
+        doubled space ships to a live page."""
+        body = self.client.get(reverse('colophon')).content.decode()
+
+        self.assertNotIn(', ,', body)
+        self.assertNotIn(',,', body)
+        self.assertNotIn('  ', body.split('<p>The following 3rd party')[1]
+                         .split('</p>')[0])
+
     def test_privacy_view(self):
         response = self.client.get(reverse('privacy'))
         self.assertEqual(response.status_code, 200)

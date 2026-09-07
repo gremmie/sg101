@@ -2,6 +2,8 @@
 This file contains the automatic admin site definitions for the News models.
 """
 from django.contrib import admin
+from django.contrib.admin.widgets import AdminTextInputWidget
+from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
 
 from forums.tools import create_topic
@@ -15,6 +17,16 @@ import ftfy
 COMMENT_THREAD_BODY = (u"This topic was automatically created to discuss the "
         u"news story [{title}]({url}).")
 
+# An ArrayField's form field wraps a plain TextInput, which never picks up the
+# class the admin styles its text inputs with -- so the tag box renders at the
+# browser default of about twenty characters. One story carries 251 characters
+# of tags, so it is given the row instead.
+TAG_FIELD_OVERRIDES = {
+    ArrayField: {
+        'widget': AdminTextInputWidget(attrs={'style': 'width: 100%'}),
+    },
+}
+
 
 class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ("title", )}
@@ -23,6 +35,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 class PendingStoryAdmin(admin.ModelAdmin):
+    formfield_overrides = TAG_FIELD_OVERRIDES
     list_display = ['title', 'date_submitted', 'submitter']
     list_filter = ['date_submitted']
     search_fields = ['title', 'short_text', 'long_text']
@@ -98,6 +111,7 @@ class PendingStoryAdmin(admin.ModelAdmin):
 
 
 class StoryAdmin(admin.ModelAdmin):
+    formfield_overrides = TAG_FIELD_OVERRIDES
     list_display = ['title', 'date_submitted', 'submitter', 'category']
     list_filter = ['date_submitted', 'category']
     search_fields = ['title', 'short_text', 'long_text']

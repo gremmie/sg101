@@ -160,7 +160,6 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.staticfiles',
     'elsewhere',
-    'tagging',
     'accounts',
     'antispam',
     'bandmap',

@@ -75,9 +75,6 @@ class StoryBase(models.Model):
             blank=True,
             validators=[validate_tags],
             help_text="Separate tags with commas, e.g. surf, reverb, twang.")
-    # The space-separated string tags used to live in, kept until the tagging
-    # tables it was kept in step with are dropped.
-    tags_legacy = models.CharField(max_length=255, blank=True)
     front_page_expiration = models.DateField(null=True, blank=True)
     update_date = models.DateTimeField(db_index=True, blank=True)
     priority = models.IntegerField(db_index=True, default=0, blank=True)

@@ -16,10 +16,6 @@ Django==5.2.17
 # moved. 0.14.0 also drops the pkgutil.find_loader() call that cost the
 # deprecation gate an ignore.
 django-environ==0.14.0
-# django-tagging is no longer installed from PyPI: 0.5.0 is the final release
-# (upstream stopped in 2018) and it does not import on Django 4.0, so it is
-# vendored into the repo as `tagging/` -- same package name and app label, so
-# its migrations and tables are untouched. See tagging/__init__.py.
 # The IANA timezone database, as a package. zoneinfo reads the *host's* tzdata
 # and falls back to this package on sys.path; pytz bundled its own copy, so this
 # only started mattering when the timezone code moved to zoneinfo. It is not
