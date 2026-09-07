@@ -8292,11 +8292,19 @@ the first found two problems that were not in the tests:
 - `makemigrations --check --dry-run`: no changes detected
 - `tools/pg_snapshot.sh dump before-0008-rehearsal` taken first, 129 MB
 
-### Left behind deliberately
+### Left behind deliberately — and cleaned up 2026-09-07
 
-`sg101_rehearsal` still exists in the Postgres service, holding the converted
-snapshot with `0008` applied. It costs nothing and is the artifact any re-check
-would want; dropping it is a one-liner whenever it stops being useful.
+`sg101_rehearsal` held the converted snapshot with `0008` applied, kept because
+it costs nothing and is the artifact any re-check would want. **Dropped on
+2026-09-07 at Brian's request**, along with `sg101_reference` and
+`sg101_frommigrations`, once Phase C was finished and pushed. Rebuilding it is
+the same `convert.sh` line recorded above.
+
+Dropping `sg101_reference` is worth doing on its own account rather than only to
+reclaim space: a **stale** copy of it once reported 31 phantom schema
+differences, every one naming a table created by a migration that postdated it.
+DOCKER.md's procedure drops and rebuilds it before comparing, so the one that
+survives between runs can only mislead.
 
 ## Step 19 Phase C — the duplicate-email pairs, DECIDED 2026-09-05
 
