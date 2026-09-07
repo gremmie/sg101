@@ -6924,7 +6924,98 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase C task 07 — `rename_tag` and `merge_tags`, BUILT 2026-09-07 — unstaged, awaiting review
+## FINDING — re-rendering stored markup changes 3,877 rows, and a third of that is Markdown getting it right (2026-09-07)
+
+**Not a task and not a bug report — a measured condition awaiting a decision.**
+Found while building Step 19 Phase C task 07, which had to know whether a bulk
+`Story.save()` was safe. It is not, and the reason turned out to be archive-wide.
+
+**Nothing here is live.** Production still runs Python 2.7 and
+`Markdown==2.6.11`; the new rendering exists only in dev and CI. **This begins
+mattering the day Step 21 flips DNS**, and only for rows somebody edits after
+that.
+
+### What changed in Markdown
+
+Six models store HTML rendered from user markup and **re-render it on `save()`**,
+so every row is one edit away from being rewritten by the current Markdown.
+Between 2.6.11 and 3.10.3 two CommonMark conformance rules landed:
+
+- An emphasis delimiter may not have whitespace on the inside, so
+  `*** text ***` is no longer bold-italic — the asterisks stay literal.
+- Underscores inside a word no longer open emphasis, so `kick_the_reverb`
+  survives as typed instead of rendering as `kick<em>the</em>reverb_`.
+
+**The first is a regression for this archive** — authors meant emphasis and the
+site has shown emphasis for years. **The second is a fix**, and it repairs
+mangled usernames.
+
+### Measured 2026-09-07 across all 492,661 rows carrying markup
+
+Every row rendered and compared, not sampled. Roughly twenty minutes of work,
+which is why it is written down.
+
+| model | rows | identical | markup only | **visible text differs** |
+|---|---|---|---|---|
+| `forums.Post.body` | 462,446 | 242,533 | 216,109 | **3,804** |
+| `messages.Message.message` | 17,147 | 10,883 | 6,230 | **34** |
+| `comments.Comment.comment` | 10,982 | 7,768 | 3,205 | **9** |
+| `gcalendar.Event.description` | 1,366 | 599 | 754 | **13** |
+| `news.Story` (both fields) | 720 | 185 | 518 | **17** |
+
+**"Markup only" is the largest column and it is inert**: 226,826 rows differ
+solely because `<img>` attributes come out in a different order. Harmless to a
+reader, but it means an edit rewrites the row.
+
+### The headline number is misleading, and that is the point of recording it
+
+Of the 3,877 rows whose visible text would change:
+
+| | rows |
+|---|---|
+| **emphasis lost — marks become literal** (the regression) | **≈1,219** |
+| underscores restored inside a word (a **fix**) | ≈326 |
+| emphasis gained | ≈195 |
+| unclassified | ≈2,137 |
+
+**The unclassified bucket is mostly more of the underscore case.** A
+count-of-emphasis-tags classifier could not see it, because the emphasis moved
+rather than disappeared; sampling eight of them found seven were
+`kickthe_reverb_` becoming `kick_the_reverb` and one was a stray `</rant>` being
+stripped. **"3,804 posts would change" is true and would mislead anyone who read
+it alone**, which is why the classification is here beside it.
+
+### How often this would actually fire, from production data
+
+| measure | value |
+|---|---|
+| forum posts ever edited | **38,538 of 463,219 — 8.3%** |
+| edits per year, recent | ~750–1,900 |
+| posts over 3 years old edited in the last 3 years | 1,226 |
+| posts that would lose emphasis | 1,177, or **0.26%** |
+
+At roughly a thousand edits a year meeting affected posts at the base rate,
+**on the order of two or three posts a year** would visibly gain asterisks after
+cutover — each only when a member happens to re-save one.
+
+### The decision, for Step 20 or 21
+
+1. **Leave it**, and fix a post if anyone ever reports one. The expected rate is
+   two or three a year and the fix is to delete two spaces.
+2. **Repair the ~1,219 sources** so a re-render is stable — mechanical, and
+   verifiable by re-running this measurement to zero.
+3. **Pin the pre-3.3 emphasis behaviour** in `core/markup.py`, which keeps the
+   archive frozen but also keeps the username mangling.
+
+**Recommendation: option 1.** The rate is low, the damage is cosmetic and
+self-evident when seen, and options 2 and 3 both spend real effort to prevent
+something that has never yet happened to anybody.
+
+**Related, and the reason this was found:** `news/retag.py` documents why the tag
+commands use `bulk_update` rather than `save()`. Any future bulk operation over
+these models faces the same question, and the answer is the same.
+
+## Step 19 Phase C task 07 — `rename_tag` and `merge_tags`, BUILT 2026-09-07, `60826bd9` + `ade1e047`, PUSHED
 
 Two management commands, and **new capability rather than restored capability.**
 The admin form these replace half-worked: it renamed the shared tag row while
