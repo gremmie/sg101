@@ -8291,7 +8291,7 @@ for it; this section records only why, and what was decided rather than deferred
 again.
 
 **The numbers could not move**, which shaped the fix. The Jaguar decommission
-project (`~/workspaces/bgn/planning/2026-08-23-jaguar-decommission/`) names "SG101
+project (`~/workspaces/bgn/jaguar-decommission/`) names "SG101
 Step 19" for the wiki retirement and declares a hard dependency edge into Step 21
 **by number**. Renumbering would break another project's plan, so the restructure
 is internal: five ordered phases inside the step, an idiom this plan already uses.

@@ -137,7 +137,7 @@ production environment to satisfy them in.
 ### D2. Keep jaguar warm
 As an sg101 fallback the window ends in 1–2 weeks. **"Then decommission" does not
 gate on that** — it gates on the separate jaguar project completing, which has
-its own plan at `~/workspaces/bgn/planning/2026-08-23-jaguar-decommission/`.
+its own plan at `~/workspaces/bgn/jaguar-decommission/`.
 *Source: `implementation/plan.md` Step 21, corrected 2026-08-23.*
 
 ---
