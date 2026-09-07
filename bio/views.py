@@ -8,7 +8,6 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
-from django.http import HttpResponseServerError
 from django.http import Http404
 from django.core.paginator import InvalidPage
 from django.contrib.auth.decorators import login_required
@@ -17,7 +16,6 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from elsewhere.models import SocialNetworkForm
-from elsewhere.models import InstantMessengerForm
 from elsewhere.models import WebsiteForm
 
 from bio.models import UserProfile
@@ -262,26 +260,20 @@ A user has flagged a profile for review.
 
 @login_required
 def edit_elsewhere(request):
-    im_id = 'id_im_%s'  # to prevent duplicate ID in HTML output
+    # Instant messengers can be listed and deleted but no longer added: every
+    # service the site offered has shut down.
     if request.method == 'POST':
         new_data = request.POST.copy()
 
         # Add forms
-        if new_data.get('sn-form') or new_data.get('im-form') or new_data.get('w-form'):
+        if new_data.get('sn-form') or new_data.get('w-form'):
 
             if new_data.get('sn-form'):
                 sn_form = SocialNetworkForm(new_data)
-                im_form = InstantMessengerForm(auto_id=im_id)
                 w_form = WebsiteForm()
                 form = sn_form
-            elif new_data.get('im-form'):
-                sn_form = SocialNetworkForm()
-                im_form = InstantMessengerForm(new_data, auto_id=im_id)
-                w_form = WebsiteForm()
-                form = im_form
             elif new_data.get('w-form'):
                 sn_form = SocialNetworkForm()
-                im_form = InstantMessengerForm(auto_id=im_id)
                 w_form = WebsiteForm(new_data)
                 form = w_form
 
@@ -304,19 +296,18 @@ def edit_elsewhere(request):
 
             return redirect(request.path)
 
-        # WTF?
+        # A POST naming no form we recognise. Reachable from a stale page:
+        # instant messengers used to be addable here.
         else:
-            return HttpResponseServerError
+            return HttpResponseBadRequest('Unknown form.')
 
     else:
         # Create blank forms
         sn_form = SocialNetworkForm()
-        im_form = InstantMessengerForm(auto_id=im_id)
         w_form = WebsiteForm()
 
     return render(request, 'bio/edit_elsewhere.html', {
         'sn_form': sn_form,
-        'im_form': im_form,
         'w_form': w_form,
         'V3_DESIGN': True,
         })

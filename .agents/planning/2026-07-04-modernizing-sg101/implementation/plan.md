@@ -1241,6 +1241,14 @@ which interacts with the first because a shorter seed list manufactures orphans
 that do not exist today. Carried into
 `.agents/tasks/2026-07-04-modernizing-sg101/step19/task-03-elsewhere-seeding-as-a-data-migration.code-task.md`.
 
+**DONE 2026-09-06 — five decisions taken, built and verified; see `STATUS.md`
+§ "Step 19 Phase C task 03".** Seeded from `0004_seed_networks` (15 social + 6
+IM, refreshed to `https`), the 42 unused social networks pruned, the IM add-form
+retired while existing entries stay readable, and `Network.slug` added as a
+stable key. **The FK was declined on the measurement** — 0 unresolvable
+`network_id` values — in favour of the slug column that fixes the rename hazard
+underneath it.
+
 **[Phase A] Also carries the `last_post` cascade hazard, added 2026-08-05 after it fired.**
 `Forum.last_post` and `Topic.last_post` are `OneToOneField('Post',
 on_delete=models.CASCADE)` and the cascade **points the wrong way**: deleting

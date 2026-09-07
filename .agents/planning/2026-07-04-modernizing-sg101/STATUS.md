@@ -6923,9 +6923,356 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase C task 02 — the donations are recorded at the instant Paypal reported
+## Step 19 Phase C task 03 — the `elsewhere` seed list, DECIDED AND BUILT 2026-09-06 — unstaged, awaiting review
 
-**Built 2026-09-06. Unstaged, awaiting review** — nothing committed or pushed.
+The task file carried three decisions. Two more came out of the investigation
+before any of the three could be answered honestly, so five were taken in one
+sitting. Nothing is built yet; this is the decision record, and the build
+follows it.
+
+### What was measured, 2026-09-06
+
+Against the dev database holding the converted production snapshot, by querying
+`SocialNetwork` / `InstantMessenger` directly rather than through
+`get_social_network_data()` — that function reads a 24-hour cache, and a cache is
+not a measurement.
+
+| | social | IM |
+|---|---|---|
+| seeded rows | 57 | 6 |
+| profile rows | 327 | 19 |
+| members holding one | 222 | 18 |
+| distinct `network_id` in use | 15 | 5 |
+| seeded but never used | 42 | 1 (`icq`) |
+| **`network_id` values that resolve to no seeded network** | **0** | **0** |
+
+Identical to the 2026-09-05 audit in the task file. **Not refreshed against
+production** — Brian's call, the figures being one day old.
+
+Social usage, all 327 rows: `facebook` 181, `twitter` 51, `youtube` 47,
+`myspace` 15, `tumblr` 9, `linkedin` 8, `reddit` 3, `lastfm` 3, `flickr` 3,
+`foursquare` 2, `pandora` 1, `goodreads` 1, `multiply` 1, `github` 1,
+`redbubble` 1. IM, all 19: `msn` 7, `skype` 6, `gtalk` 3, `aim` 2, `y` 1.
+
+### Three findings that changed the shape of the options
+
+**1. Deleting a `Network` row that any profile points at 500s that member's
+page.** `Profile._get_data_item` is `self.data_manager.data[self.network_id]`
+with no guard, and the KeyError is not silenced by template rendering. Verified
+rather than reasoned, against an unsaved profile with a bogus slug:
+
+```
+direct .name raises KeyError 'no-such-net'
+template raises KeyError 'no-such-net'
+```
+
+So pruning is safe only for a network with zero profile rows. All 42 unused
+social networks qualify; nothing in use does.
+
+**2. A shorter seed list does not shrink an existing database.** A data
+migration only creates. Production already holds all 57 rows, put there by the
+`post_migrate` receiver on every `migrate` for years. "Seed only what is used"
+therefore leaves production at 57 and a fresh database at 15 — permanent
+divergence, and a profile form that differs by environment — unless the
+migration also prunes.
+
+**3. `network_id` has nothing for a foreign key to point at.** The slug is
+`slugify(network.name)`, computed at read time inside
+`get_social_network_data()`; `Network` stores `name`, `url`, `identifier`,
+`icon` and no key. An FK is therefore not a field swap — it needs a new stable
+column first. The latent bug this exposes is worth stating on its own:
+**renaming a network in the admin silently re-slugs it and orphans every profile
+row pointing at the old slug**, which by finding 1 means 500ing those members'
+pages.
+
+A fourth, smaller one: **the IM half has no fetchable URLs at all.** Its five
+templates are protocol handlers — `aim:goim?screenname=%s`,
+`msnim:chat?contact=%s`, `ymsgr:sendim?%s`, `gtalk:chat?jid=%s`, `skype:%s?chat`
+— so there was nothing to liveness-check on that side.
+
+### The liveness check, 2026-09-06 — measured and assessed, kept apart
+
+**Measured** is the HTTP status of the domain, by `curl` with a browser
+user-agent. **Assessed** is whether the service still exists and whether the
+stored path still names a profile.
+
+| network | rows | measured | assessed |
+|---|---|---|---|
+| facebook | 181 | 200 | alive |
+| twitter | 51 | 301 → `x.com`, and `twitter.com/jack` → `x.com/jack` | alive, renamed; stored domain stale |
+| youtube | 47 | 200; `/user/PewDiePie` and `/user/Google` both 200 | alive, legacy `/user/%s` still resolves |
+| myspace | 15 | 301 `www` → bare | alive |
+| tumblr | 9 | 301 → `www` | alive |
+| linkedin | 8 | 200 | alive |
+| reddit | 3 | 301 → `www`, `/user/spez` resolves | alive |
+| lastfm | 3 | root 200; `/user/rj` probe failed | alive; path unverified |
+| flickr | 3 | 200 | alive |
+| foursquare | 2 | `playfoursquare.com` 301 → `foursquare.com`; `/user?uid=` 308 → `app.foursquare.com` | alive; stored domain and path both stale |
+| pandora | 1 | 301; `/people/%s` → `/profile/%s` | alive; stored path stale |
+| goodreads | 1 | 200 | alive |
+| **multiply** | **1** | **302 → `system1.com`** | **dead** — parked, shut down 2013 |
+| github | 1 | 200, `/torvalds` 200 | alive |
+| redbubble | 1 | 403 | alive; 403 is bot-blocking, not death |
+
+**Two caveats that stay attached to this table.** A live domain is not a correct
+profile template: only youtube, twitter, pandora, foursquare, github and reddit
+had their `%s` shape spot-checked, and those with public handles rather than
+members' stored usernames. And the first youtube probe returned 404 on a badly
+chosen subject — a handle with no YouTube channel — which would have read as
+"legacy `/user/` is retired" had it not been re-probed against two channels known
+to have one.
+
+Every one of the 15 stored templates is plain `http://`.
+
+### Decision 1 — seed the 15 in use, and prune the 42
+
+The migration seeds only the networks members actually use, and deletes the 42
+that nobody ever picked. Safe on the data by finding 1 — all 42 hold zero profile
+rows — and it is the only option under which production and a fresh database end
+up holding the same thing.
+
+**It is a display change and is recorded as one:** the profile form's dropdown
+goes from 57 choices to 15. That is the point rather than a side effect; the 42
+include Pownce, Jaiku, Dodgeball, Tagworld and Zooomr, and writing them into a
+versioned migration would be recording dead choices as current ones.
+
+`multiply` is kept despite being the one dead service, because a member has a row
+pointing at it and deleting the network would 500 their profile page. Its
+retirement belongs with decision 3's URL refresh, not here.
+
+### Decision 2 — the IM half stops being offered, and stays readable
+
+The IM networks members actually hold are seeded from the migration, so the 19
+existing rows keep rendering for the 18 members who hold them. The
+instant-messenger section comes off the profile edit form, so no new one can be
+added.
+
+**Amended the same day, at Brian's challenge: five, not six.** The option as it
+was put said "seed the 6 IM networks", and he asked why `icq` — never chosen by
+anyone, for a service as dead as the rest — was being written into a migration
+at all. It should not have been. The only reason to seed an IM network is so an
+existing profile row resolves instead of taking the member's page down, and
+`icq` has no rows; it is the IM equivalent of the 42 social networks decision 1
+prunes for exactly that reason. The option had carried the count across from the
+audit instead of applying decision 1's own logic to it. `icq` is pruned, on the
+same zero-rows guard, and its icon with it.
+
+Retiring the half outright was rejected on the data: it would delete something 18
+members entered, for services whose being dead costs them nothing while the row
+merely sits there. Keeping the form as it is was rejected on the same fact from
+the other side — every one of MSN, AIM, Yahoo, Google Talk and consumer Skype is
+gone, and there is no live service left in that half of the app to add.
+
+### Decision 3 — the URL templates are refreshed
+
+The seed list is written with `https://` throughout, and with the four stale
+paths corrected: `twitter.com/%s` → `x.com/%s`, pandora `/people/%s` →
+`/profile/%s`, foursquare `playfoursquare.com/user?uid=%s` →
+`foursquare.com/user?uid=%s`, and `multiply` pointed nowhere useful — it is the
+one case where the link is dead whatever it says.
+
+**Also a display change**, and the largest by reach: the links on 222 members'
+profiles change, 51 of them from `twitter.com` to `x.com`.
+
+### Decision 4 — a stable `slug` column, and not the foreign key
+
+**The measurement that settles it: 0 unresolvable `network_id` values**, both
+halves, and the prune in decision 1 keeps it at 0 because every network being
+removed has zero rows. Nothing forces the FK.
+
+So the FK is declined for now and the useful half of it is taken instead:
+`Network` gains a unique `slug`, backfilled from today's `slugify(name)`, and the
+lookup dict is keyed on that column rather than recomputing the slug from the
+name at read time. That fixes the real bug finding 3 exposed — a rename can no
+longer silently orphan rows — without touching the form `ChoiceField`s, the
+cached-dict machinery or `data_item`, and it is the prerequisite if the FK is
+ever wanted.
+
+**The FK stays available, not discarded.** What was rejected is doing a
+form-and-cache rework in the step before cutover for a problem measuring zero
+rows.
+
+### Decision 5 — the unresolvable-slug KeyError gets a guard
+
+`data_item` returns `None` for a slug that resolves to nothing, the template
+skips that entry, and a warning is logged. A bad slug then costs one missing link
+instead of the whole profile page.
+
+This is a small addition beyond the task file's scope, taken deliberately:
+finding 1 is the reason three of the options above were constrained, and leaving
+the crash in place means the next person who prunes a network by hand in the
+admin discovers it the way we nearly did.
+
+### What task 03 has to build
+
+1. A data migration in `elsewhere/migrations/` seeding the 15 social and 6 IM
+   networks with refreshed `https` URLs, safe on a database that already holds
+   the rows, and pruning the 42 unused social networks.
+2. Reversible, with the reverse deleting no network any profile refers to.
+3. `Network.slug`, unique, backfilled; `get_social_network_data()` and
+   `get_instant_messanger_data()` keyed on it.
+4. The `post_migrate` receiver and `elsewhere/management.py` deleted. **Nothing
+   else imports it** — `migrate` and `flush` auto-import each app's `management`
+   submodule, which is the only reason it has ever fired.
+5. The IM section off the profile edit form, with the models and rows intact.
+6. The `data_item` guard.
+7. The 42 orphaned icon files in `elsewhere/static/elsewhere/` decided — 62 files
+   are there today.
+
+### What was built — 2026-09-06, unstaged
+
+Two migrations, and the app around them.
+
+**`0003_network_slug`** adds `Network.slug`, a unique `SlugField(max_length=16)`,
+backfilled from each network's current `slugify(name)` so no stored
+`network_id` moves. The width is not arbitrary: it is the width of
+`SocialNetworkProfile.network_id`, the column that has to hold these values.
+The `AddField` carries `db_index=False` — SlugField's own index and the unique
+one added after the backfill are the same index on PostgreSQL, and creating
+both fails on `relation ... _like already exists`.
+
+**`0004_seed_networks`** seeds the 15 social and 5 IM networks with the
+refreshed URLs and deletes the rest. The delete is guarded twice — not in the
+seed list **and** holding no profile rows — so a network someone picks between
+this being written and being run survives it. Reversing restores the previous
+`http://` templates on the survivors and re-creates nothing; that is stated in
+the migration's docstring rather than left to be discovered. Both directions
+bust `elsewhere_sn_data` and `elsewhere_im_data`, which matters in production
+where the cache is Redis and shared.
+
+`elsewhere/management.py` and `elsewhere/default_list.py` are deleted, and 42
+icon files with them; the 20 that remain are exactly the ones the seeded rows
+name.
+
+### Three defects found while building, none of them predicted
+
+**1. The managers memoized the network dict for the life of the process.**
+`SocialNetworkManager._data` was a dict populated on first read and never
+invalidated. `SocialNetwork.save()` clears the *cache* entry, so the 24-hour
+expiry looked like the upper bound on staleness — but the memo sat in front of
+it, and a running web process kept serving whatever list it happened to read
+first until it was restarted. The memo is gone; the cache is now the only one.
+Without this the seeding migration would have changed the dropdown and the
+running site would not have noticed.
+
+**2. `edit_elsewhere` returned the `HttpResponseServerError` class, not an
+instance** (`return HttpResponseServerError`, no call). Django then fails inside
+`set_cookie` with `AttributeError: 'str' object has no attribute 'cookies'`.
+Pre-existing, on the "WTF?" branch a POST reaches when it names no known form —
+reachable before this change by a bare POST, and reachable more often now that
+`im-form` names nothing. Fixed to `HttpResponseBadRequest('Unknown form.')`,
+which is also the honest status: it is a bad request, not a server fault.
+
+**3. `Profile.icon`, `WebsiteProfile.icon` and `GOOGLE_PROFILE_URL` were dead
+and broken.** `_get_icon` called `reverse('elsewhere_img', ...)` for a URL name
+that exists nowhere in `sg101/urls.py`, so anything calling it would have raised
+`NoReverseMatch`. Both templates use `icon_name` with `{% static %}` instead.
+Removed.
+
+### Two display changes beyond the three that were decided
+
+Recorded here because this site's convention is that display changes are
+Brian's call, and these were taken while implementing rather than put as
+questions.
+
+- **The network dropdown is now ordered by name.** It had no ordering at all —
+  `SocialNetwork.objects.iterator()` with no `order_by`, so the order was
+  whatever PostgreSQL returned. With 15 entries alphabetical is the obvious
+  choice, but it is a change.
+- **The instant-messenger section disappears for members who hold no IM rows**,
+  rather than showing an empty "No instant messenger profiles." heading with no
+  way to add one. Members who hold a row see it, with a note saying the services
+  have shut down and no new ones can be added.
+
+### Verification
+
+**Suite 1,181, green** — 33 more than before: a new `elsewhere/tests/` package
+of 30 (the app had none) and 3 net-new in `bio`. Deprecation gate green as its
+own run.
+
+**Mutation battery, 17 mutations, every one watched to fail the test that claims
+to cover it**, then restored byte-identical. Three of them did not work first
+time, and that is the part worth recording:
+
+| | mutation | first attempt |
+|---|---|---|
+| M1 | key the dict off the name again | anchor matched both builders; re-aimed at the social one |
+| M5 | drop `order_by('name')` | **passed** — the seeded list is alphabetical in insertion order, so the ordering test proved nothing. The test now inserts a network that sorts first and is created last |
+| M10 | seed an over-long slug | the column refused it before the test ran. Re-aimed at `network_id`'s width, which is the disagreement the test actually guards |
+
+M5 is the one that mattered: it was a green test asserting nothing, and only the
+battery showed it.
+
+A fourth is worth stating because it is *not* a gap. Removing the instant
+messenger prune (M15) left `test_only_the_networks_in_use_are_seeded` passing,
+because a freshly migrated database never had `icq` to remove — the prune only
+does anything to a database that already holds it, and
+`test_an_unused_messenger_is_removed`, which sets that up, does fail. The pairing
+was wrong, not the coverage.
+
+**Against the dev database** (the converted production snapshot, restored to its
+pre-work state and re-migrated after the `icq` amendment): **57 social networks →
+15 and 6 messengers → 5**, all **327 social and 19 IM profile rows intact**,
+**0 unresolvable `network_id`**, every social URL `https`. A real row now renders as
+`Twitter → https://x.com/matt_heaton`.
+
+**Every affected page rendered**, not sampled: all 224 members holding an
+elsewhere entry, 223 of them HTTP 200 (the 224th is the viewer's own profile,
+which redirects to `/profile/me/`). The edit page checked for a member holding
+an MSN entry — entry listed with its delete button, add-form gone, notice shown
+— and for one with none, where the section is absent.
+
+**Acceptance criterion 8, on a freshly converted snapshot.** `sg101_pristine`
+converted with `tools/pgloader/convert.sh` into a scratch database and taken
+through `post_convert.py`: the whole chain applied including `0003` and `0004`,
+ending at 15/6 networks with all 327 + 19 rows resolving. Scratch database
+dropped afterwards.
+
+### The cutover hazard the icon deletion created, and what closes it
+
+Raised by Brian on 2026-09-06: production stays on the old code until the DNS
+flip, so a member could add an `icq` entry — or one of the 42 retired social
+networks — in the weeks between now and cutover. He asked for a check only if it
+was cheap. It turned out to be worth more than that, because the obvious answer
+was wrong.
+
+**The data is already safe: the prune's zero-rows guard keeps any network someone
+picked.** What is *not* safe is the icon. Those 42 files were deleted here, and
+production serves static files through **`ManifestStaticFilesStorage`**, which
+does not degrade to a broken image — `{% static %}` on a file missing from the
+manifest raises `ValueError`. A network rescued by the guard would therefore
+render its owner's profile page as a **500**, not as a missing picture.
+
+`_prune` now logs a warning for every network it rescues, naming the icon file
+to restore from git history. The message appears in the `migrate` output at
+cutover, which is the moment it is needed and the one place nobody can forget to
+look. Two tests cover it — that a rescue is reported with its filename, and that
+nothing is logged when nothing needed rescuing — and both mutations against the
+reporting are caught.
+
+**To get the answer in advance rather than at cutover**, this run against
+production settles it, and an empty result means there is nothing to do:
+
+```sql
+SELECT network_id, COUNT(*) FROM elsewhere_socialnetworkprofile
+ WHERE network_id NOT IN ('facebook','twitter','youtube','myspace','tumblr',
+   'linkedin','reddit','lastfm','flickr','foursquare','pandora','goodreads',
+   'multiply','github','redbubble') GROUP BY network_id;
+SELECT network_id, COUNT(*) FROM elsewhere_instantmessengerprofile
+ WHERE network_id NOT IN ('aim','gtalk','msn','skype','y') GROUP BY network_id;
+```
+
+### Not done here
+
+**`Twitter` keeps its name while its URL points at `x.com`.** Decision 3 was
+about URL templates, and renaming the network is a further display change that
+was not asked for.
+
+**`multiply` is still offered and still dead.** It has one profile row, and
+deleting the network would take that member's profile page down with it, so it
+stays until either the row goes or the guard makes it safe.
+
+## Step 19 Phase C task 02 — the donations are recorded at the instant Paypal reported — DONE 2026-09-06, `f2dd761d` + `85338132`, PUSHED
 
 `donations/views.py` gains `parse_payment_date()`, and
 `donations/migrations/0002_payment_date_pacific_backfill.py` moves every existing

@@ -300,25 +300,49 @@ class EditElsewhereTestCase(TestCase):
 
     def test_add_social_network(self):
         response = self.client.post(self.url, {
-            'network_id': 'catster',
+            'network_id': 'facebook',
             'username': 'pjmoto',
             'sn-form': 'Add Social Network',
         })
         self.assertRedirects(response, self.url)
         user_networks = self.user.social_network_profiles.all()
         self.assertEqual(user_networks.count(), 1)
-        self.assertEqual(user_networks[0].network_id, 'catster')
+        self.assertEqual(user_networks[0].network_id, 'facebook')
 
-    def test_add_instant_messenger(self):
+    def test_a_retired_network_cannot_be_chosen(self):
+        response = self.client.post(self.url, {
+            'network_id': 'catster',
+            'username': 'pjmoto',
+            'sn-form': 'Add Social Network',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.user.social_network_profiles.count(), 0)
+
+    def test_instant_messengers_can_no_longer_be_added(self):
         response = self.client.post(self.url, {
             'network_id': 'aim',
             'username': 'pjmoto',
             'im-form': 'Add Instant Messenger',
         })
-        self.assertRedirects(response, self.url)
-        user_networks = self.user.instant_messenger_profiles.all()
-        self.assertEqual(user_networks.count(), 1)
-        self.assertEqual(user_networks[0].network_id, 'aim')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.user.instant_messenger_profiles.count(), 0)
+
+    def test_the_add_messenger_form_is_gone_from_the_page(self):
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'Add an Instant Messenger')
+        self.assertNotContains(response, 'im-form')
+
+    def test_an_existing_messenger_entry_is_still_listed(self):
+        InstantMessengerProfile.objects.create(user=self.user,
+                                               network_id='aim',
+                                               username='pjmoto')
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'AIM')
+        self.assertContains(response, 'pjmoto')
+        self.assertContains(response, 'delete-im-form')
 
     def test_add_website(self):
         response = self.client.post(self.url, {
@@ -333,7 +357,7 @@ class EditElsewhereTestCase(TestCase):
         self.assertEqual(websites[0].url, 'https://example.com/pjmoto')
 
     def test_delete_social_network(self):
-        profile = SocialNetworkProfile(user=self.user, network_id='catster',
+        profile = SocialNetworkProfile(user=self.user, network_id='facebook',
                                        username='pjmoto')
         profile.save()
         self.assertEqual(self.user.social_network_profiles.count(), 1)

@@ -1,14 +1,15 @@
+import logging
+
 from django import forms
 from django.db import models
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
-from django.template.defaultfilters import slugify
-from django.urls import reverse
 from django.utils import timezone
 
-GOOGLE_PROFILE_URL = 'http://www.google.com/s2/favicons?domain_url=%s'
+logger = logging.getLogger(__name__)
+
 SN_CACHE_KEY = 'elsewhere_sn_data'
 IM_CACHE_KEY = 'elsewhere_im_data'
 
@@ -17,6 +18,9 @@ class Network(models.Model):
     """ Model for storing networks. """
 
     name = models.CharField(max_length=100)
+    # The key profiles are stored against. It is 16 characters because that is
+    # the width of the network_id columns that hold it.
+    slug = models.SlugField(max_length=16, unique=True)
     url = models.URLField()
     identifier = models.CharField(max_length=100)
     icon = models.CharField(max_length=100, blank=True)
@@ -46,75 +50,59 @@ class InstantMessenger(Network):
 # The following makes the social / IM networks data act as dicts.
 
 def get_social_network_data():
-    cache_key = SN_CACHE_KEY
-    data = cache.get(cache_key)
+    data = cache.get(SN_CACHE_KEY)
 
     if not data:
         data = {}
-
-        try:
-            for network in SocialNetwork.objects.iterator():
-                id = slugify(network.name)
-                data[id] = {
-                    'id': id,
-                    'name': network.name,
-                    'url': network.url,
-                    'identifier': network.identifier,
-                    'icon': network.icon
-                }
-            cache.set(cache_key, data, 60*60*24)
-        except:
-            # if we haven't yet synced the database, don't worry about this yet
-            pass
+        for network in SocialNetwork.objects.order_by('name').iterator():
+            data[network.slug] = {
+                'id': network.slug,
+                'name': network.name,
+                'url': network.url,
+                'identifier': network.identifier,
+                'icon': network.icon
+            }
+        cache.set(SN_CACHE_KEY, data, 60*60*24)
 
     return data
 
 def get_instant_messanger_data():
-    cache_key = IM_CACHE_KEY
-    data = cache.get(cache_key)
+    data = cache.get(IM_CACHE_KEY)
 
     if not data:
         data = {}
-        try:
-            for network in InstantMessenger.objects.iterator():
-                id = slugify(network.name)
-                data[id] = {
-                    'id': id,
-                    'name': network.name,
-                    'url': network.url,
-                    'icon': network.icon
-                }
-            cache.set(cache_key, data, 60*60*24)
-        except:
-            # if we haven't yet synced the database, don't worry about this yet
-            pass
+        for network in InstantMessenger.objects.order_by('name').iterator():
+            data[network.slug] = {
+                'id': network.slug,
+                'name': network.name,
+                'url': network.url,
+                'icon': network.icon
+            }
+        cache.set(IM_CACHE_KEY, data, 60*60*24)
 
     return data
 
 class ProfileManager:
     """ Handle raw data for dicts of profiles."""
-    data = {}
 
     def _get_choices(self):
         """ List of choices for profile select fields. """
         return [(props['id'], props['name']) for props in self.data.values()]
     choices = property(_get_choices)
 
+# The managers hold no data of their own. Saving a network clears the cache
+# entry, and anything memoized here would outlive that and go on serving the
+# list the process happened to read first.
+
 class SocialNetworkManager(ProfileManager):
-    _data = {}
     def _get_data(self):
-        if not self._data:
-            self._data = get_social_network_data()
-        return self._data
+        return get_social_network_data()
     data = property(_get_data)
 sn_manager = SocialNetworkManager()
 
 class InstantMessengerManager(ProfileManager):
-    _data = {}
     def _get_data(self):
-        if not self._data:
-            self._data = get_instant_messanger_data()
-        return self._data
+        return get_instant_messanger_data()
     data = property(_get_data)
 im_manager = InstantMessengerManager()
 
@@ -130,31 +118,34 @@ class Profile(models.Model):
         abstract = True
 
     def _get_data_item(self):
-        # Find profile data for this profile id
-        return self.data_manager.data[self.network_id]
+        # Find profile data for this profile id. Nothing enforces that the
+        # stored slug still names a network, so a row can outlive one; when
+        # that happens the entry is skipped rather than taking the page down.
+        try:
+            return self.data_manager.data[self.network_id]
+        except KeyError:
+            logger.warning('no network registered under the slug %r '
+                           '(profile %s)', self.network_id, self.pk)
+            return None
     data_item = property(_get_data_item)
 
     def _get_name(self):
         # Profile display name
-        return self.data_item['name']
+        item = self.data_item
+        return item['name'] if item else ''
     name = property(_get_name)
 
     def _get_url(self):
         # Profile URL with username
-        return self.data_item['url'] % self.username
+        item = self.data_item
+        return item['url'] % self.username if item else ''
     url = property(_get_url)
 
     def _get_icon_name(self):
         # Icon name
-        return self.data_item['icon']
+        item = self.data_item
+        return item['icon'] if item else ''
     icon_name = property(_get_icon_name)
-
-    def _get_icon(self):
-        # Icon URL or link to Google icon service
-        if self.icon_name:
-            return reverse('elsewhere_img', args=[self.icon_name])
-        return GOOGLE_PROFILE_URL % self.url
-    icon = property(_get_icon)
 
 class SocialNetworkProfile(Profile):
     data_manager = sn_manager
@@ -221,11 +212,6 @@ class WebsiteProfile(models.Model):
 
     def __str__(self):
         return self.url
-
-    def _get_icon(self):
-        # No known icons! Just return the Google service URL.
-        return GOOGLE_PROFILE_URL % self.url
-    icon = property(_get_icon)
 
 
 class WebsiteForm(forms.ModelForm):

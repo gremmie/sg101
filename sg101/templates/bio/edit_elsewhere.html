@@ -17,7 +17,7 @@
 <h3>Social Networks</h3>
 {% if request.user.social_network_profiles.all %}
     <ul>
-    {% for profile in request.user.social_network_profiles.all %}
+    {% for profile in request.user.social_network_profiles.all %}{% if profile.name %}
         <li>
         {% with "elsewhere/"|add:profile.icon_name as img_src %}
         <img src="{% static img_src %}" alt="{{ profile.name }}" />
@@ -28,7 +28,7 @@
                 <input type="submit" name="delete-sn-form" value="Delete" class="alert button" />
             </form>
         </li>
-    {% endfor %}
+    {% endif %}{% endfor %}
     </ul>
 {% else %}
     <p>No social network profiles.</p>
@@ -51,10 +51,10 @@
 </fieldset>
 </form>
 <hr />
-<h3>Instant Messengers</h3>
 {% if request.user.instant_messenger_profiles.all %}
+<h3>Instant Messengers</h3>
     <ul>
-    {% for profile in request.user.instant_messenger_profiles.all %}
+    {% for profile in request.user.instant_messenger_profiles.all %}{% if profile.name %}
         <li>
             {% with "elsewhere/"|add:profile.icon_name as img_src %}
             <img src="{% static img_src %}" alt="{{ profile.name }}" />
@@ -65,20 +65,15 @@
                 <input type="submit" name="delete-im-form" value="Delete" class="alert button" />
             </form>
         </li>
-    {% endfor %}
+    {% endif %}{% endfor %}
     </ul>
-{% else %}
-    <p>No instant messenger profiles.</p>
-{% endif %}
-
-<form method="post" action=".">{% csrf_token %}
-<fieldset>
-<legend>Add an Instant Messenger</legend>
-    {{ im_form.as_p }}
-    <p><input type="submit" name="im-form" value="Add Instant Messenger" class="button" /></p>
-</fieldset>
-</form>
+    <div class="primary callout">
+       <p>Every instant messenger service this site ever offered has since shut
+       down, so no new ones can be added. Your existing entries are listed above
+       and can still be deleted.</p>
+    </div>
 <hr />
+{% endif %}
 <h3>Websites</h3>
 {% if request.user.website_profiles.all %}
     <ul>
