@@ -23,6 +23,15 @@ fork has needed hand-fixing on two further rungs since: Django 4.2 made an
 all-matching `WHERE` raise `FullResultSet` instead of compiling to empty SQL,
 which 500'd the news tag cloud, and `Query.add_filter()` changed arity.
 
+### What task 05 already did
+The site runs on the array: the field, both migrations, every read path, the
+search document and the admin's comma separator all landed in task 05, verified
+against the join table on production data (1,001 tags and all 1,694 stories
+agreeing tag for tag). **`news/migrations/0001_initial.py` was also fixed there**
+— it imported `tagging.fields`, which would have made `migrate` from zero raise
+`ModuleNotFoundError` the moment this task deleted the package, at Step 21's
+cutover. Confirm that fix is still in place rather than assuming it.
+
 ### What is still referencing it after task 05
 Verified against the tree on 2026-09-07; task 05 will have cleared the first
 group, and this task should confirm that rather than assume it:
@@ -97,13 +106,24 @@ implementation. Read additional references as needed for context.
 4. **Delete `tagging/` in full**, its `INSTALLED_APPS` entry, and
    `news/tests/test_tag_queries.py`.
 
-5. **Update `sg101/templates/fixed/colophon.html:14`.** The credit is no longer
+5. **Drop `tags_legacy` from `Story` and `PendingStory`.** Task 05 renamed the
+   old space-separated column rather than dropping it, so that the original
+   strings — including the two accented spellings the join table had folded —
+   survived while the new shape was being checked. That check has passed. The
+   column goes here, with the tables, in the same migration.
+
+   **This is the last copy of `jay-poisön` and `thálasses` outside a snapshot.**
+   Nothing renders them and search matches those stories on their titles
+   regardless, so nothing is lost that anyone can see; it is worth one sentence
+   in the migration so the next reader knows it was a decision.
+
+6. **Update `sg101/templates/fixed/colophon.html:14`.** The credit is no longer
    accurate — the site no longer uses django-tagging — so the entry comes out
    rather than getting a fresher URL. Check the surrounding punctuation: it is a
    comma-joined list and removing an item mid-list is how a stray comma ships to
    a live page.
 
-6. **No shipped comment mentions the step number.** Per `CODEASSIST.md`, comments
+7. **No shipped comment mentions the step number.** Per `CODEASSIST.md`, comments
    describe the code, not the plan.
 
 ## Dependencies
@@ -130,10 +150,11 @@ implementation. Read additional references as needed for context.
    - Then the only matches are unrelated words (`{% load ... _tags %}` modules,
      `message.tags`), each one checked rather than assumed
 
-2. **The tables and their migration history are gone**
+2. **The tables, the legacy column and the migration history are gone**
    - Given the applied migration
    - When the database is inspected
-   - Then `tagging_tag` and `tagging_taggeditem` do not exist and no
+   - Then `tagging_tag` and `tagging_taggeditem` do not exist, neither
+     `news_story` nor `news_pendingstory` has a `tags_legacy` column, and no
      `django_migrations` row names the `tagging` app
 
 3. **A fresh database reaches the same state**

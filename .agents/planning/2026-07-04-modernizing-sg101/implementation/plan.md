@@ -1383,7 +1383,7 @@ is referential integrity — the array makes the 630-orphan failure mode
 structurally impossible, where `taggit` keeps the `GenericForeignKey` and with it
 the failure — plus half the queries on five of six news pages, and no dependency
 at all in place of one that died. **The implementation is tasks 05, 06 and 07**, generated
-2026-09-07.
+2026-09-07. **Task 05 BUILT 2026-09-07** — the site runs on the array, verified against the join table on production data; see `STATUS.md` § "Step 19 Phase C task 05".
 
 **While in there:** `sg101/templates/fixed/colophon.html:14` credits
 django-tagging with a link to `code.google.com/p/django-tagging/`, which has

@@ -6924,6 +6924,140 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase C task 05 — news tags are a PostgreSQL `ArrayField`, BUILT 2026-09-07 — unstaged, awaiting review
+
+Task 04's decision, implemented. The vendored `tagging` app is still installed
+and both its tables are still populated: that is what the equivalence check
+below runs against, and task 06 is what removes them.
+
+**Two decisions Brian took before any code was written:**
+
+1. **Rename the old column rather than drop it.** `tags` -> `tags_legacy`, a
+   plain `CharField` so the `TagField` descriptor and its `post_save` hook stop
+   firing, and the array arrives under the real name. PostgreSQL cannot cast
+   `varchar` to `varchar[]`, so something had to give; this way the only copy of
+   what an author actually typed survives all of task 05, and the reverse
+   migration is complete rather than dependent on a snapshot. Task 06 drops it.
+2. **`news/migrations/0001_initial.py` is fixed here, not in task 06**, so
+   migrate-from-zero is verifiable at the end of this task.
+
+### The blocker explore found, which would have fired at cutover
+
+`news/migrations/0001_initial.py` did `import tagging.fields` and declared
+`('tags', tagging.fields.TagField(max_length=255, blank=True))` for both models.
+**Deleting `tagging/` in task 06 would therefore have made `migrate` from zero
+raise `ModuleNotFoundError` before reaching migration 0001** — and the only place
+this project migrates from zero is Step 21, converting a fresh production
+snapshot on cutover day. Nothing here would have caught it: the dev and CI
+databases are already migrated.
+
+`TagField` is a `CharField` subclass whose `__init__` only defaults `max_length`
+and `blank`; the descriptor and the signal are runtime behaviour that migration
+state never reads. So `models.CharField(max_length=255, blank=True)` is
+state-equivalent and emits identical DDL. This is the case Django's own
+documentation sanctions for editing a historical migration.
+
+**The same trap a second time, in the new data migration.** The obvious way to
+write the backfill is `apps.get_model('tagging', 'TaggedItem')` with a dependency
+on `tagging.0003`. Both are stranded the moment task 06 deletes those files — a
+`LookupError` and a `NodeNotFoundError`. `0010` therefore addresses the tables by
+name in SQL, declares no dependency on that app, and guards on table existence,
+which is correct in both directions: from zero the tables are empty or absent and
+there is nothing to copy; on the converted production database they exist and are
+full.
+
+### Four defects found while building, none of them predicted
+
+**1. `FORCE_LOWERCASE_TAGS` had no replacement, and the gap was invisible.**
+`TagField.__set__` lowercased on assignment; an `ArrayField` does not. The tag
+page lowercases the name it looks up, so a tag typed `Surf` in the admin would
+have been stored capitalised and **had no reachable page** — no error, just a tag
+whose link 404s. `StoryBase.save()` now lowercases, which is what keeps the
+invariant the collation audit rests on (all 1,001 production tags lowercase, no
+case variants).
+
+**2. Django's per-item array validation drops the reason.** The space validator
+started on the base `CharField`, which is the obvious place. Through a ModelForm
+that produces `Item 1 in the array did not validate:` **and nothing else** — the
+`RegexValidator`'s message is lost by the wrapper. Moved onto the `ArrayField`
+itself, validating the list as a whole, which also allowed a better message:
+
+```
+'surf reverb twang'  ->  Tags cannot contain spaces; separate them with commas.
+                         Did you mean "surf, reverb, twang"?
+```
+
+**3. A string assigned to the array silently becomes one tag per character.**
+`search/tests/test_documents.py:91` passed `tags='surfabilly'`; iterating a
+string yields characters, each a valid `CharField` value, so it would have stored
+ten single-letter tags rather than raising. The suite caught it immediately —
+recorded because the same mistake in application code would not announce itself.
+
+**4. The first query-count tests passed for the wrong reason.** They counted
+whole pages, and the pages render a sidebar whose queries are cached in locmem;
+whichever test ran first warmed the cache for the rest. `archive` sorts before
+`index`, so `archive` saw 9 queries and `index` saw 2 — and the fix that made
+both "pass" would have been to write down 9 and 2. They now count queries against
+`news_story`, which is what the claim is actually about.
+
+### One deliberate behaviour change
+
+**A tag no story carries now returns 404** where it previously rendered an empty
+page with a 200. A `Tag` row could outlive every story using it; there is no row
+to outlive anything now. This affects the five tags reachable only through dead
+`pendingstory` rows, and nothing links to them — the cloud lists live tags only.
+
+### A prediction from task 04 that measurement disproved
+
+The task 04 record said taking the join table's spelling would mean **"search
+stops matching the accented spelling"**. **It does not.** Both stories carry the
+accented form in their *title and body*, which are indexed at higher weight than
+the tags, so after the reindex `thálasses`/`thalasses` and `poisön`/`poison` all
+still match their stories. The accent decision costs nothing in search after all.
+
+### Verification
+
+- **Equivalence against the join table, on production data** — the cloud
+  identical across all **1,001 tags** on name, count, font size *and order*; the
+  tag pages identical for `release` (567), `video` (57) and `thalasses` (2); and
+  **every one of the 1,694 stories agreeing tag for tag**.
+- **Suite 1,210** (from 1,181, so 29 new) and the **deprecation gate 1,210**, two
+  separate runs. `check` clean, `makemigrations --check` clean.
+- **Mutation battery: 12 behaviours, 12 caught**, every file restored
+  byte-identical. **The thirteenth attempt was thrown out rather than recorded**:
+  changing `attach_extra_attrs`' guard to `if True:` left the test passing,
+  because `Comment.objects.filter(object_id__in=[])` is optimised by Django into
+  no query at all — the mutation reproduced no fault, so it proved nothing about
+  the test. Replaced with one that drops the version filter and does query.
+- **Migrate from zero** on a scratch database: applies cleanly, `news_story.tags`
+  is `ARRAY/_varchar`, both GIN indexes present.
+- **The reverse was run against real data, not just written.** Reversing `0010`
+  rebuilt the join table at **3,931 rows, 0 missing, 0 extra** against the live
+  rows captured beforehand, with the 630 orphans correctly absent; re-applying
+  returned the arrays to 1,208 stories / 3,931 pairs / 1,001 tags.
+- **Reindexed to 516,858 documents** in 1:20, `reconcile_search` clean across all
+  8 types.
+- **Walked in a browser**: the cloud renders 1,001 links with font sizes actually
+  varying (876/102/22/1 across the four sizes), `/news/tag/Release/` resolves
+  case-insensitively, `/news/tag/nosuchtag/` 404s, story 1539 shows `jay-poison`,
+  and the admin box renders `2021,jay-poison,release` with its help text.
+
+### Query counts, measured before and after
+
+| page | before | after |
+|---|---|---|
+| `/news/tag/<name>/` | 4 | **2** |
+| `/news/story/<id>/` | 2 | **1** |
+| `/news/date/` | 3 | **2** |
+| `/news/archive/<y>/<m>/` | 3 | **2** |
+| `/news/tags/` | 1 | 1 |
+
+### Not done here
+
+`tagging/` is still installed, both tables still hold their 4,561 rows,
+`news/tests/test_tag_queries.py` still passes against the fork, and
+`tags_legacy` still holds every original string. All of that is task 06.
+
 ## Step 19 Phase C task 04 — `django-tagging` is replaced by a PostgreSQL `ArrayField`, DECIDED 2026-09-07
 
 The task changed no schema, moved no data and shipped no code: its output is
@@ -7133,9 +7267,14 @@ For the two stories in finding 4, the migration takes `jay-poison` and
 `thalasses`. **The join table is what every page renders today** — the tag page
 and the news index through `attach_extra_attrs`, the story page through
 `{% tags_for_object %}` — so migrating from it produces no visible change
-anywhere on the site. The accented spellings survive only in the admin edit box
-and in the search index, which reads the column (`search/documents.py:256`); that
-one search match for `thálasses` is the whole cost, and it is accepted.
+anywhere on the site. The accented spellings survive only in the admin edit box,
+and in `tags_legacy` until task 06.
+
+**The cost this paragraph originally named turned out not to exist.** It said
+search would stop matching the accented spelling, since `search/documents.py:256`
+indexes the tags. Measured in task 05 after the reindex: both stories carry the
+accented form in their *title and body*, which are indexed at higher weight, so
+every spelling still finds its story. The accent decision costs nothing at all.
 
 ### Decision 3 — the tag-cloud half of the collation audit is released
 
