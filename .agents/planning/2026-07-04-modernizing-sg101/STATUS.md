@@ -6924,7 +6924,103 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## Step 19 Phase C task 06 — the vendored `tagging` app is gone, BUILT 2026-09-07 — unstaged, awaiting review
+## Step 19 Phase C task 07 — `rename_tag` and `merge_tags`, BUILT 2026-09-07 — unstaged, awaiting review
+
+Two management commands, and **new capability rather than restored capability.**
+The admin form these replace half-worked: it renamed the shared tag row while
+each story kept its own copy of the old string, so the next save of any affected
+story quietly put the old tag back and split the set across two tag pages.
+Merging was impossible outright — the tag name was a unique column, so renaming
+one onto another raised an `IntegrityError`. Measurement and detail in
+§ "Step 19 Phase C task 04", finding 5.
+
+**The pair is exhaustive on purpose:** `rename_tag` refuses when the target
+already exists, `merge_tags` refuses when it does not, so for any two tags
+exactly one of them is the right command and neither can silently become the
+other. Each refusal names the other command.
+
+### What decided the implementation: these must not call `Story.save()`
+
+`StoryBase.save()` re-renders `short_text` from `short_markup` whenever
+`version >= 2`. Measured 2026-09-07 across all 706 such stories, read-only:
+
+| re-rendering the stored HTML | stories |
+|---|---|
+| identical | 182 |
+| differs **only** by attribute order (`src`/`alt` swapped) | 510 |
+| **differs in visible text** | **14** |
+
+The 14 are the Markdown 3.3 emphasis conformance change Step 13 task 08
+recorded — `**bold **` with a trailing space becomes literal — so a bulk save
+would put visible `*` and `***` onto the live site. **Step 13's own note that
+"stored HTML means it only surfaces when a post is edited" is the trap**: a tag
+rename would count as editing 567 stories at once.
+
+**The first measurement of this was 74% and looked alarming**; normalising
+attribute order before comparing is what separated 510 cosmetic differences from
+14 real ones. The alarming number was true and useless.
+
+Also found: `save()` sets `short_text = ''` and restores it only
+`if self.short_markup`. **0 stories** currently have `version >= 2` with empty
+markup, so nothing would be lost today — recorded because the guard is one
+data-entry accident from mattering.
+
+So the commands use `bulk_update`, which writes named columns and fires no
+signals — and then do by hand the two things `save()` would have done.
+
+**`update_date` is moved deliberately, and it is not cosmetic.**
+`search/reconcile.py` finds a stale index row by comparing `update_date` against
+`indexed_at`. A tag change that left `update_date` alone would be **invisible to
+the one sweep that exists to catch a reindex that did not happen** — which is not
+hypothetical, since today's worker was silently dropping every
+`reindex_document` (cutover-runbook C4a).
+
+**The reindex is queued explicitly**, reusing `search.receivers.queue()` rather
+than reimplementing the `transaction.on_commit` dance. **Only `Story` is
+queued**: `search/documents.py` registers no document for `PendingStory`, so a
+pending submission is not searchable, though both models still get their tags
+updated.
+
+### Verification
+
+- **Suite 1,241** and the **deprecation gate 1,241**, two separate runs (from
+  1,222, so 19 new). `check` clean, `makemigrations --check` clean.
+- **Mutation battery: 12 behaviours, 12 caught**, every file restored
+  byte-identical — including that going through `save()` rewrites the body, that
+  dropping the `update_date` bump hides the change from reconcile, that nothing
+  queues the reindex without the explicit call, and that removing
+  `transaction.atomic` leaves half a rename applied.
+- **Exercised against the converted production database, then restored from a
+  snapshot taken first.** `rename_tag video clips` moved 57 stories; the **real
+  Celery worker** logged 57 `reindex_document ... succeeded` and 0 failures, and
+  `update_date > indexed_at` returned **0 stale rows** afterwards — the bump and
+  the reindex agree.
+- **The merge was exercised on the case that matters.** `merge_tags clips
+  release` on 57 stories, **11 of which already carried `release`**: the count
+  went 567 -> 613 (567 + 57 - 11), **no story anywhere ended with a duplicate
+  tag**, and story 855 kept `release` in its original position rather than at the
+  end — `{2013,mullet-monster-mafia,release,clips}` became
+  `{2013,mullet-monster-mafia,release}`.
+- **`--dry-run` verified against real data**: reported the 57 and left
+  `video=57 clips=0` untouched.
+- **All four refusals read as instructions**, not diagnostics:
+  ```
+  "release" is already in use, so this would merge the two rather than rename
+  one. Use `merge_tags clips release` if that is what you meant.
+  No story carries "nosuchtag", so this would rename rather than merge.
+  Use `rename_tag clips nosuchtag` if that is what you meant.
+  No story carries the tag "nosuchtag".
+  A tag cannot contain a space: "two words".
+  ```
+- Snapshot restored afterwards and the index rebuilt to **516,861 documents**,
+  `reconcile_search` clean across all 8 types.
+
+### Not done here
+
+Nothing schedules or automates these; they are run by hand when Brian wants a tag
+changed. There is no admin surface for them, which is the deliberate trade
+recorded in task 04's decision 1.
+## Step 19 Phase C task 06 — the vendored `tagging` app is gone, BUILT 2026-09-07, `01a94a32` + `13ff1097`, PUSHED
 
 The package, its two tables, the `tags_legacy` column task 05 kept as a safety
 net, the migration history that named the app, and the content types and
