@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-07
+**Last updated:** 2026-09-08
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -6949,9 +6949,9 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
-## FINDING — re-rendering stored markup changes 3,877 rows, and a third of that is Markdown getting it right (2026-09-07)
+## FINDING — re-rendering stored markup changes 3,877 rows, and a third of that is Markdown getting it right — measured 2026-09-07, DECIDED 2026-09-08: leave it
 
-**Not a task and not a bug report — a measured condition awaiting a decision.**
+**Not a task and not a bug report — a measured condition, now decided.**
 Found while building Step 19 Phase C task 07, which had to know whether a bulk
 `Story.save()` was safe. It is not, and the reason turned out to be archive-wide.
 
@@ -7023,18 +7023,27 @@ At roughly a thousand edits a year meeting affected posts at the base rate,
 **on the order of two or three posts a year** would visibly gain asterisks after
 cutover — each only when a member happens to re-save one.
 
-### The decision, for Step 20 or 21
+### The decision — Brian, 2026-09-08: option 1, leave it
 
 1. **Leave it**, and fix a post if anyone ever reports one. The expected rate is
-   two or three a year and the fix is to delete two spaces.
+   two or three a year and the fix is to delete two spaces. ✅ **CHOSEN.**
 2. **Repair the ~1,219 sources** so a re-render is stable — mechanical, and
    verifiable by re-running this measurement to zero.
 3. **Pin the pre-3.3 emphasis behaviour** in `core/markup.py`, which keeps the
    archive frozen but also keeps the username mangling.
 
-**Recommendation: option 1.** The rate is low, the damage is cosmetic and
-self-evident when seen, and options 2 and 3 both spend real effort to prevent
-something that has never yet happened to anybody.
+**Recommendation was option 1 and Brian took it**, on the reasoning it was
+offered with: the rate is low, the damage is cosmetic and self-evident when seen,
+and options 2 and 3 both spend real effort to prevent something that has never yet
+happened to anybody.
+
+**Nothing is scheduled by this decision** — no Phase D task, no cutover-runbook
+item, no code change. That is the whole content of "leave it", and it is recorded
+here so the question is not reopened from the headline number alone. **What would
+reopen it** is a rate materially above the measured base — several reports in a
+year rather than the predicted two or three — at which point option 2 is the one
+to take, because it is mechanical and this measurement re-runs as its own
+verification.
 
 **Related, and the reason this was found:** `news/retag.py` documents why the tag
 commands use `bulk_update` rather than `save()`. Any future bulk operation over
