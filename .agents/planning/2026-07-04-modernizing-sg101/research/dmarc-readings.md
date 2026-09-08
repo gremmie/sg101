@@ -46,6 +46,7 @@ reading log stops*.
 | 18 | 2026-09-02 | 09-01 | the UTC−7 day passes a forward test; the second unsigned message is a bounce |
 | 19 | 2026-09-04 | 09-02, 09-03 | UTC−7 passes a second forward test; a DKIM failure class that is not the bounce class — **addendum: cause found, Postfix wraps at 998 bytes post-signing** |
 | 20 | 2026-09-05 | 09-04 | UTC−7's strongest window yet, contradicted by Yahoo in the same window; the size hypothesis dies on a forward test |
+| 21 | 2026-09-08 | 09-04 → 09-07 | five for five; three consecutive Google days reconcile exactly; Microsoft drops a tenant domain Google would have folded in |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -4729,5 +4730,208 @@ deployed yet.
    the two 09-05 reports settle it independently of any count.
 4. **GMX and Comcast file for nothing.** No `gmx.*` or `comcast.net` traffic in the
    UTC 09-04 window.
+5. **Every report reads `p=quarantine`** and no row carries a `disposition` other
+   than `none`.
+
+---
+
+### Twenty-first reading — 2026-09-08, covering 2026-09-04 through 2026-09-07: all five predictions hold, three consecutive Google days reconcile exactly, and Microsoft does not fold tenant domains the way Google does
+
+**Sixty-nine files in `~/dmarc`, sixty-eight reports — six new, sixty-two
+re-reads, and one exact duplicate.**
+`google.com!surfguitar101.com!1788652800!1788739199 (1).zip` is a second download
+of the 09-06 Google report: same md5 `6bd812354e759b24b024e1ff1b349209`, same
+`report_id`. `tools/dmarc_report.py` has no dedupe and read sixty-nine files as
+sixty-nine reports, counting those 6 messages twice. **Every figure below is on
+the deduped corpus of sixty-eight.**
+
+**Brian deleted the duplicate the same day** and the tool now reads sixty-eight,
+agreeing with this reading. **The dedupe gap is still in the tool**, closed here by
+removing the input rather than by fixing the instrument: a second copy of any report
+under a different filename will double-count again, silently and in the direction of
+overstating delivery. `(org_name, report_id)` is the key that identifies a report —
+the sixth reading established it — and nothing in the tool consults it.
+[[suspect-the-measurer-before-the-record]]
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `protection.outlook.com` | `Outlook.com` | `ba610e976e4b4ab3bea34dcef0a7ab82` | 2026-09-04 | 1 | 0 |
+| `google.com` | `google.com` | `7757518229062265817` | 2026-09-05 | 5 | **1** |
+| `yahoo.com` | `Yahoo` | `1788672892.142064` | 2026-09-05 | 1 | 0 |
+| `google.com` | `google.com` | `12744820429228850898` | 2026-09-06 | 6 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `6f440f5cfd9b4c73a19ad71b0e6351d4` | 2026-09-06 | 2 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1788831294-surfguitar101.com` | 2026-09-07 | 3 | 0 |
+
+**All six files carry mtimes of 2026-09-08 17:12–17:14** — one download batch, so
+arrival order is not separable within this reading and the nineteenth reading's
+arrival-time caveat bites in full. The one thing the mtimes do settle is a lower
+bound: the 09-04 Microsoft report was **not** in the 2026-09-05 09:49 batch the
+twentieth reading read, so it arrived somewhere between 09-05 09:49 and 09-08
+17:13. "A window late" is consistent with that and is not measured by it.
+
+**09-04 closed at 18** across three endpoints, exactly as predicted, and did not
+gain. Every row in all sixty-eight files is `disposition=none`. Nothing has been
+quarantined under `p=quarantine` at any receiver in any window.
+
+#### All five predictions held, and the arithmetic in two of them is exact
+
+1. **Microsoft filed for 09-04 with exactly 1 message, `envelope_to:
+   hotmail.com` — held.** `15AA2586558` at `Sep 4 18:19:36` local, `23:19:36Z`,
+   is the only Microsoft-bound send in the UTC 09-04 window, and the report names
+   the mailbox domain the prediction named. **09-04 then closed at 18** — Yahoo 1,
+   Google 16, Microsoft 1. The *"a window late"* clause is the one part not
+   measured; see the mtime bound above.
+2. **Google's 09-05 report does not contain the four messages of `Sep 4
+   19:11:49`–`23:03:07` local — held, and the forward test is now exact.** See the
+   next subsection.
+3. **Yahoo filed for 09-05 and its report contains `3A004586572` — held, at a
+   count of exactly 1.** That message, `Sep 4 23:03:06` local, `04:03:06Z`, is the
+   only Yahoo-bound send in the UTC 09-05 window. `2DF3F5864BF` left one second
+   later for Gmail and sits in **Google's 09-04** day. Two reporters, one second
+   apart, opposite day labels, off the same log line pair.
+4. **GMX and Comcast filed for nothing — held.** No `gmx.*` or `comcast.net`
+   recipient in the UTC 09-04 window, and no report from either for it.
+5. **Every report reads `p=quarantine` and no row carries a `disposition` other
+   than `none` — held**, all six.
+
+#### The UTC−7 aggregation day, tested a fourth time, on three consecutive days at once
+
+Google's day starts at `02:00` local. Measured against a complete send log, three
+adjacent Google windows reconcile with no slack in either direction:
+
+| Google window | UTC−7 day, local | Google-bound sends | Reported |
+|---|---|---|---|
+| 09-04 | `Sep 4 02:00` → `Sep 5 02:00` | `B1E095864BF` `02:01:13` → `2DF3F5864BF` `23:03:07`, 16 | **16** |
+| 09-05 | `Sep 5 02:00` → `Sep 6 02:00` | `12EBB5864BF` `02:01:13` → `683915864B2` `Sep 6 01:53:40`, 5 | **5** |
+| 09-06 | `Sep 6 02:00` → `Sep 7 02:00` | `1C5A55864BF` `02:01:12` → `710275864EC` `Sep 7 01:35:58`, 6 | **6** |
+
+The boundary does the work three times. `683915864B2` at `Sep 6 01:53:40` lands in
+09-05 and `1C5A55864BF` at `02:01:12`, eight minutes later, lands in 09-06; the
+same seven-minute-wide split separates 09-06 from 09-07 at `0D3A25864BF`. **A UTC
+day would move messages across all three boundaries and break all three counts.**
+This is the offset's fourth forward test and the first to run on three windows
+that were predicted before any of the three reports existed.
+
+#### Microsoft does not fold tenant domains, and Google does
+
+jaguar sent **three** Microsoft-bound messages in the UTC 09-06 window. Microsoft's
+report covers **two** — `envelope_to: hotmail.com`, count 2, the two consumer
+mailboxes `B8FF8586572` (`member17@example.com`) and `6630058650F`
+(`member31@example.com`). The third is absent:
+
+| Queue ID | Sent (local) | Recipient | Relay | In a report? |
+|---|---|---|---|---|
+| `B8FF8586572` | Sep 6 02:48:25 | `member17@example.com` | `hotmail-com.olc.protection.outlook.com` | yes |
+| `C23FC5864B2` | Sep 6 11:09:11 | `member28@example.com` | `cpp-edu.mail.protection.outlook.com` | **no** |
+| `6630058650F` | Sep 6 11:20:30 | `member31@example.com` | `hotmail-com.olc.protection.outlook.com` | yes |
+
+`cpp.edu` MXes to `cpp-edu.mail.protection.outlook.com` — a Microsoft 365 tenant,
+verified by lookup rather than inferred from the relay string, in the practice the
+nineteenth reading adopted. **`cpp.edu` appears nowhere in this log before now.**
+
+This is the opposite of the Google result. The nineteenth reading corrected itself
+to establish that `muohio.edu`, an `aspmx.l.google.com` tenant, sits *inside* the
+`google.com` endpoint's report rather than among the non-reporting domains.
+Microsoft's endpoint, on this window, does not behave that way: it splits by
+mailbox domain, files for the consumer domain, and drops the tenant.
+
+**What this reading has is one window, and one window cannot tell a rule from an
+absence.** The tenant report may yet arrive; the tenant may have reporting
+disabled; Microsoft may aggregate tenants on a different cadence. Two tests
+settle it and both are already loaded, one in each direction — see predictions 1
+and 2.
+
+#### The DKIM-failure class recurs, and this window cannot identify it
+
+A fifth `pass`/`fail` message, in Google's 09-05 window. The class now stands at
+**4 rows, 5 messages**, all at Google, all `disposition=none`. The five candidates
+in that window and their sizes:
+
+| Queue ID | Sent (local) | From | Size |
+|---|---|---|---|
+| `12EBB5864BF` | Sep 5 02:01:13 | `brian@surfguitar101.com` | 728 |
+| `192EC58650C` | Sep 5 08:16:57 | `no_reply@surfguitar101.com` | 5,450 |
+| `774965864EC` | Sep 5 12:57:14 | `no_reply@surfguitar101.com` | 6,188 |
+| `8E3E3586505` | Sep 5 20:33:47 | `no_reply@surfguitar101.com` | 2,464 |
+| `683915864B2` | Sep 6 01:53:40 | `no_reply@surfguitar101.com` | 6,254 |
+
+**Size does not pick it out** — the five span 728 to 6,254 bytes, which brackets
+`B4EFD5864BF` at 6,050 in both directions, and the twentieth reading already killed
+the size hypothesis on a forward test. **Nor does the injection path**: Google's day
+begins at `02:00` and the daily `brian` cron message goes out at `02:01`, so it sits
+at the head of *every* Google window, clean ones included, and cannot discriminate
+between them. That is the same falsification the twentieth reading made, reproduced
+here from the boundary rather than from a single window.
+
+The aggregate report carries no message identifier, so **nothing measured in this
+reading names the failing message.** The line-length mechanism from the nineteenth
+reading's addendum is neither confirmed nor damaged by it: a window whose bodies
+were not read cannot distinguish a correct mechanism from an absent one, and the
+bodies are gone from the queue. The standing prediction is unchanged — **this class
+goes to zero at the Step 21 deploy and stays there.**
+[[measure-before-recording-in-planning-docs]]
+
+#### What held steady across all sixty-eight
+
+- **82 rows, 415 messages, every one `disposition=none`.**
+- Evaluated SPF/DKIM across those rows: **73 `pass`/`pass`, 4 `fail`/`pass`,
+  4 `pass`/`fail`, 1 `fail`/`fail`** — the `pass`/`fail` count is up by one, which
+  is the whole of the DKIM result above.
+- `173.255.245.115` appears in 74 rows and 394 messages.
+- Policy renders `adkim=r aspf=r` in all sixty-eight.
+- The `p=none`/`p=quarantine` boundary at the 08-25 publication reproduces exactly:
+  16 reports read `none`, 52 read `quarantine`.
+- **Eleven reporting endpoints by filename, five reporting organizations.** No new
+  endpoint and no new organization this reading — `cpp.edu` is a *recipient* domain
+  that filed nothing, not a twelfth endpoint.
+- The published-policy field census tracks the corpus without surprises: `sp` in 41
+  and absent in exactly the 27 Yahoo reports, `pct` in 62 and absent in exactly the
+  6 GMX reports, `np` in exactly the 15 Google reports, `fo` in exactly the 20
+  Comcast and Microsoft reports, `discovery_method` and `testing` in exactly the 6
+  GMX reports. Our record still publishes none of them.
+
+#### The forwarding class is at zero for a seventh window, and Postmark for an eleventh
+
+`209.85.220.41` carried nothing on 09-05 or 09-06. The class reads 8, 5, 2, 0, 0,
+0, 0, 0, 0, 0 across 08-28 → 09-06, 17 messages total, every one surviving on DKIM,
+and the twelfth reading's `2001:470:0:60::2` row has not recurred in eleven windows.
+Postmark's `50.31.156.*` has not appeared since the 08-27 window; jaguar is still
+the only thing sending, which is expected until Step 21 and is the reason the
+Postmark path remains measured only by the two hand-sent test messages.
+
+#### Bearing on the policy decision
+
+Nothing moves. `p=quarantine` continues to cost nothing measurable — 415 messages,
+zero non-`none` dispositions, and the one class of DKIM failure that has a known
+cause is fixed by the branch waiting to deploy rather than by any change to the
+zone. `p=reject` stays unrecommended until after the Step 21 deploy, for the reason
+the nineteenth reading gave: not that the cause is unknown, but that the fix is not
+deployed yet.
+
+#### Predictions for the twenty-second reading
+
+Measured against the send log through `Sep 8 13:51` local. The UTC 09-07 window is
+complete in the log; 09-08 is not, and nothing below depends on it.
+
+1. **Google's 09-07 report settles the tenant question in Google's direction, or
+   breaks the nineteenth reading's correction.** Twenty Google-bound sends fall in
+   the UTC−7 09-07 day, `0D3A25864BF` at `Sep 7 02:01:13` through `98B1C58650F` at
+   `22:26:32`, with `72C565864DF` at `Sep 8 02:01:12` falling into 09-08. One of
+   those twenty is `F15C3586505` to `member24@example.com`, relayed through
+   `aspmx.l.google.com`. **The report reads 20 if Google folds the tenant in and 19
+   if it does not**, and 19 falsifies the nineteenth reading's correction.
+2. **No Microsoft report naming `cpp.edu` arrives for 09-06, and Microsoft's 09-07
+   report reads 2 messages, `envelope_to: hotmail.com`** — `8C9E8586529`
+   (`member23@example.com`, `Sep 7 10:35:05`) and `8D5835869B6`
+   (`member30@example.com`, `17:40:01`). A `cpp.edu` report at any count
+   falsifies the first half; a 09-07 count of 3 falsifies both halves at once.
+3. **Yahoo files two reports for 09-07 and no more**: `yahoo.com` with 2
+   (`3A86F586565` at `Sep 7 07:41:28`, `3340C5869B7` at `14:32:59`) and `aol.com`
+   with 1 (`242605869B6` at `10:44:45`). No `att.net`, `sbcglobal.net`,
+   `verizon.net`, `bellsouth.net` or `cox.net` filing for that window.
+4. **GMX files nothing for 09-07.** No `gmx.*` recipient in the window —
+   `member25@example.com` at `Sep 7 10:44:47` relays through `mx01.mail.de` and is not
+   GMX. **Comcast has already filed for 09-07 at 3**, matching its three
+   `member18@example.com` sends exactly, so that endpoint is closed.
 5. **Every report reads `p=quarantine`** and no row carries a `disposition` other
    than `none`.

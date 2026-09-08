@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty-one DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -4090,7 +4090,7 @@ alone.
 **Bearing on step 7's successor.** `p=reject` stays unrecommended until after the
 Step 21 deploy — not because the cause is unknown, but because the fix is not
 deployed yet. The DSN class remains one mechanism deep by design. Nothing argues
-for reversing `p=quarantine`; every disposition in all sixty-two reports is `none`, and
+for reversing `p=quarantine`; every disposition in all sixty-eight reports is `none`, and
 the captured message itself reads `dmarc=pass ... dis=NONE`.
 
 **Still open:** whether `B4EFD5864BF` (6,050 bytes) is the same class — the one of
@@ -4105,6 +4105,15 @@ from both sides**, 08-31 below the threshold and 09-04 above it, and the
 line-length mechanism is the only surviving account. A clean window cannot confirm
 it, only fail to contradict it; the confirming test is the next window that carries
 a body line over 998 bytes.
+
+**The class recurred 2026-09-08 in the twenty-first reading** — a fifth message, in
+Google's 09-05 window, taking it to 4 rows and 5 messages. That reading identifies
+nothing further: the five candidates in the window size 728 to 6,254 bytes, which
+brackets `B4EFD5864BF` from both sides, and the daily `brian` cron message sits at
+the head of *every* Google window because the UTC−7 day opens at `02:00` local and
+that message goes out at `02:01` — so neither size nor injection path discriminates.
+The aggregate report carries no message identifier and the bodies are gone from the
+queue. **The confirming test is unchanged and still unrun.**
 
 ### FIXED 2026-09-04 — `ContactForm.subject` refuses newlines at the form — `c2c84441`
 
@@ -5093,6 +5102,22 @@ below, which is the live state this step is steered by.
   filing, and before calling an absence a finding. The only cells with sends and no
   file are 08-22 and 08-23, which are a retrieval gap: the corpus begins with the
   batch saved 2026-08-24.
+
+- **Microsoft appears not to fold tenant domains into its endpoint the way Google
+  does** — new 2026-09-08, the twenty-first reading, **one window, stated as such.**
+  jaguar sent three Microsoft-bound messages in the UTC 09-06 window; Microsoft's
+  report reads `envelope_to: hotmail.com` at count 2 and omits `C23FC5864B2` to
+  `member28@example.com`, relayed through `cpp-edu.mail.protection.outlook.com` — a
+  Microsoft 365 tenant, confirmed by MX lookup rather than read off the relay
+  string. **This runs opposite to the Google result the offset bullet below leans
+  on**, where `muohio.edu` was corrected *into* the `google.com` endpoint in the
+  nineteenth reading. `cpp.edu` had never appeared in the corpus before this window.
+  **One window cannot tell a rule from an absence** — the tenant report may yet
+  arrive, or the tenant may have reporting disabled — and two tests are already
+  loaded, one per direction: whether a `cpp.edu` report ever arrives for 09-06, and
+  whether Google's 09-07 report reads 20 (folding `member24@example.com` in) or 19.
+  A 19 falsifies the nineteenth reading's correction rather than this bullet.
+  [[measure-before-recording-in-planning-docs]]
 
 - **Google's aggregate day is not the UTC day its `date_range` claims** —
   new 2026-09-01, **upgraded from hypothesis to result 2026-09-02 by the eighteenth
