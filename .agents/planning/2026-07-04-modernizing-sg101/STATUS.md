@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-08
+**Last updated:** 2026-09-09
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -6948,6 +6948,95 @@ cutover, not to the idea.
 **Knock-on:** Step 20's guidance said "R2 media", which is now wrong twice over —
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
+
+## Step 19 Phase D task 08 — the search-logging test reads settings in a subprocess — DONE 2026-09-09, `8552a922`, PUSHED
+
+`SearchLoggingSettingsTestCase` read `local.LOGGING` and `production.LOGGING` by
+importing both modules into the live test process. It now loads each in a
+subprocess through `core/tests/test_settings.py`'s existing `_run()`, and asserts
+the same two properties about the same two modules.
+
+**Nothing under `sg101/settings/` changed** — `git diff` is two files,
+`core/tests/test_settings.py` and `search/tests/test_views.py`. The `LOGGING`
+duplication is Step 20's, as split on 2026-09-08.
+
+### The test moved to `core/tests/test_settings.py` rather than importing the helper
+
+Brian's call between three shapes. The deciding argument is where the failures
+point: this case fails when `local.py` or `production.py` changes and **never**
+when anything in `search/` does. It now sits beside `SettingsImportIsolationTests`,
+which guards the same two modules, and needs no cross-app test-module import — a
+shape the repo has no precedent for. `search/tests/test_views.py` keeps the three
+`assertLogs` tests, which are the ones a search change can break.
+
+`_run()` was not modified. `env_overrides` already overrode
+`DJANGO_SETTINGS_MODULE`, exactly as its docstring said.
+
+### The one in-process import that stays, and why the sweep is not empty
+
+Task 08's requirement 1 asked for a suite with **no** in-process settings import.
+`SettingsImportIsolationTests` still has one and should: **the import is its
+subject**, not a way to read a value out of a module. Deleting it would drop the
+guard against Step 13 task 06's defect immediately before Step 20 restructures
+both modules — and the hazard is not confined to tests, since `docker.py:23`
+reaches `local.py` by `import *` at runtime.
+
+**Its docstring was rewritten because this task made it false.** It claimed "the
+suite imports both to read their LOGGING dicts" — the justification for its own
+existence, and no longer true as of this change. Left alone it would have been the
+next stale claim nobody re-reads.
+[[measure-before-recording-in-planning-docs]]
+
+### The subject is the deployment module's own `LOGGING`, and that is mutation-proven
+
+The snippet reads `settings.LOGGING` under `DJANGO_SETTINGS_MODULE=<module>`, so a
+`LOGGING = {...}` override later added to `production.py` is what gets read. This
+is the property Step 20 needs: when a shared `LOGGING` is extracted, this test is
+what stands between "production uses it" and "production quietly stopped."
+
+`search_logging()` asserts the return code is 0, with stderr as the message,
+**before** parsing the output — a subprocess that failed to load settings would
+otherwise be asserted about vacuously. That single guard covers acceptance
+criteria 4 and 5 together: the missing-handler case surfaces as `KeyError:
+'search'` and a nonzero exit, not as a passing test.
+
+**Mutation battery, 2026-09-09 — 7 applied, 7 caught, all reverted byte-identical:**
+
+| Mutation | Test that failed | Failed on |
+|---|---|---|
+| `production` search logger `propagate` → True | `test_search_does_not_reach_the_site_log` | `True is not false` |
+| `production` search logger `handlers` → `['file']` | `test_search_does_not_reach_the_site_log` | handlers mismatch |
+| `production` search handler `filename` → `sg101.log` | `test_search_gets_its_own_file` | suffix assertion |
+| `production` + trailing `LOGGING = {...}`, no search handler | `test_search_gets_its_own_file` | return code, `KeyError: 'search'` |
+| `local` search logger `propagate` → True | `test_search_does_not_reach_the_site_log` | `True is not false` |
+| `local` search handler `filename` → `sg101.log` | `test_search_gets_its_own_file` | suffix assertion |
+| `local` + trailing `LOGGING = {...}`, no search handler | `test_search_does_not_reach_the_site_log` | return code, `KeyError: 'search'` |
+
+**Each failure names the mutated module in its `subTest` label and only that one**
+— the other module passed in the same run. That is the check that the battery
+reproduced the fault rather than merely producing a red test: a test aimed at a
+shared helper instead of the module would have gone green on all four override and
+propagate cases. [[mutation-verify-or-it-is-not-coverage]]
+
+### Re-measured rather than trusted
+
+The task's dependency note said production settings had been verified to load
+standalone on 2026-08-07 and told the implementer to re-confirm because `base.py`
+had changed since. **Re-confirmed 2026-09-09:** both modules load with only
+`SECRET_KEY` set and `DOTENV_PATH` pointing at a nonexistent file, and neither
+configures logging at settings-load time, so the absent log directory is not a
+problem.
+
+### Verification
+- Full suite: **1241 tests, OK**, `--settings=sg101.settings.docker_test`.
+- Deprecation gate, **a separate run**: **1241 tests, OK**.
+- Both moved tests confirmed collected and passing in the full run at
+  `--verbosity=2`, along with `SettingsImportIsolationTests`.
+- Not browser-tested: the change ships no code, touches no rendered page and no
+  deferred work.
+
+**Phase D remaining: task 09 (`ready()` receiver coverage) and task 10 (`weblinks`
+`URLField`).** Neither depends on this one.
 
 ## Step 19 Phase D — task files generated, and two figures in the plan were stale (2026-09-08)
 
