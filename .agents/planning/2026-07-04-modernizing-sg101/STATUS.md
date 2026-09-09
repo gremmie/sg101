@@ -6949,6 +6949,101 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase D — task files generated, and two figures in the plan were stale (2026-09-08)
+
+**Phases 0, A, B and C are all closed and pushed.** Phase D is the last of the
+step. Three task files generated into
+`.agents/tasks/2026-07-04-modernizing-sg101/step19/`:
+
+| Task | What it is | Complexity |
+|---|---|---|
+| `task-08-settings-test-isolation` | The search-logging test off in-process settings imports and onto the existing subprocess helper | Low |
+| `task-09-receiver-coverage-for-ready` | Tests that fail when `ready()` stops running in `downloads`, `potd` and `weblinks` | Medium |
+| `task-10-weblinks-url-field` | `AddLinkForm.url` `CharField` → `URLField` | Low |
+
+**No ordering constraint left.** 09 before 10 still reads nicer — the `weblinks`
+form change then lands on an app whose signal wiring is finally under test — but
+nothing depends on anything.
+
+### The settings item split, and `local.py` is not what its name says
+
+**Brian asked whether the `LOGGING` extraction was worth doing**, saying some
+duplication is acceptable to him and that since Docker he has had no need to run
+the site outside a container. Measuring that turned up something the plan item
+never accounted for.
+
+**`local.py` is not a bare-metal-only module — `docker.py` inherits from it.**
+`sg101/settings/docker.py:23` is `from sg101.settings.local import *`, overriding
+exactly three things: the database over TCP rather than a unix socket, Redis and
+the Celery broker for the same reason, and making the debug toolbar visible behind
+Docker's NAT. **So the dev container's settings *are* `local.py`**, reached through
+a shim, under a name describing a workflow that no longer happens. `manage.py:5`
+and `sg101/celery.py:11` still default to `sg101.settings.local`, whose MySQL DSN
+names a unix socket on a box nobody runs — the default settings module is one
+nothing can actually use.
+
+**That makes the real target a dev/prod consolidation, not a de-duplication**, and
+`docker.py`'s own docstring already says the dev/prod split lands "at the deploy
+step". So the item split:
+
+| Half | Where it went | Why |
+|---|---|---|
+| Extract `LOGGING` into `logging_config.py` | **Step 20**, with the `local`/`docker` merge and the `manage.py`/`celery.py` default | Extracting now is work Step 20 may redo once it decides what the two configs even are |
+| Move the search-logging test onto the subprocess helper | **Phase D, task 08** | Stands on its own, is small, and is the isolation the item was really about |
+| Keep task 06's copy fix in `local.py` | Standing constraint | Not a task; nothing in Phase D or Step 20 may undo it |
+
+**This reverses one of the plan's own ordering constraints** — *"the settings
+extraction before Step 20, which will touch settings anyway."* That rationale cuts
+both ways, and the reversal is deliberate rather than an oversight; both `plan.md`
+entries now say so.
+
+**The test half gets *more* important by being separated, not less.** Step 20 will
+extract a shared `LOGGING`, and at that moment `search/tests/test_views.py` is the
+only thing standing between "production uses the shared config" and "production has
+quietly stopped using it" — provided its assertions stay aimed at
+`production.LOGGING` rather than at the helper. Task 08 lands that test correctly
+aimed before the extraction exists to aim it wrongly at.
+
+### The linter/formatter is OUT OF SCOPE — decided 2026-09-08
+
+Brian's call, and the measurement supports it more than the plan did. **The repo
+has no formatter or linter config of any kind** — no `pyproject.toml`,
+`setup.cfg`, `.flake8`, `.editorconfig`, no pre-commit — and `ci.yml` has no lint
+step, so nothing enforces a style or waits on one. **And the inconsistency it
+would fix is small**: across 400 non-migration `.py` files, 118 lines start at
+3-space indent against 7,683 at 4-space. It would rewrite overwhelmingly
+conforming code to normalize ~1.5% of it.
+
+**The cost is `git blame` and `git bisect` continuity, and Steps 20 and 21 are
+exactly when both are load bearing.** Paying that before the riskiest step of the
+project, for something with no deadline, is the wrong order. Revisit after cutover
+if ever; `ruff format` is the tool, and one isolated commit listed in
+`.git-blame-ignore-revs` keeps the blame damage recoverable, so deferring does not
+compound. Recorded in `plan.md` rather than left as an open question.
+
+### Two corrections to `plan.md`, both found by measuring before writing the tasks
+
+**The settings item's figures were stale.** It said the two `LOGGING` dicts were
+"~95 lines" differing "in exactly six places". Measured 2026-09-08 they are
+`local.py:71–214` (144 lines) and `production.py:92–239` (148), differing in
+**eight** behavioural places. The two the old count missed are the `email` and
+`turnstile` handler levels, **added by Step 16 task 09 and Step 17 after that item
+was written on 2026-08-07** — the count drifted because the thing it counted kept
+growing, which argues for the extraction rather than against it.
+[[measure-before-recording-in-planning-docs]]
+
+**The `ready()` gap's provenance was wrong.** The plan said "measured during the
+Django 5.0 rung"; it was the **Django 4.1 rung** — Step 13 task 04, 2026-08-04,
+which mutation-tested all eight apps carrying a `default_app_config` removal and
+found five caught and three not. The table is in
+`STATUS-archive-steps-01-15.md` § "Step 13 task 04". `wiki` was one of the five
+and has since been pruned in Phase B; the three uncaught apps remain.
+
+**Neither correction changes any decision** — task 08 and task 09 are the same
+work either way. They are recorded because a task file generated from a stale
+figure would have carried it into the implementation, and the first thing both
+tasks now require is re-measuring rather than trusting the numbers above.
+
 ## FINDING — re-rendering stored markup changes 3,877 rows, and a third of that is Markdown getting it right — measured 2026-09-07, DECIDED 2026-09-08: leave it
 
 **Not a task and not a bug report — a measured condition, now decided.**

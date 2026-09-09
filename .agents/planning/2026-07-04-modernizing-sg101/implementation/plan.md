@@ -1188,8 +1188,23 @@ items to fifteen.
   measurement found nothing broken and nothing at risk, and "leave it" is one of
   the three answers offered. Decide it in Phase 0; it only becomes work if
   option 3 (a real `ChoiceField`) is chosen, and then it is a Phase D task.
-- **The linter/formatter** may want to be its own step between 19 and 20. It
-  touches every file in the repo, which makes it unlike everything else here.
+- **The linter/formatter — OUT OF SCOPE, decided 2026-09-08.** Deferred
+  indefinitely rather than made a Phase D task or a step of its own. **Measured
+  before deciding:** the repo has no formatter or linter config of any kind (no
+  `pyproject.toml`, `setup.cfg`, `.flake8`, `.editorconfig`, no pre-commit) and
+  `ci.yml` has no lint step, so nothing enforces a style or waits on one; and the
+  inconsistency it would fix is small — across 400 non-migration `.py` files,
+  **118 lines start at 3-space indent against 7,683 at 4-space**, legacy pockets
+  rather than a project-wide split. So it would rewrite overwhelmingly conforming
+  code to normalize ~1.5% of it. **The cost is `git blame` and `git bisect`
+  continuity, and Steps 20 and 21 are precisely when both are load bearing** —
+  production hardening and a DNS cutover are where "when did this line change"
+  gets asked. Paying that before the riskiest step, for something with no
+  deadline, is the wrong order. **Revisit after cutover if ever**; `ruff format`
+  is the tool to reach for, since it subsumes the flake8 role too, and landing it
+  as one isolated commit listed in `.git-blame-ignore-revs` (with
+  `blame.ignoreRevsFile` set) keeps the blame damage recoverable — so deferring
+  does not compound.
 
 #### Phase B guidance
 
@@ -1390,40 +1405,63 @@ django-tagging with a link to `code.google.com/p/django-tagging/`, which has
 been dead for years. Whatever replaces it, that line needs updating — and it is
 a live page.
 
-**[Phase D] Also carries the settings-module cleanup, added 2026-08-07 out of Step 13 task
-06** (Brian's call to defer it rather than grow that task's diff). Three small
-independent changes:
+**[Phase D — SPLIT 2026-09-08; most of it moved to Step 20] The settings-module
+cleanup, added 2026-08-07 out of Step 13 task 06** (Brian's call to defer it
+rather than grow that task's diff). It was three changes; **only the second stays
+in Phase D.**
 
-1. **Extract `LOGGING` into `sg101/settings/logging_config.py`.** `local.py` and
-   `production.py` each carry a ~95-line dict, and they differ in exactly six
-   places: `disable_existing_loggers` (False→True), the `auth` and `search`
-   *handler* levels (DEBUG→INFO), the `auth` *logger* level, `root` level, and
-   production's extra `django.request`→`mail_admins` logger. So ~190 lines to
-   express six decisions. **`sg101/settings/databases.py` is the precedent** — a
-   side-effect-free module exposing `for_engine(name)` / `from_env()` that the
-   deployment modules call — so this follows a convention already in the package
-   rather than inventing one.
-2. **Move the search-logging assertions onto the subprocess helper.**
-   `search/tests/test_views.py`'s `SearchLoggingSettingsTestCase` imports
+**Why it split, and the finding that caused it.** Brian asked whether the
+extraction was worth doing, saying some duplication is acceptable to him and that
+he no longer runs the site outside Docker. Measuring that turned up something the
+item never accounted for: **`local.py` is not a bare-metal-only module.**
+`sg101/settings/docker.py:23` is `from sg101.settings.local import *`, overriding
+exactly three things — the database over TCP rather than a unix socket, Redis and
+the Celery broker for the same reason, and making the debug toolbar visible behind
+Docker's NAT. **So the dev container's settings *are* `local.py`**, reached
+through a shim, under a name describing a workflow that no longer happens.
+`manage.py:5` and `sg101/celery.py:11` still default to `sg101.settings.local`,
+whose MySQL DSN names a unix socket that exists on no machine anyone uses.
+
+That makes the real target a **dev/prod consolidation**, not a de-duplication —
+and `docker.py`'s own docstring already says the dev/prod split lands "at the
+deploy step". **Extracting a shared `LOGGING` now would be work Step 20 may
+redo**, so it moves there and travels with the consolidation. Recorded against
+this plan's own ordering note, which said to do the extraction *before* Step 20
+because Step 20 touches settings anyway; that rationale cuts both ways and this
+is the deliberate reversal of it.
+
+1. **~~Extract `LOGGING` into `sg101/settings/logging_config.py`~~ — MOVED TO
+   STEP 20**, with the `local`/`docker` consolidation. See Step 20's *"Also
+   carries the settings consolidation"*. The measurement stays useful and is
+   recorded there: the dicts are `local.py:71–214` (144 lines) and
+   `production.py:92–239` (148), differing in **eight** behavioural places, not
+   the "~95 lines" and "six places" this item claimed until 2026-09-08 — the two
+   it missed being the `email` and `turnstile` handler levels, added by Step 16
+   task 09 and Step 17 *after* it was written. The count drifted because the thing
+   it counted kept growing.
+
+2. **[Phase D] Move the search-logging assertions onto the subprocess helper.**
+   `search/tests/test_views.py:192`'s `SearchLoggingSettingsTestCase` imports
    `sg101.settings.local` and `.production` into the running test process to read
-   their `LOGGING` dicts, which is what detonated task 06's toolbar bump.
-   `core/tests/test_settings.py` already has `_run()`, which loads settings in a
+   their `LOGGING` dicts, which is what detonated Step 13 task 06's toolbar bump.
+   `core/tests/test_settings.py:37` already has `_run()`, which loads settings in a
    fresh subprocess for exactly this reason. Verified 2026-08-07 that production
    settings load standalone with no env help (`REDIS_UNIX_SOCKET` defaults in
-   `base.py:228`), so there is no friction to it.
-   **The trap to avoid while doing item 1:** if the test is repointed at
-   `logging_config` instead of at `production.LOGGING`, it stops proving that
-   `production.py` *uses* the shared config, and a later `LOGGING = {...}`
-   override there would pass. Reading the configuration the site actually
-   deploys is the property that test exists for — keep the assertion aimed at
-   the deployment module and let the subprocess supply the isolation.
-3. **Keep task 06's copy fix in `local.py` regardless.** Extraction shrinks what
-   sits in the blast radius; it does not remove the mine. The hazard is settings
-   modules mutating objects they share with whatever is already live, and
-   anything that imports `local.py` for any future reason still gets the toolbar
-   spliced into its `MIDDLEWARE`. (`production.py` needs nothing here — task 06
-   deleted its template-loader block once measurement showed it reproduced a
-   Django default, so it performs no in-place mutation at all now.)
+   `base.py:228`), so there is no friction to it. **This half stands on its own and
+   is worth doing whatever happens to the extraction** — it is the isolation the
+   item was really about.
+   **The trap, which now applies to Step 20 rather than to this task:** if the
+   test is ever repointed at a shared logging module instead of at
+   `production.LOGGING`, it stops proving that `production.py` *uses* that module,
+   and a later `LOGGING = {...}` override there would pass. Reading the
+   configuration the site actually deploys is the property the test exists for.
+
+3. **Keep task 06's copy fix in `local.py` regardless — a standing constraint, not
+   a task.** The hazard is settings modules mutating objects they share with
+   whatever is already live. The fix is in place and its comment says why; nothing
+   in Phase D or Step 20 may undo it. (`production.py` needs nothing here — task 06
+   deleted its template-loader block once measurement showed it reproduced a Django
+   default, so it performs no in-place mutation at all now.)
 
 **[Phase 0 DECIDED 2026-09-03: fix forward and backfill; Phase C builds] Also carries the PayPal `payment_date` timezone truncation, added 2026-08-09
 out of Step 13 task 09.** PayPal sends the IPN `payment_date` as a Pacific wall
@@ -1648,11 +1686,14 @@ until the escaping was undone — the measurement, not the data. And a `while re
 loop feeding `docker compose exec` silently processes only its first line,
 because `exec` consumes the loop's stdin; redirect it from `/dev/null`.
 
-**Not yet carried by any phase, and needing a home:** the three apps whose
-`ready()` can be neutered with the suite still green — `downloads`, `potd` and
-`weblinks`, whose receivers maintain denormalized counts, delete uploaded files
-and drive the photo-of-the-day sequence. Measured during the Django 5.0 rung and
-recorded as a pre-existing coverage gap. Assigned to **Phase D**.
+**[Phase D] The three apps whose `ready()` can be neutered with the suite still
+green** — `downloads`, `potd` and `weblinks`, whose receivers maintain
+denormalized counts, delete uploaded files and drive the photo-of-the-day
+sequence. Recorded as a pre-existing coverage gap rather than fixed inside a
+version bump. **⚠️ Provenance corrected 2026-09-08: measured during the Django
+4.1 rung, not the 5.0 rung** — Step 13 task 04, 2026-08-04, which mutation-tested
+all eight apps carrying a `default_app_config` removal and found five caught and
+three not; the table is in `STATUS-archive-steps-01-15.md` § "Step 13 task 04".
 
 **Tests:** Per phase. A: a post deletion that does not propagate past the post,
 and the queryset-delete path's actual behaviour pinned. B: app-boot tests without
@@ -1689,6 +1730,85 @@ shape. **The backup line is unaffected**: off-machine object storage for
 **`downloads` is the one worth re-examining here** — 716 rows of MP3s, the only
 media category where size and egress could justify object storage. Behind
 Cloudflare it is very likely fine on disk; measure the egress before moving it.
+
+**Also carries the settings consolidation, moved here from Step 19 Phase D on
+2026-09-08.** This step was always going to produce a prod compose and a dev/prod
+split; the settings package should come out of it with one module per deployment
+rather than the current chain.
+
+**What is actually there now.** `docker.py` is a thin shim that does
+`from sg101.settings.local import *` and overrides three things (DB over TCP,
+Redis/Celery over TCP, the debug toolbar behind Docker's NAT). It stays thin so
+the legacy reproduction stayed faithful — a reason that expired once the site
+stopped running bare metal. Meanwhile `manage.py:5` and `sg101/celery.py:11`
+default to `sg101.settings.local`, whose MySQL DSN names a unix socket on a box
+nobody runs, so the default settings module is one nothing can actually use.
+
+**Four things to settle together here, because settling them apart is what
+produced the chain:**
+
+1. **Merge `local.py` and `docker.py` into one dev module** and repoint the
+   `manage.py` / `celery.py` defaults at it. Naming it for the deployment rather
+   than for a machine is the point — `local` has not meant "local" for a while.
+2. **Extract the shared `LOGGING`** into a side-effect-free
+   `sg101/settings/logging_config.py`, following `sg101/settings/databases.py`
+   (a table of per-target differences plus `for_engine(name)` / `from_env()`,
+   importing only the standard library and raising `ImproperlyConfigured` on an
+   unknown name). **Measured 2026-09-08:** `local.py:71–214` (144 lines) and
+   `production.py:92–239` (148) differ in **eight** behavioural places —
+   `disable_existing_loggers`; the `auth`, `search`, `email` and `turnstile`
+   *handler* levels; the `auth` *logger* level; `root`; and production's extra
+   `django.request`→`mail_admins`. A differing `MARKDOWN` comment and a missing
+   space in `'django':{` are not decisions. **The dicts reference `PROJECT_PATH`,
+   so the log directory has to be a parameter** — importing `base` would make the
+   helper a settings module.
+3. **`local.py` and `production.py` still declare `django.db.backends.mysql`
+   inline** rather than calling `databases.from_env()`, five steps after the
+   PostgreSQL move. Already recommended into Step 21 as a deploy decision; if the
+   consolidation happens here it should be resolved here rather than left to
+   cutover day.
+
+4. **The unix sockets do not come back, and `production.py` today is jaguar's
+   config rather than the new host's.** Asked directly 2026-09-08 — whether
+   production returns to unix sockets once `modernize` becomes prod — and the
+   answer this step should build on is **no, not for PostgreSQL or Redis.**
+   Production here is Compose on a single VM with each of them as its own service,
+   and a unix socket does not cross a container boundary: sharing one means
+   bind-mounting the socket directory into both containers, which trades a few
+   percent on small queries — nothing at this site's traffic — for coupling
+   containers through a shared filesystem and caring about restart order. **The
+   one place a socket would still be idiomatic is between a reverse proxy and
+   gunicorn**, if both run in this compose with a shared volume, which depends on
+   the static-file decision above: with Cloudflare fronting and WhiteNoise serving
+   static there may be no local proxy at all.
+
+   **So the sockets are a pre-container artifact. They die with jaguar, not with
+   `local.py`** — which is why they are not a dev/prod distinction and do not
+   belong in the merge above.
+
+   Three concrete consequences, all measured 2026-09-08:
+
+   - **`base.py:264` defaults `REDIS_UNIX_SOCKET` to `/var/run/redis/redis.sock`**
+     — jaguar's path — and every container config has to null it explicitly
+     (`docker.py:38`, `docker_test.py:31`). **The default is the dead
+     architecture and the live configs are the exceptions.** Invert it: default to
+     TCP, and let anything needing a socket say so.
+   - **`production.py:59` builds the cache `LOCATION` as
+     `'unix://' + REDIS_UNIX_SOCKET + '?db=2'`**, and its `DATABASES` names MySQL
+     over a unix socket. Both describe the machine being decommissioned. **This
+     module is rewritten here regardless of what else this step does**, which is
+     also why extracting a shared `LOGGING` out of it in Step 19 Phase D would
+     have been the wrong order.
+   - Once the socket path goes, **`core/services.py:26`'s `if unix_socket_path:`
+     branch and the `REDIS_UNIX_SOCKET` setting are dead code.** Small, but the
+     same prune instinct as Phase B; decide it here rather than leaving a branch
+     nothing can reach.
+
+**The constraint that survives all four:** `search/tests/test_views.py`'s logging
+assertions must keep naming the *deployment* module, not the shared helper, or
+they stop proving the deployment module uses it. Step 19 Phase D moves that test
+onto the subprocess helper first, so this step inherits a test that already
+isolates correctly.
 
 **Also carries the Sass toolchain, added 2026-08-13 out of the logout fix
 (Brian's call to place it here).** The v3 design's stylesheet cannot currently be
