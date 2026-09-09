@@ -189,35 +189,6 @@ class SearchViewTestCase(TestCase):
         self.assertEqual([r.getMessage() for r in captured.records], ['marker'])
 
 
-class SearchLoggingSettingsTestCase(TestCase):
-    """
-    Where search logging is configured to land.
-
-    Asserted against the settings modules rather than the running logger: the
-    suite runs under `test`, which configures no such logger, so the only way
-    to cover the requirement is to read the configuration the site deploys.
-
-    """
-    def settings_modules(self):
-        from sg101.settings import local, production
-        return {'local': local.LOGGING, 'production': production.LOGGING}
-
-    def test_search_gets_its_own_file(self):
-        for name, config in self.settings_modules().items():
-            with self.subTest(settings=name):
-                handler = config['handlers']['search']
-                self.assertTrue(handler['filename'].endswith('search.log'))
-
-    def test_search_does_not_reach_the_site_log(self):
-        # propagate False is what keeps the root logger, and so sg101.log,
-        # from collecting a copy of every search.
-        for name, config in self.settings_modules().items():
-            with self.subTest(settings=name):
-                logger_config = config['loggers']['search']
-                self.assertFalse(logger_config['propagate'])
-                self.assertEqual(logger_config['handlers'], ['search'])
-
-
 class SearchRoutesTestCase(TestCase):
     """The rename off the dead haystack_* names."""
 

@@ -14,6 +14,7 @@ source of config.
 """
 import copy
 import importlib
+import json
 import os
 import subprocess
 import sys
@@ -31,6 +32,23 @@ SNIPPET = (
     "from django.conf import settings\n"
     "import sys\n"
     "sys.stdout.write('SECRET_KEY=' + settings.SECRET_KEY)\n"
+)
+
+
+# The two modules the site actually deploys. Both are asserted about below, for
+# the same reason each time: what they configure is never exercised by the suite,
+# which runs under `test`.
+DEPLOYMENT_SETTINGS = ['sg101.settings.local', 'sg101.settings.production']
+
+SEARCH_LOGGING_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "config = settings.LOGGING\n"
+    "sys.stdout.write(json.dumps({\n"
+    "    'handler': config['handlers']['search'],\n"
+    "    'logger': config['loggers']['search'],\n"
+    "}))\n"
 )
 
 
@@ -143,11 +161,17 @@ class SettingsImportIsolationTests(SimpleTestCase):
     `from base import *` binds base's own mutable objects, so a module that
     edits MIDDLEWARE, INSTALLED_APPS or TEMPLATES in place edits them for
     whatever configuration is already live. Both `local` and `production` once
-    did, and the suite imports both to read their LOGGING dicts, so local.py's
-    insert spliced the debug toolbar's middleware into every test that ran after
-    it -- harmless until debug-toolbar shipped a model, then 105 errors from an
-    app the registry never saw. production.py's version edited TEMPLATES, which
-    changed how every later test loaded templates and never failed anything.
+    did: local.py's insert spliced the debug toolbar's middleware into every
+    test that ran after the import -- harmless until debug-toolbar shipped a
+    model, then 105 errors from an app the registry never saw. production.py's
+    version edited TEMPLATES, which changed how every later test loaded
+    templates and never failed anything.
+
+    No test reads a value out of these modules any more -- the ones that need
+    what a deployment module configures load it in a subprocess. This case
+    imports them because the import is the thing under test, and the hazard is
+    not confined to the suite: docker.py reaches local.py by `import *` at
+    runtime.
 
     Both are covered because the property belongs to the whole package, not to
     whichever module currently happens to edit something.
@@ -155,7 +179,6 @@ class SettingsImportIsolationTests(SimpleTestCase):
     Each module is reloaded so the assertion faces a real import rather than
     sys.modules handing back a module some earlier test already ran.
     """
-    MODULES = ['sg101.settings.local', 'sg101.settings.production']
 
     def live_settings(self):
         return (list(settings.MIDDLEWARE),
@@ -164,8 +187,48 @@ class SettingsImportIsolationTests(SimpleTestCase):
 
     def test_importing_deployment_settings_leaves_the_live_ones_alone(self):
         before = self.live_settings()
-        for name in self.MODULES:
+        for name in DEPLOYMENT_SETTINGS:
             with self.subTest(settings=name):
                 sys.modules.pop(name, None)
                 importlib.import_module(name)
                 self.assertEqual(self.live_settings(), before)
+
+
+class SearchLoggingSettingsTests(SimpleTestCase):
+    """Where the deployed configuration sends search records.
+
+    The suite runs under `test`, which configures no search logger, so the only
+    way to cover "search logging lands in its own file and nowhere else" is to
+    read the configuration the site deploys.
+
+    Each module is loaded in a subprocess rather than imported, and what is read
+    is that module's own LOGGING. Both matter: the subprocess keeps a settings
+    module out of the running process, and reading the module's own value is
+    what makes a deployment module that quietly stops using a shared
+    configuration fail here rather than pass on the shared one.
+    """
+
+    def search_logging(self, module):
+        """The `search` handler and logger as `module` configures them."""
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': module,
+                               'SECRET_KEY': 'x'},
+                              snippet=SEARCH_LOGGING_SNIPPET)
+        # Checked before the output is parsed: a subprocess that never loaded
+        # settings would otherwise be asserted about vacuously.
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_search_gets_its_own_file(self):
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                handler = self.search_logging(name)['handler']
+                self.assertTrue(handler['filename'].endswith('search.log'))
+
+    def test_search_does_not_reach_the_site_log(self):
+        # propagate False is what keeps the root logger, and so sg101.log,
+        # from collecting a copy of every search.
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                logger_config = self.search_logging(name)['logger']
+                self.assertFalse(logger_config['propagate'])
+                self.assertEqual(logger_config['handlers'], ['search'])
