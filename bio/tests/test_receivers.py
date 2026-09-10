@@ -12,21 +12,25 @@ from bio.models import BadgeOwnership
 from bio.models import UserProfile
 from donations.models import Donation
 from downloads.models import Download
-import downloads.receivers
 from news.models import Story
 from potd.models import Photo
-import potd.receivers
-import search.receivers
 from weblinks.models import Link
-import weblinks.receivers
 
 
 FakeDonation = namedtuple('FakeDonation', ['is_anonymous', 'user'])
 FakeUserObject = namedtuple('FakeUserObject', ['user'])
 FakeStory = namedtuple('FakeStory', ['submitter'])
 
-# The models these tests fake a save of that are also searchable.
-SEARCHABLE = (Link, Download, Story)
+# Every post_save receiver these tests have to mute, by sender and dispatch_uid.
+# The searchable senders are here because a faked save reaches the indexer too.
+MUTED = [
+    (Link, 'weblinks.receivers'),
+    (Download, 'downloads.receivers'),
+    (Photo, 'potd.receivers'),
+    (Link, 'search.receivers'),
+    (Download, 'search.receivers'),
+    (Story, 'search.receivers'),
+]
 
 
 class ReceiverTestCase(TestCase):
@@ -36,27 +40,22 @@ class ReceiverTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('user', 'user@example.com', 'pw')
 
-        # Don't let these signal handlers fire either
-        post_save.disconnect(sender=Link, dispatch_uid='weblinks.receivers')
-        post_save.disconnect(sender=Download, dispatch_uid='downloads.receivers')
-        post_save.disconnect(sender=Photo, dispatch_uid='potd.receivers')
+        # These tests send post_save by hand with stand-in objects that have no
+        # pk and none of the fields the other apps' receivers read, so those
+        # receivers are muted for the duration.
+        #
+        # What goes back afterwards is the list as it was found. Reconnecting
+        # them by name would register wiring whether or not their app configs
+        # ever ran, which registers it for the rest of the suite too: these are
+        # module-level connections, and nothing disconnects them again.
+        saved = post_save.receivers[:]
+        self.addCleanup(self._restore, saved)
+        for sender, uid in MUTED:
+            post_save.disconnect(sender=sender, dispatch_uid=uid)
 
-        # These tests send post_save by hand with stand-in objects that have
-        # no pk, so the search indexer has nothing to queue for.
-        for sender in SEARCHABLE:
-            post_save.disconnect(sender=sender, dispatch_uid='search.receivers')
-
-    def tearDown(self):
-        post_save.connect(weblinks.receivers.on_link_save, sender=Link,
-                          dispatch_uid='weblinks.receivers')
-        post_save.connect(downloads.receivers.on_download_save, sender=Download,
-                          dispatch_uid='downloads.receivers')
-        post_save.connect(potd.receivers.on_photo_save, sender=Photo,
-                          dispatch_uid='potd.receivers')
-
-        for sender in SEARCHABLE:
-            post_save.connect(search.receivers.queue_reindex, sender=sender,
-                              dispatch_uid='search.receivers')
+    def _restore(self, saved):
+        post_save.receivers = saved
+        post_save.sender_receivers_cache.clear()
 
     def test_profile_creation(self):
         profile = UserProfile.objects.get(user=self.user)
