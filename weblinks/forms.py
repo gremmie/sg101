@@ -8,7 +8,7 @@ from weblinks.models import PendingLink, Link
 
 class AddLinkForm(forms.ModelForm):
    title = forms.CharField(widget = forms.TextInput(attrs = {'size': 52}))
-   url = forms.CharField(widget = forms.TextInput(attrs = {'size': 52}))
+   url = forms.URLField(widget = forms.TextInput(attrs = {'size': 52}))
 
    def clean_url(self):
       new_url = self.cleaned_data['url']
