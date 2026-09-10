@@ -27,7 +27,7 @@ class MessageManager(models.Manager):
         ).select_related()
 
     def unread_count(self, user):
-        return self.filter(receiver=user, read_date__isnull=True).count()
+        return self.inbox(user).filter(read_date__isnull=True).count()
 
 
 class Message(models.Model):
