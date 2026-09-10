@@ -6949,6 +6949,120 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase D task 09 — the `ready()` gap was never a coverage gap — DONE 2026-09-09, `fc386c30`, PUSHED
+
+**The three apps already had the tests.** `downloads`, `potd` and `weblinks` each
+have a `tests/test_receivers.py` asserting the effects — counts on create, move
+and delete, the photo sequence on save and delete — not the fact of a connection.
+Run on their own, every one of them **already failed** with `ready()` neutered:
+`downloads` 2 failures, `potd` 2, `weblinks` 1.
+
+**What was broken is the suite's ability to see it, and it was one test module.**
+`bio/tests/test_receivers.py:15,18,21` imported `downloads.receivers`,
+`potd.receivers` and `weblinks.receivers` at module scope. Django's runner imports
+every test module before running any test, so those imports executed the
+`connect()` calls at the bottom of each receivers module and put back exactly the
+wiring a missing `ready()` had failed to establish. Its `tearDown` then reconnected
+three of them by hand, unconditionally, a second time.
+
+### The measurement, with a control
+
+Connections registered under each `dispatch_uid`, counted in a fresh process:
+
+| | `post_save` | `post_delete` |
+|---|---|---|
+| `downloads.ready()` neutered | **0** | **0** |
+| ...after `import bio.tests.test_receivers` | 1 | 2 |
+| `ready()` intact — control | 1 | 2 |
+| ...after the same import — control | 1 | 2 |
+
+**The control is what makes this readable.** The import restores precisely what
+`ready()` would have, and every connection carries a `dispatch_uid`, so nothing
+doubles up and nothing looks wrong. The masking has no symptom.
+
+**The 2026-08-04 observation is reproduced and stands** — all three apps still go
+green under the full suite with `ready()` neutered, confirmed today before
+anything was changed. It is the conclusion drawn from it that was wrong, in
+`plan.md` and in the task file: "these apps have no coverage" was inferred from
+"the suite does not go red", and the second does not imply the first when a test
+module can re-arm the subject. [[suspect-the-measurer-before-the-record]]
+
+### Why this mattered more than the missing tests
+
+**Writing what task 09 specified would have produced tests that also pass under
+the mutation.** They would then have been "mutation-verified" the only way that
+appeared to work — by running the app's own tests, where they fail for the real
+reason — and the suite would have stayed exactly as blind as before, now with a
+record saying the hole was closed. This is the case `CODEASSIST.md` names: a
+mutation that does not reproduce the fault proves nothing.
+[[mutation-verify-or-it-is-not-coverage]]
+
+### The fix, and why it restores rather than reconnects
+
+`bio`'s test saves `post_save.receivers` in `setUp` and puts that list back in an
+`addCleanup`, instead of importing the three modules and reconnecting by name.
+**Restoring what was found puts back nothing when there was nothing** — which is
+the whole property. Reconnecting by name asserts a state, and asserting a state
+is what established the wiring for every test that ran afterwards.
+
+The four module-scope receiver imports are gone; the model imports stay, because
+they are the senders.
+
+### The one real hole underneath it
+
+`downloads`' file deletion, which is among the effects that no re-run recovers —
+an orphaned upload just accumulates on disk.
+
+- **`on_download_delete`'s `file.delete(save=False)` was exercised by nothing.**
+  The existing test creates a `Download` with no file, so `if download.file:` was
+  never true.
+- **`on_pending_download_delete`'s was asserted against a `Mock`** assigned after
+  the save — `assert_called_with(save=False)` passes whether or not anything
+  leaves the disk.
+
+Replaced by `FileDeletionTestCase`, which writes a real file under a temporary
+`MEDIA_ROOT`, captures `file.path`, deletes the row and asserts the path is gone.
+The `Mock` test was removed rather than kept beside it: the new one subsumes it
+and asserts the property the old one only approximated. Net test count +1.
+
+### Mutation battery, 2026-09-09 — run against the FULL suite
+
+Per-app runs were never the right instrument here, which is the point of the fix.
+
+| Mutation | Before the fix | After | Caught by |
+|---|---|---|---|
+| `downloads.ready()` neutered | OK | **FAILED (3)** | both file tests + the count test |
+| `potd.ready()` neutered | OK | **FAILED (2)** | both sequence tests |
+| `weblinks.ready()` neutered | OK | **FAILED (1)** | the count test |
+
+Neutering `ready()` drops several connections at once, so each test method fails
+at its first assertion and the delete paths are never reached. **Each delete
+receiver was therefore dropped on its own**, leaving the rest of `ready()` intact:
+
+| Connection dropped | Caught by |
+|---|---|
+| `on_download_delete` | `test_the_file_goes_with_the_download`, `test_download_signal_handlers` |
+| `on_pending_download_delete` | `test_the_file_goes_with_the_pending_download` |
+| `on_photo_delete` | `test_on_photo_delete` |
+| `on_link_delete` | `test_signal_handlers` |
+
+Every failure is an assertion about an effect — `True is not false` on a file
+still on disk, `'1,2,3' != '1,4,2,3'` on the sequence, `1 != 0` and `1 != 215` on
+the counts. No import error, no collection error, nothing failing for an
+unrelated reason. All mutations reverted and the files confirmed unmodified.
+
+**`potd` and `weblinks` gained no new tests and are now caught anyway** — which is
+the evidence that the leak, not the coverage, was the thing in the way.
+
+### Verification
+- Full suite: **1242 tests, OK** (1241 before: two added, the `Mock` test removed).
+- Deprecation gate, **a separate run**: **1242 tests, OK**.
+- No application code changed; the diff is two test files.
+- Real `MEDIA_ROOT` checked after the run: no `downloads/` directory, nothing left
+  behind.
+
+**Phase D remaining: task 10 (`weblinks` `URLField`).**
+
 ## Step 19 Phase D task 08 — the search-logging test reads settings in a subprocess — DONE 2026-09-09, `8552a922`, PUSHED
 
 `SearchLoggingSettingsTestCase` read `local.LOGGING` and `production.LOGGING` by

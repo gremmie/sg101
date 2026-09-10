@@ -1695,6 +1695,19 @@ version bump. **⚠️ Provenance corrected 2026-09-08: measured during the Djan
 all eight apps carrying a `default_app_config` removal and found five caught and
 three not; the table is in `STATUS-archive-steps-01-15.md` § "Step 13 task 04".
 
+**⚠️ Diagnosis corrected 2026-09-09, at task 09 — this was never a coverage gap.**
+All three apps already had receiver tests asserting the effects, and run on their
+own each one already failed with `ready()` neutered. The suite went green because
+`bio/tests/test_receivers.py` imported the three receivers modules at module
+scope, and Django imports every test module before running any test, so those
+imports re-registered the wiring the mutation had just removed. The observation
+in the table above is reproducible and correct; only the conclusion drawn from it
+was wrong. Fixed by having that test restore the receiver list it found instead
+of importing and reconnecting; the full suite now catches all three. Task 09's
+own remaining work was the one real hole underneath it — `downloads`' file
+deletion, asserted against a `Mock` for `PendingDownload` and not at all for
+`Download`. See `STATUS.md` § "Step 19 Phase D task 09".
+
 **Tests:** Per phase. A: a post deletion that does not propagate past the post,
 and the queryset-delete path's actual behaviour pinned. B: app-boot tests without
 `wiki`, trimmed tests for pruned apps, and a compile sweep over the **whole
