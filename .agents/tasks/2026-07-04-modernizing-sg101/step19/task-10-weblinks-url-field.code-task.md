@@ -31,7 +31,13 @@ unsafe here and this task does not close a hole.
 **The difference is confined to scheme-less input, and it runs the wrong way
 round.** Typing `example.com` is currently **rejected** — "Enter a valid URL.",
 which does not tell a member what to fix — where a form `URLField` normalizes it
-to `http://example.com` and accepts it.
+and accepts it.
+
+**⚠️ Corrected 2026-09-09 during execution: the scheme is `https`, not `http`.**
+`sg101/settings/base.py:75` sets `FORMS_URLFIELD_ASSUME_HTTPS = True`, so a bare
+domain normalizes to `https://example.com`. The setting is deliberate —
+`tools/deprecation_gate.sh` carries an ignore for its own deprecation warning and
+says so. Every `http://` below was written without accounting for it.
 
 ### The side effect that makes this worth a test rather than a one-liner
 `AddLinkForm` has a `clean_url` that rejects duplicates:
@@ -57,6 +63,12 @@ not edit, which is exactly the kind that ships unnoticed. **It needs its own
 test.** Note also what normalization does *not* fix: a trailing slash still makes
 `http://example.com/` a different string from `http://example.com`, so the
 duplicate check remains exact-match-after-normalization. Do not widen it here.
+
+**⚠️ The improvement is smaller than this paragraph claims.** Because the assumed
+scheme is `https` and 475 of 571 stored links are `http://`, a bare domain will
+*not* collide with the stored form of most of them. It is not a regression —
+`example.com` never reached `clean_url` at all before — but the duplicate check
+still only works for input carrying a scheme, plus the 94 rows already on https.
 
 ### House style in this file
 `weblinks/forms.py` is one of the legacy 3-space-indented files and uses spaces
@@ -127,7 +139,8 @@ implementation. Read additional references as needed for context.
 1. **Scheme-less input is accepted and normalized**
    - Given the add-link form
    - When `example.com` is submitted with an otherwise valid payload
-   - Then the form is valid and `cleaned_data['url']` is `http://example.com`
+   - Then the form is valid and `cleaned_data['url']` is `https://example.com`
+     (**corrected 2026-09-09** — `FORMS_URLFIELD_ASSUME_HTTPS`)
 
 2. **Schemed input is unchanged**
    - Given the add-link form
@@ -140,10 +153,13 @@ implementation. Read additional references as needed for context.
    - Then the form is invalid with an error on `url` in both cases
 
 4. **The duplicate check sees the normalized value**
-   - Given an existing `Link` with url `http://example.com`
+   - Given an existing `Link` with url `https://example.com` (**corrected
+     2026-09-09** — as written, with `http://`, this criterion fails: the
+     normalized value is `https://` and `url__iexact` does not bridge the two)
    - When `example.com` is submitted
    - Then the form is invalid with "That link already exists in our database." —
      which it is not today, because the value never reaches `clean_url`
+   - And the `http://` case is pinned by its own test as a known boundary
 
 5. **The tests are real — mutation-verified**
    - Given the new tests

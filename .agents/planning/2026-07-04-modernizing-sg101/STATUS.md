@@ -6949,6 +6949,107 @@ cutover, not to the idea.
 corrected to media on the VM's disk, with object storage still used for `pg_dump`
 backups.
 
+## Step 19 Phase D task 10 — the add-link form takes a bare domain — DONE 2026-09-09, `5ed3a113`, PUSHED
+
+`AddLinkForm.url` is a `forms.URLField`, keeping its `TextInput` widget and
+`size`. One line of application code and six tests in a new
+`weblinks/tests/test_forms.py`. **Phase D is complete, and with it Step 19.**
+
+### The premise held, checked before it was relied on
+
+The task required verifying rather than assuming that a `CharField` here is not
+skipping validation. Exercised directly against the running form, before anything
+changed:
+
+| input | valid? | result |
+|---|---|---|
+| `example.com` | **no** | "Enter a valid URL." |
+| `http://example.com/page` | yes | passes through untouched |
+| `not a url at all` | no | "Enter a valid URL." |
+| `javascript:alert(1)` | no | "Enter a valid URL." |
+
+`ModelForm._post_clean` runs the model `URLField`'s validators, so the bad input
+was already refused. **This is a usability fix and closes no hole** — nothing to
+stop and report. What changes is only the scheme-less case, which went from
+rejected-with-an-unhelpful-message to accepted.
+
+### The task file's `http://` was wrong, and criterion 4 would have failed
+
+**`sg101/settings/base.py:75` sets `FORMS_URLFIELD_ASSUME_HTTPS = True`**, so a
+bare domain normalizes to `https://example.com`. The task file said `http://`
+throughout, and its acceptance criterion 4 seeded an existing `Link` at
+`http://example.com` and expected `example.com` to collide with it. It would not:
+`url__iexact` does not bridge the schemes.
+
+**The setting is deliberate, not an accident to correct.** `tools/deprecation_gate.sh`
+carries an ignore for the transitional setting's own deprecation warning and says
+in as many words that the project opted into https. So the criteria were corrected
+in the task file, in place, rather than the setting being changed to match them.
+[[measure-before-recording-in-planning-docs]]
+
+### What that costs the task's stated rationale
+
+The task justified testing the duplicate-check side effect by saying a bare
+domain would afterwards match an existing `http://example.com`. It will not, and
+the corpus makes that the common case:
+
+    Link rows: 571     http:// 475     https:// 94     other 2
+
+**Not a regression** — `example.com` never reached `clean_url` before, because it
+failed validation first, so the duplicate check has only ever worked for input
+carrying a scheme and still does. But the improvement is smaller than the task
+file claimed, and it is worth saying so where the claim lives rather than letting
+a later reader infer that bare-domain duplicates are now caught.
+
+Pinned by a test rather than widened: `clean_url` is untouched, and a link stored
+as `http://example.com` is *not* matched by a typed `example.com`. Same reasoning
+the task file already applied to trailing slashes — deciding what counts as the
+same link is a larger question than the url box.
+
+### The rendered page is byte-identical
+
+`URLField` renders `<input type="url">` by default, so the explicit `TextInput`
+is what keeps this invisible. The add-link page was rendered through the view as
+a logged-in member under both versions of the field and diffed:
+
+    <input type="text" name="url" size="52" required id="id_url">
+
+identical, `size` included.
+
+### Mutation battery, 2026-09-09 — the tests that must NOT fail are the point
+
+Reverting the field to `forms.CharField`:
+
+| Test | Under `CharField` | |
+|---|---|---|
+| a bare domain is accepted and given a scheme | **FAILS** | "Enter a valid URL." |
+| a bare domain reaches the duplicate check | **FAILS** | got "Enter a valid URL." instead of the duplicate message |
+| a link stored on another scheme is not a duplicate | **FAILS** | also a bare-domain case |
+| gibberish is rejected | passes | `_post_clean` always caught it |
+| a `javascript:` url is rejected | passes | same |
+| a url that already has a scheme is left alone | passes | unaffected |
+
+**The three passes are the evidence the tests are aimed at this change.** A
+battery that reddened everything would mean they were testing URL validation in
+general, which was never missing — and the file would then go green again for
+reasons having nothing to do with the field.
+
+### One process note, recorded because it cost a run
+
+`git checkout -- weblinks/forms.py` to revert a mutation also reverted the task's
+own uncommitted change, and the following full-suite run failed with the three
+new tests red. Harmless once seen, and the fix was to re-apply and re-run — but
+**reverting a mutation with `git checkout` is only safe when the work it sits on
+top of is already committed.** Both earlier tasks got away with it because their
+mutations were applied to files they were not themselves editing.
+
+### Verification
+- Full suite: **1248 tests, OK** (1242 before; six added).
+- Deprecation gate, **a separate run**: **1248 tests, OK** — the gate matters here
+  more than usual, since the behaviour depends on a setting that announces its own
+  removal at Django 6.0.
+- `clean_url` unedited; the only application change is the field's type.
+
 ## Step 19 Phase D task 09 — the `ready()` gap was never a coverage gap — DONE 2026-09-09, `fc386c30`, PUSHED
 
 **The three apps already had the tests.** `downloads`, `potd` and `weblinks` each
