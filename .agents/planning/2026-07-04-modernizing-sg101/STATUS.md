@@ -43,6 +43,103 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## PLANNING — Step 20: nine task files, and the proxy decision that was wrong twice (2026-09-12)
+
+Step 19 closed 2026-09-09, making Step 20 the active step. Nine task files
+generated in `.agents/tasks/2026-07-04-modernizing-sg101/step20/`, covering the
+plan's own scope plus the items other steps hung on it: the real-client-IP
+rewrite, origin exposure, the two indexes deferred out of Step 12, and two carried
+items filed under Step 21 in `plan.md` that are hardening rather than cutover —
+the dev/prod settings split (carried 2026-08-07) and Redis's memory policy
+(carried 2026-08-05).
+
+### The proxy choice was never made, and then it was made wrong
+
+**`research/docker-strategy.md` still lists it as open:** *"Decide gunicorn+nginx/
+Caddy vs. WhiteNoise-only."* The design says `Caddy/nginx or platform router`, and
+`plan.md` states the real-IP requirement proxy-agnostically, naming
+`ngx_http_realip_module` only as an example of satisfying it. **nginx propagated
+into `STATUS.md` and `plan.md`'s Step 21 ordering note as though it were the
+decision.** It was not.
+
+**Decided 2026-09-12: Apache.** The deciding argument is that a verified working
+configuration already exists for exactly the load-bearing item — jaguar's
+`conf-enabled/remoteip.conf`, checked against Cloudflare's published list
+2026-08-21 with no drift — and that fail2ban's jail filters are log-format
+specific. Operator familiarity is the tiebreaker and is a legitimate one for a
+single-admin site.
+
+**Then decided wrong, and corrected the same day.** The first draft put Apache on
+the host. That breaks the project's own sequencing — *"do everything locally,
+deploy once at the end"* — because **no VM is provisioned**, so the step would not
+have been exercisable at all. It also repeats the jaguar complaint: config that
+does not travel with the code. **Apache is a service in the production compose
+stack.** The argument for a host daemon — several sites sharing a box — does not
+apply, because the decommission project is capturing the other sites as static
+mirrors bound for Cloudflare Pages, leaving this VM single-purpose.
+
+**The fail2ban justification for a host daemon was also weak.** It bans by pushing
+addresses into a Cloudflare IP list that a WAF rule drops at the edge — an API
+call, not local packet filtering. It needs to read an access log, which a bind
+mount provides.
+
+### The request rate, measured — 2026-09-12
+
+Taken because "are there performance concerns with Apache in Docker" deserved a
+number rather than an opinion. From `/svr/www/surfguitar101.com/log/access.log` on
+jaguar, **572,177 requests over 6.3 days**, 2026-09-06 06:48 → 2026-09-12 14:09
+local:
+
+| | Rate |
+|---|---|
+| Average | **~1.05 req/s** |
+| Busiest hour (09-10 17:00) | 5,062 req/hr — **~1.4 req/s** |
+| Busiest minute (09-08 13:18) | 506 req/min — **~8.4 req/s** |
+
+Bridge-network NAT costs tens of microseconds per packet, so at these rates
+containerization is immaterial. **Apache will also do less work than it does
+today**, since it currently runs `mod_wsgi` with Python embedded in its workers
+and becomes a pure reverse proxy.
+
+**Three consequences worth acting on, none about CPU:** bind-mount I/O is slow
+under Docker Desktop on macOS and native on the Linux VM, so a sluggish local
+`/media` test is not a production signal; the access log should be bind-mounted
+rather than sent to the json-file driver, which also gives fail2ban the path it
+needs; and `EnableSendfile` should be set explicitly rather than inherited, given
+the overlay filesystem underneath.
+
+**This measurement has a shelf life.** It comes from jaguar's Apache log, which
+rotates, and the send-side baseline dies with the host. Anything to be compared
+against it must be captured before the decommission.
+
+### Three things that need the VM, and therefore are not in Step 20
+
+Task 07 authors the origin firewall ruleset but cannot apply it, and task 04's
+Cloudflare Origin CA certificate cannot be installed. Both are now entries **B6
+and B5** in `cutover-runbook.md`. Task 07's rules will reach cutover day
+**unexercised**, and its task file says so in as many words.
+
+**The backup storage provider is the third, and it is deferred on purpose rather
+than for lack of a VM.** Nothing in task 06's path needs it: endpoint, bucket and
+credentials are configuration, in the pattern `base.py:350-352` already uses, and
+the task builds and drills the whole path against a local S3-compatible endpoint.
+**What is decided now is the constraint, because that is the part that gets lost:**
+
+> The backup target must not share a provider or account with the VM.
+
+A Linode VM backed up to Linode Object Storage shares a failure domain. `bobcat` is
+already a second Linode and its rsync is repointed at the new VM, so that is the
+warm same-provider copy; the object storage copy has to be elsewhere. Against a
+Linode VM, an AWS S3 bucket satisfies it, and `boto3` and credentials are already
+here from Step 15 — **a new bucket, not the media buckets, on a write-scoped
+credential with deletion left to a lifecycle policy.** Recorded as
+`cutover-runbook.md` **B7**.
+
+**The general shape is worth naming, since it recurs across these nine tasks:**
+separate the constraint from the choice. Write down the property that must hold,
+defer the selection to where the information is, and the selection cannot quietly
+violate the property.
+
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
 
 Requirements clarification only; nothing built. Q&A in `step12-idea-honing.md`
@@ -2269,8 +2366,9 @@ consequences:
    lesson.** The new VM also sits behind Cloudflare, so **the real-client-IP
    rewrite must be working before fail2ban is enabled**, or the new host repeats
    2025's mistake and bans the edge. Step 20 already carries that rewrite
-   (`ngx_http_realip_module`, the same 15 ranges) as its own item; this makes it
-   a **prerequisite of the blocking** rather than an independent task.
+   (Apache `mod_remoteip`, the same 15 IPv4 and 7 IPv6 ranges) as its own item;
+   this makes it a **prerequisite of the blocking** rather than an independent
+   task.
 3. **Turnstile will be judged against a floor fail2ban is holding down.** If the
    blocking is not carried over, spam rises at cutover for reasons that have
    nothing to do with the registration flow — and that rise would read as
@@ -5449,9 +5547,10 @@ below, which is the live state this step is steered by.
   the codebase is correct only because of it**: `antispam`, `accounts`, `forums`,
   `comments`, `downloads`, `donations`. **Nothing in the repo performs it** — no
   `real_ip`, no `SECURE_PROXY_SSL_HEADER`, no proxy in `docker-compose.yml` — and
-  Django does not do it itself. Without the analogue (nginx's
-  `ngx_http_realip_module`, same 15 ranges) every IP the site records silently
-  becomes a proxy address on cutover day, with nothing reporting the
+  Django does not do it itself. Without a proxy-side rewrite (Apache's
+  `mod_remoteip` or nginx's `ngx_http_realip_module`, over the same 15 IPv4 and
+  7 IPv6 ranges) every IP the site records silently becomes a proxy address on
+  cutover day, with nothing reporting the
   disagreement. **Hung on Step 20 in `plan.md` 2026-08-21** — production
   hardening already owns the Cloudflare front and the gunicorn prod compose, so
   it needs no new step. **Step 17 inherits it**: Turnstile's siteverify takes the

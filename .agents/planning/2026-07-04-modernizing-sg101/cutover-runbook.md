@@ -51,7 +51,15 @@ warning, not the only one.
 edits across deploys **silently** — production ran one for ~20 months without
 anyone knowing. Audited clean 2026-08-16, but production stays live on the old
 code until the flip, so the audit is only true as of the day it was run.
-*Source: `STATUS.md`; the original audit is in the Step 15 record.*
+
+**Extended 2026-09-12: audit the Apache configuration on the new host too.** Step
+20 puts the proxy config in this repository and delivers it to the container by
+**bind mount**, which means the running configuration is whatever is on disk at
+that path — the same silent-divergence shape as the working-copy edit above, in a
+file that is the site's security boundary. Check it with the same eye, and on the
+new host as well as the old one.
+*Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
+03 and 04.*
 
 ### A3. Delete the 32 pending `gcalendar` rows in production, not just locally
 Step 21 converts a **fresh** production snapshot, so rows deleted only in the dev
@@ -84,18 +92,64 @@ backup if it is ever lost.
 *Source: memory `modernizing-sg101-planning`; `AGENTS.md`.*
 
 ### B3. Real client IP at the new front door
-**Nothing in the repo sets it.** The rewrite that makes every `REMOTE_ADDR`
-reader correct exists only as Apache config on the box being retired. Whatever
-fronts the new VM needs the analogue — nginx `ngx_http_realip_module` with the
-Cloudflare ranges — or on cutover day every IP the site records silently becomes
-a proxy address. Step 20 builds it; cutover verifies it against a real request.
-*Source: `research/dmarc-readings.md` § "A cutover requirement this exposed".*
+**The rewrite that makes every `REMOTE_ADDR` reader correct exists only as Apache
+config on the box being retired.** Without it, on cutover day every IP the site
+records silently becomes a proxy address.
+
+**Step 20 task 04 builds it in the repo** — Apache `mod_remoteip`,
+`RemoteIPHeader CF-Connecting-IP`, `RemoteIPTrustedProxy` over Cloudflare's **15
+IPv4 and 7 IPv6** ranges — as configuration mounted into the proxy service of the
+production compose stack, so it travels with the code rather than living on a
+host. **Cutover verifies it against a real request**, which is the only check that
+means anything: read what the application recorded, not what the config says.
+*Source: `research/dmarc-readings.md` § "A cutover requirement this exposed";
+Step 20 tasks 03 and 04.*
 
 ### B4. The media tree
 **Nothing has been migrated.** The 4,577 local-disk user photos ride this step's
 rsync; the S3 work in Step 15 changed where *new* uploads go, not where the old
 ones are.
 *Source: `STATUS.md` § Step 15; `implementation/plan.md` Step 21.*
+
+### B5. Install the Cloudflare Origin CA certificate
+Step 20 terminates TLS at the Apache proxy on a **self-signed certificate**,
+which is all the local stack needs. The real origin certificate is a Cloudflare
+Origin CA cert — long-lived, no renewal job, and trusted only for proxied traffic,
+which is why it pairs with B6. **Issuing and installing it needs the provisioned
+VM**, so it happens here and not in Step 20.
+*Source: Step 20 task 04, the TLS decision.*
+
+### B6. Apply the origin firewall — and it has never been run
+**Step 20 task 07 authors the ruleset and cannot apply it**, because no VM existed
+when it was written. Restrict inbound 443 to Cloudflare's ranges, **IPv4 and IPv6
+both**, from the same verified list task 04 uses.
+
+**Treat this as unexercised configuration.** Verify by connecting from outside
+Cloudflare over both protocols and observing refusal, then confirm the site still
+serves through the edge. The task also carries an emergency-open and re-close
+procedure — read it before the window, not during it.
+*Source: Step 20 task 07; `STATUS.md` § Step 16 task 03 Open register.*
+
+### B7. Choose the backup bucket — and the constraint it must satisfy
+Step 20 task 06 builds the whole backup path against a local S3-compatible
+endpoint and **deliberately does not choose a provider**, because nothing in the
+path needs one: endpoint, bucket and credentials are configuration.
+
+**The constraint is what this entry exists to carry forward:**
+
+> **The backup target must not share a provider or account with the VM.**
+
+A Linode VM backed up to Linode Object Storage shares a failure domain — one
+billing lapse, suspension or account event takes the site and its backups
+together. `bobcat` is already a second Linode and its rsync is repointed at the
+new VM (see the media and backup entries), so that copy is the warm same-provider
+one. **The object storage copy is the one that has to be somewhere else.**
+
+Against a Linode VM, **an AWS S3 bucket satisfies this**, and `boto3` plus the
+credentials are already in the project from Step 15. Use a **new bucket**, not
+`sg101.user.photos` or `sg101.forum.photos`, and a **write-scoped credential** —
+the job puts objects, the lifecycle policy deletes them.
+*Source: Step 20 task 06.*
 
 ## C. The maintenance window
 
@@ -170,7 +224,8 @@ Stated so the file is not mistaken for complete:
 - **No rollback procedure is written down** beyond "keep jaguar warm and flip
   DNS back". What that means for data written to the new host during the window
   has not been decided.
-- **Steps 19 and 20 are unfinished**, and both will add entries. Step 19 Phase C
-  alone has two tasks left.
+- **Step 20 is unfinished** and will add entries; its nine task files were
+  generated 2026-09-12 and B5 and B6 above are the first two they produced.
+  *(Step 19 closed 2026-09-09 and no longer belongs on this list.)*
 - **Ordering and timings are absent.** The sections are grouped by phase, not
   sequenced, and nothing here estimates how long the window needs to be.
