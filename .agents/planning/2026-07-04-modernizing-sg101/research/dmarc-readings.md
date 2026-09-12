@@ -47,7 +47,7 @@ reading log stops*.
 | 19 | 2026-09-04 | 09-02, 09-03 | UTC−7 passes a second forward test; a DKIM failure class that is not the bounce class — **addendum: cause found, Postfix wraps at 998 bytes post-signing** |
 | 20 | 2026-09-05 | 09-04 | UTC−7's strongest window yet, contradicted by Yahoo in the same window; the size hypothesis dies on a forward test |
 | 21 | 2026-09-08 | 09-04 → 09-07 | five for five; three consecutive Google days reconcile exactly; Microsoft drops a tenant domain Google would have folded in |
-| 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 |
+| 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces** |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -64,6 +64,12 @@ Microsoft reports and was missed; the nineteenth reading carries the full census
 of the Gmail spam folder the same evening, which identifies the DKIM failure as a
 body-hash mismatch caused by Postfix's 998-byte line wrap running after `opendkim`
 signs. It kills that reading's own size fit and replaces it with a mechanism.
+
+**Reading 22 carries an addendum** — Cloudflare's dashboard read the same
+afternoon, which shows 26 messages for the 09-07 window against the 5 in `~/dmarc`.
+The hole is in our collection path, not in the reporters; `yahoo.com` alone did not
+file; and the window's two DKIM failures are null-sender DSNs rather than the
+over-long-line class, settled by the check the eighteenth reading prescribed.
 
 **Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
 read 2026-08-26 13:12Z, which takes that window to 11 messages across four
@@ -5235,3 +5241,86 @@ on them.
    day was still open at the log's end, so the figure is a floor.
 6. **Every report reads `p=quarantine`** and no row carries a `disposition` other
    than `none`.
+
+#### Addendum, 2026-09-12 — Cloudflare's dashboard read the same afternoon: the 09-07 hole is ours, Yahoo alone did not file, and the two failures in that window are bounces
+
+Prediction 4 above proposed the test and it was run within the hour. **Cloudflare
+DMARC Management, zone → Email, Report detail for September 7, 2026:**
+
+| Volume | DMARC pass | SPF aligned | DKIM aligned | IP count | Sending service |
+|---|---|---|---|---|---|
+| 26 | 26 (100%) | 26 (100%) | 24 (92.31%) | 1 | "Akamai Technologies, Inc." |
+
+**26 against the 5 in `~/dmarc`. The reports were filed; our collection path lost
+them.** The prediction set 28 as the all-filed figure and 5 as the none-filed
+figure; the answer is at the high end, and the shortfall of 2 is itself
+informative.
+
+**The one endpoint that genuinely did not file is Yahoo.** 26 decomposes as Google
+20 + Comcast 3 + Microsoft 2 + AOL 1. The only way to reach 26 from the five
+candidates is to drop one of the two 2s, and Microsoft's 09-07 report is a file in
+`~/dmarc`, so it reached Cloudflare on the same record's other `rua` destination.
+Google at 20 rather than 19 is what this reading's tenant result already required.
+**So the twenty-first reading's prediction 3 stays falsified for `yahoo.com` and is
+now falsified for the opposite reason at `aol.com`** — AOL filed, and we lost it.
+
+**This is inferred from one total, not read from reporter identity.** The dashboard
+lists *sending services* and never names the reporter; the preamble has said so
+since the first reading. The decomposition is the only arithmetic that fits the
+constraints, which is weaker than reading five `org_name` fields and is recorded as
+such. Re-downloading the 09-07 reports would settle it by observation.
+
+##### The two unaligned messages are the DSN class, and the eighteenth reading's own check is what says so
+
+`DKIM aligned 24 (92.31%)` against `SPF aligned 26 (100%)` and `IP count 1` is a
+`spf=pass dkim=fail` pair from jaguar alone — the shape of the signed-DKIM failure
+class this reading recorded as absent. **It is not that class.**
+
+```
+Sep  7 03:01:01 jaguar postfix/qmgr[11510]: CF7C258658B: from=<>, size=4083, nrcpt=2
+Sep  7 15:59:18 jaguar postfix/qmgr[11510]: C781A5865B2: from=<>, size=4263, nrcpt=2
+```
+
+**Exactly two null-sender DSNs on Sep 7, and the only two in the whole log from
+`Sep 6 06:47` to `Sep 12 13:05`.** Both are Google-bound to `bgneal@gmail.com` —
+they are items 3 and 27 of the UTC−7 09-07 day's send list — so both sit inside
+Google's missing report and inside Cloudflare's 09-07 bucket. DSNs bypass the
+milters and carry no signature; SPF falls back to the HELO name
+`mail.surfguitar101.com`, which shares an organizational domain and so aligns under
+`aspf=r`. `pass`/`fail`, two of them, which is the whole of the 24-of-26.
+
+**The over-long-line class did not recur, and that is now measured rather than
+assumed.** It stands at 4 rows and 5 messages, unchanged since 09-05. The caveat
+this reading attached to the five clean windows — that the largest untested window
+in the series was the one with no report — was the right worry and it resolves
+clean: 09-07 carried 20 Google-bound messages, and every DKIM failure among them is
+accounted for by bounces.
+
+**The eighteenth reading prescribed this check and this is its first real use.**
+That reading closed the unsigned-message question by identifying the class as every
+Postfix DSN and wrote that a `pass`/`fail` row from `173.255.245.115` is "expected
+rather than anomalous — and checkable against `grep 'from=<>'` on the mail log."
+One grep, two hits, exact agreement with a dashboard figure derived from reports we
+do not hold. **Two classes share one `pass`/`fail` signature in the aggregate
+reports, and the send log is what separates them** — which is the argument for why
+the send-side baseline cannot be allowed to die unreplaced with jaguar.
+[[measure-before-recording-in-planning-docs]]
+
+##### What this costs and what it does not
+
+**It costs the row detail.** Volume, alignment rates and IP count survive in the
+dashboard; source IPs, `policy_published`, `envelope_to`, Report-IDs and reporter
+identity do not. The 09-07 window can never be reconciled endpoint-by-endpoint the
+way 09-08 through 09-11 were, unless the reports are recovered from the mail.
+
+**It does not cost the Step 21 before/after**, which needs the DKIM-failure count
+and now has it for 09-07 from two independent directions.
+
+**The collection path is the open item, not the window.** `admin@surfguitar101.com`
+runs through Cloudflare Email Routing to Gmail and is saved by hand; something in
+that path dropped **two of the four reports filed for 09-07, carrying 21 of its 26
+messages**, while keeping the other two. Whether it drops more is not known, and
+**every earlier window in this log was collected the same way** — so the corpus
+totals are a floor, not a census. Cloudflare's own view is the control that can
+measure the gap, and it should be read against the series before the Step 21
+window rather than during it.

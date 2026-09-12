@@ -4125,7 +4125,21 @@ more than twice their median. The largest untested window in the series is the o
 with no report, so the "before" half of the Step 21 before/after has a hole in it
 that no later reading can fill. See *The 09-07 reporting hole* below.
 
-### OPEN 2026-09-12 — The 09-07 reporting hole: three endpoints with traffic and no report
+**RESOLVED the same day by the twenty-second reading's addendum, and the class did
+not recur.** Cloudflare's dashboard for 09-07 reads `SPF aligned 26 (100%)`,
+`DKIM aligned 24 (92.31%)`, `IP count 1` — two `pass`/`fail` messages from jaguar
+alone, which is this class's exact signature. **They are the DSN class instead.**
+jaguar's log carries exactly two null-sender messages on Sep 7, `CF7C258658B` at
+`03:01:01` and `C781A5865B2` at `15:59:18`, and they are the only two between
+`Sep 6 06:47` and `Sep 12 13:05`; both are Google-bound and both fall in the UTC−7
+09-07 day. DSNs bypass the milters and carry no signature, and SPF falls back to
+the HELO name, which aligns relaxed. **The over-long-line class stands at 4 rows
+and 5 messages, and the "before" half is intact** — 09-07's 20 Google-bound
+messages produced no signed-DKIM failure. The discriminator was the eighteenth
+reading's own prescription, `grep 'from=<>'` on the mail log, used for the first
+time here.
+
+### RESOLVED 2026-09-12 — The 09-07 reporting hole is in our collection path, and Yahoo alone did not file
 
 Found by the twenty-second reading. Five days after the window closed, the
 2026-09-07 window is missing three of the five endpoints that had mail in it:
@@ -4139,9 +4153,10 @@ the `rua` local copy runs `admin@surfguitar101.com` through Cloudflare Email
 Routing to Gmail and is saved by hand. Three simultaneous absences across three
 independent organizations favor the collection path; against that, Microsoft's own
 09-07 report arrived four days late, so "absent at five days" is not "never sent".
-**AOL has not filed since the 08-31 window**, and the single AOL-bound send the
-log covers (09-07) has no report, and Yahoo's absence is two windows wide before it resumes at 09-09 with an
-exact report — which is what one lost delivery batch would look like.
+**AOL has not filed since the 08-31 window** and the single AOL-bound send the log
+covers (09-07) has no report; Yahoo's absence is two windows wide before it resumes
+at 09-09 with an exact report — which is what one lost delivery batch would look
+like.
 
 **The test does not go through our mail at all and should be run before the next
 reading.** `_dmarc`'s other `rua` destination is
@@ -4155,6 +4170,34 @@ skipped the window.
 current log, and the signed-DKIM failure class the Step 21 before/after depends on
 is measured only from Google's reports. The entry above says what that costs.
 [[probes-must-not-perturb-what-they-measure]]
+
+**ANSWERED the same afternoon.** Cloudflare DMARC Management (zone → Email),
+Report detail for September 7 2026: **volume 26**, DMARC pass 26 (100%), SPF
+aligned 26 (100%), DKIM aligned 24 (92.31%), IP count 1. **26 against the 5 in
+`~/dmarc` — the reports were filed and our collection path lost them.**
+
+**Yahoo is the only endpoint that genuinely did not file.** 26 decomposes as
+Google 20 + Comcast 3 + Microsoft 2 + AOL 1; the only way to reach 26 is to drop
+one of the two 2s, and Microsoft's report is a file in `~/dmarc` so it reached
+Cloudflare on the same record's other `rua` destination. **AOL filed and we lost
+it** — the opposite of what the entry above suspected. The decomposition is
+arithmetic over one total, not reporter identity, which this dashboard never
+shows; re-downloading the 09-07 reports would settle it by observation.
+
+**What the window costs is the row detail, not the measurement.** Volume and
+alignment rates survive; source IPs, `policy_published`, `envelope_to`, Report-IDs
+and reporter identity do not, so 09-07 can never be reconciled
+endpoint-by-endpoint. The Step 21 before/after is unaffected — see the class entry
+above, where the window's two DKIM failures resolve as bounces.
+
+**The open item is now the collection path itself, and it is wider than one
+window.** `admin@surfguitar101.com` runs through Cloudflare Email Routing to Gmail
+and is saved by hand; something there dropped **two of the four reports filed for
+09-07, carrying 21 of its 26 messages**, while keeping the other two. **Every
+earlier window in this log was collected the same way,
+so the corpus totals are a floor rather than a census.** Cloudflare's view is the
+control that can measure the gap across the series, and reading it against the log
+belongs before the Step 21 window, not during it.
 
 ### A second forwarder appears at web.de, and it is the first forwarding measured under the tightened policy — 2026-09-12
 
@@ -4348,12 +4391,15 @@ cutover:**
 **UPDATED 2026-09-12 by the twenty-second reading.** `p=quarantine` now stands at
 **79 reports, 491 messages**, eighteen days, every disposition `none`. A **fourth**
 item joins the three above and it is about the instrument rather than the domain:
-**the 09-07 window is missing three endpoints that had traffic**, and until
-Cloudflare's dashboard says whether those reports were filed at all, the series has
-a gap of unknown cause running through the exact measurement the Step 21
-before/after depends on. It is the one open item that gets *harder* to resolve with
-time — Cloudflare's dashboard retains a limited history — so it is the one to run
-first.
+**the collection path drops reports.** Cloudflare holds 26 messages for the 09-07
+window against the 5 in `~/dmarc`: two of the four reports filed that day, carrying
+21 of its 26 messages, were lost between Cloudflare Email Routing, Gmail and the
+manual save. **Every
+window in this log was collected that way, so every total in it is a floor rather
+than a census**, and the reading that establishes how wide the gap is has not been
+done. Cloudflare's own view is the control, it retains a limited history, and
+reading it against the series belongs before the Step 21 window rather than during
+it — which makes it the item to run first.
 
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report
