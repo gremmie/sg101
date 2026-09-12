@@ -4223,6 +4223,25 @@ more than twice their median. The largest untested window in the series is the o
 with no report, so the "before" half of the Step 21 before/after has a hole in it
 that no later reading can fill. See *The 09-07 reporting hole* below.
 
+**⚠️ CORRECTED 2026-09-12 — this class is 3 rows and 4 messages, not 4 and 5, and
+has been over-counted since the nineteenth reading.** Google's 09-07 report,
+recovered from Gmail the same afternoon, made the discriminator visible: the DSN
+class carries **no `<dkim>` element at all** and SPF on the HELO name
+`mail.surfguitar101.com`, while this class carries a `<dkim>` element failing on
+`surfguitar101.com`. **The 09-01 message is unsigned** — it is the DSN the
+eighteenth reading had already identified, absorbed one reading later into a class
+defined as *"not the bounce class"*. Corrected: **over-long-line = 3 rows, 4
+messages (09-02, 09-03 ×2, 09-05)**; DSN in reports = 2 rows, 3 messages (09-01,
+09-07 ×2). Both classes render identically in the *evaluated* fields that
+`tools/dmarc_report.py` prints and every tally was built from, which is how five
+readings shared one error. [[suspect-the-measurer-before-the-record]]
+
+**The standing prediction is unaffected in direction** and now has a smaller,
+cleaner "before": 4 messages across 3 windows, all signed, all at Google. The DSN
+class is not expected to reach zero at the deploy — it appears whenever something
+bounces — which is exactly why conflating the two would have made the before/after
+unreadable.
+
 **RESOLVED the same day by the twenty-second reading's addendum, and the class did
 not recur.** Cloudflare's dashboard for 09-07 reads `SPF aligned 26 (100%)`,
 `DKIM aligned 24 (92.31%)`, `IP count 1` — two `pass`/`fail` messages from jaguar
@@ -4244,6 +4263,12 @@ Found by the twenty-second reading. Five days after the window closed, the
 `google.com` (20 messages in its UTC−7 day), `yahoo.com` (2, UTC) and `aol.com`
 (1, UTC). `protection.outlook.com` (2) and `comcast.net` (3) both filed for the
 same window and both reconcile exactly with the send log.
+
+**CLOSED 2026-09-12: Google's 09-07 report was recovered from Gmail** at 14:39 and
+is now in `~/dmarc`, holding the predicted 20 messages. The window stands at 25
+across three endpoints against Cloudflare's 26, so **`aol.com`'s single-message
+09-07 report is the entire remaining gap** — searched for in Gmail and not found.
+The reasoning below is kept because it is what identified the file to look for.
 
 **Two explanations, and the reading cannot separate them.** Either the three
 reporters did not file, or they filed and the reports never reached `~/dmarc` —
@@ -4487,7 +4512,9 @@ cutover:**
    the instrument that confirms it.
 
 **UPDATED 2026-09-12 by the twenty-second reading.** `p=quarantine` now stands at
-**79 reports, 491 messages**, eighteen days, every disposition `none`. A **fourth**
+**80 reports, 511 messages**, eighteen days, every disposition `none` (the
+figure includes Google's 09-07 report, recovered from Gmail that afternoon). A
+**fourth**
 item joins the three above and it is about the instrument rather than the domain:
 **the collection path drops reports.** Cloudflare holds 26 messages for the 09-07
 window against the 5 in `~/dmarc`: two of the four reports filed that day, carrying

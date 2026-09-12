@@ -47,7 +47,7 @@ reading log stops*.
 | 19 | 2026-09-04 | 09-02, 09-03 | UTC−7 passes a second forward test; a DKIM failure class that is not the bounce class — **addendum: cause found, Postfix wraps at 998 bytes post-signing** |
 | 20 | 2026-09-05 | 09-04 | UTC−7's strongest window yet, contradicted by Yahoo in the same window; the size hypothesis dies on a forward test |
 | 21 | 2026-09-08 | 09-04 → 09-07 | five for five; three consecutive Google days reconcile exactly; Microsoft drops a tenant domain Google would have folded in |
-| 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces** |
+| 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces**; **second addendum: 09-07 recovered — the classes separate inside the report, and the class tally was wrong since reading 19** |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -65,11 +65,23 @@ of the Gmail spam folder the same evening, which identifies the DKIM failure as 
 body-hash mismatch caused by Postfix's 998-byte line wrap running after `opendkim`
 signs. It kills that reading's own size fit and replaces it with a mechanism.
 
-**Reading 22 carries an addendum** — Cloudflare's dashboard read the same
-afternoon, which shows 26 messages for the 09-07 window against the 5 in `~/dmarc`.
-The hole is in our collection path, not in the reporters; `yahoo.com` alone did not
-file; and the window's two DKIM failures are null-sender DSNs rather than the
-over-long-line class, settled by the check the eighteenth reading prescribed.
+**⚠️ CORRECTED 2026-09-12 by the twenty-second reading's second addendum — the
+over-long-line DKIM class is 3 rows and 4 messages, not 4 and 5.** The 09-01
+message is **unsigned** and belongs to the DSN class the eighteenth reading
+identified; the nineteenth opened a class explicitly *"not the bounce class"* and
+absorbed it anyway, and readings 20, 21 and 22 carried the figure forward. The two
+classes are identical in the *evaluated* fields every tally was built from and
+differ only in `auth_results`: the DSN class carries **no `<dkim>` element** and
+SPF on `mail.surfguitar101.com`, the over-long-line class a `<dkim>` element
+failing on `surfguitar101.com`.
+
+**Reading 22 carries two addenda** — Cloudflare's dashboard read the same
+afternoon, which shows 26 messages for the 09-07 window against the 5 in `~/dmarc`;
+and Google's 09-07 report itself, recovered from Gmail at 14:39, which confirms the
+loss was ours, holds the predicted 20, and separates the two DKIM-failure classes
+from `auth_results` without recourse to the send log. **`aol.com`'s 09-07 report is
+the one piece still missing**, and the 25-against-26 arithmetic is what identifies
+it.
 
 **Reading 11 carries an addendum** — Comcast's late filing for the 08-25 window,
 read 2026-08-26 13:12Z, which takes that window to 11 messages across four
@@ -5324,3 +5336,103 @@ messages**, while keeping the other two. Whether it drops more is not known, and
 totals are a floor, not a census. Cloudflare's own view is the control that can
 measure the gap, and it should be read against the series before the Step 21
 window rather than during it.
+
+#### Second addendum, 2026-09-12 — Google's 09-07 report recovered from Gmail: the prediction held, the two failure classes separate inside the report, and the class tally has been wrong since the nineteenth reading
+
+Brian found the report in Gmail and saved it at **14:39**; the corpus is now
+**eighty reports, 103 rows, 511 messages**, every disposition still `none`.
+
+**The reports were filed and our collection path lost them — now demonstrated,
+not inferred.** The first addendum reasoned it from a Cloudflare total. This is
+the file.
+
+##### The twenty-first reading's prediction 1 held, at 20
+
+`4725575807514715615`, window 2026-09-07, **20 messages in 2 records**. The
+prediction was *"20 if Google folds the tenant in and 19 if it does not."*
+**Twenty.** With 09-08 and 09-11 that is the third independent confirmation that
+Google folds Workspace tenants — here `F15C3586505` to `member24@example.com` —
+into the `google.com` endpoint's report, and the nineteenth reading's correction
+is no longer resting on a single window.
+
+##### The two classes are distinguishable inside the reports, and no send log is needed
+
+The failing record reads:
+
+```
+173.255.245.115  n=2  disp=none  dkim=fail  spf=pass
+    auth_results: <no dkim element at all>  spf d=mail.surfguitar101.com pass
+```
+
+**No `<dkim>` element means the message was never signed** — not signed and
+broken. And SPF authenticated `mail.surfguitar101.com`, the HELO name, which is
+the fallback for a null envelope sender. That is the eighteenth reading's DSN
+class, stated by the report itself.
+
+Applied across every DKIM-failing row in the corpus, the discriminator separates
+them cleanly:
+
+| Window | Rows | `<dkim>` element | SPF domain | Class |
+|---|---|---|---|---|
+| 09-01 | 1 msg | **absent** | `mail.surfguitar101.com` | **DSN** |
+| 09-02 | 1 msg | `d=surfguitar101.com` fail | `surfguitar101.com` | over-long-line |
+| 09-03 | 2 msgs | `d=surfguitar101.com` fail | `surfguitar101.com` | over-long-line |
+| 09-05 | 1 msg | `d=surfguitar101.com` fail | `surfguitar101.com` | over-long-line |
+| 09-07 | 2 msgs | **absent** | `mail.surfguitar101.com` | **DSN** |
+
+*(The twelfth reading's `2001:470:0:60::2` row on 08-26 is a third shape again —
+a `<dkim>` element failing **and** SPF failing, both on `surfguitar101.com`.)*
+
+**This is an instrument result, and a better one than the method the first
+addendum used.** That addendum identified 09-07's two failures as bounces by
+matching a Cloudflare aggregate against `grep 'from=<>'` on the mail log. The
+identification was right, but **the reports carry the answer on their own** — and
+they will keep carrying it after jaguar's log is gone, which is exactly the
+dependency the exit-condition section warns cannot outlive the host.
+
+##### ⚠️ CORRECTION — the over-long-line class has been over-counted since the nineteenth reading
+
+**It is 3 rows and 4 messages, not 4 rows and 5.** The 09-01 message is unsigned:
+it belongs to the DSN class, not to the signed-DKIM class the nineteenth reading
+opened.
+
+**The eighteenth reading had already identified that exact message as a Postfix
+DSN** — *"null envelope sender, SPF falling back to the HELO name
+`mail.surfguitar101.com`, no signature because DSNs bypass the milters."* One
+reading later a second class appeared, explicitly *"not the bounce class"*, and
+09-01 was absorbed into its tally anyway. The twentieth and twenty-first readings
+carried the inflated figure forward, and so did this reading before this addendum.
+
+**Corrected figures:**
+
+| Class | Rows | Messages | Windows |
+|---|---|---|---|
+| Over-long-line (signed, body-hash fail) | **3** | **4** | 09-02, 09-03 ×2, 09-05 |
+| DSN (unsigned, HELO-fallback SPF) | **2** | **3** | 09-01, 09-07 ×2 |
+
+**Why it happened, and it is the reusable part.** Both classes render identically
+in the *evaluated* fields — `spf=pass dkim=fail`, which is what
+`tools/dmarc_report.py` prints and what every tally in this log was built from.
+They differ only in `auth_results`, which the tool summarizes rather than
+distinguishing. **A count taken from the evaluated pair cannot separate them, and
+five readings took one.** [[suspect-the-measurer-before-the-record]]
+
+**What it changes and what it does not.** The standing prediction — that the
+over-long-line class goes to zero at the Step 21 deploy — is unaffected in
+direction and now has a smaller, cleaner "before": 4 messages across 3 windows,
+all signed, all at Google. The DSN class is not expected to go to zero at all;
+it appears whenever something bounces, which is precisely why conflating them
+would have made the before/after unreadable.
+
+##### AOL is the only report still missing, and the arithmetic now proves it
+
+The 09-07 window now holds **25 messages** across three endpoints — Google 20,
+Comcast 3, Microsoft 2 — against Cloudflare's **26**. The gap is exactly **1**,
+and the single AOL-bound send in that window is `242605869BA` to
+`member26@example.com` at `Sep 7 10:44:45`. **The first addendum's decomposition
+was inferred from one total; it is now confirmed by subtraction**, and Yahoo's
+absence from the 26 stands as a genuine non-filing rather than a second loss.
+
+`aol.com!surfguitar101.com!1788739200!1788825599.xml.gz` was searched for in Gmail
+and not found. **That one report is the whole of the remaining collection gap**,
+and AOL has filed nothing since the 08-31 window.
