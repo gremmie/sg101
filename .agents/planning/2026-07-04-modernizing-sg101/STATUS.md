@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty-one DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty-two DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -4115,6 +4115,71 @@ that message goes out at `02:01` — so neither size nor injection path discrimi
 The aggregate report carries no message identifier and the bodies are gone from the
 queue. **The confirming test is unchanged and still unrun.**
 
+**The class did not recur 2026-09-12 in the twenty-second reading**, and the
+absence is weaker than it looks. Five Google windows have been filed since the
+last occurrence in 09-05 — 09-06, 09-08, 09-09, 09-10, 09-11, carrying 6, 7, 14,
+10 and 9 messages — and none carries a `pass`/`fail` row. The class stands
+unchanged at 4 rows and 5 messages. **But Google filed nothing for the 09-07
+window, which carried 20 messages** — more than any window that was filed, and
+more than twice their median. The largest untested window in the series is the one
+with no report, so the "before" half of the Step 21 before/after has a hole in it
+that no later reading can fill. See *The 09-07 reporting hole* below.
+
+### OPEN 2026-09-12 — The 09-07 reporting hole: three endpoints with traffic and no report
+
+Found by the twenty-second reading. Five days after the window closed, the
+2026-09-07 window is missing three of the five endpoints that had mail in it:
+`google.com` (20 messages in its UTC−7 day), `yahoo.com` (2, UTC) and `aol.com`
+(1, UTC). `protection.outlook.com` (2) and `comcast.net` (3) both filed for the
+same window and both reconcile exactly with the send log.
+
+**Two explanations, and the reading cannot separate them.** Either the three
+reporters did not file, or they filed and the reports never reached `~/dmarc` —
+the `rua` local copy runs `admin@surfguitar101.com` through Cloudflare Email
+Routing to Gmail and is saved by hand. Three simultaneous absences across three
+independent organizations favor the collection path; against that, Microsoft's own
+09-07 report arrived four days late, so "absent at five days" is not "never sent".
+**AOL has not filed since the 08-31 window**, and the single AOL-bound send the
+log covers (09-07) has no report, and Yahoo's absence is two windows wide before it resumes at 09-09 with an
+exact report — which is what one lost delivery batch would look like.
+
+**The test does not go through our mail at all and should be run before the next
+reading.** `_dmarc`'s other `rua` destination is
+`00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net`, verified intact
+2026-09-12. If Cloudflare's dashboard shows Google, Yahoo and AOL volume for
+2026-09-07, the reports were filed and our collection path lost them — and
+re-downloading may still close the hole. If it shows the same gap, three reporters
+skipped the window.
+
+**Why it costs more than one window.** 09-07 is the largest Google day in the
+current log, and the signed-DKIM failure class the Step 21 before/after depends on
+is measured only from Google's reports. The entry above says what that costs.
+[[probes-must-not-perturb-what-they-measure]]
+
+### A second forwarder appears at web.de, and it is the first forwarding measured under the tightened policy — 2026-09-12
+
+Four new source IPs in Google's 09-09 → 09-11 windows, all reversing to
+`mout.web.de` and registered to 1&1 Mail & Media / IONOS, verified by lookup.
+Seven messages, every one `dkim=pass` on `d=surfguitar101.com`, `spf=fail` because
+the forwarder rewrote the envelope sender into `web.de`, every one delivered
+`disposition=none`. They reconcile exactly with seven sends to one address,
+`member29@example.com`, and fall in the same UTC−7 days Google reports them in.
+
+**The mechanism is the one the fourth and fifth readings described at
+`209.85.220.41`** — a member mailbox auto-forwarding site mail onward, From header
+preserved, signature intact, SPF unalignable. It is member-side configuration with
+nothing to fix on the box. **What is new is the conditions:** those earlier
+observations were made under `p=none` or in the first days of `p=quarantine`, and
+were used to argue that a tightening *would not* strand forwarded mail. These
+seven ran under live `p=quarantine` and a live `-all` SPF record. The argument is
+now a measurement taken after the tightening rather than a prediction about it.
+
+**Bearing on the deferred `p=reject` decision.** These seven are precisely the
+mail `p=reject` would put at risk, and they are at risk only through DKIM — one
+broken signature on that path and the forward is refused rather than quarantined.
+That is the quantity to set beside the decision, not an argument against it, and
+it is small: one recipient, one forwarder.
+
 ### FIXED 2026-09-04 — `ContactForm.subject` refuses newlines at the form — `c2c84441`
 
 Found by reading the production error that turned out to be `0077E586513`. A
@@ -4280,10 +4345,33 @@ cutover:**
    08-25. The cutover is what makes it a reporting source, and these reports are
    the instrument that confirms it.
 
+**UPDATED 2026-09-12 by the twenty-second reading.** `p=quarantine` now stands at
+**79 reports, 491 messages**, eighteen days, every disposition `none`. A **fourth**
+item joins the three above and it is about the instrument rather than the domain:
+**the 09-07 window is missing three endpoints that had traffic**, and until
+Cloudflare's dashboard says whether those reports were filed at all, the series has
+a gap of unknown cause running through the exact measurement the Step 21
+before/after depends on. It is the one open item that gets *harder* to resolve with
+time — Cloudflare's dashboard retains a limited history — so it is the one to run
+first.
+
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report
 that cannot be reconciled — and it should be finished on its own merits, not
 because a step is waiting on it.
+
+**CLOSED 2026-09-12 by the twenty-second reading.** The offset is a property of the
+reporter, and both halves are now measured on multiple windows: **Google aggregates
+on a UTC−7 day**, confirmed by four more exact reconciliations (09-08 through
+09-11) with the `02:00` local boundary pinned inside a thirty-seven-minute gap;
+**Yahoo, Cox and Microsoft aggregate on the true UTC day**, seven for seven across
+the same span. The twentieth reading's Yahoo contradiction was not a contradiction
+but the second rule. **A window label cannot be compared across reporters without
+applying the right offset**, and every cross-reporter total in this log before the
+eighteenth reading was computed without one. Cox is a Yahoo tenancy and follows
+Yahoo, not a third rule — a fact the twenty-second reading established only after
+its own first cut classified Cox-bound mail by relay name and made Yahoo's 09-10
+report look wrong. [[suspect-the-measurer-before-the-record]]
 
 **The cadence, from here:**
 
