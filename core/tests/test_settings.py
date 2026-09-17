@@ -20,6 +20,7 @@ import subprocess
 import sys
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
 
@@ -336,3 +337,93 @@ class DebugToolbarWiringTests(SimpleTestCase):
         enabled = self.toolbar_wiring()['enabled_panels']
         self.assertIn('HistoryPanel', enabled)
         self.assertIn('ProfilingPanel', enabled)
+
+
+DEPLOYED_LOGGING_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "sys.stdout.write(json.dumps(settings.LOGGING, default=str))\n"
+)
+
+# The differences between the two deployments' logging, as sg101/settings/
+# logging_config.py's TARGETS table expresses them. Spelled out here rather than
+# imported from the helper: a test that reads its expectations out of the thing
+# under test cannot fail when that thing changes.
+EXPECTED_LOGGING_DIFFERENCES = {
+    'disable_existing_loggers',
+    'handlers.auth.level',
+    'handlers.email.level',
+    'handlers.search.level',
+    'handlers.turnstile.level',
+    'loggers.auth.level',
+    'loggers.django.request',
+    'root.level',
+}
+
+
+class DeployedLoggingTests(SimpleTestCase):
+    """What the two deployments' LOGGING may and may not disagree about.
+
+    Both dicts come from logging_config.for_target(). That is the point of the
+    helper -- they ran to ~145 near-identical lines each, and adding a logger
+    meant editing both by hand.
+
+    Each module is loaded in a subprocess and its *own* LOGGING is read, for the
+    reason the search-logging case above gives: reading the module's value is
+    what makes a deployment module that quietly stopped using the shared helper
+    fail here, rather than pass on the helper's own output.
+    """
+
+    def deployed_logging(self, module):
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': module,
+                               'SECRET_KEY': 'x'},
+                              snippet=DEPLOYED_LOGGING_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def differences(self):
+        """Every leaf key where the two deployed dicts disagree."""
+        def walk(a, b, path=''):
+            found = set()
+            if isinstance(a, dict) and isinstance(b, dict):
+                for key in set(a) | set(b):
+                    here = '{}.{}'.format(path, key) if path else key
+                    if key not in a or key not in b:
+                        found.add(here)
+                    else:
+                        found |= walk(a[key], b[key], here)
+            elif a != b:
+                found.add(path)
+            return found
+
+        return walk(self.deployed_logging('sg101.settings.dev'),
+                    self.deployed_logging('sg101.settings.production'))
+
+    def test_the_deployments_differ_only_where_intended(self):
+        """A new logger added to one module and not the other lands here."""
+        self.assertEqual(self.differences(), EXPECTED_LOGGING_DIFFERENCES)
+
+    def test_production_is_the_quieter_of_the_two(self):
+        """The direction of the level differences, which the set above cannot say."""
+        dev = self.deployed_logging('sg101.settings.dev')
+        production = self.deployed_logging('sg101.settings.production')
+        for app_log in ('auth', 'search', 'email', 'turnstile'):
+            with self.subTest(handler=app_log):
+                self.assertEqual(dev['handlers'][app_log]['level'], 'DEBUG')
+                self.assertEqual(production['handlers'][app_log]['level'], 'INFO')
+        self.assertEqual(dev['root']['level'], 'DEBUG')
+        self.assertEqual(production['root']['level'], 'INFO')
+
+    def test_only_production_mails_request_errors(self):
+        self.assertNotIn('django.request',
+                         self.deployed_logging('sg101.settings.dev')['loggers'])
+        self.assertEqual(
+            self.deployed_logging('sg101.settings.production')
+                ['loggers']['django.request']['handlers'],
+            ['mail_admins'])
+
+    def test_an_unknown_target_fails_loudly(self):
+        from sg101.settings import logging_config
+        with self.assertRaises(ImproperlyConfigured):
+            logging_config.for_target('staging', log_dir='/tmp')
