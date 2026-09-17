@@ -562,10 +562,12 @@ activates it and the container's Python is `/usr/local`.
 
 ## How the pieces fit
 
-- **`Dockerfile`** — builds the Python 3.12 image (system libs + pip deps from
-  `requirements-docker.txt`).
+- **`Dockerfile`** — builds the Python 3.12 image in two targets: `prod`
+  (system libs + `requirements.txt`) and `dev` (`FROM prod`, plus
+  `requirements_dev.txt` — the test suite and the debug toolbar).
 - **`docker-compose.yml`** — defines the services and wires them together: five
-  by default, plus `db` (MySQL) behind the `mysql` profile.
+  by default, plus `db` (MySQL) behind the `mysql` profile. web/worker/beat all
+  build the `dev` target.
 - **`sg101/settings/docker.py`** — dev settings; points the DB and Redis at the
   container services over the network (the legacy settings used unix sockets).
   Selected via `DJANGO_SETTINGS_MODULE` in compose.

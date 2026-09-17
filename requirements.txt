@@ -1,9 +1,7 @@
 # SG101 runtime requirements -- Python 3.12 / Django 5.2 LTS.
 #
-# Editing a pin here is half the change: requirements_dev.txt follows through
-# `-r requirements.txt`, but requirements-docker.txt is a hand-maintained copy
-# and is the file Docker and CI install. A pin added here alone rebuilds
-# cleanly and changes nothing.
+# This file is what the prod image installs, and requirements_dev.txt follows
+# through `-r requirements.txt` for the dev image.
 #
 # django-elsewhere used to be an editable git dependency; it's now vendored into
 # the repo (the fork is tiny and frozen upstream, and needed Py3 patches), so it

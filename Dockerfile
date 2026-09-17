@@ -16,8 +16,17 @@
 # apt build dependencies below are for. Together they cost about 5s of an
 # uncached build, two thirds of it psycopg2; only simplejson is new at 3.12,
 # the other four built from source on 3.10 too.
+#
+# Two targets:
+#
+#   prod  the runtime pins and nothing else
+#   dev   prod plus the test and debugging tools
+#
+# dev builds FROM prod, so the runtime layers are shared and the dev tools are
+# one thin layer on top. Build one explicitly with --target; compose names `dev`
+# for web/worker/beat.
 
-FROM python:3.12
+FROM python:3.12 AS prod
 
 # Don't buffer stdout/stderr (so logs show up immediately) and don't write .pyc.
 ENV PYTHONUNBUFFERED=1 \
@@ -62,8 +71,8 @@ WORKDIR /app
 # Install Python deps first so the layer caches across code changes. The editable
 # git dep (django-elsewhere) is gone -- the fork is vendored into the repo now --
 # so no `git` in the image and no `--src` shadowing workaround.
-COPY requirements-docker.txt /app/requirements-docker.txt
-RUN pip install -r requirements-docker.txt
+COPY requirements.txt /app/requirements.txt
+RUN pip install -r requirements.txt
 
 # The LOGGING config writes to sg101/logs/*.log; make sure it exists even when
 # the code isn't bind-mounted.
@@ -74,5 +83,16 @@ COPY . /app
 
 EXPOSE 8000
 
-# Default: run the Django dev server. Compose overrides the command per service.
+# gunicorn replaces this in the prod target; until then both targets start the
+# development server, and compose overrides the command per service anyway.
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
+# --- dev ---------------------------------------------------------------------
+# The test suite and the debug toolbar, layered on the runtime image. The dev
+# requirements pull the runtime ones through `-r`, but those are already
+# installed by the layers above, so this resolves to the three tools it adds.
+# No COPY needed: the source, requirements file included, arrived above.
+FROM prod AS dev
+
+RUN pip install -r requirements_dev.txt

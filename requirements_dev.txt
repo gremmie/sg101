@@ -1,24 +1,17 @@
-# Dev/test requirements -- Python 3.12 / Django 5.2 LTS. Installs the runtime pins
-# plus the tools needed to run the test suite and dev server. (In Docker these
-# same tools are inlined into requirements-docker.txt.)
-#
-# The old Fabric / pycrypto / ssh deploy trio lived here; it's Python-2 only and
-# belongs with the legacy /svr deploy artifacts (fabfile.py), reintroduced with
-# modern deploy tooling later.
+# Dev/test requirements -- Python 3.12 / Django 5.2 LTS. The runtime pins plus
+# the tools needed to run the test suite and the dev server. This is what the
+# Dockerfile's `dev` target installs.
 -r requirements.txt
 testfixtures==12.3.0
-# The 7.x line requires django>=5.2, which is why this pin sat at 6.3.0 until
-# the 5.2 rung and moved with it. The constraint now runs the other way: the
-# toolbar is what would block a Django *downgrade*, since 7.1.1 will not install
-# against 5.1. Classifiers cover 5.2, 6.0 and 6.1, so it is ahead of this
-# project rather than behind it for the first time in the upgrade.
+# The 7.x line requires django>=5.2, so this pin is what would block a Django
+# *downgrade*: 7.1.1 will not install against 5.1. Classifiers cover 5.2, 6.0
+# and 6.1. Its SQL panel uses sqlparse, pinned in the runtime block via
+# `-r requirements.txt`.
 #
-# Two things about it are load-bearing and easy to lose in a bump, both found
-# the hard way and both covered by tests: its middleware sits *after*
-# CommonMiddleware deliberately (see the note in local.py), and local.py copies
-# base.py's settings objects rather than mutating them. Its SQL panel uses
-# sqlparse, pinned in the runtime block via -r requirements.txt.
+# Two things about the way it is wired are load-bearing and easy to lose in a
+# bump: its middleware sits at index 0 with RedirectsPanel disabled (see the
+# note in local.py, which measured it), and local.py copies base.py's settings
+# objects rather than mutating them -- which is the half a test covers.
 django-debug-toolbar==7.1.1
-# coverage was held under 5 for the Python 3.7 line; 7.x needs 3.9+ and runs the
-# same `coverage run --source='.' / report / xml` sequence CI already invokes.
+# Runs the `coverage run --source='.' / report / xml` sequence CI invokes.
 coverage==7.15.4

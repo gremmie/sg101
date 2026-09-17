@@ -1,4 +1,4 @@
-# Dockerized SG101 dev stack (Python 3.7 / Django 3.2).
+# Dockerized SG101 dev stack -- the Dockerfile's `dev` target.
 #
 # Five services by default:
 #   web      - Django dev server (the site), published on http://localhost:8000
@@ -23,7 +23,7 @@
 # the Dockerfile or requirements -- `build web` alone leaves worker/beat stale.
 #
 # Common commands (see DOCKER.md for the full walkthrough):
-#   docker compose build          # build the Python 3.7 image
+#   docker compose build          # build the dev image
 #   docker compose up             # start the whole stack
 #   docker compose up -d          # ...in the background
 #   docker compose logs -f web    # follow the web server logs
@@ -106,7 +106,12 @@ services:
       - "6379:6379"
 
   web:
-    build: .
+    # The dev target: the runtime pins plus the test suite and the debug toolbar.
+    # The prod target carries neither, which is what keeps the toolbar out of a
+    # production image and lets the settings package have a dev-only module.
+    build: &app_build
+      context: .
+      target: dev
     command: python manage.py runserver 0.0.0.0:8000
     # Docker-topology vars (not secrets): which settings module, which database
     # engine, and where the redis service lives on the Compose network.
@@ -145,7 +150,7 @@ services:
         condition: service_started
 
   worker:
-    build: .
+    build: *app_build
     command: celery -A sg101 worker -l info
     environment: *app_env
     env_file: *app_env_file
@@ -159,7 +164,7 @@ services:
         condition: service_started
 
   beat:
-    build: .
+    build: *app_build
     command: celery -A sg101 beat -l info
     environment: *app_env
     env_file: *app_env_file
