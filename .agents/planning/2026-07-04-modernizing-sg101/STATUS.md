@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-17
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -139,6 +139,102 @@ credential with deletion left to a lifecycle policy.** Recorded as
 separate the constraint from the choice. Write down the property that must hold,
 defer the selection to where the information is, and the selection cannot quietly
 violate the property.
+
+## Step 20 — the task files audited against the plan before task 01 ran (2026-09-17)
+
+The nine task files were generated 2026-09-12 from the step's scope. Read back
+against `plan.md`'s own Step 20 section before starting task 01, **four of them
+were wrong or incomplete, and the count of tasks was wrong.** Corrected in place,
+each amended file carrying its own amendment record.
+
+**Five defects and one missing task, and the two worst were inherited from
+`plan.md` rather than invented.** A task generator is only as good as the section
+it reads, and nothing had been diffing that section against the files it produced.
+
+**What the generation pass missed, and it is one pattern:** `plan.md`'s Step 20
+section is long and carries items added to it over five weeks —
+`plan.md`'s "four things to settle together" (2026-09-08), the Sass toolchain
+(2026-08-13), the real-client-IP rewrite (2026-08-21). **The nine files covered
+the step's headline scope and dropped the items appended to it later.** A task
+generator reads the section; nobody diffed the section against the files it
+produced.
+
+| Defect | File | Correction |
+|---|---|---|
+| `prod` target told to install `requirements.txt` | task 01 | `Dockerfile:65-66` installs `requirements-docker.txt`; the three files and their three consumers are now a table in the task |
+| The settings consolidation was absent | task 01 | The `local.py`/`docker.py` merge, the `manage.py:5` / `celery.py:11` defaults, the `LOGGING` extraction and the `production.py` rewrite are now requirements 3-7 |
+| gunicorn told to serve `sg101.wsgi` | task 02 | **That module does not exist.** Creating it is now requirement 1 |
+| Maintenance mode was about to be deleted in silence | task 02 | The `OFFLINE` flag and `offline.html` live only in the mod_wsgi script; a replacement is now an explicit decision |
+| The two socket consequences had no home | task 05 | `base.py:264`'s default inversion and `core/services.py:26`'s dead branch are now requirements 5-6 |
+| The Sass toolchain had no task file at all | **task 10, new** | `plan.md` has carried it here since 2026-08-13 |
+| The toolbar's middleware position was **backwards** | task 01 | It is **index 0**; the file named the position Step 14 task 04 replaced |
+
+### The one that would have done real damage: the toolbar's position, recorded backwards
+
+Task 01's background said *"It sits after `CommonMiddleware`, that placement was
+measured"*, and requirement 7 and acceptance criterion 7 both said to preserve it
+there. **That is the position Step 14 task 04 measured and abandoned on
+2026-08-15.** `local.py:55` prepends the middleware, so the toolbar is at **index
+0**; `DISABLE_PANELS` is `{RedirectsPanel}`, not the empty set the old reasoning
+depended on.
+
+Implementing the requirement as written would have moved the toolbar back to
+index 1, reintroducing the `APPEND_SLASH` interstitial Brian's call removed — and
+**acceptance criterion 7 would have certified it as correct.** A task file that
+encodes a stale claim as an acceptance criterion converts documentation drift into
+a verified regression, which is the failure mode worth naming out of this audit.
+
+**Where it came from, and both sources are now fixed.** `plan.md`'s Step 20
+detail still carried the pre-move paragraph (including *"`RedirectsPanel`, which
+is live because `DISABLE_PANELS` is empty"*), and its Step 21 carried-item line
+repeated the claim in one clause. The task generator read `plan.md` faithfully;
+the plan was wrong. **The measurement had been recorded correctly all along** — in
+`STATUS-archive-steps-01-15.md`, with the three-row table and its control — which
+is the argument for the 2026-08-26 split doing its job: the closed-step record
+kept the evidence while the forward-looking plan drifted.
+
+**The criterion now asserts the observable**, `/forums` answering 301 rather than
+a 200 interstitial, instead of a list index alone. An index is a spelling; the
+redirect is the reason.
+
+### The one that would have cost the most time: `sg101/wsgi.py` does not exist
+
+Task 02 said gunicorn would serve `sg101.wsgi`. There is no such module —
+`runserver` builds its own handler, so nothing has ever needed one. The only WSGI
+file in the tree is **`sg101/apache/sg101.wsgi`**, jaguar's mod_wsgi script, which
+`site.addsitedir`s a **Python 2.7** site-packages path and hardcodes
+`DJANGO_SETTINGS_MODULE = 'sg101.settings.production'`.
+
+**And that script is the only home of a feature nothing else provides.** An
+`OFFLINE = False` flag at its top switches the site to an `offline_handler`
+serving `sg101/templates/offline.html` with `503` (and `405` on non-GET) —
+maintenance mode, toggled by editing the file, which is what `fabfile.py:33`'s
+touch reloads. The template is still in the tree. Deleting the script as a
+Python 2 artifact takes maintenance mode with it, and **the day it is most likely
+to be wanted is cutover day.**
+
+### `requirements.txt` is not a vestigial twin — Brian, 2026-09-17
+
+Worth recording because the first correction I drafted implied it was. **`main`'s
+`requirements.txt` is what live production installs from today** — Django 1.8.15,
+MySQL-python, the Xapian eggs — and `main` has no `requirements-docker.txt` at
+all. So on this branch there are three files with three consumers: the image and
+CI read `requirements-docker.txt`, `requirements_dev.txt` reaches
+`requirements.txt` through `-r`, and jaguar reads `main`'s copy. **The duplication
+ends with jaguar, not with this step** — collapsing the two is not Step 20's.
+
+### The static-assets decision now has exactly one owner
+
+`plan.md` says the committed-CSS-vs-deploy-build question is *"one decision about
+static assets, not two"*, interacting with WhiteNoise, `collectstatic` and
+`ManifestStaticFilesStorage`. **Task 02 decides it; task 10 implements it.** Task
+10 says so in as many words, so the decision cannot be made twice and differently
+— which is the failure this project has already had once, with the proxy choice
+that "was never made, and then was made wrong."
+
+**Step 20 is ten tasks, not nine.** Every prose reference to "these nine tasks"
+above this line predates 2026-09-17 and is left as written rather than
+back-edited; this section is the correction.
 
 ## PLANNING — Step 12 (PostgreSQL full-text search) — DESIGNED 2026-07-26
 

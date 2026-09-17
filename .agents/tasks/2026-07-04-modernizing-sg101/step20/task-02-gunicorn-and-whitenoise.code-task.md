@@ -5,6 +5,10 @@ Replace Django's development server with gunicorn in the production image, and
 give static files a real home through WhiteNoise and a `STATIC_ROOT` that is not
 a temporary directory.
 
+**Amended 2026-09-17.** As generated, requirement 1 told gunicorn to serve
+`sg101.wsgi`, **which does not exist**; and the static-assets decision `plan.md`
+ties to the Sass toolchain was not referenced. See *Amendment record* at the end.
+
 ## Background
 The production image currently ends in
 `CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]`. `runserver` is
@@ -18,6 +22,25 @@ test value living in the base module, so `collectstatic` has no real destination
 
 On jaguar, Apache serves static files from a `static_serve` directory via the
 config in `sg101/apache/`. That configuration does not travel with the code.
+
+**There is no `sg101/wsgi.py`.** Verified 2026-09-17: the settings package has
+`__init__`, `base`, `databases`, `docker`, `docker_test`, `local`, `production`
+and `test`, and `sg101/` itself has `apps.py`, `celery.py`, `urls.py` and
+`views.py` — no WSGI module. `runserver` builds its own handler, so nothing has
+needed one. What exists is **`sg101/apache/sg101.wsgi`**, a mod_wsgi script for
+jaguar: it `site.addsitedir`s a **Python 2.7** site-packages path, appends
+`/svr/django-sites/sg101/...` to `sys.path`, sets a `PYTHON_EGG_CACHE`, and
+hardcodes `DJANGO_SETTINGS_MODULE = 'sg101.settings.production'`. Pointing
+gunicorn at it would fail; pointing gunicorn at `sg101.wsgi` fails too, with
+`ModuleNotFoundError`.
+
+**That script also carries a feature nothing else does.** An `OFFLINE = False`
+flag at the top switches the whole site to an `offline_handler` that serves
+`sg101/templates/offline.html` with `503 Service Unavailable` (and `405` on
+non-GET) — a maintenance mode toggled by editing the file and touching it, which
+is how `fabfile.py:33` reloads the app. The template is still in the tree. When
+the mod_wsgi script goes, **maintenance mode goes with it unless something
+replaces it**, and the one day it is most likely to be wanted is cutover day.
 WhiteNoise replaces it by serving static assets from inside the application, which
 keeps the container self-contained. **Cloudflare fronts the origin**, so WhiteNoise
 serves each asset once to the edge rather than to every visitor, and the usual
@@ -40,30 +63,64 @@ are on S3. Conflating the two is the failure mode to avoid.
 implementation. Read additional references as needed for context.
 
 ## Technical Requirements
-1. Add `gunicorn` to `requirements.txt` and make it the production image's entry
-   point, serving `sg101.wsgi`.
-2. Size the worker count from the VM's CPU count rather than hardcoding it, and
+1. **Create `sg101/wsgi.py`** — the standard `get_wsgi_application()` module,
+   taking `DJANGO_SETTINGS_MODULE` from the environment with a sensible default,
+   never hardcoding production the way the mod_wsgi script does.
+2. Add `gunicorn` to **both `requirements-docker.txt` and `requirements.txt`** —
+   the image and CI install the former, the latter is this branch's runtime list
+   of record and reaches the `dev` target through `requirements_dev.txt`'s `-r`.
+   See task 01's *Which requirements file is which*; in particular, leave
+   `main`'s `requirements.txt` alone, since that is what live production on
+   jaguar installs from. Make gunicorn the production image's entry point,
+   serving `sg101.wsgi:application`.
+3. Size the worker count from the VM's CPU count rather than hardcoding it, and
    record the reasoning in a comment.
-3. Add `whitenoise` and place its middleware immediately after
-   `SecurityMiddleware`, which is where it must sit.
-4. Give `STATIC_ROOT` a real path outside `/tmp`, and confirm whether the
+4. Add `whitenoise` to both requirements files and place its middleware
+   immediately after `SecurityMiddleware`, which is where it must sit.
+5. Give `STATIC_ROOT` a real path outside `/tmp`, and confirm whether the
    existing `ManifestStaticFilesStorage` configuration survives Django 5.2's
-   `STORAGES` setting.
-5. Run `collectstatic` as part of the image build or the container entry point,
+   `STORAGES` setting. Task 01 leaves a placeholder value; the decision is this
+   task's.
+6. Run `collectstatic` as part of the image build or the container entry point,
    and state which and why.
-6. Leave the development workflow on `runserver`.
+7. **Decide the fate of `sg101/apache/sg101.wsgi` and of maintenance mode.**
+   Deleting the script is correct — it is Python 2.7 paths for a host being
+   decommissioned. Whether `offline.html` gets a replacement mechanism, and
+   where it lives (a gunicorn-level flag, an Apache `ErrorDocument` in task 03's
+   proxy service, or a Cloudflare rule), is a decision to record, and its
+   cutover-day use belongs in `cutover-runbook.md` if it survives.
+8. Leave the development workflow on `runserver`.
+
+### The static-assets decision this task shares with task 10
+
+`plan.md` is explicit that **"is built CSS a committed artifact or a deploy-time
+build step?"** is *"one decision about static assets, not two"* — it interacts
+directly with WhiteNoise, `collectstatic` and the `ManifestStaticFilesStorage`
+that `production.py:38` already names. Committing built CSS is what the project
+has always done and it keeps deploys simple; building at deploy time removes the
+artifact from review but puts Node in the production image.
+
+**Decide it here, and record it here.** Task 10 rebuilds the toolchain and
+inherits this decision — it does not re-make it. Sequencing note: task 10 can
+run before or after this task, but the decision cannot be deferred past whichever
+runs first.
 
 ## Dependencies
-- Task 01 — the `prod` Dockerfile target and production settings module
+- Task 01 — the `prod` Dockerfile target and the consolidated settings package
+- Task 10 — shares the committed-artifact-vs-deploy-build decision above
 - Django 5.2's `STORAGES` setting, which supersedes `STATICFILES_STORAGE`
+- `sg101/templates/offline.html`, if maintenance mode is kept
 
 ## Implementation Approach
-1. Add both packages and wire the middleware, checking the existing static
+1. Write `sg101/wsgi.py` first and prove gunicorn can serve it, before touching
+   static files — an entry point that does not import is the failure that makes
+   everything after it ambiguous.
+2. Add both packages and wire the middleware, checking the existing static
    storage configuration against Django 5.2 rather than assuming it carries over.
-2. Give `STATIC_ROOT` a real value and move it out of the base module if the test
-   settings are what wanted `/tmp`.
-3. Replace the production `CMD` with gunicorn; leave the dev target alone.
-4. Verify by requesting a static asset from a running production container and
+3. Give `STATIC_ROOT` a real value and move it out of the base module if the test
+   settings are what wanted `/tmp` (`base.py:95` is `/tmp/test_static_root`).
+4. Replace the production `CMD` with gunicorn; leave the dev target alone.
+5. Verify by requesting a static asset from a running production container and
    reading the response headers, not by inspecting configuration.
 
 ## Acceptance Criteria
@@ -90,8 +147,22 @@ implementation. Read additional references as needed for context.
    - When a nonexistent static path is requested
    - Then the response is 404
 
-5. **The suite stays green**
-   - Given the full test suite
+5. **The WSGI entry point takes its settings from the environment**
+   - Given `sg101/wsgi.py`
+   - When it is imported with `DJANGO_SETTINGS_MODULE` set
+   - Then that module is used, no settings module is hardcoded, and
+     `sg101/apache/sg101.wsgi`'s Python 2.7 paths appear nowhere in the
+     production path
+
+6. **The static-assets decision is written down**
+   - Given the planning record for this step
+   - When it is read
+   - Then it states whether built CSS is committed or built at deploy time, and
+     task 10 is consistent with it
+
+7. **The suite stays green**
+   - Given the full test suite run the way CI runs it
+     (`manage.py test --noinput --settings=sg101.settings.docker_test`)
    - When it is run
    - Then it passes, including coverage of the static configuration
 
@@ -99,3 +170,19 @@ implementation. Read additional references as needed for context.
 - **Complexity**: Medium
 - **Labels**: gunicorn, WhiteNoise, Static Files, Production Hardening
 - **Required Skills**: WSGI servers, Django static files, Docker
+
+## Amendment record — 2026-09-17
+
+1. **Requirement 1 told gunicorn to serve `sg101.wsgi`, which does not exist.**
+   The only WSGI file in the tree is jaguar's mod_wsgi script under
+   `sg101/apache/`, on Python 2.7 paths. Creating the module is now requirement 1
+   and has its own acceptance criterion.
+2. **Maintenance mode was about to be deleted silently.** The `OFFLINE` flag and
+   `offline.html` live only in that script; its replacement is now an explicit
+   decision rather than a casualty.
+3. **`requirements.txt` was named alone** for two new dependencies. The image
+   and CI install `requirements-docker.txt`, so both files on this branch get the
+   pin — and `main`'s copy, which is what jaguar installs from today, gets
+   neither.
+4. **The committed-CSS-vs-deploy-build decision is now referenced here**, where
+   `plan.md` says it belongs — with task 10 inheriting it rather than re-deciding.

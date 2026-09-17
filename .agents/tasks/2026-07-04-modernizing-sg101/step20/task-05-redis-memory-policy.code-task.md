@@ -39,7 +39,24 @@ implementation. Read additional references as needed for context.
    and kept-state keys carry no TTL — the property the policy depends on.
 4. Move the production Redis and Celery broker configuration off the unix socket
    onto the compose service.
-5. Leave the development configuration working.
+5. **Invert `base.py:264`'s default.** It defaults `REDIS_UNIX_SOCKET` to
+   `/var/run/redis/redis.sock` — jaguar's path — and every container config has
+   to null it explicitly (`docker.py:38`, `docker_test.py:31`, and whatever task
+   01's merge leaves in their place). **The default is the dead architecture and
+   the live configs are the exceptions.** Default to TCP and let anything needing
+   a socket say so. `base.py:273`'s `CELERY_BROKER_URL` names the same socket and
+   goes the same way.
+6. **Decide `core/services.py:26`'s dead branch.** Once no configuration supplies
+   a socket path, `if unix_socket_path:` is unreachable and the
+   `REDIS_UNIX_SOCKET` setting is dead with it. Small, but the same prune
+   instinct as Step 19 Phase B — decide it here rather than leaving a branch
+   nothing can reach.
+7. Leave the development configuration working.
+
+**Added 2026-09-17.** Requirements 5 and 6 are the two socket consequences
+`plan.md` records under Step 20's fourth "thing to settle" and no task file had
+picked up. They are here rather than in task 01 because this task owns the socket
+move; task 01 only stops `production.py` depending on it.
 
 ## Dependencies
 - Task 03 — the production compose file that carries the Redis service
