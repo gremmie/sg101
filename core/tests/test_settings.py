@@ -232,55 +232,78 @@ class SearchLoggingSettingsTests(SimpleTestCase):
                 self.assertEqual(logger_config['handlers'], ['search'])
 
 
+# Builds a toolbar against a bare HttpRequest and reports which panels came out
+# enabled. No view runs and no query is issued, which is the point: the panel
+# set is a property of the configuration, so reading it must not depend on the
+# database being populated.
 TOOLBAR_WIRING_SNIPPET = (
     "import json\n"
     "import sys\n"
     "import django\n"
     "django.setup()\n"
     "from django.conf import settings\n"
-    "from django.test import Client\n"
+    "from django.http import HttpRequest\n"
+    "from debug_toolbar.toolbar import DebugToolbar\n"
+    "request = HttpRequest()\n"
+    "request.META['REMOTE_ADDR'] = '127.0.0.1'\n"
+    "request.path = '/'\n"
+    "toolbar = DebugToolbar(request, lambda r: None)\n"
     "sys.stdout.write(json.dumps({\n"
     "    'first_middleware': settings.MIDDLEWARE[0],\n"
     "    'installed': 'debug_toolbar' in settings.INSTALLED_APPS,\n"
     "    'disabled_panels': sorted(\n"
     "        settings.DEBUG_TOOLBAR_CONFIG.get('DISABLE_PANELS', [])),\n"
-    "    'append_slash_status': Client().get('/forums').status_code,\n"
+    "    'enabled_panels': sorted(p.panel_id for p in toolbar.enabled_panels),\n"
+    "    'all_panels': sorted(p.panel_id for p in toolbar.panels),\n"
     "}))\n"
 )
 
 REDIRECTS_PANEL = 'debug_toolbar.panels.redirects.RedirectsPanel'
+REDIRECTS_PANEL_ID = 'RedirectsPanel'
 
 
 class DebugToolbarWiringTests(SimpleTestCase):
     """How the debug toolbar is wired into the dev settings.
 
-    Three properties, none of which the suite can see for itself: it runs under
-    `test`, which installs no toolbar at all. They are read out of the dev
-    module in a subprocess, for the reason the whole file uses one -- importing
-    a deployment module here would splice its middleware into the running
-    configuration.
+    Properties the suite cannot see for itself: it runs under `test`, which
+    installs no toolbar at all. They are read out of the dev module in a
+    subprocess, for the reason the whole file uses one -- importing a deployment
+    module here would splice its middleware into the running configuration.
 
-    The position is load-bearing and was measured rather than argued. From
-    index 1 the toolbar sits *inside* CommonMiddleware, so an APPEND_SLASH
+    The middleware position is load-bearing and was measured rather than argued.
+    From index 1 the toolbar sits *inside* CommonMiddleware, so an APPEND_SLASH
     request records as the inner 404 it really is and the 301 never reaches the
-    history panel. From index 0 it records the 301 -- but only with
-    RedirectsPanel off, because that panel answers the redirect with a 200
-    interstitial instead of passing it through.
+    history panel; from index 0 HistoryPanel records the 301. That only holds
+    with RedirectsPanel off, because that panel answers the redirect with a 200
+    interstitial rather than passing it through -- so position and panel are one
+    decision.
 
-    What each case actually catches, from mutating this configuration and
-    watching these tests:
+    The panel is read as the toolbar itself resolves it, not out of the config
+    dict alone. DISABLE_PANELS does not remove a panel from the list; it decides
+    which panels come out enabled, and only an enabled panel intercepts
+    anything.
 
-      * toolbar moved to index 1  -> only the middleware assertion fails. The
-        redirect still answers 301 from index 1, so the observable below does
-        *not* cover the position.
-      * RedirectsPanel re-enabled -> the panel assertion and the redirect both
-        fail (200, the interstitial).
-      * toolbar dropped from INSTALLED_APPS -> all three, because the
-        subprocess dies on the app-registry mismatch described above.
+    ProfilingPanel is asserted enabled for the same reason RedirectsPanel is
+    asserted disabled: the toolbar disables both by default, so an empty
+    DISABLE_PANELS does not mean "leave the defaults alone" -- it means "turn
+    both on". Naming both pins the setting from both directions, and mutating
+    the configuration shows why both are needed:
 
-    So the position has exactly one guard and the panel has two; nothing here
-    covers SHOW_TOOLBAR_CALLBACK, which only affects whether the toolbar is
-    visible.
+      * toolbar moved to index 1 -> the middleware case alone. The panels are
+        unaffected by where the middleware sits.
+      * DISABLE_PANELS emptied -> the config case, and RedirectsPanel comes out
+        enabled.
+      * the DISABLE_PANELS key misspelled -> the config case, and
+        *ProfilingPanel* is lost. RedirectsPanel stays off, because the
+        toolbar's own default already disables it -- so the typo is invisible
+        from RedirectsPanel's side and only the ProfilingPanel assertion
+        catches it.
+      * ProfilingPanel added to DISABLE_PANELS -> the same two.
+
+    So no single assertion here covers the setting; the pair does.
+
+    Nothing here covers SHOW_TOOLBAR_CALLBACK, which only affects whether the
+    toolbar is visible.
     """
 
     def toolbar_wiring(self):
@@ -298,15 +321,18 @@ class DebugToolbarWiringTests(SimpleTestCase):
         self.assertEqual(wiring['first_middleware'],
                          'debug_toolbar.middleware.DebugToolbarMiddleware')
 
-    def test_redirects_panel_is_disabled(self):
+    def test_redirects_panel_is_the_only_one_turned_off(self):
         self.assertEqual(self.toolbar_wiring()['disabled_panels'],
                          [REDIRECTS_PANEL])
 
-    def test_append_slash_redirect_is_not_intercepted(self):
-        """The observable the position was chosen on: a 301, not a 200.
+    def test_redirects_panel_is_not_enabled_on_the_toolbar(self):
+        """Off where it counts: the panel set the toolbar actually consults."""
+        wiring = self.toolbar_wiring()
+        self.assertIn(REDIRECTS_PANEL_ID, wiring['all_panels'])
+        self.assertNotIn(REDIRECTS_PANEL_ID, wiring['enabled_panels'])
 
-        /forums resolves only with its trailing slash, so CommonMiddleware
-        answers the request itself and no view -- and no database -- is
-        reached. A 200 here is the RedirectsPanel interstitial.
-        """
-        self.assertEqual(self.toolbar_wiring()['append_slash_status'], 301)
+    def test_the_panels_that_do_its_job_stay_enabled(self):
+        """HistoryPanel replaces RedirectsPanel; ProfilingPanel is wanted."""
+        enabled = self.toolbar_wiring()['enabled_panels']
+        self.assertIn('HistoryPanel', enabled)
+        self.assertIn('ProfilingPanel', enabled)
