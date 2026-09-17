@@ -6,9 +6,9 @@ from celery import Celery
 from django.conf import settings
 
 # 12-factor: the settings module comes from the environment (Compose sets
-# DJANGO_SETTINGS_MODULE=sg101.settings.docker; a deploy sets its own). Default
+# DJANGO_SETTINGS_MODULE=sg101.settings.dev; a deploy sets its own). Default
 # to local for a bare invocation, matching manage.py.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.local')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.dev')
 
 app = Celery('sg101')
 

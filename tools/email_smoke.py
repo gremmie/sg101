@@ -52,7 +52,7 @@ import traceback
 from types import SimpleNamespace
 
 sys.path.insert(0, '/app')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.docker')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.dev')
 
 import django  # noqa: E402
 django.setup()

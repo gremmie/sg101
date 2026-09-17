@@ -21,8 +21,9 @@ authoritative record of what has been done and why.
 Every top-level directory is a Django app on the standard layout. The Django
 *project* package is `sg101/`, not the repo root.
 
-- `sg101/settings/` — `base.py` holds everything shared; `local.py`,
-  `docker.py`, `docker_test.py`, `production.py`, `test.py` override it.
+- `sg101/settings/` — `base.py` holds everything shared; `dev.py`,
+  `production.py`, `test.py`, `docker_test.py` override it. One module per
+  deployment: `dev.py` is the Compose stack, `production.py` the VM.
 - `core/` — the shared kernel: mail wrapper, Markdown rendering, Redis and S3
   helpers, middleware, pagination. **It imports nothing else in the repo.** Keep
   it that way.

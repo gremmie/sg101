@@ -36,7 +36,7 @@ import django
 
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.docker')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.dev')
     django.setup()
 
     from django.core.management import call_command

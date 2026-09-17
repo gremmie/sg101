@@ -38,7 +38,7 @@ SNIPPET = (
 # The two modules the site actually deploys. Both are asserted about below, for
 # the same reason each time: what they configure is never exercised by the suite,
 # which runs under `test`.
-DEPLOYMENT_SETTINGS = ['sg101.settings.local', 'sg101.settings.production']
+DEPLOYMENT_SETTINGS = ['sg101.settings.dev', 'sg101.settings.production']
 
 SEARCH_LOGGING_SNIPPET = (
     "import json\n"
@@ -160,18 +160,16 @@ class SettingsImportIsolationTests(SimpleTestCase):
 
     `from base import *` binds base's own mutable objects, so a module that
     edits MIDDLEWARE, INSTALLED_APPS or TEMPLATES in place edits them for
-    whatever configuration is already live. Both `local` and `production` once
-    did: local.py's insert spliced the debug toolbar's middleware into every
-    test that ran after the import -- harmless until debug-toolbar shipped a
-    model, then 105 errors from an app the registry never saw. production.py's
-    version edited TEMPLATES, which changed how every later test loaded
-    templates and never failed anything.
+    whatever configuration is already live. Both deployment modules once did:
+    an insert spliced the debug toolbar's middleware into every test that ran
+    after the import -- harmless until debug-toolbar shipped a model, then 105
+    errors from an app the registry never saw. production.py's version edited
+    TEMPLATES, which changed how every later test loaded templates and never
+    failed anything.
 
     No test reads a value out of these modules any more -- the ones that need
     what a deployment module configures load it in a subprocess. This case
-    imports them because the import is the thing under test, and the hazard is
-    not confined to the suite: docker.py reaches local.py by `import *` at
-    runtime.
+    imports them because the import is the thing under test.
 
     Both are covered because the property belongs to the whole package, not to
     whichever module currently happens to edit something.
@@ -232,3 +230,83 @@ class SearchLoggingSettingsTests(SimpleTestCase):
                 logger_config = self.search_logging(name)['logger']
                 self.assertFalse(logger_config['propagate'])
                 self.assertEqual(logger_config['handlers'], ['search'])
+
+
+TOOLBAR_WIRING_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "import django\n"
+    "django.setup()\n"
+    "from django.conf import settings\n"
+    "from django.test import Client\n"
+    "sys.stdout.write(json.dumps({\n"
+    "    'first_middleware': settings.MIDDLEWARE[0],\n"
+    "    'installed': 'debug_toolbar' in settings.INSTALLED_APPS,\n"
+    "    'disabled_panels': sorted(\n"
+    "        settings.DEBUG_TOOLBAR_CONFIG.get('DISABLE_PANELS', [])),\n"
+    "    'append_slash_status': Client().get('/forums').status_code,\n"
+    "}))\n"
+)
+
+REDIRECTS_PANEL = 'debug_toolbar.panels.redirects.RedirectsPanel'
+
+
+class DebugToolbarWiringTests(SimpleTestCase):
+    """How the debug toolbar is wired into the dev settings.
+
+    Three properties, none of which the suite can see for itself: it runs under
+    `test`, which installs no toolbar at all. They are read out of the dev
+    module in a subprocess, for the reason the whole file uses one -- importing
+    a deployment module here would splice its middleware into the running
+    configuration.
+
+    The position is load-bearing and was measured rather than argued. From
+    index 1 the toolbar sits *inside* CommonMiddleware, so an APPEND_SLASH
+    request records as the inner 404 it really is and the 301 never reaches the
+    history panel. From index 0 it records the 301 -- but only with
+    RedirectsPanel off, because that panel answers the redirect with a 200
+    interstitial instead of passing it through.
+
+    What each case actually catches, from mutating this configuration and
+    watching these tests:
+
+      * toolbar moved to index 1  -> only the middleware assertion fails. The
+        redirect still answers 301 from index 1, so the observable below does
+        *not* cover the position.
+      * RedirectsPanel re-enabled -> the panel assertion and the redirect both
+        fail (200, the interstitial).
+      * toolbar dropped from INSTALLED_APPS -> all three, because the
+        subprocess dies on the app-registry mismatch described above.
+
+    So the position has exactly one guard and the panel has two; nothing here
+    covers SHOW_TOOLBAR_CALLBACK, which only affects whether the toolbar is
+    visible.
+    """
+
+    def toolbar_wiring(self):
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': 'sg101.settings.dev',
+                               'SECRET_KEY': 'x'},
+                              snippet=TOOLBAR_WIRING_SNIPPET)
+        # Checked before parsing: a subprocess that never loaded settings would
+        # otherwise be asserted about vacuously.
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_toolbar_is_installed_and_first_in_middleware(self):
+        wiring = self.toolbar_wiring()
+        self.assertTrue(wiring['installed'])
+        self.assertEqual(wiring['first_middleware'],
+                         'debug_toolbar.middleware.DebugToolbarMiddleware')
+
+    def test_redirects_panel_is_disabled(self):
+        self.assertEqual(self.toolbar_wiring()['disabled_panels'],
+                         [REDIRECTS_PANEL])
+
+    def test_append_slash_redirect_is_not_intercepted(self):
+        """The observable the position was chosen on: a 301, not a 200.
+
+        /forums resolves only with its trailing slash, so CommonMiddleware
+        answers the request itself and no view -- and no database -- is
+        reached. A 200 here is the RedirectsPanel interstitial.
+        """
+        self.assertEqual(self.toolbar_wiring()['append_slash_status'], 301)

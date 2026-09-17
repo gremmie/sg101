@@ -9,9 +9,9 @@ testfixtures==12.3.0
 # `-r requirements.txt`.
 #
 # Two things about the way it is wired are load-bearing and easy to lose in a
-# bump: its middleware sits at index 0 with RedirectsPanel disabled (see the
-# note in local.py, which measured it), and local.py copies base.py's settings
-# objects rather than mutating them -- which is the half a test covers.
+# bump: its middleware sits at index 0 with RedirectsPanel disabled, and dev.py
+# copies base.py's settings objects rather than mutating them. Both are covered
+# by tests; the note in dev.py has the measurements.
 django-debug-toolbar==7.1.1
 # Runs the `coverage run --source='.' / report / xml` sequence CI invokes.
 coverage==7.15.4

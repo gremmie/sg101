@@ -40,7 +40,7 @@ import django
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', '..'))
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.docker')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.dev')
 django.setup()
 
 import requests  # noqa: E402

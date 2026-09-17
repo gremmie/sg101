@@ -1,70 +1,86 @@
 """
-Local Django settings.
+Development Django settings.
 
+Each service runs in its own container on the Compose network, so the database
+and Redis are reached over TCP; connection details come from the environment
+Compose sets (see docker-compose.yml). All config and secrets -- SECRET_KEY, DB
+credentials, API keys -- are env vars read by base.py from the environment,
+which Compose loads from .env.
+
+Selected by DJANGO_SETTINGS_MODULE, and the default for manage.py and
+sg101/celery.py.
 """
-import importlib.util
+import os
 
 from sg101.settings.base import *
+from sg101.settings.databases import from_env
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'OPTIONS': {
-            'unix_socket': '/var/run/mysqld/mysqld.sock',
-        },
-    },
-}
 
-# Django Debug Toolbar support
+# --- Database ----------------------------------------------------------------
+# $DB_ENGINE picks the service -- `postgresql` (the `postgres` container) or
+# `mysql` (the `db` container, which the snapshot conversion still needs); see
+# sg101/settings/databases.py. Credentials come from the environment.
+DATABASES = from_env()
+
+# --- Redis / Celery ----------------------------------------------------------
+# core/services.py uses a unix socket only when REDIS_UNIX_SOCKET is truthy;
+# nulling it falls back to REDIS_HOST/REDIS_PORT.
+REDIS_UNIX_SOCKET = None
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+REDIS_DB = 0
+
+# db 1 for the broker, keeping the cache (db 2) and the site's kept state (db 0)
+# clear of it.
+CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
+
+ALLOWED_HOSTS = ['*']
+
+# --- Django Debug Toolbar ----------------------------------------------------
+# Unconditional: this module is only ever the development deployment, so there
+# is nothing to probe for and nothing to guard against. The toolbar is a dev
+# dependency and the prod image does not carry it.
 #
-# Probe for the package with find_spec rather than importing it: debug-toolbar
-# 3.x builds its URLconf (and reads settings) at package-import time, and this
-# runs while the settings module is still being constructed -- importing it here
-# would re-enter settings loading and blow up. find_spec only locates the module.
-if DEBUG and importlib.util.find_spec('debug_toolbar') is not None:
-    # Rebind copies rather than editing in place. `from base import *` binds
-    # base's own list objects, so `.insert()`/`.append()` here would edit the
-    # settings of whatever module is already live -- and importing this one for
-    # its LOGGING dict is a thing the suite does. Splicing the toolbar's
-    # middleware into a process that never registered the app leaves the app
-    # registry and INSTALLED_APPS disagreeing.
-    #
-    # First, which is what the toolbar's docs ask for: "as early as possible in
-    # the list", the one exception being that it must come after any middleware
-    # that encodes the response body, such as GZipMiddleware. That exception is
-    # also the only ordering rule the package enforces (its check_middleware()
-    # warns about GZip and about nothing else), and this project runs no
-    # content-encoding middleware -- so adding one later is the thing that would
-    # change this answer.
-    #
-    # It sat after CommonMiddleware for years instead, because middleware at
-    # index 0 wraps index 1: from here the toolbar sees CommonMiddleware's
-    # responses, and with RedirectsPanel on that turned every APPEND_SLASH
-    # redirect into a "you are being redirected" interstitial. Disabling that
-    # panel (below) is what freed the position -- measured both ways, and with
-    # the panel re-enabled at index 0 to confirm the panel was the cause.
-    #
-    # The move is also what makes redirect monitoring honest. From index 1 the
-    # toolbar is inside CommonMiddleware, so an APPEND_SLASH request records as
-    # the inner 404 it really is and the 301 never reaches the panel; from here
-    # HistoryPanel records the 301. Application redirects record as 302 either
-    # way.
-    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + list(MIDDLEWARE)
-    INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
-    # The toolbar disables RedirectsPanel and ProfilingPanel by default; an
-    # empty DISABLE_PANELS therefore did not mean "leave the defaults alone", it
-    # meant "turn both on". ProfilingPanel is wanted, so it stays enabled by
-    # omission -- but RedirectsPanel is deprecated upstream and slated for
-    # removal, and it interrupts every dev redirect with an interstitial to do a
-    # job HistoryPanel now does without one: history keeps the toolbar data for
-    # the redirecting request, so it can be inspected after the redirect has
-    # been followed.
-    DEBUG_TOOLBAR_CONFIG = {
-        'DISABLE_PANELS': {'debug_toolbar.panels.redirects.RedirectsPanel'},
-    }
+# Rebind copies rather than editing in place. `from base import *` binds base's
+# own list objects, so `.insert()`/`.append()` here would edit the settings of
+# whatever configuration is already live -- and importing this module for its
+# LOGGING dict is a thing the suite does. Splicing the toolbar's middleware into
+# a process that never registered the app leaves the app registry and
+# INSTALLED_APPS disagreeing.
+#
+# Index 0, which is what the toolbar's docs ask for: "as early as possible in
+# the list", the one exception being that it must come after any middleware that
+# encodes the response body, such as GZipMiddleware. That exception is also the
+# only ordering rule the package enforces (its check_middleware() warns about
+# GZip and about nothing else), and this project runs no content-encoding
+# middleware -- so adding one later is the thing that would change this answer.
+#
+# The position depends on RedirectsPanel being off. With it on, the toolbar at
+# index 0 answers CommonMiddleware's APPEND_SLASH redirects with a 200
+# interstitial instead of passing the 301 through; measured both ways, with the
+# panel re-enabled at index 0 as the control. It is also what makes redirect
+# monitoring honest: from index 1 the toolbar sits inside CommonMiddleware, so
+# an APPEND_SLASH request records as the inner 404 it really is and the 301
+# never reaches the panel; from here HistoryPanel records the 301. Application
+# redirects record as 302 either way.
+MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + list(MIDDLEWARE)
+INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
+# The toolbar disables RedirectsPanel and ProfilingPanel by default, so an empty
+# DISABLE_PANELS does not mean "leave the defaults alone", it means "turn both
+# on". ProfilingPanel is wanted, so it stays enabled by omission -- but
+# RedirectsPanel is deprecated upstream and slated for removal, and it
+# interrupts every dev redirect with an interstitial to do a job HistoryPanel
+# now does without one: history keeps the toolbar data for the redirecting
+# request, so it can be inspected after the redirect has been followed.
+#
+# SHOW_TOOLBAR_CALLBACK: the toolbar's own default gates on REMOTE_ADDR being in
+# INTERNAL_IPS, and behind Docker's bridge host requests arrive NAT'd from the
+# gateway (172.18.0.x), never 127.0.0.1 -- so the toolbar would stay hidden.
+# Show it whenever DEBUG is on.
+DEBUG_TOOLBAR_CONFIG = {
+    'DISABLE_PANELS': {'debug_toolbar.panels.redirects.RedirectsPanel'},
+    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+}
 
 # Logging configuration
 

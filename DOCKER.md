@@ -568,9 +568,9 @@ activates it and the container's Python is `/usr/local`.
 - **`docker-compose.yml`** — defines the services and wires them together: five
   by default, plus `db` (MySQL) behind the `mysql` profile. web/worker/beat all
   build the `dev` target.
-- **`sg101/settings/docker.py`** — dev settings; points the DB and Redis at the
-  container services over the network (the legacy settings used unix sockets).
-  Selected via `DJANGO_SETTINGS_MODULE` in compose.
+- **`sg101/settings/dev.py`** — dev settings; points the DB and Redis at the
+  container services over the network, and enables the debug toolbar. Selected
+  via `DJANGO_SETTINGS_MODULE` in compose, and the default for `manage.py`.
 - **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
   name, and port, so the settings modules never hardcode an engine.
 - **`sg101/settings/docker_test.py`** — test settings (PostgreSQL + Redis over

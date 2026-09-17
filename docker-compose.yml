@@ -32,7 +32,7 @@
 # Config/secrets note: SECRET_KEY, DB creds, and API keys come from the
 # git-ignored .env file (see .env.example), loaded via `env_file:` below; base.py
 # reads them from the environment. The DB/Redis topology (DB_ENGINE, REDIS_HOST,
-# DJANGO_SETTINGS_MODULE) is set inline and consumed by sg101/settings/docker.py.
+# DJANGO_SETTINGS_MODULE) is set inline and consumed by sg101/settings/dev.py.
 
 services:
   db:
@@ -122,7 +122,7 @@ services:
     # Host and port default to whichever service runs that engine, so this is
     # the only knob; DB_HOST/DB_PORT still override for anything off-Compose.
     environment: &app_env
-      DJANGO_SETTINGS_MODULE: sg101.settings.docker
+      DJANGO_SETTINGS_MODULE: sg101.settings.dev
       DB_ENGINE: ${DB_ENGINE:-postgresql}
       REDIS_HOST: redis
     # Secrets + DB credentials (SECRET_KEY, DB_*, API keys) come from the
