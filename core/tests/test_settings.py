@@ -482,3 +482,76 @@ class DeployedBackendsTests(SimpleTestCase):
                 self.assertNotIn('unix_socket', backends['options'])
                 self.assertFalse(backends['cache'].startswith('unix://'),
                                  msg=backends['cache'])
+
+
+DEPLOYED_STATIC_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "sys.stdout.write(json.dumps({\n"
+    "    'middleware': list(settings.MIDDLEWARE),\n"
+    "    'static_root': settings.STATIC_ROOT,\n"
+    "    'proxy_ssl_header': settings.SECURE_PROXY_SSL_HEADER,\n"
+    "    'ssl_redirect': settings.SECURE_SSL_REDIRECT,\n"
+    "    'hsts_seconds': settings.SECURE_HSTS_SECONDS,\n"
+    "    'staticfiles_backend': settings.STORAGES['staticfiles']['BACKEND'],\n"
+    "}))\n"
+)
+
+SECURITY_MIDDLEWARE = 'django.middleware.security.SecurityMiddleware'
+WHITENOISE_MIDDLEWARE = 'whitenoise.middleware.WhiteNoiseMiddleware'
+
+
+class ProductionStaticAndSecurityTests(SimpleTestCase):
+    """How production serves static files, and what it tells the browser.
+
+    None of this is exercised by the suite: it runs under `test`, which serves
+    no static files and sets no security headers. Read out of the production
+    module in a subprocess, like the rest of this file.
+    """
+
+    def production_settings(self):
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': 'sg101.settings.production',
+                               'SECRET_KEY': 'x'},
+                              snippet=DEPLOYED_STATIC_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_whitenoise_sits_directly_after_the_security_middleware(self):
+        """Order is the point: SecurityMiddleware's headers must still reach
+        the responses WhiteNoise serves, and WhiteNoise must come before
+        anything that would otherwise handle a static URL."""
+        middleware = self.production_settings()['middleware']
+        self.assertEqual(middleware[0], SECURITY_MIDDLEWARE)
+        self.assertEqual(middleware[1], WHITENOISE_MIDDLEWARE)
+
+    def test_static_root_is_not_the_test_directory(self):
+        """base.py's value is a /tmp path meant for the suite; shipping it
+        would put collectstatic's output somewhere the system may clear."""
+        static_root = self.production_settings()['static_root']
+        self.assertFalse(static_root.startswith('/tmp'), msg=static_root)
+        self.assertTrue(static_root.endswith('static_root'), msg=static_root)
+
+    def test_the_scheme_is_taken_from_the_proxy(self):
+        """TLS is terminated ahead of the application, so without this every
+        request looks insecure to Django."""
+        self.assertEqual(self.production_settings()['proxy_ssl_header'],
+                         ['HTTP_X_FORWARDED_PROTO', 'https'])
+
+    def test_redirect_and_hsts_are_still_off(self):
+        """Both wait for the proxy that sets X-Forwarded-Proto to exist.
+
+        Turning on the redirect while Django believes a secure request is
+        insecure redirects it to itself, and HSTS is cached by browsers for its
+        full duration whether or not it was right. Change this test when the
+        proxy lands, deliberately.
+        """
+        settings_read = self.production_settings()
+        self.assertFalse(settings_read['ssl_redirect'])
+        self.assertEqual(settings_read['hsts_seconds'], 0)
+
+    def test_static_files_are_served_from_a_manifest(self):
+        """The hashed names are what let WhiteNoise mark assets immutable."""
+        self.assertEqual(
+            self.production_settings()['staticfiles_backend'],
+            'django.contrib.staticfiles.storage.ManifestStaticFilesStorage')

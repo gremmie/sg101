@@ -21,10 +21,30 @@ DATABASES = from_env('postgresql')
 # Lifetime of the database connections, in seconds:
 CONN_MAX_AGE = 1200
 
-# Provisional. Somewhere outside the source tree that collectstatic can write
-# and the server can read; the value settles with the static-file serving work,
-# which is also what decides whether anything serves it from disk at all.
+# collectstatic writes here during the image build, and WhiteNoise serves out of
+# it. Outside the source tree so a collected copy never shadows a source file,
+# and inside the image so the manifest cannot disagree with the code it was
+# built from.
 STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_root'))
+
+# WhiteNoise serves the collected files from the application process, directly
+# after SecurityMiddleware so that its redirect and headers still apply to
+# them. Rebound rather than inserted: `from base import *` binds base's own list
+# object, so .insert() here would edit the middleware of whatever configuration
+# is already live.
+_security, *_rest = MIDDLEWARE
+MIDDLEWARE = [_security, 'whitenoise.middleware.WhiteNoiseMiddleware'] + _rest
+
+# Django and the proxy disagree about the scheme unless this is set. There are
+# two TLS connections in front of this process -- browser to Cloudflare, and
+# Cloudflare to the origin on its own certificate -- and the proxy terminates
+# the second one, so the request reaches the application over plain HTTP inside
+# the compose network and request.is_secure() would be False without this.
+#
+# X-Forwarded-Proto is an ordinary request header, so this is only sound while
+# the proxy overwrites it rather than passing a client's through, and while
+# nothing but the proxy can reach this container.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Both backends are named explicitly even though 'default' is Django's own
 # choice: STORAGES replaced a pair of standalone settings, so writing only the

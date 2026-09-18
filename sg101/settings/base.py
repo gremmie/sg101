@@ -92,7 +92,10 @@ STATICFILES_DIRS = [
     os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static')),
     os.path.abspath(os.path.join(PROJECT_PATH, 'static')),
 ]
-STATIC_ROOT = '/tmp/test_static_root'
+# No STATIC_ROOT here, exactly as there is no DATABASES and no LOGGING: it is a
+# per-deployment answer, and the module that deploys is the one that gives it.
+# Leaving it unset means a collectstatic run under settings that never intended
+# to collect fails loudly instead of writing somewhere arbitrary.
 STATIC_URL = '/static/'
 
 # 12-factor configuration: all secrets/config come from environment variables.
@@ -110,6 +113,13 @@ env.read_env(os.environ.get('DOTENV_PATH',
 SECRET_KEY = env('SECRET_KEY')
 
 MIDDLEWARE = [
+    # First, so its redirect happens before any other middleware does work. It
+    # also supplies X-Content-Type-Options, Referrer-Policy and
+    # Cross-Origin-Opener-Policy from their defaults, which is most of what it
+    # is here for; SECURE_SSL_REDIRECT and HSTS stay off until a proxy sets
+    # X-Forwarded-Proto and SECURE_PROXY_SSL_HEADER is proven against it, since
+    # redirecting on a request Django wrongly believes is insecure loops.
+    'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

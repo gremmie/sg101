@@ -83,9 +83,24 @@ COPY . /app
 
 EXPOSE 8000
 
-# gunicorn replaces this in the prod target; until then both targets start the
-# development server, and compose overrides the command per service anyway.
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Collect the static files into the image rather than at container start, so a
+# container comes up serving and the manifest cannot disagree with the code it
+# was built from. collectstatic imports settings before it copies anything, so
+# it needs a SECRET_KEY; this one never leaves the build step, and the running
+# container reads the real one from the environment.
+RUN SECRET_KEY=build-time-only \
+    DJANGO_SETTINGS_MODULE=sg101.settings.production \
+    python manage.py collectstatic --noinput
+
+# Workers are sized at start from the CPUs the container actually gets, rather
+# than baked in here: the image is built on a developer's machine and run on a
+# VM with a different count. The usual starting point for sync workers is
+# 2*CPU+1, which at this site's rate -- about 1 request a second, with a busiest
+# measured minute near 8 -- is already far more concurrency than it needs.
+CMD ["sh", "-c", "exec gunicorn sg101.wsgi:application \
+     --bind 0.0.0.0:8000 \
+     --workers ${GUNICORN_WORKERS:-$(( $(nproc) * 2 + 1 ))} \
+     --access-logfile - --error-logfile -"]
 
 
 # --- dev ---------------------------------------------------------------------
@@ -96,3 +111,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 FROM prod AS dev
 
 RUN pip install -r requirements_dev.txt
+
+# Development runs the auto-reloading server; compose overrides this per service
+# anyway, but the target's own default should not be gunicorn.
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

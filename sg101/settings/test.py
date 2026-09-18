@@ -27,6 +27,12 @@ REDIS_DB = 14
 # over TCP (the only way tests actually run now).
 CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
 
+# Nothing in the suite collects static, but the staticfiles app is installed and
+# a destination keeps it from being the one setting the module leaves undefined.
+# The name says what it is; it moved here from base.py, where a value meant for
+# tests applied to every deployment.
+STATIC_ROOT = '/tmp/test_static_root'
+
 # For unit-testing the Donations module w/o using the Paypal sandbox
 DONATIONS_DEBUG_VERIFY_RESPONSE = 'VERIFIED'
 DONATIONS_BUSINESS_DEBUG = ['brian@surfguitar101.com']

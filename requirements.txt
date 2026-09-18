@@ -8,6 +8,14 @@
 # no longer appears here.
 
 Django==5.2.17
+# The WSGI server. Workers are sized from the VM's CPU count at startup rather
+# than pinned here; see the Dockerfile.
+gunicorn==26.2.0
+# Serves the collected static files from the application process, so no static
+# file configuration has to live on the host. It reads the manifest
+# collectstatic writes, so a hashed name gets a long-lived immutable
+# Cache-Control while an unhashed one does not.
+whitenoise==6.12.0
 # 12-factor env-var config: base.py reads .env through this and every secret
 # comes from it. The 0.4.5 pin it sat on was chosen in Step 3 as "the last line
 # supporting Python 2.7" -- a constraint five interpreters stale by the time it

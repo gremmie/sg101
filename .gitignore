@@ -50,7 +50,7 @@ snapshots/*.tar
 snapshots/*.tgz
 
 # Static/served + media (user uploads)
-static_serve
+static_root
 media/avatars/users
 media/badges
 media/banners
