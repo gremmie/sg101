@@ -427,3 +427,58 @@ class DeployedLoggingTests(SimpleTestCase):
         from sg101.settings import logging_config
         with self.assertRaises(ImproperlyConfigured):
             logging_config.for_target('staging', log_dir='/tmp')
+
+
+DEPLOYED_BACKENDS_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "sys.stdout.write(json.dumps({\n"
+    "    'engine': settings.DATABASES['default']['ENGINE'],\n"
+    "    'options': settings.DATABASES['default'].get('OPTIONS', {}),\n"
+    "    'cache': settings.CACHES['default'].get('LOCATION', ''),\n"
+    "}))\n"
+)
+
+
+class DeployedBackendsTests(SimpleTestCase):
+    """Which database and cache the deployed modules actually name.
+
+    Neither is exercised by the suite, which runs under `test` against its own
+    database and a locmem cache, so the only way to cover "production connects
+    to the things that exist" is to read what the module configures.
+
+    Both modules went five Django versions naming MySQL over a unix socket on a
+    host that no longer runs either, which nothing noticed because nothing
+    loaded them.
+    """
+
+    def deployed_backends(self, module, **env):
+        code, out, err = _run(dict({'DJANGO_SETTINGS_MODULE': module,
+                                    'SECRET_KEY': 'x'}, **env),
+                              snippet=DEPLOYED_BACKENDS_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_both_deployments_read_the_engine_from_the_environment(self):
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                backends = self.deployed_backends(name, DB_ENGINE='postgresql')
+                self.assertEqual(backends['engine'],
+                                 'django.db.backends.postgresql')
+
+    def test_no_deployment_hardcodes_a_unix_socket(self):
+        """A socket does not cross a container boundary, so naming one is a bug.
+
+        The engine's own OPTIONS are checked rather than the whole dict: this is
+        where `unix_socket` lived, and where a copy of the old configuration
+        would land again. The cache is checked in the same case because it grew
+        the same defect from the same cause; only production names one, since
+        dev inherits base's locmem cache and a locmem cache has no LOCATION.
+        """
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                backends = self.deployed_backends(name, DB_ENGINE='postgresql')
+                self.assertNotIn('unix_socket', backends['options'])
+                self.assertFalse(backends['cache'].startswith('unix://'),
+                                 msg=backends['cache'])

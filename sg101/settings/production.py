@@ -2,30 +2,29 @@
 Production Django settings.
 
 """
+import os
+
 from sg101.settings.base import *
 from sg101.settings import logging_config
+from sg101.settings.databases import from_env
 
 DEBUG = False
 SITE_SCHEME = 'https'
 
 ALLOWED_HOSTS = ['.surfguitar101.com']
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'OPTIONS': {
-            'unix_socket': '/var/run/mysqld/mysqld.sock',
-        },
-    },
-}
+# The engine and its connection details come from the environment, as they do
+# for every other deployment; see sg101/settings/databases.py. Credentials are
+# read there from DB_NAME/DB_USER/DB_PASSWORD.
+DATABASES = from_env('postgresql')
 
 # Lifetime of the database connections, in seconds:
 CONN_MAX_AGE = 1200
 
-STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_serve'))
+# Provisional. Somewhere outside the source tree that collectstatic can write
+# and the server can read; the value settles with the static-file serving work,
+# which is also what decides whether anything serves it from disk at all.
+STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_root'))
 
 # Both backends are named explicitly even though 'default' is Django's own
 # choice: STORAGES replaced a pair of standalone settings, so writing only the
@@ -54,10 +53,17 @@ STORAGES = {
 # Its own database, because clearing the cache must not touch what the site
 # keeps in Redis permanently -- db 0 holds who's-online and the forums'
 # latest-post lists, and db 1 is the broker.
+# Reached over TCP: each service is its own container, and a unix socket does
+# not cross that boundary without bind-mounting a directory into both and
+# caring about start order.
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'unix://' + REDIS_UNIX_SOCKET + '?db=2',
+        'LOCATION': 'redis://{host}:{port}/2'.format(host=REDIS_HOST,
+                                                    port=REDIS_PORT),
         'TIMEOUT': 600,
         'KEY_PREFIX': 'sg101',
     },
