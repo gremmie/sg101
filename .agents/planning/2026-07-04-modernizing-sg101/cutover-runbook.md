@@ -111,6 +111,37 @@ rsync; the S3 work in Step 15 changed where *new* uploads go, not where the old
 ones are.
 *Source: `STATUS.md` § Step 15; `implementation/plan.md` Step 21.*
 
+**`media/` is half committed assets and half user uploads, so neither "sync it
+all" nor "exclude it" is right.** Measured 2026-09-17 on the `modernize` branch:
+
+| under `media/` | tracked in git | user uploads |
+|---|---|---|
+| `badges` | **10** | — |
+| `smiley` | **87** | — |
+| `podcast` | **1** | — |
+| `avatars/users`, `banners`, `potd`, `downloads`, `user_photos` | 0 | **all of it** |
+
+`.gitignore` lists `media/badges`, `media/smiley` and the rest, which reads as
+though none of it is tracked — but an ignore entry does not apply to files
+already tracked, and those 98 are. So:
+
+- **`--exclude=media` loses the uploads.** They exist nowhere else.
+- **An unconditional `rsync` of `media/` writes production's copies over tracked
+  files.** Almost certainly identical, but it is a working-tree change nobody
+  asked for, and on a `--delete` run anything tracked-but-absent on production
+  would be deleted locally.
+
+**Sync the upload directories by name rather than syncing `media/` wholesale**,
+and check `git status media/` after the transfer — it should be clean.
+
+**One known gap to fix while there:** three `bio.Badge` rows reference files that
+were never committed — `badges/map.png` (Map Pin), `badges/bns_badge.png` (Brave
+New Surf Pin) and `badges/script.png` (Wiki Pin). They exist on production and
+arrive with this rsync, which is the moment to commit them alongside the other
+ten so the set stops being partial. They render broken in local development
+until then, which is how this was found.
+*Source: Step 20 task 02, tracing broken images on a forum topic page.*
+
 ### B5. Install the Cloudflare Origin CA certificate
 Step 20 terminates TLS at the Apache proxy on a **self-signed certificate**,
 which is all the local stack needs. The real origin certificate is a Cloudflare
@@ -152,6 +183,28 @@ the job puts objects, the lifecycle policy deletes them.
 *Source: Step 20 task 06.*
 
 ## C. The maintenance window
+
+### C0. Freeze writes on jaguar, before the snapshot
+
+**On jaguar**, edit `sg101/apache/sg101.wsgi`, set `OFFLINE = True`, and `touch`
+it — mod_wsgi reloads on mtime, which is what `fab touch` already does. The site
+then answers **503 for GET and 405 for everything else**, serving
+`sg101/templates/offline.html`.
+
+**The 405 is the point, not the notice.** Everything between the final snapshot
+(C1) and the final media delta (C5) is a window where a member posting produces
+a row that will not be in the restored database, or a file with no row. This
+refuses the write rather than losing it.
+
+**It runs on jaguar's own copy**, which is on the `main` branch, under hg, at
+`/svr/django-sites/sg101/sg101/`. The `modernize` branch deleted that script as
+Python 2.7 host configuration, so the copy in the git tree is gone and the one
+that matters is untouched by that deletion.
+
+**The new host is not covered by this.** Its maintenance mechanism is
+Cloudflare-side — see the Step 20 record; it needs to be in place before D2's
+warm window, not before the flip, because until the DNS flip nothing is pointed
+at the new VM anyway.
 
 ### C1. Final snapshot → convert → restore
 `tools/pgloader/convert.sh` then `tools/pgloader/post_convert.py`, the same chain

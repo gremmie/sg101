@@ -109,6 +109,33 @@ over or whether it retires with `mod_wsgi`.
 **Note:** You MUST read the detailed design document before beginning
 implementation. Read additional references as needed for context.
 
+## Carried in from task 01 and task 02 (2026-09-17)
+
+**The compose file must name `target: prod`.** A bare `docker build .` builds the
+*last* stage of the Dockerfile, which is `dev` — checked, and it produces an
+image carrying `django-debug-toolbar`. The `prod` target exists only if something
+names it, so a production compose that writes `build: .` ships the toolbar and
+undoes task 01 silently. Worth an acceptance criterion, not just a line.
+
+**`SECURE_SSL_REDIRECT` and HSTS are this task's, deliberately deferred from task
+02.** `SecurityMiddleware` is now first in `MIDDLEWARE` and
+`SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` is set in
+`production.py`, but nothing sets that header yet — this task's Apache service is
+what will. Until then the redirect stays off, because redirecting a request
+Django wrongly believes is insecure loops forever.
+
+**`check --deploy` tracks the deferral**, which is how to know this is done:
+`security.W001` is gone as of task 02, and **`W004` (HSTS) and `W008` (SSL
+redirect) are the two that remain**. They are the acceptance criteria for this
+part. `core/tests/test_settings.py` asserts both settings are still off, so
+turning them on is a deliberate edit to a test that says why.
+
+**Maintenance mode, backstop half.** Task 02 decided Cloudflare is primary. This
+stack's Apache is the backstop: a rewrite conditioned on a file's existence, so
+maintenance can be toggled over SSH with `touch` and works while gunicorn is
+stopped for a migration. `sg101/templates/offline.html` is its content and is
+still in the tree.
+
 ## Technical Requirements
 1. Add a production compose file running `proxy` (Apache), `web` (gunicorn),
    `worker`, `beat`, `postgres` and `redis`, and no MySQL service.

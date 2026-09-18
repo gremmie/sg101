@@ -66,16 +66,16 @@ implementation. Read additional references as needed for context.
 1. **Create `sg101/wsgi.py`** — the standard `get_wsgi_application()` module,
    taking `DJANGO_SETTINGS_MODULE` from the environment with a sensible default,
    never hardcoding production the way the mod_wsgi script does.
-2. Add `gunicorn` to **both `requirements-docker.txt` and `requirements.txt`** —
-   the image and CI install the former, the latter is this branch's runtime list
-   of record and reaches the `dev` target through `requirements_dev.txt`'s `-r`.
-   See task 01's *Which requirements file is which*; in particular, leave
-   `main`'s `requirements.txt` alone, since that is what live production on
-   jaguar installs from. Make gunicorn the production image's entry point,
-   serving `sg101.wsgi:application`.
+2. Add `gunicorn` to **`requirements.txt`** — task 01 deleted
+   `requirements-docker.txt` after measuring it equal to this file plus the three
+   dev pins, so `requirements.txt` is now what the `prod` target installs and
+   `requirements_dev.txt` reaches the `dev` target through its `-r`. One file,
+   one edit. Leave `main`'s `requirements.txt` alone: that is what live
+   production on jaguar installs from. Make gunicorn the production image's
+   entry point, serving `sg101.wsgi:application`.
 3. Size the worker count from the VM's CPU count rather than hardcoding it, and
    record the reasoning in a comment.
-4. Add `whitenoise` to both requirements files and place its middleware
+4. Add `whitenoise` to `requirements.txt` and place its middleware
    immediately after `SecurityMiddleware` — **which this project does not have.**
    Found 2026-09-17 running `check --deploy` against the production module
    during task 01: `security.W001`, *"You do not have
@@ -104,12 +104,34 @@ implementation. Read additional references as needed for context.
    task's.
 6. Run `collectstatic` as part of the image build or the container entry point,
    and state which and why.
-7. **Decide the fate of `sg101/apache/sg101.wsgi` and of maintenance mode.**
-   Deleting the script is correct — it is Python 2.7 paths for a host being
-   decommissioned. Whether `offline.html` gets a replacement mechanism, and
-   where it lives (a gunicorn-level flag, an Apache `ErrorDocument` in task 03's
-   proxy service, or a Cloudflare rule), is a decision to record, and its
-   cutover-day use belongs in `cutover-runbook.md` if it survives.
+7. **The fate of `sg101/apache/sg101.wsgi` and of maintenance mode — DECIDED
+   2026-09-17.**
+
+   **The script is deleted from this branch.** It is Python 2.7 site paths for a
+   host being decommissioned, and it hardcodes a settings module. Jaguar keeps
+   its own copy, which is on `main` under hg, so **deleting it here does not
+   touch the running site** — and jaguar's copy is still needed, because its
+   `OFFLINE` flag is what freezes writes during the cutover window. Recorded as
+   `cutover-runbook.md` **C0**, before the final snapshot.
+
+   **Maintenance mode is not rebuilt in `wsgi.py`.** The flag worked under
+   mod_wsgi because it reloaded on mtime; gunicorn imports the module once per
+   worker, so flipping a boolean means a restart either way. It also only
+   answers while the application is up, which is not the case it is wanted for.
+
+   **Two layers replace it, neither of them this task's:**
+
+   - **Cloudflare, primary.** A maintenance Snippet (or the same template as a
+     Worker on the free plan) returns a 503 page **without contacting the
+     origin**, so it covers the VM being down, and it supports an IP allowlist
+     so the site can be verified while others see the notice. **Watch the
+     Workers free tier**: 100k requests/day against a measured ~90.8k/day, so
+     bind the route only while maintenance is on rather than leaving it bound
+     behind an internal flag.
+   - **Apache in the compose stack, backstop — task 03's.** A rewrite conditioned
+     on a file's existence gives a page that can be toggled over SSH with
+     `touch`, needing no dashboard, and it works when gunicorn is stopped for a
+     migration. `sg101/templates/offline.html` stays in the tree as its content.
 8. Leave the development workflow on `runserver`.
 
 ### The static-assets decision this task shares with task 10

@@ -62,13 +62,28 @@ rebuild against the committed artifact **before** replacing it: bytes that diffe
 Sass implementation, a newer autoprefixer target, a different minifier — which is
 worth seeing rather than absorbing silently.
 
-### The decision this task inherits rather than makes
+### The decision this task inherits — DECIDED 2026-09-17 in task 02
 
-`plan.md`: **"is built CSS a committed artifact or a deploy-time build step?"** is
-*"one decision about static assets, not two"* — it interacts directly with
-WhiteNoise, `collectstatic` and `ManifestStaticFilesStorage`. **Task 02 owns that
-decision.** Read it there and implement it; do not re-decide it here. If task 02
-has not run yet, the decision still gets made there, not in this file.
+**Built CSS stays a committed artifact, and CI verifies it is reproducible.**
+Brian's call. The production image stays free of Node, deploys stay one step, and
+`main.min.css` stays diffable in review — while the drift that would otherwise
+argue for a deploy-time build becomes a failing CI run instead.
+
+**That makes a CI check this task's to deliver**, not an optional extra: after
+the rebuild works, CI runs the build and fails if the committed file differs.
+
+```
+npm run build
+git diff --exit-code sg101/static/css/v3/main.min.css
+```
+
+It sharpens acceptance criterion 2 rather than replacing it: the criterion says
+every difference from the baseline must be explained, and this says that once
+they have been, the *steady state* is byte-identical and machine-checked.
+
+**Note the ordering trap.** The check can only be added after the rebuild
+reproduces the committed file, including the two hand-appended rules. Adding it
+first turns every CI run red until the toolchain is finished.
 
 ## Reference Documentation
 **Required:**

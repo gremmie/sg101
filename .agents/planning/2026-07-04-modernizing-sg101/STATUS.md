@@ -43,6 +43,137 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 02 — gunicorn, WhiteNoise, and a static pipeline that had never run — DONE 2026-09-17, `7d51fe34`, PUSHED
+
+**Suite 1269 OK, gate 1269 OK, `check --deploy` down to the two warnings this
+task deliberately leaves.** The production image no longer runs `runserver`, and
+`sg101/wsgi.py` exists for the first time.
+
+### The finding: `collectstatic` had never worked on this stack
+
+`collectstatic` exited 1 under `ManifestStaticFilesStorage` with a
+`UnicodeDecodeError` — **two files in TinyMCE's `spellchecker` plugin are
+latin-1**, and they have been since 2011.
+
+**It never surfaced on jaguar, and the reason is exact.** `fabfile.py:15` has run
+`collectstatic` with production settings on that host for years. Hashing reads
+bytes; only files matching `HashedFilesMixin.patterns` are decoded as UTF-8 to
+rewrite references. Read out of the installed 5.2 rather than recalled:
+
+```
+*.css -> 3 reference pattern(s)
+*.js  -> 1 reference pattern(s)
+```
+
+**The `*.js` entry is recent** — it exists to rewrite `sourceMappingURL`. On
+Django 1.8 only CSS was post-processed, so those two files were hashed as bytes
+and never decoded. **The blast radius grew underneath files nobody had touched.**
+
+**Nothing else on this stack runs `collectstatic`, so the first deploy to the new
+host would have failed** — at cutover, on the day with the least room for it.
+
+**Fixed by deleting the plugin** (Brian's call): it is not in the enabled list —
+`table,advhr,emotions,insertdatetime,preview,searchreplace,print,contextmenu,fullscreen,media,paste`,
+**11 of 36 shipped plugins** — so re-encoding would have fixed a plugin nothing
+loads. With it gone, **1122 files copied and all 1122 post-processed**, no
+missing-reference failures. That answers the task's open question: the existing
+`ManifestStaticFilesStorage` configuration does survive Django 5.2's `STORAGES`,
+and the encoding was the only blocker.
+
+### Decisions taken
+
+**`sg101/wsgi.py` has no default settings module.** `manage.py` and `celery.py`
+default to development, which is right for a person at a terminal. The same
+default in a WSGI entry point means a server whose environment lost the variable
+serves tracebacks with `ALLOWED_HOSTS = ['*']`. **Failing to start is the better
+outcome**, and every launch path sets the variable.
+
+**`collectstatic` at image build, not container start.** ~2s for 1122 files. The
+image is self-contained and the manifest cannot drift from the code it was built
+from. **CI gets it free**: `docker compose build web` builds the `dev` target,
+`dev` is `FROM prod`, so the layer runs — verified by finding
+`staticfiles.json` in the dev image. **The dev *container* shows none of it**,
+because the `.:/app` bind mount shadows the directory; harmless, since
+`runserver` serves from source.
+
+**Built CSS stays committed, and CI will verify it is reproducible.** Brian's
+call, and it is recorded as task 10's obligation: after the rebuild works, CI
+runs the build and fails on a diff. Ordering trap noted there — added before the
+toolchain works, it turns every run red.
+
+**`SecurityMiddleware` added, redirect and HSTS deferred.** It has existed since
+**Django 1.8** — jaguar's own version — and was never added; `check --deploy`,
+which shipped in the same release, is what reports it. Adding it alone supplies
+`X-Content-Type-Options`, `Referrer-Policy` and `Cross-Origin-Opener-Policy`
+from their defaults. **`W001` is gone; `W004` (HSTS) and `W008` (SSL redirect)
+are the two that remain and are task 03's acceptance criteria.** A test asserts
+both settings are still off, so turning them on is a deliberate edit.
+
+**Maintenance mode is not rebuilt in `wsgi.py`.** The `OFFLINE` flag worked
+because mod_wsgi reloaded on mtime; gunicorn imports once per worker. It also
+only answers while the application is up, which is not the case it is wanted
+for. **Cloudflare is primary** (a Snippet returns 503 without contacting the
+origin, and allows an IP bypass — watch the Workers free tier, 100k/day against
+a measured ~90.8k/day, so bind the route only while it is on), **Apache in task
+03's stack is the backstop**, and jaguar's own copy of the script is the cutover
+write-freeze, now runbook **C0**.
+
+### `STATIC_ROOT`, and a stray directory it explains
+
+Moved out of `base.py` to `test.py`, where the name `/tmp/test_static_root`
+always said it belonged. **`base.py` now defines no `STATIC_ROOT`**, as it
+defines no `DATABASES` and no `LOGGING`. Consequence, and the point of doing it:
+`collectstatic` under dev settings now raises `ImproperlyConfigured` instead of
+writing to `/tmp` — **and can no longer create a stray `static_root/` on the Mac
+through the bind mount**, which is how it appeared twice while this task ran.
+`.gitignore`'s `static_serve` was jaguar's name for that directory and is
+repointed.
+
+### Two corrections earned while tracing broken images
+
+Brian asked why some images 404 on a forum topic page. **Every one of the 35
+`/static/` URLs on that page returns 200**; every 404 is `/media/`.
+
+**1. Badges are media, not static, and the broken ones are not the ones they
+looked like.** `bio/models.py:43` is `ImageField(upload_to='badges')`. Of 13
+`Badge` rows, 10 files are present and serve 200 — **including News
+(`newspaper.png`) and Calendar (`date.png`)**. The three that 404 are **Map,
+Brave New Surf and Wiki** (`map.png`, `bns_badge.png`, `script.png`), which were
+never committed. `script.png` is a document icon, which is probably why it read
+as "news".
+
+**2. `media/` is half committed assets and half user uploads**, and
+`.gitignore` hides that: it lists `media/badges` and `media/smiley`, but **an
+ignore entry does not apply to already-tracked files** and 98 of them are
+tracked — 10 badges, 87 smileys, 1 podcast file. So neither `--exclude=media`
+nor a wholesale `rsync` of `media/` is correct at cutover. Recorded as runbook
+**B4**, with the three missing badge files as a gap to close there.
+
+**A measurement error of my own, corrected in the same breath.** I first reported
+`media/smiley` as 87 tracked against 1 on disk and called it a broken checkout.
+It is 87 against 87, `git status` clean. I had counted on-disk with `ls` — which
+saw one entry, the `images/` subdirectory — and tracked with `git ls-files`,
+which is recursive, then compared the two as though they measured the same thing.
+The same flaw produced a bogus `potd` row. **Comparing two counts requires that
+both counted the same thing** — see [[probes-must-not-perturb-what-they-measure]]
+for the neighbouring failure.
+
+### Verified by running the image, not by reading it
+
+- prod image: `gunicorn 26.2.0`, `2*CPU+1` workers (21 booted on a 10-CPU host),
+  sized at start so the VM's count governs rather than the build machine's
+- hashed asset → `Cache-Control: max-age=315360000, public, immutable`
+- unhashed name → `max-age=60, public`
+- rendered page references `css/v3/main.min.04783fc9afb1.css`, from the manifest
+- missing asset → 404; home page → 200 with all three security headers
+- **pins checked against PyPI rather than recalled**: my first draft wrote
+  `gunicorn==23.0.0` and `whitenoise==6.11.0`; current are **26.2.0** and
+  **6.12.0**, and this project aligns to the current line
+
+Five tests cover the production wiring, each watched to fail — WhiteNoise moved
+last, `SecurityMiddleware` removed, `STATIC_ROOT` reverted, the proxy header
+dropped, HSTS switched on — with both settings modules byte-identical after each.
+
 ## Step 20 task 01 — one settings module per deployment — DONE 2026-09-17, `0764b87a` + `3d82ab26` + `20188f2a` + `9dfda6dc` + `f5657698`, PUSHED, CI GREEN
 
 Four staged commits plus one fix. **Suite 1254 → 1264, the deprecation gate
