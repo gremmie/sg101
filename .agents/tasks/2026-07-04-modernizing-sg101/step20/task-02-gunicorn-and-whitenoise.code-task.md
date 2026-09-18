@@ -76,7 +76,28 @@ implementation. Read additional references as needed for context.
 3. Size the worker count from the VM's CPU count rather than hardcoding it, and
    record the reasoning in a comment.
 4. Add `whitenoise` to both requirements files and place its middleware
-   immediately after `SecurityMiddleware`, which is where it must sit.
+   immediately after `SecurityMiddleware` — **which this project does not have.**
+   Found 2026-09-17 running `check --deploy` against the production module
+   during task 01: `security.W001`, *"You do not have
+   'django.middleware.security.SecurityMiddleware' in your MIDDLEWARE"*.
+   `base.py:112` starts `MIDDLEWARE` with `CommonMiddleware`, and **no `SECURE_*`
+   setting is defined anywhere in the package.** So this requirement as written
+   cannot be followed, the same way requirement 1 named a `sg101.wsgi` that did
+   not exist.
+
+   **Decide the middleware before placing WhiteNoise after it.** Adding
+   `SecurityMiddleware` is not a formality: it is what makes
+   `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`, `SECURE_CONTENT_TYPE_NOSNIFF`
+   and `SECURE_REFERRER_POLICY` do anything, and HSTS in particular is
+   difficult to walk back once a browser has cached it. It also interacts with
+   the Cloudflare front, which already terminates TLS. Treat it as its own
+   decision with its own values, and place WhiteNoise relative to whatever that
+   decides — WhiteNoise's own requirement is only that it sit above the
+   middleware that would otherwise serve static files, not that
+   `SecurityMiddleware` exist.
+
+   Note the toolbar sits at `MIDDLEWARE[0]` in dev and is asserted there by
+   `core/tests/test_settings.py`, so a new first middleware changes that test.
 5. Give `STATIC_ROOT` a real path outside `/tmp`, and confirm whether the
    existing `ManifestStaticFilesStorage` configuration survives Django 5.2's
    `STORAGES` setting. Task 01 leaves a placeholder value; the decision is this
@@ -186,3 +207,7 @@ runs first.
    neither.
 4. **The committed-CSS-vs-deploy-build decision is now referenced here**, where
    `plan.md` says it belongs — with task 10 inheriting it rather than re-deciding.
+5. **`SecurityMiddleware` does not exist in this project** (2026-09-17), so
+   requirement 4's anchor had to become a decision rather than a position. Found
+   by running `check --deploy`, which is the second premise in this file that
+   reading alone would not have caught.

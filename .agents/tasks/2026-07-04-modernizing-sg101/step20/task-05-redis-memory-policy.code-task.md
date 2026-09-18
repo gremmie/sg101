@@ -37,8 +37,14 @@ implementation. Read additional references as needed for context.
 2. Set `maxmemory-policy volatile-lru`.
 3. Confirm the three logical databases and their roles, and confirm that broker
    and kept-state keys carry no TTL — the property the policy depends on.
-4. Move the production Redis and Celery broker configuration off the unix socket
-   onto the compose service.
+4. Move the production **Celery broker** off the unix socket onto the compose
+   service. **The cache half is already done** — task 01 rewrote
+   `production.py`'s `CACHES['default']['LOCATION']` to `redis://host:port/2`
+   and gave the module its own `REDIS_HOST`/`REDIS_PORT`. What remains is
+   `CELERY_BROKER_URL`, which `production.py` does not override at all: it
+   inherits `base.py:273`'s `redis+socket:///var/run/redis/redis.sock`, so
+   **production is not deployable until this task lands.** Verified 2026-09-17
+   by reading the setting out of the production module.
 5. **Invert `base.py:264`'s default.** It defaults `REDIS_UNIX_SOCKET` to
    `/var/run/redis/redis.sock` — jaguar's path — and every container config has
    to null it explicitly (`docker.py:38`, `docker_test.py:31`, and whatever task

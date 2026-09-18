@@ -43,6 +43,138 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 01 — one settings module per deployment — DONE 2026-09-17, `0764b87a` + `3d82ab26` + `20188f2a` + `9dfda6dc` + `f5657698`, PUSHED, CI GREEN
+
+Four staged commits plus one fix. **Suite 1254 → 1264, the deprecation gate
+matching at every stage, checks clean.** The settings package is now one module
+per deployment, and the image has a production target that carries no
+development tooling.
+
+**The images.** `Dockerfile` splits into `prod` and `dev`, `dev` built `FROM
+prod` so the runtime layers are shared. Verified by listing the built images
+rather than reading the file: `prod` carries none of `django-debug-toolbar`,
+`coverage` or `testfixtures`, and does carry Django 5.2.17, psycopg2 2.9.12 and
+celery 5.6.3; `dev` carries the toolbar at 7.1.1. Sizes 2.17 GB and 2.18 GB —
+the difference is the three tools, nothing installed twice.
+
+**`requirements-docker.txt` is deleted.** Measured equal to `requirements.txt`
+plus `coverage`, `django-debug-toolbar` and `testfixtures`, with **no differing
+pins** — exactly `requirements_dev.txt` flattened — so the targets now express
+the boundary its contents used to. This retires the hand-mirroring hazard where
+a pin added to `requirements.txt` alone rebuilt cleanly and changed nothing.
+**Three files, three consumers, and the third is why the duplication existed**:
+`main`'s `requirements.txt` is what live production installs from, and `main`
+carries no `requirements-docker.txt` at all. **The duplication ends with jaguar,
+not here.**
+
+**One thing to carry to task 03: a bare `docker build .` builds the *last*
+stage, which is `dev`.** Checked, and it produced an image with the toolbar in
+it. `prod` exists only if something names it, so the production compose must set
+`target: prod` explicitly or it ships the toolbar and the split buys nothing.
+
+**`local.py` + `docker.py` → `dev.py`.** The shim inherited `local.py` whole and
+overrode the database and Redis onto TCP, to keep the bare-metal reproduction
+faithful — a reason that expired several steps ago. `manage.py` and
+`sg101/celery.py` had defaulted to `local.py`, **whose MySQL DSN named a unix
+socket on a box nobody runs**, so the default settings module was one nothing
+could use; both now default to `sg101.settings.dev`, verified with
+`DJANGO_SETTINGS_MODULE` unset rather than assumed. The toolbar's
+`find_spec` guard is gone, the module being dev-only, and `docker.py`'s
+`SHOW_TOOLBAR_CALLBACK` folded into the same config.
+
+**`LOGGING` comes from `sg101/settings/logging_config.py`**, shaped like
+`databases.py`. `dev.py` 238 → 88 lines, `production.py` 247 → 93, one 186-line
+helper replacing ~290 duplicated ones. **The eight differences are four
+parameters**, because five of the eight — four handler levels and the `auth`
+logger — are the single decision *dev is verbose*, written out five times.
+**Gate: each module's `LOGGING` dumped before and after and compared, both
+byte-identical.** One apparent difference dissolved on reading: the `file`
+handler stays at DEBUG in both targets, since what `sg101.log` collects is
+decided by the root logger's level, so its own level is inert in production.
+
+**`production.py` no longer describes jaguar.** `from_env('postgresql')` for the
+database, the cache `LOCATION` on `redis://host:port/2`, and `STATIC_ROOT` off
+the `static_serve` path. None of `/var/run/mysqld`, `unix://`,
+`REDIS_UNIX_SOCKET` or `static_serve` appears in the module. `STATIC_ROOT` is a
+container path and **deliberately provisional** — where `collectstatic` writes,
+and whether anything serves it from disk, belongs to task 02.
+
+### What this cost in wrong claims, which is the part worth keeping
+
+**Three, and only one was caught by reading.**
+
+**1. The toolbar's middleware position, inherited from `plan.md`.** Covered in
+its own section above: the task file said "after `CommonMiddleware`", which is
+the position Step 14 task 04 measured and abandoned, and acceptance criterion 7
+would have certified the regression.
+
+**2. "No view — and no database — is reached."** Asserted in a test docstring
+*and* in `3d82ab26`'s commit message, about the `/forums` → 301 check. **CI
+failed on it** — `relation "django_site" does not exist`, three failures. It
+passed locally because this dev database has the production snapshot loaded and
+CI's is empty. Both halves were wrong: Django issues the `APPEND_SLASH` redirect
+from `process_response` once the response is already a 404, so the request
+traverses the whole chain, and `FlatpageFallbackMiddleware` — last in
+`MIDDLEWARE`, therefore first to see the response — queries `django_site`
+looking for a flatpage. **The probe that "confirmed" it could not distinguish
+the two cases, and the conclusion was recorded anyway.**
+
+The observable was replaced rather than repaired. The test now builds a
+`DebugToolbar` against a bare `HttpRequest` and reads which panels come out
+**enabled**, which is the state that governs the behaviour: `DISABLE_PANELS`
+does not remove a panel from the list, it decides which are consulted, and only
+an enabled panel intercepts. Proved hermetic by pointing the subprocess at an
+unresolvable `DB_HOST` — the old check dies, the replacement answers.
+
+**A subprocess test inherits the developer's database.** That is the general
+lesson: several tests here load a deployment module in a subprocess, and they
+are safe only because they read configuration. Anything that issues a *request*
+from one is testing against whatever happens to be in the local `sg101`.
+
+**3. What the mutation battery covers.** Written into a docstring from
+reasoning, then contradicted by running it. Moving the toolbar to index 1 fails
+the middleware assertion **alone** — the redirect still answers 301 from index 1
+— so the observable never covered the position. And a **misspelled
+`DISABLE_PANELS` key does not re-enable `RedirectsPanel`**, because the toolbar's
+own defaults already disable it; what the typo loses is `ProfilingPanel`. The
+typo is invisible from `RedirectsPanel`'s side, and only the `ProfilingPanel`
+assertion catches it — the *"an empty `DISABLE_PANELS` means turn both on"*
+finding running in reverse.
+
+### Found by running `check --deploy`, and left as a decision
+
+**`SecurityMiddleware` is not in this project at all**, and **no `SECURE_*`
+setting is defined anywhere** — `security.W001`, against `base.py:112` starting
+`MIDDLEWARE` with `CommonMiddleware`. **Task 02's requirement 4 says to place
+WhiteNoise "immediately after `SecurityMiddleware`, which is where it must
+sit"**, so that instruction cannot be followed as written — the same class of
+defect as the `sg101.wsgi` that did not exist, and the second in that file that
+reading alone did not catch.
+
+**Not fixed here, on purpose.** Adding it is what makes `SECURE_SSL_REDIRECT`
+and `SECURE_HSTS_SECONDS` do anything, and **HSTS is hard to walk back once
+browsers have cached it**; it also interacts with Cloudflare already terminating
+TLS. Recorded in task 02 as its own decision with its own values, with the note
+that a new first middleware changes the `MIDDLEWARE[0]` assertion the toolbar
+tests now make.
+
+### Still open, and task 05 owns it
+
+**`production.py` is not deployable yet.** It never overrides
+`CELERY_BROKER_URL`, so it inherits `base.py:273`'s
+`redis+socket:///var/run/redis/redis.sock` — jaguar's path. Read out of the
+production module 2026-09-17 rather than inferred. Task 01 moved the cache;
+**task 05's requirement 4 has been narrowed to the broker**, since it claimed
+both halves and one is done, and it now states the deployability dependency so
+it is not discovered at cutover.
+
+**Ten new tests**, every one mutation-verified with the mutated file restored
+byte-identical after each: four on the toolbar's wiring, four on what the two
+deployments' logging may disagree about, two on which database and cache the
+deployed modules name. The logging cases read each module's **own** `LOGGING`,
+so a deployment module that quietly stopped using the shared helper fails seven
+of them — verified by making it stop.
+
 ## PLANNING — Step 20: nine task files, and the proxy decision that was wrong twice (2026-09-12)
 
 Step 19 closed 2026-09-09, making Step 20 the active step. Nine task files
