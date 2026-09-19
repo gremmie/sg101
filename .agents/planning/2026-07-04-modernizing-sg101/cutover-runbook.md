@@ -58,6 +58,12 @@ code until the flip, so the audit is only true as of the day it was run.
 that path — the same silent-divergence shape as the working-copy edit above, in a
 file that is the site's security boundary. Check it with the same eye, and on the
 new host as well as the old one.
+
+**Concretely, since task 03 (2026-09-19):** the proxy reads `apache/` from the
+checkout, and a graceful reload picks up whatever is there. `git status apache/
+docker-compose.prod.yml` on the VM must be clean. The Apache image carries only
+the program and its modules, so nothing about the site's configuration hides in
+it.
 *Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
 03 and 04.*
 
@@ -148,7 +154,12 @@ which is all the local stack needs. The real origin certificate is a Cloudflare
 Origin CA cert — long-lived, no renewal job, and trusted only for proxied traffic,
 which is why it pairs with B6. **Issuing and installing it needs the provisioned
 VM**, so it happens here and not in Step 20.
-*Source: Step 20 task 04, the TLS decision.*
+
+**Where it goes:** `secrets/tls/origin.pem` and `secrets/tls/origin.key` in the
+checkout, mounted read-only into the proxy. The local self-signed pair uses the
+same names, so the vhost does not change between the two. `secrets/` is
+git-ignored and **backed up nowhere**, like `.env` and the calendar key.
+*Source: Step 20 task 04, the TLS decision; task 03 fixed the paths.*
 
 ### B6. Apply the origin firewall — and it has never been run
 **Step 20 task 07 authors the ruleset and cannot apply it**, because no VM existed
@@ -181,6 +192,18 @@ credentials are already in the project from Step 15. Use a **new bucket**, not
 `sg101.user.photos` or `sg101.forum.photos`, and a **write-scoped credential** —
 the job puts objects, the lifecycle policy deletes them.
 *Source: Step 20 task 06.*
+
+### B8. `/hosted` and `/photos` — content from jaguar's document root
+Two directories that were **not in the repo and recorded nowhere** until Step 20
+task 03 read jaguar's vhost: `Alias /hosted/` and `Alias /photos/` point into
+`/svr/www/surfguitar101.com/public/`. Measured 2026-09-19: **`hosted/` 16 MB,
+`photos/` 69 MB, 1,509 files together**, and **40 requests** for either in the
+access log current that day (window not measured; not split by path or by bot).
+
+The new proxy serves both from `var/public/{hosted,photos}` in the checkout.
+**`rsync` both there from jaguar**, then spot-check one file from each through
+the site. `var/` is git-ignored, so nothing but this step puts them there.
+*Source: `STATUS.md` § Step 20 task 03.*
 
 ## C. The maintenance window
 
@@ -250,6 +273,13 @@ deploy, not only this one.
 *Source: task 06's browser session, Brian spotted it in the worker log.*
 
 ### C5. Final media delta, then the DNS flip
+**Before the flip, run `tools/prod_smoke.sh <vm-address>` from a checkout.** It
+makes every request to the VM's own address under the site's name, so it tests
+the new origin while DNS still points at jaguar: the home page over TLS, one
+HSTS header, the redirects, the root files, `/media`, the old SG101 1.0 URLs,
+and that 8000/5432/6379 are closed. It was written against the local stack;
+this is its first run against a real host.
+
 Low-TTL cutover in Cloudflare.
 
 ## D. After
@@ -278,7 +308,7 @@ Stated so the file is not mistaken for complete:
   DNS back". What that means for data written to the new host during the window
   has not been decided.
 - **Step 20 is unfinished** and will add entries; its nine task files were
-  generated 2026-09-12 and B5 and B6 above are the first two they produced.
+  generated 2026-09-12; B5, B6 and B8 above came from it, and C5's smoke run.
   *(Step 19 closed 2026-09-09 and no longer belongs on this list.)*
 - **Ordering and timings are absent.** The sections are grouped by phase, not
   sequenced, and nothing here estimates how long the window needs to be.

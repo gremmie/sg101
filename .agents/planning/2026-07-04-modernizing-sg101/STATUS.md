@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-19
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,136 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 20 task 03 — the production stack, Apache in front — DONE 2026-09-19, `60c54324`, COMMITTED
+
+**Suite 1271 OK, gate 1271 OK, `tools/prod_smoke.sh` 19/19, `check --deploy`
+down to W005 and W021, both deliberate.** `docker-compose.prod.yml` runs `proxy`
+(Apache), `web` (gunicorn), `worker`, `beat`, `postgres` and `redis` with
+production settings; only the proxy publishes a port. Brian browser-tested it
+2026-09-19 through a throwaway Chrome mapped to the local stack: good.
+
+### jaguar's vhost, read for the first time — and what it said
+
+`sites-enabled/surfguitar101.com.conf` had been recorded nowhere in `.agents/`.
+Brian ran the read (the ssh was refused to me as a production read). It settled
+one question and turned up three gaps:
+
+- **HSTS came from jaguar's Apache**, `Header add Strict-Transport-Security
+  "max-age=604800"`. **Now Django's**: `SECURE_HSTS_SECONDS = 604800`, no
+  subdomains, no preload, and the new Apache sends none, so there is one header
+  with one value. Whether Cloudflare's own HSTS setting is off is **not
+  verified**; one header at the edge is consistent with either.
+- **`/robots.txt`, `/favicon.ico` and the Google verification file were served
+  only by Apache aliases.** WhiteNoise serves them under `/static/`, so without
+  aliases all three would have 404'd at cutover. The live `/robots.txt` is
+  byte-identical to `static/robots.txt`, `last-modified` one minute after
+  `ab46ab25` — jaguar's file, cached by Cloudflare. Brian relies on Cloudflare for
+  bot control; the alias is kept anyway, since dropping it later is one line.
+- **Five SG101 1.0 URL rewrites**, ported verbatim.
+- **`/hosted/` and `/photos/` alias into jaguar's document root** — 16 MB + 69 MB,
+  1,509 files, 40 requests in that day's access log (window not measured, not
+  split by bot). Carried: served from `var/public/`, rsync'd at cutover as
+  runbook **B8**.
+
+Not ported, deliberately: jaguar's 2016 cipher list (it allows TLS 1.0/1.1; only
+Cloudflare connects to the new origin, so Debian's defaults stand), `mod_wsgi`,
+Let's Encrypt's `.well-known/`, and static `Expires` headers (WhiteNoise sets
+its own).
+
+### Decisions taken (Brian, 2026-09-19)
+
+| Decision | Choice |
+|---|---|
+| 03/04 boundary | 03 builds the whole vhost; 04 keeps `mod_remoteip`, the range re-check, `CSRF_TRUSTED_ORIGINS` |
+| Compose | a standalone `docker-compose.prod.yml`, project `sg101-prod` |
+| Apache config | top-level `apache/`, Debian layout, the **directory** bind-mounted |
+| `sg101/apache/` | removed (it was empty and untracked since task 02) |
+| Health checks | the home page, not a `/health/` view |
+| Django logs | bind-mounted to `var/log/django` |
+| Smoke test | `tools/prod_smoke.sh`, taking an origin address |
+
+**Why the project name matters:** both compose files use the same service names,
+so without `name: sg101-prod` they are one project and `up` on either replaces
+the other's containers. **Why a directory mount:** vim saves by writing a new
+file, and a single-file bind mount keeps the old inode — an edit that never
+reaches Apache and no error saying so.
+
+**Why the home page:** it is uncached apart from a 600s slideshow fragment, so
+every render queries PostgreSQL and loads forum tags that read Redis. A health
+view would have been ~15 lines and four tests to prove less. Two checks every
+30s is ~5,800 renders a day against ~90k real requests.
+
+### Requirement 10: both halves of the socket
+
+`production.py` now sets `REDIS_UNIX_SOCKET = None` and
+`CELERY_BROKER_URL = redis://{REDIS_HOST}:{REDIS_PORT}/1`, the `dev.py` shape.
+`base.py`'s default is untouched; inverting it is task 05's requirement 5.
+
+### Measured against the running stack
+
+The development database was piped into the production stack's own volume
+(`pg_dump` from dev, search data excluded): **463,223 posts, 15,227 users** on
+both sides. All six services came up healthy on the first start.
+
+| Criterion | Result |
+|---|---|
+| 1 serves through Apache, DEBUG off | 200; the 404 page is not the debug page |
+| 2 no MySQL | `db` absent; the prod image cannot import `debug_toolbar` |
+| 3 proxy only | 8000, 5432, 6379 refused — **with the dev stack stopped**, which publishes all three |
+| 4 access log on the host | `combined` lines in `var/log/apache/access.log`; the proxy's own health requests excluded |
+| 5 health | PostgreSQL stopped → `web` and `proxy` unhealthy at **71s**, healthy **20s** after it restarted |
+| 6 graceful reload | **240/240** requests 200 across two reloads |
+| 7 Redis consumers | Celery's own `inspect stats`: the worker ran `core.tasks.max_users`; a logged-in first request wrote `whos_online:users` in db 0 |
+| 8 docs | `DOCKER.md` §10 |
+
+Two readings of criterion 5 worth keeping: a **stopped** container shows
+`exited`, not `unhealthy` — the dependents are what report it — and the
+**worker stays healthy** with the database down, because its check is a broker
+round trip.
+
+**Maintenance mode** returns `offline.html` with 503 whether gunicorn is up or
+down, POSTs and `/robots.txt` included. With no flag and gunicorn down, visitors
+get the same page, since the 503 error document covers a dead backend too.
+
+### Mutation batteries — 14 of 14, one only after a check was added
+
+**Settings, 7/7**, `production.py` restored byte-identical: socket left
+inherited, broker back on the socket, broker on db 0, redirect off, HSTS on
+subdomains, preload on, HSTS at a year.
+
+**Apache, 7/7**, each run through a graceful reload and the smoke script, vhost
+restored byte-identical: a legacy rewrite dropped, `X-Forwarded-Proto` dropped
+(home page 301s to itself), the robots alias dropped, HSTS added in Apache (two
+headers), the `/media/` proxy exclusion dropped, the health-check log exclusion
+dropped (caught by reading the log, not the script), and **`set` →
+`setifempty` on `X-Forwarded-Proto`, which survived the first run.** The script
+never sent the header, so it could not tell the two apart. A check now sends
+`X-Forwarded-Proto: http` and expects 200; it fails on `setifempty` with a 301.
+
+### Three errors of my own in the probes
+
+1. **zsh does not word-split `$P`**, so the first restore ran nothing on the
+   production side. The dev dump was read and cut off; nothing was written.
+2. **The who's-online probe sent `sessionid`**; this site's cookie is
+   `sg101_sessionid`. The first "no write" was an anonymous request, not a
+   broken stack.
+3. **`core:stats` in db 0 nearly counted as proof the worker ran.** `get_stats()`
+   copies the row from the database into Redis on any read, so it proved only
+   that *something* wrote db 0. Celery's own count is what shows the worker.
+
+### Open, and not this task's
+
+- **Task completion lines appear nowhere** — not in the worker's output, not in
+  `var/log/django`. "Received" is logged; "succeeded" is not.
+- **Log rotation races.** N gunicorn workers, the Celery worker and beat all
+  write the same files through `RotatingFileHandler`, and each process rotates
+  on its own. Lines can be lost or land in the rotated file. True since task 02
+  brought gunicorn; jaguar's single mod_wsgi process never had it. **Wants a
+  decision** — stdout with the Docker log driver is the container-native answer.
+- **Client address in the access log** is the Docker gateway locally, and will be
+  Cloudflare's edge on the VM until task 04.
+- **The application containers run as root**, and Redis stays at 6 to match dev.
 
 ## Step 20 task 02 — gunicorn, WhiteNoise, and a static pipeline that had never run — DONE 2026-09-17, `7d51fe34`, PUSHED
 
@@ -290,6 +420,8 @@ that a new first middleware changes the `MIDDLEWARE[0]` assertion the toolbar
 tests now make.
 
 ### Still open, and task 03 owns it — reassigned 2026-09-18
+
+**Closed by task 03, 2026-09-19** — see its section above.
 
 **`production.py` is not deployable yet.** It never overrides
 `CELERY_BROKER_URL`, so it inherits `base.py:283`'s
