@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -289,15 +289,22 @@ TLS. Recorded in task 02 as its own decision with its own values, with the note
 that a new first middleware changes the `MIDDLEWARE[0]` assertion the toolbar
 tests now make.
 
-### Still open, and task 05 owns it
+### Still open, and task 03 owns it — reassigned 2026-09-18
 
 **`production.py` is not deployable yet.** It never overrides
-`CELERY_BROKER_URL`, so it inherits `base.py:273`'s
-`redis+socket:///var/run/redis/redis.sock` — jaguar's path. Read out of the
-production module 2026-09-17 rather than inferred. Task 01 moved the cache;
-**task 05's requirement 4 has been narrowed to the broker**, since it claimed
-both halves and one is done, and it now states the deployability dependency so
-it is not discovered at cutover.
+`CELERY_BROKER_URL`, so it inherits `base.py:283`'s
+`redis+socket:///var/run/redis/redis.sock` — jaguar's path. **It also never nulls
+`REDIS_UNIX_SOCKET` (`base.py:274`)**, and `core/services.py` takes the socket
+branch whenever that setting is truthy, so db 0 — who's-online, written by the
+`WhosOnline` middleware on any request that lacks its online cookie, and the forums' latest-post lists — is
+on jaguar's socket too. The 2026-09-17 reading caught the broker and missed this
+half; found 2026-09-18 while untangling the task order.
+
+**Tasks 03 and 05 each listed the other as a dependency.** Brian's call, 2026-09-18:
+**03 first.** Both socket overrides move into task 03 as requirement 10, since its
+criterion 1 cannot pass without them; task 05 keeps the memory policy, the
+`base.py` default inversion and the dead branch in `core/services.py`. Both task
+files carry an amendment record.
 
 **Ten new tests**, every one mutation-verified with the mutated file restored
 byte-identical after each: four on the toolbar's wiring, four on what the two

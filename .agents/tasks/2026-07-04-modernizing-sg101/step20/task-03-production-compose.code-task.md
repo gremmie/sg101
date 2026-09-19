@@ -155,10 +155,22 @@ still in the tree.
 8. Set restart policies appropriate to an unattended VM, and make proxy config
    changes a reload rather than a restart.
 9. Document how the stack is started, stopped and reloaded, in `DOCKER.md`.
+10. **Point production at Redis over TCP for all three databases** — moved here
+    from task 05 on 2026-09-18. `production.py` inherits two socket settings
+    from `base.py`: `REDIS_UNIX_SOCKET` (line 274), which `core/services.py`
+    uses for db 0 whenever it is truthy, and `CELERY_BROKER_URL` (line 283).
+    Override both in `production.py`, in the shape `dev.py:29-36` already uses:
+    null the socket, broker at `redis://host:port/1`. The cache (db 2) is already
+    on TCP from task 01. Leave `base.py`'s default alone — inverting it is task
+    05's requirement 5.
 ## Dependencies
 - Task 01 — the `prod` image target and production settings
 - Task 02 — gunicorn as the entry point
-- Task 05 — Redis memory policy, which this file's `redis` service must carry
+
+**Not a dependency either, as of 2026-09-18: task 05.** The two files listed each
+other. Brian's call is 03 first: this task ships the `redis` service on Redis's
+own defaults, and task 05 adds `maxmemory` and `volatile-lru` to it afterwards.
+Task 05 depends on this one, not the reverse.
 
 **Not a dependency, deliberately: task 04.** This task stands the proxy service up
 with a minimal working configuration — reverse proxy to gunicorn, TLS, logs on a
@@ -210,7 +222,14 @@ Listing 04 here would make the two circular; the order is 03 then 04.
    - When the Apache configuration is reloaded
    - Then no request fails
 
-7. **The procedure is written down**
+7. **Every Redis consumer reaches the compose service**
+   - Given the running stack
+   - When a logged-in page is served to a client with no online cookie (the
+     `WhosOnline` middleware writes only then) and a Celery task is queued
+   - Then db 0 gains the who's-online keys, the worker runs the task, and
+     `/var/run/redis/redis.sock` appears nowhere in production's settings
+
+8. **The procedure is written down**
    - Given `DOCKER.md`
    - When the production section is read
    - Then starting, stopping, reloading and inspecting the stack are documented
@@ -219,3 +238,14 @@ Listing 04 here would make the two circular; the order is 03 then 04.
 - **Complexity**: Medium
 - **Labels**: Docker Compose, Apache, Deployment, Health Checks, Production Hardening
 - **Required Skills**: Docker Compose, Apache configuration, service health checking
+
+## Amendment record — 2026-09-18
+
+1. **Task 05 removed from the dependencies.** Tasks 03 and 05 each listed the
+   other; Brian's call is 03 first, with 05 adding the memory policy to this
+   task's `redis` service afterwards.
+2. **Requirement 10 and acceptance criterion 7 added**, moved from task 05's
+   requirement 4. That requirement named only the broker, but production also
+   inherits `REDIS_UNIX_SOCKET` from `base.py:274`, so db 0 — who's-online and the
+   forums' latest-post lists — would try jaguar's socket as well. Either half
+   blocks this task's criterion 1, so the fix cannot wait for task 05.

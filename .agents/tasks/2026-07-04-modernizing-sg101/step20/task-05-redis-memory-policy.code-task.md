@@ -16,8 +16,8 @@ Unbounded, Redis grows until the VM's memory runs out, and the failure lands on
 whichever service allocates next rather than on the cache that caused it.
 
 **A second problem this task should fix while it is here.**
-`sg101/settings/base.py:264` sets `REDIS_UNIX_SOCKET = '/var/run/redis/redis.sock'`
-and line 273 points `CELERY_BROKER_URL` at the same socket. That is jaguar's
+`sg101/settings/base.py:274` sets `REDIS_UNIX_SOCKET = '/var/run/redis/redis.sock'`
+and line 283 points `CELERY_BROKER_URL` at the same socket. That is jaguar's
 shape: a Redis process on the same machine. The compose stack reaches Redis as a
 network service, so the socket assumption has to come out of the production path.
 
@@ -37,20 +37,17 @@ implementation. Read additional references as needed for context.
 2. Set `maxmemory-policy volatile-lru`.
 3. Confirm the three logical databases and their roles, and confirm that broker
    and kept-state keys carry no TTL — the property the policy depends on.
-4. Move the production **Celery broker** off the unix socket onto the compose
-   service. **The cache half is already done** — task 01 rewrote
-   `production.py`'s `CACHES['default']['LOCATION']` to `redis://host:port/2`
-   and gave the module its own `REDIS_HOST`/`REDIS_PORT`. What remains is
-   `CELERY_BROKER_URL`, which `production.py` does not override at all: it
-   inherits `base.py:273`'s `redis+socket:///var/run/redis/redis.sock`, so
-   **production is not deployable until this task lands.** Verified 2026-09-17
-   by reading the setting out of the production module.
-5. **Invert `base.py:264`'s default.** It defaults `REDIS_UNIX_SOCKET` to
+4. ~~Move the production **Celery broker** off the unix socket onto the compose
+   service.~~ **Moved to task 03, 2026-09-18** — see *Amendment record*. Task 03
+   cannot serve a page without it, so it is done there as a `production.py`
+   override; this task inherits a production module that already reaches Redis
+   over TCP for all three databases.
+5. **Invert `base.py:274`'s default.** It defaults `REDIS_UNIX_SOCKET` to
    `/var/run/redis/redis.sock` — jaguar's path — and every container config has
-   to null it explicitly (`docker.py:38`, `docker_test.py:31`, and whatever task
-   01's merge leaves in their place). **The default is the dead architecture and
+   to null it explicitly (`dev.py:29`, `docker_test.py:31`, and `production.py`
+   once task 03 lands). **The default is the dead architecture and
    the live configs are the exceptions.** Default to TCP and let anything needing
-   a socket say so. `base.py:273`'s `CELERY_BROKER_URL` names the same socket and
+   a socket say so. `base.py:283`'s `CELERY_BROKER_URL` names the same socket and
    goes the same way.
 6. **Decide `core/services.py:26`'s dead branch.** Once no configuration supplies
    a socket path, `if unix_socket_path:` is unreachable and the
@@ -65,8 +62,14 @@ picked up. They are here rather than in task 01 because this task owns the socke
 move; task 01 only stops `production.py` depending on it.
 
 ## Dependencies
-- Task 03 — the production compose file that carries the Redis service
+- Task 03 — the production compose file that carries the Redis service, and the
+  `production.py` override that moved all three databases off the socket
 - The existing Celery configuration in `sg101/settings/base.py`
+
+**The order is 03 then 05**, decided 2026-09-18. Task 03 ships a `redis` service
+with no `maxmemory` and no policy — Redis's own defaults — and this task adds
+both to that service. Task 03 does not list this task
+as a dependency.
 
 ## Implementation Approach
 1. Enumerate what actually writes to each database, from the code rather than
@@ -95,11 +98,12 @@ move; task 01 only stops `production.py` depending on it.
    - When their TTLs are inspected
    - Then none is set, which is what makes `volatile-lru` safe
 
-4. **Production no longer assumes a unix socket**
-   - Given production settings
-   - When the cache and broker URLs are read
-   - Then both address the Redis service over the network and
-     `/var/run/redis/redis.sock` appears nowhere in the production path
+4. **No configuration assumes a unix socket by default**
+   - Given `base.py` after the default is inverted
+   - When the socket setting and broker URL are read from every settings module
+   - Then all address Redis over TCP, and the explicit nulls task 03 and the
+     container modules added are gone because nothing needs them (task 03 owns
+     the production half of this; this criterion is the default's)
 
 5. **The suite stays green**
    - Given the full test suite
@@ -110,3 +114,23 @@ move; task 01 only stops `production.py` depending on it.
 - **Complexity**: Medium
 - **Labels**: Redis, Celery, Caching, Production Hardening
 - **Required Skills**: Redis configuration, Celery brokers, Django cache backends
+
+## Amendment record — 2026-09-18
+
+1. **Tasks 03 and 05 each listed the other as a dependency.** Brian's call: 03
+   first. This file keeps its dependency on 03; task 03's on this one is removed.
+2. **Requirement 4 moved to task 03, and it was narrower than the defect.** It
+   said production's only remaining socket dependency was `CELERY_BROKER_URL`.
+   Read out of the settings 2026-09-18: `production.py` also leaves
+   `REDIS_UNIX_SOCKET` inherited from `base.py:274`, and `core/services.py`
+   uses the socket whenever that setting is truthy. So **db 0 — who's-online and
+   the forums' latest-post lists — also points at jaguar's socket in production**,
+   not only the broker. `dev.py:29` and `docker_test.py:31` null it; production
+   never did. Task 03 cannot pass its own acceptance criterion 1 with either half
+   broken, so the override goes there: null `REDIS_UNIX_SOCKET` and set the broker
+   URL in `production.py`, the same shape `dev.py` already uses.
+3. **Line references corrected**: `base.py:264`/`:273` are now `:274`/`:283`,
+   moved by task 01 and 02's edits, and `docker.py:38` no longer exists — task
+   01 merged it into `dev.py`, which nulls the socket at line 29.
+4. **Acceptance criterion 4 rewritten** to the default inversion, since its
+   production half is now task 03's.
