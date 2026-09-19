@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 20 task 03 — the production stack, Apache in front — DONE 2026-09-19, `60c54324`, COMMITTED
+## Step 20 task 03 — the production stack, Apache in front — DONE 2026-09-19, `60c54324` + `127c22c6`, PUSHED
 
 **Suite 1271 OK, gate 1271 OK, `tools/prod_smoke.sh` 19/19, `check --deploy`
 down to W005 and W021, both deliberate.** `docker-compose.prod.yml` runs `proxy`
@@ -160,18 +160,37 @@ never sent the header, so it could not tell the two apart. A check now sends
    copies the row from the database into Redis on any read, so it proved only
    that *something* wrote db 0. Celery's own count is what shows the worker.
 
-### Open, and not this task's
+### Open, and not this task's — each now has an owner (2026-09-19)
+
+| Item | Owner |
+|---|---|
+| Task completion lines logged nowhere | **task 11**, new |
+| Log rotation races | **task 11** — `WatchedFileHandler` + host `logrotate`, Brian's call |
+| Client address in the access log | **task 04**, already its purpose |
+| Containers run as root | **task 12**, new |
+| `redis:6` | **task 05**, requirement 8 added |
+
+The detail as found:
 
 - **Task completion lines appear nowhere** — not in the worker's output, not in
   `var/log/django`. "Received" is logged; "succeeded" is not.
 - **Log rotation races.** N gunicorn workers, the Celery worker and beat all
   write the same files through `RotatingFileHandler`, and each process rotates
   on its own. Lines can be lost or land in the rotated file. True since task 02
-  brought gunicorn; jaguar's single mod_wsgi process never had it. **Wants a
-  decision** — stdout with the Docker log driver is the container-native answer.
+  brought gunicorn; jaguar's single mod_wsgi process never had it. **Decided
+  2026-09-19:** keep the separate files — `auth.log`'s long retention is what the
+  registration-spam analysis ran on — with `WatchedFileHandler` in production
+  and rotation on the host. Stdout and the Docker log driver was considered and
+  rejected because it merges the files.
 - **Client address in the access log** is the Docker gateway locally, and will be
   Cloudflare's edge on the VM until task 04.
 - **The application containers run as root**, and Redis stays at 6 to match dev.
+  Measured: `web` is `uid=0`, and the worker prints Celery's superuser
+  `SecurityWarning` at every start. Apache's root parent with `www-data`
+  children is the standard arrangement and not part of this.
+
+**Step 20 is twelve tasks, not ten**, as of 2026-09-19: tasks 11 and 12 were
+generated from the rows above.
 
 ## Step 20 task 02 — gunicorn, WhiteNoise, and a static pipeline that had never run — DONE 2026-09-17, `7d51fe34`, PUSHED
 

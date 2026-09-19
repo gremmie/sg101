@@ -45,7 +45,7 @@ implementation. Read additional references as needed for context.
 5. **Invert `base.py:274`'s default.** It defaults `REDIS_UNIX_SOCKET` to
    `/var/run/redis/redis.sock` — jaguar's path — and every container config has
    to null it explicitly (`dev.py:29`, `docker_test.py:31`, and `production.py`
-   once task 03 lands). **The default is the dead architecture and
+   since task 03, `60c54324`). **The default is the dead architecture and
    the live configs are the exceptions.** Default to TCP and let anything needing
    a socket say so. `base.py:283`'s `CELERY_BROKER_URL` names the same socket and
    goes the same way.
@@ -55,6 +55,11 @@ implementation. Read additional references as needed for context.
    instinct as Step 19 Phase B — decide it here rather than leaving a branch
    nothing can reach.
 7. Leave the development configuration working.
+8. **Choose the Redis version.** Added 2026-09-19 from task 03: both compose files
+   run `redis:6`, kept there by task 03 only for parity with development. Check
+   the 6.x line's support status and the current stable release from Redis's own
+   documentation rather than from memory, and move both files together if it
+   moves. The eviction behaviour this task tests belongs to the version chosen.
 
 **Added 2026-09-17.** Requirements 5 and 6 are the two socket consequences
 `plan.md` records under Step 20's fourth "thing to settle" and no task file had
@@ -134,3 +139,11 @@ as a dependency.
    01 merged it into `dev.py`, which nulls the socket at line 29.
 4. **Acceptance criterion 4 rewritten** to the default inversion, since its
    production half is now task 03's.
+
+## Amendment record — 2026-09-19
+
+1. **Requirement 8 added: choose the Redis version.** Task 03 kept `redis:6` in
+   the production stack only for parity with development and recorded it as
+   open; this task owns the Redis service, so the choice belongs here.
+2. **Requirement 5's `production.py` reference made current** — task 03 landed
+   in `60c54324` with the explicit null in place.
