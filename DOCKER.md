@@ -537,6 +537,104 @@ The `.:/app` bind mount does carry `.venv` into the running container, and
 macOS-architecture wheels. Inside the container it sits inert, because nothing
 activates it and the container's Python is `/usr/local`.
 
+## 10. Running the production stack
+
+`docker-compose.prod.yml` is the stack the new host runs: the `prod` image under
+gunicorn, behind Apache, with production settings. It runs on the Mac too, which
+is how it was built and tested. **Always pass `-f docker-compose.prod.yml`** —
+without it every command below acts on the development stack instead. The
+examples use a shell function to save typing:
+
+```bash
+dcp() { docker compose -f docker-compose.prod.yml "$@"; }
+```
+
+It is its own compose project (`sg101-prod`), with its own PostgreSQL and Redis
+volumes, so it can run next to the development stack without touching it.
+
+### One-time setup
+
+| What | Where | Notes |
+| --- | --- | --- |
+| TLS certificate + key | `secrets/tls/origin.pem`, `secrets/tls/origin.key` | Cloudflare Origin CA on the host (runbook B5); self-signed locally, below |
+| Environment | `.env` | the same file the development stack reads |
+| Host state | `var/` | created by the command below; git-ignored |
+
+```bash
+mkdir -p var/log/apache var/log/django var/maintenance var/public/hosted var/public/photos
+# Locally only -- a throwaway certificate:
+mkdir -p secrets/tls
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj "/CN=surfguitar101.com" \
+    -addext "subjectAltName=DNS:surfguitar101.com,DNS:www.surfguitar101.com" \
+    -keyout secrets/tls/origin.key -out secrets/tls/origin.pem
+```
+
+To give a local stack data, copy the development database across. This only
+reads from the development side:
+
+```bash
+docker compose exec -T postgres pg_dump -U sg101 -d sg101 -Fc \
+        --exclude-table-data=search_searchdocument \
+    | dcp exec -T postgres pg_restore -U sg101 -d sg101 --no-owner --no-privileges
+```
+
+### Start, stop, inspect
+
+| Goal | Command |
+| --- | --- |
+| Build and start | `dcp up -d --build` |
+| Status and health | `dcp ps` |
+| Stop, keep data | `dcp down` |
+| Follow a service's output | `dcp logs -f web` (or `proxy`, `worker`, `beat`) |
+| Apache's logs | `var/log/apache/access.log`, `error.log` |
+| Django's logs | `var/log/django/*.log` |
+| Django shell | `dcp exec web python manage.py shell` |
+| Deployment checks | `dcp exec web python manage.py check --deploy` |
+| Smoke test | `tools/prod_smoke.sh` (stop the development stack first) |
+
+Every service has a health check. `web` and `proxy` render the home page, so
+they go `unhealthy` when the database or Redis is down, not only when their own
+process is. Nothing restarts on `unhealthy`; `restart: unless-stopped` acts only
+when a process exits.
+
+### Reload the proxy
+
+The Apache configuration is the `apache/` directory, mounted into the container.
+Edit it, check it, then reload without dropping connections:
+
+```bash
+dcp exec proxy sh -c '. /etc/apache2/envvars && apache2 -t'
+dcp exec proxy apache2ctl -k graceful
+```
+
+A change to `apache/Dockerfile` itself needs `dcp up -d --build proxy`.
+
+### Maintenance mode
+
+```bash
+touch var/maintenance/on    # every request gets offline.html with a 503
+rm var/maintenance/on       # back to normal
+```
+
+No reload needed. It works while `web` is stopped, which is when it is wanted:
+Apache answers it without gunicorn. Cloudflare's own maintenance page is the
+first choice; this is the one that still works with Cloudflare out of the
+picture.
+
+### Opening it in a browser
+
+Production settings answer only to `surfguitar101.com`, so a browser has to
+send that name to the local stack. A throwaway Chrome does it without changing
+anything system-wide:
+
+```bash
+open -na "Google Chrome" --args --user-data-dir="$(mktemp -d)" \
+    --host-resolver-rules="MAP surfguitar101.com 127.0.0.1"
+```
+
+Its fresh profile has no remembered HSTS for the real site, which is what lets
+you click past the self-signed certificate.
+
 ## Everyday commands
 
 | Goal | Command |
@@ -573,6 +671,13 @@ activates it and the container's Python is `/usr/local`.
   via `DJANGO_SETTINGS_MODULE` in compose, and the default for `manage.py`.
 - **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
   name, and port, so the settings modules never hardcode an engine.
+- **`docker-compose.prod.yml`** — the production stack (section 10): the `prod`
+  target under gunicorn, Apache in front, no MySQL, only the proxy's ports
+  published.
+- **`apache/`** — the proxy: a small Dockerfile for the image, and the
+  configuration it reads through a bind mount.
+- **`sg101/settings/production.py`** — production settings, selected by the
+  production stack.
 - **`sg101/settings/docker_test.py`** — test settings (PostgreSQL + Redis over
   TCP), used by both local runs and CI.
 - **`snapshots/`** — where your DB dumps live, both the MySQL production dumps

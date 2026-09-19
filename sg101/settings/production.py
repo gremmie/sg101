@@ -46,6 +46,14 @@ MIDDLEWARE = [_security, 'whitenoise.middleware.WhiteNoiseMiddleware'] + _rest
 # nothing but the proxy can reach this container.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# With the scheme known, plain HTTP can be redirected and browsers told to
+# remember it. A week is what the old host's proxy sent; it moves here so there
+# is one header with one value. Subdomains and preloading stay off: browsers
+# cache both for the full duration, and the other hosts under this domain are
+# not this application's to promise.
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 604800
+
 # Both backends are named explicitly even though 'default' is Django's own
 # choice: STORAGES replaced a pair of standalone settings, so writing only the
 # half that differs would hide where user uploads go. That entry is what moves
@@ -88,6 +96,14 @@ CACHES = {
         'KEY_PREFIX': 'sg101',
     },
 }
+# The kept state and the broker live on the same Redis, and base.py still
+# describes one on this machine behind a unix socket. core/services.py takes the
+# socket whenever one is named, so it has to be switched off here, not just
+# left unused.
+REDIS_UNIX_SOCKET = None
+CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST,
+                                                    port=REDIS_PORT)
+
 CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = 600
 CACHE_MIDDLEWARE_KEY_PREFIX = ''

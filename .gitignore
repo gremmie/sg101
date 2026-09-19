@@ -23,6 +23,10 @@ secrets/
 .env
 .claude/settings.local.json
 
+# Host state for the production stack: logs, the maintenance flag, and the
+# content copied off the old host. See docker-compose.prod.yml.
+/var/
+
 # Logs / runtime
 *.log
 *.log.?

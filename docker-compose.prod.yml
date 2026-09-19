@@ -1,0 +1,175 @@
+# Production SG101 stack -- the Dockerfile's `prod` target behind Apache.
+#
+#   proxy    - Apache: TLS, files served from disk, everything else to web
+#   web      - gunicorn serving the site; reachable only from proxy
+#   worker   - Celery worker (background tasks)
+#   beat     - Celery beat (scheduled tasks)
+#   postgres - PostgreSQL 16
+#   redis    - Redis: kept state (db 0), Celery broker (db 1), cache (db 2)
+#
+# Always name this file; without -f, compose reads the development one:
+#   docker compose -f docker-compose.prod.yml up -d --build
+# DOCKER.md, "Running the production stack", has the rest: stopping, reloading
+# the proxy, maintenance mode, logs.
+#
+# Nothing here publishes a port except the proxy. The database, Redis and
+# gunicorn are on the compose network only.
+#
+# Host paths, all relative to the checkout:
+#   apache/          proxy configuration (tracked)
+#   secrets/tls/     origin.pem + origin.key (git-ignored)
+#   media/           uploads and the committed badges/smileys
+#   var/log/         apache/ and django/ logs (git-ignored)
+#   var/maintenance/ `on` here puts the site in maintenance (git-ignored)
+#   var/public/      /hosted and /photos from the old host (git-ignored)
+
+# Its own project name. Both compose files use the same service names, so
+# without this they would be one project and starting either would replace the
+# other's containers.
+name: sg101-prod
+
+x-app: &app
+  build:
+    context: .
+    # Named, never left to the default: the last stage of the Dockerfile is
+    # `dev`, which carries the debug toolbar and the test tools.
+    target: prod
+  image: sg101-app:prod
+  environment:
+    DJANGO_SETTINGS_MODULE: sg101.settings.production
+    DB_ENGINE: postgresql
+    REDIS_HOST: redis
+  # SECRET_KEY, database credentials and API keys; see .env.example.
+  env_file:
+    - .env
+  # Same reason as the development stack: parallel A/AAAA lookups against
+  # Docker's DNS stall each one for the resolver's full timeout.
+  dns_opt:
+    - single-request-reopen
+  restart: unless-stopped
+
+services:
+  proxy:
+    build: ./apache
+    image: sg101-proxy:prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # The whole directory, never single files: an editor that saves by
+      # writing a new file leaves a single-file mount pointing at the old one.
+      - ./apache:/etc/apache2/sg101:ro
+      - ./secrets/tls:/etc/apache2/tls:ro
+      - ./var/log/apache:/var/log/apache2
+      - ./media:/srv/sg101/media:ro
+      - ./static:/srv/sg101/static:ro
+      - ./sg101/templates:/srv/sg101/templates:ro
+      - ./var/public:/srv/public:ro
+      - ./var/maintenance:/srv/maintenance:ro
+    healthcheck:
+      # Through Apache to gunicorn and whatever the home page needs behind it.
+      test: ["CMD", "curl", "-fsSk", "-o", "/dev/null",
+             "-H", "Host: surfguitar101.com", "https://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Started, not healthy: the proxy has to come up when the application
+    # cannot, or maintenance mode has nothing to answer with.
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    <<: *app
+    volumes:
+      - ./media:/app/media
+      - ./var/log/django:/app/sg101/logs
+    healthcheck:
+      # The home page, rendered: it queries the database and reads Redis, so
+      # this fails when either is down, not only when gunicorn is. The two
+      # headers get it past ALLOWED_HOSTS and the HTTPS redirect, since it
+      # talks to gunicorn directly rather than through the proxy.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null",
+             "-H", "Host: surfguitar101.com",
+             "-H", "X-Forwarded-Proto: https",
+             "http://127.0.0.1:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    <<: *app
+    command: celery -A sg101 worker -l info
+    volumes:
+      - ./var/log/django:/app/sg101/logs
+    healthcheck:
+      # A round trip through the broker to this worker. Loading the app costs
+      # a few seconds of CPU, hence the longer interval.
+      test: ["CMD-SHELL", "celery -A sg101 inspect ping -d celery@$$HOSTNAME --timeout 10"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    <<: *app
+    command: celery -A sg101 beat -l info
+    volumes:
+      - ./var/log/django:/app/sg101/logs
+    healthcheck:
+      # Only that the broker answers. Celery has no way to ask beat whether it
+      # is still scheduling, so a hung beat passes this.
+      test: ["CMD", "python", "-c",
+             "import os, redis; redis.Redis(host=os.environ['REDIS_HOST']).ping()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:6
+    # A volume, so the kept state and any queued tasks survive the container
+    # being recreated.
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -437,6 +437,8 @@ DEPLOYED_BACKENDS_SNIPPET = (
     "    'engine': settings.DATABASES['default']['ENGINE'],\n"
     "    'options': settings.DATABASES['default'].get('OPTIONS', {}),\n"
     "    'cache': settings.CACHES['default'].get('LOCATION', ''),\n"
+    "    'redis_socket': settings.REDIS_UNIX_SOCKET,\n"
+    "    'broker': settings.CELERY_BROKER_URL,\n"
     "}))\n"
 )
 
@@ -483,6 +485,28 @@ class DeployedBackendsTests(SimpleTestCase):
                 self.assertFalse(backends['cache'].startswith('unix://'),
                                  msg=backends['cache'])
 
+    def test_no_deployment_reaches_redis_through_a_socket(self):
+        """Redis is a separate service; base.py's defaults name a socket.
+
+        base.py still describes a Redis on the same machine: the kept state in
+        core/services.py (who's online, the forums' latest posts) takes the
+        socket whenever REDIS_UNIX_SOCKET is set, and the broker URL names the
+        same path. A deployment inheriting either cannot talk to Redis at all.
+        """
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                backends = self.deployed_backends(name, DB_ENGINE='postgresql')
+                self.assertFalse(backends['redis_socket'],
+                                 msg=backends['redis_socket'])
+                self.assertNotIn('socket', backends['broker'])
+
+    def test_production_broker_is_its_own_redis_database(self):
+        """db 0 is kept state and db 2 the cache; the broker is db 1."""
+        backends = self.deployed_backends('sg101.settings.production',
+                                          DB_ENGINE='postgresql',
+                                          REDIS_HOST='redis')
+        self.assertEqual(backends['broker'], 'redis://redis:6379/1')
+
 
 DEPLOYED_STATIC_SNIPPET = (
     "import json\n"
@@ -494,6 +518,8 @@ DEPLOYED_STATIC_SNIPPET = (
     "    'proxy_ssl_header': settings.SECURE_PROXY_SSL_HEADER,\n"
     "    'ssl_redirect': settings.SECURE_SSL_REDIRECT,\n"
     "    'hsts_seconds': settings.SECURE_HSTS_SECONDS,\n"
+    "    'hsts_subdomains': settings.SECURE_HSTS_INCLUDE_SUBDOMAINS,\n"
+    "    'hsts_preload': settings.SECURE_HSTS_PRELOAD,\n"
     "    'staticfiles_backend': settings.STORAGES['staticfiles']['BACKEND'],\n"
     "}))\n"
 )
@@ -538,17 +564,23 @@ class ProductionStaticAndSecurityTests(SimpleTestCase):
         self.assertEqual(self.production_settings()['proxy_ssl_header'],
                          ['HTTP_X_FORWARDED_PROTO', 'https'])
 
-    def test_redirect_and_hsts_are_still_off(self):
-        """Both wait for the proxy that sets X-Forwarded-Proto to exist.
+    def test_https_is_enforced(self):
+        """Plain HTTP is redirected, and browsers are told to remember that.
 
-        Turning on the redirect while Django believes a secure request is
-        insecure redirects it to itself, and HSTS is cached by browsers for its
-        full duration whether or not it was right. Change this test when the
-        proxy lands, deliberately.
+        The redirect is only safe because the proxy sets X-Forwarded-Proto on
+        every request it forwards; without it Django sees every request as
+        insecure and redirects it to itself.
+
+        HSTS is the week the old host sent, set here rather than in the proxy
+        so there is one header with one value. It stays off subdomains and out
+        of the preload list: browsers cache both for the full duration, and
+        other hosts under this domain are not this application's to promise.
         """
         settings_read = self.production_settings()
-        self.assertFalse(settings_read['ssl_redirect'])
-        self.assertEqual(settings_read['hsts_seconds'], 0)
+        self.assertTrue(settings_read['ssl_redirect'])
+        self.assertEqual(settings_read['hsts_seconds'], 604800)
+        self.assertFalse(settings_read['hsts_subdomains'])
+        self.assertFalse(settings_read['hsts_preload'])
 
     def test_static_files_are_served_from_a_manifest(self):
         """The hashed names are what let WhiteNoise mark assets immutable."""
