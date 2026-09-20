@@ -120,6 +120,31 @@ expect_redirect "old podcast feed" \
 expect_redirect "convention" \
     "https://$HOST/convention" "https://www.facebook.com/SG101Convention"
 
+# --- Media carries a cache lifetime -------------------------------------------
+
+# Without these, Cloudflare falls back to caching by file extension, and its
+# default list does not include .m4a -- which is what 11 of 15 podcast episodes
+# are. Measured on the old host over 56 days: the podcast alone was 19.95 GB,
+# 28% of all origin egress, every byte of it a cache miss.
+
+# expect_cache_control NAME URL MAX_AGE
+expect_cache_control() {
+    local got
+    got=$(req -D - -o /dev/null "$2" | grep -i '^cache-control:' | tr -d '\r')
+    case "$got" in
+        *"max-age=$3"*public*|*public*"max-age=$3"*) pass "$1" ;;
+        *) fail "$1" "wanted max-age=$3 and public, got '${got:-no Cache-Control}'" ;;
+    esac
+}
+
+expect_cache_control "media is cacheable for a year" \
+    "https://$HOST/media/avatars/default.png" 31536000
+
+# A month, not a year: podcast audio is referenced by a URLField and placed by
+# hand, so unlike everything else under /media its URL can be reused.
+expect_cache_control "the podcast overrides it to a month" \
+    "https://$HOST/media/podcast/podcast_logo.jpg" 2592000
+
 # --- Only the proxy is reachable ----------------------------------------------
 
 # Locally these fail while the development stack is up, since it publishes all
