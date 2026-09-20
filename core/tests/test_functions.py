@@ -230,6 +230,65 @@ class GetIpTestCase(unittest.TestCase):
         ip = get_ip(self.request)
         self.assertEqual(ip, '192.0.2.3')
 
+    def test_cf_connecting_ip_does_not_override_remote_addr(self):
+        # Same reasoning one header along. The proxy reads CF-Connecting-IP and
+        # writes REMOTE_ADDR from it; the application must never read it
+        # itself, or a request that reached us without passing through the
+        # proxy could name its own address.
+        self.request.META['HTTP_CF_CONNECTING_IP'] = '127.0.0.1'
+        self.request.META['REMOTE_ADDR'] = '192.0.2.3'
+        ip = get_ip(self.request)
+        self.assertEqual(ip, '192.0.2.3')
+
+    def test_ipv6_found_in_remote_addr(self):
+        # Cloudflare serves visitors over IPv6 and passes their address along
+        # like any other, so half the address space is not an edge case.
+        self.request.META['REMOTE_ADDR'] = '2606:4700:4700::1111'
+        ip = get_ip(self.request)
+        self.assertEqual(ip, '2606:4700:4700::1111')
+
+    def test_ipv6_loopback_found_in_remote_addr(self):
+        self.request.META['REMOTE_ADDR'] = '::1'
+        ip = get_ip(self.request)
+        self.assertEqual(ip, '::1')
+
+    def test_ipv4_mapped_ipv6_is_unwrapped(self):
+        # One visitor must not be two addresses. A v4-mapped address is an
+        # IPv4 client wearing IPv6 notation, and stored or keyed as written it
+        # would be a second identity for the same person.
+        self.request.META['REMOTE_ADDR'] = '::ffff:192.0.2.3'
+        ip = get_ip(self.request)
+        self.assertEqual(ip, '192.0.2.3')
+
+    def test_ipv4_mapped_ipv6_matches_the_plain_form(self):
+        self.request.META['REMOTE_ADDR'] = '::ffff:192.0.2.3'
+        mapped = get_ip(self.request)
+        self.request.META['REMOTE_ADDR'] = '192.0.2.3'
+        plain = get_ip(self.request)
+        self.assertEqual(mapped, plain)
+
+    def test_a_real_ipv6_address_is_left_as_written(self):
+        # Only the mapped form is rewritten: an address the proxy sends in a
+        # different but equivalent spelling is not this function's to
+        # canonicalize.
+        self.request.META['REMOTE_ADDR'] = '2606:4700:4700::1111'
+        ip = get_ip(self.request)
+        self.assertEqual(ip, '2606:4700:4700::1111')
+
+    def test_invalid_ipv6_found_in_remote_addr(self):
+        self.request.META['REMOTE_ADDR'] = '2606:4700::gggg'
+        ip = get_ip(self.request)
+        self.assertIsNone(ip)
+
+    def test_trailing_junk_is_not_an_address(self):
+        # The old pattern matched a leading address and ignored the rest, so
+        # anything beginning with four octets was accepted. REMOTE_ADDR comes
+        # from the proxy and holds one address; a value that is not one is not
+        # something to salvage a prefix from.
+        self.request.META['REMOTE_ADDR'] = '192.0.2.3, 127.0.0.1'
+        ip = get_ip(self.request)
+        self.assertIsNone(ip)
+
 
 class IsAjaxTestCase(unittest.TestCase):
     def setUp(self):

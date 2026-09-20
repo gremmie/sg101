@@ -1,8 +1,8 @@
 """This file houses various core utility functions"""
 from contextlib import contextmanager
+import ipaddress
 import logging
 import os
-import re
 import tempfile
 
 from django.contrib.sites.models import Site
@@ -127,25 +127,42 @@ def copyright_str():
     return 'Copyright (C) %s, SurfGuitar101.com' % year_range
 
 
-IP_PAT = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
-
 def get_ip(request):
     """Returns the IP from the request or None if it cannot be retrieved.
 
     REMOTE_ADDR only, and deliberately. Setting it to the real client address
     is the front-end proxy's job -- Apache's mod_remoteip does it today, from
     CF-Connecting-IP, for connections arriving from Cloudflare's ranges.
-    X-Forwarded-For must not be preferred over it: any client can send that
-    header, so a request carrying a forged leading entry would otherwise be
-    recorded under whatever address it chose to claim.
+    Neither that header nor X-Forwarded-For may be preferred over it: any
+    client can send either one, so a request carrying a forged entry would
+    otherwise be recorded under whatever address it chose to claim.
+
+    Both address families count. This used to match a leading IPv4 octet
+    quad with a regular expression, which returned None for every visitor
+    arriving over IPv6 -- silently, since None is also what a missing address
+    looks like. Validating instead of pattern-matching also stops a value that
+    merely begins with an address being accepted as one.
+
+    An IPv4-mapped IPv6 address (``::ffff:192.0.2.3``) is returned as the
+    IPv4 address it wraps, so that one visitor cannot become two: the wrapped
+    and plain spellings would otherwise be different strings for the same
+    client, and whatever is keyed or stored by address would hold both. No
+    other rewriting happens -- an address written in an equivalent form is
+    returned as the proxy sent it.
     """
     ip = request.META.get('REMOTE_ADDR')
 
-    if ip:
-        match = IP_PAT.match(ip)
-        ip = match.group(1) if match else None
+    if not ip:
+        return None
 
-    return ip
+    try:
+        parsed = ipaddress.ip_address(ip)
+    except ValueError:
+        return None
+
+    mapped = getattr(parsed, 'ipv4_mapped', None)
+
+    return ip if mapped is None else str(mapped)
 
 
 def is_ajax(request):

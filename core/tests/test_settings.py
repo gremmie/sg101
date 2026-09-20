@@ -526,6 +526,7 @@ DEPLOYED_STATIC_SNIPPET = (
 
 SECURITY_MIDDLEWARE = 'django.middleware.security.SecurityMiddleware'
 WHITENOISE_MIDDLEWARE = 'whitenoise.middleware.WhiteNoiseMiddleware'
+REAL_CLIENT_IP_MIDDLEWARE = 'core.middleware.RealClientIP'
 
 
 class ProductionStaticAndSecurityTests(SimpleTestCase):
@@ -548,8 +549,15 @@ class ProductionStaticAndSecurityTests(SimpleTestCase):
         the responses WhiteNoise serves, and WhiteNoise must come before
         anything that would otherwise handle a static URL."""
         middleware = self.production_settings()['middleware']
-        self.assertEqual(middleware[0], SECURITY_MIDDLEWARE)
-        self.assertEqual(middleware[1], WHITENOISE_MIDDLEWARE)
+        self.assertEqual(middleware[1], SECURITY_MIDDLEWARE)
+        self.assertEqual(middleware[2], WHITENOISE_MIDDLEWARE)
+
+    def test_the_client_address_is_corrected_before_anything_reads_it(self):
+        """REMOTE_ADDR is the proxy until this runs, and six applications
+        record what it says. First, so that no middleware or view added later
+        can read the address before it is the client's."""
+        middleware = self.production_settings()['middleware']
+        self.assertEqual(middleware[0], REAL_CLIENT_IP_MIDDLEWARE)
 
     def test_static_root_is_not_the_test_directory(self):
         """base.py's value is a /tmp path meant for the suite; shipping it

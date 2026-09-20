@@ -32,8 +32,15 @@ STATIC_ROOT = os.path.abspath(os.path.join(PROJECT_PATH, '..', 'static_root'))
 # them. Rebound rather than inserted: `from base import *` binds base's own list
 # object, so .insert() here would edit the middleware of whatever configuration
 # is already live.
+#
+# RealClientIP goes ahead of both. It rewrites REMOTE_ADDR from the header the
+# proxy sets, and everything downstream -- the applications that record who did
+# something, and anything added later -- reads that value without having to know
+# this happened. Only first leaves no ordering rule for later code to get wrong.
 _security, *_rest = MIDDLEWARE
-MIDDLEWARE = [_security, 'whitenoise.middleware.WhiteNoiseMiddleware'] + _rest
+MIDDLEWARE = ['core.middleware.RealClientIP',
+              _security,
+              'whitenoise.middleware.WhiteNoiseMiddleware'] + _rest
 
 # Django and the proxy disagree about the scheme unless this is set. There are
 # two TLS connections in front of this process -- browser to Cloudflare, and

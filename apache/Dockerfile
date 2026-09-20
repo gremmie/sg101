@@ -19,7 +19,7 @@ RUN set -eux; \
 # vhosts without their own: this site's vhost names its log, and a second copy
 # of every line would be one more file for fail2ban to not read.
 RUN set -eux; \
-    a2enmod proxy proxy_http headers rewrite ssl; \
+    a2enmod proxy proxy_http headers remoteip rewrite ssl; \
     a2dissite 000-default; \
     a2disconf other-vhosts-access-log; \
     printf '%s\n' \

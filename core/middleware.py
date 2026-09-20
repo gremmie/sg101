@@ -1,5 +1,6 @@
 """Common middleware for the entire project."""
 import datetime
+import ipaddress
 import logging
 
 from django.db import IntegrityError
@@ -9,6 +10,48 @@ from django.utils.deprecation import MiddlewareMixin
 
 from core.functions import get_ip, is_ajax
 from core.whos_online import report_user, report_visitor
+
+
+logger = logging.getLogger(__name__)
+
+
+class RealClientIP:
+    """Puts the address the front-end proxy worked out into REMOTE_ADDR.
+
+    The proxy decides who the client is: it believes CF-Connecting-IP only on
+    connections from Cloudflare's published ranges, and falls back to the peer
+    everywhere else. That decision used to reach the application for free,
+    because the application ran inside the proxy. It no longer does -- this is
+    a separate process the proxy reaches over the network, so REMOTE_ADDR here
+    is the proxy itself unless it restates its answer in a header.
+
+    Sound only because the proxy sets the header rather than passing a
+    client's through, and because nothing but the proxy can reach this
+    process. That is the same footing SECURE_PROXY_SSL_HEADER stands on, and
+    it fails the same way if either half stops being true. Belongs first in
+    MIDDLEWARE, so that no later middleware or view can read the address
+    before it is corrected.
+    """
+    HEADER = 'HTTP_X_REAL_IP'
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        ip = request.META.get(self.HEADER)
+        if ip:
+            try:
+                ipaddress.ip_address(ip)
+            except ValueError:
+                # Left alone rather than trusted: REMOTE_ADDR feeds the
+                # address columns and every log line that records who did
+                # something.
+                logger.warning('Discarding an unparseable client address '
+                               'from the proxy: %r', ip)
+            else:
+                request.META['REMOTE_ADDR'] = ip
+
+        return self.get_response(request)
 
 
 class InactiveUserMiddleware(MiddlewareMixin):

@@ -4,7 +4,9 @@ from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
 from unittest.mock import patch, Mock
 
-from core.middleware import InactiveUserMiddleware, WhosOnline
+from core.functions import get_ip
+from core.middleware import (InactiveUserMiddleware, RealClientIP,
+                            WhosOnline)
 
 
 class InactiveUserMiddlewareTestCase(TestCase):
@@ -37,6 +39,62 @@ class InactiveUserMiddlewareTestCase(TestCase):
         self.request.user = self.user
         self.middleware.process_view(self.request, lambda x: None, None, None)
         mock_logout.assert_called_once_with(self.request)
+
+
+class RealClientIPTestCase(TestCase):
+    """The proxy's client address, carried across the hop to gunicorn.
+
+    Apache's mod_remoteip rewrites REMOTE_ADDR from CF-Connecting-IP for
+    connections out of Cloudflare's ranges, but the application no longer runs
+    inside Apache: it is a separate process reached over the network, so what
+    it sees as the peer is the proxy. The proxy restates the address it worked
+    out in a header, and this puts it back where every reader already looks.
+    """
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.middleware = RealClientIP(lambda request: HttpResponse())
+
+    def test_header_becomes_remote_addr(self):
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7',
+                                   HTTP_X_REAL_IP='198.51.100.7')
+        self.middleware(request)
+        self.assertEqual(request.META['REMOTE_ADDR'], '198.51.100.7')
+
+    def test_ipv6_header_becomes_remote_addr(self):
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7',
+                                   HTTP_X_REAL_IP='2606:4700:4700::1111')
+        self.middleware(request)
+        self.assertEqual(request.META['REMOTE_ADDR'], '2606:4700:4700::1111')
+
+    def test_no_header_leaves_remote_addr_alone(self):
+        """Nothing but the proxy can reach the application, but a request that
+        arrives without the header is not one to invent an address for."""
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7')
+        self.middleware(request)
+        self.assertEqual(request.META['REMOTE_ADDR'], '172.19.0.7')
+
+    def test_an_address_that_is_not_one_is_refused(self):
+        """The header is only as good as the proxy that set it. A value that
+        is not an address is not written into REMOTE_ADDR, where six
+        applications and the database's address columns would take it."""
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7',
+                                   HTTP_X_REAL_IP='not-an-address')
+        self.middleware(request)
+        self.assertEqual(request.META['REMOTE_ADDR'], '172.19.0.7')
+
+    def test_get_ip_reads_the_corrected_address(self):
+        """The point of the exercise: the readers are unchanged and see the
+        client, not the proxy."""
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7',
+                                   HTTP_X_REAL_IP='198.51.100.7')
+        self.middleware(request)
+        self.assertEqual(get_ip(request), '198.51.100.7')
+
+    def test_the_response_is_passed_through(self):
+        response = HttpResponse('body')
+        middleware = RealClientIP(lambda request: response)
+        request = self.factory.get('/', REMOTE_ADDR='172.19.0.7')
+        self.assertIs(middleware(request), response)
 
 
 class WhosOnlineMiddlewareTestCase(TestCase):
