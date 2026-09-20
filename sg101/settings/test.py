@@ -20,12 +20,10 @@ PASSWORD_HASHERS = [
 # Celery should always execute tasks immediately
 CELERY_TASK_ALWAYS_EAGER = True
 
-# Use a different Redis database for tests (the app's own connection; the Celery
-# broker's db is the virtual_host on CELERY_BROKER_URL below).
+# A database of its own for the app's own connection, so a suite run cannot
+# disturb the development stack's kept state on db 0. The broker's db is set by
+# docker_test, which is the only way the suite runs.
 REDIS_DB = 14
-# Bare-metal default; docker_test.py overrides this to reach the `redis` service
-# over TCP (the only way tests actually run now).
-CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=15'
 
 # Nothing in the suite collects static, but the staticfiles app is installed and
 # a destination keeps it from being the one setting the module leaves undefined.

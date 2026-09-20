@@ -24,16 +24,8 @@ from sg101.settings.databases import from_env
 DATABASES = from_env()
 
 # --- Redis / Celery ----------------------------------------------------------
-# core/services.py uses a unix socket only when REDIS_UNIX_SOCKET is truthy;
-# nulling it falls back to REDIS_HOST/REDIS_PORT.
-REDIS_UNIX_SOCKET = None
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
-REDIS_DB = 0
-
-# db 1 for the broker, keeping the cache (db 2) and the site's kept state (db 0)
-# clear of it.
-CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST, port=REDIS_PORT)
+# Host, port, db and the broker URL all come from base.py, which reads the first
+# two from the environment and puts the broker on db 1. Nothing to override.
 
 ALLOWED_HOSTS = ['*']
 

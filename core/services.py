@@ -11,11 +11,9 @@ import redis
 REDIS_HOST = getattr(settings, 'REDIS_HOST', 'localhost')
 REDIS_PORT = getattr(settings, 'REDIS_PORT', 6379)
 REDIS_DB = getattr(settings, 'REDIS_DB', 0)
-REDIS_SOCKET = getattr(settings, 'REDIS_UNIX_SOCKET', None)
 
 
-def get_redis_connection(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB,
-                         unix_socket_path=REDIS_SOCKET):
+def get_redis_connection(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB):
     """
     Create and return a Redis connection using the supplied parameters.
 
@@ -23,8 +21,5 @@ def get_redis_connection(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB,
     # decode_responses=True returns str (not bytes) from reads. Every value this
     # app stores in Redis is text/int/JSON, and on Python 2 the code treated
     # reads as str; this keeps that behavior on Python 3.
-    if unix_socket_path:
-        return redis.StrictRedis(unix_socket_path=unix_socket_path, db=db,
-                                 decode_responses=True)
     return redis.StrictRedis(host=host, port=port, db=db,
                              decode_responses=True)

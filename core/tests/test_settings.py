@@ -437,10 +437,27 @@ DEPLOYED_BACKENDS_SNIPPET = (
     "    'engine': settings.DATABASES['default']['ENGINE'],\n"
     "    'options': settings.DATABASES['default'].get('OPTIONS', {}),\n"
     "    'cache': settings.CACHES['default'].get('LOCATION', ''),\n"
-    "    'redis_socket': settings.REDIS_UNIX_SOCKET,\n"
+    "    'has_socket_setting': hasattr(settings, 'REDIS_UNIX_SOCKET'),\n"
     "    'broker': settings.CELERY_BROKER_URL,\n"
     "}))\n"
 )
+
+
+REDIS_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "sys.stdout.write(json.dumps({\n"
+    "    'has_socket_setting': hasattr(settings, 'REDIS_UNIX_SOCKET'),\n"
+    "    'broker': settings.CELERY_BROKER_URL,\n"
+    "}))\n"
+)
+
+# Every module in the package, not only the two that deploy: base is where the
+# socket default lived and test carried its own copy. Neither names a database,
+# so neither can be read with DEPLOYED_BACKENDS_SNIPPET.
+ALL_SETTINGS = ['sg101.settings.base', 'sg101.settings.test',
+                'sg101.settings.docker_test'] + DEPLOYMENT_SETTINGS
 
 
 class DeployedBackendsTests(SimpleTestCase):
@@ -486,19 +503,43 @@ class DeployedBackendsTests(SimpleTestCase):
                                  msg=backends['cache'])
 
     def test_no_deployment_reaches_redis_through_a_socket(self):
-        """Redis is a separate service; base.py's defaults name a socket.
+        """Redis is a separate service, and a socket does not cross a container.
 
-        base.py still describes a Redis on the same machine: the kept state in
-        core/services.py (who's online, the forums' latest posts) takes the
-        socket whenever REDIS_UNIX_SOCKET is set, and the broker URL names the
-        same path. A deployment inheriting either cannot talk to Redis at all.
+        base.py used to default REDIS_UNIX_SOCKET to jaguar's path and point the
+        broker URL at it, so every container module had to switch it back off by
+        hand -- the dead architecture was the default and the live ones were the
+        exceptions. The setting is gone rather than inverted: with nothing able
+        to supply a socket, the branch that consumed it was unreachable.
+
+        Asserted as absence, not falsity, because a falsy value is what the old
+        explicit nulls looked like.
         """
         for name in DEPLOYMENT_SETTINGS:
             with self.subTest(settings=name):
                 backends = self.deployed_backends(name, DB_ENGINE='postgresql')
-                self.assertFalse(backends['redis_socket'],
-                                 msg=backends['redis_socket'])
+                self.assertFalse(backends['has_socket_setting'],
+                                 msg='REDIS_UNIX_SOCKET is back')
                 self.assertNotIn('socket', backends['broker'])
+
+    def test_every_settings_module_reaches_redis_over_tcp(self):
+        """Including base and test, which no deployment loads on its own.
+
+        base.py is where the socket default lived, and settings/test.py carried
+        its own copy for a bare-metal run that no longer exists. Neither is in
+        DEPLOYMENT_SETTINGS, so the inversion would have gone uncovered exactly
+        where it was made.
+        """
+        for name in ALL_SETTINGS:
+            with self.subTest(settings=name):
+                code, out, err = _run({'DJANGO_SETTINGS_MODULE': name,
+                                       'SECRET_KEY': 'x'},
+                                      snippet=REDIS_SNIPPET)
+                self.assertEqual(code, 0, msg=err)
+                config = json.loads(out)
+                self.assertFalse(config['has_socket_setting'],
+                                 msg='REDIS_UNIX_SOCKET is back')
+                self.assertTrue(config['broker'].startswith('redis://'),
+                                msg=config['broker'])
 
     def test_production_broker_is_its_own_redis_database(self):
         """db 0 is kept state and db 2 the cache; the broker is db 1."""

@@ -82,18 +82,10 @@ STORAGES = {
 # `loaders` was also what forced the APP_DIRS deletion, since Django refuses both
 # at once.
 
-# Redis, not memcached: Django dropped the python-memcached backend, and the
-# host already runs Redis for the Celery broker and for the application data in
-# core/services.py, so caching here retires a service rather than replacing one.
-# Its own database, because clearing the cache must not touch what the site
-# keeps in Redis permanently -- db 0 holds who's-online and the forums'
-# latest-post lists, and db 1 is the broker.
-# Reached over TCP: each service is its own container, and a unix socket does
-# not cross that boundary without bind-mounting a directory into both and
-# caring about start order.
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
-
+# Redis, not memcached: Django dropped the python-memcached backend, and Redis
+# is already here for the broker and the site's kept state, so caching here
+# retires a service rather than replacing one. Its own database, db 2; host and
+# port come from base.py, which also names the other two.
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
@@ -103,14 +95,6 @@ CACHES = {
         'KEY_PREFIX': 'sg101',
     },
 }
-# The kept state and the broker live on the same Redis, and base.py still
-# describes one on this machine behind a unix socket. core/services.py takes the
-# socket whenever one is named, so it has to be switched off here, not just
-# left unused.
-REDIS_UNIX_SOCKET = None
-CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST,
-                                                    port=REDIS_PORT)
-
 CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = 600
 CACHE_MIDDLEWARE_KEY_PREFIX = ''

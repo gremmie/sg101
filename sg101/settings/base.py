@@ -271,7 +271,14 @@ MAX_TAG_LENGTH = 50
 #######################################################################
 # Redis integration & settings
 #######################################################################
-REDIS_UNIX_SOCKET = '/var/run/redis/redis.sock'
+# Redis is a service on the network: host and port come from the environment,
+# and both compose files point them at the `redis` service.
+#
+# Three databases, so that clearing one cannot touch the others. db 0 is the
+# site's kept state (who's online, the forums' latest-post lists), db 1 the
+# Celery broker, db 2 the cache.
+REDIS_HOST = env('REDIS_HOST', default='redis')
+REDIS_PORT = env.int('REDIS_PORT', default=6379)
 REDIS_DB = 0
 
 #######################################################################
@@ -280,7 +287,8 @@ REDIS_DB = 0
 # Celery reads these via config_from_object(..., namespace='CELERY'): each name
 # has its CELERY_ prefix stripped and lowercased to the modern setting (so
 # CELERY_BROKER_URL -> broker_url, CELERY_BEAT_SCHEDULE -> beat_schedule, etc.).
-CELERY_BROKER_URL = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1'
+CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST,
+                                                     port=REDIS_PORT)
 CELERY_BROKER_POOL_LIMIT = 10
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     'fanout_prefix': True,
@@ -291,8 +299,9 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_IGNORE_RESULT = True
-# Set this when we want results:
-#CELERY_RESULT_BACKEND = 'redis+socket:///var/run/redis/redis.sock?virtual_host=1&new_join=1'
+# No results are kept. Setting CELERY_RESULT_BACKEND would need a database of
+# its own -- db 3, since 0, 1 and 2 are taken -- and an expiry, or results
+# accumulate in a Redis that is now capped.
 CELERY_WORKER_DISABLE_RATE_LIMITS = True
 
 CELERY_BEAT_SCHEDULE = {

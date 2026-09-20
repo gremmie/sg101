@@ -9,13 +9,10 @@ Full-text search is Postgres-only besides, so a portable suite could not cover i
 at all. The measured price is about two seconds on a seven-second suite.
 
 Inherits the shared test tuning from `test` (eager Celery, fast password hashing,
-no logging) and adds the container's Redis, which reaches the `redis` service over
-TCP rather than the unix socket the bare-metal settings assume.
+no logging) and puts the broker on a database of its own.
 
 Run with:  python manage.py test --settings=sg101.settings.docker_test
 """
-import os
-
 from sg101.settings.databases import for_engine
 from sg101.settings.test import *  # noqa: F401,F403
 
@@ -23,12 +20,9 @@ from sg101.settings.test import *  # noqa: F401,F403
 DATABASES = for_engine('postgresql')
 
 
-# On the Mac the suite talked to a real redis at /tmp/redis.sock; the faithful
-# container equivalent is the `redis` service over the network. This lets the
-# integration-style tests (who's-online) exercise a real redis,
-# just as they did on the Mac. core/tests/test_services.py was updated to pass
-# explicit args rather than depend on these ambient defaults.
-REDIS_UNIX_SOCKET = None
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
-CELERY_BROKER_URL = 'redis://{host}:{port}/15'.format(host=REDIS_HOST, port=REDIS_PORT)
+# The suite talks to a real redis -- the `redis` service -- so the
+# integration-style tests (who's-online, the forums' latest posts) exercise one
+# rather than a mock. Only the broker db differs from base: 15, so a suite run
+# cannot consume or discard whatever the development stack has queued on db 1.
+CELERY_BROKER_URL = 'redis://{host}:{port}/15'.format(host=REDIS_HOST,
+                                                      port=REDIS_PORT)

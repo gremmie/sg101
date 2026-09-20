@@ -597,6 +597,40 @@ they go `unhealthy` when the database or Redis is down, not only when their own
 process is. Nothing restarts on `unhealthy`; `restart: unless-stopped` acts only
 when a process exits.
 
+### Redis: the ceiling and what eviction takes
+
+One Redis serves three things, and they are not alike:
+
+| db | Holds | Expires? | If it is lost |
+| --- | --- | --- | --- |
+| 0 | kept state — who's online, the forums' latest-post lists | no | gone; some of it rebuilds on the next write |
+| 1 | the Celery broker | no | queued tasks never run |
+| 2 | the Django cache | yes, 600 s | a database query |
+
+The eviction policy is server-wide, so `allkeys-lru` would discard queued tasks
+as readily as cache entries. `volatile-lru` evicts only keys carrying a TTL,
+which is what makes one policy safe across all three.
+
+```bash
+dcp exec redis redis-cli config get maxmemory
+dcp exec redis redis-cli config get maxmemory-policy
+dcp exec redis redis-cli info stats | grep evicted_keys
+```
+
+`maxmemory` defaults to 256 MB and is overridden with `REDIS_MAXMEMORY` in
+`.env`. It is a bound on a runaway, not a cache size: the working set measured
+~3 MB on the old host, whose memcached never evicted once in 150 days against a
+64 MB limit. **A non-zero `evicted_keys` is worth looking at rather than tuning
+away** — at these volumes it means something is writing far more than the site
+ever has.
+
+Two things it does not do. It does not bound the process: `maxmemory` limits
+Redis's own accounting, while fragmentation and a forked `BGSAVE` sit above it.
+And it does not spare `user_photos:counts:*`, the upload rate limiter — the one
+expiring key in db 0 that nothing can rebuild, so evicting it returns that
+member's daily quota. Both are accepted deliberately; `core/tests/test_redis_ttls.py`
+pins the inventory so a new expiring key has to be thought about.
+
 ### Reload the proxy
 
 The Apache configuration is the `apache/` directory, mounted into the container.
@@ -666,9 +700,11 @@ you click past the self-signed certificate.
 - **`docker-compose.yml`** — defines the services and wires them together: five
   by default, plus `db` (MySQL) behind the `mysql` profile. web/worker/beat all
   build the `dev` target.
-- **`sg101/settings/dev.py`** — dev settings; points the DB and Redis at the
-  container services over the network, and enables the debug toolbar. Selected
-  via `DJANGO_SETTINGS_MODULE` in compose, and the default for `manage.py`.
+- **`sg101/settings/dev.py`** — dev settings; points the DB at the container
+  services and enables the debug toolbar. Redis needs nothing here: `base.py`
+  reads its host and port from the environment and defaults them to the `redis`
+  service. Selected via `DJANGO_SETTINGS_MODULE` in compose, and the default for
+  `manage.py`.
 - **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
   name, and port, so the settings modules never hardcode an engine.
 - **`docker-compose.prod.yml`** — the production stack (section 10): the `prod`
@@ -678,8 +714,9 @@ you click past the self-signed certificate.
   configuration it reads through a bind mount.
 - **`sg101/settings/production.py`** — production settings, selected by the
   production stack.
-- **`sg101/settings/docker_test.py`** — test settings (PostgreSQL + Redis over
-  TCP), used by both local runs and CI.
+- **`sg101/settings/docker_test.py`** — test settings (PostgreSQL, and the
+  broker on a Redis database of its own so a suite run cannot touch what the
+  development stack has queued), used by both local runs and CI.
 - **`snapshots/`** — where your DB dumps live, both the MySQL production dumps
   and the PostgreSQL snapshots `tools/pg_snapshot.sh` writes (git-ignored).
 

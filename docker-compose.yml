@@ -101,7 +101,11 @@ services:
       retries: 10
 
   redis:
-    image: redis:6
+    # Same major version as production, so the suite and the development stack
+    # exercise the server the site will actually run on. No ceiling or eviction
+    # policy here: development has no cache database (base.py's locmem stands in),
+    # and a dev Redis that quietly drops keys is a debugging trap.
+    image: redis:8.10
     ports:
       - "6379:6379"
 

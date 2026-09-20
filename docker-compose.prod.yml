@@ -158,7 +158,31 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:6
+    image: redis:8.10
+    # Bounded, and evicting only what can be rebuilt.
+    #
+    # Unbounded, Redis grows until the VM's memory runs out, and the failure
+    # lands on whichever process allocates next rather than on the cache that
+    # caused it. The ceiling is a blast radius, not a capacity estimate: the
+    # whole working set measured ~3 MB on the old host (1.88 MB of kept state
+    # and broker, 1.05 MB of cache), and its memcached never evicted once in
+    # 150 days against a 64 MB limit. 256 MB is roughly 85x that, and small
+    # enough on any plausible VM that reaching it means something is wrong.
+    #
+    # volatile-lru, because the policy is server-wide but the three databases
+    # are not alike: db 2's cache entries all expire and cost a query to
+    # rebuild, while db 1's queued tasks and db 0's kept state are written with
+    # no expiry and cannot be rebuilt at all. Evicting only keys that carry a
+    # TTL is what keeps one policy honest across all three. The exceptions are
+    # pinned by core/tests/test_redis_ttls.py.
+    #
+    # maxmemory bounds Redis's own accounting, not the process's resident size:
+    # fragmentation and a forked BGSAVE both sit above it, so this is not the
+    # most memory Redis can take from the machine.
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy volatile-lru
     # A volume, so the kept state and any queued tasks survive the container
     # being recreated.
     volumes:
