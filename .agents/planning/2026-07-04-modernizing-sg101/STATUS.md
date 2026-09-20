@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-19
+**Last updated:** 2026-09-20
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,161 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 20 task 04 — the real client IP, and the half jaguar never needed — UNCOMMITTED, awaiting review
+## Step 20 task 05 — Redis bounded, and the socket that outlived its machine — DONE 2026-09-20, `0b6a96b0` + this planning commit, PUSHED
+
+**Suite 1296 OK, gate 1296 OK (1292 → 1296), `tools/prod_smoke.sh` 19/19
+unchanged, `check --deploy` unchanged, 8 of 8 mutations caught.** Production
+Redis is `redis:8.10` with a 256 MB ceiling and `maxmemory-policy volatile-lru`;
+`REDIS_UNIX_SOCKET` and the branch that consumed it are gone.
+
+### What the old host actually holds, measured 2026-09-20
+
+Taken before anything was decided, because "what should the ceiling be" deserved
+a number. jaguar, Redis 2.6.13 and memcached, both 150 days up:
+
+| | Redis (db 0 + db 1) | memcached (the cache db 2 replaces) |
+|---|---|---|
+| in use | **1.88 MB** (peak 2.31 MB) | **1.05 MB** |
+| ceiling | none | 64 MB |
+| keys | db0 831, db1 3 | 369 |
+| evictions | — | **0 in 150 days** |
+| hit rate | — | 53,076,509 / 53,779,782 = **98.7%** |
+
+**The whole post-cutover working set is ~3 MB.** So the ceiling is a blast
+radius, not a capacity estimate: 256 MB is ~85x the measurement and 4x a limit
+that was never once touched. It is `REDIS_MAXMEMORY` in `.env`, defaulting in
+the compose file, because the VM does not exist yet — the constraint is recorded
+and the number stays revisable, the same split Step 20's planning names.
+
+**jaguar's `maxmemory-policy volatile-lru` is not evidence of a decision.** It is
+Redis 2.6's *default*; the default became `noeviction` in 3.0, which is what both
+candidate images start with. Measured on both rather than recalled.
+
+### Requirement 3's premise was false, and the three exceptions are named
+
+The task says to confirm kept state and broker keys carry no TTL. **The broker
+does not. db 0 does** — `expires=3` of 831, enumerated rather than inferred:
+
+| key | TTL when read | what it is | safe to evict? |
+|---|---|---|---|
+| `core:stats` | 10,373 s | 4 h copy of `core_statistic` pk=1 | **yes** — `get_stats()` falls back to the database and repopulates |
+| `user_photos:counts:Jerome` | 59,557 s | upload rate limiter, 50 per 86,400 s | **no** — nothing rebuilds it |
+| `user_photos:counts:Colorado_Instrumental` | 6,208 s | same | **no** |
+
+**Brian's call: accept and document.** Eviction begins only at the ceiling, and
+the blast radius is one member regaining part of a 50-photo day. What makes that
+a decision rather than an oversight is that it is now *pinned*:
+`core/tests/test_redis_ttls.py` asserts the inventory, so a fourth expiring key
+in db 0 fails the suite and has to be argued for.
+
+### The eviction was exercised, not asserted
+
+Filled db 2 past the real 256 MB ceiling (3,500 × 100 KB) with broker messages
+and kept state present:
+
+| | before | after |
+|---|---|---|
+| `used_memory` | 1.57 MB | 255.97 MB against a 256.00 MB ceiling |
+| db 1 `celery` | llen 3, ttl −1 | **llen 3, ttl −1** |
+| db 0, the three keys with no TTL | present | **all present** |
+| db 0 `user_photos:counts:brian` | present, ttl 86,400 | **evicted** |
+| db 2 | 0 | 2,322 of 3,500 survived; `evicted_keys` 1,178 |
+
+So the documented caveat is demonstrated rather than predicted — the one db-0
+key the policy can take is exactly the one the table above says it can.
+
+**The first run of this was invalid and said the opposite.** It reported the
+broker's `celery` list gone, which would have made `volatile-lru` unusable. The
+cause was not eviction: the local production stack had been up 19 hours since
+task 03, so **a live Celery worker consumed the messages** the probe had just
+queued. `RestartCount=0` ruled out a crash, and the `_kombu.binding.*` sets in
+db 1 were the tell — a connected client's, not a seeded one's. Re-run with
+`worker` and `beat` stopped, the broker is untouched.
+[[probes-must-not-perturb-what-they-measure]], in the form where the perturbing
+thing is not the probe but something else already running beside it.
+
+### Redis 8, and the lifecycle table that would have answered wrongly
+
+`redis.io`'s "product lifecycle" page gives 6.2 an EOL of **2025-02-28** and is
+the first hit for the question. **It is Redis *Enterprise*'s schedule.** Redis
+Open Source's own `SECURITY.md` lists **6.2.x as supported, "support extended"**,
+and 6.2.23 / 6.2.24 shipped 2026-07-23 and 2026-08-17 beside the 7.x and 8.x
+patches. Taking the wrong table at face value would have retired a version that
+is still receiving fixes — and it also lists **8.0.x as unsupported** while 6.2
+is not, so "newer is safer" fails here too.
+
+The move was measured rather than argued, since 6.2 → 8.10 looks like four major
+versions:
+
+| | redis:6.2.24 | redis:8.10.1 |
+|---|---|---|
+| full suite | 1292 OK | **1292 OK** |
+| Celery worker + beat, real broker | — | **5 tasks published and consumed** |
+| the 24 commands this app issues | ok | **identical** |
+| an RDB written by 6.2.24 | — | **loads; values and TTLs intact** |
+| `maxmemory-policy` default | `noeviction` | `noeviction` |
+| baseline `used_memory` / RSS | 885 KB / 7.97 MB | 1.38 MB / 22.96 MB |
+
+**The worker run is the one that counts.** `CELERY_TASK_ALWAYS_EAGER` means 1292
+green tests say nothing about kombu against a real broker, so the suite could not
+have caught a broker-level incompatibility. The command surface this site uses is
+1.x-era — `zadd`, `hgetall`, `lpop`, `incr`, `expire` — which is why the version
+gap overstates the risk. Nothing migrates either: the development `redis` service
+has no volume at all, and production's is empty on a VM that does not exist.
+
+**The measured cost of 8.10 is five bundled modules** — `search`, `ReJSON`,
+`timeseries`, `bf`, `vectorset` — that the site never calls, worth ~15 MB of RSS.
+They can be switched off by mounting an empty tmpfs over
+`/usr/local/lib/redis/modules` (verified: 22.62 → 12.40 MB RSS, suite still
+green), since the entrypoint loads whatever `.so` files it globs there.
+**Brian's call: leave them.** The saving is cosmetic on an 8 GB VM and the tmpfs
+line is not self-explanatory. Recorded here so the option does not have to be
+rediscovered.
+
+### The socket default was the dead architecture, and the live configs were the exceptions
+
+`base.py` defaulted `REDIS_UNIX_SOCKET` to `/var/run/redis/redis.sock` and
+pointed `CELERY_BROKER_URL` at the same path, so `dev.py`, `docker_test.py` and
+`production.py` each had to switch it back off by hand. **Deleted rather than
+inverted**: with nothing able to supply a socket, `core/services.py`'s
+`if unix_socket_path:` was unreachable and the setting dead with it. Gone from
+six files, plus the commented-out `CELERY_RESULT_BACKEND` that named the same
+socket and a `new_join=1` option Celery dropped years ago.
+
+`base.py` now reads `REDIS_HOST`/`REDIS_PORT` from the environment and builds the
+broker URL from them, so the three container modules stop repeating it;
+`docker_test.py` keeps only its own broker database (15) and `production.py` only
+its cache.
+
+**The new settings test covers `base` and `test` as well**, which
+`DEPLOYMENT_SETTINGS` does not — they are where the socket default actually
+lived, so the inversion would have gone uncovered exactly where it was made.
+Neither names a database, so it needed a Redis-only snippet rather than
+`DEPLOYED_BACKENDS_SNIPPET`.
+
+### Two mutations that proved nothing until they were fixed
+
+8 of 8 caught, but two had to be rewritten first, both instances of the same
+rule — [[mutation-verify-or-it-is-not-coverage]]:
+
+1. **Adding `expire` to `accounts:user_count` was self-neutralizing.** The next
+   line is `redis.set(USER_COUNT_KEY, count)` on the `count == 1` branch, and
+   `SET` clears a TTL. The test passed because the mutation undid itself, not
+   because the test was blind. Re-aimed at `accounts:new_users`, which is
+   `lpush`/`ltrim` only — caught.
+2. **Deleting `conn.expire(key, seconds)` from the rate limiter left an empty
+   `if` block**, so what failed was an `IndentationError` at import. A syntax
+   error is not the fault under test. Replaced with `pass` — caught.
+
+### Not done here
+
+The `banners:url:*` lists and `forums:*` caches in db 0 are written without a
+TTL and are also derived — they rebuild from the database on a miss. They are
+*not* in the exception table because nothing evicts them, and giving them TTLs to
+make them evictable would be a change to how the site behaves under memory
+pressure it has never been under.
+
+## Step 20 task 04 — the real client IP, and the half jaguar never needed — DONE 2026-09-19, `472b1e03` + `559c64e1`, PUSHED
 
 **Suite 1292 OK, gate 1292 OK (1271 → 1292), `tools/prod_smoke.sh` 19/19
 unchanged, 17 of 17 mutations caught.** `mod_remoteip` trusts Cloudflare's 15
