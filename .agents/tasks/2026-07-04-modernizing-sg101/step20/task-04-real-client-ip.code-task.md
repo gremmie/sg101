@@ -34,7 +34,14 @@ chooses a Debian-based image precisely so this ports as a file rather than being
 rewritten into another server's syntax.
 
 **It is reproduced here as a starting point, not as the answer.** It is evidence
-about 2026-08-21; requirement 3 below is what makes it current.
+about 2026-08-21; requirement 2 below is what makes it current.
+
+**And it is only half of what this needs.** jaguar ran Django inside Apache under
+`mod_wsgi`, so `mod_remoteip`'s rewrite *was* the application's `REMOTE_ADDR`.
+Task 02 replaced `mod_wsgi` with gunicorn behind `mod_proxy_http`, which puts a
+network hop between the server that knows the client's address and the process
+that records it. Porting this file is necessary and not sufficient; requirement 3
+is the other half.
 
 **The trusted-range list is the security boundary, not the header name.** Without
 it the header is client-supplied and anyone can claim any address. A list carrying
@@ -75,25 +82,38 @@ certificate terminated the connection.
 implementation. Read additional references as needed for context.
 
 ## Technical Requirements
-1. Configure the Apache proxy service from task 03 as a reverse proxy to
-   gunicorn, with `mod_wsgi` playing no part.
-2. Enable `mod_remoteip` with `RemoteIPHeader CF-Connecting-IP` and
+
+**Rewritten 2026-09-19.** The list below replaces the one written 2026-09-12,
+which predated task 03 and the move off `mod_wsgi`. Five of its eight items had
+already landed with task 03; one of its premises was wrong. What it said, and
+where each item went, is in `STATUS.md` under this task.
+
+1. Enable `mod_remoteip` with `RemoteIPHeader CF-Connecting-IP` and
    `RemoteIPTrustedProxy` covering **both** Cloudflare's IPv4 and IPv6 ranges.
-3. **Re-verify the range list against Cloudflare's published list at the time of
+2. **Re-verify the range list against Cloudflare's published list at the time of
    implementation.** The 2026-08-21 check is evidence about that date, not this
    one.
-4. Set `SECURE_PROXY_SSL_HEADER` so Django knows the request arrived over TLS, and
-   `CSRF_TRUSTED_ORIGINS` for the scheme-qualified origins Django 5 requires.
-5. Terminate TLS at the proxy, using a self-signed certificate locally. The
-   Cloudflare Origin CA certificate is a cutover-runbook item, not this task's.
-6. Serve `/media` from the VM's disk through Apache; static files stay with
-   WhiteNoise.
-7. Keep the configuration in this repository so it travels with the code — the
-   stated reason the jaguar configuration was lost to the plan — delivered by
-   bind mount as task 03 establishes.
-8. **Because it is bind-mounted, the running file can drift from the committed
-   one.** Add the Apache configuration to the cutover runbook's A2 working-copy
-   audit, which today covers only the Django settings.
+3. **Carry the address across the hop to gunicorn.** jaguar needed only
+   `mod_remoteip` because Django ran *inside* Apache under `mod_wsgi`, so the
+   rewrite was already Django's `REMOTE_ADDR`. It is a separate process now and
+   sees the proxy as its peer. The proxy must restate the address it worked out,
+   and the application must put it back where every reader already looks.
+4. `get_ip()` must return an address for visitors on **either** family. It
+   matched an IPv4 octet quad and returned `None` otherwise, which is also what
+   "no address" looks like.
+5. Decide `CSRF_TRUSTED_ORIGINS` **on evidence**. Django compares the Origin
+   header against the request's own scheme and host, and `ProxyPreserveHost` means
+   that is the browser's; the setting may not be needed at all. Whichever way it
+   goes, record the measurement and the control that makes it mean something.
+6. Keep the configuration in this repository so it travels with the code, by bind
+   mount as task 03 establishes.
+
+**Already satisfied when this was rewritten**, by task 03 (`60c54324`): Apache
+reverse-proxies to gunicorn with no `mod_wsgi`; TLS terminates at the proxy on a
+self-signed certificate locally, with the Cloudflare Origin CA certificate left to
+the cutover runbook; `/media` is served from disk while static stays with
+WhiteNoise; `SECURE_PROXY_SSL_HEADER` is set. And the bind-mount drift hazard was
+added to the cutover runbook's A2 audit on 2026-09-12.
 
 ## Dependencies
 - Task 02 — gunicorn listening for the proxy to reach
@@ -115,7 +135,8 @@ implementation. Read additional references as needed for context.
 1. **A proxied request records the client address**
    - Given a request arriving from a Cloudflare range with `CF-Connecting-IP` set
    - When the application reads `REMOTE_ADDR`
-   - Then it is the client address from the header, not the peer
+   - Then it is the client address from the header, not the peer, and not the
+     proxy
 
 2. **A spoofed header from an untrusted peer is ignored**
    - Given a request from an address outside the trusted ranges carrying a
@@ -123,26 +144,34 @@ implementation. Read additional references as needed for context.
    - When the application reads `REMOTE_ADDR`
    - Then it is the peer address and the header is disregarded
 
-3. **IPv6 clients are covered**
+3. **IPv6 clients are covered end to end**
    - Given a request arriving over one of Cloudflare's IPv6 ranges
-   - When the application reads `REMOTE_ADDR`
-   - Then the client address is recorded, proving the IPv6 ranges are trusted
+   - When the application reads the address and `get_ip()` is called on it
+   - Then the client's IPv6 address is both recorded and returned
 
-4. **Django knows the request was secure**
-   - Given a request arriving over TLS terminated at the proxy, self-signed
-     locally
-   - When `request.is_secure()` is evaluated
-   - Then it is true, and CSRF checks accept the site's own origins
-
-5. **The range list was verified, not assumed**
+4. **The range list was verified, not assumed**
    - Given Cloudflare's published list at implementation time
    - When it is compared with the configured ranges
    - Then they match exactly, and the comparison is recorded with its date
 
+5. **The CSRF decision rests on a measurement with a control**
+   - Given a same-origin POST and a cross-origin POST through the proxy
+   - When both are run
+   - Then the same-origin result is only meaningful because the cross-origin one
+     is refused, and whichever way the decision goes is recorded with both
+
 6. **The six readers are covered by tests**
    - Given the applications that read `REMOTE_ADDR`
    - When the suite runs
-   - Then tests assert the address they observe under a proxied request
+   - Then tests assert the address they record under a proxied request, and each
+     arrives with a different value from the one asserted
+
+7. **Every check was watched to fail**
+   - Given the configuration and the code
+   - When a defect is introduced into each
+   - Then the check that claims to cover it fails, and a mutation that leaves an
+     invalid Apache configuration is reported as no mutation at all rather than
+     as a pass
 
 ## Metadata
 - **Complexity**: High

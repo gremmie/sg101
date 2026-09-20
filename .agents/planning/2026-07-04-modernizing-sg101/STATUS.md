@@ -43,6 +43,227 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 04 — the real client IP, and the half jaguar never needed — UNCOMMITTED, awaiting review
+
+**Suite 1292 OK, gate 1292 OK (1271 → 1292), `tools/prod_smoke.sh` 19/19
+unchanged, 17 of 17 mutations caught.** `mod_remoteip` trusts Cloudflare's 15
+IPv4 and 7 IPv6 ranges and believes `CF-Connecting-IP` only from them; the vhost
+restates the result as `X-Real-IP`; `core.middleware.RealClientIP` puts it back
+into `REMOTE_ADDR` before anything reads it.
+
+### The finding: porting jaguar's file is necessary and not sufficient
+
+The task file's premise was *"jaguar already solves it… task 03 chooses a
+Debian-based image precisely so this ports as a file."* **It ports as a file and
+then does not work**, because jaguar ran Django *inside* Apache under `mod_wsgi`.
+There, `mod_remoteip`'s rewrite **was** the application's `REMOTE_ADDR` — one
+process, no hop. Task 02 replaced `mod_wsgi` with gunicorn behind
+`mod_proxy_http`, putting a network hop between the server that knows the client
+and the process that records it.
+
+Measured before it was diagnosed: with `remoteip.conf` in place and correct,
+Apache logged `198.51.100.7` while the application logged `172.19.0.7` — **the
+proxy container's own compose address**, for every request, from every visitor.
+
+| | trusted peer, `CF-Connecting-IP: 198.51.100.7` | untrusted peer, same header |
+|---|---|---|
+| `%a` (client) | `198.51.100.7` | `192.168.65.1` |
+| `%{c}a` (peer) | `103.21.244.3` | `192.168.65.1` |
+| `%h` (what `combined` logs) | **`198.51.100.7`** | `192.168.65.1` |
+
+**`%h` follows the substitution**, so `combined` is untouched and fail2ban's
+format-specific filters keep working — the reason Apache was chosen over nginx.
+
+**The consequence worth keeping separate:** Step 21's fail2ban reads the *Apache*
+log and was therefore already satisfied by the Apache half alone. The six
+applications were not. A half-done version of this task would have looked
+finished from the direction anyone was watching.
+
+### Requirement 2 — the range re-check, 2026-09-19
+
+`www.cloudflare.com/ips-v4` and `ips-v6`, cross-checked against
+`api.cloudflare.com/client/v4/ips` (etag `38f79d050aa027e3be3865e495dcc9bc`).
+**15 IPv4 and 7 IPv6, identical to jaguar's list as sets and in published
+order. No drift since 2026-08-21.** Two sources, not one read twice. The file is
+generated from the fetched lists rather than retyped.
+
+### `IP_PAT` was IPv4-only, and had been for as long as it existed
+
+`get_ip()` matched `(\d{1,3}\.){3}\d{1,3}` and returned `None` otherwise —
+**which is also what "no address" looks like**, so it failed silently. Every
+visitor arriving over IPv6 got `None`, **on jaguar today**, since `mod_remoteip`
+is live there and Cloudflare serves IPv6.
+
+Blast radius is the three `get_ip` callers, not the six direct `REMOTE_ADDR`
+readers: who's-online never counted an IPv6 visitor, `turnstile.verify` lost the
+`remoteip` hint (degraded, not broken — it already omits a `None` deliberately),
+and the search log recorded no address. **The three address columns are
+`GenericIPAddressField`**, so nothing ever truncated or raised; the address was
+dropped in one function, quietly. Now validated with `ipaddress.ip_address`,
+which also stops a value that merely *begins* with an address being accepted as
+one.
+
+Proved end to end through the stack: `whos_online:visitors` in Redis db 0 held
+`198.51.100.7` and `2606:4700:4700::1111` after one anonymous visit from each
+family. Before, the second would not have been there.
+
+**`get_ip` also unwraps IPv4-mapped IPv6** (`::ffff:192.0.2.3` →
+`192.0.2.3`), so one visitor cannot become two identities. Nothing observed
+sends the mapped form — Apache gives the plain one for IPv4 peers — so this is a
+guard, not a fix for something measured. Nothing else is rewritten: an address in
+an equivalent-but-different spelling is returned as the proxy sent it, and a
+mutation canonicalizing everything is caught.
+
+**It is `get_ip` only, and that is not all the readers.** Six applications read
+`request.META['REMOTE_ADDR']` directly and never call `get_ip` — `forums`,
+`comments`, `downloads`, `donations`, `antispam`, `accounts` — so a mapped
+address would still reach `Post.user_ip`, `Comment.ip_address` and
+`Download.ip_address` as written. Covering those would mean normalizing in
+`RealClientIP` instead, where `REMOTE_ADDR` is set. Deliberately not done;
+recorded here so the gap is not rediscovered as a bug.
+
+### `CSRF_TRUSTED_ORIGINS` is not needed — measured, with a control
+
+The task file asserted it was. It is not: `ProxyPreserveHost On` means
+`request.get_host()` is the browser's own host, so Django's Origin check matches
+without it.
+
+| POST through the proxy | result |
+|---|---|
+| Origin and Host both `surfguitar101.com` | 200 |
+| Origin and Host both `www.surfguitar101.com` | 200 |
+| Host `surfguitar101.com`, Origin `www.surfguitar101.com` | **403** |
+
+**The third row is what makes the first two mean anything** — without it, two
+200s are equally consistent with the CSRF check being absent. Not added:
+unused configuration in the security boundary has a cost, and the setting earns
+its place only if a www→apex redirect or a posting subdomain is ever introduced.
+
+### Mutation batteries — 17 of 17, after the first run measured nothing
+
+**Django, 11/11**, every file restored byte-identical (sha256): `RealClientIP`
+dropped from production `MIDDLEWARE`; moved from first to third; made a no-op;
+its address validation skipped; pointed at `X-Forwarded-For`; made to overwrite
+`REMOTE_ADDR` with no header present; `get_ip` reverted to the IPv4 pattern; and
+`get_ip` made to accept a leading address out of a longer string. Three more on
+the mapped-form unwrap: reverted to the old behaviour, widened to canonicalize
+every address, and with the mapped check inverted.
+
+**Apache, 6/6**, each through a graceful reload and re-probed, both files
+restored byte-identical: IPv6 ranges swapped for an unrelated one, the IPv4 range
+holding the peer swapped out, `RemoteIPHeader` pointed at `X-Forwarded-For`, the
+trust list widened to include the spoofing peer (**the spoof was then believed**,
+which is what proves the list is the boundary), `X-Real-IP` not set, and
+`expr=%{REMOTE_ADDR}` → `expr=%{CONN_REMOTE_ADDR}`.
+
+**The first Apache run reported 3 of 7 survived, and all three were wrong.** The
+mutations renamed `RemoteIPTrustedProxy` to an invalid directive — so
+`apache2ctl -k graceful` **refused the configuration and Apache kept serving the
+one it already had.** The probe then measured the unmutated system and read as a
+survival. **An invalid configuration is not a mutation**; the battery now runs
+`configtest` after each one and reports `INVALID` rather than a result. Same
+class as the `mysql -B` escaping in the collation audit — a difference in the
+measurement presented as a difference in the thing.
+
+Two more of my own errors in the same run, both of which produced a confident
+wrong answer first:
+
+- **`0.0.0.0/0` is not accepted by `mod_remoteip`**, so the trust-widening
+  mutation was invalid rather than survived. Redone with `192.168.0.0/16`, which
+  contains the spoofing peer, and it was caught.
+- **`$DC` holding `docker compose -f …` does not word-split in zsh**, so a reload
+  silently never ran and the mutation read as survived. The same trap the
+  collation audit recorded, in a different shape.
+
+### Two things found while probing, neither a defect
+
+- **Apache binds its listeners at startup.** The proxy container was started
+  before the IPv6 probe network was attached, so it bound IPv4 only and the IPv6
+  probe could not connect at all — which looked exactly like a missing IPv6
+  trust entry. After a restart it binds `[::]:443` dual-stack. A probe artifact,
+  but worth knowing on the VM: attach the interface, then start.
+- **Without `mod_remoteip` loaded, Apache refuses to start**, because
+  `remoteip.conf`'s directives become invalid. That is the good failure: loudly,
+  at start, rather than silently recording the edge. Disabling the module as a
+  mutation therefore also needs the container recreated from the image
+  afterwards.
+
+### Testing
+
+`core/tests/test_real_client_ip.py` is new and holds criterion 6 in one place:
+comments, forum topics, forum posts over IPv6, and downloads read back from the
+database, plus failed login and failed registration read back from `auth.log`.
+**Every request arrives with `REMOTE_ADDR` set to the proxy's address and asserts
+a different one**, so a test that passes because the middleware did nothing is
+not possible. The logging pair copies the enable-and-restore dance from
+`contact/tests/test_views.py`.
+
+**What the suite cannot cover, and what to do instead:** `tools/prod_smoke.sh`
+makes every check from outside, and what the application recorded is visible only
+on the host, so the smoke script is **not** extended here. Cutover runbook **B3**
+now carries the manual verification and the ordering constraint into Step 21.
+
+### Not done here
+
+The proxy's own `X-Forwarded-For` handling is untouched. `mod_proxy_http`
+appends the corrected client to it on the way to gunicorn, and nothing reads it —
+`get_ip`'s docstring and `AGENTS.md` both say not to, and that stands.
+
+### Deferred — routing the other readers through `get_ip` (asked 2026-09-19)
+
+**Question: should the applications that read `REMOTE_ADDR` directly call
+`get_ip` instead, and should the normalization live in the middleware rather
+than in `get_ip`? Answer: partially, and no. Neither is urgent and nothing is
+blocked.** Recorded here with the measurements, because they are what set the
+priority and they are not obvious from the code.
+
+**The normalization stays in `get_ip`.** The two pieces answer different
+questions and the split is the point: `RealClientIP` answers *whose address is
+this*, which is deployment-specific and only correct behind the proxy;
+`get_ip` answers *is this a usable address, canonically spelled*, which is true
+in dev, in the suite and on the VM alike. Moving it into the middleware would
+make canonical spelling a property of running in production — the same input
+returning different strings in dev and prod — and would still not reach
+`get_ip`'s own callers outside production.
+
+**Switching the direct readers is worth less than it looks, because the database
+already refuses bad values.** All three address columns are PostgreSQL `inet`,
+and two of them are `NOT NULL`:
+
+| column | type | null |
+|---|---|---|
+| `comments_comment.ip_address` | `inet` | NO |
+| `downloads_download.ip_address` | `inet` | NO |
+| `forums_post.user_ip` | `inet` | YES |
+
+So a value that is not an address cannot be stored today. Switching those three
+writers to `get_ip` turns a `DataError` into an `IntegrityError`; it changes
+which exception is raised, not whether bad data lands. **This corrects an
+assumption made earlier the same day** — that the direct readers could persist
+junk. They cannot.
+
+**The six log-only sites would get worse, not better.** `donations`,
+`antispam` (x2) and `accounts` (x3) interpolate the address into a string and
+default it to `'?'` or `'unknown'`. `get_ip` returns `None`, so a straight swap
+makes `auth.log` read `Login failure from [None]` — in the file fail2ban parses
+and the registration-spam analysis ran on. They would need
+`get_ip(request) or '?'`, which is more code for identical behaviour.
+
+**The one real argument for doing it**: `get_ip`'s docstring is the single place
+this project states the rule about never preferring a client-supplied header,
+and seven of the ten call sites do not go through it. That is consistency and
+discoverability, not correctness.
+
+**Priority low; the mapped form has no producer in this stack.** Gunicorn binds
+`0.0.0.0:8000`, so it only ever sees IPv4 peers, and Apache reports plain forms
+already — measured during the mutation battery, a plain `192.168.65.1` from an
+IPv4 client against a `[::]:443` listener. The unwrap added to `get_ip` guards a
+case nothing currently generates.
+
+**Where it belongs: after Step 21.** Not Step 20, which is production hardening;
+this is application tidying of the kind Step 19 Phase D collects, and nothing
+before cutover needs it.
+
 ## Step 20 task 03 — the production stack, Apache in front — DONE 2026-09-19, `60c54324` + `127c22c6`, PUSHED
 
 **Suite 1271 OK, gate 1271 OK, `tools/prod_smoke.sh` 19/19, `check --deploy`

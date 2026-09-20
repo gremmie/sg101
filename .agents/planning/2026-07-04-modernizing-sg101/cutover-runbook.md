@@ -64,6 +64,14 @@ checkout, and a graceful reload picks up whatever is there. `git status apache/
 docker-compose.prod.yml` on the VM must be clean. The Apache image carries only
 the program and its modules, so nothing about the site's configuration hides in
 it.
+
+**Two files in there are the security boundary (task 04, 2026-09-19):**
+`conf-enabled/remoteip.conf` decides whose `CF-Connecting-IP` is believed, and
+the vhost's `RequestHeader set X-Real-IP` is what carries that answer to
+gunicorn. An edit to either silently changes who the site thinks its visitors
+are. Re-read Cloudflare's published ranges at the same time and diff them
+against the file rather than skimming — `www.cloudflare.com/ips-v4` and
+`ips-v6`, 15 and 7 CIDRs when last checked.
 *Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
 03 and 04.*
 
@@ -102,12 +110,31 @@ backup if it is ever lost.
 config on the box being retired.** Without it, on cutover day every IP the site
 records silently becomes a proxy address.
 
-**Step 20 task 04 builds it in the repo** — Apache `mod_remoteip`,
+**Built and verified locally 2026-09-19 (task 04).** Apache `mod_remoteip`,
 `RemoteIPHeader CF-Connecting-IP`, `RemoteIPTrustedProxy` over Cloudflare's **15
-IPv4 and 7 IPv6** ranges — as configuration mounted into the proxy service of the
-production compose stack, so it travels with the code rather than living on a
-host. **Cutover verifies it against a real request**, which is the only check that
-means anything: read what the application recorded, not what the config says.
+IPv4 and 7 IPv6** ranges, in `apache/conf-enabled/remoteip.conf`, bind-mounted
+into the proxy so it travels with the code rather than living on a host.
+
+**It is two halves, and the second one is easy to forget.** `mod_remoteip` fixes
+what *Apache* thinks the client is; the vhost's `RequestHeader set X-Real-IP
+"expr=%{REMOTE_ADDR}"` and `core.middleware.RealClientIP` are what carry that to
+gunicorn, which is a separate process here and was not on jaguar. Either half
+alone leaves the applications recording a constant address.
+
+**Verify against a real request on the VM, and do not skip it.**
+`tools/prod_smoke.sh` cannot cover this: every check it makes is from outside,
+and what the application recorded is only visible on the host. So:
+
+1. From a browser, through Cloudflare, fail a login on purpose.
+2. On the VM, `tail var/log/django/auth.log` — the `Login failure from [...]`
+   line must hold **your** address, not a Cloudflare edge address and not the
+   proxy container's `172.*`.
+3. `tail var/log/apache/access.log` — the same address must lead that line, since
+   this is what fail2ban parses.
+4. Repeat over IPv6 if the origin publishes an AAAA record.
+
+**Then, and only then, enable fail2ban** (Step 21). In the wrong order it bans
+Cloudflare.
 *Source: `research/dmarc-readings.md` § "A cutover requirement this exposed";
 Step 20 tasks 03 and 04.*
 
