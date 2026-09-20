@@ -43,6 +43,157 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 08 — the egress is the podcast, and one file extension explains it — DONE 2026-09-20, `66d87c77` + this planning commit, PUSHED
+
+**`tools/prod_smoke.sh` 19/19 → 21/21, both new checks mutation-verified.** The
+origin half is done and in the repo; the Cloudflare rule is specified below for
+Brian to apply, and re-verification at cutover is runbook **B9**.
+
+### The task named the wrong category, by 24x
+
+**Measured from jaguar's Apache access logs, 27 Jul – 20 Sep 2026, 56 days**
+(`access.log` plus 8 rotations — the full retained window). `%O` from the
+`combined` format, which is bytes Apache sent, i.e. **origin egress**: behind
+Cloudflare that is exactly what the VM's allowance bills.
+
+| | requests | origin bytes | share |
+|---|---|---|---|
+| everything | 6,384,159 | **70.98 GB** | — |
+| `/media` | 297,539 | 25.36 GB | 35.7% |
+| **`podcast`** | 1,349 | **19.95 GB** | **28.1%** |
+| `user_photos` | 61,489 | 3.30 GB | 4.6% |
+| `avatars` | 173,885 | 0.94 GB | 1.3% |
+| **`downloads`** | 362 | **0.83 GB** | **1.2%** |
+
+`plan.md` says *"`downloads` (716 MP3 rows) is the one category worth measuring
+egress on"*. It is not: it is 1.2%, and the podcast is 24x larger at 15.1 MB per
+request against downloads' 2.4 MB. **The reasoning behind the plan's sentence was
+sound — MP3s are the biggest files — and it picked the wrong set of them.**
+
+Peak day 2.71 GB (05 Aug); peak podcast day 1.70 GB (22 Aug), so no single day
+is an outlier that carries the total.
+
+### One file extension explains all of it
+
+| | Cloudflare, two requests |
+|---|---|
+| `sg101_episode11.mp3` | MISS → **HIT** |
+| `sg101_episode11.m4a` | **DYNAMIC, DYNAMIC** |
+
+Same directory, same `content-type: audio/mpeg`, 62.9 MB either way. **`.m4a` is
+not in Cloudflare's default cacheable-extension list and `.mp3` is**, and
+**11 of the 15 podcast episodes point listeners at `.m4a`** (`enclosure_url`;
+only 4 use `.mp3`).
+
+**The origin sends no `Cache-Control` or `Expires` for `/media` at all** —
+verified against Apache on jaguar directly, bypassing Cloudflare, where both
+files return byte-identical headers. jaguar sets `ExpiresDefault` on
+`static_serve` and **never on `media`**. So the `max-age=14400` visible on the
+`.mp3` through Cloudflare is **Cloudflare's own** default Browser Cache TTL, not
+jaguar's. Reading it as the origin's would have made the `.mp3`/`.m4a` difference
+look like an origin config difference, which is the wrong place to fix it.
+
+**The new stack reproduced the gap exactly**: `<Directory /srv>` set no
+`Expires`, and `mod_expires` was not among the modules `apache/Dockerfile`
+enabled.
+
+### Bandwidth was never the constraint, and that is the real answer
+
+**~38 GB per 30 days against the 4,000 GB included with `g6-standard-2`** (4 GB,
+$24.00/mo — the plan's named VM, read from Linode's public API at
+`api.linode.com/v4/linode/types`, since **no allowance was recorded anywhere in
+the planning documents**).
+
+**0.95% of the allowance. ~105x headroom — with the podcast entirely uncached.**
+
+The task exists to decide *"whether edge caching is sufficient to make disk
+storage viable"*. It is not close: **disk storage is viable with no edge caching
+at all.** Caching the podcast is worth doing because 28% of origin traffic for no
+reason is waste, not because anything is at risk. **Recorded this way deliberately
+— the number that matters is the one that says the question was not binding.**
+
+### The origin half, and why the TTLs live in the repo
+
+`apache/` now enables `mod_expires` and sets, under `/media`, a year — with a
+month for `/media/podcast/`. **The split is justified by mutability, not by
+guesswork about traffic:**
+
+| category | how the path is built | reusable URL? |
+|---|---|---|
+| `avatars/users/` | username + microsecond stamp (`bio/models.py`, whose comment says it is for cache-busting) | no |
+| `downloads/` | `downloads/Y/M/D/<random>/` | no |
+| `potd/` | `potd/%Y/%m/%d` | no |
+| `badges`, `smiley/`, `news/`, `banners/` | plain directories, but written through Django storage, which suffixes a colliding name | no |
+| **`podcast/`** | **not Django-managed at all** — `podcast.Item.enclosure_url` is a `URLField` and the audio is placed on disk by hand | **yes** |
+
+So everything except the podcast is immutable by construction and a year is not
+optimism, it is the lifetime of the bytes. **Brian's call on the podcast: one
+month, and purge on republish.**
+
+**The Cloudflare rule carries no TTLs**, deliberately: its Edge TTL is set to use
+the origin's `Cache-Control` when present, so the policy above is the only copy
+and it travels with the code — the jaguar complaint, not repeated.
+
+### The rule — applied by Brian 2026-09-20, Cloudflare → Caching → Cache Rules
+
+```
+Name:  Cache /media
+If:    (starts_with(http.request.uri.path, "/media/"))
+Then:  Cache eligibility ....... Eligible for cache
+       Edge TTL ................ Use cache-control header if present, cache
+                                 request with Cloudflare's default TTL for the
+                                 response status if not
+       Browser TTL ............. Respect origin TTL
+```
+
+**The Edge TTL as first specified here named a control that does not exist.** It
+said *"use cache-control if present, otherwise use default: 1 month"*, and
+Cloudflare's form offers no custom fallback on that option — the TTL input is
+greyed out. A TTL can only be named on *"Ignore cache-control header and use this
+TTL"*, which would override the origin's per-category headers after cutover and
+discard the reason for putting the policy in the repo at all. The option above is
+the right one; **Brian caught this from the form rather than from the spec.**
+
+**The consequence, which is the whole of the difference:** jaguar sends no
+`Cache-Control` for `/media`, so today the fallback branch is live — Cloudflare's
+status-code default, measured in hours. After cutover the new origin's
+`max-age=31536000` (a month for the podcast) is present and the fallback is never
+reached. **So the TTLs change at cutover without the rule being touched**, which
+is what runbook **B9** exists to re-verify.
+
+**Acceptance criterion 3 met 2026-09-20.** The `.m4a` that returned `DYNAMIC` on
+every request went `DYNAMIC → MISS → HIT`, and `HIT` with `age: 18` thereafter:
+
+| path | req 1 | req 2 |
+|---|---|---|
+| `/media/podcast/sg101_episode12.m4a` | MISS | **HIT** |
+| `/media/downloads/.../walk-dont-run-drums-track.m4a` | MISS | **HIT** |
+| `/media/avatars/users/...jpg` | HIT | HIT |
+
+**A first probe read `DYNAMIC` three times for `/media/downloads/` while the
+podcast was already `HIT`**, which looked like the rule matching one subtree and
+not another. It was propagation across PoPs, and retesting a minute later showed
+every path caching. Recorded because a single reading of `cf-cache-status`
+immediately after a rule change is not evidence of anything.
+
+**The full 28% saving lands at cutover, not today**, since the short fallback TTL
+will not hold ~24 podcast requests a day spread across ~20 files and many PoPs.
+That is acceptable on the measurement above — egress is 0.95% of the allowance —
+and the reason to apply now was to reach cutover with the rule exercised.
+
+### Two things left alone
+
+**`?source=iheart` appears on 48 podcast requests.** Cloudflare's cache key
+includes the query string, so those are separate cache entries from the bare
+URL. Not worth an ignore-query-string rule: it is 3.5% of podcast requests, and
+the rule would apply to all of `/media`, where a query string could one day mean
+something.
+
+**18 requests for `/media/downloads/` returned 404**, and a long tail of
+`/media/.env`, `/media/.git`, `/media/terraform.tfstate` and similar probes
+appears throughout — attack noise, a few bytes each, listed here only so the next
+reader of these figures does not mistake them for a finding.
+
 ## Step 20 task 05 — Redis bounded, and the socket that outlived its machine — DONE 2026-09-20, `0b6a96b0` + this planning commit, PUSHED
 
 **Suite 1296 OK, gate 1296 OK (1292 → 1296), `tools/prod_smoke.sh` 19/19

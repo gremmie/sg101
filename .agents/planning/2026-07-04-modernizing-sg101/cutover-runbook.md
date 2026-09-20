@@ -220,6 +220,33 @@ credentials are already in the project from Step 15. Use a **new bucket**, not
 the job puts objects, the lifecycle policy deletes them.
 *Source: Step 20 task 06.*
 
+### B9. Re-verify the `/media` cache rule against the new origin
+The Cloudflare cache rule was applied to the zone on 2026-09-20 and verified
+serving `HIT` on jaguar, so it arrives at cutover already exercised — the
+opposite of B6. What changes at cutover is the *origin*: jaguar sends no cache
+headers for `/media` at all, so the rule's fallback branch is what is live today;
+the new Apache sends `max-age=31536000` for everything under `/media` and
+`max-age=2592000` for `/media/podcast/`, at which point the fallback stops being
+reached and the TTLs jump from hours to a year.
+
+The rule's Edge TTL is set to **use the origin's `Cache-Control` when present**,
+so the per-category policy lives in `apache/sites-enabled/surfguitar101.com.conf`
+and not in the dashboard. That means the TTLs *change* at cutover, from the
+rule's fallback to the origin's own values, without the rule being touched.
+
+**Verify after the DNS flip**, twice for the same asset, since the first request
+populates the edge:
+
+```bash
+curl -sI https://surfguitar101.com/media/podcast/sg101_episode15.m4a | grep -i 'cf-cache-status\|cache-control'
+curl -sI https://surfguitar101.com/media/podcast/sg101_episode15.m4a | grep -i 'cf-cache-status\|cache-control'
+```
+
+Wanted: `cf-cache-status: HIT` on the second, and `max-age=2592000` from the new
+origin. `tools/prod_smoke.sh` checks the origin half of this already; the edge
+half needs the real DNS.
+*Source: Step 20 task 08.*
+
 ### B8. `/hosted` and `/photos` — content from jaguar's document root
 Two directories that were **not in the repo and recorded nowhere** until Step 20
 task 03 read jaguar's vhost: `Alias /hosted/` and `Alias /photos/` point into
