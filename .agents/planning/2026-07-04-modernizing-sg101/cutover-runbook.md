@@ -220,6 +220,47 @@ credentials are already in the project from Step 15. Use a **new bucket**, not
 the job puts objects, the lifecycle policy deletes them.
 *Source: Step 20 task 06.*
 
+### B10. Install the `logrotate` configuration
+Production's log handlers are `WatchedFileHandler`: they never rotate, because a
+dozen processes share `var/log/django` and a handler that renames the file it
+writes leaves every other process appending to a name that no longer exists.
+**Until this is installed, nothing rotates those files at all.**
+
+```bash
+sudo cp logrotate/sg101 /etc/logrotate.d/sg101
+sudo sed -i "s#/srv/sg101#$PWD#" /etc/logrotate.d/sg101   # if the checkout is elsewhere
+sudo logrotate --debug /etc/logrotate.d/sg101             # parses, changes nothing
+sudo logrotate --force /etc/logrotate.d/sg101             # once, to prove it
+```
+
+**Then prove the processes followed it**, which is the whole point and is not
+visible from `ls`: after the forced rotation, make the site serve a page and
+queue a task, then confirm the new lines are in `sg101.log` and not in
+`sg101.log.1`.
+
+```bash
+tail -3 var/log/django/sg101.log
+```
+
+*Source: Step 20 task 11, where this was exercised against the local stack.*
+
+### B11. Apache's own logs have no rotation either — decide before the VM fills
+**Found during task 11 and deliberately not fixed there.** `var/log/apache/`
+is written by the proxy container and nothing rotates it. On jaguar a single
+week of `access.log` was **164 MB**, and that host had `logrotate` for it; the
+new VM does not.
+
+It is a different problem from the Django files and that is why it was left:
+Apache holds its log open and does **not** follow a rename, so rotation needs a
+`postrotate` that signals the container —
+`docker compose -f docker-compose.prod.yml exec proxy apache2ctl -k graceful` —
+or `CustomLog` piped to `rotatelogs` instead of a file, which changes
+`apache/sites-enabled/`. The second keeps everything inside the container and
+needs no host cron; the first keeps one rotation mechanism for the whole VM.
+**Not decided.** Step 21 must not flip DNS without one of them.
+
+*Source: Step 20 task 11.*
+
 ### B9. Re-verify the `/media` cache rule against the new origin
 The Cloudflare cache rule was applied to the zone on 2026-09-20 and verified
 serving `HIT` on jaguar, so it arrives at cutover already exercised — the

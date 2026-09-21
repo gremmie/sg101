@@ -43,6 +43,335 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 11 — the worker was logging to nothing, and three trees were silenced — DONE 2026-09-20, `870f375d` + this planning commit, PUSHED
+
+**Suite 1303 OK, gate 1303 OK (1296 → 1303), `tools/prod_smoke.sh` 21/21
+unchanged, `check --deploy` unchanged, 10 of 10 mutations caught.** Production's
+file handlers are `WatchedFileHandler`, rotation moves to `logrotate/sg101`, and
+the worker's records reach the files for the first time.
+
+### The task named one defect; there were two, and the second is worse
+
+The task file asks why *a task's completion* is not logged. Measured on the
+running production stack 2026-09-20, **nothing the worker or beat logs reaches
+any file at all** — not Celery's lines, not the application's.
+
+| | cause | effect |
+|---|---|---|
+| 1 | `disable_existing_loggers: True` silences `celery.app.trace` | no `succeeded` line, anywhere |
+| 2 | Celery's default `worker_hijack_root_logger` replaces root's handlers in the worker | every worker record that *relies on root* — the 13 module-named loggers, celery's own — went to the container's stdout and nowhere else. Loggers with their own handler were unaffected |
+
+**Corrected 2026-09-20, after Brian questioned the development half.** This
+section first claimed `email.log` was empty *by construction* and that the mail
+audit trail had no answer in production. **That was wrong, and the mistake was
+mine: I reasoned from a 0-byte file instead of sending a message.**
+
+Celery's hijack replaces the **root** logger's handlers. It does not touch a
+logger that has its own, and `email`, `auth`, `search` and `antispam.turnstile`
+each have one. Tested by setting the hijack back on and sending a failing
+message: **`email.log` filled anyway, 504 bytes.** The file was 0 bytes because
+no mail had ever been sent through a local production stack built the day
+before, which is a fact about the test rig and not about the site.
+
+**What the hijack actually costs is everything that depends on root's
+handlers** — the 13 module-named loggers and celery's own. Measured: an
+application warning inside a task reached the container's output and not
+`sg101.log`, and `sg101.log` had not been written since 2026-09-19 despite days
+of task activity. The `email` logger's `propagate: True` half was lost with
+them, so the audit line was in `email.log` and missing from `sg101.log` — half
+of what that comment promises, not none of it.
+
+[[suspect-the-measurer-before-the-record]] read the wrong way round: I had the
+measurement (0 bytes) and invented a mechanism for it rather than testing the
+mechanism. The hedge I attached at the time — *"reasoning from the demonstrated
+mechanism plus a 0-byte file, I did not send real mail"* — named the exact gap
+and I wrote the conclusion down anyway.
+
+### The asymmetry is the finding, not the absence
+
+`received` appeared and `succeeded` did not, from the same task, which looks
+arbitrary until you ask *when each logger was created*:
+
+| logger | existed when Django applied `LOGGING` | disabled | emits |
+|---|---|---|---|
+| `celery.app.trace` | **yes** | **yes** | `succeeded` |
+| `celery.worker.strategy` | no | no | `received` |
+
+**So which Celery lines survive is decided by which modules happened to be
+imported first.** That is not a thing to work around one logger at a time. The
+fix is one `celery` entry in `LOGGING`: dictConfig disables existing loggers it
+was not told about, but *resets* the descendants of one it was told about, so
+naming the parent keeps the whole tree.
+
+**The first probe of this read the opposite and was wrong.** Run as
+`python -c "import django; django.setup(); ..."`, `celery.app.trace` reported
+`disabled=False` — because that process created the logger *after* dictConfig
+had run. Re-probed in the worker's own order (`import celery.app.trace` first,
+then `django.setup()`) it reports `disabled=True`. **The probe had the property
+it was measuring.** [[probes-must-not-perturb-what-they-measure]]
+
+A detail worth keeping: `celery.app` reports `disabled=False` in both orders,
+because it is a `PlaceHolder` in `loggerDict` rather than a real `Logger`, and
+dictConfig's disable pass skips those. Reading it as evidence the tree was fine
+would have been wrong twice over.
+
+### The hijack, proved from the format rather than asserted
+
+An application `logger.warning()` inside a task printed as:
+
+```
+[2026-09-20 17:37:40,634: WARNING/ForkPoolWorker-6] update_user_stats: user id 999999 doesn't exist
+```
+
+That is **Celery's** format. The project's `simple` formatter is
+`%(asctime)s %(levelname)s %(message)s`, with no brackets and no worker name. A
+Celery handler had handled the record, which is what hijacking root means. After
+`CELERY_WORKER_HIJACK_ROOT_LOGGER = False` the same line reads
+`2026-09-20 17:45:49,985 WARNING update_user_stats: ...` and lands in
+`sg101.log`. **`sg101.log` had last been written on 2026-09-19**, days of task
+activity ago.
+
+`email.log` and `sg101.log` now both carry the audit line — 489 and 1,772 bytes
+on an exercised send — which is what the `email` logger's `propagate: True` has
+always promised. Only the `sg101.log` half was ever missing.
+
+### Rotation, and what was actually measured about retention
+
+Retention on jaguar, read 2026-09-20 rather than taken from the task file's
+figures:
+
+| file | backups | oldest line | span |
+|---|---|---|---|
+| `sg101.log` | 10 | 2026-04-19 | **5.0 months** |
+| `auth.log` | 5 | 2025-01-09 | **20.4 months** |
+| `email.log`, `search.log`, `turnstile.log` | — | **absent** | — |
+
+**Three of the five do not exist on the old host at all** — they arrived with
+Steps 12, 16 and 17 — so for those there is no retention to preserve and nothing
+to compare against. They take `auth.log`'s shape because they are the same kind
+of file. **Brian's call: match that shape and add compression.**
+
+`auth.log` gets **12 backups where the handler kept 5**. Its history is the
+stated reason this approach beat one stream per container, and 12 compressed
+backups cost less disk than 5 uncompressed ones do today — which also absorbs
+the higher volume the new stack will produce, since the worker now writes here
+too and every gunicorn process writes where one mod_wsgi daemon used to.
+
+**`create`, never `copytruncate`**, and `create` with no mode or owner so it
+reuses the rotated file's own — which keeps working when task 12 stops the
+containers running as root.
+
+**Exercised, not asserted.** Real `logrotate` was run against the running
+stack's `var/log/django` (in a Debian container, since macOS has none). After
+`sg101.log` → `sg101.log.1` left a 0-byte file, a web request and a queued task
+both wrote to the **new** file:
+
+```
+2026-09-20 17:48:27,043 WARNING WEB-AFTER-ROTATE
+2026-09-20 17:48:27,075 WARNING update_user_stats: user id 999999 doesn't exist
+2026-09-20 17:48:27,076 INFO Task accounts.tasks.user_stats_task[...] succeeded
+```
+
+### The search tasks were logging into the worker's log, not `search.log`
+
+**Found by Brian asking how Celery uses the new `celery` entry**, which is a
+better question than it sounds: the answer is that Celery never looks it up.
+The entry is structural — dictConfig disables existing loggers it was not told
+about, but *resets* the descendants of one it was, so naming the parent spares
+`celery.app.trace` and the rest. Routing is then plain propagation up to root.
+
+Following that through turned up a second consumer of the same tree.
+`celery.utils.log.get_task_logger()` **reparents** what it returns onto
+`celery.task`, and `search/tasks.py` used it. Measured in the worker:
+
+```
+search.tasks[NullHandler] -> celery.task -> celery -> root[WatchedFileHandler, StreamHandler]
+```
+
+Its parent was `celery.task`, **not `search`** — so four `logger.warning` and
+`logger.info` call sites never reached `search.log`, which has its own handler
+and exists precisely so a sweep's findings sit beside the queries members ran.
+
+**`search/reconcile.py:48` already documents the trap in a comment** and
+deliberately uses a plain `getLogger('search')` to avoid it. `tasks.py` did not.
+One line, now matching, with the same reasoning in a comment beside it.
+
+Verified in the running stack: `search.log` went 0 → 76 bytes with the warning,
+and the line is **absent** from `sg101.log`, which is the `search` logger's
+`propagate: False` doing what it has always claimed.
+
+**A discriminating mutation kept the two new tests honest.** Reverting to
+`get_task_logger` fails both. Changing the logger to `getLogger('search.tasks')`
+fails only the identity test — because a name-child of `search` still routes
+correctly, so `assertLogs('search')` cannot tell the two apart. Without the
+second test the fix could regress to something that routes by accident.
+
+**A defect of my own, caught by the test count.** The new case first subclassed
+`TaskTestCase` and so inherited and re-ran nine of its test methods — the suite
+read 1311 where it should have read 1302. It needs no fixture at all, only a
+database for the content-type lookup to miss in.
+
+### "Do we have tests that records go to the right logs?" — we did not
+
+**Brian's question, and the honest answer was no.** The `search/tasks.py` defect
+is the proof: it logged into the worker's log for its entire life and nothing
+failed, because nothing looked. What existed tested the *shape* of the two
+LOGGING dicts and a couple of individual `assertLogs` cases; nothing tested
+where a given module's records actually end up.
+
+**The routing, measured under production settings 2026-09-20:**
+
+| logger | records reach |
+|---|---|
+| `email` | email.log, sg101.log, console |
+| `auth` | auth.log |
+| `search` | search.log |
+| `antispam.turnstile` | turnstile.log |
+| the 13 module-named loggers | sg101.log, console |
+| `django` | sg101.log (WARNING) |
+| `django.request` | AdminEmailHandler, sg101.log |
+| `MARKDOWN` | sg101.log (WARNING) |
+
+All correct — but a measurement does not stop the next `get_task_logger`, so it
+is now `test_every_logger_reaches_the_file_it_is_meant_for`, which pins 14
+module-level loggers to their destination sets.
+
+**It asserts on the logger *object*, not its name**, which is the whole point:
+`get_task_logger` leaves the name `search.tasks` intact and moves the parent, so
+a name check passes while the records go elsewhere. The test imports each module
+first, so anything done to the logger at import time has already happened, then
+walks the propagation chain to the handlers' filenames.
+
+**Mutation-verified against the original defect.** Reintroducing
+`get_task_logger` in `search/tasks.py` now fails the suite, and says why:
+
+```
+AssertionError: Lists differ: ['NullHandler', 'StreamHandler', 'sg101.log'] != ['search.log']
+```
+
+Flipping `auth`'s `propagate` to True fails five subtests, since four loggers
+feed that file and their volume would start landing in `sg101.log`.
+
+**One consequence of putting `console` on root rather than per logger:** the
+four loggers with `propagate: False` — `auth`, `search`, `antispam.turnstile`
+and `django` — do not reach the container's output at all. Their files are the
+record. That is visible in the table above rather than left to be discovered.
+
+### The same defect a third time: gunicorn was logging nothing either
+
+**Found while sizing the container-log ceiling.** `Dockerfile` ran gunicorn with
+`--access-logfile -`, so `web`'s stream should carry a line per request. It
+carried none: **30 requests moved the stream 0 bytes.**
+
+Same cause as `celery.app.trace`, one layer down. gunicorn builds
+`gunicorn.access` and `gunicorn.error` before a worker loads the Django app, so
+`disable_existing_loggers: True` disabled both:
+
+| logger | existed when `LOGGING` applied | disabled |
+|---|---|---|
+| `gunicorn.access` | yes | **yes** |
+| `gunicorn.error` | yes | **yes** |
+| `gunicorn` | placeholder only | no |
+
+**`gunicorn.error` is the real loss, not the access log.** It carries "Error
+handling request" and a worker's own failures, and it had been going nowhere.
+A `gunicorn` entry in `LOGGING` restores the tree exactly as the `celery` one
+does; both now route to `sg101.log` and the container's output.
+
+**`--access-logfile -` is removed rather than repaired.** Apache in front
+already logs every request in the `combined` format fail2ban's filters are
+written against, and it logs the ones Apache serves from disk too, so it is a
+superset. Restoring gunicorn's copy would have put a second line per request —
+about 114,000 a day at the rate measured on the old host — into the container
+stream, to say what a bounded, retained file already says. The Dockerfile now
+claims only what it does.
+
+**Three places, one mechanism.** `celery.app.trace`, `search.tasks` (through
+`get_task_logger`'s reparenting) and now `gunicorn.*` all lost records to
+`disable_existing_loggers: True` and import order, and none of the three failed
+anything. That is what the routing test above exists to stop.
+
+### Every container stream was unbounded
+
+Docker's `json-file` driver has no `max-size` or `max-file` by default, and
+`docker-compose.prod.yml` set none: verified with
+`docker inspect` — `driver=json-file opts=map[]` on every service. A container's
+stream grew until the disk did.
+
+Now `10m` x `3` per service through a `x-logging` anchor, verified against the
+resolved configuration rather than the file:
+
+| beat | postgres | proxy | redis | web | worker |
+|---|---|---|---|---|---|
+| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+30 MB a service, six services, and months of output at the volumes measured. It
+needs no host cron, which is what makes it the cheapest of the three sinks to
+close.
+
+**Which makes the count worth stating plainly: this stack had four log sinks
+and three were unbounded.** The Django files (fixed here), the container streams
+(fixed here), Apache's files (**still open**, runbook B11) and Docker's own
+daemon log. A task called "Production Logging That Survives Many Processes"
+found that the logging mostly was not surviving at all.
+
+### Should the four `propagate: False` loggers also reach the container output?
+
+**Asked and answered no.** `auth`, `search`, `antispam.turnstile` and `django`
+keep their records to their own files. The volume argument is weak — `auth.log`
+measures ~0.6 MB a month on the old host — and the real reason is what each sink
+is for: the files are rotated, retained for 20 months, and read by fail2ban,
+while the container stream is a live view. Root already carries `file` and
+`console`, so everything that propagates is in `docker compose logs` already;
+these four are exactly the ones with somewhere better to be. If one of them ever
+needs to be live, the change is `console` on that handler, not propagation.
+
+### Found and deliberately not fixed: Apache rotates nothing either
+
+`var/log/apache/` is written by the proxy container and **nothing rotates it**.
+jaguar's `access.log` was **164 MB for a single week**, and that host had
+`logrotate` for it. The new VM does not.
+
+It is left because it is a *different* problem, not a smaller one: Apache holds
+its log open and does not follow a rename, so it needs either a `postrotate`
+that signals the container or `CustomLog` piped to `rotatelogs`, which changes
+`apache/sites-enabled/`. Recorded as runbook **B11**, undecided, and flagged
+there as something Step 21 must not flip DNS without.
+
+### Development keeps its rotation and loses the hijack — corrected 2026-09-20
+
+Dev keeps `RotatingFileHandler`: the task file scopes rotation out and gives a
+reason that holds — nobody reads development logs for history, and there is no
+host `logrotate` to hand rotation to.
+
+**The hijack was a different matter and was excluded by mistake.** It first went
+into `production.py` alone, on the strength of that same "development is out of
+scope" line — but that line's reasoning is about *rotation*, and says nothing
+about which handlers a worker writes through. **Brian pushed back and was
+right.** The setting is now in `base.py`, so a worker logs the same way in both
+deployments, and dev's root gains the `console` its container output would
+otherwise have lost. `root.handlers` is no longer a difference between the two
+targets at all.
+
+**What it fixes in development:** worker records reach dev's `sg101.log`, which
+they never did. Measured after the change — 1,078 bytes and three worker lines
+in a file that had been getting none.
+
+**The noise it was expected to cost: none, measured.** Dev's root runs at DEBUG,
+so the worry was that every propagating DEBUG record would start printing. The
+same two operations produced **336 bytes of worker console against 391 before**
+— slightly *less*, because Celery's `[...: INFO/ForkPoolWorker-6]` prefix is
+longer than this project's `... INFO`. Five page loads added **0 bytes** to the
+web console. **The whole codebase contains six `logger.debug()` calls**, all in
+`core/images/upload.py` on the photo-upload path, so there is almost no DEBUG to
+emit.
+
+**The format is the tell, and it caught a false result mid-measurement.** The
+first run after the change reported byte-identical output — because
+`docker compose up -d` had not recreated the already-running worker, which was
+still on the old settings. Celery's bracketed prefix in the output said so
+before the numbers did.
+
 ## Step 20 task 08 — the egress is the podcast, and one file extension explains it — DONE 2026-09-20, `66d87c77` + this planning commit, PUSHED
 
 **`tools/prod_smoke.sh` 19/19 → 21/21, both new checks mutation-verified.** The
