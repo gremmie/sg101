@@ -78,6 +78,29 @@ RUN pip install -r requirements.txt
 # the code isn't bind-mounted.
 RUN mkdir -p /app/sg101/logs
 
+# --- The account the application runs as -------------------------------------
+# A code-execution bug in the application gets whatever the process has, and a
+# root process is what most container escapes start from. Nothing here needs
+# root: the ports are 8000 and above, and everything written at runtime is
+# either a bind mount or this user's own home.
+#
+# A container user and a host user are matched by *numeric UID*, not by name, so
+# this number is the contract with the VM: media/ and var/ on the host must be
+# owned by it, which cutover-runbook B12 sets after B4's rsync. 1000 is the
+# first ordinary account on Debian and Ubuntu, so it is almost certainly the
+# administrator's own -- which keeps those directories manageable without sudo.
+# A host where 1000 is taken by something else passes --build-arg APP_UID=.
+#
+# Docker Desktop on macOS translates bind-mount ownership and will accept
+# almost anything here. The Linux VM will not, which is why CI -- ubuntu-latest,
+# with real bind-mount semantics -- builds this image and checks it can write.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN set -eux; \
+    groupadd --gid "$APP_GID" sg101; \
+    useradd --uid "$APP_UID" --gid "$APP_GID" --create-home \
+            --home-dir /home/sg101 --shell /usr/sbin/nologin sg101
+
 # Copy the source (in dev this is shadowed by a bind mount from compose).
 COPY . /app
 
@@ -91,6 +114,16 @@ EXPOSE 8000
 RUN SECRET_KEY=build-time-only \
     DJANGO_SETTINGS_MODULE=sg101.settings.production \
     python manage.py collectstatic --noinput
+
+# The two directories the application writes inside the image rather than onto a
+# bind mount. sg101/logs is both: it is a mount point in production and a real
+# directory in development, and it has to be writable either way.
+RUN chown -R sg101:sg101 /app/sg101/logs /home/sg101
+
+# Everything below runs as sg101. Declared after the build steps so those still
+# run as root -- pip, collectstatic and the apt layers all write where this user
+# cannot.
+USER sg101
 
 # No --access-logfile: Apache in front logs every request already, in the
 # combined format fail2ban's filters are written against, and a second line per
@@ -115,6 +148,20 @@ CMD ["sh", "-c", "exec gunicorn sg101.wsgi:application \
 # installed by the layers above, so this resolves to the three tools it adds.
 # No COPY needed: the source, requirements file included, arrived above.
 FROM prod AS dev
+
+# Back to root, deliberately, and only here.
+#
+# Development bind-mounts the whole checkout over /app, so anything the
+# container creates lands in the working tree owned by whoever the container
+# runs as. Under Docker Desktop that ownership is translated and either choice
+# works; on Linux a developer whose UID is not the one baked into the image
+# would get files they cannot edit -- from makemigrations, from a test that
+# writes, from pip installing into the tree.
+#
+# The reason for dropping root in production also does not apply: this stack
+# publishes to localhost, carries the debug toolbar, and runs the test suite.
+# What it protects against is not a threat it faces.
+USER root
 
 RUN pip install -r requirements_dev.txt
 

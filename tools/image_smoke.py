@@ -130,7 +130,24 @@ def main(with_s3=False):
 
     created['user'] = User.objects.create_user(
         USERNAME, 'image-smoke@example.com', PASSWORD)
-    client = Client()
+    # Two things the production settings need and the test client does not
+    # supply by default. Neither matters in development, which is why this tool
+    # ran there and had never run against the stack it most needs to check.
+    #
+    # SERVER_NAME: Client() sends `Host: testserver`, which production's
+    # ALLOWED_HOSTS rejects (development allows '*'), so every view-driven check
+    # came back 400. The first allowed host is the right one to claim to be; a
+    # leading dot is a suffix pattern rather than a name, so it is stripped.
+    #
+    # X-Forwarded-Proto: production sets SECURE_SSL_REDIRECT, so a plain-HTTP
+    # POST is answered 301 to https -- which drops the body, and `follow=True`
+    # then re-issues it as a GET. The checks saw 200 and no stored file. The
+    # header is how Apache tells Django a request arrived over TLS
+    # (SECURE_PROXY_SSL_HEADER), so claiming it is what a real request does.
+    host = (settings.ALLOWED_HOSTS or ['testserver'])[0].lstrip('.')
+    if host == '*':
+        host = 'testserver'
+    client = Client(SERVER_NAME=host, HTTP_X_FORWARDED_PROTO='https')
     assert client.login(username=USERNAME, password=PASSWORD), 'login failed'
 
     print('\n== avatar uploads (bio.views.change_avatar)')

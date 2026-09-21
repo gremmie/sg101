@@ -70,6 +70,41 @@ jobs:
           && coverage report
           && coverage xml"
 
+      # The one thing a Mac cannot answer. Docker Desktop translates bind-mount
+      # ownership, so the production image passes there whatever UID it runs as
+      # -- and the VM does not translate anything. This runner is real Linux
+      # with real bind-mount semantics, which is the only place the contract
+      # between the image's UID and the host directories' owner is actually
+      # tested before the VM exists.
+      #
+      # It builds the prod target (the suite above builds dev, which is root on
+      # purpose), checks the processes are not root, and checks that a directory
+      # owned by the matching UID is writable and one owned by another is not --
+      # because a test that only proves "it wrote" would pass on a world-writable
+      # directory and prove nothing.
+      - name: The production image runs unprivileged, and its UID is the contract
+        run: |
+          set -eux
+          docker build --target prod -t sg101-uid-check .
+
+          test "$(docker run --rm sg101-uid-check id -u)" = 1000
+          test "$(docker run --rm sg101-uid-check id -un)" = sg101
+
+          mkdir -p /tmp/uidcheck/ok /tmp/uidcheck/wrong
+          sudo chown 1000:1000 /tmp/uidcheck/ok
+          sudo chown 65534:65534 /tmp/uidcheck/wrong
+          sudo chmod 755 /tmp/uidcheck/ok /tmp/uidcheck/wrong
+
+          docker run --rm -v /tmp/uidcheck/ok:/m sg101-uid-check \
+              sh -c 'touch /m/probe && echo "matching UID: writable"'
+
+          if docker run --rm -v /tmp/uidcheck/wrong:/m sg101-uid-check \
+                 sh -c 'touch /m/probe' 2>/dev/null; then
+            echo "a directory owned by another UID was writable; the check proves nothing"
+            exit 1
+          fi
+          echo "non-matching UID: refused, as it must be"
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7

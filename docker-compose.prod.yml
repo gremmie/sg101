@@ -142,7 +142,11 @@ services:
 
   beat:
     <<: *app
-    command: celery -A sg101 beat -l info
+    # --schedule out of /app: beat keeps a small database of each periodic
+    # task's last run, and /app belongs to root in the image. Home keeps its
+    # lifetime exactly as it was -- the container's writable layer, so a restart
+    # preserves it and a recreate does not.
+    command: celery -A sg101 beat -l info --schedule /home/sg101/celerybeat-schedule
     volumes:
       - ./var/log/django:/app/sg101/logs
     healthcheck:
