@@ -175,6 +175,42 @@ ten so the set stops being partial. They render broken in local development
 until then, which is how this was found.
 *Source: Step 20 task 02, tracing broken images on a forum topic page.*
 
+### B4a. Own `media/` and `var/` as the container's UID — after the rsync, not before
+The application containers run as **uid 1000** (`sg101` in the image). A
+container user and a host user are matched by number, not by name, so the host
+directories the containers write have to be owned by 1000 or the writes fail.
+
+**This goes after B4**, because B4's rsync sets ownership from what it copies
+and would undo it. Same for any later re-sync: re-run this afterwards.
+
+```bash
+sudo chown -R 1000:1000 media var
+sudo find media var -type d -exec chmod 755 {} +
+```
+
+On Debian and Ubuntu, 1000 is the first ordinary account — very likely your own
+login — so these stay editable without `sudo` afterwards. Check it before
+relying on it: `id -u`. **If the VM's admin account is not 1000**, either use a
+UID that is free and build with `--build-arg APP_UID=<n>`, or keep 1000 and
+accept that `media/` belongs to whichever account holds it.
+
+**Verify after `docker compose -f docker-compose.prod.yml up -d`:**
+
+```bash
+docker compose -f docker-compose.prod.yml exec web id          # uid=1000(sg101)
+docker compose -f docker-compose.prod.yml exec web touch /app/media/.probe \
+  && docker compose -f docker-compose.prod.yml exec web rm /app/media/.probe
+docker compose -f docker-compose.prod.yml exec web python /app/tools/image_smoke.py
+```
+
+The last one drives real uploads through the real views on this deployment and
+cleans up after itself — 7/7 when the ownership is right. **Take a database
+snapshot first**; it creates and deletes a scratch user.
+
+*Source: Step 20 task 12. The UID contract is checked on every CI run, which is
+the only Linux this project has until the VM exists — Docker Desktop translates
+bind-mount ownership and will accept a configuration the VM rejects.*
+
 ### B5. Install the Cloudflare Origin CA certificate
 Step 20 terminates TLS at the Apache proxy on a **self-signed certificate**,
 which is all the local stack needs. The real origin certificate is a Cloudflare

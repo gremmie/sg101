@@ -43,6 +43,141 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Cloudflare's HSTS is off — verified 2026-09-20, closing the vhost read's open item
+
+**The open question from the vhost read was whether the edge adds its own HSTS
+header**, since one header at the edge is consistent with Cloudflare passing
+jaguar's through *or* sending its own. Matching values cannot separate those:
+
+| | `Strict-Transport-Security` |
+|---|---|
+| origin, direct (`127.0.0.1` on jaguar, Host header set) | `max-age=604800` |
+| through the edge | `max-age=604800` |
+| **`/cdn-cgi/trace`** — Cloudflare's own response, never reaching the origin | **absent** |
+
+**The third row is the measurement.** Cloudflare's HSTS setting is a zone-wide
+response header and would apply to its own responses too; it is not there. So
+the header on the live site is jaguar's, passed through unchanged, and the goal
+stated when HSTS moved out of Apache and into `SECURE_HSTS_SECONDS` holds at
+cutover: **one header, one source, one value** — the new Apache sends none,
+Django sends `max-age=604800`, Cloudflare adds nothing.
+
+**Which also makes `check --deploy`'s two remaining warnings deliberate rather
+than accidental.** `security.W005` (`SECURE_HSTS_INCLUDE_SUBDOMAINS`) and
+`security.W021` (`SECURE_HSTS_PRELOAD`) are both off because a browser caches
+either for the full `max-age` and there is no way to withdraw it early —
+`wiki.surfguitar101.com` still answers on the old host, and preload is baked
+into browser binaries. W005 becomes answerable once nothing else lives under the
+domain; W021 only after W005 has run long enough to trust.
+
+**A side finding worth knowing, not acting on:** the same directive is in
+**five** of jaguar's vhosts — `surfguitar101.com`, `bravenewsurf.com`,
+`edtaxidermy.com`, `briananddebra.com`, `deathofagremmie.com`. HSTS is per-host,
+so each was advertising its own, and three of those domains have since moved to
+Cloudflare Pages and are no longer served by jaguar at all. A domain that
+advertised `max-age=604800` and then stops sending it is only a problem if it
+also stops serving HTTPS, which Pages does not — so nothing to do, but it is the
+kind of thing that looks alarming when noticed later without this note.
+
+## Step 20 task 12 — unprivileged containers, and the tool that could never check them — DONE 2026-09-20, `e503b69b` + this planning commit, PUSHED
+
+**Suite 1303 OK, gate 1303 OK (unchanged — no Python behaviour changed),
+`tools/prod_smoke.sh` 21/21, `check --deploy` unchanged,
+`tools/image_smoke.py` 2/7 → 7/7 against the production stack.** `web`, `worker`
+and `beat` run as `uid=1000(sg101)`; Celery's superuser warning is gone.
+
+### Two write paths the task file did not have
+
+Its list was *"web writes ./media and ./var/log/django; worker and beat write
+./var/log/django"*, and it says itself that the list was read rather than
+measured. Measured in the running containers:
+
+| process | writes |
+|---|---|
+| `web` | `/app/media`, `/app/sg101/logs`, **`/root/.gunicorn/gunicorn.ctl`** |
+| `worker` | `/app/sg101/logs` |
+| `beat` | `/app/sg101/logs`, **`/app/celerybeat-schedule`** |
+
+Both extras are inside the image, not on a mount, and both belong to root there.
+gunicorn's control socket needed a real home directory — `useradd --create-home`
+— and beat's schedule file moved to `/home/sg101/celerybeat-schedule` via
+`--schedule`. **Brian's call: home, not a volume.** That keeps its lifetime
+exactly as it was, the container's writable layer, so a restart preserves it and
+a recreate does not; today's behaviour, minus the permission problem.
+
+`PYTHONDONTWRITEBYTECODE=1` was already set, so there is no `__pycache__` to
+own, and `static_root` is built as root and only read.
+
+### UID 1000 is a contract with the VM, and macOS cannot test it
+
+**Brian's call: 1000, overridable with `--build-arg APP_UID`.** It is the first
+ordinary account on Debian and Ubuntu, so on the VM it is almost certainly the
+administrator's own — which keeps `media/` manageable without `sudo` on a
+single-admin box.
+
+**Docker Desktop translates bind-mount ownership and hides the whole question.**
+Measured: inside the container `/app/sg101/logs/sg101.log` is `sg101:sg101`,
+while the Mac sees the same file as `brianneal:staff`. Everything passes locally
+whatever UID the image uses, which is precisely the configuration the VM would
+reject.
+
+So the check went into **CI, which is `ubuntu-latest` — the only real Linux this
+project has until the VM exists.** It builds the `prod` target, asserts the
+processes are uid 1000, and then asserts both directions: a directory owned by
+1000 is writable **and one owned by another UID is refused.** The second half is
+what makes the first mean anything — without it the check would pass against a
+world-writable directory.
+
+Exercised locally before it was written, against Docker named volumes, which
+live inside the VM and so carry real Linux ownership: matching UID writable,
+non-matching refused. **The first attempt at that local check reported the wrong
+answer** — `if docker run ... | tail -1` tests `tail`'s exit status, not the
+container's, so a denial read as a success. The CI step has no pipe and was
+unaffected, but the harness proving it did.
+
+### `tools/image_smoke.py` had never run against production, for two reasons
+
+The tool exists because *"the unit suite mocks storage and runs against a
+throwaway database, so it cannot tell you that an upload works on this
+deployment"*. **It could not run on the deployment that matters.** Against the
+production stack it scored **2/7**, and only the two direct-model checks passed.
+
+| | cause | symptom |
+|---|---|---|
+| 1 | `Client()` sends `Host: testserver`; production's `ALLOWED_HOSTS` is `['.surfguitar101.com']` (development allows `'*'`) | every view-driven check 400 |
+| 2 | production sets `SECURE_SSL_REDIRECT`, so a plain-HTTP POST is answered **301 to https** — which drops the body, and `follow=True` re-issues it as a GET | 200, and nothing stored |
+
+Both fixed in the tool: it claims the first allowed host, and sets
+`X-Forwarded-Proto: https`, which is how Apache tells Django a request arrived
+over TLS. **7/7 against the production stack**, as the unprivileged user —
+avatars, user photos and photo-of-the-day, all through the real views.
+
+**Neither failure was the new user, and that was established rather than
+assumed**: the same image, same settings, run with `--user root` scored the same
+2/7. One variable, changed alone.
+
+**The second cause was found by reading `sg101.log`** — which only works because
+task 11 landed first. Before it, a `DisallowedHost` raised in the worker or
+behind gunicorn reached no file at all.
+
+### Development stays root, and says why
+
+**Brian's call.** Development bind-mounts the whole checkout over `/app`, so
+anything the container creates lands in the working tree owned by whoever the
+container runs as — and on Linux a developer whose UID is not the one baked in
+gets files they cannot edit. The reason for dropping root is also absent here:
+the stack publishes to localhost, carries the debug toolbar and runs the suite.
+`dev` builds `FROM prod`, so it sets `USER root` back explicitly, with that
+reasoning beside it.
+
+### The dependency on task 11, closed with evidence
+
+Task 12's file says `logrotate`'s `create` must keep `var/log/django` writable
+by the new user. Task 11 chose bare `create` — no mode, no owner — specifically
+so it reuses the rotated file's own. Verified rather than reasoned: rotated with
+real `logrotate` while the containers ran as `sg101`, the new `sg101.log` came
+back **`sg101:sg101`**, and both a web request and a queued task wrote into it.
+
 ## Step 20 task 11 — the worker was logging to nothing, and three trees were silenced — DONE 2026-09-20, `870f375d` + this planning commit, PUSHED
 
 **Suite 1303 OK, gate 1303 OK (1296 → 1303), `tools/prod_smoke.sh` 21/21
@@ -915,8 +1050,9 @@ one question and turned up three gaps:
 - **HSTS came from jaguar's Apache**, `Header add Strict-Transport-Security
   "max-age=604800"`. **Now Django's**: `SECURE_HSTS_SECONDS = 604800`, no
   subdomains, no preload, and the new Apache sends none, so there is one header
-  with one value. Whether Cloudflare's own HSTS setting is off is **not
-  verified**; one header at the edge is consistent with either.
+  with one value. ~~Whether Cloudflare's own HSTS setting is off is **not
+  verified**; one header at the edge is consistent with either.~~ **Verified off,
+  2026-09-20 — see below.**
 - **`/robots.txt`, `/favicon.ico` and the Google verification file were served
   only by Apache aliases.** WhiteNoise serves them under `/static/`, so without
   aliases all three would have 404'd at cutover. The live `/robots.txt` is
