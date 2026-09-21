@@ -289,6 +289,18 @@ REDIS_DB = 0
 # CELERY_BROKER_URL -> broker_url, CELERY_BEAT_SCHEDULE -> beat_schedule, etc.).
 CELERY_BROKER_URL = 'redis://{host}:{port}/1'.format(host=REDIS_HOST,
                                                      port=REDIS_PORT)
+# Celery replaces the root logger's handlers with its own when a worker starts.
+# That is convenient for a foreground worker and wrong here: it detaches the
+# worker from LOGGING's root, so every record that depends on root's handlers --
+# the module-named loggers, and celery's own -- reaches the container's output
+# and no file. Loggers with a handler of their own (email, auth, search,
+# turnstile) were never affected; only what relies on root.
+#
+# Shared rather than production-only, so a worker logs the same way in both
+# deployments. A difference here is exactly the kind that hides a defect in
+# production while development looks fine.
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+
 CELERY_BROKER_POOL_LIMIT = 10
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     'fanout_prefix': True,

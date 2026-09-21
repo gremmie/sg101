@@ -28,6 +28,20 @@
 # other's containers.
 name: sg101-prod
 
+# Docker's json-file driver has no ceiling by default: a container's stream
+# grows until the disk does not. Nothing here produces much -- Apache and the
+# application write their own files, and gunicorn's access log is deliberately
+# off -- but "not much, forever" still fills a disk, and this is the cheapest
+# of the stack's log sinks to bound, needing no host cron at all.
+#
+# 10 MB x 3 is months of output per service at the volumes measured on the old
+# host, and 30 MB x 6 services is a rounding error against any VM's disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-app: &app
   build:
     context: .
@@ -46,6 +60,7 @@ x-app: &app
   # Docker's DNS stall each one for the resolver's full timeout.
   dns_opt:
     - single-request-reopen
+  logging: *logging
   restart: unless-stopped
 
 services:
@@ -79,6 +94,7 @@ services:
     depends_on:
       web:
         condition: service_started
+    logging: *logging
     restart: unless-stopped
 
   web:
@@ -155,6 +171,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *logging
     restart: unless-stopped
 
   redis:
@@ -192,6 +209,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *logging
     restart: unless-stopped
 
 volumes:

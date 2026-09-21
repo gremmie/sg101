@@ -359,6 +359,87 @@ EXPECTED_LOGGING_DIFFERENCES = {
     'loggers.auth.level',
     'loggers.django.request',
     'root.level',
+    # Production rotates nothing from inside the application: logrotate on the
+    # host renames once for every process, so the handler only has to notice.
+    # WatchedFileHandler takes neither size nor count, hence three keys each.
+    'handlers.file.class',
+    'handlers.file.maxBytes',
+    'handlers.file.backupCount',
+    'handlers.auth.class',
+    'handlers.auth.maxBytes',
+    'handlers.auth.backupCount',
+    'handlers.email.class',
+    'handlers.email.maxBytes',
+    'handlers.email.backupCount',
+    'handlers.search.class',
+    'handlers.search.maxBytes',
+    'handlers.search.backupCount',
+    'handlers.turnstile.class',
+    'handlers.turnstile.maxBytes',
+    'handlers.turnstile.backupCount',
+}
+
+FILE_HANDLERS = ('file', 'auth', 'email', 'search', 'turnstile')
+WATCHED = 'logging.handlers.WatchedFileHandler'
+ROTATING = 'logging.handlers.RotatingFileHandler'
+
+
+# Where each module's own logger object actually sends records, under the
+# production dict. The point is the *object*: a logger can be renamed, or have
+# its parent reassigned underneath it -- celery's get_task_logger() does exactly
+# that -- and a name-based check cannot see either.
+#
+# The snippet imports the module first, so anything done to the logger at import
+# time has happened before the destinations are read.
+LOGGER_ROUTING_SNIPPET = (
+    "import json\n"
+    "import importlib\n"
+    "import logging\n"
+    "import os\n"
+    "import sys\n"
+    "import django\n"
+    "django.setup()\n"
+    "MODULES = json.loads(os.environ['ROUTING_MODULES'])\n"
+    "def destinations(logger):\n"
+    "    out, c = [], logger\n"
+    "    while c:\n"
+    "        for h in c.handlers:\n"
+    "            f = getattr(h, 'baseFilename', None)\n"
+    "            out.append(os.path.basename(f) if f else type(h).__name__)\n"
+    "        c = c.parent if c.propagate else None\n"
+    "    return sorted(out)\n"
+    "result = {}\n"
+    "for path in MODULES:\n"
+    "    module_name, attr = path.rsplit(':', 1)\n"
+    "    module = importlib.import_module(module_name)\n"
+    "    result[path] = destinations(getattr(module, attr))\n"
+    "sys.stdout.write(json.dumps(result))\n"
+)
+
+# Every module-level logger that is meant for a file of its own, and where its
+# records must land. sg101.log appears beside email.log because that logger
+# propagates on purpose -- the audit trail and the place anyone debugging looks
+# first. `console` is production's container output.
+EXPECTED_ROUTING = {
+    'core.tasks:logger': ['StreamHandler', 'email.log', 'sg101.log'],
+    'accounts.forms:email_logger': ['StreamHandler', 'email.log', 'sg101.log'],
+
+    'accounts.forms:logger': ['auth.log'],
+    'accounts.utils:logger': ['auth.log'],
+    'accounts.views:logger': ['auth.log'],
+    'antispam.receivers:logger': ['auth.log'],
+
+    'search.tasks:logger': ['search.log'],
+    'search.reconcile:logger': ['search.log'],
+    'search.views:logger': ['search.log'],
+
+    'antispam.turnstile:logger': ['turnstile.log'],
+
+    # The rest are named by module and belong in the site log.
+    'accounts.stats:logger': ['StreamHandler', 'sg101.log'],
+    'core.whos_online:logger': ['StreamHandler', 'sg101.log'],
+    'forums.latest:logger': ['StreamHandler', 'sg101.log'],
+    'user_photos.storage:logger': ['StreamHandler', 'sg101.log'],
 }
 
 
@@ -403,6 +484,91 @@ class DeployedLoggingTests(SimpleTestCase):
     def test_the_deployments_differ_only_where_intended(self):
         """A new logger added to one module and not the other lands here."""
         self.assertEqual(self.differences(), EXPECTED_LOGGING_DIFFERENCES)
+
+    def test_production_never_rotates_from_inside_the_application(self):
+        """The race this fixes: many processes, one file, each rotating alone.
+
+        jaguar served the site from a single mod_wsgi daemon, so a handler that
+        renames the file it writes was safe. Production now runs gunicorn's
+        workers plus the Celery worker and beat over one mounted directory, and
+        a rename by one of them leaves the rest writing a file that no longer
+        has that name.
+        """
+        production = self.deployed_logging('sg101.settings.production')
+        for name in FILE_HANDLERS:
+            with self.subTest(handler=name):
+                handler = production['handlers'][name]
+                self.assertEqual(handler['class'], WATCHED)
+                # WatchedFileHandler's constructor takes neither; dictConfig
+                # passes leftover keys through as keyword arguments.
+                self.assertNotIn('maxBytes', handler)
+                self.assertNotIn('backupCount', handler)
+
+    def test_development_still_rotates_for_itself(self):
+        """Development has no host logrotate to hand rotation to."""
+        dev = self.deployed_logging('sg101.settings.dev')
+        for name in FILE_HANDLERS:
+            with self.subTest(handler=name):
+                handler = dev['handlers'][name]
+                self.assertEqual(handler['class'], ROTATING)
+                self.assertIn('maxBytes', handler)
+                self.assertIn('backupCount', handler)
+
+    def test_the_third_party_trees_are_configured_and_so_survive(self):
+        """Otherwise disable_existing_loggers silences them, by import order.
+
+        dictConfig disables every existing logger it was not told about, but
+        resets rather than disables the descendants of one it was. Naming the
+        parent therefore keeps a whole tree alive.
+
+        Both were found the same way and both had the same shape. celery:
+        celery.app.trace already existed when LOGGING was applied and was
+        disabled -- taking a task's `succeeded` line with it -- while
+        celery.worker.strategy had not been imported and survived, which is why
+        a task logged `received` and nothing after. gunicorn: gunicorn.access
+        and gunicorn.error are built before a worker loads the Django app, so
+        both were disabled, and "Error handling request" had nowhere to go.
+        """
+        for module in DEPLOYMENT_SETTINGS:
+            for tree in ('celery', 'gunicorn'):
+                with self.subTest(settings=module, logger=tree):
+                    self.assertIn(tree, self.deployed_logging(module)['loggers'])
+
+    def test_both_deployments_log_to_the_container_as_well_as_to_files(self):
+        """`docker compose logs worker` is how a running service is read.
+
+        Both, not just production: with Celery's root hijack off, root's
+        handlers are the only thing putting a worker's records anywhere, and a
+        development stack whose containers went quiet would be worse than the
+        problem being fixed.
+        """
+        for module in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=module):
+                root = self.deployed_logging(module)['root']['handlers']
+                self.assertIn('console', root)
+                self.assertIn('file', root)
+
+    def test_every_logger_reaches_the_file_it_is_meant_for(self):
+        """The routing, read off the logger objects the code actually uses.
+
+        This is the check that was missing. `search/tasks.py` spent its whole
+        life logging into the worker's log instead of search.log, because
+        celery's get_task_logger() reparents what it returns onto celery.task;
+        nothing failed, because nothing looked. Every assertion here is about a
+        destination, not a name -- a renamed or reparented logger changes where
+        records go while the name stays plausible.
+        """
+        env = {'DJANGO_SETTINGS_MODULE': 'sg101.settings.production',
+               'SECRET_KEY': 'x',
+               'DB_ENGINE': 'postgresql',
+               'ROUTING_MODULES': json.dumps(sorted(EXPECTED_ROUTING))}
+        code, out, err = _run(env, snippet=LOGGER_ROUTING_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        actual = json.loads(out)
+
+        for path in sorted(EXPECTED_ROUTING):
+            with self.subTest(logger=path):
+                self.assertEqual(actual[path], sorted(EXPECTED_ROUTING[path]))
 
     def test_production_is_the_quieter_of_the_two(self):
         """The direction of the level differences, which the set above cannot say."""

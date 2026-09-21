@@ -11,8 +11,9 @@ The signal handlers in search.receivers are what queue these, always on commit.
 
 """
 
+import logging
+
 from celery import shared_task
-from celery.utils.log import get_task_logger
 from django.contrib.contenttypes.models import ContentType
 from django.db import InterfaceError
 from django.db import OperationalError
@@ -27,7 +28,11 @@ from search.reconcile import log_report
 from search.reconcile import reconcile
 
 
-logger = get_task_logger(__name__)
+# The search log, by name and not by module, exactly as search/reconcile.py
+# does and for the same reason: celery's get_task_logger() reparents the logger
+# it returns onto celery.task, which carries these lines away from the handler
+# they are meant for and into the worker's log instead.
+logger = logging.getLogger('search')
 
 # A dropped connection or a database restart should cost a document a few
 # seconds, not remove it from the index until someone notices and reindexes.

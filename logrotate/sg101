@@ -1,0 +1,67 @@
+# Rotation for the Django log files, installed on the VM as
+# /etc/logrotate.d/sg101. See cutover-runbook.md B10.
+#
+# EDIT THE PATHS. Everything below assumes the checkout is at /srv/sg101; the
+# files live in <checkout>/var/log/django, which docker-compose.prod.yml mounts
+# into web, worker and beat at /app/sg101/logs.
+#
+# Why rotation is out here rather than in the application: production's handlers
+# are WatchedFileHandler, which never rotates and instead checks before each
+# write whether the file at its path is still the one it opened. A dozen
+# processes share this directory -- gunicorn's workers, the Celery worker and
+# beat -- so rotation has to happen once for all of them. logrotate renames, and
+# each process reopens on its next write.
+#
+# create, never copytruncate. copytruncate loses whatever is written between the
+# copy and the truncate, and it is only needed for programs that cannot follow a
+# rename -- which is exactly what WatchedFileHandler was chosen to avoid. `create`
+# takes no mode or owner here on purpose: it then reuses the rotated file's own,
+# which keeps working when the containers stop running as root.
+#
+# Sizes and counts are the floor, not a target: each matches what the in-process
+# handler used, so no file keeps less than it does today. Measured on the old
+# host 2026-09-20 -- sg101.log held 5.0 months across 10 backups, auth.log 20.4
+# months across 5.
+
+/srv/sg101/var/log/django/sg101.log {
+    size 100k
+    rotate 10
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create
+}
+
+# auth.log gets more backups than the handler kept, not fewer. Its history is
+# why this whole approach was chosen over one stream per container: fail2ban
+# reads it, and the 2026 registration-spam analysis ran on it. 12 compressed
+# backups cost less disk than the 5 uncompressed ones do today, and they absorb
+# the higher volume the new stack will produce -- INFO in production, and every
+# gunicorn worker writing where one mod_wsgi daemon used to.
+/srv/sg101/var/log/django/auth.log {
+    size 2M
+    rotate 12
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create
+}
+
+# These three do not exist on the old host at all -- they arrived with Steps 12,
+# 16 and 17 -- so there is no retention to preserve and nothing to measure
+# against. They take auth.log's shape because they are the same kind of file: a
+# low-volume record kept for looking things up afterwards. email.log in
+# particular is the per-message audit trail core.tasks.send_mail writes.
+/srv/sg101/var/log/django/email.log
+/srv/sg101/var/log/django/search.log
+/srv/sg101/var/log/django/turnstile.log {
+    size 2M
+    rotate 5
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create
+}

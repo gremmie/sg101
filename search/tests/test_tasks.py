@@ -7,8 +7,11 @@ was queued for can be gone, or no longer belong in the index, by the time a
 worker picks the task up.
 
 """
+import logging
+
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.test import TestCase
 
 from forums.models import Post
 from forums.models import Topic
@@ -130,3 +133,47 @@ class CategoryTaskTestCase(ReceiverTestCase):
         reindex_category(self.category.pk)
 
         self.assertIndexed(other_topic)
+
+
+class TaskLoggingTestCase(TestCase):
+    """Where a task's log lines land.
+
+    Deliberately not a TaskTestCase subclass: that would inherit and re-run
+    every one of its test methods for no benefit. These need no fixture, only
+    a database for the content-type lookup to miss in.
+
+    `search.log` exists so that a sweep's findings sit beside the queries
+    members ran, rather than in the worker's log. That only works if these
+    tasks log through the `search` logger -- and celery's `get_task_logger()`
+    does not: it reparents what it returns onto `celery.task`, carrying the
+    lines away from the handler they are meant for. search/reconcile.py
+    documents the trap in a comment and uses a plain getLogger; this module
+    did not.
+    """
+
+    def enable_logging(self):
+        """Undoes the suite-wide logging.disable() for one test.
+
+        sg101.settings.test disables logging outright, and that beats
+        assertLogs -- records never reach its handler.
+        """
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, logging.CRITICAL)
+
+    def test_a_tasks_warning_reaches_the_search_logger(self):
+        """assertLogs('search') sees it only if the logger is under `search`."""
+        self.enable_logging()
+        with self.assertLogs('search', level='WARNING') as captured:
+            reindex_document(9999999, 1)        # no such content type
+        self.assertEqual(len(captured.records), 1)
+        self.assertIn('no model for content type', captured.records[0].getMessage())
+
+    def test_the_module_logs_through_the_search_logger_itself(self):
+        """Pins the cause, not only the symptom.
+
+        A reparented logger is still *named* search.tasks, so a name check
+        would pass while the records went elsewhere. Identity is what the
+        reparenting breaks.
+        """
+        import search.tasks
+        self.assertIs(search.tasks.logger, logging.getLogger('search'))

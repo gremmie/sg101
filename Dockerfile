@@ -92,6 +92,12 @@ RUN SECRET_KEY=build-time-only \
     DJANGO_SETTINGS_MODULE=sg101.settings.production \
     python manage.py collectstatic --noinput
 
+# No --access-logfile: Apache in front logs every request already, in the
+# combined format fail2ban's filters are written against, and a second line per
+# request in the container's stream would be the same record twice. --error-logfile
+# stays, and the `gunicorn` entry in logging_config is what keeps it reaching
+# anything at all.
+#
 # Workers are sized at start from the CPUs the container actually gets, rather
 # than baked in here: the image is built on a developer's machine and run on a
 # VM with a different count. The usual starting point for sync workers is
@@ -100,7 +106,7 @@ RUN SECRET_KEY=build-time-only \
 CMD ["sh", "-c", "exec gunicorn sg101.wsgi:application \
      --bind 0.0.0.0:8000 \
      --workers ${GUNICORN_WORKERS:-$(( $(nproc) * 2 + 1 ))} \
-     --access-logfile - --error-logfile -"]
+     --error-logfile -"]
 
 
 # --- dev ---------------------------------------------------------------------
