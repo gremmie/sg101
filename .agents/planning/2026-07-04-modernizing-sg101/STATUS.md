@@ -6034,6 +6034,53 @@ done. Cloudflare's own view is the control, it retains a limited history, and
 reading it against the series belongs before the Step 21 window rather than during
 it — which makes it the item to run first.
 
+**UPDATED 2026-09-21 by the twenty-third reading.** `p=quarantine` now stands at
+**101 reports, 639 messages**, twenty-seven days, every disposition `none`. Two of
+the four items moved, in opposite directions, and **the cadence above is
+unchanged** — weekly until the Step 21 window, daily across it, then stopped.
+
+**Item 1 was quietly at risk and is now safe.** The over-long-line DKIM class had
+been silent for thirteen Google windows, 09-06 through 09-18. Had it stayed
+silent, the before/after would have become unmeasurable: a class already at zero
+cannot be shown to *go* to zero at the deploy, and the cleanest before/after this
+project has would have evaporated without anyone deciding to give it up. **It
+recurred on 09-19** — one signed row, `<dkim>` element present, SPF on
+`surfguitar101.com`, so the over-long-line class and not the DSN class — taking it
+to 4 rows and 5 messages. The test is live again, and this is now the strongest
+single reason to keep reading through the cutover.
+
+**Item 4 has changed from a measurement task into a repair task, and the
+measurement it asked for is no longer the urgent half.** The mechanism is found:
+**there is no second copy of the report XML and has not been since 2026-08-23.**
+See the register bullet below. What the item said — that the gap's width is
+unmeasured — remains true, and Cloudflare's dashboard is still the control that
+can measure it. What it did not know is that the designed redundancy had already
+been retired by the MX flip, silently, three days after the amendment that
+established its value. **Fixing the path matters more than sizing the hole**, and
+the fix should not be built on jaguar, which is being decommissioned.
+
+**One correction to how item 4 was framed.** It reads as though report collection
+has no redundancy at all. The `_dmarc` record publishes **two** `rua`
+destinations, and Cloudflare receives every report independently — so the
+redundancy preserves **totals** but not **detail**: `org_name`, Report-ID,
+`envelope_to` and the per-source rows exist only in the copy saved from Gmail.
+That asymmetry is exactly what made 09-07 recoverable in aggregate and
+irrecoverable endpoint-by-endpoint.
+
+**Items 2 and 3 are unchanged.** `p=reject` stays deferred to after the deploy,
+and Postmark has still never appeared in an aggregate report — no message in
+fifteen days of mail log relays through `*.mtasv.net`.
+
+**UPDATED again later on 2026-09-21 — item 4 is repaired, and the figures move.**
+`tools/dmarc_fetch.py` replaced the manual save and recovered four lost reports
+on its first run, so `p=quarantine` now stands at **105 reports, 658 messages**,
+twenty-seven days, every disposition `none`. **Item 4 stops being the item to run
+first**: the collection path is automated, and the width of the historical gap is
+now known to be five reports rather than estimated. What remains of it is a
+one-line habit — run the fetcher before each reading — and the standing caution
+that totals recorded before today are floors. **Items 1, 2 and 3 still gate the
+log's end and all three still close at the Step 21 cutover.**
+
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report
 that cannot be reconciled — and it should be finished on its own merits, not
@@ -6796,6 +6843,67 @@ below, which is the live state this step is steered by.
 
 ### Open
 
+- **The local `rua` copy has been a dead collection path since 2026-08-23, and
+  eighteen readings were written without noticing** — new 2026-09-21, the
+  twenty-third reading. **Measured, not inferred**: over fifteen days of mail log
+  `/home/dmarc/mail` received 29 messages and **not one was a DMARC report** — 23
+  from `no_reply@surfguitar101.com`, 4 from `root@surfguitar101.com`, 2 from `<>`,
+  all jaguar's own mail to `admin@`. The cause is already in this file, stated
+  about something else: task 06 Phase 1 records *"Inbound mail for
+  `surfguitar101.com` no longer touches jaguar."* The apex MX is Cloudflare's, so
+  external report mail is forwarded to Gmail and never enters jaguar's Postfix —
+  the `virtual_alias_maps` fan-out that produces the local copy only runs for mail
+  jaguar generates itself. **The 2026-08-20 section built that copy as the
+  instrument's insurance and proved it end to end; the 2026-08-21 amendment
+  established its real value as latency, one report delivered locally in 0.85s
+  against 9h25m52s to Gmail. The MX flip retired it three days later.** It served
+  the fifth and sixth readings and nothing since. **Consequence: report collection
+  has a single point of failure — a manual save out of Gmail — and has had one all
+  along**, which is why one missed delivery batch lost the 09-07 window outright.
+  **The fix does not belong on jaguar**; automating the Gmail→`~/dmarc` step
+  removes the human failure mode and survives the decommission.
+  **FIXED the same day — `tools/dmarc_fetch.py`.** Read-only IMAP against Gmail,
+  All Mail *and* Spam, detecting reports by parsing the bytes rather than by
+  sender, preserving each attachment's own filename, refusing to overwrite, and
+  stateless so a missed run self-heals. Its **first sweep recovered four reports
+  that had never been saved** — `enterprise.protection.outlook.com` for 09-06 and
+  three from `web.de` — taking the corpus from 101 to **105 reports, 658
+  messages**. **So the gap was five reports, not the one the twenty-second
+  reading identified**, and the four span 09-06 → 09-12 across two unrelated
+  reporters, interleaved with windows that saved correctly. **A single lost batch
+  cannot produce that shape: the manual save was leaking steadily.** Every total
+  in the reading log before 2026-09-21 is a floor for that reason, not only
+  because of 09-07. AOL's 09-07 report is still absent and that absence is now
+  well evidenced — an exhaustive sweep of the whole reporting era does not find
+  it, where before there was only a hand search.
+  **`tools/dmarc_report.py` still has `DEFAULT_MAILDIR = '/home/dmarc/mail'`**, so
+  run bare on the box it now reads a maildir holding no reports and says so without
+  complaining — the same class of silent-success trap the six-traps section
+  recorded. [[probes-must-not-perturb-what-they-measure]]
+
+- **A report's `count` is DMARC evaluations, not distinct messages — every
+  reconciliation in the log used the wrong unit and got away with it** — new
+  2026-09-21, the twenty-third reading, **demonstrated exactly rather than
+  argued.** Comcast's 09-17 report reads **16** against **2** messages sent.
+  Comcast answered `451 4.2.0 Try Again Later` *in reply to end of DATA* — having
+  already taken the whole message — and Postfix retried `6EAF8586505` for four
+  hours fifty minutes. Each cycle reaches **both** MX hosts, because Postfix falls
+  through to the next MX after the first defers: 7 cycles × 2 = 14 receptions, plus
+  two eventual deliveries = **16, exact**. Nothing was duplicated or double-sent;
+  the recipient got one copy. **The three inflation mechanisms are one
+  mechanism**: a forwarder hop, a multi-recipient fan-out and a defer-and-retry
+  loop each have the receiver evaluate a message again, and the report counts what
+  it evaluated — the only quantity it can honestly report. **Bearing on the
+  reconciliation bullet below**, which is stated in message counts and says "not one
+  disagreement": it is correct in fact and wrong in method. Across the whole covered
+  log the only `4xx`-at-end-of-DATA events are 40 at `mx{1,2}.mxge.comcast.net` and
+  2 at `mx.bt.prod.cloud.openwave.ai`, so no window before 09-17 contained a
+  deferral loop and `grep status=sent` happened to give the right answer every
+  time. **Counting sends is only valid where nothing deferred — check before
+  reconciling, not after a mismatch.** The test is already in the queue: the still-open
+  UTC 09-21 window stood at **27 receptions for 2 messages** at the log's end.
+  [[suspect-the-measurer-before-the-record]]
+
 - **Record the reporter, Report-ID and window in every reading** — convention
   adopted 2026-08-21. `tools/dmarc_report.py` prints all three and no reading has
   ever captured one, which is the entire reason "is this the report we already
@@ -6830,6 +6938,19 @@ below, which is the live state this step is steered by.
   provenance distinction survives and the doubt it carried does not. **Twelve
   receiving domains have been observed; eleven of them as files.** The correction
   below is what the figure meant for one day, kept for its reasoning.
+
+  **UPDATED 2026-09-21 — thirteen by filename, fourteen observed.** Two new
+  endpoints in one day. `enterprise.protection.outlook.com` filed for 09-13 and
+  09-06 (see the Microsoft tenant bullet below), and **`web.de` turns out to be a
+  reporter**, not only the forwarding source the reading log had it down as —
+  three reports recovered by the first run of `tools/dmarc_fetch.py`. `swbell.net`
+  remains the one observed only as a sender name. **Say thirteen, or
+  thirteen-plus-one with the provenance attached.** Four figures now differ and
+  none is interchangeable with another: **13 endpoints by filename, 7 `org_name`
+  strings, 6 reporter addresses, 5 corporate organizations.** `Enterprise Outlook`
+  and `Outlook.com` share `dmarcreport@microsoft.com`; `WEB.DE` and `GMX` use
+  different addresses but are one implementation, which the field census below
+  identifies rather than assumes.
 
   <details><summary>The 2026-08-31 correction, superseded</summary>
 
@@ -6885,6 +7006,32 @@ below, which is the live state this step is steered by.
   whether Google's 09-07 report reads 20 (folding `member24@example.com` in) or 19.
   A 19 falsifies the nineteenth reading's correction rather than this bullet.
   [[measure-before-recording-in-planning-docs]]
+
+  **CLOSED 2026-09-21 by the twenty-third reading — it is a rule, and the tenant
+  mail goes to a separate endpoint.** Both loaded tests are answered. Google's
+  09-07 report, recovered from Gmail on 09-12, reads **20** and folds
+  `member24@example.com` in, confirming the nineteenth reading's correction on a
+  third independent window. And a twelfth endpoint has appeared:
+  **`enterprise.protection.outlook.com`**, `org_name: Enterprise Outlook`, filing
+  under the same reporter address `dmarcreport@microsoft.com` as `Outlook.com`.
+  Its single report covers the 09-13 window, reads 1, and carries `envelope_to:
+  cooldwelling.com` — matching `8F2C658650C` to `member16@example.com`
+  (`Sep 13 14:11:58`), relayed through `cooldwelling-com.mail.protection.outlook.com`,
+  MX verified by lookup. One send, one report, exact. **So Google folds tenants
+  into its main endpoint and Microsoft splits them onto a separate one** — this
+  bullet's finding was right about the behavior and could not say where the mail
+  went. ~~**`cpp.edu` still has no report for 09-06**, and that is now a per-tenant
+  fact rather than a puzzle.~~ **⚠️ WRONG, corrected the same day.**
+  `b600b29c97d4444ca781546148067037` covers 09-06, reads 1 message and matches
+  `C23FC5864B2` to `member28@example.com` exactly. It was in Gmail all along and was
+  recovered by the first run of `tools/dmarc_fetch.py`. **Both tenants file.**
+  The error is worth keeping because of how it was made: it inferred a
+  reporter's configuration from an absence in our own corpus, on the same day
+  this register recorded that the collection path drops reports. **An absence is
+  not a finding until the collection path is ruled out**, which is the
+  seventeenth reading's rule applied to the instrument instead of the send log. **The endpoint count is twelve by filename**, plus `swbell.net` by
+  sender name; the `org_name` strings are six but the reporting *organizations*
+  are still five.
 
 - **Google's aggregate day is not the UTC day its `date_range` claims** —
   new 2026-09-01, **upgraded from hypothesis to result 2026-09-02 by the eighteenth

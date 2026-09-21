@@ -48,6 +48,7 @@ reading log stops*.
 | 20 | 2026-09-05 | 09-04 | UTC−7's strongest window yet, contradicted by Yahoo in the same window; the size hypothesis dies on a forward test |
 | 21 | 2026-09-08 | 09-04 → 09-07 | five for five; three consecutive Google days reconcile exactly; Microsoft drops a tenant domain Google would have folded in |
 | 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces**; **second addendum: 09-07 recovered — the classes separate inside the report, and the class tally was wrong since reading 19** |
+| 23 | 2026-09-21 | 09-11 → 09-20 | Comcast counts evaluations, not messages — 16 for two; ten exact Google days; a twelfth endpoint; the local `rua` copy has been dead since the MX flip — **addendum: the collection path was automated the same day and recovered four lost reports; `web.de` is a reporter and counts every window twice; prediction 6 falsified** |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -5436,3 +5437,528 @@ absence from the 26 stands as a genuine non-filing rather than a second loss.
 `aol.com!surfguitar101.com!1788739200!1788825599.xml.gz` was searched for in Gmail
 and not found. **That one report is the whole of the remaining collection gap**,
 and AOL has filed nothing since the 08-31 window.
+
+### Twenty-third reading — 2026-09-21, covering 2026-09-11 through 2026-09-20: Comcast counts evaluations rather than messages and reads 16 for two, Google reconciles exactly ten days running, a twelfth endpoint appears, and the local `rua` copy turns out to have been dead since the MX flip
+
+**One hundred and one files in `~/dmarc`, 101 reports — twenty-one new, eighty
+re-reads, no duplicates.** `tools/dmarc_report.py` reads 102 files and reports one
+carrying no report, which is `.DS_Store`. All 101 Report-IDs are distinct, so the
+dedupe gap the twenty-first reading left open is still open and still unexercised.
+
+| Receiving domain | Reporter | Report-ID | Window | Msgs | Failing |
+|---|---|---|---|---|---|
+| `protection.outlook.com` | `Outlook.com` | `3681f70e4fd844a2b7bcf4c2e47338de` | 2026-09-11 | 6 | 0 |
+| `cox.net` | `Yahoo` | `1789277666.594635` | 2026-09-12 | 3 | 0 |
+| `google.com` | `google.com` | `8050126460101432255` | 2026-09-12 | 20 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `1ba65eb4fee34bf4a78851bf24aeb73b` | 2026-09-12 | 6 | 0 |
+| `yahoo.com` | `Yahoo` | `1789277666.594701` | 2026-09-12 | 3 | 0 |
+| `enterprise.protection.outlook.com` | `Enterprise Outlook` | `3b0439d9b00e498c8e12ad1540bbedf1` | 2026-09-13 | 1 | 0 |
+| `google.com` | `google.com` | `32091998236930475` | 2026-09-13 | 15 | 0 |
+| `aol.com` | `Yahoo` | `1789451087.361978` | 2026-09-14 | 1 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1789436543-surfguitar101.com` | 2026-09-14 | 2 | 0 |
+| `google.com` | `google.com` | `10965688976189427050` | 2026-09-14 | 12 | 0 |
+| `protection.outlook.com` | `Outlook.com` | `6ab1bb05c6a148fca198d68661452bef` | 2026-09-14 | 5 | 0 |
+| `yahoo.com` | `Yahoo` | `1789451087.362007` | 2026-09-14 | 4 | 0 |
+| `google.com` | `google.com` | `9788966810165148316` | 2026-09-15 | 6 | 0 |
+| `google.com` | `google.com` | `8383501600596985036` | 2026-09-16 | 1 | 0 |
+| `sbcglobal.net` | `Yahoo` | `1789624102.712517` | 2026-09-16 | 2 | 0 |
+| `comcast.net` | `comcast.net` | `v2-1789696251-surfguitar101.com` | 2026-09-17 | **16** | 0 |
+| `google.com` | `google.com` | `9270648328413933526` | 2026-09-17 | 3 | 0 |
+| `yahoo.com` | `Yahoo` | `1789710489.822197` | 2026-09-17 | 1 | 0 |
+| `google.com` | `google.com` | `2930377980238467422` | 2026-09-18 | 3 | 0 |
+| `google.com` | `google.com` | `12115526217816345215` | 2026-09-19 | 6 | **1** |
+| `google.com` | `google.com` | `11426903074718832384` | 2026-09-20 | 12 | 0 |
+
+The send-side figures below come from jaguar's `/var/log/mail.log.2.gz`,
+`mail.log.1` and `mail.log`, which together run `Sep 6 07:22` to `Sep 21 12:12`
+local. **jaguar is UTC−5**; `date -u` on the box read `17:18:00Z` against a
+`12:18:00 CDT` local clock. The UTC 09-20 window and both open 09-21 windows are
+incomplete and nothing below depends on them.
+
+#### Scoring the twenty-second reading's predictions: three held, none falsified, two unresolved because the reports do not exist
+
+1. **HELD on the half that was filed, exactly.** Microsoft's 09-11 report reads
+   **6**, `envelope_to: hotmail.com`, and the six sends are the six the prediction
+   named by queue ID — `141A15869B6` (`Sep 10 19:32:01`), `78196586505`
+   (`Sep 11 00:56:11`), `3380A5869B6` (`00:59:04`), `7211F586505` (`08:54:53`),
+   `3D02F5869B7` (`09:01:53`), `1C5F75869B6` (`09:18:46`). No `hotmail.fr` and no
+   tenant record, so the twenty-first reading's no-folding finding survives.
+   **UNRESOLVED on 09-09 — Microsoft never filed for it**, though three
+   `hotmail.com` sends sit in that UTC day.
+2. **UNRESOLVED — Comcast never filed for 09-09.** `6EE2958650F` to
+   `member14@example.com` at `Sep 9 17:16:27` is in the log and is the only
+   Comcast-bound send in the window. No report.
+3. **HELD.** No `yahoo.com` report for 09-11 exists, and no `yahoo.com` recipient
+   falls in that UTC day. `cox.net` filed 09-11 at 4 and was already closed.
+4. Resolved in the twenty-second reading's own addenda.
+5. **HELD.** Google's 09-12 report reads **20** against a predicted floor of 9.
+   The floor was set on a window still open at the previous log's end; the closed
+   window reconciles exactly, below.
+6. **HELD.** All 21 new reports read `p=quarantine`, and no row in any of the 101
+   carries a `disposition` other than `none`.
+
+#### Comcast's 09-17 report reads 16 for two messages, and the count is end-of-DATA receptions
+
+**This is the first window in the series where a report disagrees with the send
+log, and the disagreement is the finding.** `v2-1789696251-surfguitar101.com`
+covers UTC 2026-09-17 and carries a single `173.255.245.115` record with
+`count=16`, `dkim=pass spf=pass`, `disposition=none`. Two messages were sent to
+`comcast.net` in that window.
+
+The window is `Sep 16 19:00` → `Sep 17 18:59` local, and Comcast answered
+`451 4.2.0 Try Again Later` **in reply to end of DATA** — after taking the whole
+message — to a message Postfix then retried for four hours and fifty minutes:
+
+| Local time | Queue ID | MX answering `451` | MX answering `451` | Receptions |
+|---|---|---|---|---|
+| 12:02:45 / :47 | `6EAF8586505` | `mx1` | `mx2` | 2 |
+| 12:12:01 / :04 | `6EAF8586505` | `mx2` | `mx1` | 2 |
+| 12:22:02 / :04 | `6EAF8586505` | `mx1` | `mx2` | 2 |
+| 12:42:02 / :04 | `6EAF8586505` | `mx2` | `mx1` | 2 |
+| 13:22:02 / :04 | `6EAF8586505` | `mx2` | `mx1` | 2 |
+| 14:32:03 / :04 | `6EAF8586505` | `mx2` | `mx1` | 2 |
+| 15:42:02 / :04 | `6EAF8586505` | `mx1` | `mx2` | 2 |
+| 15:51:23 | `EA19A5864DF` | — | `mx2` accepted `250` | 1 |
+| 16:52:03 | `6EAF8586505` | — | `mx1` accepted `250` | 1 |
+| | | | **Total** | **16** |
+
+**Sixteen against sixteen.** Every retry cycle reaches *two* Comcast MX hosts,
+because Postfix falls through to the next MX after the first defers, and both
+have already read the message to end of DATA by the time they answer. Seven
+cycles is fourteen receptions; the eventual delivery of `6EAF8586505` is the
+fifteenth and the unrelated `EA19A5864DF` is the sixteenth.
+
+**So the `count` field is a count of DMARC evaluations, not of distinct
+messages.** Comcast evaluated one 1,585-byte message fifteen times and reported
+it fifteen times. Nothing was duplicated, misdelivered or double-sent; the
+recipient received one copy.
+
+**Every earlier reconciliation in this log counted `status=sent` lines**, and
+every one of them was exact — which is not a vindication of the definition but a
+statement that no window before 09-17 contained a deferral loop. Across the whole
+covered log the only `4xx`-at-end-of-DATA events are 40 at
+`mx{1,2}.mxge.comcast.net` and 2 at `mx.bt.prod.cloud.openwave.ai` (`talk21.com`).
+**The corpus totals before 09-17 are unaffected in fact and wrong in method.**
+[[suspect-the-measurer-before-the-record]]
+
+**The three mechanisms that inflate a report's count are now all measured, and
+they are one mechanism.** A forwarder hop (web.de, `209.85.220.41`) has the
+receiver evaluate a message a second time; a multi-recipient fan-out has it
+evaluate once per recipient; a defer-and-retry loop has it evaluate once per
+attempt. In each case the report counts what the receiver *evaluated*, which is
+the only quantity it can honestly report.
+
+**It is still happening at the time of reading.** `250305869BB` entered the queue
+around `Sep 21 00:23` local and was still deferring at the log's end thirteen
+cycles later, having been received 26 times; with the delivered `0BD785869B6`
+that is **27 receptions for 2 messages in the UTC 09-21 window, which is still
+open.**
+
+#### Google reconciles exactly for ten consecutive windows, and has filed for fifteen without a gap
+
+Google's day starts at `02:00` local. Counting Gmail plus the `muohio.edu`
+Workspace tenant against the `173.255.245.115` row alone, with forwarder rows
+held separately:
+
+| Google window | Gmail | Tenant | Direct | `173.255.245.115` row | Forwarder rows |
+|---|---|---|---|---|---|
+| 09-11 | 8 | 1 | 9 | **9** | 3 |
+| 09-12 | 15 | 2 | 17 | **17** | 3 |
+| 09-13 | 13 | 2 | 15 | **15** | 0 |
+| 09-14 | 9 | 2 | 11 | **11** | 1 |
+| 09-15 | 6 | 0 | 6 | **6** | 0 |
+| 09-16 | 1 | 0 | 1 | **1** | 0 |
+| 09-17 | 3 | 0 | 3 | **3** | 0 |
+| 09-18 | 3 | 0 | 3 | **3** | 0 |
+| 09-19 | 6 | 0 | 6 | **6** | 0 |
+| 09-20 | 12 | 0 | 12 | **12** | 0 |
+
+**Ten for ten, and Google has filed for every window from 09-06 to 09-20 with no
+gap — fifteen consecutive.** No other endpoint in the corpus has filed more than
+three consecutive windows.
+
+**The boundary keeps doing the work.** The daily `brian` cron goes out at
+`02:01:1x` and opens all ten windows; the latest carry-over from the previous day
+is `F0E095869BD` at `Sep 14 00:32:57`. That pins the boundary inside a gap of one
+hour twenty-eight minutes, which is looser than the thirty-seven-minute pin the
+twenty-second reading achieved — **the tightest pin in the series is still that
+one**, and these ten windows corroborate it rather than improve it.
+
+**The tenant folds in four more times** — 09-11, 09-12 (×2), 09-13 (×2), 09-14
+(×2). Drop `muohio.edu` and those four windows read 8, 15, 13 and 9 against
+reports of 9, 17, 15 and 11.
+
+#### A twelfth endpoint: Microsoft files tenant traffic under `enterprise.protection.outlook.com`, and that is where the tenants went
+
+`enterprise.protection.outlook.com!surfguitar101.com!1789257600!1789344000.xml.gz`
+is a shape not seen before:
+
+```
+org_name: Enterprise Outlook      email: dmarcreport@microsoft.com
+window 2026-09-13    1 message    173.255.245.115    dkim=pass spf=pass    disposition=none
+envelope_to: cooldwelling.com     envelope_from: surfguitar101.com
+```
+
+jaguar sent exactly one message to that domain — `8F2C658650C` to
+`member16@example.com`, `Sep 13 14:11:58`, relayed through
+`cooldwelling-com.mail.protection.outlook.com`, an MX verified by lookup this
+reading. **One send, one report, exact.**
+
+**This completes the twenty-first reading's tenant finding rather than
+contradicting it.** That reading established that Microsoft does *not* fold
+tenant domains into the `protection.outlook.com` endpoint the way Google folds
+them into `google.com`, using the absence of any `cpp.edu` record for 09-06 as
+its evidence. It could not say where tenant traffic went instead. **It goes to a
+separate endpoint with a separate `org_name`, under the same reporter address.**
+Google folds; Microsoft splits the endpoint.
+
+**`cpp.edu` still has no report, and that is now a per-tenant fact rather than a
+puzzle.** `C23FC5864B2` to `member28@example.com` went out `Sep 6 11:09:11`, inside
+the UTC 09-06 window, and no `enterprise.protection.outlook.com` file exists for
+it. Both are Microsoft 365 tenants; one files aggregate reports and one does not,
+which is tenant-side configuration and not visible from here.
+
+**The endpoint count is twelve by filename**, plus `swbell.net` by sender name.
+The `org_name` strings are six, but the reporting *organizations* are still five:
+`Enterprise Outlook` and `Outlook.com` share `dmarcreport@microsoft.com`.
+
+#### The signed-DKIM failure class recurred at 09-19 after thirteen clean windows
+
+`12115526217816345215`, window 2026-09-19, carries one failing record:
+
+```
+173.255.245.115  n=1  disp=none  dkim=fail  spf=pass
+    auth_results: dkim d=surfguitar101.com selector=dkim result=fail
+                  spf  d=surfguitar101.com result=pass
+```
+
+**A `<dkim>` element is present and SPF authenticated the header-from domain, not
+the HELO name** — so by the twenty-second reading's discriminator this is the
+over-long-line class and not the DSN class. Applied across all 101 reports the
+two classes remain cleanly separable:
+
+| Class | Rows | Messages | Windows |
+|---|---|---|---|
+| Over-long-line (signed, body-hash fail) | **4** | **5** | 09-02, 09-03 ×2, 09-05, **09-19** |
+| DSN (unsigned, HELO-fallback SPF) | 2 | 3 | 09-01, 09-07 ×2 |
+
+**The class was at 3 rows and 4 messages and had been silent for thirteen Google
+windows, 09-06 through 09-18.** The twenty-second reading recorded that silence
+with the caveat that the largest untested window was the missing one; 09-07 was
+then recovered and came back clean. **This recurrence is the first datum that says
+the class is live rather than resolved**, and it arrived in a six-message window.
+
+**The failing message is one of three, narrowed by arithmetic rather than by a
+size hypothesis.** The 09-19 Google day holds six sends, none of them a null
+sender. A message whose *total* size is under 998 bytes cannot contain a line
+longer than 998 bytes, which eliminates three:
+
+| Queue ID | Local time | Size | Recipient | Candidate |
+|---|---|---|---|---|
+| `9AEEC586505` | `02:01:13` | 728 | `bgneal@gmail.com` | no — too small |
+| `1332D5864DF` | `06:05:22` | 950 | `bgneal@gmail.com` | no — too small |
+| `37185586505` | `06:30:47` | 855 | `bgneal@gmail.com` | no — too small |
+| `78844586558` | `03:30:12` | **6082** | `bgneal@gmail.com` | **yes** |
+| `52CAF5864EC` | `17:42:20` | **1999** | `member22@example.com` | **yes** |
+| `0755958650C` | `18:19:57` | **1407** | `member22@example.com` | **yes** |
+
+**This is not the size hypothesis the twentieth reading killed.** That one claimed
+large messages fail; this uses size only as a *necessary* bound on line length,
+which is arithmetic. [[measure-before-recording-in-planning-docs]]
+
+**One of the three is directly readable and the check has not been run.**
+`78844586558` was `nrcpt=2` and its second delivery was `relay=local` to
+`dmarc@localhost`, so a byte-identical copy sits in `/home/dmarc/mail` on jaguar.
+Reading it requires `sudo` — `sudo -n` is refused on the box — so it is left for
+Brian:
+
+```
+sudo awk 'length > 998 {print FILENAME": "length}' /home/dmarc/mail/new/* /home/dmarc/mail/cur/*
+```
+
+A hit on the `20260919083011.1921.82019@jaguar.deathofagremmie.com` message
+identifies the failing send and confirms the mechanism on a fourth occurrence.
+
+#### The local `rua` copy has been a dead collection path since the MX flip, and nothing in this log said so
+
+**Over the fifteen days of mail log, `/home/dmarc/mail` received 29 messages and
+not one of them was a DMARC report.** Classified by envelope sender: 23 from
+`no_reply@surfguitar101.com`, 4 from `root@surfguitar101.com`, 2 from `<>`. All
+are jaguar's own mail to `admin@`.
+
+The cause is in `STATUS.md` already, stated about something else. The apex MX is
+now `41 route1` / `46 route3` / `98 route2 .mx.cloudflare.net`, re-read from DNS
+this reading, and Step 16 task 06 Phase 1 — done **2026-08-23** — records the
+consequence in as many words: *"Inbound mail for `surfguitar101.com` no longer
+touches jaguar."* External report mail reaches Cloudflare and is forwarded to
+Gmail. It never enters jaguar's Postfix, so the `virtual_alias_maps` fan-out that
+produces the local copy never runs for it. **Only locally generated mail to
+`admin@` still lands in that maildir.**
+
+**What that retires is the instrument's insurance.** The 2026-08-20 section built
+the local copy precisely so that the reports could not be forwarded away, proved
+it end to end, and the 2026-08-21 amendment established its real value as latency
+— a Google report delivered locally in 0.85s and to Gmail 9h25m52s later. **Three
+days after that amendment the MX flip took the copy out of the path, and eighteen
+readings have been written since without noticing.** The fifth and sixth readings
+were the only ones it ever served.
+
+**This is the mechanism behind the twenty-second reading's open item.** That
+reading found two of four reports for 09-07 lost, wrote that *"the collection path
+is the open item, not the window"*, and identified the path as Cloudflare → Gmail
+→ saved by hand. It did not say that the designed second copy had already stopped
+existing. **There is no redundancy in report collection and has not been since
+2026-08-23**, which is why a single missed delivery batch lost a window outright.
+
+**`tools/dmarc_report.py` still defaults to `DEFAULT_MAILDIR = '/home/dmarc/mail'`.**
+Run with no `--dir` on jaguar it now reads a maildir containing no reports. That
+is a trap of the kind this log keeps recording — an instrument that answers
+without complaining. [[probes-must-not-perturb-what-they-measure]]
+
+#### Every other endpoint reconciles exactly on the UTC day
+
+| Endpoint | Window | Sends in the true UTC day | Reported |
+|---|---|---|---|
+| `cox.net` | 09-12 | 3 | **3** |
+| `yahoo.com` | 09-12 | 3 | **3** |
+| `protection.outlook.com` | 09-12 | 6 `hotmail.com` | **6** |
+| `enterprise.protection.outlook.com` | 09-13 | 1 `cooldwelling.com` | **1** |
+| `aol.com` | 09-14 | 1 | **1** |
+| `comcast.net` | 09-14 | 2 | **2** |
+| `protection.outlook.com` | 09-14 | 5 `hotmail.com` | **5** |
+| `yahoo.com` | 09-14 | 4 | **4** |
+| `sbcglobal.net` | 09-16 | 2 | **2** |
+| `yahoo.com` | 09-17 | 1 | **1** |
+| `comcast.net` | 09-17 | 2 messages / **16 receptions** | **16** |
+
+Eleven for eleven, once 09-17 is counted in the unit Comcast actually reports.
+
+**AOL has filed again.** `1789451087.361978` for 09-14 is the first AOL report
+since the 08-31 window, and it is exact. **The 09-07 AOL report is still the one
+piece missing from the corpus** and is now the only known loss in the series.
+
+#### Endpoints with traffic and no report, 09-06 → 09-20
+
+| Endpoint | Window | Sends | Note |
+|---|---|---|---|
+| `enterprise.protection.outlook.com` | 09-06 | 1 | `cpp.edu`; tenant appears not to file |
+| `aol.com` | 09-07 | 1 | the known collection loss |
+| `yahoo.com` | 09-07 | 2 | genuine non-filing, established in reading 22 |
+| `yahoo.com` | 09-08 | 2 | genuine non-filing |
+| `comcast.net` | 09-09 | 1 | prediction 2, never filed |
+| `protection.outlook.com` | 09-09 | 3 | prediction 1's other half, never filed |
+| `gmx.net` | 09-19 | 1 | `gmx.at`; GMX has filed nothing since 09-02 |
+| `protection.outlook.com` | 09-20 | 1 | one day old, likely still in flight |
+
+**09-09 is a second two-endpoint hole**, and unlike 09-07 it cannot be a
+collection fault of the same shape: Google and Yahoo both filed exact reports for
+09-09 in the same delivery batches. Microsoft and Comcast simply did not file.
+**Reporters skipping windows is now the better-evidenced explanation for most
+absences**, and 09-07 remains the one window where the opposite was demonstrated.
+
+#### What held steady across all 101
+
+- **129 rows, 639 messages, every one `disposition=none`.**
+- Evaluated SPF/DKIM by row: **107 `pass`/`pass`, 15 `fail`/`pass`, 6
+  `pass`/`fail`, 1 `fail`/`fail`.** By message: 602 / 28 / 8 / 1.
+- `173.255.245.115` appears in 110 rows and 607 messages.
+- Policy renders `adkim=r aspf=r` in all 101.
+- The `p=none`/`p=quarantine` boundary at the 08-25 publication reproduces
+  exactly: **16 reports read `none`, 85 read `quarantine`.**
+- **Twelve reporting endpoints by filename, five reporting organizations, six
+  `org_name` strings.**
+- The published-policy field census still tracks the corpus exactly: `sp` present
+  in 64 and absent in exactly the 37 Yahoo reports; `pct` present in 95 and absent
+  in exactly the 6 GMX reports; `np` in exactly the 29 Google reports; `fo` in
+  exactly the 10 Comcast, 18 Outlook.com and 1 Enterprise Outlook reports;
+  `discovery_method` and `testing` in exactly the 6 GMX reports. Our record still
+  publishes none of them, and `_dmarc.surfguitar101.com` re-read from DNS this
+  reading is unchanged: `v=DMARC1; p=quarantine; rua=mailto:00fc656c22e64e73bb643fb00331d013@dmarc-reports.cloudflare.net,mailto:admin@surfguitar101.com`.
+
+#### The forwarding classes, and Postmark at a twenty-fourth window
+
+| Source | Rows | Msgs | Windows |
+|---|---|---|---|
+| Gmail relay `209.85.220.41` | 6 | 19 | 08-26 → 08-30, **09-12, 09-14** |
+| web.de `212.227.*` / `217.72.192.78` | 9 | 9 | 09-09 → **09-12** |
+| `2001:470:0:60::2` | 1 | 1 | 08-26 only |
+| Postmark `50.31.156.*` | 3 | 3 | 08-25, 08-27 |
+
+**`209.85.220.41` is back after twelve silent windows**, one message each on 09-12
+and 09-14. Both are re-evaluations of messages already counted in the same
+report's `173.255.245.115` row — the reconciliation is exact without them, which
+is what identifies them as forwards rather than as extra mail.
+
+**The web.de forwarder stopped.** jaguar sent nine messages to
+`member29@example.com` across 09-09 → 09-12 and Google reported nine forwarded rows,
+one per send, exact. There have been no web.de sends since `87C2E5869B7` on
+`Sep 12`, and no rows since. The class is complete at nine and every one was
+delivered `disposition=none` under `p=quarantine` and `-all`.
+
+**Postmark's `50.31.156.*` has not appeared since the 08-27 window**, and no
+message in fifteen days of log relays through `*.mtasv.net`. jaguar is still the
+only thing sending, which is expected until Step 21.
+
+#### Bearing on the policy decision
+
+Nothing moves, and one thing is worth stating plainly for the first time.
+`p=quarantine` continues to cost nothing measurable — **639 messages, zero
+non-`none` dispositions, twenty-seven days live.** The forwarded-mail risk is now
+measured across two independent forwarders, both carried through DMARC by DKIM
+alone under `-all`.
+
+**The 09-19 recurrence is the argument for keeping `p=reject` deferred, restated
+with a date on it.** The over-long-line class was silent for thirteen windows and
+came back. Under `p=reject` that message is refused rather than delivered. The
+fix is the Step 21 deploy, it is not deployed, and the class is demonstrably still
+firing — which is the twenty-second reading's reasoning with the missing evidence
+now supplied.
+
+#### Predictions for the twenty-fourth reading
+
+Measured against the send log through `Sep 21 12:12` local. The UTC 09-20 window
+is complete; UTC 09-21 and the UTC−7 09-21 day are not.
+
+1. **Comcast's 09-21 report reads at least 27 and is far above the 2 messages
+   actually sent.** At the log's end `250305869BB` had been received 26 times and
+   `0BD785869B6` once; the window had almost seven hours left and Postfix was
+   retrying at roughly seventy-minute intervals. A count equal to 2 falsifies this
+   reading's central finding outright; a count near 27–31 confirms that `count` is
+   receptions. **This is the cleanest test the finding will get, and it is already
+   in the queue.**
+2. **Microsoft files for 09-20 at exactly 1**, `envelope_to: hotmail.com` —
+   `33D5E58650F` to `member19@example.com`, `Sep 20 12:04:32`.
+3. **Google files for 09-21 at 4 or more.** Four Gmail-bound sends by the log's
+   end, no tenant, and the UTC−7 day still open, so the figure is a floor. An
+   exact 4 would also mean the Gmail relay filed nothing further.
+4. **Yahoo files for 09-21 at 1 and `aol.com` at 1.** One recipient each in that
+   UTC day.
+5. **GMX files nothing for 09-19.** It has filed nothing since 09-02 despite a
+   `gmx.at` send on 09-19, and the six GMX reports remain the only ones in the
+   corpus carrying `discovery_method` and `testing`.
+6. **No `enterprise.protection.outlook.com` report for 09-06 ever arrives**, the
+   `cpp.edu` tenant not having reporting enabled.
+7. **Every report reads `p=quarantine`** and no row carries a `disposition` other
+   than `none`.
+
+#### Addendum, 2026-09-21 — `tools/dmarc_fetch.py`'s first run: four reports recovered, `web.de` is a reporter, and two claims above are falsified
+
+The collection path was automated the same afternoon this reading was written.
+Its first sweep of the reporting era — Gmail All Mail and Spam, 2026-07-04
+onward — found **four reports that had never been saved**. The corpus is now
+**105 reports, 133 rows, 658 messages**, every disposition still `none`.
+
+**The reading above was written against a corpus with a hole in it, and the hole
+was not where the twenty-second reading left it.**
+
+##### ⚠️ FALSIFIED — `web.de` is a reporting endpoint, not merely a source
+
+This reading states, in *What held steady across all seventy-nine*: *"`web.de` is
+a **source**, not an endpoint, and has filed nothing."* It has filed three
+reports, `org_name: WEB.DE`, `noreply-dmarc@sicher.web.de`:
+
+| Report-ID | Window | Msgs | Sends in the UTC day |
+|---|---|---|---|
+| `3fc6fb808c4c418fa476575edb5be86d` | 2026-09-10 | **4** | 2 |
+| `c3a105cb59d54f48a1eb95fa5e291b41` | 2026-09-11 | **8** | 4 |
+| `42d724cb697f446db70c82ffd22f3890` | 2026-09-12 | **6** | 3 |
+
+**Thirteen reporting endpoints by filename**, plus `swbell.net` by sender name.
+Every row is `173.255.245.115`, `dkim=pass spf=pass`, `disposition=none` — this
+is jaguar sending *to* a web.de mailbox, which is the opposite direction from the
+`212.227.*` forwarder rows inside Google's reports. **The same forwarder is now
+visible from both ends.**
+
+##### Every window is exactly twice the send log, and the send side is clean
+
+4 against 2, 8 against 4, 6 against 3. **Three exact doublings is not a
+coincidence**, so the measurement was checked before the reporter was:
+
+- Nine deliveries to `member29@example.com`, the only recipient at any web.de MX in
+  the log, `mx-ha02`/`mx-ha03` — and **no other domain relays through a web.de
+  MX**, so nothing is being missed by classifying on the recipient domain.
+- **Every one is `nrcpt=1`**, so it is not the multi-recipient fan-out.
+- **Zero `4xx` responses at end of DATA from any web.de host**, so it is not the
+  retry inflation the Comcast section above measures.
+- UTC binning at jaguar's verified UTC−5: 2, 4, 3. Reported: 4, 8, 6.
+
+**So this is a third counting behaviour, and it confirms the frame rather than
+breaking it.** The `count` field reports what the receiver *evaluated*. Comcast
+inflates by re-evaluating a deferred message on every retry; web.de appears to
+evaluate each received message twice — plausibly once at MX ingress and once at
+mailbox delivery, both attributed to the original connecting IP. **The mechanism
+is not measured and is not guessed at**; what is measured is the ratio and the
+cleanliness of the send side.
+
+**The contrast with Google is what makes it a reporter property.** The same nine
+messages were forwarded onward to Gmail, and Google reported them **nine times,
+one per send**, in the `212.227.*`/`217.72.192.78` rows above. The forward
+happened once. web.de counted twice; Google counted once. [[suspect-the-measurer-before-the-record]]
+
+##### ⚠️ FALSIFIED — prediction 6, and the reasoning behind it was the error
+
+This reading predicted: *"No `enterprise.protection.outlook.com` report for 09-06
+ever arrives, the `cpp.edu` tenant not having reporting enabled."*
+`b600b29c97d4444ca781546148067037` covers 2026-09-06 and reads **1 message**,
+matching `C23FC5864B2` to `member28@example.com` (`Sep 6 11:09:11` local) exactly.
+
+**The tenant does file. We lost the report.** The prediction inferred a reporter's
+configuration from an absence in our own corpus, at a moment when the collection
+path was known to drop reports and the reading was in the middle of saying so.
+That is the same error the seventeenth reading warned about — *check the send log
+before calling an absence a finding* — committed against a gap this very reading
+had just characterised. [[measure-before-recording-in-planning-docs]]
+
+##### The collection gap was five reports, not one, and it was leaking rather than failing
+
+The twenty-second reading called AOL's 09-07 report *"the whole of the remaining
+collection gap."* The real figure is five, and the shape matters more than the
+count: the four recovered here span **09-06 to 09-12 across two unrelated
+reporters**, interleaved with windows that were saved correctly. **A single lost
+delivery batch cannot produce that.** The manual save was leaking steadily, and
+every earlier total in this log is a floor for that reason and not only because
+of 09-07.
+
+**AOL's 09-07 report is still absent**, and that absence is now much better
+evidenced: an exhaustive programmatic sweep of All Mail and Spam over the whole
+reporting era does not find it, where the twenty-second reading had only a hand
+search. **It was never delivered to Gmail.**
+
+##### The subject line is a safe narrowing, measured rather than assumed
+
+Brian observed that every report mail carries `Report Domain: surfguitar101.com`
+in its subject — the format RFC 7489 §7.2.1.1 specifies, which is a SHOULD and so
+cannot be relied on by argument. The fetcher's `--audit` mode runs the broad
+attachment-only search alongside the narrowed one and checks the difference:
+**29 attachment-bearing messages across the whole reporting era do not match that
+subject, and not one of them carries a report.** Lossless on this mailbox.
+
+##### The first DMARC 2.0 documents in the corpus
+
+All three WEB.DE reports are `xmlns="urn:ietf:params:xml:ns:dmarc-2.0"`. **This is
+the first time the namespaced schema has appeared here**, and both instruments
+handle it: `_unqualify` in `dmarc_report.py`, written against exactly this trap,
+and the namespace-aware root-tag test in the fetcher. Had either compared the
+qualified tag, these reports would have parsed cleanly and read as zero messages.
+
+##### Corrected census across all 105
+
+- **133 rows, 658 messages, every one `disposition=none`.** Evaluated pairs by
+  row: **111 `pass`/`pass`, 15 `fail`/`pass`, 6 `pass`/`fail`, 1 `fail`/`fail`.**
+- **Both DKIM-failure classes are unchanged** — over-long-line 4 rows / 5
+  messages, DSN 2 rows / 3 messages. All nineteen recovered messages pass both
+  mechanisms, so nothing in this reading's failure analysis moves.
+- The `p=none`/`p=quarantine` boundary still reproduces exactly: **16 `none`, 89
+  `quarantine`.**
+- **Thirteen endpoints by filename; seven `org_name` strings; six reporter
+  addresses; five corporate organizations.** The three counts now differ and are
+  not interchangeable. `Enterprise Outlook` and `Outlook.com` share
+  `dmarcreport@microsoft.com`; **`WEB.DE` and `GMX` do not share an address but
+  are plainly one implementation** — see the field census below.
+- Published-policy field census: `sp` present in 68, absent in exactly the 37
+  Yahoo reports; `np` in exactly the 29 Google reports; `fo` in exactly the 10
+  Comcast, 18 Outlook.com and 2 Enterprise Outlook reports. **Two entries change:
+  `pct` is absent in 9 — the 6 GMX reports *and* the 3 WEB.DE reports — and
+  `discovery_method` and `testing` appear in exactly those same 9.** That triple
+  signature, plus the parallel `sicher.gmx.net`/`sicher.web.de` reporter
+  addresses, is what identifies GMX and WEB.DE as one operator rather than two.
