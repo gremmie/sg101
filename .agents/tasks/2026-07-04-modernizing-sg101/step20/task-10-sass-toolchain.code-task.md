@@ -22,7 +22,7 @@ Motion UI, then the site's own `_sg101.scss`; `sg101/gulpfile.js` runs it throug
 commits as the SCSS (`a3d54a8` is an example of both moving together).
 
 **Three independent things stop it running**, all observable rather than
-suspected, and all re-verified 2026-09-17:
+suspected, and all re-verified 2026-09-17 and again 2026-09-21:
 
 1. **`gulp-sass` ^2.1.1 wraps `node-sass`**, which needs native bindings built per
    Node version. Node here is **v26.5.0**; node-sass stopped shipping bindings
@@ -43,6 +43,17 @@ native build), and consider dropping gulp altogether — this is one `sass`
 invocation plus a minifier, which an npm script can express directly. The
 autoprefixer target is `['last 2 versions', 'ie >= 9']`, written in 2016; **IE 9
 can go.**
+
+**Premises re-checked 2026-09-21 against tasks 03, 11 and 12, which all landed
+after this file was generated: no gap.** `node -v` is still exactly **v26.5.0**;
+`main.scss`, `gulpfile.js`, `bower.json` and the committed `main.min.css` are all
+present; `node_modules` and `bower_components` are both still absent; and the two
+hand-appended rules are still last in the artifact in the stated order. Nothing in
+the production stack touches this work — task 02's decision keeps Node out of the
+production image, so the non-root container change does not reach it, and the
+Apache static mount serves `collectstatic` output rather than the Sass source.
+**Checked because tasks 04, 06 and 07 each carried a premise that had gone stale;
+this one had not.**
 
 ### The outstanding debt to reconcile — two rules, not one
 

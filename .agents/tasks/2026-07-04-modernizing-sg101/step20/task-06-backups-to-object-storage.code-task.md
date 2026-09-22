@@ -32,6 +32,37 @@ with identical row counts, `reindex_search` 1 m 35 s.
 out over `exec -T`; and `.env` must not be sourced to read values out of it,
 because `SECRET_KEY` contains `$8` and sourcing runs the file as shell.
 
+**⚠️ PREMISE GAP found 2026-09-21: the first of those two traps describes the
+*dev* stack, and this task runs against the *prod* one.** This file was generated
+2026-09-12; task 03 landed the production stack on 2026-09-19. Measured from both
+compose files rather than assumed:
+
+| | `docker-compose.yml` (dev) | `docker-compose.prod.yml` |
+|---|---|---|
+| `./snapshots:/snapshots:ro` | **mounted** | **absent** |
+| published `5432` | yes | **none** |
+| data | `postgres_data` volume | `postgres_data` volume |
+
+So in production there is **no snapshots mount to stream into and no published
+port to connect to** — the dump has nowhere to land by the route the trap
+describes, and the backup job's path onto the host is undefined rather than
+inherited. The `.env` trap is unaffected and still applies.
+
+**This does not change the task's shape**, only a premise its implementation
+approach rests on: step 1 says to read `tools/pg_snapshot.sh` and decide what it
+already does, and what it does is dev-shaped. Decide where a prod dump is written
+before building on it.
+
+**Also stale: the pointer in *Why the provider is deferred* read
+`sg101/settings/base.py:350-352`, which is now the avatar settings.** Corrected
+below to 377-387. **The pattern it cites is real and survives** — `USER_PHOTOS_BUCKET`,
+`USER_PHOTOS_BASE_URL` and `USER_PHOTOS_REGION` are all `env()`-driven, so
+requirement 3 stands as written.
+
+**Same failure as tasks 04 and 07**: a task file written before the task it
+depends on. **Re-read a task file's premises against what has landed since it was
+written**, not only its requirement list.
+
 **And the limitation worth keeping in front of the schedule:** a snapshot only
 helps if it is older than the damage.
 
@@ -45,8 +76,8 @@ costing example and nothing more.
 shape, the alarm, the media backup and the restore drill are all provider-neutral.
 AWS S3 and Linode Object Storage both speak the S3 API, so the difference is an
 endpoint URL and a credential — configuration, in the pattern
-`sg101/settings/base.py:350-352` already uses for the user-photos bucket and its
-endpoint.
+`sg101/settings/base.py:377-387` already uses for the user-photos bucket, its
+base URL and its region.
 
 **What must be decided now is the constraint, because it is what gets lost
 otherwise.** If it is not written down, the bucket is chosen at provisioning time

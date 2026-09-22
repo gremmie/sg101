@@ -29,6 +29,44 @@ peers may assert a client address; this one decides which peers may connect at
 all. Neither is sufficient alone, and **they must share one range list** rather
 than maintaining two that can drift apart.
 
+**⚠️ PREMISE GAP found 2026-09-21: this file predates the stack it has to
+firewall, and reads as though Apache were a host process.** It was generated
+2026-09-12. Task 03 landed on 2026-09-19 and put Apache in a **container**, which
+changes where the rules have to live — not merely how they are written.
+
+Measured from `docker-compose.prod.yml` rather than assumed: **exactly one
+service publishes anything.** `proxy` publishes `80:80` and `443:443`, with no
+address prefix, so both bind `0.0.0.0`. `web`, `worker`, `beat`, `postgres` and
+`redis` declare no `ports:` at all and are reachable only on the compose network.
+The entire public surface is the proxy container's two ports.
+
+**That is the case where a host firewall silently does nothing.** Docker
+publishes a port by inserting DNAT rules into `nat/PREROUTING`; the packet is
+then *forwarded* to the container and never traverses `INPUT`. A ruleset written
+against `INPUT` — which is what requirements 1 and 4 read as, and what ufw's
+ordinary syntax produces — would be present, valid, and would filter nothing.
+Traffic from any source address would still reach Apache. **The failure mode is a
+firewall that looks correct and is not**, which is the worst available outcome
+for this task and is invisible to a review that only reads the rules.
+
+**Consequence for requirement 3, and it cuts the other way.** `sshd` is a host
+process, so administrative access *is* on `INPUT`. The two paths are genuinely
+separate chains: restricting the published 443 does not touch SSH, and the
+lockout risk requirement 3 guards against is smaller than it looks — but only
+once the separation is understood, and it is not stated anywhere in this file.
+
+**The design is not chosen here, deliberately.** There are at least two shapes —
+rules in the `DOCKER-USER` chain, which Docker traverses before its own
+published-port rules and never rewrites; or binding the publish to a host-local
+address and terminating externally by some other means. They have different
+failure modes and different interactions with Cloudflare's ranges, and picking
+one is Brian's call on evidence, not a detail to settle while writing rules.
+
+**This is the same failure as task 04's**, one task later: a task file written
+before the task it depends on carried a premise that had since become false.
+**Re-read a task file's premises against what has landed since it was written**,
+not only its requirement list.
+
 ## Reference Documentation
 **Required:**
 - Design: `.agents/planning/2026-07-04-modernizing-sg101/design/detailed-design.md`
@@ -43,8 +81,15 @@ than maintaining two that can drift apart.
 implementation. Read additional references as needed for context.
 
 ## Technical Requirements
+
+**Read the premise-gap note in *Background* before this list.** Requirements 1
+and 4 are written as though Apache were a host process; it is a container, and a
+ruleset on `INPUT` would filter none of its published traffic.
+
 1. Author a ruleset restricting inbound 443 to Cloudflare's published ranges,
-   **IPv4 and IPv6 both**, in a form that can be applied to the VM unchanged.
+   **IPv4 and IPv6 both**, in a form that can be applied to the VM unchanged —
+   and in a chain that actually sees traffic DNAT'd to a published container
+   port, which `INPUT` does not.
 2. Source the ranges from the same verified list task 04 uses; a single source for
    both is the point, and drift between them is the failure mode.
 3. Keep administrative access (SSH) reachable, and state explicitly by what means.
