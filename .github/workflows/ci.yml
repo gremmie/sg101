@@ -19,6 +19,39 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The v3 stylesheet is a committed build artifact, which buys one-step
+      # deploys and a reviewable diff at the cost of someone having to remember
+      # to rebuild. This is what collects that debt: rebuild from sg101/scss/
+      # and fail if the result differs from what is committed.
+      #
+      # It catches both directions of the mistake -- a Sass change committed
+      # without its rebuild, and a hand-edit to main.min.css that the next
+      # rebuild would silently discard.
+      #
+      # `npm ci` rather than `npm install`, because the whole point of the
+      # committed lockfile is that CI resolves the same dart-sass, autoprefixer
+      # and cssnano a developer did. It also pins caniuse-lite, which is what
+      # browserslist consults: an unpinned one would change the emitted vendor
+      # prefixes on its own schedule and fail this step on a day nobody touched
+      # the CSS.
+      #
+      # Node lives only here and on developer machines. The application image
+      # has none, and deploys do not build CSS.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: The committed stylesheet rebuilds to itself
+        working-directory: sg101
+        run: |
+          set -eux
+          npm ci
+          npm run build:css
+          # --exit-code makes a difference a failure. Without it this step would
+          # print the diff and pass, which is the shape of check that looks like
+          # coverage and is not.
+          git diff --exit-code -- static/css/v3/main.min.css
+
       # docker-compose loads .env via env_file, exactly like a fresh dev
       # checkout; seed it from the committed example (a dummy SECRET_KEY and the
       # throwaway credentials the `postgres` service initializes itself with, so

@@ -82,6 +82,12 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
 - **Rendered HTML is cached in sibling fields** (`Post.body`/`html`) and rendered
   at save time. Changing rendering needs a data migration, not just a template
   change.
+- **The v3 stylesheet is a committed build artifact.** `sg101/scss/` compiles to
+  `sg101/static/css/v3/main.min.css` via `npm run build:css` in `sg101/`. Editing
+  the built file works until the next rebuild discards it — change the Sass and
+  commit both. The application image has no Node and deploys do not build CSS, so
+  a forgotten rebuild ships stale styling with no error anywhere.
+
 - **The `wiki` app is gone.** It minted a cookie for an external MoinMoin wiki to
   validate against Redis. The wiki itself still runs on the old host until that
   host is retired; its content is archived under `archive/wiki/`.

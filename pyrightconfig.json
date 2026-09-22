@@ -25,8 +25,7 @@
     "**/migrations",
     "media",
     "static_serve",
-    "sg101/node_modules",
-    "sg101/bower_components"
+    "sg101/node_modules"
   ],
 
   "reportMissingImports": "error",

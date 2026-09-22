@@ -1,19 +1,27 @@
 {
   "name": "sg101",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
+  "description": "SurfGuitar101.com stylesheet build",
+  "private": true,
+  "author": "Brian Neal <bgneal@gmail.com>",
   "license": "ISC",
-  "dependencies": {
-    "gulp-autoprefixer": "^3.1.0",
-    "gulp-cssnano": "^2.1.0",
-    "gulp-rename": "^1.2.2",
-    "gulp-sass": "^2.1.1",
-    "gulp-watch": "^4.3.5"
+  "scripts": {
+    "build:css": "sass --no-source-map --quiet-deps --load-path=node_modules/foundation-sites/scss --load-path=node_modules/motion-ui/src scss/main.scss static/css/v3/main.min.css && postcss static/css/v3/main.min.css --replace --no-map",
+    "watch:css": "sass --watch --no-source-map --quiet-deps --load-path=node_modules/foundation-sites/scss --load-path=node_modules/motion-ui/src scss/main.scss static/css/v3/main.min.css"
+  },
+  "browserslist": [
+    "> 0.5%",
+    "last 2 versions",
+    "Firefox ESR",
+    "not dead"
+  ],
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "cssnano": "^7.0.0",
+    "foundation-sites": "6.3.1",
+    "motion-ui": "1.2.3",
+    "postcss": "^8.4.0",
+    "postcss-cli": "^11.0.0",
+    "sass": "^1.80.0"
   }
 }

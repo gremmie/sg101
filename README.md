@@ -49,6 +49,31 @@ Compose; `.env.example` is committed and carries working local defaults,
 including Cloudflare's public Turnstile test keys. There is **no
 `secrets.json`** — that was retired during the modernization.
 
+## Building the stylesheet
+
+The v3 stylesheet is written in Sass under `sg101/scss/` and compiled to
+`sg101/static/css/v3/main.min.css`, **which is committed**. The build needs
+Node (developed against v26); the application image does not contain Node and
+deploys do not build CSS.
+
+```
+cd sg101
+npm install
+npm run build:css
+```
+
+`npm run watch:css` recompiles on save while working on the Sass.
+
+**Edit the Sass, never `main.min.css`.** The built file is an artifact: anything
+written into it by hand is silently discarded by the next build. Committing it
+keeps deploys to one step and keeps CSS changes reviewable in the diff, at the
+cost of having to remember to rebuild — so **a change to `sg101/scss/` and the
+rebuilt `main.min.css` belong in the same commit.**
+
+Foundation and Motion UI come from npm and are pinned in `package.json`;
+browser targets live in its `browserslist` key, which is what decides the
+vendor prefixes `autoprefixer` emits.
+
 ## Running tests
 
 ```
