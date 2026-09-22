@@ -62,6 +62,11 @@ the Py2.7 image every run).
 
 ## Secret hygiene — TWO audits
 
+**Audit #2 is now Step 22 (added 2026-09-21), together with the LICENSE file that
+depends on it.** It had lived here and in Step 2's detail prose as a forward
+reference with no checklist item, which is how a gate goes unrun. `plan.md` has
+the step; this section stays as its definition.
+
 Private-initially relaxes *urgency*, not the *need*. Two passes:
 
 - **Audit #1 — during Step 2 (repo private).** `gitleaks` + `trufflehog` on the
