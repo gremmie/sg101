@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-20
+**Last updated:** 2026-09-21
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty-two DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty-three DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -78,6 +78,96 @@ Cloudflare Pages and are no longer served by jaguar at all. A domain that
 advertised `max-age=604800` and then stops sending it is only a problem if it
 also stops serving HTTPS, which Pages does not — so nothing to do, but it is the
 kind of thing that looks alarming when noticed later without this note.
+
+## Step 20 task 10 — the stylesheet can be rebuilt, and the hand-patching stops — DONE 2026-09-21, `7f7bd3fa` + this planning commit, PUSHED
+
+**`main.min.css` 94,386 → 79,166 bytes, every difference accounted for, both
+hand-appended rules regenerated from source, CI gate added and mutation-verified
+in both directions, and Brian confirmed dev and the prod stack render the same.**
+No Python changed, so the suite is untouched.
+
+**The debt this clears was visible in the tree.** A one-rule CSS fix in August
+(`39aceca4`) and a second in Step 17 had both been appended *to the minified
+build artifact* by hand, because no rebuild was possible. Both rules were correct
+in `_sg101.scss` the whole time — only the built file was being patched.
+
+**Three independent blockers, and `npm install` reproduced the first exactly.**
+`gulp-sass` 2.x wraps `node-sass`, which needs native bindings per Node version;
+on v26 the install dies in `node-gyp`. The gulpfile is gulp 3 syntax that gulp 4
+removed, and `gulp` was never in `package.json` at all — only five of its
+plugins. The libraries came from bower, sunset since 2017.
+
+**Both bower pins exist on npm at the same versions, and that is what made the
+change verifiable rather than merely plausible.** `foundation-sites@6.3.1` and
+`motion-ui@1.2.3` are exactly what `bower.json` pinned. Installing those *and
+holding the 2016 browser targets* isolated the single variable worth isolating —
+LibSass vs dart-sass — before the targets were touched at all.
+
+**The Foundation-under-dart-sass risk did not bite.** 6.3.1 predates dart-sass
+and its own devDependencies still name `gulp-sass`, so it might not have compiled
+at all; that was the one thing that could have turned this into an upgrade rather
+than a reconstruction. It compiles, exit 0. The only noise is 16 `@import`
+deprecation warnings in our own `main.scss`, plus `color.scale`/`color.adjust`
+warnings from `_sg101_settings.scss`. `@import` is not removed until Dart Sass
+3.0, which does not exist yet.
+
+#### Every difference from the committed artifact, and what causes each
+
+| Cause | Shape |
+|---|---|
+| Numeric precision | LibSass emitted 5 decimals, dart-sass emits 10 — `8.33333%` → `8.3333333333%`, the same twelfth of a grid |
+| Quote style | `content: '+'` → `content: "+"` |
+| cssnano | declarations alphabetized, some shorthands split (`border` → `border-width` + `border-style`), some rules merged |
+| Prefix strategy | `-webkit-flex` (77) → `-webkit-box-flex` (77), and **61 `-ms-transform` appear that the 2016 build never emitted** |
+
+**That last row is worth keeping.** The old artifact was missing a vendor prefix
+its own stated `ie >= 9` target required. The reconstruction is *more* correct for
+2016's targets than 2016's build was.
+
+#### Dropping IE 9 removed 753 declarations and added one, and the one is the tell
+
+The removals are vendor-prefix material in four shapes, which a count of prefixed
+*properties* alone would have undercounted: 664 prefixed properties, plus
+prefixed values (`display: -ms-flexbox`), prefixed selectors
+(`::-ms-input-placeholder`) and prefixed at-rules (`@-webkit-keyframes`).
+
+**The single addition is `abbr[title] { -webkit-text-decoration: underline
+dotted }`, and it exists because the query was replaced rather than edited.**
+`["last 2 versions", "ie >= 9"]` became `["> 0.5%", "last 2 versions", "Firefox
+ESR", "not dead"]`, and `> 0.5%` reaches a Safari that `last 2 versions` never
+did. Recorded because the step was described in advance as "purely prefix
+removal" and it was not quite.
+
+#### The CI gate, and why a weaker one would have proved nothing
+
+CI rebuilds and runs `git diff --exit-code` on the artifact. **Verified by
+breaking it both ways before it went in**: a hand-edit to `main.min.css` is
+caught, and a Sass change committed without its rebuild is caught.
+[[mutation-verify-or-it-is-not-coverage]]
+
+`npm ci`, not `npm install` — the committed lockfile pins `caniuse-lite`, which
+browserslist consults. Unpinned, the emitted prefixes would change on caniuse's
+schedule and fail the check on a day nobody touched the CSS. And the build is
+deterministic: two consecutive runs hash identically.
+
+#### A trap for anyone re-running the comparison
+
+**browserslist resolves its config from the *input file's* directory, not the
+working directory.** The first comparison here built to a scratch path outside the
+package, where there is no `package.json`; autoprefixer silently fell back to its
+defaults, dropped IE, and emitted a different stylesheet. It looks exactly like a
+toolchain difference and is not — the first cut of this task's analysis reported
+806 lost declarations that were an artifact of where the output was written.
+[[probes-must-not-perturb-what-they-measure]]
+
+#### Task 02's decision honored, not re-opened
+
+Built CSS stays committed. The application image has no `node`, `npm` or `yarn`;
+`.dockerignore` already excluded `sg101/node_modules`; and `node_modules` sits
+beside `sg101/static` rather than inside it, so `collectstatic` cannot sweep 129
+packages into the static tree. The command is documented in `README.md` and the
+silent failure mode — a forgotten rebuild ships stale styling with no error
+anywhere — is in `AGENTS.md`.
 
 ## Step 20 task 12 — unprivileged containers, and the tool that could never check them — DONE 2026-09-20, `e503b69b` + this planning commit, PUSHED
 
