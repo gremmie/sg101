@@ -386,6 +386,22 @@ The new proxy serves both from `var/public/{hosted,photos}` in the checkout.
 the site. `var/` is git-ignored, so nothing but this step puts them there.
 *Source: `STATUS.md` § Step 20 task 03.*
 
+### B13. Confirm `make` is on the VM
+The repo's `Makefile` holds shortcuts for the everyday production commands,
+among them `make prod-maint-on`. Minimal server images often leave `make` out,
+and nobody has checked this VM's. **If it is missing, the shortcut fails with
+"command not found" at exactly the moment it is needed in a hurry.**
+
+```bash
+command -v make || sudo apt install make   # or the distribution's equivalent
+make                                        # from the checkout: lists the targets
+make prod-maint-status                      # reads var/maintenance/, changes nothing
+```
+
+If `make` cannot be installed, every target is a command written out in
+DOCKER.md, which the `Makefile` only abbreviates.
+*Source: the `Makefile` at the repo root.*
+
 ## C. The maintenance window
 
 ### C0. Freeze writes on jaguar, before the snapshot

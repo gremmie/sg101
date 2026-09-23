@@ -549,6 +549,10 @@ examples use a shell function to save typing:
 dcp() { docker compose -f docker-compose.prod.yml "$@"; }
 ```
 
+The common ones are also `make` targets, all prefixed `prod-` (`make
+prod-maint-on`, `make prod-logs svc=web`, `make prod-backup`). Run `make` on its
+own to list them.
+
 It is its own compose project (`sg101-prod`), with its own PostgreSQL and Redis
 volumes, so it can run next to the development stack without touching it.
 
@@ -753,6 +757,9 @@ tools/backup_drill.sh        # needs this stack up
 ```
 
 ## Everyday commands
+
+`make` lists shortcuts for most of these, for both stacks. This table and the
+sections above are what those shortcuts run.
 
 | Goal | Command |
 | --- | --- |
