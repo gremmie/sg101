@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-22
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -78,6 +78,111 @@ Cloudflare Pages and are no longer served by jaguar at all. A domain that
 advertised `max-age=604800` and then stops sending it is only a problem if it
 also stops serving HTTPS, which Pages does not — so nothing to do, but it is the
 kind of thing that looks alarming when noticed later without this note.
+
+## Step 20 task 06 — backups to two buckets, and the stream that would have uploaded a truncated dump — DONE 2026-09-22, `a61528ac` + this planning commit, PUSHED
+
+**`tools/backup_drill.sh` 26/26 against a local MinIO, 11 of 11 mutations caught
+each by the check written for it, every restored file byte-identical; the
+restore commands in DOCKER.md run as written, full replacement included.
+Suite 1303 OK and gate 1303 OK, unchanged (no Python touched); `tools/prod_smoke.sh` 21/21 unchanged.** What
+needs a real account — buckets, the job's IAM user, the heartbeat check, and
+seeing an alarm arrive in Gmail — is runbook **B12**.
+
+### What was built
+
+| | |
+|---|---|
+| `backup/Dockerfile` | `FROM postgres:16` + `awscli` 2.23.6 + `curl`, runs as `postgres` (uid 999) |
+| `backup/backup.sh` | heartbeat start → `pg_dump -Fc` to a temp file in the container → upload → `aws s3 sync /media`, never `--delete` → heartbeat ok; any failure → `/fail` |
+| `backup/provision.sh` | both buckets versioned; `lifecycle-db.json` on dumps; media's lifecycle *deleted*; re-runnable |
+| `backup/policy-writer.json` | `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:ListBucket` — no read, no delete |
+| `backup/sg101-backup.{service,timer}` | 04:30 host time, `Persistent=true`, `TimeoutStartSec=6h`, a fixed container name removed by `ExecStopPost`; parse-checked with `systemd-analyze verify` |
+| `docker-compose.prod.yml` `backup` | profile `backup`; `secrets/backup.env`, not `.env`; `./media` read-only |
+| `docker-compose.backup-drill.yml` | MinIO, `mc`, a separate AWS CLI, a heartbeat stand-in; `env_file: !reset []` so a real credential can never reach the drill |
+
+### Decisions, all Brian's, 2026-09-22
+
+- **The host schedules it, not beat** — the app image has no `pg_dump`, `./media`
+  is mounted only into `web`, and a beat task stops silently with the broker.
+- **Two buckets.** Dumps expire at **90 days**; **media keeps everything,
+  prior versions included, forever.** One bucket would have made the media's
+  survival depend on a prefix filter nobody drops.
+- **The dump goes to a temp file inside the container, not a stream.** The
+  recorded decision had been to stream under `pipefail`. Working out drill check
+  10 showed `aws s3 cp -` completes a truncated upload and exits 0 when its input
+  ends early, and the job's credential cannot delete the result. **Mutation M1
+  puts the stream back and the drill catches it** — "a database failure uploads
+  no dump" fails, which is the truncated object appearing.
+- MinIO `RELEASE.2025-09-07T16-13-09Z` from quay.io, pinned by digest — its
+  images left Docker Hub 2026-09-11; frozen is acceptable for a local fixture.
+- healthchecks.io for the dead-man's switch.
+
+### Made during coding, reported for review
+
+- **No incomplete-upload rules anywhere.** MinIO accepts
+  `AbortIncompleteMultipartUpload` inside a rule and silently drops it, and
+  rejects a rule containing only that — which is what media's would have been.
+  Keeping them would make the drill test a configuration production does not
+  run. Cost: an interrupted upload's parts, at most one dump (~120 MB,
+  ~$0.003/month), until removed by hand.
+- **No `pg_restore --list` before upload.** Planned, then dropped: nothing
+  could make it fail where `pg_dump` had succeeded, so it could never be seen to.
+- **The job cannot read its own backups**, so a restore needs an admin
+  credential. Deliberate: a compromised host can neither destroy nor download
+  them. DOCKER.md says so first.
+- **A timeout alone would have left the hung job running.** A `oneshot` has no
+  limit by default, and a hung run blocks every later night, so Brian asked for
+  `TimeoutStartSec=6h`. Measured before relying on it: SIGTERM to
+  `docker compose run` exits the client (143) and **the container keeps
+  running** — it is Docker's, not the unit's. So the timer's run gets a fixed
+  name (`sg101-backup`), which also makes Docker refuse an overlapping second
+  run (measured: `Conflict ... already in use`), and `ExecStopPost=-docker rm -f`
+  removes it however the run ended. Verified by hand, not under systemd:
+  `systemd-analyze verify` checks only that the units parse.
+- **A put-only credential is not safe without versioning** — it can overwrite.
+  M8 turns versioning off and the overwrite check catches it.
+
+### Measured
+
+- **Production `/media` on jaguar: 4.7 GB, 14,906 files**; `downloads` 2.7 GB,
+  `podcast` 1.4 GB, `user_photos` 589 MB. **Churn 9.9 MB / 192 files in 30 days,
+  150 MB / 1,999 in a year** — so the first sync is the whole cost and nightly
+  runs are near nothing. Recorded because task 08 measured egress, not size.
+- **Dump 119,603,065 bytes**, 83 tables, restored with every row count equal;
+  `reindex_search` 516,861 documents in 1 m 43 s; `reconcile_search` clean.
+- **Empty directories do not survive**: object storage has only files.
+  Production has 125, mostly `avatars/users/<name>` from deleted avatars.
+  Harmless — Django creates directories on save — and noted in DOCKER.md so the
+  gap is not mistaken for loss.
+
+### The drill had three defects of its own, all found before trusting it
+
+1. **MinIO's image declares `/data` a volume, and `--force-recreate` keeps
+   anonymous volumes** — the second run saw the first's 152 objects, so
+   "a dump reached the bucket" could pass on yesterday's dump. Fixed with
+   `--renew-anon-volumes` and a new check that the buckets start empty.
+2. `docker compose run` writes its status lines to stderr; fetching a version via
+   a stderr swap mixed them into the body, and the overwrite check failed for a
+   reason that was not the code's.
+3. An empty bucket's `length(Versions)` is `""`, not `None`.
+
+**Three mutations had no detector at first**, found by asking of each "which
+check fails?" before running it: `--delete` on the sync (nothing in the bucket
+was absent on disk), `provision` not removing a hand-added media rule (a fresh
+bucket has none), and running as root. Each got a check; all three are now in
+the 11.
+
+**Two slips caught before shipping**: `docker compose run --no-build` does not
+exist (`run` has only `--build`), which would have failed every night; and the
+task file's own first decision text said `pg_dump` would run over `exec -T`,
+impossible from a one-shot container without the Docker socket.
+
+### Not verifiable here, and where it went
+
+- **Lifecycle expiry itself** — rules count in whole days. The rules are read
+  back and checked; that they fire is runbook B12's day-91 reminder.
+- **The alarm reaching Gmail** — B12 step 5, a deliberate wrong-password run.
+- **Block Public Access** — MinIO has no equivalent; B12 step 1 says to confirm.
 
 ## Step 20 task 10 — the stylesheet can be rebuilt, and the hand-patching stops — DONE 2026-09-21, `7f7bd3fa` + this planning commit, PUSHED
 

@@ -86,20 +86,36 @@ endpoint; only the trigger is host configuration, alongside task 11's
 - **The backup credential would sit in the application's environment**, reachable
   from every request, where it has no business being even write-scoped.
 
-**The dump streams to the bucket and never lands on disk:** `pg_dump -Fc` runs
-inside the `postgres` container over `exec -T` — which keeps the client version
-matched to the server for free, the one part of `tools/pg_snapshot.sh` that
-carries over unchanged — and is piped to the upload. Run under
-`set -o pipefail` and treat a non-zero `pg_dump` as a failed backup, or a dump
-cut short uploads as a truncated object that looks like a backup.
+**The dump is written inside the backup container, verified, then uploaded — it
+never lands on the host.** *(Corrected 2026-09-22, same day; the first version of
+this paragraph was wrong twice.)* It first said `pg_dump` runs in the `postgres`
+container over `exec -T` and streams to the upload under `set -o pipefail`:
+
+- **`exec` is not available to a one-shot container** without the Docker socket,
+  which is root on the host. The backup image is built `FROM postgres:16` instead
+  and connects over the compose network — the client still matches the server,
+  which was the reason for `exec`.
+- **`pipefail` does not stop a truncated upload.** If `pg_dump` dies mid-stream,
+  `aws s3 cp -` sees end of input, completes the upload and exits 0; `pipefail`
+  fails the *job*, but the partial object is already in the bucket, and the job's
+  credential cannot delete it. It sits there for the retention window looking like
+  a backup.
+
+So the dump goes to a temporary file in the container's own writable layer — not
+a host path, mounted by nothing, and gone when the `--rm` container exits — and is
+uploaded only if `pg_dump` exited 0. A bad dump never reaches the bucket. Cost:
+~128 MB of transient space. *(A `pg_restore --list` check before upload was
+planned and dropped: nothing could make it fail where `pg_dump` had succeeded,
+so it could never be seen to catch anything.)*
 
 **A dump must never land under a path the proxy mounts.** The proxy serves
 `./media`, `./static`, `./var/public` and `./var/maintenance` to the internet; a
 dump in any of them is downloadable by anyone who guesses the name, and it holds
-password hashes, email addresses and private messages. Streaming makes this hold
-by construction; if a local copy is ever added, it goes in a root-owned `0700`
-directory mounted into no container. **Direction matters in the requirements
-below: `/media` is a *source* of the backup, never a destination.**
+password hashes, email addresses and private messages. Keeping the dump inside the
+container makes this hold by construction; if a host copy is ever added, it goes
+in a root-owned `0700` directory mounted into no container. **Direction matters in
+the requirements below: `/media` is a *source* of the backup, never a
+destination.**
 
 **Requirement 8 needs a dead-man's switch, not only a failure alarm.** An alarm
 on failure catches a job that runs and breaks; it cannot catch a job that never
@@ -107,7 +123,18 @@ starts — a timer not installed, a disabled unit, a VM that is off. The job che
 in with an external heartbeat service on success, and silence is the alarm.
 Neither a timer nor beat can report its own absence.
 
-**The bucket: a new, dedicated S3 bucket** — as already recorded below and in
+**Two buckets, not one — decided 2026-09-22.** Dumps and media need opposite
+retention: a dump's current object expires after **90 days**; a media file's
+never does, because an untouched 2012 photo is still the only off-site copy.
+**The media bucket keeps everything, current and noncurrent versions, forever**;
+its only lifecycle rule aborts incomplete multipart uploads. One bucket with
+prefix-filtered rules would work until a filter was dropped, and then expire the
+media silently while the site kept serving it from disk. Separate buckets make
+each rule whole-bucket. **Both are versioned**: a put-only credential can still
+overwrite, and versioning is what keeps the overwritten original. One job
+credential, put-and-list on both, nothing that deletes.
+
+**The buckets: new and dedicated** — as already recorded below and in
 runbook B7 — **provided the VM is not on AWS.** The VM's provider is still
 open between Linode and Lightsail (`research/hosting.md`); on Lightsail an S3
 bucket shares the provider and fails the constraint, so the bucket choice is

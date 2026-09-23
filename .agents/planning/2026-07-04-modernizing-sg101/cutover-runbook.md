@@ -235,7 +235,11 @@ serves through the edge. The task also carries an emergency-open and re-close
 procedure — read it before the window, not during it.
 *Source: Step 20 task 07; `STATUS.md` § Step 16 task 03 Open register.*
 
-### B7. Choose the backup bucket — and the constraint it must satisfy
+### B7. Choose the backup buckets — and the constraint they must satisfy
+**Two buckets, decided 2026-09-22** — dumps and media, because their retention
+is opposite (dumps expire at 90 days; media never does). Everything below
+applies to both. Provisioning them is B12.
+
 Step 20 task 06 builds the whole backup path against a local S3-compatible
 endpoint and **deliberately does not choose a provider**, because nothing in the
 path needs one: endpoint, bucket and credentials are configuration.
@@ -256,6 +260,50 @@ credentials are already in the project from Step 15. Use a **new bucket**, not
 the job puts objects, the lifecycle policy deletes them. **If the VM lands on
 Lightsail instead, S3 shares its provider and fails the constraint** — the
 bucket then goes elsewhere.
+*Source: Step 20 task 06.*
+
+### B12. Provision the backups, and prove the alarm reaches you
+The job, the buckets' rules and the restore are built and drilled locally
+(`tools/backup_drill.sh`, DOCKER.md *Backups, and restoring from them*). What
+cannot be drilled locally is everything with a real account behind it.
+`dcp` is DOCKER.md §10's shorthand, `docker compose -f docker-compose.prod.yml`.
+
+1. **Create the buckets** with an administrative credential — creates both,
+   turns on versioning, applies `lifecycle-db.json`, and leaves the media bucket
+   with no rules at all. Re-running it corrects drift.
+   ```bash
+   dcp --profile backup build backup
+   dcp run --rm -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... \
+       -e BACKUP_DB_BUCKET=... -e BACKUP_MEDIA_BUCKET=... backup provision
+   ```
+   **Confirm Block Public Access is on for both** (the AWS default for new
+   buckets since 2023; `provision` does not set it because the local stand-in
+   does not support it).
+2. **Create the job's IAM user** with `backup/policy-writer.json` as its only
+   policy, `@DB_BUCKET@`/`@MEDIA_BUCKET@` replaced. Nothing else — no read, no
+   delete.
+3. **Create the healthchecks.io check**: period 1 day, grace 2 hours, alerting to
+   Gmail. Put its ping URL, the buckets and the job's key in
+   `secrets/backup.env` (template: `backup/backup.env.example`).
+4. **Run the first backup by hand** — `dcp run --rm backup`. The first media sync
+   uploads all ~4.7 GB and will take a while; later ones copy ~10 MB a month.
+5. **Prove the alarm, at the receiving end.** Run it once with a wrong database
+   password, `dcp run --rm -e PGPASSWORD=wrong backup`, and **see the alert arrive
+   in Gmail** — not just the check turning red on the dashboard. This is the
+   acceptance test task 06 could not run.
+6. **Install the timer**, editing the path in the `.service` as for logrotate:
+   ```bash
+   sudo cp backup/sg101-backup.service backup/sg101-backup.timer /etc/systemd/system/
+   sudo systemctl daemon-reload && sudo systemctl enable --now sg101-backup.timer
+   systemctl list-timers sg101-backup.timer
+   ```
+7. **Restore once from the real bucket** into a scratch database (DOCKER.md),
+   so the first proof that the real backups restore is not a disaster.
+
+**Also worth a calendar reminder around day 91:** confirm the oldest dumps are
+actually gone. Expiry is the one behaviour no local drill can show, because
+lifecycle rules count in whole days.
+
 *Source: Step 20 task 06.*
 
 ### B10. Install the `logrotate` configuration
