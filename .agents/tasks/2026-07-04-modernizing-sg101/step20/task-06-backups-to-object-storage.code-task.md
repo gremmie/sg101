@@ -66,6 +66,53 @@ written**, not only its requirement list.
 **And the limitation worth keeping in front of the schedule:** a snapshot only
 helps if it is older than the damage.
 
+### Decided 2026-09-22: what runs the job, and where a dump may exist
+
+**The schedule lives on the host, not in celery beat.** A systemd timer (or cron)
+on the VM runs a one-shot compose service — `docker compose -f
+docker-compose.prod.yml run --rm backup`, behind a profile so `up` never starts
+it. The tooling stays in the repo and runs locally against the S3-compatible
+endpoint; only the trigger is host configuration, alongside task 11's
+`logrotate` in the cutover runbook. Beat was rejected on four grounds:
+
+- **The app image cannot do it.** The Dockerfile installs `libpq-dev` but no
+  PostgreSQL client, so there is no `pg_dump`, and one would have to match the
+  16 server. `./media` is mounted into `web` only, not `worker` or `beat`.
+- **It would share fate with what it protects.** A beat task needs beat, the
+  broker and a worker all healthy; lose any one and backups stop with nothing
+  said — the same silent failure this task exists to end.
+- **It would occupy the only worker** for the length of a dump and a media
+  upload, delaying the site's own tasks, mail among them.
+- **The backup credential would sit in the application's environment**, reachable
+  from every request, where it has no business being even write-scoped.
+
+**The dump streams to the bucket and never lands on disk:** `pg_dump -Fc` runs
+inside the `postgres` container over `exec -T` — which keeps the client version
+matched to the server for free, the one part of `tools/pg_snapshot.sh` that
+carries over unchanged — and is piped to the upload. Run under
+`set -o pipefail` and treat a non-zero `pg_dump` as a failed backup, or a dump
+cut short uploads as a truncated object that looks like a backup.
+
+**A dump must never land under a path the proxy mounts.** The proxy serves
+`./media`, `./static`, `./var/public` and `./var/maintenance` to the internet; a
+dump in any of them is downloadable by anyone who guesses the name, and it holds
+password hashes, email addresses and private messages. Streaming makes this hold
+by construction; if a local copy is ever added, it goes in a root-owned `0700`
+directory mounted into no container. **Direction matters in the requirements
+below: `/media` is a *source* of the backup, never a destination.**
+
+**Requirement 8 needs a dead-man's switch, not only a failure alarm.** An alarm
+on failure catches a job that runs and breaks; it cannot catch a job that never
+starts — a timer not installed, a disabled unit, a VM that is off. The job checks
+in with an external heartbeat service on success, and silence is the alarm.
+Neither a timer nor beat can report its own absence.
+
+**The bucket: a new, dedicated S3 bucket** — as already recorded below and in
+runbook B7 — **provided the VM is not on AWS.** The VM's provider is still
+open between Linode and Lightsail (`research/hosting.md`); on Lightsail an S3
+bucket shares the provider and fails the constraint, so the bucket choice is
+settled only once the VM is.
+
 ### Why the provider is deferred, and what is decided instead
 
 **`plan.md` says only *"Backups still go to object storage."*** No provider is
@@ -147,7 +194,9 @@ implementation. Read additional references as needed for context.
 
 ## Implementation Approach
 1. Read `tools/pg_snapshot.sh` and decide what it already does versus what needs
-   adding — scheduling, upload, retention, alarming.
+   adding — scheduling, upload, retention, alarming. Read *Decided 2026-09-22*
+   first: the trigger, the streaming route and the no-served-path rule are
+   settled, and the tool's `./snapshots` route is dev-only.
 2. Stand up a local S3-compatible endpoint so the path is exercisable before any
    bucket exists.
 3. Add the upload and lifecycle-based retention, keeping the custom-format dump so

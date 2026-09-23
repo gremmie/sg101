@@ -253,7 +253,9 @@ one. **The object storage copy is the one that has to be somewhere else.**
 Against a Linode VM, **an AWS S3 bucket satisfies this**, and `boto3` plus the
 credentials are already in the project from Step 15. Use a **new bucket**, not
 `sg101.user.photos` or `sg101.forum.photos`, and a **write-scoped credential** —
-the job puts objects, the lifecycle policy deletes them.
+the job puts objects, the lifecycle policy deletes them. **If the VM lands on
+Lightsail instead, S3 shares its provider and fails the constraint** — the
+bucket then goes elsewhere.
 *Source: Step 20 task 06.*
 
 ### B10. Install the `logrotate` configuration
