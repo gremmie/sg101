@@ -27,6 +27,49 @@ from search.models import SearchDocument
 HEADLINE_MAX_WORDS = 35
 HEADLINE_MIN_WORDS = 15
 
+# Names the site spells more than one way, each group written as members type
+# it. The index holds words as written, so without this neither spelling finds
+# the other -- and the site's signature tune is split between two.
+#
+# Extending a group is only a matter of adding to it -- nothing is reindexed,
+# because the rewrite happens to the query. What it cannot bridge is a form
+# whose words the parser drops: "wipe out" indexes as just 'wipe', since 'out'
+# is an English stop word, so there is nothing to rewrite from.
+SPELLINGS = [
+    ['misirlou', 'miserlou', 'miserlu'],
+    ['straitjackets', 'straightjackets'],
+    ['bel-airs', 'belairs', 'bel airs'],
+]
+
+
+class SpellingSearchQuery(SearchQuery):
+    """
+    A websearch query in which any spelling of a SPELLINGS name finds them all.
+
+    ts_rewrite works on the parsed tsquery rather than the typed string, so a
+    spelling is bridged wherever it sits: alone, inside a quoted phrase, or
+    excluded, where excluding one spelling excludes every one.
+
+    Each form is a target twice over, because typed two words it parses as an
+    AND of both and quoted as a phrase. Either way it is replaced by itself OR
+    the whole group, never by the group alone -- so a rewrite only ever adds
+    matches, and a query still finds everything it found before.
+
+    """
+    def as_sql(self, compiler, connection, **kwargs):
+        sql, params = super().as_sql(compiler, connection, **kwargs)
+        for group in SPELLINGS:
+            either = ' || '.join(['phraseto_tsquery(%s, %s)'] * len(group))
+            either_params = [value for form in group
+                             for value in (SEARCH_CONFIG, form)]
+            for form in group:
+                for parse in ('plainto_tsquery', 'phraseto_tsquery'):
+                    target = f'{parse}(%s, %s)'
+                    sql = f'ts_rewrite({sql}, {target}, {target} || {either})'
+                    params = [*params, SEARCH_CONFIG, form, SEARCH_CONFIG,
+                              form, *either_params]
+        return sql, params
+
 
 def positive_terms(query):
     """
@@ -80,7 +123,8 @@ def matching_documents(query):
     box *would* give, which the box being unchecked must not change.
 
     """
-    tsquery = SearchQuery(query, search_type='websearch', config=SEARCH_CONFIG)
+    tsquery = SpellingSearchQuery(query, search_type='websearch',
+                                  config=SEARCH_CONFIG)
     return SearchDocument.objects.filter(search_vector=tsquery)
 
 
@@ -135,8 +179,8 @@ def search_documents(query, keys):
     deliberate change rather than restored behavior.
 
     """
-    ranked = SearchQuery(positive_terms(query), search_type='websearch',
-                         config=SEARCH_CONFIG)
+    ranked = SpellingSearchQuery(positive_terms(query), search_type='websearch',
+                                 config=SEARCH_CONFIG)
 
     documents = [document_for_key(key) for key in keys]
 

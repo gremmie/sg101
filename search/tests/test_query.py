@@ -215,3 +215,67 @@ class SearchDocumentsTestCase(TestCase):
         self.index_topic('Reverb tank rebuild')
         row = search_documents('reverb', self.ALL_KEYS)[0]
         self.assertEqual(row.result_label, 'Forum Topic')
+
+    # Spellings of one name. Each of these fails without the rewrite: the
+    # index holds the words as written, so neither spelling finds the other.
+
+    def test_each_spelling_of_misirlou_finds_them_all(self):
+        self.index_topic('Misirlou by Dick Dale')
+        self.index_topic('Miserlou cover night')
+        self.index_topic('Miserlu on a Jaguar')
+        for query in ['misirlou', 'miserlou', 'miserlu']:
+            with self.subTest(query=query):
+                self.assertEqual(sorted(self.titles(query)),
+                                 ['Miserlou cover night',
+                                  'Miserlu on a Jaguar',
+                                  'Misirlou by Dick Dale'])
+
+    def test_a_quoted_phrase_bridges_the_spelling_but_keeps_its_order(self):
+        self.index_topic('Misirlou Dick Dale live')
+        self.index_topic('Dick Dale plays Misirlou')
+        self.assertEqual(self.titles('"miserlou dick dale"'),
+                         ['Misirlou Dick Dale live'])
+
+    def test_excluding_one_spelling_excludes_them_all(self):
+        self.index_topic('Dick Dale Misirlou')
+        self.index_topic('Dick Dale Pipeline')
+        self.assertEqual(self.titles('dale -miserlou'), ['Dick Dale Pipeline'])
+
+    def test_either_spelling_of_straitjackets_finds_both(self):
+        self.index_topic('Los Straitjackets live')
+        self.index_topic('Los Straightjackets album')
+        for query in ['straitjackets', 'straightjackets']:
+            with self.subTest(query=query):
+                self.assertEqual(sorted(self.titles(query)),
+                                 ['Los Straightjackets album',
+                                  'Los Straitjackets live'])
+
+    def test_every_form_of_bel_airs_finds_them_all(self):
+        # One word, two words, or hyphenated -- and typed two words, the query
+        # is an AND of both rather than a phrase.
+        self.index_topic('The Bel-Airs reunion')
+        self.index_topic('Belairs 45 found')
+        self.index_topic('Bel Airs set list')
+        for query in ['bel-airs', 'belairs', 'bel airs', '"bel airs"']:
+            with self.subTest(query=query):
+                self.assertEqual(sorted(self.titles(query)),
+                                 ['Bel Airs set list', 'Belairs 45 found',
+                                  'The Bel-Airs reunion'])
+
+    def test_a_rewritten_query_still_finds_what_it_found_before(self):
+        # The rewrite adds spellings to a query, never swaps its own words for
+        # them: two words typed apart still match two words written apart.
+        self.index_topic('Bel canto on the air')
+        self.assertEqual(self.titles('bel airs'), ['Bel canto on the air'])
+
+    def test_the_other_spelling_counts_towards_rank(self):
+        self.index_story('Misirlou history')
+        self.index_post('Amp settings',
+                        'A long post about amps. ' * 40 + 'Miserlou played.')
+        self.assertEqual(self.titles('miserlou')[0], 'Misirlou history')
+
+    def test_a_snippet_marks_the_other_spelling(self):
+        self.index_post('Amp settings', 'They played Misirlou twice.')
+        row = search_documents('miserlou', self.ALL_KEYS)[0]
+        self.assertIn('<span class="highlight">Misirlou</span>',
+                      row.highlighted)
