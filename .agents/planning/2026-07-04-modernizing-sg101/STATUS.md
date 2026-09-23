@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-22
+**Last updated:** 2026-09-23
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,114 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 20 task 09 — no autocomplete index, and the spelling split closed at query time — DONE 2026-09-23, `0f58f6ae` + this planning commit, PUSHED
+
+**Suite 1311 OK and gate 1311 OK** (1303 + 8 new tests in
+`search/tests/test_query.py`), **6 of 6 mutations caught**, each by the test
+written for it, file restored byte-identical. Code: `search/query.py` only. No
+migration.
+
+### The autocomplete index is not added — 67 requests in 58 days
+
+**The task's instrument did not exist.** Requirement 1 said to count usage *"from
+the query logging that already exists"*; that is the `search` logger, and
+`core.views.ajax_users` never writes to it. The only record is jaguar's vhost
+access log, `/svr/www/surfguitar101.com/log/access.log*` (not
+`/var/log/apache2/`, per Step 17 task 05). `/core/ajax/users/` is the same path
+on `main`. Brian ran the count (the ssh was refused to me as a production read).
+
+| 27 Jul – 23 Sep 2026, 58 days, the full retained window | |
+|---|---|
+| requests | **67** |
+| days with any | 15 |
+| distinct IPs | 17 |
+| single-character `q` (≈ times someone started typing) | 9 |
+
+At Step 12's **2.7 → 0.48 ms**, that is **~150 ms saved in two months** — not
+worth a third index on `username` to maintain. Requirement 3 applies. The
+Step 12 measurement stands if post-cutover traffic changes the answer.
+
+**One figure the script produced is invalid and is not recorded as a finding:**
+it counted "empty `[]` responses" as response size 2, but this log's size field
+is `%O` (bytes sent, headers included — task 08), so it reads 0 whatever
+happened.
+
+### The spelling split — `ts_rewrite`, not either option the task offered
+
+**Step 12's numbers reproduce** on the dev snapshot (516,861 documents):
+`misirlou` 1,416, `miserlou` 2,131, both 148, either 3,399. The tail is small —
+`miserlu` 20, `misserlou` 8, `miserilou` 8, `missirlou` 7, `misirlu` 7.
+
+**`pg_trgm` fails on the measurements, twice.** As a low-result fallback it never
+fires: each spelling alone returns over 1,000 rows. As a similarity match it
+cannot separate the right word from a wrong one — `similarity('miserlou',
+'misirlou')` is **0.50**, and so is `similarity('miserlou', 'miser')`, an
+unrelated word in 199 documents. No threshold admits one and not the other.
+
+**A synonym dictionary works and costs more than the problem.** PostgreSQL reads
+synonyms only from a file in `$SHAREDIR/tsearch_data/` on the database server:
+a mount on `postgres` in dev, prod and CI, a file every restore depends on, a
+custom text search configuration, and a full vector recompute over 516,861 rows
+— again on every added spelling, since it acts at index time.
+
+**`ts_rewrite` does it at query time**, on the parsed tsquery: no file, no
+extension, no reindex. Prototyped before choosing — a bare word becomes
+`miserlou | misirlou`; the phrase `"miserlou dick dale"` becomes
+`(miserlou | misirlou) <-> dick <-> dale` (67 → 101 rows); `dale -miserlou`
+excludes both. Chosen by Brian 2026-09-23.
+
+**Groups, chosen by Brian from measured candidates:**
+
+| group | A / B / both | |
+|---|---|---|
+| misirlou · miserlou · miserlu | 1,416 / 2,131 / 148 | in |
+| straitjackets · straightjackets | 4,455 / 274 / 62 | in |
+| bel-airs · belairs · bel airs | 1,058 / 495 / 38 | in |
+| astroman · "astro man" | 1,355 / 1,793 / 73 | held back — "astro man" may match unrelated text |
+| wipeout · "wipe out" | — | **unbridgeable**: `out` is a stop word, so "wipe out" indexes as `wipe` alone; the 2,105 was counting "wipe" |
+| ghostriders · "ghost riders" | 57 / 589 / 3 | out — likely different things |
+
+Plurals are already one word to the stemmer (`pyramids`/`pyramid` identical),
+which served as the control for the method.
+
+**Two shapes that decided the design:**
+- **A two-word form parses two ways**: typed, `bel airs` is `bel & air`; quoted,
+  it is `bel <-> air`. So each form is a target twice, via `plainto_tsquery` and
+  `phraseto_tsquery`. `ts_rewrite` matches an AND subset wherever its operands
+  sit (`bel surf airs` rewrites too).
+- **The substitute is the target OR the group, never the group alone**, so a
+  rewrite only adds matches. Replacing `bel & air` with the group would have
+  narrowed an unquoted search to the phrase.
+
+**Cost, measured on the dev corpus, `count()` medians of 7:** queries without a
+grouped name are unchanged (`reverb` 35.1 → 34.6 ms, `surf` 81.8 → 72.1 ms,
+noise); `miserlou` 0.6 → 1.7 ms for 2,131 → 3,419 rows, `"bel airs"` 0.6 → 2.1 ms
+for 495 → 1,515. The rewrite constant-folds and the GIN index serves it.
+**A known wart, left:** each nested call re-expands what earlier calls
+substituted, so `miserlou` becomes a 37-term OR of three words, and the
+planner's estimate for such queries inflates ~17x (59,864 vs 3,419). ~1 ms
+does not justify the machinery to deduplicate.
+
+**Rendered-page check** on the dev corpus: `/search/?q=miserlou` per-type counts
+sum to 3,419 and highlight both `Miserlou` and `Misirlou`; `belairs` sums to
+1,515.
+
+### Mutation battery
+
+| mutation | caught by |
+|---|---|
+| filter uses plain `SearchQuery` | all 7 spelling tests (12 failures, 1 error) |
+| ranking/headline uses plain `SearchQuery` | rank + snippet tests |
+| substitute is the group alone | `test_a_rewritten_query_still_finds_what_it_found_before` |
+| no `plainto_tsquery` target | `bel airs` subtest |
+| no `phraseto_tsquery` target | `bel-airs`, `"bel airs"` subtests |
+| `miserlu` dropped from its group | all three Misirlou subtests |
+
+**The group-only mutation was first written wrong** — it removed the
+placeholders and left their parameters, so every query raised and 36 tests
+errored. That proved nothing about the behaviour; redone with the parameters
+removed, it fails exactly the one test written for it.
 
 ## Cloudflare's HSTS is off — verified 2026-09-20, closing the vhost read's open item
 
