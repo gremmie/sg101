@@ -1,0 +1,34 @@
+# The nightly backup, run by sg101-backup.timer. Installed on the VM as
+# /etc/systemd/system/sg101-backup.service; see cutover-runbook.md B12.
+#
+# EDIT THE PATH. WorkingDirectory assumes the checkout is at /srv/sg101, as
+# logrotate/sg101 does.
+#
+# Failure is reported by the job itself, to the heartbeat service, and by the
+# heartbeat service's own clock when no success arrives -- not by this unit,
+# whose only alarm would be the host's outbound mail.
+
+[Unit]
+Description=SG101 backup: database and media to object storage
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/sg101
+# The image is built with each deploy (`--profile backup build`). Without
+# --build, `run` uses the one that exists and builds only if there is none.
+#
+# A fixed name, so a second run cannot start while one is still going: Docker
+# refuses the name.
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml run --rm --name sg101-backup backup
+# A oneshot has no time limit by default, and a hung run would block every
+# later night -- a unit that is still running is not started again. Six hours
+# covers a full first media upload with room over; a normal night is a minute.
+TimeoutStartSec=6h
+# The limit only stops `docker compose run`, the client. The container belongs
+# to Docker, not to this unit, and outlives it -- measured, not assumed. So it is
+# removed here, after every run however it ended; when it already exited, this
+# is a no-op.
+ExecStopPost=-/usr/bin/docker rm -f sg101-backup

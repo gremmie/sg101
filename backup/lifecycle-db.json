@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "dumps-kept-90-days",
+      "Status": "Enabled",
+      "Filter": {},
+      "Expiration": {"Days": 90},
+      "NoncurrentVersionExpiration": {"NoncurrentDays": 1}
+    },
+    {
+      "ID": "expired-delete-markers",
+      "Status": "Enabled",
+      "Filter": {},
+      "Expiration": {"ExpiredObjectDeleteMarker": true}
+    }
+  ]
+}

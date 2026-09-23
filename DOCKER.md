@@ -669,6 +669,89 @@ open -na "Google Chrome" --args --user-data-dir="$(mktemp -d)" \
 Its fresh profile has no remembered HSTS for the real site, which is what lets
 you click past the self-signed certificate.
 
+### Backups, and restoring from them
+
+A host timer (`backup/sg101-backup.timer`, nightly at 04:30) runs the `backup`
+service once and it exits. It writes to two buckets:
+
+| Bucket | Holds | Kept |
+| --- | --- | --- |
+| dumps | `sg101-<UTC time>.dump`, `pg_dump -Fc`, search index rows left out | 90 days |
+| media | a copy of `media/`, new and changed files only, never deleted | forever, prior versions included |
+
+Both are versioned. The job's credential can add objects and list them, and
+**cannot read, delete or reconfigure anything** — so a compromised host can
+neither destroy the backups nor download them. **Restoring therefore needs an
+administrative credential**, passed with `-e`, which overrides the job's own in
+`secrets/backup.env`:
+
+```bash
+admin() { dcp run --rm -T -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... backup "$@"; }
+admin aws s3 ls "s3://$DUMPS_BUCKET/"                # newest last
+```
+
+**Every command below streams through the host and writes no file on it.** Never
+save a dump into `media/`, `static/` or `var/` — Apache serves those to the
+internet, and a dump holds password hashes and private messages.
+
+**Run a backup now**, and see what it did — it prints the key and size:
+
+```bash
+dcp run --rm backup
+```
+
+**Restore into a scratch database** to inspect it or copy rows back, leaving
+the live one untouched. Row-copying is described in section 8.
+
+```bash
+dcp exec -T postgres sh -c 'createdb -U "$POSTGRES_USER" sg101_scratch'
+admin aws s3 cp "s3://$DUMPS_BUCKET/sg101-<time>.dump" - |
+    dcp exec -T postgres sh -c \
+    'pg_restore -U "$POSTGRES_USER" -d sg101_scratch --no-owner --no-privileges'
+```
+
+**Replace the live database.** Destructive: everything since the dump is lost.
+
+```bash
+touch var/maintenance/on
+dcp stop web worker beat                   # their connections block the drops
+admin aws s3 cp "s3://$DUMPS_BUCKET/sg101-<time>.dump" - |
+    dcp exec -T postgres sh -c \
+    'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges'
+dcp start web worker beat
+dcp exec web python manage.py reindex_search     # the dump has no index rows
+dcp exec web python manage.py reconcile_search   # should report no drift
+rm var/maintenance/on
+```
+
+`pg_restore` prints notices about objects that did not exist yet; those are
+expected. An `error:` line is not.
+
+**Restore media.** Current versions, over what is on disk — the container's user
+is given the directory's owner so the files come back owned as the site expects:
+
+```bash
+dcp run --rm -T --user "$(stat -c %u:%g media)" -v "$PWD/media:/restore" \
+    -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... \
+    backup aws s3 sync "s3://$MEDIA_BUCKET/" /restore/
+```
+
+Empty directories do not come back — object storage has only files, and
+production has ~125 of them, mostly `avatars/users/<name>` left by deleted
+avatars. Nothing needs them: Django creates a directory when it saves into it.
+
+A file that was overwritten has its earlier content as a prior version:
+`admin aws s3api list-object-versions --bucket "$MEDIA_BUCKET" --prefix <path>`,
+then `get-object --version-id`.
+
+**The drill** exercises all of this against a local MinIO, including a restore
+with every table's row count compared, and is what to run after changing
+anything under `backup/`:
+
+```bash
+tools/backup_drill.sh        # needs this stack up
+```
+
 ## Everyday commands
 
 | Goal | Command |

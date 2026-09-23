@@ -1,0 +1,81 @@
+# Backup drill fixtures, layered over the production stack by
+# tools/backup_drill.sh. Nothing here runs in production.
+#
+#   minio     - a local S3-compatible endpoint standing in for the real buckets
+#   mc        - MinIO's client, for the one thing the S3 API cannot do: create
+#               the job's user and attach its policy
+#   awscli    - a plain AWS CLI, so the drill inspects the buckets with a tool
+#               the job under test does not share
+#   heartbeat - stands in for the heartbeat service: logs the path of every
+#               request it receives, and nothing else
+#
+# The `backup` service itself is defined in docker-compose.prod.yml; this file
+# only points it at the fixtures.
+
+x-drill-aws: &drill_aws
+  AWS_ENDPOINT_URL: http://minio:9000
+  AWS_DEFAULT_REGION: us-east-1
+
+services:
+  minio:
+    # MinIO's community images left Docker Hub in 2026 and are no longer
+    # patched. The last release is kept on quay.io, and a frozen image is
+    # acceptable only because this is a test fixture that never leaves a
+    # developer machine. Pinned by digest: a tag can be re-pointed.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    profiles: [drill]
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: drill-admin
+      MINIO_ROOT_PASSWORD: drill-admin-secret
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  mc:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    profiles: [drill]
+    entrypoint: ["sh", "-c"]
+    volumes:
+      - ./backup:/backup:ro
+
+  awscli:
+    image: amazon/aws-cli:2.23.6
+    profiles: [drill]
+    environment:
+      <<: *drill_aws
+      AWS_ACCESS_KEY_ID: drill-admin
+      AWS_SECRET_ACCESS_KEY: drill-admin-secret
+
+  heartbeat:
+    image: python:3.12-slim
+    profiles: [drill]
+    command:
+      - python
+      - -u
+      - -c
+      - |
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Log(BaseHTTPRequestHandler):
+            def answer(self):
+                print("PING", self.path)
+                self.send_response(200)
+                self.end_headers()
+            do_GET = do_POST = do_HEAD = answer
+            def log_message(self, *args):
+                pass
+        HTTPServer(("", 8000), Log).serve_forever()
+
+  backup:
+    # Production's secrets/backup.env is dropped, not merged: the drill must
+    # never pick up a real credential or a real bucket name.
+    env_file: !reset []
+    environment:
+      <<: *drill_aws
+      AWS_ACCESS_KEY_ID: drill-writer
+      AWS_SECRET_ACCESS_KEY: drill-writer-secret
+      BACKUP_DB_BUCKET: sg101-drill-db
+      BACKUP_MEDIA_BUCKET: sg101-drill-media
+      HEARTBEAT_URL: http://heartbeat:8000/drill

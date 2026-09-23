@@ -1,0 +1,16 @@
+# Installed on the VM as /etc/systemd/system/sg101-backup.timer, then:
+#     systemctl daemon-reload && systemctl enable --now sg101-backup.timer
+# See cutover-runbook.md B12.
+
+[Unit]
+Description=Nightly SG101 backup
+
+[Timer]
+# Host time. A low-traffic hour for the site.
+OnCalendar=*-*-* 04:30:00
+# A run missed while the VM was down happens at the next boot rather than a day
+# late.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

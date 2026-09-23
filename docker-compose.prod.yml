@@ -216,6 +216,32 @@ services:
     logging: *logging
     restart: unless-stopped
 
+  backup:
+    # The nightly backup: the database to one bucket, media to another. Never
+    # started by `up` -- the host's timer runs it and it exits:
+    #     docker compose -f docker-compose.prod.yml run --rm backup
+    # backup/sg101-backup.timer, and DOCKER.md for restoring.
+    build: ./backup
+    image: sg101-backup:prod
+    profiles: [backup]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_NAME}
+    # The buckets, the heartbeat URL and the job's own credential, which can
+    # write to both buckets and delete from neither. Its own file, not .env:
+    # .env is in every application container, and nothing that serves a web
+    # request needs a way into the backups.
+    env_file:
+      - secrets/backup.env
+    volumes:
+      - ./media:/media:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
 volumes:
   postgres_data:
   redis_data:
