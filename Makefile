@@ -32,13 +32,14 @@ label ?=
 	prod-build prod-up prod-down prod-ps prod-logs prod-shell prod-bash \
 	prod-manage prod-check prod-proxy-reload prod-smoke prod-browser \
 	prod-backup prod-backup-drill \
+	cloudflare-ranges-check firewall-plan firewall-apply firewall-check \
 	up down ps logs shell bash manage psql test deprecation-gate css \
 	snapshot snapshots
 
 help: ## Show this list
 	@awk 'BEGIN { FS = ":.*## " } \
 		/^##@ / { printf "\n%s\n", substr($$0, 5) } \
-		/^[a-zA-Z0-9_-]+:.*## / { printf "  %-20s %s\n", $$1, $$2 }' \
+		/^[a-zA-Z0-9_-]+:.*## / { printf "  %-24s %s\n", $$1, $$2 }' \
 		$(MAKEFILE_LIST)
 	@echo
 	@echo "Restores are in DOCKER.md, not here: \"Backups, and restoring from them\""
@@ -108,6 +109,23 @@ prod-backup: ## Run a backup now (the nightly timer runs the same thing)
 
 prod-backup-drill: ## Test backup and restore against a local MinIO (stack up)
 	tools/backup_drill.sh
+
+##@ Origin firewall (run these from your own machine, never the VM)
+
+# tools/origin_firewall.sh explains the settings apply needs. The ranges live in
+# apache/cloudflare-ranges.txt, which Apache reads too: after changing it, run
+# prod-proxy-reload as well as firewall-apply.
+cloudflare-ranges-check: ## Compare apache/cloudflare-ranges.txt with Cloudflare's lists
+	tools/origin_firewall.sh ranges-check
+
+firewall-plan: ## Print the firewall rules the ranges file implies
+	tools/origin_firewall.sh plan
+
+firewall-apply: ## Push the firewall rules to the hosting provider
+	tools/origin_firewall.sh apply
+
+firewall-check: ## Compare the provider's live rules with the plan
+	tools/origin_firewall.sh check
 
 ##@ Development (docker-compose.yml)
 
