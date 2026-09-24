@@ -65,15 +65,16 @@ docker-compose.prod.yml` on the VM must be clean. The Apache image carries only
 the program and its modules, so nothing about the site's configuration hides in
 it.
 
-**Two files in there are the security boundary (task 04, 2026-09-19):**
-`conf-enabled/remoteip.conf` decides whose `CF-Connecting-IP` is believed, and
-the vhost's `RequestHeader set X-Real-IP` is what carries that answer to
-gunicorn. An edit to either silently changes who the site thinks its visitors
-are. Re-read Cloudflare's published ranges at the same time and diff them
-against the file rather than skimming — `www.cloudflare.com/ips-v4` and
-`ips-v6`, 15 and 7 CIDRs when last checked.
+**Three files in there are the security boundary (task 04, 2026-09-19; task
+07, 2026-09-23):** `cloudflare-ranges.txt` is the list of Cloudflare ranges, read
+by both Apache and the origin firewall; `conf-enabled/remoteip.conf` makes Apache
+believe `CF-Connecting-IP` only from those ranges; and the vhost's `RequestHeader
+set X-Real-IP` carries that answer to gunicorn. An edit to any of them silently
+changes who the site thinks its visitors are. Run `make cloudflare-ranges-check`
+at the same time: it diffs the file against Cloudflare's published lists and
+fails on any difference — 15 IPv4 and 7 IPv6 when last verified.
 *Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
-03 and 04.*
+03, 04 and 07.*
 
 ### A3. Delete the 32 pending `gcalendar` rows in production, not just locally
 Step 21 converts a **fresh** production snapshot, so rows deleted only in the dev
@@ -111,9 +112,11 @@ config on the box being retired.** Without it, on cutover day every IP the site
 records silently becomes a proxy address.
 
 **Built and verified locally 2026-09-19 (task 04).** Apache `mod_remoteip`,
-`RemoteIPHeader CF-Connecting-IP`, `RemoteIPTrustedProxy` over Cloudflare's **15
-IPv4 and 7 IPv6** ranges, in `apache/conf-enabled/remoteip.conf`, bind-mounted
-into the proxy so it travels with the code rather than living on a host.
+`RemoteIPHeader CF-Connecting-IP`, trusted only from Cloudflare's **15 IPv4 and
+7 IPv6** ranges, in `apache/conf-enabled/remoteip.conf` reading
+`apache/cloudflare-ranges.txt` (the list moved there in task 07 so the firewall
+shares it), bind-mounted into the proxy so it travels with the code rather than
+living on a host.
 
 **It is two halves, and the second one is easy to forget.** `mod_remoteip` fixes
 what *Apache* thinks the client is; the vhost's `RequestHeader set X-Real-IP
@@ -225,15 +228,65 @@ git-ignored and **backed up nowhere**, like `.env` and the calendar key.
 *Source: Step 20 task 04, the TLS decision; task 03 fixed the paths.*
 
 ### B6. Apply the origin firewall — and it has never been run
-**Step 20 task 07 authors the ruleset and cannot apply it**, because no VM existed
-when it was written. Restrict inbound 443 to Cloudflare's ranges, **IPv4 and IPv6
-both**, from the same verified list task 04 uses.
+**The web ports admit only Cloudflare, enforced by the hosting provider's
+firewall** (decided 2026-09-23, Step 20 task 07). A firewall on the VM itself
+was rejected: Docker forwards a published port to the container before the VM's
+own input rules see it, so those rules would look right and filter nothing.
 
-**Treat this as unexercised configuration.** Verify by connecting from outside
-Cloudflare over both protocols and observing refusal, then confirm the site still
-serves through the edge. The task also carries an emergency-open and re-close
-procedure — read it before the window, not during it.
-*Source: Step 20 task 07; `STATUS.md` § Step 16 task 03 Open register.*
+**Treat this as unexercised configuration.** The ranges file, the plan and the
+checks were built and tested in task 07; the part that talks to the provider
+could not be written until the provider was chosen, and no rule has ever been
+applied to a host.
+
+**Decide these with the provider, before the window** — `firewall-apply`
+refuses to run until the first two are set:
+
+| | setting | decide |
+|---|---|---|
+| SSH source | `FIREWALL_SSH_FROM` | `anywhere`, or your addresses — tighter, but a changed home IP locks you out until the provider's console gets you back in (Linode Lish, Lightsail browser SSH) |
+| port 80 | `FIREWALL_HTTP` | `allow` from Cloudflare only, or `drop` — depends on whether the zone's HTTPS redirect means the origin never answers plain HTTP |
+| provider | `FIREWALL_PROVIDER` | the adapter in `tools/origin_firewall.sh`: write it, and check whether one rule holds all 22 ranges or the provider's limits split them. **`apply` must replace the whole rule set, not add to it** — re-closing below depends on that |
+
+The API token is firewall-scoped and stays on your machine. **Never put it on the
+VM**: a token that can edit the VM's firewall, on the VM, lets whoever compromises
+it open the firewall.
+
+**Order matters: smoke-test first.** `tools/prod_smoke.sh <VM address>` connects
+to the origin directly, bypassing Cloudflare, so once the firewall is on it is
+refused like any other outsider. Run it (B-section checks, before DNS moves),
+then apply.
+
+**Apply** — from your machine:
+
+1. `make cloudflare-ranges-check` — the file still matches Cloudflare.
+2. `make firewall-plan` — read it: 443 from 15 IPv4 and 7 IPv6 ranges, port 80
+   and SSH as decided, nothing else inbound.
+3. `make firewall-apply`, then `make firewall-check` — the live rules match.
+
+**Verify** — the refusal is the measurement, so check the refusal first:
+
+1. From your machine (outside Cloudflare), directly at the origin, over each
+   family and each web port:
+   `curl -sk --max-time 10 --resolve surfguitar101.com:443:<VM IPv4> https://surfguitar101.com/robots.txt; echo "exit $?"`
+   and again with `[<VM IPv6>]`. **A correct refusal is no HTTP response at
+   all** — curl exits 28 (timed out; providers usually drop) or 7 (refused).
+   **Any HTTP status, even an error page, means the firewall is not filtering.**
+   Repeat on port 80 with `http://` if it was set to `drop` or `allow`.
+2. SSH still connects, from where `FIREWALL_SSH_FROM` says it should.
+3. After the DNS flip (C5): `curl -sI https://surfguitar101.com/` returns 200
+   with a `cf-ray` header — through the edge, the site serves.
+
+**Emergency open** — when cutover-day debugging needs direct access to the
+origin: open the provider's dashboard and allow 443 (and 80) from your own
+address only, not from anywhere. The dashboard is the fallback because it works
+even when your machine's script or token does not. Write down what you changed.
+
+**Re-close:** `make firewall-apply`, then `make firewall-check`. Because `apply`
+replaces the whole rule set, it removes the emergency rule along with anything
+else not in the plan — and `firewall-check` passing is what proves it did.
+Then repeat **Verify** step 1.
+*Source: Step 20 task 07 (task file § Decided 2026-09-23); `STATUS.md` § Step 16
+task 03 Open register.*
 
 ### B7. Choose the backup buckets — and the constraint they must satisfy
 **Two buckets, decided 2026-09-22** — dumps and media, because their retention

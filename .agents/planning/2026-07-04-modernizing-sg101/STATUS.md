@@ -43,6 +43,88 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 20 task 07 — the provider's firewall, one range file, and a check that said OK on a broken file — DONE 2026-09-23, `f1014b3d` + this planning commit
+
+**The firewall itself is UNEXERCISED: no rule has been applied to any host.** What
+Step 20 could build is built and tested; the provider adapter needs the provider,
+which is Step 21's, and runbook **B6** carries it. `tools/prod_smoke.sh` 21/21
+unchanged; no Python touched, so the suite was not re-run.
+
+**Decision and the three-way comparison live in the task file**, § *Decided
+2026-09-23* — the provider's firewall, pushed by a script from one range file,
+run from Brian's machine. Not restated here.
+
+### Built
+
+| | |
+|---|---|
+| `apache/cloudflare-ranges.txt` | the 22 ranges, their sources, "last verified", and both consumers named |
+| `apache/conf-enabled/remoteip.conf` | inline lists replaced by `RemoteIPTrustedProxyList sg101/cloudflare-ranges.txt` |
+| `tools/origin_firewall.sh` | `ranges-check`, `plan`, `apply`, `check`; the provider seam fails with a message |
+| `Makefile` | `cloudflare-ranges-check`, `firewall-plan`, `firewall-apply`, `firewall-check` |
+| `cutover-runbook.md` | B6 rewritten (decide, apply, verify, emergency-open, re-close); A2 and B3 point at the file |
+
+**Ranges re-verified 2026-09-23 from two sources:** `ips-v4`/`ips-v6` and
+`api.cloudflare.com/client/v4/ips`, etag `38f79d050aa027e3be3865e495dcc9bc` —
+**the same etag task 04 recorded on 09-19**, so nothing has moved.
+
+### Apache reads the file — measured, not inferred
+
+Probe peers on throwaway Docker networks inside Cloudflare ranges
+(`103.21.244.0/24`, `2606:4700:10::/64`) and outside (`198.18.0.0/24`), each
+sending `CF-Connecting-IP`, reading `%h` from the access log:
+
+| | trusted IPv4 | trusted IPv6 | untrusted |
+|---|---|---|---|
+| baseline, inline lists | claimed | claimed | own peer |
+| from the file | claimed | claimed | own peer |
+| file: IPv4 range dropped | **own peer** | claimed | own peer |
+| file: IPv6 range dropped | claimed | **own peer** | own peer |
+| file: untrusted net added | claimed | claimed | **claimed — the spoof believed** |
+| directive names a missing file | Apache refuses the config | | |
+
+**Identical before and after is what a reload that never happened also looks
+like** — task 04's trap — so the three file mutations are what show the file is
+live and is the boundary. Each ran behind a `configtest` guard; both files
+restored byte-identical. A missing file refuses to load, loudly, rather than
+trusting no one quietly.
+
+### The check reported OK on a file with a bad line
+
+**The first version of `ranges-check` printed the parse error three times and
+then `OK … matches Cloudflare`, exit 0.** `ranges()` dies on a malformed line,
+but it is read through pipes, and without `pipefail` a pipe reports its last
+command. The bad line was appended after the good ones, so every real range had
+already gone through and the sets matched. Caught by the mutation written for
+it, not by reading; `set -o pipefail` fixed it.
+
+| mutation | result |
+|---|---|
+| malformed line (`ranges-check`, `plan`) | exit 2, names the line |
+| IPv4 range dropped / IPv6 range dropped | `DIFFERS`, "only at Cloudflare", exit 1 |
+| stray range added | `DIFFERS`, "only in the file", exit 1 |
+| file with no trailing newline | last range still read, OK |
+| **guard** removed: `\|\| [ -n "$line" ]` | the no-newline file loses `2c0f:f248::/32` — caught |
+| **guard** removed: `pipefail` | the bad-line file reports OK again — caught |
+
+`apply` refuses while `FIREWALL_SSH_FROM` or `FIREWALL_HTTP` is unset — a plan
+with no SSH rule is one that locks you out — and `apply`/`check` exit 2 with no
+provider configured.
+
+### Found while writing B6
+
+- **Smoke before firewall.** `prod_smoke.sh <VM>` connects to the origin
+  directly, so after the firewall it is refused like any outsider. B6 orders it.
+- **The adapter's `apply` must replace the rule set, not add to it.** Re-closing
+  after an emergency open is `firewall-apply`, and only a replace removes the
+  emergency rule. Recorded in B6 as a requirement on the adapter.
+- **Port 80 was never in the task file**, which named 443 only; the proxy
+  publishes both. Now a required decision in the plan.
+
+**Stale, pre-existing, not changed here:** `AGENTS.md` ("Nothing in this repo
+does that" — task 04 made the repo do it) and `.agents/summary/architecture.md`
+(Apache + `mod_wsgi`, gone since task 02).
+
 ## Step 20 task 09 — no autocomplete index, and the spelling split closed at query time — DONE 2026-09-23, `0f58f6ae` + this planning commit, PUSHED
 
 **Suite 1311 OK and gate 1311 OK** (1303 + 8 new tests in
