@@ -1,7 +1,9 @@
 # AGENTS.md
 
 Guidance for AI coding agents working in this repository. Deeper detail lives in
-[`.agents/summary/index.md`](.agents/summary/index.md).
+[`.agents/summary/index.md`](.agents/summary/index.md) — a snapshot generated
+2026-08-27, describing production as it ran then. Where it and this file
+disagree, this file is newer.
 
 ## What this is
 
@@ -12,9 +14,12 @@ calendar.
 
 **Python 3.12 / Django 5.2 LTS / PostgreSQL 16 / Redis / Celery. Git.**
 
-The repo is **mid-modernization**: Steps 1-16 are complete, Step 17 is in
-progress. `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md` is the
-authoritative record of what has been done and why.
+The repo is **mid-modernization, and none of it is deployed yet.** Production
+still runs the old code (Python 2.7, Django 1.8, MySQL, Apache + `mod_wsgi`) on
+the old host, jaguar, until the Step 21 cutover. So what this repo does and what
+the live site does can differ. Which steps are done, and why, is in
+`.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`, which is
+authoritative; this file does not track it.
 
 ## Layout
 
@@ -67,7 +72,10 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   deferred task passes the suite and fails in a browser. Browser-test anything
   touching deferred work.
 - **`REMOTE_ADDR` is only correct because Apache rewrites it** from
-  `CF-Connecting-IP` via `mod_remoteip`. Nothing in this repo does that. Use
+  `CF-Connecting-IP` via `mod_remoteip`, believing it only from the ranges in
+  `apache/cloudflare-ranges.txt`. Gunicorn is a separate process, so it takes a
+  second hop: the vhost passes the answer as `X-Real-IP`, and
+  `core.middleware.RealClientIP` puts it back into `REMOTE_ADDR`. Use
   `core.functions.get_ip`, and never prefer `X-Forwarded-For` — any client can
   forge it.
 - **Log retention differs per file and limits what you can ask.** `sg101.log`
