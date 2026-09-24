@@ -541,10 +541,41 @@ production environment to satisfy them in.
 *Source: `STATUS.md` § Step 16 task 02, "What task 02 does not close".*
 
 ### D2. Keep jaguar warm
-As an sg101 fallback the window ends in 1–2 weeks. **"Then decommission" does not
-gate on that** — it gates on the separate jaguar project completing, which has
-its own plan at `~/workspaces/bgn/jaguar-decommission/`.
-*Source: `implementation/plan.md` Step 21, corrected 2026-08-23.*
+As an sg101 fallback the window ends in 1–2 weeks. Decommissioning used to gate
+on the separate jaguar project (`~/workspaces/bgn/jaguar-decommission/`) as
+well; **Brian closed that project 2026-09-23**, so it now gates on this window
+and on **D5**.
+*Source: `implementation/plan.md` Step 21, corrected 2026-08-23 and 2026-09-23.*
+
+### D3. Every mail path, live, once
+`tools/email_smoke.py --live` in the production `web` container, to addresses you
+own — **including an Outlook or Hotmail inbox**, since Gmail accepted this site's
+mail before any of the migration and so cannot tell success from failure. Read
+`Authentication-Results` in the inbox, not the provider's `250`: the tool's own
+docstring says what a green run does not prove. So far one path has been sent to
+one receiver; this is all ten, from the real host. The tool never takes a
+recipient from the database, and `--live` cannot be undone — a dead address is a
+permanent bounce against the domain.
+*Source: `STATUS.md` § Step 16 task 07, "Still open"; carried 2026-09-23.*
+
+### D4. Watch Postmark's bounce dashboard for two weeks
+Starting at cutover. This replaced the graduated warm-up, dropped 2026-08-20 on
+measurement: 11.9% of a year's notification mail reaches accounts dormant 3+
+years, and Postmark suppresses each after one hard bounce — so early bounces
+from dormant addresses are expected, and are why this is a watch rather than a
+staged send.
+*Source: `STATUS.md` § Step 16, the warm-up measured and dropped; carried
+2026-09-23.*
+
+### D5. Before jaguar is shut down: its Postfix has gone quiet
+Senders cache MX records beyond their TTL, so mail for `surfguitar101.com` and
+`themadeira.net` kept arriving at jaguar after the 2026-08-25 flip, and jaguar's
+Postfix was left receiving so none of it would be refused. Before shutdown, read
+jaguar's mail log for recent inbound deliveries to either domain. **None for a
+week** is the condition; anything still arriving means a sender is still using
+the old MX, and shutting down turns their mail into bounces.
+*Source: Step 16 task 06 Phase 3; carried here 2026-09-23 when the jaguar
+decommission project closed.*
 
 ---
 
