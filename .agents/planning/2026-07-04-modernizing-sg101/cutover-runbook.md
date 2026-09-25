@@ -584,6 +584,33 @@ the old MX, and shutting down turns their mail into bounces.
 *Source: Step 16 task 06 Phase 3; carried here 2026-09-23 when the jaguar
 decommission project closed.*
 
+### D6. Pull jaguar's logs again — the day after the flip, and last thing before shutdown
+Same pull as the 2026-09-25 archive, into a new dated directory beside it under
+`~/workspaces/bgn/sg101-evidence/`: sg101's and the wiki's Apache log
+directories and the Django `logs/` directory, `rsync -a`, then a size check
+against a listing taken first and a `MANIFEST.sha256`. **Deadline: before about
+2026-11-20**, when the eight-week rotation passes the end of the previous pull
+and the record gets a hole. If shutdown is later than that, pull in between.
+Un-excluding the logs on bobcat does not substitute for this: its rsync runs
+`--delete`, so it mirrors the same eight weeks.
+*Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
+
+### D7. At shutdown: the wiki becomes a redirect, not a dead name
+The MoinMoin vhost stays up on jaguar until shutdown. At shutdown, keep
+`wiki.surfguitar101.com` **proxied** in Cloudflare and add a redirect rule
+sending it to `https://surfguitar101.com/`. A redirect rule fires only on a
+proxied record, so the record has to stay (pointed anywhere, since the rule
+answers before the origin is contacted). Deleting the record instead would break
+the forum's old links to the wiki. The content is already in `archive/wiki/`.
+*Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
+
+### D8. At shutdown: IRC goes with jaguar — delete `irc.surfguitar101.com`
+`ngircd` and `sg101Bot.py` are **not** moved to the new host. They stop when
+jaguar does. Then delete the `irc.surfguitar101.com` record, which is proxied
+and so has never reached ports 6667/6697 by name anyway. The bot's code and
+ngircd's config are copied to `~/workspaces/bgn/sg101-evidence/irc-2026-09-25/`.
+*Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
+
 ---
 
 ## Known gaps in this list

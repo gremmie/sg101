@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-25
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,97 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 — planning pass: eleven task files, the provider chosen, and why the block list grows — 2026-09-24, this planning commit
+## Step 21 task 01 — jaguar's leftovers: logs archived, IRC and the wiki decided — DONE 2026-09-25, this commit
+
+No application code touched, so the suite was not run (acceptance criterion 5).
+Actions for cutover and shutdown are runbook **D6**, **D7**, **D8**.
+
+### The archive
+
+**`~/workspaces/bgn/sg101-evidence/jaguar-logs-2026-09-25/`**, 555 MB, 82 files,
+pulled 2026-09-25 ~13:28 CDT with `rsync -a`. It sits outside the repo because it
+holds client IP addresses. The layout mirrors jaguar's paths under `svr/`:
+`www/surfguitar101.com/log/`, `www/wiki.surfguitar101.com/log/`, and the whole
+Django `django-sites/sg101/sg101/sg101/logs/`. The Django directory went whole,
+not just `auth.log*`/`sg101.log*`, because `celery-w1.log*` rotates away too.
+
+- **Complete against the source:** a `find -printf` listing was taken on jaguar
+  *before* the copy (`source-listing/before.txt`). All 82 files are present
+  locally with identical sizes, mtimes are preserved, and every `.gz` passes
+  `gzip -t`. The first comparison run reported every file SHRANK, because this
+  shell has no `stat` on its PATH and the sizes came back empty. The re-run uses
+  `/usr/bin/stat` and treats an empty size as an error.
+- **Checksums:** `MANIFEST.sha256` (82 lines, `shasum -a 256 -c` clean). The
+  manifest's own SHA-256 is
+  `2c77ddc4478631ae924dda242d8c1454f9f88c58d481f7617c8fcd977d5caa1e`.
+- **The copy is on the laptop only.** Like `.env`, it is backed up nowhere else.
+
+### Coverage, from first and last lines, not file dates
+
+| family | files | from | to |
+|---|---|---|---|
+| sg101 `access.log*` | 9 | 27/Jul/2026 06:48 | 25/Sep/2026 13:27 |
+| sg101 `error.log*` | 9 | Jul 28 11:05 | Sep 24 12:49 |
+| wiki `access.log*` | 9 | 27/Jul/2026 06:49 | 25/Sep/2026 13:27 |
+| wiki `error.log*` | 9 | Jul 29 17:46 | Sep 25 11:50 |
+| `auth.log*` | 6 | 2025-01-09 20:32 | 2026-09-25 13:01 |
+| `sg101.log*` | 11 | 2026-05-19 06:47 | 2026-09-25 13:01 |
+| `celery-w1.log*` | 11 | 2026-07-12 06:45 | 2026-09-25 13:20 |
+
+File dates would have understated this. `auth.log.5`'s mtime is 2025-04-10, but
+its first line is 2025-01-09. `sg101.log.1` ends on a traceback line with no
+timestamp; its last timestamped line is 2026-09-25 11:19:02. Also carried, and
+stale: `celery-beat.log*`, `oembed_refresh*.log` and `ssl_images.log` (all
+2015), `report.html` (2015) and `moin.log.1` (2013).
+
+**The access logs were one rotation from losing a week.** `access.log.8.gz`
+(27 Jul – 2 Aug) would have been deleted at the next weekly rotation, around
+Sunday 2026-09-27 06:30.
+
+**Two gaps in the source, not in the archive:**
+
+- **2026-08-09, 06:53 → 09:33: no requests on either vhost.** The Apache
+  error-log thread-id prefix changes across it (`125005…` → `140707…`), so this
+  was very likely a jaguar or Apache restart. Nothing in `.agents/` recorded it.
+- **2026-09-25 11:18–11:19: jaguar rebooted.** `uptime -s` gives 11:19:50, and
+  `last -x` shows the kernel going from 6.14.3 to 7.1.9. The site served ~49
+  500s (`Can't connect to local MySQL server`) over those two minutes. **Brian
+  rebooted it at Linode's request for host maintenance** — expected, not a fault.
+
+### Decided 2026-09-25 (Brian, all three on the recommendation)
+
+**Stopping the loss: re-pull on schedule (runbook D6).** Pull again the day after
+the flip, then a final pull at shutdown, each into a new dated directory beside
+this one. Deadline ~2026-11-20. Taking the log lines out of bobcat's
+`jaguar_exclude.txt` was **not** chosen, because it does not do what it seems to.
+That rsync runs `--delete`, so bobcat would mirror the same eight-week window and
+drop the oldest week in step with jaguar. That guards against jaguar dying, not
+against rotation. Raising `rotate 8` on jaguar was the other option, and it is a
+root edit on the production box.
+
+**IRC: retire with jaguar, not moved (runbook D8).** Re-measured on the box:
+`ngircd` on `*:6667`/`*:6697` (IPv4 and IPv6), and `sg101Bot.py` running **as
+root**. Both restarted at the 11:19 reboot, so the "live since Apr 23" in the
+task file is out of date. Across all of `/var/log/syslog*` (Sep 18–25), exactly
+one user registered, and it was the bot (`bot!~bot@localhost.localdomain`). The
+other inbound connections are scanners that never register.
+`irc.surfguitar101.com` is an explicit **proxied** record (no wildcard exists),
+so the name has never reached the IRC ports. The one established connection is
+the bot's, over loopback. The `127.0.0.1:23352` listener is still unattributed.
+Copied to `~/workspaces/bgn/sg101-evidence/irc-2026-09-25/`: the bot's tree
+(8.2 MB; a Mercurial checkout at `9:a977b29a77f7`, plus its virtualenv) and
+`/etc/ngircd/`, **except `server.key`**, which is root-only and not needed to
+retire the service.
+
+**Wiki: leave it until shutdown, then a Cloudflare redirect (runbook D7).**
+Measured over the archive's 8.5 weeks: 176,001 requests. 68,220 of those were
+403s, overwhelmingly `?action=newaccount` spam. Just 35 were referred from
+`surfguitar101.com`. The redirect keeps the forum's old wiki links from
+dead-ending, and the 30 pages remain in `archive/wiki/`, whose README already
+says the wiki stays up until the host goes. `wiki-abuse` stood at 229 bans across
+`fail2ban.log*` on 09-25 (225 on 09-24).
+
+## Step 21 — planning pass: eleven task files, the provider chosen, and why the block list grows — 2026-09-24, `16a3533b`
 
 **Step 21 is the active step.** Its `plan.md` line (~11k characters gathered
 since August) is sorted into eleven task files in
