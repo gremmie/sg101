@@ -43,7 +43,122 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 01 — jaguar's leftovers: logs archived, IRC and the wiki decided — DONE 2026-09-25, this commit
+## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, this commit
+
+**`tools/origin_firewall.sh` is now `tools/origin_firewall.py`**, and its tests
+are `tools/origin_firewall_test.py`, both at Brian's request. The tool keeps the
+same commands, output and exit codes. The `make firewall-*` targets are unchanged,
+and `make firewall-test` is new. Only the standard library is used, so the
+Mac's `/usr/bin/python3` (3.9) runs it as well as the repo's 3.12. It still runs
+only from Brian's machine. The VM needs neither Python nor the token for it.
+Runbook **B6** names the three Linode variables. No Django code was touched, so
+the suite was not run.
+
+### Why Python — Brian's call, 2026-09-25
+
+The adapter was first written in bash to extend Step 20 task 07's script, and it
+passed its tests and mutations. Brian found the bash hard to read, and it will
+be read cold, during an incident, if at all. The bugs this script has had were
+bash's own: task 07's `pipefail` OK-on-a-broken-file, and while writing the
+adapter a jq syntax error inside a bash string, curl's `000` status on a failed
+connection, and bash 3.2's unbound empty arrays. The tests drive the command
+line, not the code, so the same harness verified the port unchanged.
+
+### How it works
+
+- `apply` builds one body — `cloudflare-https` (443), `cloudflare-http` (80,
+  only when `FIREWALL_HTTP=allow`) and `ssh` (22); inbound DROP, outbound ACCEPT
+  with no rules — and sends it with `PUT …/networking/firewalls/{id}/rules`,
+  which **replaces** both rule sets.
+- `check` reduces the live rules and the plan to one line per
+  *direction action protocol port address*, plus the two policies, and names each
+  line found on only one side. Rule order, address order and labels are ignored.
+  Addresses are compared through `ipaddress`, so a respelling of the same range
+  is not a difference.
+- Any status other than 2xx exits 2 with Linode's `field: reason` lines. The
+  token goes only in the request header. It never reaches a command line or the
+  output.
+- An SSH entry has to be a CIDR range. A bare address is refused rather than
+  read as a /32.
+
+### Tests: `tools/origin_firewall_test.py`, 25 tests (40 checks), against a local stand-in
+
+`unittest`, standard library only, and it runs under 3.12 and 3.9. The tool runs
+as a subprocess, as it does from the Makefile. The stand-in is an in-process
+server for GET and PUT on the rules endpoint. It checks the token, returns 404
+for a wrong ID, validates labels and limits, records every request, and returns
+rules and addresses in reverse order. Tests edit its rules dict to play the
+dashboard. The tool and ranges file are copied into a scratch tree, so a
+malformed-range case never touches the real file.
+
+**The tests were written first, in bash** (`origin_firewall_test.sh`, RED
+against the unchanged script, then GREEN), and ported to Python after the tool
+was. Both harnesses ran the same battery.
+
+**Mutation battery against the Python tool and the Python tests: 18 of 18
+caught**, each by the test written for it, and the file restored byte-identical. It covered respelling
+normalization, any-status-OK, unreachable-swallowed, apply-merges-instead-of-replacing,
+port/outbound/policies dropped from the comparison, 80 always sent,
+SSH unvalidated, bare address accepted, check without the plan guard, token/ID
+guards removed, Linode's reasons dropped, inbound ACCEPT, `anywhere` IPv4-only,
+a bad ranges line skipped, and an unknown provider accepted. **One survived the
+first pass:** removing the "`FIREWALL_LINODE_ID` is unset" guard still refused,
+because the digits check after it rejects an empty string. The guard's only
+contribution is the message, so a test now asserts that the message names the
+missing variable. The bash version's battery was 16 of 16 before the rewrite.
+
+**Checked by hand, outside the harness.** For valid settings, `plan`'s output is
+identical to the bash version's from `HEAD`. Task 07's `ranges-check` cases
+still hold: dropped IPv4, dropped IPv6, stray range, malformed line, and no
+trailing newline.
+
+### Found by comparing against the real endpoints, which the stand-in cannot
+
+- **Cloudflare answers urllib's default User-Agent with HTTP 403.**
+  `ranges-check` in Python failed against `www.cloudflare.com/ips-v4` until it
+  sent its own (`sg101-origin-firewall`). The Linode calls send the same one.
+- An invalid `FIREWALL_HTTP` now refuses before printing anything. Bash printed
+  the 443 ranges and then died. This is the one deliberate change in output.
+
+### Exercised against the real API — 2026-09-25
+
+The subject was scratch firewall `sg101-test`, **ID 175544886**, attached to
+nothing, created by Brian in the dashboard (inbound DROP, no rules). The token
+was read from `~/.config/sg101-linode-token` (mode 600), so it never entered
+the transcript. It is scoped to Firewalls read/write: `linode/instances` and
+`account` answered 401, and `/profile` answers any token. Settings were
+`FIREWALL_HTTP=allow` and `FIREWALL_SSH_FROM=anywhere`, the fullest plan.
+
+| step | result |
+|---|---|
+| `check` before any write | DIFFERS, every planned line named |
+| `apply` | exit 0; version 2 |
+| raw GET | **one 443 rule holding all 22 ranges (15 + 7)**; the same for 80; addresses stored verbatim and in file order; labels echoed, `description: null` |
+| `check` | OK, exit 0 |
+| bad token, `check` and `apply` | exit 2, `HTTP 401 / Invalid Token`, token not printed |
+| wrong ID, `check` / `apply` | exit 2, `404 Not found` / `The provided ID did not match any existing Firewalls` |
+| after the refused calls | `check` OK — untouched |
+| hand rule in the dashboard: 443 from `203.0.113.7/32`, label `emergency` | version 3, four rules |
+| `check` | **DIFFERS, `only live: inbound ACCEPT TCP 443 203.0.113.7/32`, exit 1** |
+| `apply` | exit 0 |
+| `check`, raw GET | OK; version 4; three rules; `203.0.113.7` absent |
+
+**B6's open question is answered on the real API: one rule holds all 22
+ranges.** An `apply` that changed nothing left the version at 2. Only real
+changes bump it.
+
+**Afterwards (Brian, 2026-09-25):** `sg101-test` is deleted, not kept for task
+03. The VM's firewall is created in Linode's create flow, as B6 says. The token
+is kept for now in `~/.config/sg101-linode-token` (mode 600, laptop only), since
+B6 needs the same scope. It is a live credential to revoke once the cutover no
+longer needs it.
+
+**The dashboard holds an added rule as a draft until *Save Changes* is
+clicked.** The first attempt at the hand edit was never saved. The raw GET,
+read before anything ran, showed version 2 and three rules, so that round was
+not counted.
+
+## Step 21 task 01 — jaguar's leftovers: logs archived, IRC and the wiki decided — DONE 2026-09-25, `44431f1e`
 
 No application code touched, so the suite was not run (acceptance criterion 5).
 Actions for cutover and shutdown are runbook **D6**, **D7**, **D8**.

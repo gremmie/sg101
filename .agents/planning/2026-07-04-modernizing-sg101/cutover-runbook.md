@@ -227,16 +227,16 @@ same names, so the vhost does not change between the two. `secrets/` is
 git-ignored and **backed up nowhere**, like `.env` and the calendar key.
 *Source: Step 20 task 04, the TLS decision; task 03 fixed the paths.*
 
-### B6. Apply the origin firewall — and it has never been run
+### B6. Apply the origin firewall — tested against a stand-in, never run on the VM
 **The web ports admit only Cloudflare, enforced by the hosting provider's
 firewall** (decided 2026-09-23, Step 20 task 07). A firewall on the VM itself
 was rejected: Docker forwards a published port to the container before the VM's
 own input rules see it, so those rules would look right and filter nothing.
 
-**Treat this as unexercised configuration.** The ranges file, the plan and the
-checks were built and tested in task 07; the part that talks to the provider
-could not be written until the provider was chosen, and no rule has ever been
-applied to a host.
+**Treat this as unexercised on the VM.** The ranges file, the plan and the
+checks were built in Step 20 task 07. The Linode adapter was built in Step 21
+task 02 and tested against a local stand-in for Linode's API
+(`make firewall-test`). No rule has been applied to the VM yet.
 
 **Decide these with the provider, before the window** — `firewall-apply`
 refuses to run until the first two are set:
@@ -245,9 +245,12 @@ refuses to run until the first two are set:
 |---|---|---|
 | SSH source | `FIREWALL_SSH_FROM` | `anywhere`, or your addresses — tighter, but a changed home IP locks you out until the provider's console gets you back in (Linode Lish, Lightsail browser SSH) |
 | port 80 | `FIREWALL_HTTP` | `allow` from Cloudflare only, or `drop` — depends on whether the zone's HTTPS redirect means the origin never answers plain HTTP |
-| provider | `FIREWALL_PROVIDER` | the adapter in `tools/origin_firewall.sh`: write it, and check whether one rule holds all 22 ranges or the provider's limits split them. **`apply` must replace the whole rule set, not add to it** — re-closing below depends on that |
+| provider | `FIREWALL_PROVIDER` | `linode` |
+| firewall | `FIREWALL_LINODE_ID` | the numeric ID in the firewall's dashboard URL |
+| token | `LINODE_TOKEN` | a personal access token with **Firewalls read/write and nothing else** |
 
-The API token is firewall-scoped and stays on your machine. **Never put it on the
+`apply` replaces the whole rule set (Linode's `PUT …/rules`); re-closing below
+depends on that. The token is firewall-scoped and stays on your machine. **Never put it on the
 VM**: a token that can edit the VM's firewall, on the VM, lets whoever compromises
 it open the firewall.
 
