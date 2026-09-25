@@ -251,10 +251,17 @@ The API token is firewall-scoped and stays on your machine. **Never put it on th
 VM**: a token that can edit the VM's firewall, on the VM, lets whoever compromises
 it open the firewall.
 
-**Order matters: smoke-test first.** `tools/prod_smoke.sh <VM address>` connects
-to the origin directly, bypassing Cloudflare, so once the firewall is on it is
-refused like any other outsider. Run it (B-section checks, before DNS moves),
-then apply.
+**The firewall exists from the moment the Linode does** (decided 2026-09-24).
+Create it in Linode's create flow: inbound policy drop, one rule allowing TCP 22
+(from your address, or anywhere), outbound accept. The VM is then never on the
+internet unfiltered, even during first boot. **This is the firewall the script
+manages** — its ID is `FIREWALL_LINODE_ID`; don't create a second one.
+
+**Smoke-test through a temporary rule.** `tools/prod_smoke.sh <VM address>`
+connects to the origin directly, bypassing Cloudflare, so the drop policy refuses
+it. In the dashboard, allow 443 and 80 **from your address only**, run the smoke
+(B-section checks, before DNS moves), then apply — `apply` replaces the whole
+rule set, so it removes the temporary rule.
 
 **Apply** — from your machine:
 

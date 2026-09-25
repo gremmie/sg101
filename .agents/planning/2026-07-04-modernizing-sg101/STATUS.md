@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-23
+**Last updated:** 2026-09-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,60 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 21 — planning pass: eleven task files, the provider chosen, and why the block list grows — 2026-09-24, this planning commit
+
+**Step 21 is the active step.** Its `plan.md` line (~11k characters gathered
+since August) is sorted into eleven task files in
+`.agents/tasks/2026-07-04-modernizing-sg101/step21/`:
+
+| | task | code in the repo? |
+|---|---|---|
+| 01 | jaguar leftovers — archive sg101's Apache logs **now**, decide IRC and the wiki vhost | no |
+| 02 | Linode Cloud Firewall adapter for `tools/origin_firewall.sh` | yes |
+| 03 | provision the Linode; fix worker counts in configuration | yes (compose, `.env.example`) |
+| 04 | send-only host mail, proven by a failing cron job | no |
+| 05 | backups on real accounts; bobcat repointed or retired | no |
+| 06 | fail2ban and the Cloudflare block list, with a working unban | yes (action, jails, filters) |
+| 07 | dress rehearsal on the VM, timed and memory-measured | no (badge images) |
+| 08 | finish the runbook: sequence, smoke checklist, rollback | no |
+| 09 | the cutover | no |
+| 10 | after cutover: mail live, two weeks watched, summary regenerated | no |
+| 11 | decommission jaguar; retire the MySQL chain | yes |
+
+**Dropped as already done by Step 20:** Redis's memory policy (task 05) and the
+dev/prod settings split with the stale MySQL engines (task 01).
+
+**01 is time-sensitive:** sg101's Apache logs are on an eight-week rolling
+delete on jaguar and bobcat excludes them, so each week of delay loses a week.
+
+### Decided 2026-09-24: Linode, 4 GB shared CPU, core compute region
+
+Brian's choice, on familiarity — jaguar and bobcat already run there. It settles
+three open items: the firewall adapter targets Linode (task 02); the backup
+buckets go to AWS S3, which meets B7's no-shared-provider rule (task 05); and
+outbound port 25 is irrelevant because everything submits to Postmark (task 04).
+
+**Shared can become dedicated later.** Akamai's resize docs (read 2026-09-24):
+a core-region Linode can change plan type, keeping data, configuration and IP
+addresses, by warm or cold resize. Shrinking is the awkward direction.
+
+**Sizing measured, not assumed** — the figures and the estimate live in task
+03's Background. In short: jaguar uses 2.4 GB of 7.9 GB for programs while
+running far more than sg101; the new stack is estimated at 1.7–2.0 GB on 2
+vCPUs. **The catch found:** gunicorn and celery both size themselves from
+`nproc` — 21 workers and 10 children locally, ~2.5 GB idle — so task 03 pins
+both in configuration.
+
+### Why jaguar's block list only grows — found 2026-09-24, not yet confirmed live
+
+From `/etc/fail2ban/action.d/cloudflare.conf` (Brian pasted it, credentials
+redacted): the unban looks up the item ID with **one unpaginated `GET`**, and
+Cloudflare paginates list items. Past one page, an IP isn't found, the action
+exits 0, and the entry is stranded — which lengthens the list and strands more.
+Also: no `curl --fail`, no ban persistence across restarts in 0.8.11, and the
+**Global API Key** on the box. Detail and the fix are in task 06's Background;
+confirming it (list size vs active bans) is task 06's first requirement.
 
 ## Step 20 task 07 — the provider's firewall, one range file, and a check that said OK on a broken file — DONE 2026-09-23, `f1014b3d` + this planning commit
 
