@@ -147,6 +147,23 @@ task 02 tool applied the final plan (`FIREWALL_SSH_FROM=anywhere`,
   `hello-world` runs as brian.
 - **`make` 4.4.1, `git` 2.53, and a 2 GB `/swapfile`** on top of Linode's 496 MB
   partition, with `vm.swappiness = 10`.
+- **Deploy key:** `~brian/.ssh/sg101_deploy`, ed25519, with no passphrase
+  because nobody is there to type one. It is registered on `gremmie/sg101` as
+  **"leopard (read-only)", deploy key ID 164483639**. It has no write access and
+  is scoped to this one repo. `~brian/.ssh/config` makes `github.com` use it and
+  nothing else. GitHub's ED25519 host key was pinned in `known_hosts` after its
+  fingerprint `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` matched the
+  published one. `ssh -T` greets `gremmie/sg101`, the repo and not the account,
+  which is how a deploy key shows itself. To revoke it:
+  `gh repo deploy-key delete 164483639 -R gremmie/sg101`, or the repo's
+  Settings → Deploy keys.
+- **Checkout at `/svr/sg101`**, created with
+  `sudo install -d -o brian -g brian /svr/sg101` and cloned as brian, not root,
+  so `git pull` needs no `sudo`. `/svr` is `root:root 755`. Every file is
+  brian's (uid 1000). It is on `modernize` at `c95002ae`, clean, tracking
+  `origin`.
+- **Next:** B2 `.env`, B1 `secrets/gcal-service-account.json`, B5
+  `secrets/tls/origin.{pem,key}`, then build and start.
 
 ## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 
