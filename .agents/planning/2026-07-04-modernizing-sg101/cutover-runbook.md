@@ -76,9 +76,13 @@ fails on any difference — 15 IPv4 and 7 IPv6 when last verified.
 *Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
 03, 04 and 07.*
 
-### A3. Delete the 32 pending `gcalendar` rows in production, not just locally
+### A3. Delete the 32 pending `gcalendar` rows in production, not just locally — DONE
 Step 21 converts a **fresh** production snapshot, so rows deleted only in the dev
 database come back with it and land in the pending queue on the new host.
+**Done by Brian in production**, reported 2026-09-26; the date of the deletion is
+not recorded. **Not yet confirmed from data:** task 07's fresh snapshot is the
+first place to see it, as a count of pending events in the restored database
+(task 07a, requirement 4a). If the count is not zero, this entry reopens.
 *Source: `STATUS.md` § the `NEW`/`NEW_APRV` decision, settled 2026-08-31.*
 
 ### A4. Move DMARC readings to daily

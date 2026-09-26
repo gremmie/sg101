@@ -23,8 +23,10 @@ warm as the fallback task 08 defined.
   before) and A5 (the jaguar-side email baseline — the only chance to take it).
 - **A2 re-runs the production working-copy audit** (`hg status`, `hg diff` on
   jaguar), since production stayed live on the old code the whole time.
-- **A3 deletes the 32 pending `gcalendar` rows in production**, or they come back
-  with the fresh snapshot.
+- **A3 is done:** Brian deleted the 32 pending `gcalendar` rows in production
+  (reported 2026-09-26, date not recorded). The rehearsal snapshot confirms it
+  (task 07a, requirement 4a). If it was not confirmed there, count pending events
+  in the final snapshot before the site opens.
 
 ## Reference Documentation
 **Required:**

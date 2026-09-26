@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-25
+**Last updated:** 2026-09-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,28 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 21 task 07a — a member beta before the cutover — PLANNED 2026-09-26
+
+**A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
+Brian's request.** None of the eleven put the new stack in front of anyone but
+Brian before the DNS flip. Task 07a keeps task 07's rehearsed site up for a few
+days at `beta.surfguitar101.com` for a handful of invited members, who log in as
+themselves; everything they write is discarded when C1 restores a fresh
+snapshot. It sits between 07 and 08. The task file holds the decisions and the
+reasoning; this section only points at them.
+
+**Decided 2026-09-26 (Brian), recorded in the task:** access through Cloudflare
+Access (Zero Trust organization `sg101-beta` created, Free plan, no application
+yet); mail through a new allowlisting email backend, the only code the task
+adds; the real Google Calendar workflow runs end to end, with beta events
+deleted by hand afterwards; testers told not to donate; findings compiled at the
+end, possibly as GitHub issues, and Brian decides which delay task 09.
+
+**Runbook A3 marked done:** Brian deleted the 32 pending `gcalendar` rows in
+production (reported 2026-09-26, date not recorded). **Not yet confirmed from
+data** — task 07a's requirement 4a counts pending events in the rehearsal
+snapshot, and task 09 falls back to the final snapshot if that did not happen.
 
 ## Step 21 task 03 — leopard provisioned and hardened; worker counts required — IN PROGRESS, stopped 2026-09-25 before the checkout; repo half in this commit
 
