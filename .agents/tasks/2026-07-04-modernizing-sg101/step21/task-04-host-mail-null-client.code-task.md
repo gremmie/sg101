@@ -26,6 +26,15 @@ way, until Step 16 task 10 fixed its sender on 2026-08-18.
 - **Egress.** Linode blocks outbound port 25 by default; some providers also
   restrict 587. Postmark accepts **2525** as an alternative. Test from the VM.
   The failure mode is silent queueing.
+
+  **Measured early, 2026-09-26 (Brian, on leopard): both 587 and 2525 connect.**
+  `nc -vz -w 5 smtp.postmarkapp.com 587` and the same on `2525` both succeeded,
+  prompted by Linode's setup screen advising third-party services because some
+  shared servers lack SMTP. That was a **TCP connect only**. It proves the ports
+  are not blocked, not that STARTTLS, authentication or a submission works, so
+  Implementation Approach step 1 is done, and steps 3–4 still have to send a
+  real message. Unless something has changed by then, the client and the
+  application both use 587, the `EMAIL_PORT` value `.env.example` shows.
 - **No inbound path.** Nothing listens on 25, and the VM has no MX record.
 
 **`tools/email_smoke.py` proves the application's mail, not this.** Run it from
