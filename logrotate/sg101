@@ -65,3 +65,34 @@
     delaycompress
     create
 }
+
+# Apache's logs, written by the proxy container into var/log/apache. Unlike the
+# Django handlers, Apache holds its log open and follows a rename: after
+# logrotate moves access.log aside, Apache goes on appending to the renamed file
+# until it is told to reopen. postrotate tells it, with the same graceful reload
+# `make prod-proxy-reload` uses, which lets requests in flight finish. Measured
+# locally 2026-09-25: without the reload the next request landed in the renamed
+# file; with it, in the new one.
+#
+# Weekly, as on the old host, but 26 weeks kept rather than 8: eight weeks is
+# what nearly lost sg101's logs before they were archived (Step 21 task 01), and
+# at ~17 MB a compressed week the half-year costs under half a gigabyte.
+#
+# sharedscripts: one reload for both files, not one each. The compose file is
+# named with its full path so that compose finds the checkout's .env, which it
+# needs even to run exec. A failed reload is not silenced: logrotate reports it,
+# and cron mails the report.
+/srv/sg101/var/log/apache/access.log
+/srv/sg101/var/log/apache/error.log {
+    weekly
+    rotate 26
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create
+    sharedscripts
+    postrotate
+        docker compose -f /srv/sg101/docker-compose.prod.yml exec -T proxy apache2ctl -k graceful
+    endscript
+}

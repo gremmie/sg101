@@ -561,7 +561,7 @@ volumes, so it can run next to the development stack without touching it.
 | What | Where | Notes |
 | --- | --- | --- |
 | TLS certificate + key | `secrets/tls/origin.pem`, `secrets/tls/origin.key` | Cloudflare Origin CA on the host (runbook B5); self-signed locally, below |
-| Environment | `.env` | the same file the development stack reads |
+| Environment | `.env` | the same file the development stack reads; the production stack also requires `GUNICORN_WORKERS` and `CELERY_WORKER_CONCURRENCY` from it and refuses to start without them (`.env.example`) |
 | Host state | `var/` | created by the command below; git-ignored |
 
 ```bash

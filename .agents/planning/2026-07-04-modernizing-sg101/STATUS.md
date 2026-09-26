@@ -43,7 +43,105 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, this commit
+## Step 21 task 03 — leopard provisioned and hardened; worker counts required — IN PROGRESS, stopped 2026-09-25 before the checkout; repo half in this commit
+
+**Where it stopped:** the host is set up and the repo change is committed.
+**Next:** a read-only deploy key made on leopard and added on GitHub, the clone to
+`/srv/sg101`, then secrets (B1 B2 B5), the stack, the smoke run through a
+temporary rule, `firewall-apply` (B6), both rotations proved (B10 B11), and
+memory measured (acceptance criterion 6).
+
+### Worker counts come from configuration (acceptance criterion 1 — met locally)
+
+`docker-compose.prod.yml` now **requires** `GUNICORN_WORKERS` (in the shared
+`x-app` environment) and `CELERY_WORKER_CONCURRENCY` (the worker's
+`--concurrency`), both through `${VAR:?…}`. Without either, every prod compose
+command stops and names it. They are **5 and 2**, Brian's choice on the 2-vCPU
+estimate. `.env.example` explains both, the Dockerfile's `nproc` fallback stays
+for any other use of the image, and DOCKER.md §10 and runbook B2 say production's
+`.env` needs them. `secrets.json` never held them.
+
+The service-level `environment:` could not carry `GUNICORN_WORKERS`: YAML merge
+is shallow, so a map there would *replace* `x-app`'s and drop
+`DJANGO_SETTINGS_MODULE`.
+
+| local prod stack (10-core Mac) | gunicorn workers | celery children |
+|---|---|---|
+| before | **21** | **10** |
+| either variable unset | compose refuses, naming it | |
+| `.env` 5 / 2 | **5** | **2** |
+| shell override 3 / 1 | 3 | 1 |
+| back to `.env` | 5 | 2 |
+
+All services were healthy throughout. Idle memory on the Mac: web 412, worker 163,
+beat 94, proxy 15, postgres 487, redis 39 MiB, about 1.2 GB. That is not the
+VM figure criterion 6 asks for. **Suite 1311 OK, gate 1311 OK.** Brian's local
+`.env` has had the two lines appended.
+
+### Decided 2026-09-25 (Brian, each on the recommendation)
+
+| | decision |
+|---|---|
+| region | jaguar's |
+| distribution | **Ubuntu 26.04 LTS** (support to 2031); jaguar is still on 14.04 |
+| origin IPv6 | **IPv4 only**, no AAAA; Cloudflare still serves visitors IPv6. B3 step 4 and the IPv6 refusal checks drop out |
+| SSH source | **anywhere, keys only** |
+| port 80 | **drop**: the zone's SSL mode is **Full**, so Cloudflare reaches the origin on 443 only |
+| Apache logs (B11) | **host logrotate + graceful**, weekly, 26 kept; a block in `logrotate/sg101` |
+| security reboots | automatic, **10:00 UTC**, only when an update needs one |
+| `brian`'s password | set (for `sudo` and the Lish console) rather than password-free `sudo` |
+
+**Full (strict) is safe to switch on now, and that is Brian's click.** jaguar's
+origin certificate is Let's Encrypt for `surfguitar101.com` and `www`, issued
+2026-08-18 and expiring 11-16. Its renewals work, and leopard will carry the
+Origin CA certificate.
+
+**Apache follows a rename, measured locally.** With `access.log` renamed and no
+reload, the next request landed in the renamed file. After a new file was
+created and `apache2ctl -k graceful` sent, requests landed in the new one. The
+new block parses under Ubuntu 26.04's logrotate. The forced rotation on the VM
+is still owed.
+
+### leopard — host setup, done 2026-09-25
+
+**`leopard`, 192.0.2.13**, Linode 4 GB shared: 2 CPUs, 3.9 GB, 79 GB disk,
+unpartitioned `/dev/sda`. **Host key ED25519
+`SHA256:qkv+mWaLpvHaVJg6I3E0OXWlRChXtaBdeUo/bCz0nUk`**, recorded on first contact.
+
+**Firewall 175729041 (`leopard`)** is attached to Linode interface 916020, and it
+is the only entity attached. **It was created with no inbound rules**: the SSH
+rule was not saved in the create flow, so leopard was unreachable on every port,
+which is what criterion 4 asks for, if not quite as intended. With Brian's OK the
+task 02 tool applied the final plan (`FIREWALL_SSH_FROM=anywhere`,
+`FIREWALL_HTTP=drop`): 22 from anywhere, 443 from the 22 Cloudflare ranges.
+`firewall-check` OK. Port 22 then took about a minute to answer.
+
+- **Updates:** full upgrade to kernel 7.0.0-34, rebooted, running it.
+  **Linode's Ubuntu image ships a broken debconf value**:
+  `grub-pc/install_devices` holds the literal `multiselect`, so the upgrade
+  failed on `grub-install` to a device of that name. Linode boots the disk with
+  its own GRUB reading `/boot/grub/grub.cfg`, so the fix is an empty device list
+  (`install_devices_empty true`). The regenerated `grub.cfg` then booted the new
+  kernel, which proves it.
+- **`brian`, uid 1000**, in `sudo` and `docker`, with root's authorized key.
+  Ubuntu 26.04's `sudo` is **sudo-rs**. A successful `sudo -v` leaves no log
+  line, so the check rests on Brian's report. The first try failed because both
+  `passwd` prompts were for brian's *new* password.
+- **SSH:** `/etc/ssh/sshd_config.d/01-leopard.conf`, sorted first because sshd
+  keeps the first value it reads. It sets no password and no keyboard-interactive
+  login, and **`PermitRootLogin no`**. `sshd -T` confirms it; root gets
+  `Permission denied (publickey)`.
+- **Security updates:** Ubuntu's default origins (the release, `-security`, and
+  the two ESM security channels) plus `/etc/apt/apt.conf.d/52leopard-reboot`. The
+  dry run was clean. Docker's repository is not an origin, so Docker upgrades
+  stay manual.
+- **Docker** 29.8.1 and Compose v5.5.1 from `download.docker.com`, a `resolute`
+  build. The key fingerprint `9DC8…CD88` matches Docker's published one.
+  `hello-world` runs as brian.
+- **`make` 4.4.1, `git` 2.53, and a 2 GB `/swapfile`** on top of Linode's 496 MB
+  partition, with `vm.swappiness = 10`.
+
+## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 
 **`tools/origin_firewall.sh` is now `tools/origin_firewall.py`**, and its tests
 are `tools/origin_firewall_test.py`, both at Brian's request. The tool keeps the

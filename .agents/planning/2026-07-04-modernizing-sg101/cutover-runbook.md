@@ -103,8 +103,10 @@ reissued from the Google console.
 
 ### B2. `.env`
 The only other un-backed-up artifact. Regenerate from `secrets.json` in the hg
-backup if it is ever lost.
-*Source: memory `modernizing-sg101-planning`; `AGENTS.md`.*
+backup if it is ever lost. **It also needs `GUNICORN_WORKERS=5` and
+`CELERY_WORKER_CONCURRENCY=2`**, which `secrets.json` never held: the production
+compose refuses to start without them. `.env.example` gives the reasoning.
+*Source: memory `modernizing-sg101-planning`; `AGENTS.md`; Step 21 task 03.*
 
 ### B3. Real client IP at the new front door
 **The rewrite that makes every `REMOTE_ADDR` reader correct exists only as Apache
@@ -393,7 +395,7 @@ tail -3 var/log/django/sg101.log
 
 *Source: Step 20 task 11, where this was exercised against the local stack.*
 
-### B11. Apache's own logs have no rotation either — decide before the VM fills
+### B11. Apache's own logs rotate with B10's file — prove it before the flip
 **Found during task 11 and deliberately not fixed there.** `var/log/apache/`
 is written by the proxy container and nothing rotates it. On jaguar a single
 week of `access.log` was **164 MB**, and that host had `logrotate` for it; the
@@ -404,11 +406,16 @@ Apache holds its log open and does **not** follow a rename, so rotation needs a
 `postrotate` that signals the container —
 `docker compose -f docker-compose.prod.yml exec proxy apache2ctl -k graceful` —
 or `CustomLog` piped to `rotatelogs` instead of a file, which changes
-`apache/sites-enabled/`. The second keeps everything inside the container and
-needs no host cron; the first keeps one rotation mechanism for the whole VM.
-**Not decided.** Step 21 must not flip DNS without one of them.
+`apache/sites-enabled/`.
 
-*Source: Step 20 task 11.*
+**Decided 2026-09-25 (Brian): logrotate with the graceful `postrotate`**, weekly,
+26 kept, compressed. It is a block in the same `logrotate/sg101` that B10
+installs, so installing B10 installs this too. Prove it the way B10 proves the
+Django half: `sudo logrotate --force /etc/logrotate.d/sg101`, request a page, and
+the request's line must be in `var/log/apache/access.log`, not
+`access.log.1`. **DNS still must not flip until that has been seen on the VM.**
+
+*Source: Step 20 task 11; Step 21 task 03.*
 
 ### B9. Re-verify the `/media` cache rule against the new origin
 The Cloudflare cache rule was applied to the zone on 2026-09-20 and verified

@@ -131,11 +131,11 @@ USER sg101
 # stays, and the `gunicorn` entry in logging_config is what keeps it reaching
 # anything at all.
 #
-# Workers are sized at start from the CPUs the container actually gets, rather
-# than baked in here: the image is built on a developer's machine and run on a
-# VM with a different count. The usual starting point for sync workers is
-# 2*CPU+1, which at this site's rate -- about 1 request a second, with a busiest
-# measured minute near 8 -- is already far more concurrency than it needs.
+# Workers come from GUNICORN_WORKERS, which docker-compose.prod.yml requires, so
+# production runs a chosen number (.env.example says why it is what it is). The
+# fallback, 2*CPU+1, is only for an image started some other way: on a 10-core
+# laptop it is 21 workers and over 2 GB, far more than this site -- about 1
+# request a second -- needs.
 CMD ["sh", "-c", "exec gunicorn sg101.wsgi:application \
      --bind 0.0.0.0:8000 \
      --workers ${GUNICORN_WORKERS:-$(( $(nproc) * 2 + 1 ))} \

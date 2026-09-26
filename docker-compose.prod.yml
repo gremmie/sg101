@@ -53,6 +53,10 @@ x-app: &app
     DJANGO_SETTINGS_MODULE: sg101.settings.production
     DB_ENGINE: postgresql
     REDIS_HOST: redis
+    # Required, like the concurrency on worker below: left to itself each sizes
+    # from the CPU count, so memory would follow the machine rather than a
+    # decision, and change silently on a resize. .env.example has the values.
+    GUNICORN_WORKERS: ${GUNICORN_WORKERS:?set GUNICORN_WORKERS in .env, see .env.example}
   # SECRET_KEY, database credentials and API keys; see .env.example.
   env_file:
     - .env
@@ -123,7 +127,7 @@ services:
 
   worker:
     <<: *app
-    command: celery -A sg101 worker -l info
+    command: celery -A sg101 worker -l info --concurrency ${CELERY_WORKER_CONCURRENCY:?set CELERY_WORKER_CONCURRENCY in .env, see .env.example}
     volumes:
       - ./var/log/django:/app/sg101/logs
     healthcheck:
