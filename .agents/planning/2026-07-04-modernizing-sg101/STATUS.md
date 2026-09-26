@@ -47,9 +47,16 @@ When work is committed, the heading is part of the commit.
 
 **Where it stopped:** the host is set up and the repo change is committed.
 **Next:** a read-only deploy key made on leopard and added on GitHub, the clone to
-`/srv/sg101`, then secrets (B1 B2 B5), the stack, the smoke run through a
+`/svr/sg101`, then secrets (B1 B2 B5), the stack, the smoke run through a
 temporary rule, `firewall-apply` (B6), both rotations proved (B10 B11), and
 memory measured (acceptance criterion 6).
+
+**The checkout is `/svr/sg101`, not `/srv/sg101`** (Brian, 2026-09-25), matching
+jaguar's `/svr/django-sites/`. `logrotate/sg101` and `backup/sg101-backup.service`
+now default to it, so nothing is edited at install and B10's `sed` line is gone.
+Both files say the spelling is deliberate. The `/srv/...` paths in `apache/` and
+on the right-hand side of the prod compose mounts are **inside the proxy
+container** and are unchanged. Requirement 5 is met by the new defaults.
 
 ### Worker counts come from configuration (acceptance criterion 1 — met locally)
 

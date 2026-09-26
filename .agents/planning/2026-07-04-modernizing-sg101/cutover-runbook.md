@@ -379,7 +379,7 @@ writes leaves every other process appending to a name that no longer exists.
 
 ```bash
 sudo cp logrotate/sg101 /etc/logrotate.d/sg101
-sudo sed -i "s#/srv/sg101#$PWD#" /etc/logrotate.d/sg101   # if the checkout is elsewhere
+# The paths assume the checkout is at /svr/sg101; edit them if it is elsewhere.
 sudo logrotate --debug /etc/logrotate.d/sg101             # parses, changes nothing
 sudo logrotate --force /etc/logrotate.d/sg101             # once, to prove it
 ```

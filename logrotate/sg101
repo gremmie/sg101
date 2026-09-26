@@ -1,9 +1,12 @@
-# Rotation for the Django log files, installed on the VM as
-# /etc/logrotate.d/sg101. See cutover-runbook.md B10.
+# Rotation for the Django and Apache log files, installed on the VM as
+# /etc/logrotate.d/sg101. See cutover-runbook.md B10 and B11.
 #
-# EDIT THE PATHS. Everything below assumes the checkout is at /srv/sg101; the
-# files live in <checkout>/var/log/django, which docker-compose.prod.yml mounts
-# into web, worker and beat at /app/sg101/logs.
+# Every path below assumes the checkout is at /svr/sg101, where it is on the
+# production host. /svr, not /srv, is deliberate: it is the host's convention.
+# The /srv paths in apache/ and docker-compose.prod.yml are a different thing,
+# locations inside the proxy container. A checkout anywhere else needs these
+# paths edited. The Django files live in <checkout>/var/log/django, which
+# docker-compose.prod.yml mounts into web, worker and beat at /app/sg101/logs.
 #
 # Why rotation is out here rather than in the application: production's handlers
 # are WatchedFileHandler, which never rotates and instead checks before each
@@ -23,7 +26,7 @@
 # host 2026-09-20 -- sg101.log held 5.0 months across 10 backups, auth.log 20.4
 # months across 5.
 
-/srv/sg101/var/log/django/sg101.log {
+/svr/sg101/var/log/django/sg101.log {
     size 100k
     rotate 10
     missingok
@@ -39,7 +42,7 @@
 # backups cost less disk than the 5 uncompressed ones do today, and they absorb
 # the higher volume the new stack will produce -- INFO in production, and every
 # gunicorn worker writing where one mod_wsgi daemon used to.
-/srv/sg101/var/log/django/auth.log {
+/svr/sg101/var/log/django/auth.log {
     size 2M
     rotate 12
     missingok
@@ -54,9 +57,9 @@
 # against. They take auth.log's shape because they are the same kind of file: a
 # low-volume record kept for looking things up afterwards. email.log in
 # particular is the per-message audit trail core.tasks.send_mail writes.
-/srv/sg101/var/log/django/email.log
-/srv/sg101/var/log/django/search.log
-/srv/sg101/var/log/django/turnstile.log {
+/svr/sg101/var/log/django/email.log
+/svr/sg101/var/log/django/search.log
+/svr/sg101/var/log/django/turnstile.log {
     size 2M
     rotate 5
     missingok
@@ -82,8 +85,8 @@
 # named with its full path so that compose finds the checkout's .env, which it
 # needs even to run exec. A failed reload is not silenced: logrotate reports it,
 # and cron mails the report.
-/srv/sg101/var/log/apache/access.log
-/srv/sg101/var/log/apache/error.log {
+/svr/sg101/var/log/apache/access.log
+/svr/sg101/var/log/apache/error.log {
     weekly
     rotate 26
     missingok
@@ -93,6 +96,6 @@
     create
     sharedscripts
     postrotate
-        docker compose -f /srv/sg101/docker-compose.prod.yml exec -T proxy apache2ctl -k graceful
+        docker compose -f /svr/sg101/docker-compose.prod.yml exec -T proxy apache2ctl -k graceful
     endscript
 }

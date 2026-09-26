@@ -1,8 +1,9 @@
 # The nightly backup, run by sg101-backup.timer. Installed on the VM as
 # /etc/systemd/system/sg101-backup.service; see cutover-runbook.md B12.
 #
-# EDIT THE PATH. WorkingDirectory assumes the checkout is at /srv/sg101, as
-# logrotate/sg101 does.
+# WorkingDirectory is the checkout, at /svr/sg101 on the production host, as
+# logrotate/sg101 assumes. /svr, not /srv, is deliberate; see logrotate/sg101.
+# A checkout anywhere else needs it edited.
 #
 # Failure is reported by the job itself, to the heartbeat service, and by the
 # heartbeat service's own clock when no success arrives -- not by this unit,
@@ -16,7 +17,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=/srv/sg101
+WorkingDirectory=/svr/sg101
 # The image is built with each deploy (`--profile backup build`). Without
 # --build, `run` uses the one that exists and builds only if there is none.
 #
