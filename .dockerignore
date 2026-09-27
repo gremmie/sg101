@@ -24,6 +24,10 @@ media/slideshow
 *.sql.gz
 *.db
 .env
+# Keys and certificates. Without this, `COPY . /app` bakes every one of them
+# into the image, where anyone holding the image can read them. The production
+# stack mounts only what each service needs, at run time.
+secrets
 # Host virtualenv: macOS-architecture wheels that must not reach the image via
 # `COPY . /app`. Note this does NOT keep it out of the running container -- the
 # `.:/app` bind mount carries it in regardless, where it sits inert because

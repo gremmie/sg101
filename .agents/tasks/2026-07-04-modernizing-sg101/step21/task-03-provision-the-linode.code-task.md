@@ -83,7 +83,7 @@ implementation. Read additional references as needed for context.
    file, since Linode's default is small and the memory estimate is an estimate.
 5. The checkout lives where `logrotate/sg101` expects (`/srv/sg101`) or the
    installed copy is edited to match (B10).
-6. `.env`, `secrets/gcal-service-account.json` and `secrets/tls/origin.{pem,key}`
+6. `.env`, `secrets/gcal/gcal-service-account.json` and `secrets/tls/origin.{pem,key}`
    are in place, readable only by the admin account and the container. Record
    where each came from; none of them is backed up anywhere else (B1, B2, B5).
 7. **The firewall is created with the Linode**, in the create flow, so the VM

@@ -99,17 +99,33 @@ discrepancy explainable rather than merely visible.
 
 ## B. Host preparation
 
-### B1. `secrets/gcal-service-account.json`
+### B1. `secrets/gcal/gcal-service-account.json`
 Git-ignored as a whole directory and **backed up nowhere**. Without it the
 calendar does not come up on the new host, and it cannot be recovered — only
 reissued from the Google console.
-*Source: `STATUS.md` § Step 18; memory `modernizing-sg101-planning`.*
+
+**In `secrets/gcal/`, not `secrets/`** — that directory alone is mounted into
+`web`, and nothing in `secrets/` reaches the image. **Owned by uid 1000, mode
+600** (on leopard that is `brian`), because the container runs as uid 1000 and a
+file it cannot read fails only when someone presses Synchronize.
+`GCAL_CREDENTIALS_PATH=/app/secrets/gcal/gcal-service-account.json` in `.env`.
+*Source: `STATUS.md` § Step 18, § Step 21 task 03; memory `modernizing-sg101-planning`.*
 
 ### B2. `.env`
 The only other un-backed-up artifact. Regenerate from `secrets.json` in the hg
 backup if it is ever lost. **It also needs `GUNICORN_WORKERS=5` and
 `CELERY_WORKER_CONCURRENCY=2`**, which `secrets.json` never held: the production
 compose refuses to start without them. `.env.example` gives the reasoning.
+
+**It is not a copy of the development `.env`.** That file runs on Cloudflare's
+public Turnstile test keys, which pass every bot, and has no Postmark token.
+Production needs real `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` from a
+widget created in the Cloudflare dashboard — **none has been created yet**
+(checked 2026-09-26). The widget's hostname list must include
+`beta.surfguitar101.com` for task 07a as well as `surfguitar101.com`. It also
+needs `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` (the Postmark server token, in
+both) and the `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_USE_TLS` lines `.env.example`
+shows commented out.
 *Source: memory `modernizing-sg101-planning`; `AGENTS.md`; Step 21 task 03.*
 
 ### B3. Real client IP at the new front door

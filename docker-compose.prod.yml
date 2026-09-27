@@ -18,6 +18,7 @@
 # Host paths, all relative to the checkout:
 #   apache/          proxy configuration (tracked)
 #   secrets/tls/     origin.pem + origin.key (git-ignored)
+#   secrets/gcal/    the Google Calendar service account key (git-ignored)
 #   media/           uploads and the committed badges/smileys
 #   var/log/         apache/ and django/ logs (git-ignored)
 #   var/maintenance/ `on` here puts the site in maintenance (git-ignored)
@@ -106,6 +107,11 @@ services:
     volumes:
       - ./media:/app/media
       - ./var/log/django:/app/sg101/logs
+      # The Google Calendar key, for the admin's Synchronize page, which runs
+      # in this process. Only this directory: the rest of secrets/ holds the
+      # TLS key and the backup credential, which the application never needs.
+      # The file must be readable by the container's user, uid 1000.
+      - ./secrets/gcal:/app/secrets/gcal:ro
     healthcheck:
       # The home page, rendered: it queries the database and reads Redis, so
       # this fails when either is down, not only when gunicorn is. The two

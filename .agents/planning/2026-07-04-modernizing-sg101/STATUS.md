@@ -184,8 +184,47 @@ task 02 tool applied the final plan (`FIREWALL_SSH_FROM=anywhere`,
   so `git pull` needs no `sudo`. `/svr` is `root:root 755`. Every file is
   brian's (uid 1000). It is on `modernize` at `c95002ae`, clean, tracking
   `origin`.
-- **Next:** B2 `.env`, B1 `secrets/gcal-service-account.json`, B5
-  `secrets/tls/origin.{pem,key}`, then build and start.
+- **Next:** B2 `.env`, B1 `secrets/gcal/gcal-service-account.json`, B5
+  `secrets/tls/origin.{pem,key}`, then build and start. B2 waits on a real
+  Turnstile widget, which does not exist yet (below).
+
+### `secrets/` was baked into the image, and the calendar key was unreadable there — fixed 2026-09-26
+
+Found while preparing B1, before any secret went to leopard. **`.dockerignore`
+listed `.env` but not `secrets/`**, so the Dockerfile's `COPY . /app` put the
+whole directory in `sg101-app:prod`. The local image held
+`/app/secrets/gcal-service-account.json` and `/app/secrets/tls/origin.key`; on
+leopard it would also have held `secrets/backup.env`, the credential the compose
+file keeps out of the application containers on purpose.
+
+**And the calendar reached its key only through that copy, which it could not
+read.** Nothing in the production compose mounted `secrets/` into `web`, so
+`GCAL_CREDENTIALS_PATH` resolved only to the baked file: `root`, mode 600, in a
+container running as `sg101` (uid 1000). Read as that user: **`Permission
+denied`**. Synchronize would have failed on the new host. The suite cannot see
+this, and the dev stack hides it because it bind-mounts the whole checkout.
+
+**Fix:** `secrets` added to `.dockerignore`; the key moves to
+`secrets/gcal/`, and that directory alone is mounted read-only into `web`, the
+only process that uses it (the admin's Synchronize view; no Celery task does).
+Not the whole of `secrets/`, which would hand the application the TLS key and
+the backup credential. `.env.example`, DOCKER.md's setup table and runbook B1
+give the new path; Brian's local key and `.env` line were moved to match.
+
+| after, local prod stack rebuilt | |
+|---|---|
+| `/app/secrets` in the image | **absent** |
+| `web`, as uid 1000 | sees only `secrets/gcal/`; key readable |
+| `worker` | no `/app/secrets` |
+| `Calendar(...)` in `web` | loads `sg101-calendar@api-project-786263548002.iam.gserviceaccount.com` (constructed only; nothing synced) |
+| services | all healthy |
+
+**Suite 1311 OK, gate 1311 OK.**
+
+**No real Turnstile key exists yet** (Brian, 2026-09-26; nothing in these docs
+records one). The development `.env` runs on Cloudflare's always-pass test keys,
+so leopard's `.env` cannot be a copy of it. Runbook B2 now says so, and that the
+widget's hostnames need `beta.surfguitar101.com` for task 07a.
 
 ## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 
