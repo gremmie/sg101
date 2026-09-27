@@ -65,13 +65,14 @@ production (reported 2026-09-26, date not recorded). **Not yet confirmed from
 data** — task 07a's requirement 4a counts pending events in the rehearsal
 snapshot, and task 09 falls back to the final snapshot if that did not happen.
 
-## Step 21 task 03 — leopard provisioned and hardened; worker counts required — IN PROGRESS: host, deploy key, checkout and B2 done; next B1
+## Step 21 task 03 — leopard provisioned and hardened; worker counts required — DONE 2026-09-27: stack running on leopard, smoked, firewalled, rotation proved; memory re-read owed at task 07
 
-**Where it stands (2026-09-27):** the host is set up, the deploy key and the
-checkout at `/svr/sg101` are done (below), and B2's `.env` is in place.
-**Next:** the remaining secrets (B1 B5), the stack, the smoke run through a
-temporary rule, `firewall-apply` (B6), both rotations proved (B10 B11), and
-memory measured (acceptance criterion 6).
+**Where it stands (2026-09-27):** secrets B1 B2 B5 in place, the stack built and
+healthy on leopard, the smoke run passed through a temporary rule, B6 applied and
+the refusal measured, B10 and B11 proved on the VM for every writing process, and
+memory read (provisional; PostgreSQL is empty). Details in § 2026-09-27 below.
+The repo half of the 775 finding is in, and criterion 7 passed. **Carried
+forward:** criterion 6's figure is re-read after task 07 restores a snapshot.
 
 **The checkout is `/svr/sg101`, not `/srv/sg101`** (Brian, 2026-09-25), matching
 jaguar's `/svr/django-sites/`. `logrotate/sg101` and `backup/sg101-backup.service`
@@ -184,8 +185,7 @@ task 02 tool applied the final plan (`FIREWALL_SSH_FROM=anywhere`,
   so `git pull` needs no `sudo`. `/svr` is `root:root 755`. Every file is
   brian's (uid 1000). It was cloned on `modernize` at `c95002ae`, clean,
   tracking `origin`, and was at `f99ba4f9` by 2026-09-27.
-- **Next:** B1 `secrets/gcal/gcal-service-account.json`, B5
-  `secrets/tls/origin.{pem,key}`, then build and start. B2 is done (below).
+- **Then:** B1, B5, build and start — § 2026-09-27 below.
 
 ### `secrets/` was baked into the image, and the calendar key was unreadable there — fixed 2026-09-26
 
@@ -239,6 +239,106 @@ uncommented. `DB_ENGINE=postgresql`, `GUNICORN_WORKERS=5`,
 `secrets/gcal/` path from the fix above. Neither of Cloudflare's always-pass test
 keys appears in it. The checkout is at `f99ba4f9`, level with `origin`, so it
 already has the `.dockerignore` fix and the `gcal` mount.
+
+### 2026-09-27 — secrets, the stack, the smoke run, the firewall, rotation, memory
+
+**B1.** The calendar key copied to `secrets/gcal/` (uid 1000, 600); SHA-256
+matches the local copy. `secrets/` and both subdirectories are 700, and git on
+leopard reports `secrets/` ignored.
+
+**B5 — the key never left leopard.** Key and CSR generated on the host, SANs
+`surfguitar101.com` and `*.surfguitar101.com` (the wildcard covers `www` and task
+07a's `beta`). Brian issued the Origin CA certificate from the CSR in the
+dashboard. Cert and key public keys hash identically; valid 2026-09-27 to
+**2041-09-23**. CSR deleted; `origin.key` 600, `origin.pem` 644. Issuing it
+changes nothing for jaguar: Cloudflare installs an origin certificate nowhere.
+
+**Build and start.** `docker compose -f docker-compose.prod.yml build`, 2m16s on
+2 vCPUs, **without** the backup profile: that profile needs
+`secrets/backup.env`, which is B12. `var/` created per DOCKER.md §10.
+`migrate` against the empty database, then all six services healthy.
+`check --deploy`: W005 and W021 only, both deliberate (§ HSTS, 2026-09-20).
+
+**The start sent ten error mails, and they were useful.** Between up and
+`migrate`, the `web` and `proxy` health checks rendered the home page against no
+tables: ten `relation "django_site" does not exist` 500s, 20:03:48–20:04:35 UTC,
+each mailed to ADMINS as `ERROR (internal IP)` (the checks come from
+`127.0.0.1`). Brian's copy's headers: Postmark accepted it at **20:03:49**, one
+second after leopard logged the first error, the headers themselves cannot name
+the submitting host, so the timing is the attribution. It then went Postmark
+`sc-ord-mta114` → Cloudflare Email Routing (`admin@`) → Gmail, with **SPF, DKIM
+`d=surfguitar101.com` (selector `20260817033844pm`) and DMARC passing at both
+Cloudflare and Gmail** under `p=quarantine`. Runbook D1's check, seen from
+leopard before the flip; D1 itself still runs after it. **Any fresh start does
+this** — task 07's rehearsal and the cutover included — unless `postgres` is
+brought up alone, restored and migrated before the rest.
+
+**Smoke, through a temporary rule.** Brian added 443 and 80 from
+`192.0.2.12/32`; `tools/prod_smoke.sh 192.0.2.13` passed all 21 checks.
+
+**B6.** `ranges-check` OK (15 + 7). `check` beforehand differed by exactly the two
+temporary rules. `apply`, then `check` **OK**. From the same Mac, 20 s later,
+443 and 80 at the origin: **no HTTP response, curl exit 28**. Minutes earlier
+the same address was served, so the refusal is the firewall's. SSH still
+connects.
+
+**B10/B11 — as installed, logrotate would have rotated nothing.** A root
+`--debug` skipped every file: `parent directory has insecure permissions`.
+DOCKER.md's `mkdir -p var/log/...` takes the umask; the Mac's 022 gave 755,
+Ubuntu's 002 for users gives **775**, and logrotate refuses a directory writable
+by a non-root group. **An unprivileged `--debug` does not run that check**, so
+only root sees it. `chmod 755 var var/log var/log/django var/log/apache` on
+leopard (Brian's choice over a `su` line per block); `var/maintenance` and
+`var/public/*` stay 775, since logrotate never touches them.
+
+**The failure would have been silent.** `logrotate/sg101` says cron mails the
+report. On leopard logrotate runs from `logrotate.timer`, and there is no
+`sendmail`, so a skip reaches only the journal.
+
+**Then forced, and every writer followed** — the new line in the new file, none
+in `.1`:
+
+| writer | how made to write | landed in |
+|---|---|---|
+| Apache | graceful from `postrotate`, then 6 requests from the host | `error.log` (the reload notice), `access.log`; `access.log.1` has none |
+| Celery worker | `user_stats_task.delay(999999)` | `sg101.log` |
+| gunicorn workers | 8 POSTs to `/contact/` without CSRF → 403 warnings | `sg101.log`, all 8 |
+| beat | its 20:30 UTC `max_users` send | `sg101.log`; no scheduler line in `.1` after the rotation |
+
+The 404s wrote nothing to Django's log, which is why the CSRF POSTs were needed.
+The Django log's timestamps are Central time, the rest UTC.
+
+**Memory (criterion 6), idle, 20:19 UTC — provisional:**
+
+| | MiB |
+|---|---|
+| web (5 workers) | 454 |
+| worker (2 children) | 170 |
+| beat | 93 |
+| postgres | 39 |
+| proxy | 13 |
+| redis | 9 |
+| containers | ~778 |
+| host `used` | 1,384 of 3,910; swap 0 used; 2,526 available |
+
+Under the 1.7–2.0 GB estimate, but **PostgreSQL is empty** (487 MiB on the Mac
+with data), so this does not yet answer the criterion. Re-read after task 07
+restores a snapshot.
+
+**The repo half of the 775 finding (Brian approved both).** DOCKER.md §10 now
+creates `var/` under `(umask 022 && mkdir -p ...)`. Under umask 002 on the Mac:
+plain `mkdir -p` gave 775 throughout; `mkdir -p -m 755` gave 755 on the last
+directory only, `var` and `var/log` still 775; the umask form gave 755 on all
+three. The `logrotate/sg101` comment no longer says cron mails the report; it
+names `sudo journalctl -u logrotate`, and the `sudo` is measured: `brian` is in
+neither `adm` nor `systemd-journal`, and without it the journal shows no
+entries. The unit has no `OnFailure=`. **Nothing alerts on a failed rotation**;
+whether something should is an open item for Brian, not decided here. leopard's
+installed copy matches its checkout; the change is a comment, so re-copying it
+after the next pull is tidiness, not a fix.
+
+**Criterion 7:** suite 1311 OK; gate 1311 OK, with `tools/deprecation_gate.sh`
+printing its non-empty filter.
 
 ## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 

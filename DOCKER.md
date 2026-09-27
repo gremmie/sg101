@@ -566,7 +566,10 @@ volumes, so it can run next to the development stack without touching it.
 | Host state | `var/` | created by the command below; git-ignored |
 
 ```bash
-mkdir -p var/log/apache var/log/django var/maintenance var/public/hosted var/public/photos
+# umask 022, so the directories are 755 on any host. Ubuntu's user umask gives
+# 775, and logrotate skips every file in a directory a non-root group can write.
+# Not `mkdir -m 755`: that sets only the last directory of each path.
+(umask 022 && mkdir -p var/log/apache var/log/django var/maintenance var/public/hosted var/public/photos)
 # Locally only -- a throwaway certificate:
 mkdir -p secrets/tls
 openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj "/CN=surfguitar101.com" \

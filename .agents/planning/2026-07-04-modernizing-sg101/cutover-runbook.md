@@ -99,7 +99,7 @@ discrepancy explainable rather than merely visible.
 
 ## B. Host preparation
 
-### B1. `secrets/gcal/gcal-service-account.json`
+### B1. `secrets/gcal/gcal-service-account.json` — DONE on leopard 2026-09-27
 Git-ignored as a whole directory and **backed up nowhere**. Without it the
 calendar does not come up on the new host, and it cannot be recovered — only
 reissued from the Google console.
@@ -237,7 +237,7 @@ snapshot first**; it creates and deletes a scratch user.
 the only Linux this project has until the VM exists — Docker Desktop translates
 bind-mount ownership and will accept a configuration the VM rejects.*
 
-### B5. Install the Cloudflare Origin CA certificate
+### B5. Install the Cloudflare Origin CA certificate — DONE 2026-09-27, valid to 2041-09-23
 Step 20 terminates TLS at the Apache proxy on a **self-signed certificate**,
 which is all the local stack needs. The real origin certificate is a Cloudflare
 Origin CA cert — long-lived, no renewal job, and trusted only for proxied traffic,
@@ -250,7 +250,7 @@ same names, so the vhost does not change between the two. `secrets/` is
 git-ignored and **backed up nowhere**, like `.env` and the calendar key.
 *Source: Step 20 task 04, the TLS decision; task 03 fixed the paths.*
 
-### B6. Apply the origin firewall — tested against a stand-in, never run on the VM
+### B6. Apply the origin firewall — DONE on leopard 2026-09-27, refusal measured
 **The web ports admit only Cloudflare, enforced by the hosting provider's
 firewall** (decided 2026-09-23, Step 20 task 07). A firewall on the VM itself
 was rejected: Docker forwards a published port to the container before the VM's
@@ -392,7 +392,7 @@ lifecycle rules count in whole days.
 
 *Source: Step 20 task 06.*
 
-### B10. Install the `logrotate` configuration
+### B10. Install the `logrotate` configuration — DONE on leopard 2026-09-27
 Production's log handlers are `WatchedFileHandler`: they never rotate, because a
 dozen processes share `var/log/django` and a handler that renames the file it
 writes leaves every other process appending to a name that no longer exists.
@@ -401,9 +401,16 @@ writes leaves every other process appending to a name that no longer exists.
 ```bash
 sudo cp logrotate/sg101 /etc/logrotate.d/sg101
 # The paths assume the checkout is at /svr/sg101; edit them if it is elsewhere.
+chmod 755 var var/log var/log/django var/log/apache      # logrotate skips 775 dirs
 sudo logrotate --debug /etc/logrotate.d/sg101             # parses, changes nothing
 sudo logrotate --force /etc/logrotate.d/sg101             # once, to prove it
 ```
+
+**The `--debug` run must be as root and must print no `insecure permissions`
+line.** Ubuntu's user umask makes `mkdir` give 775, logrotate skips every file in
+a directory a non-root group can write, and only a root run checks. On leopard it
+did exactly that until the `chmod` (`STATUS.md` § Step 21 task 03, 2026-09-27).
+Grep for `insecure|skipping|^error:`, not `error`, which matches `error.log`.
 
 **Then prove the processes followed it**, which is the whole point and is not
 visible from `ls`: after the forced rotation, make the site serve a page and
@@ -416,7 +423,7 @@ tail -3 var/log/django/sg101.log
 
 *Source: Step 20 task 11, where this was exercised against the local stack.*
 
-### B11. Apache's own logs rotate with B10's file — prove it before the flip
+### B11. Apache's own logs rotate with B10's file — PROVED on leopard 2026-09-27
 **Found during task 11 and deliberately not fixed there.** `var/log/apache/`
 is written by the proxy container and nothing rotates it. On jaguar a single
 week of `access.log` was **164 MB**, and that host had `logrotate` for it; the

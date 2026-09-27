@@ -83,8 +83,10 @@
 #
 # sharedscripts: one reload for both files, not one each. The compose file is
 # named with its full path so that compose finds the checkout's .env, which it
-# needs even to run exec. A failed reload is not silenced: logrotate reports it,
-# and cron mails the report.
+# needs even to run exec. A failed reload is not silenced, but nothing sends it
+# anywhere: logrotate runs from logrotate.timer and the host has no mailer, so
+# the report is only in `sudo journalctl -u logrotate`. A directory with
+# insecure permissions is reported there too, and nothing in it is rotated.
 /svr/sg101/var/log/apache/access.log
 /svr/sg101/var/log/apache/error.log {
     weekly
