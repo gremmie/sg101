@@ -65,11 +65,11 @@ production (reported 2026-09-26, date not recorded). **Not yet confirmed from
 data** — task 07a's requirement 4a counts pending events in the rehearsal
 snapshot, and task 09 falls back to the final snapshot if that did not happen.
 
-## Step 21 task 03 — leopard provisioned and hardened; worker counts required — IN PROGRESS, stopped 2026-09-25 before the checkout; repo half in this commit
+## Step 21 task 03 — leopard provisioned and hardened; worker counts required — IN PROGRESS: host, deploy key, checkout and B2 done; next B1
 
-**Where it stopped:** the host is set up and the repo change is committed.
-**Next:** a read-only deploy key made on leopard and added on GitHub, the clone to
-`/svr/sg101`, then secrets (B1 B2 B5), the stack, the smoke run through a
+**Where it stands (2026-09-27):** the host is set up, the deploy key and the
+checkout at `/svr/sg101` are done (below), and B2's `.env` is in place.
+**Next:** the remaining secrets (B1 B5), the stack, the smoke run through a
 temporary rule, `firewall-apply` (B6), both rotations proved (B10 B11), and
 memory measured (acceptance criterion 6).
 
@@ -182,11 +182,10 @@ task 02 tool applied the final plan (`FIREWALL_SSH_FROM=anywhere`,
 - **Checkout at `/svr/sg101`**, created with
   `sudo install -d -o brian -g brian /svr/sg101` and cloned as brian, not root,
   so `git pull` needs no `sudo`. `/svr` is `root:root 755`. Every file is
-  brian's (uid 1000). It is on `modernize` at `c95002ae`, clean, tracking
-  `origin`.
-- **Next:** B2 `.env`, B1 `secrets/gcal/gcal-service-account.json`, B5
-  `secrets/tls/origin.{pem,key}`, then build and start. B2 waits on a real
-  Turnstile widget, which does not exist yet (below).
+  brian's (uid 1000). It was cloned on `modernize` at `c95002ae`, clean,
+  tracking `origin`, and was at `f99ba4f9` by 2026-09-27.
+- **Next:** B1 `secrets/gcal/gcal-service-account.json`, B5
+  `secrets/tls/origin.{pem,key}`, then build and start. B2 is done (below).
 
 ### `secrets/` was baked into the image, and the calendar key was unreadable there — fixed 2026-09-26
 
@@ -221,10 +220,25 @@ give the new path; Brian's local key and `.env` line were moved to match.
 
 **Suite 1311 OK, gate 1311 OK.**
 
-**No real Turnstile key exists yet** (Brian, 2026-09-26; nothing in these docs
-records one). The development `.env` runs on Cloudflare's always-pass test keys,
+**No real Turnstile key existed on 2026-09-26** (Brian; nothing in these docs
+recorded one). The development `.env` runs on Cloudflare's always-pass test keys,
 so leopard's `.env` cannot be a copy of it. Runbook B2 now says so, and that the
 widget's hostnames need `beta.surfguitar101.com` for task 07a.
+
+### B2 — the real Turnstile widget, and leopard's `.env` — done 2026-09-27
+
+**Brian created a production Turnstile widget and wrote leopard's `.env`**
+(reported 2026-09-27; the file is dated 03:29 that morning). The widget's
+hostname list, including `beta.surfguitar101.com`, is **on Brian's report and
+not checked from here**.
+
+Checked on leopard by variable *name*, never value: `/svr/sg101/.env` is
+`brian:brian 600`, and it sets every variable `.env.example` leaves
+uncommented. `DB_ENGINE=postgresql`, `GUNICORN_WORKERS=5`,
+`CELERY_WORKER_CONCURRENCY=2`, and `GCAL_CREDENTIALS_PATH` gives the
+`secrets/gcal/` path from the fix above. Neither of Cloudflare's always-pass test
+keys appears in it. The checkout is at `f99ba4f9`, level with `origin`, so it
+already has the `.dockerignore` fix and the `gcal` mount.
 
 ## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 

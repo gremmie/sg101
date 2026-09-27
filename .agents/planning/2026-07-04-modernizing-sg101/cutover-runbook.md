@@ -111,7 +111,7 @@ file it cannot read fails only when someone presses Synchronize.
 `GCAL_CREDENTIALS_PATH=/app/secrets/gcal/gcal-service-account.json` in `.env`.
 *Source: `STATUS.md` § Step 18, § Step 21 task 03; memory `modernizing-sg101-planning`.*
 
-### B2. `.env`
+### B2. `.env` — DONE
 The only other un-backed-up artifact. Regenerate from `secrets.json` in the hg
 backup if it is ever lost. **It also needs `GUNICORN_WORKERS=5` and
 `CELERY_WORKER_CONCURRENCY=2`**, which `secrets.json` never held: the production
@@ -120,8 +120,9 @@ compose refuses to start without them. `.env.example` gives the reasoning.
 **It is not a copy of the development `.env`.** That file runs on Cloudflare's
 public Turnstile test keys, which pass every bot, and has no Postmark token.
 Production needs real `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` from a
-widget created in the Cloudflare dashboard — **none has been created yet**
-(checked 2026-09-26). The widget's hostname list must include
+widget created in the Cloudflare dashboard. **Brian created one and wrote
+leopard's `.env`**, reported 2026-09-27; the variable names were checked there
+(`STATUS.md` § B2). The widget's hostname list must include
 `beta.surfguitar101.com` for task 07a as well as `surfguitar101.com`. It also
 needs `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` (the Postmark server token, in
 both) and the `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_USE_TLS` lines `.env.example`
