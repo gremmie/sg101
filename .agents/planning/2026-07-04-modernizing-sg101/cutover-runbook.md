@@ -421,7 +421,37 @@ queue a task, then confirm the new lines are in `sg101.log` and not in
 tail -3 var/log/django/sg101.log
 ```
 
-*Source: Step 20 task 11, where this was exercised against the local stack.*
+**Then the heartbeat, so a failed rotation reaches you.** The host has no mailer;
+without this, a failure is only in `sudo journalctl -u logrotate`.
+
+1. On healthchecks.io, create a check: **period 1 day, grace 2 hours**, alerting
+   to Gmail, as B12's backup check.
+2. On the VM, its ping URL into `secrets/logrotate.env`, mode 600:
+   `HEARTBEAT_URL=https://hc-ping.com/<uuid>`.
+3. Install the drop-in and run once:
+   ```bash
+   sudo install -D -m 644 logrotate/heartbeat.conf \
+       /etc/systemd/system/logrotate.service.d/sg101-heartbeat.conf
+   sudo systemctl daemon-reload
+   systemctl cat logrotate.service | tail -3     # the drop-in is listed
+   sudo systemctl start logrotate.service        # the check turns green
+   ```
+4. **Prove the alarm at the receiving end**, as B12 does: a throwaway config for
+   a 775 directory makes the run exit 1.
+   ```bash
+   sudo install -d -m 775 -o brian -g brian /srv/lrfail && echo x > /srv/lrfail/t.log
+   printf '/srv/lrfail/t.log {\n    rotate 1\n}\n' | sudo tee /etc/logrotate.d/zz-lrfail
+   sudo systemctl start logrotate.service        # fails; the alert must arrive in Gmail
+   sudo rm -r /etc/logrotate.d/zz-lrfail /srv/lrfail
+   sudo systemctl start logrotate.service        # green again
+   ```
+   Remove the throwaway config straight away: while it is there, every nightly
+   run fails. `/srv`, not `/tmp` or `/var/tmp`: the service has `PrivateTmp`, so
+   there the file would not exist and the run would fail for the wrong reason.
+   Check the journal says `insecure permissions`, not `stat ... failed`.
+
+*Source: Step 20 task 11, where this was exercised against the local stack; the
+heartbeat, Step 21 task 03.*
 
 ### B11. Apache's own logs rotate with B10's file — PROVED on leopard 2026-09-27
 **Found during task 11 and deliberately not fixed there.** `var/log/apache/`

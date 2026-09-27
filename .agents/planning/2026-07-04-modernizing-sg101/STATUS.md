@@ -333,12 +333,55 @@ three. The `logrotate/sg101` comment no longer says cron mails the report; it
 names `sudo journalctl -u logrotate`, and the `sudo` is measured: `brian` is in
 neither `adm` nor `systemd-journal`, and without it the journal shows no
 entries. The unit has no `OnFailure=`. **Nothing alerts on a failed rotation**;
-whether something should is an open item for Brian, not decided here. leopard's
+Brian chose option 1, a heartbeat (below). leopard's
 installed copy matches its checkout; the change is a comment, so re-copying it
 after the next pull is tidiness, not a fix.
 
 **Criterion 7:** suite 1311 OK; gate 1311 OK, with `tools/deprecation_gate.sh`
 printing its non-empty filter.
+
+### The logrotate heartbeat — option 1 chosen (Brian, 2026-09-27); built, not yet installed
+
+**Measured first: logrotate's exit status carries both failures.** As root on
+leopard, three scratch configs: a 755 directory exits **0**; a 775 directory
+exits **1** (`insecure permissions`); a `postrotate` of `false` exits **1**. So a
+hook on the service's result sees a skipped directory and a failed Apache
+reload the night they happen, and the permission check runs every night, not
+only when a file is due.
+
+**`logrotate/heartbeat.conf`**, a drop-in for the host's own
+`logrotate.service`: `/start` before, then the URL on success or `/fail`
+otherwise, from `$SERVICE_RESULT` in `ExecStopPost`. The URL comes from
+`secrets/logrotate.env`; the pattern is the backup job's (healthchecks.io,
+period 1 day, grace 2 hours). Every line is `-`-prefixed and the env file is
+optional, so the heartbeat cannot stop the rotation it watches. It covers every
+`/etc/logrotate.d` file, deliberately.
+
+**Exercised without sudo, as a user unit on leopard** with the drop-in attached
+and a local listener for the pings:
+
+| `ExecStart` | result | pings |
+|---|---|---|
+| `true` | success | `/start`, `` |
+| `false` | exit-code | `/start`, `/fail` |
+| `true`, no env file | success | none |
+| `true`, unreachable URL | success | none |
+
+This proves the `$$` escaping and both branches. It does not prove the real
+unit, whose sandbox differs: runbook B10 installs it and proves the alarm in
+Gmail with a throwaway 775 directory. **That directory is in `/srv`, not
+`/var/tmp`**: the service has `PrivateTmp`, where the file would not exist and
+the run would fail for the wrong reason.
+
+**Open for Brian: host mail at all.** leopard has no mailer, where jaguar had
+Postfix. Measured 2026-09-27, it loses almost nothing today: no user crontab;
+the `cron.daily`/`weekly` scripts (`dpkg`, `logrotate`, `man-db`, `apt-compat`,
+`e2scrub_all`) exit on a systemd host, `apport` aside; timers log to the
+journal. **The one gap is unattended-upgrades**: `Unattended-Upgrade::Mail` is
+commented out, so a failed security update is only in
+`/var/log/unattended-upgrades/`. Either a relay through Postmark (once, for
+everything) or a heartbeat on `apt-daily-upgrade.service`. Not needed before
+task 07.
 
 ## Step 21 task 02 — the Linode firewall adapter, rewritten in Python, exercised on a real firewall — DONE 2026-09-25, `ab7c1efd`
 
