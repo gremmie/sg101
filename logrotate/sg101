@@ -85,8 +85,8 @@
 # named with its full path so that compose finds the checkout's .env, which it
 # needs even to run exec. A failed reload is not silenced, but nothing sends it
 # anywhere: logrotate runs from logrotate.timer and the host has no mailer, so
-# the report is only in `sudo journalctl -u logrotate`. A directory with
-# insecure permissions is reported there too, and nothing in it is rotated.
+# the report is only in `sudo journalctl -u logrotate`. logrotate/heartbeat.conf
+# is what makes a failure reach anyone.
 /svr/sg101/var/log/apache/access.log
 /svr/sg101/var/log/apache/error.log {
     weekly

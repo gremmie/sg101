@@ -71,7 +71,7 @@ snapshot, and task 09 falls back to the final snapshot if that did not happen.
 healthy on leopard, the smoke run passed through a temporary rule, B6 applied and
 the refusal measured, B10 and B11 proved on the VM for every writing process, and
 memory read (provisional; PostgreSQL is empty). Details in § 2026-09-27 below.
-The repo half of the 775 finding is in, and criterion 7 passed. **Carried
+The repo half of the 775 finding is in (its rationale corrected the same day, below), and criterion 7 passed. **Carried
 forward:** criterion 6's figure is re-read after task 07 restores a snapshot.
 
 **The checkout is `/svr/sg101`, not `/srv/sg101`** (Brian, 2026-09-25), matching
@@ -282,18 +282,36 @@ temporary rules. `apply`, then `check` **OK**. From the same Mac, 20 s later,
 the same address was served, so the refusal is the firewall's. SSH still
 connects.
 
-**B10/B11 — as installed, logrotate would have rotated nothing.** A root
-`--debug` skipped every file: `parent directory has insecure permissions`.
-DOCKER.md's `mkdir -p var/log/...` takes the umask; the Mac's 022 gave 755,
-Ubuntu's 002 for users gives **775**, and logrotate refuses a directory writable
-by a non-root group. **An unprivileged `--debug` does not run that check**, so
-only root sees it. `chmod 755 var var/log var/log/django var/log/apache` on
-leopard (Brian's choice over a `su` line per block); `var/maintenance` and
-`var/public/*` stay 775, since logrotate never touches them.
+**B10/B11 — the 775 directories. CORRECTED the same day: the nightly run was
+never affected.** A root `--debug` of `/etc/logrotate.d/sg101` skipped every
+file: `parent directory has insecure permissions`. DOCKER.md's `mkdir -p
+var/log/...` takes the umask; the Mac's 022 gave 755, Ubuntu's 002 for users
+gives **775**. An unprivileged `--debug` does not run the check. `chmod 755 var
+var/log var/log/django var/log/apache` on leopard; `var/maintenance` and
+`var/public/*` stay 775.
 
-**The failure would have been silent.** `logrotate/sg101` says cron mails the
+**What was first recorded here, "as installed, logrotate would have rotated
+nothing", was wrong.** Every run above named `/etc/logrotate.d/sg101` directly.
+The nightly `logrotate.service` reads `/etc/logrotate.conf` first, and Ubuntu's
+sets **`su root adm` globally**. With an `su` directive, logrotate skips the
+permission check altogether, which is what its own error message says. Found
+when the heartbeat's alarm proof, a 775 directory under the real service,
+**exited 0 and rotated**. So the test ran logrotate in a way the host never
+does. The `chmod`, DOCKER.md's `umask 022` and the runbook line stay: they cost
+nothing and keep a hand-run of the file clean. The reasons given for them are
+corrected below and in the files. `16131aad`'s commit message repeats the wrong
+claim; this paragraph supersedes it.
+
+**The global `su` was then checked for the thing it could break**: the owner of
+the new file. `sudo logrotate --debug --force /etc/logrotate.conf`, as the
+service runs it: it keeps euid 0, switches egid to `adm` (4) for the rotation,
+and reports `creating new /svr/sg101/var/log/django/sg101.log mode = 0644 uid =
+1000 gid = 1000`. The containers can still write it.
+
+**A failure would have been silent.** `logrotate/sg101` said cron mails the
 report. On leopard logrotate runs from `logrotate.timer`, and there is no
-`sendmail`, so a skip reaches only the journal.
+`sendmail`, so a failure reaches only the journal. That part stands, and is why
+the heartbeat (below) exists.
 
 **Then forced, and every writer followed** — the new line in the new file, none
 in `.1`:
@@ -344,10 +362,10 @@ printing its non-empty filter.
 
 **Measured first: logrotate's exit status carries both failures.** As root on
 leopard, three scratch configs: a 755 directory exits **0**; a 775 directory
-exits **1** (`insecure permissions`); a `postrotate` of `false` exits **1**. So a
-hook on the service's result sees a skipped directory and a failed Apache
-reload the night they happen, and the permission check runs every night, not
-only when a file is due.
+exits **1** (`insecure permissions`); a `postrotate` of `false` exits **1**. Those
+runs named each config directly. **Under the service the 775 case does not
+fail at all** (the global `su`, above); the failed `postrotate` does, and it is
+the failure that matters: the Apache reload.
 
 **`logrotate/heartbeat.conf`**, a drop-in for the host's own
 `logrotate.service`: `/start` before, then the URL on success or `/fail`
@@ -368,10 +386,16 @@ and a local listener for the pings:
 | `true`, unreachable URL | success | none |
 
 This proves the `$$` escaping and both branches. It does not prove the real
-unit, whose sandbox differs: runbook B10 installs it and proves the alarm in
-Gmail with a throwaway 775 directory. **That directory is in `/srv`, not
-`/var/tmp`**: the service has `PrivateTmp`, where the file would not exist and
-the run would fail for the wrong reason.
+unit, whose sandbox differs.
+
+**Installed and proved on leopard, 2026-09-27** (Brian ran the `sudo` steps).
+The check went green on the first run. **The first alarm proof proved
+nothing**: a throwaway 775 directory, run as the service, exited 0; the check
+never saw a `/fail` and the event log showed none. That is how the global `su`
+was found. The proof was redone with a `postrotate` of `false` on a two-byte
+file with `size 1`: the unit failed, **the check went red, and the alert email
+arrived in Gmail**. Cleaned up, run again, green. Runbook B10 step 4 now uses
+the `postrotate` failure.
 
 **Open for Brian: host mail at all.** leopard has no mailer, where jaguar had
 Postfix. Measured 2026-09-27, it loses almost nothing today: no user crontab;

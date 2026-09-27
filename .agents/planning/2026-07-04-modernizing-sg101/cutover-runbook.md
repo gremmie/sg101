@@ -401,16 +401,18 @@ writes leaves every other process appending to a name that no longer exists.
 ```bash
 sudo cp logrotate/sg101 /etc/logrotate.d/sg101
 # The paths assume the checkout is at /svr/sg101; edit them if it is elsewhere.
-chmod 755 var var/log var/log/django var/log/apache      # logrotate skips 775 dirs
-sudo logrotate --debug /etc/logrotate.d/sg101             # parses, changes nothing
+chmod 755 var var/log var/log/django var/log/apache      # keeps a hand-run clean
+sudo logrotate --debug --force /etc/logrotate.conf 2>&1 | grep 'creating new /svr'
 sudo logrotate --force /etc/logrotate.d/sg101             # once, to prove it
 ```
 
-**The `--debug` run must be as root and must print no `insecure permissions`
-line.** Ubuntu's user umask makes `mkdir` give 775, logrotate skips every file in
-a directory a non-root group can write, and only a root run checks. On leopard it
-did exactly that until the `chmod` (`STATUS.md` § Step 21 task 03, 2026-09-27).
-Grep for `insecure|skipping|^error:`, not `error`, which matches `error.log`.
+**Dry-run through `/etc/logrotate.conf`, not the file alone**: that is how the
+nightly service runs it, and Ubuntu's sets `su root adm` globally, which changes
+what logrotate does. Every `creating new` line for `var/log/django` must say
+`uid = 1000`, or the containers cannot write their log after the first real
+rotation. Run on the file alone, a 775 directory prints `insecure permissions`
+and is skipped; under the global `su` it is not checked at all (`STATUS.md` §
+Step 21 task 03, 2026-09-27).
 
 **Then prove the processes followed it**, which is the whole point and is not
 visible from `ls`: after the forced rotation, make the site serve a page and
@@ -436,19 +438,20 @@ without this, a failure is only in `sudo journalctl -u logrotate`.
    systemctl cat logrotate.service | tail -3     # the drop-in is listed
    sudo systemctl start logrotate.service        # the check turns green
    ```
-4. **Prove the alarm at the receiving end**, as B12 does: a throwaway config for
-   a 775 directory makes the run exit 1.
+4. **Prove the alarm at the receiving end**, as B12 does: a throwaway config
+   whose `postrotate` fails, as a failed Apache reload would.
    ```bash
-   sudo install -d -m 775 -o brian -g brian /srv/lrfail && echo x > /srv/lrfail/t.log
-   printf '/srv/lrfail/t.log {\n    rotate 1\n}\n' | sudo tee /etc/logrotate.d/zz-lrfail
+   sudo install -d -m 755 -o brian -g brian /srv/lrfail && echo x > /srv/lrfail/t.log
+   printf '/srv/lrfail/t.log {\n    size 1\n    postrotate\n        false\n    endscript\n}\n' \
+       | sudo tee /etc/logrotate.d/zz-lrfail
    sudo systemctl start logrotate.service        # fails; the alert must arrive in Gmail
    sudo rm -r /etc/logrotate.d/zz-lrfail /srv/lrfail
    sudo systemctl start logrotate.service        # green again
    ```
    Remove the throwaway config straight away: while it is there, every nightly
-   run fails. `/srv`, not `/tmp` or `/var/tmp`: the service has `PrivateTmp`, so
-   there the file would not exist and the run would fail for the wrong reason.
-   Check the journal says `insecure permissions`, not `stat ... failed`.
+   run fails. `size 1` makes the two-byte file due, so the `postrotate` runs.
+   `/srv`, not `/tmp` or `/var/tmp`: the service has `PrivateTmp`. **Not a 775
+   directory**: under the global `su` the service never checks, and exits 0.
 
 *Source: Step 20 task 11, where this was exercised against the local stack; the
 heartbeat, Step 21 task 03.*
