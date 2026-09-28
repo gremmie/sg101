@@ -43,6 +43,102 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
+
+**Split by data, not by step (Brian, 2026-09-28).** leopard holds an empty,
+freshly migrated database and 1.1 MB of committed media, so requirement 5 (the
+~4.7 GB first run, its duration, memory during `pg_dump`) and criterion 3 (a
+restore compared by row counts) would measure nothing now. They run in task 07,
+after the rehearsal restores a snapshot and copies the media. Everything that
+needs only the accounts is done.
+
+**Decided (Brian, 2026-09-28):** buckets **`sg101-backup-db`** and
+**`sg101-backup-media`** in **`us-west-1`**, beside `sg101.user.photos`. **The
+timer goes in now**, so it runs and exercises the alarm nightly for the weeks
+before cutover. The cost: anything uploaded locally during the rehearsal and beta
+stays in the media bucket, since the sync never deletes.
+
+**The admin credential never touched leopard.** `awscli` 2.37.4 from Homebrew on
+the Mac, profile `sg101-admin`, holding a new access key on Brian's IAM user
+`brian`. That user is in `Admins`, whose inline 2013 policy is `*` on `*`.
+`provision` ran on the Mac from a locally built `sg101-backup:prod`, with the key
+passed by variable name (`aws configure export-credentials`). **To remove at the
+end of this task:** that key (not the user, which is Brian's console login) and
+the `[sg101-admin]` sections of `~/.aws/credentials` and `~/.aws/config`.
+
+**Requirement 1, read back rather than trusted from the script's output:**
+
+| | `sg101-backup-db` | `sg101-backup-media` |
+|---|---|---|
+| region | us-west-1 | us-west-1 |
+| versioning | Enabled | Enabled |
+| Block Public Access | all four on (AWS's default; `provision` does not set it) | same |
+| object ownership | BucketOwnerEnforced | same |
+| encryption | AES256 | same |
+| lifecycle | `dumps-kept-90-days` 90, `expired-delete-markers` | **none** |
+| bucket policy | none | none |
+
+**Requirement 2 / criterion 2 — the key tried, not the policy read.** IAM user
+`sg101-backup`: one inline policy `sg101-backup-writer` (`policy-writer.json`,
+buckets filled in), no managed policies, no groups, no console login. With its
+key, on both buckets: **allowed** put, overwrite, list; **refused** get, head,
+delete, delete-a-version, list-versions, suspend-versioning, delete-lifecycle;
+and outside them, list-buckets and `sg101.user.photos`, refused. The admin
+profile then showed each overwrite had kept the first copy as a non-current
+version. **Criterion 2 as written ("list ... refused") contradicted the design**:
+the policy grants `s3:ListBucket` because `aws s3 sync` lists. The task file is
+corrected. Probe objects removed, all versions.
+
+**Requirement 4:** `secrets/backup.env` written on leopard from
+`backup.env.example`, the key sent over ssh's stdin and the Mac's copy deleted.
+**`brian:brian 600`, not root-only as written**, matching `.env`: the unit runs
+as root either way, a root-only file would force `sudo` onto every manual
+`dcp run`, and `brian` is in `docker`, so root-only would withhold nothing from
+him. **Brian agreed, 2026-09-28.**
+
+**Runs, all on leopard:**
+
+| run | result |
+|---|---|
+| `dcp run --rm backup`, no heartbeat yet | 256 K dump (the empty database) and 121 media objects, matching `find media -type f`; 7 s |
+| `-e PGPASSWORD=wrong` | `password authentication failed`, `backup: FAILED, exit 1`, nothing uploaded; **the healthchecks alert arrived in Gmail** (criterion 1) |
+| `dcp run --rm backup` | success; check green |
+| `sudo systemctl start sg101-backup.service` | `Result=success`, dump `…T012839Z` in the journal — **the path the timer takes, run once by hand** so 04:30 is not its first test |
+
+**Criterion 4:** `sg101-backup.timer` enabled, listed, next run Mon 2026-09-28
+04:30 UTC. The unit files needed no edit; they already default to `/svr/sg101`.
+
+**Requirement 9:** the first dump is 2026-09-28, so expiry is due about
+**2026-12-28**. S3 acts after the midnight UTC past day 90, sometimes a day
+late. **Check on 2026-12-30** that `sg101-20260928T011812Z.dump` is gone. That
+reminder is in Brian's Google Tasks.
+
+**Criterion 5, bobcat — decided (Brian, 2026-09-28): not brought into the
+leopard plan; the machine's fate is decided outside it.** Nothing in the cutover
+depends on it. What a repoint would have added over S3 was two things. **Logs:**
+a sync of `var/log` to S3 was first called small and then withdrawn: numbered
+rotation renames files every cycle, and a job that cannot delete would pile up
+copies, as would versions of the live files. Doing it properly (date-named
+rotation, a third bucket with its own expiry, policy and provision changes) is
+real work. **Instead, Linode's Backup service on leopard, turned on by Brian**
+(his report; the only Linode token here is firewall-scoped, so not checked). Its
+whole-disk snapshots also hold `secrets/` and host configuration (`/etc/msmtprc`,
+the units, sysctl), which nothing else backs up. Same provider, which B7 allows:
+the offsite copy is S3's. **Secrets:** Brian has `.env` in his password manager.
+Everything under `secrets/` can be reissued (Google, Cloudflare Origin CA, IAM,
+healthchecks.io), just more slowly. Long-term offsite log history, if wanted
+later, is its own design. Runbook B7 and `plan.md` corrected; they said bobcat
+was repointed.
+
+**Left:** the full-size run with its duration and `pg_dump` memory, and a restore
+from the real bucket compared by row counts (both task 07, its requirement 11).
+**The admin key is gone (2026-09-28):** Brian deleted it from IAM user `brian`
+(his report) and removed `~/.aws/credentials` and `config`. The Mac confirms: the
+profile `sg101-admin` "could not be found", and only the CLI's `cli/` cache
+directory is left. **Task 07's restore needs an admin credential to read the
+bucket, so it starts with a fresh temporary key**, created and removed the same
+way.
+
 ## Step 21 task 04 — send-only mail from leopard, proved by a failing cron job — DONE 2026-09-28
 
 **Decided (Brian, 2026-09-27):** **`msmtp`** (`msmtp-mta` provides

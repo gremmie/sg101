@@ -345,9 +345,11 @@ path needs one: endpoint, bucket and credentials are configuration.
 
 A Linode VM backed up to Linode Object Storage shares a failure domain — one
 billing lapse, suspension or account event takes the site and its backups
-together. `bobcat` is already a second Linode and its rsync is repointed at the
-new VM (see the media and backup entries), so that copy is the warm same-provider
-one. **The object storage copy is the one that has to be somewhere else.**
+together. **The warm same-provider copy is Linode's Backup service on the VM**
+(turned on by Brian, 2026-09-28): whole-disk snapshots, so it also holds the logs,
+`secrets/` and host configuration the S3 job does not. **bobcat is not repointed**
+(Brian, 2026-09-28; this said it was until then). **The object storage copy is
+the one that has to be somewhere else.**
 
 Against a Linode VM, **an AWS S3 bucket satisfies this**, and `boto3` plus the
 credentials are already in the project from Step 15. Use a **new bucket**, not
@@ -357,7 +359,7 @@ Lightsail instead, S3 shares its provider and fails the constraint** — the
 bucket then goes elsewhere.
 *Source: Step 20 task 06.*
 
-### B12. Provision the backups, and prove the alarm reaches you
+### B12. Provision the backups, and prove the alarm reaches you — DONE on leopard 2026-09-28 except step 7 (task 07)
 The job, the buckets' rules and the restore are built and drilled locally
 (`tools/backup_drill.sh`, DOCKER.md *Backups, and restoring from them*). What
 cannot be drilled locally is everything with a real account behind it.
@@ -365,18 +367,29 @@ cannot be drilled locally is everything with a real account behind it.
 
 1. **Create the buckets** with an administrative credential — creates both,
    turns on versioning, applies `lifecycle-db.json`, and leaves the media bucket
-   with no rules at all. Re-running it corrects drift.
+   with no rules at all. Re-running it corrects drift. **Run it from your own
+   machine, not the VM**, so the admin key never reaches the VM or its shell
+   history. With an AWS CLI profile holding a temporary admin key, the key goes
+   in by variable name only:
    ```bash
-   dcp --profile backup build backup
-   dcp run --rm -e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=... \
-       -e BACKUP_DB_BUCKET=... -e BACKUP_MEDIA_BUCKET=... backup provision
+   docker build -t sg101-backup:prod backup/
+   ( eval "$(aws configure export-credentials --profile sg101-admin --format env)"
+     docker run --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN \
+         -e AWS_DEFAULT_REGION=us-west-1 -e BACKUP_DB_BUCKET=sg101-backup-db \
+         -e BACKUP_MEDIA_BUCKET=sg101-backup-media sg101-backup:prod provision )
    ```
    **Confirm Block Public Access is on for both** (the AWS default for new
    buckets since 2023; `provision` does not set it because the local stand-in
    does not support it).
 2. **Create the job's IAM user** with `backup/policy-writer.json` as its only
    policy, `@DB_BUCKET@`/`@MEDIA_BUCKET@` replaced. Nothing else — no read, no
-   delete.
+   delete. `aws iam create-user --user-name sg101-backup`, `put-user-policy` with
+   the filled-in file, `create-access-key` redirected to a mode-600 file, never
+   printed. **List is allowed on purpose**: `aws s3 sync` lists to find what
+   changed. Prove the rest with the key itself: put and overwrite succeed; get,
+   head, delete, delete-version, list-versions, suspend-versioning,
+   delete-lifecycle, list-buckets and any other bucket are refused; and the
+   overwrite leaves the first copy as a non-current version.
 3. **Create the healthchecks.io check**: period 1 day, grace 2 hours, alerting to
    Gmail. Put its ping URL, the buckets and the job's key in
    `secrets/backup.env` (template: `backup/backup.env.example`).
@@ -386,12 +399,17 @@ cannot be drilled locally is everything with a real account behind it.
    password, `dcp run --rm -e PGPASSWORD=wrong backup`, and **see the alert arrive
    in Gmail** — not just the check turning red on the dashboard. This is the
    acceptance test task 06 could not run.
-6. **Install the timer**, editing the path in the `.service` as for logrotate:
+6. **Install the timer.** The `.service` already defaults to `/svr/sg101`:
    ```bash
    sudo cp backup/sg101-backup.service backup/sg101-backup.timer /etc/systemd/system/
    sudo systemctl daemon-reload && sudo systemctl enable --now sg101-backup.timer
    systemctl list-timers sg101-backup.timer
+   sudo systemctl start sg101-backup.service     # the path the timer takes
+   systemctl show sg101-backup.service -p Result  # success
    ```
+   **Run the service once by hand.** Every earlier run is `dcp run` from your
+   shell; the timer runs the unit as root from `WorkingDirectory`, and that path
+   is otherwise first exercised unattended at 04:30.
 7. **Restore once from the real bucket** into a scratch database (DOCKER.md),
    so the first proof that the real backups restore is not a disaster.
 

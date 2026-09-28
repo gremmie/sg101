@@ -85,8 +85,9 @@ implementation. Read additional references as needed for context.
 
 2. **The job's credential is write-only**
    - Given the job's IAM key
-   - When it tries to list, read and delete an object
-   - Then each is refused
+   - When it tries to read and delete an object, or change the buckets
+   - Then each is refused (listing is allowed: `aws s3 sync` needs it, and
+     `policy-writer.json` grants it on purpose — corrected 2026-09-28)
 
 3. **A real restore works**
    - Given the newest dump in the real bucket

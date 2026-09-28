@@ -85,7 +85,16 @@ implementation. Read additional references as needed for context.
    backup run (task 05) happening at the same time as a light load on the site.
    Compare with task 03's idle figure.
 10. Everything the rehearsal changed outside the VM is undone: the test hostname
-    removed or left deliberately, the scratch calendar, anything in S3.
+    removed or left deliberately, the scratch calendar, anything in S3. **Not
+    the backup buckets**: task 05's timer runs nightly from 2026-09-28, so the
+    rehearsal's data is backed up like any other night. Its dumps expire at 90
+    days. Its media stays, because the sync never deletes, and the job's key
+    could not remove it anyway.
+11. **Carried from task 05 (2026-09-28), which had no data to measure:** the
+    first backup with the real media (~4.7 GB) — its duration, and host memory
+    during `pg_dump` (item 9) — and **a restore of that run's dump, fetched
+    from `sg101-backup-db` with the admin profile, into a scratch database,
+    compared by table row counts with the source** (task 05's criterion 3).
 
 ## Dependencies
 - Tasks 03 (VM), 04 (host mail) and 05 (backups)
