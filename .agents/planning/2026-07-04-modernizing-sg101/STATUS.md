@@ -43,6 +43,86 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 04 — send-only mail from leopard, proved by a failing cron job — DONE 2026-09-28
+
+**Decided (Brian, 2026-09-27):** **`msmtp`** (`msmtp-mta` provides
+`/usr/sbin/sendmail`) over a Postfix null client: no daemon, so nothing can
+listen on 25, and one config file. The cost is no queue: a message sent while
+Postmark is unreachable is lost, the error going to the caller. Accepted for a
+few messages a month, with the heartbeats covering the jobs that matter.
+**The application's own Postmark token, reused** (requirement 4): a second
+Postmark server would buy independent revocation but no isolation, since both
+copies live on leopard.
+
+**The repo:** `msmtp/msmtprc` (a template, `@POSTMARK_TOKEN@` filled from
+`.env` at install, so the token never crossed a terminal) and `msmtp/aliases`.
+Sender rewritten, envelope and header, to `no_reply@surfguitar101.com`, jaguar's
+`sender_canonical` address. `allow_from_override off`, because a parse test in
+an `ubuntu:26.04` container showed msmtp's default lets a caller's `sendmail -f`
+replace the envelope sender. Recipients go to **`admin@surfguitar101.com`**, not
+Gmail directly, a deviation from the task file: it is where Django's error mail
+already goes, and Cloudflare Email Routing then decides where it lands. Installed
+root:root 600, so only root can send. The container test confirmed a non-root
+caller gets exit 78; every sender on this host is root.
+
+| criterion | result |
+|---|---|
+| 1. a failing job reaches the inbox | `false` with output in `/etc/cron.d`: Postmark `250` at 00:02:02 UTC, arrived as `From: CronDaemon <no_reply@surfguitar101.com>`, body the job's output. One run, entry removed |
+| 2. the sender is accepted | not refused; **SPF, DKIM `d=surfguitar101.com` (selector `20260817033844pm`) and DMARC pass** at Cloudflare and at Gmail, on both the hand-sent test and cron's |
+| 3. no inbound path | `ss -ltn`: nothing on 25. MX is Cloudflare's `route1-3.mx.cloudflare.net` (162.159.205.x) only; no name points MX at the VM |
+| 4. egress | 587 carries a real submission (STARTTLS, AUTH PLAIN, `250`); 2525 connects (TCP, 2026-09-26) but was not needed |
+| 5. a broken credential | user and password both set wrong: msmtp `535 5.7.8 authentication failed`, `EX_NOPERM`; cron: `mailed 41 bytes of output but got status 0x004d from MTA`; no mail, nothing in Postmark. **Visible only in leopard's journal.** The heartbeats use `curl`, not mail, so they are unaffected. Restored and re-sent: arrived |
+
+`To: root` in cron's header passes through unchanged. Delivery follows the
+envelope, which the aliases rewrote. Cloudflare's spam score was 1 on both
+host messages, against 0 on the application's; left alone.
+
+**Requirement 7, how each job reports failure:** cron, by this mail (proved);
+unattended-upgrades, by this mail once configured (below); **logrotate and the
+backup, not by mail at all**, since systemd does not mail a unit's output. They
+have heartbeats (task 03's logrotate drop-in; B12). The task file assumed mail
+would carry all four.
+
+**unattended-upgrades:** `/etc/apt/apt.conf.d/53leopard-mail`, host-only like
+`52leopard-reboot`, sets `Mail "root"`, `MailReport "only-on-error"`
+(Brian's choice), and `apt-config dump` shows both. **The report itself has
+never been seen.** `--dry-run` sends no mail: the source (around line 2563) gates
+`send_summary_mail` on `not options.dry_run`, and on there being a result. Its
+path, `sendmail -oi -t` with `To: root` taking the recipient from the header, was
+tested by hand and arrived. Only a real failed upgrade will show the rest.
+
+**The token leaked into this session's transcript.** msmtp's journal line
+includes `user=`, which with Postmark is the token, and one line was pasted
+unfiltered at Claude's request. Rotation is Brian's call; runbook B14 says to
+filter, and how to rotate. **It cannot touch the live site**: jaguar does not use
+Postmark. Checked 2026-09-28, its Postfix has no `relayhost` and no SASL, signs
+with its own `opendkim`, and `mail.log` shows direct deliveries to recipients'
+MX on 25. It moves to Postmark only when leopard takes over. The token is used
+by leopard and by tests only.
+
+**Rotated by Brian, 2026-09-28.** `.env` 00:32, `/etc/msmtprc` 00:34, host
+mail arrived. The containers still held the old token until `make prod-up`, as
+measured on a throwaway project: `docker compose restart` keeps the environment a
+container was created with; `up -d` recreates it. Then **Django's
+`sendtestemail --admins` failed `535`**: only `EMAIL_HOST_PASSWORD` had been
+changed, and `EMAIL_HOST_USER` still hashed as the old token. Postmark takes the
+token as both. Host mail never saw it, because msmtprc is built from the password
+alone. `EMAIL_HOST_USER` set from the password, `make prod-up` again, and both
+values now hash identically in `.env` and in `web`. The Django test mail
+arrived. The runbook's rotation steps now name both variables and both checks.
+
+**A reboot, observed with the stack up — 2026-09-28.** The 10:00 UTC automatic
+reboot (`52leopard-reboot`) only happens after an update needs one, and leopard
+had last booted 2026-09-26 00:31, before the stack existed. Brian ran `sudo
+reboot`; a watcher from the Mac polled SSH every 5 s. **SSH was gone for about
+95 s**; the new boot time was 00:49:44; **all six services were healthy about
+70 s after SSH returned**, roughly 2½–3 minutes of outage in all. Afterwards:
+the home page, `robots.txt` and the stylesheet were 200 from inside the host;
+both swap devices were back with `vm.swappiness` 10; `logrotate.timer`,
+`apt-daily-upgrade.timer` and Docker were active; `systemctl --failed` was
+empty; a queued task ran; nothing listened on 25. Nothing had to be done by
+hand.
+
 ## Step 21 task 07a — a member beta before the cutover — PLANNED 2026-09-26
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
@@ -397,7 +477,7 @@ file with `size 1`: the unit failed, **the check went red, and the alert email
 arrived in Gmail**. Cleaned up, run again, green. Runbook B10 step 4 now uses
 the `postrotate` failure.
 
-**Open for Brian: host mail at all.** leopard has no mailer, where jaguar had
+**Host mail: answered by task 04 (above), which already planned it.** leopard had no mailer, where jaguar had
 Postfix. Measured 2026-09-27, it loses almost nothing today: no user crontab;
 the `cron.daily`/`weekly` scripts (`dpkg`, `logrotate`, `man-db`, `apt-compat`,
 `e2scrub_all`) exit on a systemd host, `apport` aside; timers log to the

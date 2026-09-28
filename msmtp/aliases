@@ -1,0 +1,11 @@
+# Local recipients for the host's mail, installed on the VM as /etc/aliases. msmtp
+# reads it (msmtprc's `aliases`) to turn a bare local name into an address.
+#
+# Everything goes to admin@surfguitar101.com, where Django's own error mail
+# already goes; Cloudflare Email Routing forwards it on. Where host mail ends up
+# is then set in one place, Cloudflare, not here.
+
+root: admin@surfguitar101.com
+brian: admin@surfguitar101.com
+www-data: admin@surfguitar101.com
+default: admin@surfguitar101.com

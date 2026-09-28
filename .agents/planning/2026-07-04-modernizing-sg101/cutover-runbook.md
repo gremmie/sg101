@@ -127,6 +127,15 @@ leopard's `.env`**, reported 2026-09-27; the variable names were checked there
 needs `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` (the Postmark server token, in
 both) and the `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_USE_TLS` lines `.env.example`
 shows commented out.
+
+**`SECRET_KEY`: `python3 -c 'import secrets; print(secrets.token_urlsafe(50))'`**,
+not Django's `get_random_secret_key()`. Measured 2026-09-28: in an `env_file`
+value, Compose replaced `$HOMEcd` with nothing and cut `ab #cd` at the space,
+both silently, and django-environ resolved a leading `$` to another variable.
+Django's alphabet has `$` and `#`. leopard's key is 67 characters of
+`[A-Za-z0-9_-]`, the `token_urlsafe(50)` shape; the command that made it was not
+recorded. Changing it later logs everyone out and voids outstanding reset and
+signup links; Django's `SECRET_KEY_FALLBACKS` eases that.
 *Source: memory `modernizing-sg101-planning`; `AGENTS.md`; Step 21 task 03.*
 
 ### B3. Real client IP at the new front door
@@ -532,6 +541,48 @@ make prod-maint-status                      # reads var/maintenance/, changes no
 If `make` cannot be installed, every target is a command written out in
 DOCKER.md, which the `Makefile` only abbreviates.
 *Source: the `Makefile` at the repo root.*
+
+### B14. Send-only mail from the host — DONE on leopard 2026-09-28
+`msmtp` as `/usr/sbin/sendmail`, relaying to Postmark on 587 with the
+application's own token. It carries cron's mail and unattended-upgrades' failure
+reports. **It does not carry logrotate's or the backup's failures**: systemd
+does not mail a unit's output, so those have heartbeats (B10, B12).
+
+```bash
+sudo apt-get install -y msmtp msmtp-mta        # AppArmor support: the default, No
+sudo sh -c 'umask 077; t=$(sed -n "s/^EMAIL_HOST_PASSWORD=//p" /svr/sg101/.env); sed "s/@POSTMARK_TOKEN@/$t/g" /svr/sg101/msmtp/msmtprc > /etc/msmtprc'
+sudo install -m 644 msmtp/aliases /etc/aliases
+sudo awk '$1=="user"{print "token length", length($2)}' /etc/msmtprc    # 36
+ss -ltn | grep -E ':25\b' || echo "nothing on 25"
+printf 'Subject: test\n\nfrom the host\n' | sudo sendmail root; echo "exit $?"
+```
+
+Then `/etc/apt/apt.conf.d/53leopard-mail`:
+```
+Unattended-Upgrade::Mail "root";
+Unattended-Upgrade::MailReport "only-on-error";
+```
+
+**msmtp logs the token.** Its journal line carries `user=`, and Postmark's user
+is the token. Filter before pasting anywhere:
+`sudo journalctl -t msmtp -n 3 | sed 's/user=[^ ]*/user=REDACTED/'`.
+
+**Rotating the Postmark token:** the new token into **both** `EMAIL_HOST_USER`
+and `EMAIL_HOST_PASSWORD` in `.env` — Postmark takes it as both, and updating
+only the password leaves the application failing `535` while host mail works,
+because `/etc/msmtprc` is built from the password alone. Then reinstall
+`/etc/msmtprc` (the second command above), then **`make prod-up`**, which
+recreates `web`, `worker` and `beat` with the new value. **Not `docker compose
+restart`**: it restarts the same containers with the environment they were
+created with. Measured on Compose v5.2: after `restart` the old value, after
+`up -d` the new one. msmtp reads its file on every send, so it needs nothing.
+Check both paths: `sudo sendmail root` for the host, and
+`dcp exec -T web python manage.py sendtestemail --admins` for the application.
+
+**`unattended-upgrade --dry-run` never mails**, whatever `MailReport` says, and
+a real run mails only when there is a result. Test the path it uses instead:
+`printf 'To: root\nSubject: t\n\nx\n' | sudo sendmail -oi -t`.
+*Source: Step 21 task 04.*
 
 ## C. The maintenance window
 
