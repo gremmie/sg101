@@ -49,6 +49,7 @@ reading log stops*.
 | 21 | 2026-09-08 | 09-04 → 09-07 | five for five; three consecutive Google days reconcile exactly; Microsoft drops a tenant domain Google would have folded in |
 | 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces**; **second addendum: 09-07 recovered — the classes separate inside the report, and the class tally was wrong since reading 19** |
 | 23 | 2026-09-21 | 09-11 → 09-20 | Comcast counts evaluations, not messages — 16 for two; ten exact Google days; a twelfth endpoint; the local `rua` copy has been dead since the MX flip — **addendum: the collection path was automated the same day and recovered four lost reports; `web.de` is a reporter and counts every window twice; prediction 6 falsified** |
+| 24 | 2026-09-28 | 09-20 → 09-27 | leopard appears through Cloudflare's forward — sixteen messages, fifteen matched to the send log; UTC−7 holds on a new source; two new forwarders; six of seven predictions held, the seventh already falsified |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -5962,3 +5963,161 @@ qualified tag, these reports would have parsed cleanly and read as zero messages
   `discovery_method` and `testing` appear in exactly those same 9.** That triple
   signature, plus the parallel `sicher.gmx.net`/`sicher.web.de` reporter
   addresses, is what identifies GMX and WEB.DE as one operator rather than two.
+
+### Twenty-fourth reading — 2026-09-28, covering 2026-09-20 through 2026-09-27: leopard appears for the first time, through Cloudflare's forward, and the send log accounts for fifteen of its sixteen messages exactly; two new forwarders; six of seven predictions held, the seventh already falsified
+
+**`tools/dmarc_fetch.py` found 35 new reports** in 78 candidate messages from All
+Mail and Spam since 09-06, with 43 already held and no conflicts. **The corpus
+is 140 reports, 184 rows, 1,652 messages, every disposition `none`.** Evaluated
+pairs by row: 152 `pass`/`pass`, 24 `fail`/`pass`, 7 `pass`/`fail`, 1
+`fail`/`fail`. Published policy: **16 `p=none`, 124 `p=quarantine`**.
+
+This reading covers the 36 reports with windows from 09-20 on: the 35 new ones
+and Google's 09-20, already held. They hold 52 rows and 1,006 messages; every row
+aligns on at least one mechanism, and every disposition is `none`.
+
+| Reporter (endpoints) | Reports | Windows | Msgs |
+|---|---|---|---|
+| `comcast.net` | 6 | 09-21 → 09-26 | 637 |
+| `google.com` | 8 | 09-20 → 09-27 | 284 |
+| `Yahoo` (`yahoo.com`, `aol.com`, `att.net`, `cox.net`, `verizon.net`) | 14 | 09-21 → 09-27 | 58 |
+| `Outlook.com` (`protection.outlook.com`) | 6 | 09-20, 09-22 → 09-26 | 20 |
+| `GMX` (`gmx.net`) | 2 | 09-23, 09-25 | 7 |
+
+**Report-IDs are not tabulated here.** `tools/dmarc_report.py` prints them, and
+the files are named by receiver and window, so any row above can be re-read in
+one command. **jaguar's `mail.log` was not read for this reading**, so none of
+the direct-delivery counts below are reconciled against the send side. Comcast's
+637, including **255** for 09-25, is the largest a single endpoint has filed.
+Without the send log it cannot be split into messages and retries. The
+twenty-third reading showed Comcast counts receptions, not messages.
+
+#### Scoring the twenty-third reading's predictions: six held, one already falsified
+
+1. **HELD.** Comcast's 09-21 report reads **39**, against 2 messages sent. That
+   is above the 27–31 the prediction called confirming, and in the direction the
+   receptions finding requires. The excess over 31 is unmeasured without
+   jaguar's log.
+2. **HELD.** Microsoft's 09-20 report reads exactly **1**.
+3. **HELD.** Google's 09-21 report reads **12**, above the floor of 4.
+4. **HELD.** `yahoo.com` and `aol.com` each read **1** for 09-21.
+5. **HELD.** No GMX report exists for 09-19. GMX's last window before this reading
+   was 09-02; it resumed at 09-23 and 09-25.
+6. Already **FALSIFIED** in the twenty-third reading's addendum. The `cpp.edu`
+   tenant's 09-06 report was in Gmail all along.
+7. **HELD.** All 36 reports read `p=quarantine`, and no row has a disposition
+   other than `none`.
+
+#### leopard appears: sixteen messages from Cloudflare's forwarding range, and the send log accounts for fifteen
+
+Google's 09-27 report carries five rows no reading has seen:
+
+```
+104.30.8.10     4  none  pass  pass
+104.30.8.49     4  none  pass  pass
+104.30.10.31    2  none  pass  pass
+104.30.8.104    4  none  pass  pass
+104.30.10.185   2  none  pass  pass
+    dkim  d=surfguitar101.com     s=cf2024-1           pass
+    dkim  d=cloudflare-email.net  s=cf2024-1           pass
+    dkim  d=pm.mtasv.net          s=pm20250806         pass
+    dkim  d=surfguitar101.com     s=20260817033844pm   pass
+    spf   d=surfguitar101.com                          pass
+```
+
+**Every one is mail leopard sent to `admin@surfguitar101.com` through Postmark,
+which Cloudflare Email Routing then forwarded to Gmail.** The reporting receiver
+sees only the last hop, which is why the source is Cloudflare's `104.30.0.0/19`
+and not Postmark's `50.31.156.*`. SPF passes against `surfguitar101.com` because
+Cloudflare rewrites the envelope sender with SRS, and `104.30.0.0/19` falls inside
+`include:_spf.mx.cloudflare.net`. This is the first time the finding recorded
+under *`include:_spf.mx.cloudflare.net` is load-bearing* shows up in an aggregate
+report rather than in a header capture.
+
+**There are two `surfguitar101.com` signatures, and they are different.**
+`20260817033844pm` is Postmark signing as this domain. `cf2024-1` is Cloudflare
+Email Routing signing the forward. The report tool prints both as
+`dkim:surfguitar101.com=pass`, which reads like a duplicate but is not one; the
+selector is only in the raw XML.
+
+**The attribution, on Google's UTC−7 day, which here runs 09-27 07:00 UTC to
+09-28 07:00 UTC:**
+
+| Source | Time (UTC) | Msgs | Evidence |
+|---|---|---|---|
+| Django `ERROR (internal IP)` mail, the first stack start | 09-27 20:03:48 → 20:04:35 | 10 | leopard `sg101.log.1`: ten `Internal Server Error: /` lines, 15:03:48–15:04:35 at UTC−5 |
+| msmtp, the hand-sent test | 09-27 23:42:19 | 1 | journal, `250 … queued as 390DF427E0B` |
+| msmtp, cron's failing job | 09-28 00:02:02 | 1 | journal, `29CED412EE3` |
+| msmtp, the wrong credential | 09-28 00:08:04 | 0 | journal, `535`, `EX_NOPERM`, nothing sent |
+| msmtp, re-sent after restoring the credential | 09-28 00:09:18 | 1 | journal, `C73A1407301` |
+| msmtp | 09-28 00:20:58 | 1 | journal, `DE275411344` |
+| msmtp, host mail after the token rotation | 09-28 00:38:13 | 1 | journal, `7E7964056E3` |
+| **Measured** | | **15** | |
+| Django `sendtestemail --admins` after the rotation | after 00:38:13 | 1 | recorded in `STATUS.md` (task 04) as arrived; **not timed by any log** |
+
+**Fifteen of the sixteen are measured and the sixteenth is attributed.**
+`sendtestemail` writes nothing to leopard's logs, so it is placed only by the
+order in which task 04's record lists it. The journal was read with
+`journalctl -t msmtp` over 09-26 → 09-29 and filtered on the host
+(`user=` redacted, per runbook B14); it holds six lines, five sent. Which test
+the 00:20:58 send was is not recorded in the journal line.
+
+**This is also a forward test of the UTC−7 day on a source it was not fitted
+to.** Five of the sixteen fall on 09-28 in UTC and in 09-27 on Google's day. A
+UTC-day aggregation would have put 11 in this report, not 16. The day was fitted
+on jaguar's direct deliveries; this is Postmark → Cloudflare → Gmail, and it
+lands the same way.
+
+**It bears on `STATUS.md`'s third open item, but does not close it.** That item
+is that Postmark has never appeared in an aggregate report. Postmark's signature
+now has, on sixteen messages. **Postmark as a *source IP*, delivering directly to
+a receiver's MX, has still not appeared since 08-27**, because nothing Postmark
+sent in this window went anywhere but `admin@`. That half needs the cutover.
+
+#### Two new forwarders, and web.de once more
+
+| Source | Operator (whois, PTR) | SPF domain | Windows | Msgs |
+|---|---|---|---|---|
+| `23.83.222.44`, `23.83.212.16`, `23.83.222.49` | MailChannels, `23.83.208.0/20`; `crimson.ash.relay.mailchannels.net` | `littlekahunamusic.com` | 09-22, 09-24 | 3 |
+| `66.39.4.2` | pair Networks; `mail1.g6.pair.com` | `srs.pair.com` | 09-26 | 1 |
+| `212.227.15.14` | `mout.web.de` | `web.de` | 09-22 | 1 |
+| Gmail relay `209.85.220.41` | | `gmail.com` | 09-23 → 09-26 | 15 |
+
+**All twenty fail SPF alignment and pass on DKIM `d=surfguitar101.com`**,
+delivered `disposition=none` under `p=quarantine`. That makes four independent
+forwarders carried through DMARC by DKIM alone. pair applies SRS and still fails
+alignment, because it rewrites into its own domain, not this one.
+MailChannels forwarding for a named band domain is plausibly a member's
+forwarding address; **who it is was not investigated.**
+
+**The twenty-third reading said the web.de forwarder had stopped at 09-12.** One
+row on 09-22 says it has not stopped, though it has slowed. That reading's *"the
+class is complete at nine"* is wrong: the class is now ten.
+
+#### Failure classes
+
+- **DSN class: one more.** Google 09-25, `173.255.245.115`, `pass`/`fail`, SPF
+  on `mail.surfguitar101.com` and no `<dkim>` element. By the twenty-second
+  reading's discriminator, that is a bounce.
+- **Over-long-line class: none this week.** After 09-19's recurrence, 09-20
+  through 09-27 is clean. The class is intermittent, so this does not take it off
+  the table for the cutover's before/after.
+
+#### Endpoints with no report yet
+
+No Microsoft report for 09-21 and no Comcast report for 09-27 had arrived by
+this fetch. Microsoft's 09-07 report arrived four days after its window closed,
+so the 09-27 absences are not yet absences. **Whether any traffic went to those
+endpoints in those windows is unmeasured**, because jaguar's log was not read.
+Neither is called a gap.
+
+#### Predictions for the twenty-fifth reading
+
+1. **Google's 09-28 report carries no rows for the six msmtp sends of
+   09-28 00:02–00:38 UTC.** They are already counted in 09-27 on Google's day.
+   If they appear again in 09-28, the UTC−7 day fails on this source.
+2. **Any `104.30.*` row in Google's 09-28 report is matched by an msmtp journal
+   line or a Django `ERROR` line after 09-28 07:00 UTC.** The journal read here
+   has no send after 00:38:13.
+3. **Every report reads `p=quarantine`** and no row carries a disposition other
+   than `none`.

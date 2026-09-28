@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty-three DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty-four DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -7264,6 +7264,16 @@ now known to be five reports rather than estimated. What remains of it is a
 one-line habit — run the fetcher before each reading — and the standing caution
 that totals recorded before today are floors. **Items 1, 2 and 3 still gate the
 log's end and all three still close at the Step 21 cutover.**
+
+**UPDATED 2026-09-28 by the twenty-fourth reading.** `p=quarantine` now stands at
+**124 reports** (140 in the corpus, 1,652 messages), every disposition `none`.
+**Item 3 moved halfway.** Postmark's signature has now appeared in an aggregate
+report: sixteen leopard messages to `admin@`, forwarded by Cloudflare to Gmail,
+in Google's 09-27 window. Fifteen are matched to leopard's msmtp journal and
+Django log. Postmark as a *source IP* delivering straight to a receiver's MX is
+still absent, and only the cutover produces that. **Item 1**: no over-long-line
+failure 09-20 → 09-27; the class is intermittent and stays live. **Item 2** is
+unchanged.
 
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report
