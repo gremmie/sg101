@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script, its stand-in test and the Makefile targets written 2026-09-29, `3ff52995` + this planning commit
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -142,10 +142,53 @@ DELETE has an item cap (the cleanup is 331); requirement 6 — two operations ba
 to back, and re-adding an address already listed, which a restarting fail2ban
 does. All need the write token against the real list.
 
-**Next:** the fail2ban token (requirement 8), then requirements 5 and 6 measured
-from Brian's machine with documentation-range addresses, and acceptance
-criterion 3's live half: jaguar's action seen to miss an address past the
-first page, the new one to find it.
+### Live on leopard — 2026-09-29 ~22:28 UTC
+
+Brian created the fail2ban token (Account Rule Lists read and edit), put it in
+leopard's `secrets/cloudflare.env`, and pulled to `7a9fffe2`. Run on leopard, as
+decided the same day: the token lives there, and its IP filter need not admit
+the Mac. `make blocklist-test` there: **28 OK under Python 3.14.4**, the first
+run under that interpreter. Measured with documentation-range addresses
+commented `measure-*`; **338 items before, 338 after**.
+
+**Requirement 5 — Cloudflare canonicalizes IPv6, and stores a /128.** Sent
+`2001:DB8:0:0::5`, `2001:db8::6`, `2001:db8:0:0:0:0:0:7`; stored `2001:db8::5`,
+`2001:db8::6`, `2001:db8::7`. `search=2001:db8::5` found it;
+`search=2001:DB8:0:0::5` and `search=2001:db8:0:0::5` found **nothing** — the
+search is a literal prefix of the stored form. So the canonical spelling the
+script sends and searches is required, not a tidiness. The stand-in had stored
+what it was sent; it now canonicalizes, keeps one item per address, and
+`test_ban_sends_the_canonical_spelling` checks the request body, since the
+stored form no longer can. Battery re-run: 21 of 21.
+
+**Requirement 6 — no conflicts seen.** Two adds sent back to back, neither
+awaited: both completed. A delete and an add sent back to back: both completed.
+**Adding an address already listed succeeded and left one item, with the new
+comment** — so fail2ban re-banning after a restart is harmless. The catch: a
+`ban` of an address added by hand re-comments it `fail2ban`, and plain
+`blocklist-clear` would then remove it. Operations took 0.1–0.6 s, polling
+included; `created_on` came back without fractional seconds.
+
+**Criterion 3 — the live half.** Added `192.0.2.63`. The request jaguar's action
+makes (one `GET`, no parameters) returned 25 items and a cursor, **without it**;
+in the full list of 344 it sat at **position 296**. The script's `find` returned
+it. This is the old action's request, not its shell script run on jaguar.
+
+**Criterion 5 / requirement 8 — least privilege, read-only probes.** Account
+details 403 (9109); members and rulesets 403 (10000); `/zones` 200 with zero
+results; lists 200. The same profile as the read token. `/user/tokens/verify`
+answers 401 `Invalid API Token`: that endpoint is for user-owned tokens (an
+account-owned token verifies under the account). **IP filter: leopard's IPv4
+and IPv6 addresses only; no expiry** (Brian's report; the filter was not probed
+from elsewhere, which would need the token off leopard). No expiry because an
+expired token fails every ban and unban, and nothing on leopard reads
+`fail2ban.log`.
+
+**Still open:** the 60 s operation timeout is untested; whether one bulk DELETE
+has an item cap (the 331-item cleanup will show it); requirements 2, 7, 9, 10
+and the `action.d`, jails and filters — fail2ban is not installed on leopard
+(Ubuntu 26.04 offers 1.1.0-9), and `var/log/django/auth.log` is empty, so
+requirement 7 needs failure lines made through the test hostname first.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 

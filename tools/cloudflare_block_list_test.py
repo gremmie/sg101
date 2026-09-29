@@ -4,7 +4,9 @@ Cloudflare's Lists API. Nothing here reaches Cloudflare or needs a token.
 
 The stand-in serves the list lookup, the list's items (paged, with the prefix
 search Cloudflare does on IP lists), adding and deleting items, and the bulk
-operations those two start. An operation answers "pending" the first time it
+operations those two start. It stores what Cloudflare was measured to store: an
+address in its canonical spelling, and one item per address, so adding an
+address already listed replaces its comment. An operation answers "pending" the first time it
 is polled and only then takes effect, so a script that did not wait for it would
 find the list unchanged. Every request is recorded, so a refusal can be shown to
 have sent nothing.
@@ -20,6 +22,7 @@ Standard library only.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import re
@@ -78,6 +81,7 @@ class StandIn:
     def reset(self) -> None:
         self.items: list[dict] = []
         self.requests: list[tuple[str, str]] = []
+        self.added: list[dict] = []
         self.operations: dict[str, dict] = {}
         self.completed = 0
         self.fail_next = False
@@ -157,9 +161,13 @@ class StandIn:
         if not isinstance(payload, list) or not all('ip' in item for item in payload):
             return 400, failure(10026, 'filters.api.invalid_body')
 
+        self.added += payload
+
         def apply() -> None:
             for item in payload:
-                self.seed(item['ip'], item.get('comment', ''))
+                ip = str(ipaddress.ip_address(item['ip']))
+                self.items = [old for old in self.items if old['ip'] != ip]
+                self.seed(ip, item.get('comment', ''))
         return self.start(apply)
 
     def delete(self, payload) -> tuple[int, dict]:
@@ -315,12 +323,12 @@ class CloudflareBlockListTest(unittest.TestCase):
         self.ok('unban', '198.51.100.7')
         self.assertEqual(set(self.searches()), {'198.51.100.7'})
 
-    # Both assume Cloudflare keeps an address as sent; requirement 5 measures it.
-    # A search is a string prefix, so the two sides must agree on one spelling.
+    # Cloudflare stores the canonical spelling, and its search is a string prefix
+    # of that: 2001:DB8:0:0::5 finds nothing. Both sides must use that spelling.
 
     def test_ban_sends_the_canonical_spelling(self) -> None:
         self.ok('ban', '2001:DB8:0:0::5')
-        self.assertEqual(self.stand_in.ips(), ['2001:db8::5'])
+        self.assertEqual([item['ip'] for item in self.stand_in.added], ['2001:db8::5'])
 
     def test_unban_takes_any_spelling_of_the_address(self) -> None:
         self.stand_in.seed('2001:db8::5')
