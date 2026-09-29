@@ -6,7 +6,8 @@ Cloudflare IP list `block_list`, which a WAF rule already drops at the edge.
 **Fix the defect that makes jaguar's list grow without limit**, move from the
 Global API Key to a narrowly-scoped API token, clear out the entries already
 stranded on the list, and prove the whole cycle: a ban appears on the list, and
-disappears when it expires.
+disappears when it expires. Give Brian Makefile targets to show the list, block
+and unblock an address by hand, and clear it.
 
 **Enable it only after runbook B3's real-client-IP check has passed on the VM.**
 In the other order it bans Cloudflare.
@@ -56,9 +57,29 @@ Three smaller defects in the same file:
   syntax 0.8 ignores and misspells `cf_target` anyway; harmless.)
 
 **The fix:** look the IP up with the endpoint's `search` parameter (IP lists
-match by prefix), select the exact match with `jq`, delete by ID, `--fail` on
-every call, and authenticate with an API token scoped to editing the account's
-filter lists.
+match by prefix), select the exact match, delete by ID, treat every non-2xx
+answer as a failure, and authenticate with an API token scoped to editing the
+account's filter lists.
+
+**Decided 2026-09-28 (Brian): the action is Python, and the same script serves
+the Makefile.** A standalone standard-library script (e.g.
+`tools/cloudflare_block_list.py`) with subcommands, called by a thin
+`action.d/*.conf` whose `actionban`/`actionunban` run it — the shape of
+`tools/origin_firewall.py`. Not a native fail2ban Python action (`action.d/*.py`):
+that runs inside fail2ban's server process, can be tested only there, and would
+still leave the manual commands needing a CLI. One script means the code that
+clears blocks by hand is the code fail2ban runs, and it gets a local stand-in
+for Cloudflare's API to test against, as `firewall-test` has for Linode's.
+
+**The token lives in `secrets/cloudflare.env`** (git-ignored, with a committed
+`cloudflare.env.example`), `brian:brian 600` on leopard — the `secrets/backup.env`
+pattern and the same reasoning: `brian` is in `docker`, so root-only would
+withhold nothing from him and would force `sudo` onto every manual command;
+fail2ban runs as root and reads it regardless. Unlike `origin_firewall.py`, which
+runs only from the Mac because its Linode token could open the firewall, this
+runs on leopard, where fail2ban needs the token anyway. The token's worst case
+is editing the block list — a broad range added would block visitors at the
+edge — and whoever holds leopard can take the site down directly.
 
 **What carries over, and what does not.** `wiki-abuse` goes: the wiki is
 retired. `postfix` goes: nothing on the VM listens for mail (task 04). `ssh`
@@ -95,13 +116,18 @@ implementation. Read additional references as needed for context.
    days). Record the numbers.
 2. fail2ban from the distribution's current packages on the VM, with a
    persistent ban database (default since 0.9).
-3. A Cloudflare action in the repo (e.g. `fail2ban/action.d/`), alongside the
-   jail and filter files, installed onto the host. The token is not in the repo:
-   it goes in a root-only file on the host (e.g. under `/etc/fail2ban/`).
-4. `actionban` adds `{"ip": "<ip>", "comment": "fail2ban"}` with `--fail`.
-   `actionunban` finds the item with `search=<ip>`, matches it exactly, deletes by
-   ID, fails loudly if the delete is refused, and handles "not found" in a way
-   that is logged rather than silent.
+3. A standard-library Python script (e.g. `tools/cloudflare_block_list.py`)
+   doing all list work, and a Cloudflare action in the repo (e.g.
+   `fail2ban/action.d/`) that calls it, alongside the jail and filter files,
+   installed onto the host. The token is not in the repo: it is read from
+   `secrets/cloudflare.env` (git-ignored; `secrets/cloudflare.env.example`
+   committed; `brian:brian 600` on leopard). Exit status 0 OK, non-zero on any
+   refusal or error, so fail2ban records a failed action as failed. The script's
+   docstring says what each subcommand does and which settings it reads.
+4. `ban` adds `{"ip": "<ip>", "comment": "fail2ban"}`. `unban` finds the item
+   with `search=<ip>`, matches it exactly, deletes by ID, fails loudly if the
+   delete is refused, and handles "not found" in a way that is logged rather
+   than silent. Every non-2xx answer is a failure.
 5. Measure how Cloudflare stores an IPv6 address on this list, and make the
    exact match compare against that form, not the form fail2ban holds.
 6. The API calls to add and delete are asynchronous bulk operations. Check
@@ -111,11 +137,28 @@ implementation. Read additional references as needed for context.
    `fail2ban-regex` against real lines from the new host's `auth.log`.
 8. The API token can edit the account's filter lists and nothing else.
 9. A one-time cleanup of stranded entries: only `fail2ban`-commented items older
-   than the longest bantime. **jaguar writes to the same list until it is shut
-   down**, so either fix jaguar's `actionunban` the same way (Brian's box; his
-   call) or run the cleanup again after shutdown.
+   than the longest bantime — `blocklist-clear` (requirement 11) with an age
+   filter, not a separate tool. **jaguar writes to the same list until it is
+   shut down**, so either fix jaguar's `actionunban` the same way (Brian's box;
+   his call) or run the cleanup again after shutdown.
 10. **Not enabled until B3 passes on the VM.** B3's order is stated in the
     runbook; make this task's record point at it.
+11. **Makefile targets, run on leopard, calling the same script** (decided
+    Brian, 2026-09-28):
+    - `blocklist-show` — every item on `block_list`, with its comment and date.
+    - `blocklist-add ip=...` — block by hand, with comment `manual`. These never
+      expire: fail2ban does not know about them. The target's help and the
+      script's docstring say so, and point at
+      `fail2ban-client set sg101-auth banip <ip>` for a block that expires.
+    - `blocklist-remove ip=...` — unblock by hand, the same lookup as `unban`.
+    - `blocklist-clear` — **defaults to `fail2ban`-commented items only**;
+      `all=1` removes everything on the list, `manual` entries included. It
+      first runs `fail2ban-client unban --all` (when fail2ban is running), so
+      fail2ban's ban database does not go on believing those addresses are
+      banned. While jaguar is still writing to the list, `all=1` also removes
+      jaguar's current bans; the help text says so.
+    - A test target (e.g. `blocklist-test`) running the script against a local
+      stand-in for Cloudflare's API, as `firewall-test` does.
 
 ## Dependencies
 - Task 03 (VM, stack, logrotate) and runbook B3 passed through a test hostname
@@ -124,7 +167,8 @@ implementation. Read additional references as needed for context.
 
 ## Implementation Approach
 1. Take the measurements in requirement 1 first.
-2. Write the action against the list API and exercise it from Brian's machine
+2. Write the script and its stand-in test first; the mutation test in step 3
+   runs there before it runs against Cloudflare. Then exercise it from Brian's machine
    with a test address from a documentation range (`192.0.2.0/24`,
    `2001:db8::/32`): add, look up, delete, and look up on a later page.
 3. Mutation-test the lookup: put the test IP beyond the first page of results
@@ -133,6 +177,8 @@ implementation. Read additional references as needed for context.
    `sg101-auth` ban from a phone's mobile connection (real IP, not Brian's
    home address), watch the IP appear on the list, and wait out the 600 s ban.
 5. Run the cleanup; record before and after counts.
+6. Exercise each Makefile target on leopard with documentation-range addresses,
+   checking the result against the API.
 
 ## Acceptance Criteria
 
@@ -175,7 +221,15 @@ implementation. Read additional references as needed for context.
    - Then the failure lines match and extract the client's address, not a
      Cloudflare or container address
 
+8. **The manual targets do what they say**
+   - Given documentation-range addresses on the list, some `fail2ban`-commented
+     and some added by `blocklist-add`
+   - When `blocklist-add`, `blocklist-remove`, `blocklist-clear` and
+     `blocklist-clear all=1` run
+   - Then the API shows each change; plain `blocklist-clear` left the `manual`
+     entries in place and `all=1` removed them
+
 ## Metadata
 - **Complexity**: Medium
 - **Labels**: fail2ban, Cloudflare, WAF, Security, Anti-spam, Operations
-- **Required Skills**: fail2ban, Cloudflare API, Bash, jq, regular expressions
+- **Required Skills**: fail2ban, Cloudflare API, Python (standard library), Make, regular expressions
