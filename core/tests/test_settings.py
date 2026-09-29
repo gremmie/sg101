@@ -443,6 +443,69 @@ EXPECTED_ROUTING = {
 }
 
 
+# How every configured handler writes one fixed instant, after django.setup() has
+# set the process's local time to TIME_ZONE. Libraries' NullHandlers write
+# nothing and are skipped; any other handler without a formatter gets logging's
+# default, which writes local time, and is reported as such. Also reports that local offset, so a
+# test can show the process was not already in UTC -- if it were, UTC output
+# would prove nothing.
+TIMESTAMP_SNIPPET = (
+    "import json\n"
+    "import logging\n"
+    "import os\n"
+    "import sys\n"
+    "import time\n"
+    "import django\n"
+    "django.setup()\n"
+    "epoch = float(os.environ['PROBE_EPOCH'])\n"
+    "record = logging.LogRecord('probe', logging.ERROR, 'probe', 1, 'probe', None, None)\n"
+    "record.created, record.msecs = epoch, 0\n"
+    "loggers = [logging.root] + [l for l in logging.root.manager.loggerDict.values()\n"
+    "                            if isinstance(l, logging.Logger)]\n"
+    "stamps = {}\n"
+    "for logger in loggers:\n"
+    "    for h in logger.handlers:\n"
+    "        if isinstance(h, logging.NullHandler):\n"
+    "            continue\n"
+    "        f = getattr(h, 'baseFilename', None)\n"
+    "        name = os.path.basename(f) if f else type(h).__name__\n"
+    "        stamps[name] = (h.formatter or logging.Formatter()).formatTime(record)\n"
+    "sys.stdout.write(json.dumps({'offset': time.localtime(epoch).tm_gmtoff,\n"
+    "                             'stamps': stamps}))\n"
+)
+
+
+class LogTimestampTests(SimpleTestCase):
+    """Every log line's time is UTC, in both deployments.
+
+    Django sets the process's local time to TIME_ZONE, America/Chicago, and the
+    format carries no offset. The production host runs in UTC, and fail2ban on
+    it reads auth.log's times as its own: Chicago times read as UTC are five or
+    six hours old, older than any findtime, and would never be banned on.
+    """
+
+    # 2026-09-29 22:30:00 UTC, 17:30 in Chicago.
+    EPOCH = 1790721000
+    UTC = '2026-09-29 22:30:00,000'
+
+    def test_every_handler_writes_utc(self):
+        for module in DEPLOYMENT_SETTINGS:
+            with self.subTest(module=module):
+                code, out, err = _run({'DJANGO_SETTINGS_MODULE': module,
+                                       'SECRET_KEY': 'x',
+                                       'DB_ENGINE': 'postgresql',
+                                       'PROBE_EPOCH': str(self.EPOCH)},
+                                      snippet=TIMESTAMP_SNIPPET)
+                self.assertEqual(code, 0, msg=err)
+                result = json.loads(out)
+                self.assertNotEqual(result['offset'], 0,
+                                    'the process is in UTC already; this proves nothing')
+                self.assertIn('auth.log', result['stamps'])
+                for handler, stamp in sorted(result['stamps'].items()):
+                    with self.subTest(handler=handler):
+                        self.assertEqual(stamp, self.UTC)
+
+
 class DeployedLoggingTests(SimpleTestCase):
     """What the two deployments' LOGGING may and may not disagree about.
 

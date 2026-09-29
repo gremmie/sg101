@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -189,6 +189,38 @@ has an item cap (the 331-item cleanup will show it); requirements 2, 7, 9, 10
 and the `action.d`, jails and filters — fail2ban is not installed on leopard
 (Ubuntu 26.04 offers 1.1.0-9), and `var/log/django/auth.log` is empty, so
 requirement 7 needs failure lines made through the test hostname first.
+
+### Log timestamps were Chicago time on a UTC host — made UTC 2026-09-29
+
+**Found while answering whether the jails match jaguar's.** leopard runs in UTC
+(`timedatectl`: Etc/UTC; the web container the same, `TZ` unset), but Django
+sets every process's local time to `TIME_ZONE = 'America/Chicago'` at startup,
+and the log format `%(asctime)s` carries no offset. Measured: at 22:42 UTC,
+leopard's newest `sg101.log` line read `2026-09-29 17:30:00,008`, beat's 22:30
+UTC task written in CDT. fail2ban on the host would read `auth.log`'s times as
+UTC, five or six hours in the past; the expectation (not observed) is that it
+drops every line as older than `findtime` and never bans. `fail2ban-regex`
+would not show it, since it does not apply `findtime`. jaguar presumably ran in
+Chicago time, which would be why it never showed there; not checked. Nothing in
+`.agents/` recorded it.
+
+**Decided (Brian): log in UTC**, over an offset in each line or fail2ban's
+`logtimezone`. `sg101.settings.logging_config.UTCFormatter` is `logging.Formatter`
+with `converter = time.gmtime`; both formatters name it, so every handler (the
+five files, the container output, the admin mail) writes UTC. `TIME_ZONE` still
+governs everything else. **Anyone comparing new logs with jaguar's must allow
+for the switch.**
+
+**Measured.** `LogTimestampTests` loads each deployment in a subprocess, runs
+`django.setup()`, confirms the process is *not* in UTC (else the test proves
+nothing), and has every real handler format one fixed instant: before the fix
+all wrote `17:30`, after it `22:30`. Mutations: converter `localtime`, converter
+removed, `simple`'s class dropped — caught; `verbose`'s class dropped — missed,
+because no handler uses `verbose` (the class stays on it so a later switch
+cannot reintroduce the fault). Suite and deprecation gate: 1,312 OK each.
+
+**Owed on leopard after the next deploy:** the newest `sg101.log` line agrees
+with `date -u` — the real processes, not the test's.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 

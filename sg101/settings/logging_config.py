@@ -16,6 +16,8 @@ Everything not in TARGETS below is shared by construction. What differs:
   * whether the file handlers rotate themselves, or leave that to the host
   * whether the root logger also writes to the container's output
 
+Both write every timestamp in UTC; see UTCFormatter.
+
 `log_dir` is a parameter rather than read from the settings: these dicts name
 files, and importing a settings module to find out where would make this one a
 settings module too.
@@ -23,7 +25,9 @@ settings module too.
 base.py defines no LOGGING at all, exactly as it defines no DATABASES; the
 modules that deploy are the ones that ask (see databases.py, same shape).
 """
+import logging
 import os
+import time
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -59,6 +63,19 @@ TARGETS = {
         'root_handlers': ['file', 'console'],
     },
 }
+
+
+class UTCFormatter(logging.Formatter):
+    """A formatter whose timestamps are UTC.
+
+    Django sets the process's local time to TIME_ZONE, America/Chicago, and
+    asctime carries no offset, so without this every line would be Chicago time
+    that does not say so. The production host runs in UTC, and fail2ban there
+    reads auth.log's times as its own: Chicago times would look hours old, older
+    than any findtime, and nothing would ever be banned.
+    """
+    converter = time.gmtime
+
 
 # The four application log files. Each gets its own handler at app_log_level,
 # and each rotates at 2 MB rather than sg101.log's 100 KB.
@@ -218,9 +235,11 @@ def for_target(name, log_dir):
         'disable_existing_loggers': target['disable_existing_loggers'],
         'formatters': {
             'verbose': {
+                'class': 'sg101.settings.logging_config.UTCFormatter',
                 'format': '%(asctime)s %(levelname)s %(module)s %(process)d %(thread)d %(message)s'
             },
             'simple': {
+                'class': 'sg101.settings.logging_config.UTCFormatter',
                 'format': '%(asctime)s %(levelname)s %(message)s'
             },
         },
