@@ -480,8 +480,8 @@ class LogTimestampTests(SimpleTestCase):
 
     Django sets the process's local time to TIME_ZONE, America/Chicago, and the
     format carries no offset. The production host runs in UTC, and fail2ban on
-    it reads auth.log's times as its own: Chicago times read as UTC are five or
-    six hours old, older than any findtime, and would never be banned on.
+    it reads auth.log's times as its own; given Chicago times it can only guess,
+    warning on every line.
     """
 
     # 2026-09-29 22:30:00 UTC, 17:30 in Chicago.

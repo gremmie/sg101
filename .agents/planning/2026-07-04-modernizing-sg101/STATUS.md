@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -197,10 +197,15 @@ requirement 7 needs failure lines made through the test hostname first.
 sets every process's local time to `TIME_ZONE = 'America/Chicago'` at startup,
 and the log format `%(asctime)s` carries no offset. Measured: at 22:42 UTC,
 leopard's newest `sg101.log` line read `2026-09-29 17:30:00,008`, beat's 22:30
-UTC task written in CDT. fail2ban on the host would read `auth.log`'s times as
-UTC, five or six hours in the past; the expectation (not observed) is that it
-drops every line as older than `findtime` and never bans. `fail2ban-regex`
-would not show it, since it does not apply `findtime`. jaguar presumably ran in
+UTC task written in CDT. fail2ban on the host reads `auth.log`'s times as
+UTC, five or six hours in the past. **The prediction recorded here first — that
+it would drop every line as older than `findtime` and never ban — was wrong,**
+and went into `cb83e666`'s message and two docstrings too. Observed the same
+day with fail2ban 1.1.0 (below): it logs `Detected a log entry 5h before the
+current time … This looks like a timezone problem. Treating such entries as if
+they just happened.` on every such line, and bans. So the Chicago times never
+stopped banning; they made fail2ban guess, with a warning per line, and put
+every Django log five hours off the host's clock. The docstrings are corrected. jaguar presumably ran in
 Chicago time, which would be why it never showed there; not checked. Nothing in
 `.agents/` recorded it.
 
@@ -221,6 +226,46 @@ cannot reintroduce the fault). Suite and deprecation gate: 1,312 OK each.
 
 **Owed on leopard after the next deploy:** the newest `sg101.log` line agrees
 with `date -u` — the real processes, not the test's.
+
+### The action, jails and filters — written 2026-09-29, run end to end in a container
+
+`fail2ban/action.d/cloudflare-block-list.conf` (`actionban`/`actionunban` call
+the script at `/svr/sg101/tools/`; `timeout = 120`, since each call may wait 60 s
+on Cloudflare and fail2ban's default kills at 60), `filter.d/sg101-auth.conf`,
+`filter.d/sg101-reg.conf`, `jail.d/sg101.conf` with jaguar's thresholds. Not
+installed: B3 has not run on leopard, and the jail file says to install only
+after it.
+
+**Tested in an `ubuntu:26.04` container with its fail2ban package — 1.1.0 on
+Python 3.14.4, the versions leopard's apt offers and runs.** The package enables
+an `sshd` jail itself (`defaults-debian.conf`: nftables, systemd backend).
+
+**Filters, `fail2ban-regex` on lines written through the dev stack's real `auth`
+logger** (so in the real format, UTC): `sg101-auth` matched the IPv4, IPv6 and
+Register lines and not the `INFO` ones; `sg101-reg` the honeypot line alone.
+- **The patterns are anchored, `^\s*ERROR …`, unlike jaguar's.** A username is
+  logged verbatim in `INFO User login signal: <name>`; with a user named
+  `ERROR Login failure from [203.0.113.99]`, the unanchored pattern banned
+  **203.0.113.99** (mutation, observed) — an address of the username's choosing.
+  Anchored, it did not.
+- **`^ERROR` alone matched nothing**: after fail2ban cuts the date out, the rest
+  begins with a space. Hence `^\s*`.
+
+**End to end: real fail2ban, the repo's files installed as the runbook will,
+the script, and the test's Cloudflare stand-in** (test-only override: `sshd`
+off, `sg101-auth` bantime 20 s):
+1. Six UTC failures from `198.51.100.7`: on the list in 1 s, commented
+   `fail2ban`; gone again at the 20 s unban.
+2. Six failures stamped UTC−5: **banned**, with the timezone warning (above).
+3. One honeypot line from `2001:db8::9`: on the list in 1 s.
+4. `fail2ban-client restart`: **stop ran `unban` for every current ban**, start
+   ran `Restore Ban`, and `2001:db8::9` was on the list once. So a stopped
+   fail2ban leaves none of its entries on the list — jaguar's 0.8 stranded them
+   instead. The action file said otherwise and is corrected.
+
+**Decided (Brian): the `sshd` jail keeps jaguar's 14-day bantime** over the
+package's 10 minutes, set in `jail.d/sg101.conf`, which sorts after
+`defaults-debian.conf` and so overrides it.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 

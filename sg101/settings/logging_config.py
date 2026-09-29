@@ -70,9 +70,11 @@ class UTCFormatter(logging.Formatter):
 
     Django sets the process's local time to TIME_ZONE, America/Chicago, and
     asctime carries no offset, so without this every line would be Chicago time
-    that does not say so. The production host runs in UTC, and fail2ban there
-    reads auth.log's times as its own: Chicago times would look hours old, older
-    than any findtime, and nothing would ever be banned.
+    that does not say so. The production host runs in UTC, and so do its
+    journal, its clock and fail2ban, which reads auth.log's times as its own.
+    Given Chicago times, fail2ban 1.1 warns "This looks like a timezone problem"
+    on every such line and treats it as if it had just happened: a guess, not a
+    reading of the time.
     """
     converter = time.gmtime
 
