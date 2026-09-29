@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-28
+**Last updated:** 2026-09-29
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); nothing built
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script, its stand-in test and the Makefile targets written 2026-09-29, `3ff52995` + this planning commit
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -94,7 +94,58 @@ restart 3–4 days ago stranding everything then banned (0.8's empty
 refused (403); `/zones` 200 with zero results. The write side is the fail2ban
 token's to test.
 
-**Next:** the script and its stand-in test, with the past-the-first-page mutation.
+### The script, its stand-in, the targets — 2026-09-29
+
+`tools/cloudflare_block_list.py` (`ban`, `unban`, `show`, `add`, `remove`,
+`clear [--all] [--older-than DAYS]`), `tools/cloudflare_block_list_test.py`,
+five `blocklist-*` targets, `fail2ban/cloudflare.env.example`. No `action.d`,
+jails or filters yet: they want `fail2ban-regex` on leopard.
+
+**Decided 2026-09-29 (Brian):**
+- `unban` of an address not on the list exits **1**, naming it — the signal
+  jaguar's `exit 0` swallowed.
+- Every add and delete **polls its bulk operation** to `completed` or `failed`
+  (60 s limit); a `failed` operation exits 2 with Cloudflare's error.
+- The example lives at **`fail2ban/cloudflare.env.example`**, not
+  `secrets/cloudflare.env.example` as the task file says: `secrets/` is
+  git-ignored whole, and `backup/backup.env.example` is the precedent.
+- All five targets now.
+
+**Found while writing it:**
+- **`search` is a string prefix, so both sides must spell an address alike.**
+  An item stored as `2001:db8:0:0::5` is never returned by `search=2001:db8::5`.
+  `ban` sends and `unban` searches `ipaddress`'s canonical spelling; the exact
+  match compares with `ipaddress`. This assumes Cloudflare stores what it is sent
+  — requirement 5 measures it, and a stored `/64` would change the lookup.
+- **Search results page too, but only for IPv6.** At `per_page=500`, one full
+  IPv4 address prefixes at most 111 addresses (`.1`, `.10`–`.19`,
+  `.100`–`.199`); `2001:db8::1` prefixes unboundedly many. The cursor test is
+  therefore IPv6.
+- **`blocklist-clear` without `days=` first runs `sudo fail2ban-client unban
+  --all`, which unbans every jail, sshd's included** (as the task file asks; the
+  Makefile comment says so). With `days=` it is skipped: an age-filtered clear
+  removes only entries older than every bantime.
+
+**Measured.** 28 tests OK under Python 3.12.14 and the Mac's `/usr/bin/python3`
+3.9.6. RED first: against a stub exiting 3, 27 of 27 tests failed (47 with
+subtests). **Mutation battery, 21 of 21 caught**, file restored byte-identical,
+suite green after — among them **jaguar's own lookup** (one `GET`, no `search`,
+`per_page` or cursor: 4 tests fail, the past-the-first-page one included),
+cursor not followed, prefix match for exact, operation not awaited, `failed`
+taken as done, a 200 with `success: false` ignored (a subtest added for it after
+coverage review found no test reached that branch), not-found exiting 0, the
+token printed on refusal. Django suite and deprecation gate: 1,311 OK each
+(nothing Django changed; run as `CODEASSIST.md` requires).
+
+**Not covered by the stand-in:** the 60 s operation timeout; whether one bulk
+DELETE has an item cap (the cleanup is 331); requirement 6 — two operations back
+to back, and re-adding an address already listed, which a restarting fail2ban
+does. All need the write token against the real list.
+
+**Next:** the fail2ban token (requirement 8), then requirements 5 and 6 measured
+from Brian's machine with documentation-range addresses, and acceptance
+criterion 3's live half: jaguar's action seen to miss an address past the
+first page, the new one to find it.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 
