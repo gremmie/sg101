@@ -224,8 +224,15 @@ removed, `simple`'s class dropped — caught; `verbose`'s class dropped — miss
 because no handler uses `verbose` (the class stays on it so a later switch
 cannot reintroduce the fault). Suite and deprecation gate: 1,312 OK each.
 
-**Owed on leopard after the next deploy:** the newest `sg101.log` line agrees
-with `date -u` — the real processes, not the test's.
+**Checked on leopard 2026-09-29, after `make prod-up` at `051f983e`:** `web`,
+`worker` and `beat` recreated 23:15:47 from an image built 23:15:41 that holds
+`UTCFormatter`. At `date -u` 23:17:29 the newest `sg101.log` line read
+`23:15:59` (the worker's `ready`), not `18:15`. Brian's own reading at 23:18:23
+agreed; `date`'s 12-hour output (`11:18:23 PM`) made it look otherwise at first
+— `date -u '+%F %T'` prints in the log's form. `proxy` was not recreated and
+`ps` showed it by a bare digest: the cached rebuild gave `sg101-proxy:prod` a new
+image index around the same `linux/amd64` manifest (`67293c8ff9c5`), which is
+the one the container runs (containerd image store; `docker image ls --tree`).
 
 ### The action, jails and filters — written 2026-09-29, run end to end in a container
 
