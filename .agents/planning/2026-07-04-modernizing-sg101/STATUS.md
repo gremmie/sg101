@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-28
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,59 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); nothing built
+
+**Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
+action is a stdlib Python script that the Makefile's `blocklist-*` targets also
+call; the token lives in `secrets/cloudflare.env`; `blocklist-clear` removes
+only `fail2ban` items unless `all=1`.
+
+**The measuring token.** Account-owned, Account Rule Lists → Read, account
+`f201716c…ee7c`, in `secrets/cloudflare.env` on leopard (`brian:brian 600`,
+keys `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_LIST_NAME`).
+**The first value leaked into this session's transcript**: the file then held a
+bare token, and a `sed` redaction written for `KEY=value` matched nothing.
+Brian rolled it (his report; not checked from here, since auto mode refuses to
+send a leaked credential anywhere, even to `tokens/verify`).
+
+**The token's IP filter is IPv4-only, and leopard prefers IPv6.**
+`api.cloudflare.com` publishes AAAA and leopard has
+`2001:db8::4`. The same call, forced each way: IPv4 **200**,
+IPv6 **401, code 10000**. `tokens/verify` answers `active` regardless, so it does
+not test the filter. The measurements below forced IPv4. **Brian added leopard's
+IPv6 address to the filter (2026-09-28); re-tested: IPv4, IPv6 and the default
+all 200.** Hard-coding IPv4 in the script instead would have worked until
+someone forgot why.
+
+**Requirement 1 — the leak is confirmed.** `block_list` read 2026-09-29 ~02:15
+UTC, paged at 500; jaguar's jails read by Brian minutes later:
+
+| | |
+|---|---|
+| items | **331**, all single IPv4, all commented `fail2ban` |
+| jaguar's active bans (all `wiki-abuse`) | **24**, every one on the list |
+| **stranded** (on the list, banned by no jail) | **307** (93%) |
+| older than 14 days, the longest bantime | 264 |
+| what jaguar's `actionunban` sees | one page of **25**; 306 items lie beyond it |
+| oldest item | 2026-07-04; **Brian has cleared the list by hand at least twice** |
+| growth since | ~3.8 items a day |
+
+**Every ban is the wiki's.** `sg101-auth`: 424 failures, **0** bans (never 6 in
+600 s); `sg101-reg`: 0. The site's own jails added nothing; the wiki retires with
+jaguar, so leopard's ban rate should be far lower.
+
+**A second stranding source, inferred.** 11 stranded items are 3–4 days old,
+inside `wiki-abuse`'s 5-day bantime. `wiki-abuse` reports Total banned = Currently
+banned = 24, and the oldest active ban is 3 days old: consistent with a fail2ban
+restart 3–4 days ago stranding everything then banned (0.8's empty
+`actionstop`). jaguar's `fail2ban.log` (sudo) was not read.
+
+**Least privilege, read-only probes:** rulesets, account details, members
+refused (403); `/zones` 200 with zero results. The write side is the fail2ban
+token's to test.
+
+**Next:** the script and its stand-in test, with the past-the-first-page mutation.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 
