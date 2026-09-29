@@ -12,6 +12,8 @@
 #   cmd="..."        the manage.py command for manage / prod-manage
 #   t="forums bio"   test labels, for test and deprecation-gate
 #   label=...        a label for a snapshot
+#   ip=...           an address for blocklist-add / blocklist-remove
+#   all=1, days=N    what blocklist-clear removes
 #
 # Written for the GNU Make 3.81 that macOS ships.
 
@@ -24,6 +26,9 @@ svc ?=
 cmd ?=
 t ?=
 label ?=
+ip ?=
+all ?=
+days ?=
 
 .DEFAULT_GOAL := help
 
@@ -33,6 +38,7 @@ label ?=
 	prod-manage prod-check prod-proxy-reload prod-smoke prod-browser \
 	prod-backup prod-backup-drill \
 	cloudflare-ranges-check firewall-plan firewall-apply firewall-check firewall-test \
+	blocklist-show blocklist-add blocklist-remove blocklist-clear blocklist-test \
 	up down ps logs shell bash manage psql test deprecation-gate css \
 	snapshot snapshots
 
@@ -129,6 +135,36 @@ firewall-check: ## Compare the provider's live rules with the plan
 
 firewall-test: ## Test the firewall script against a local stand-in for Linode's API
 	tools/origin_firewall_test.py
+
+##@ Cloudflare block list (run these on the VM)
+
+# tools/cloudflare_block_list.py explains the settings; it reads them from
+# secrets/cloudflare.env. An address blocked with blocklist-add never expires,
+# because fail2ban does not know it is there. For a block that expires, use
+# `sudo fail2ban-client set sg101-auth banip <ip>` instead.
+blocklist-show: ## Every address on the block list, with its date and comment
+	tools/cloudflare_block_list.py show
+
+blocklist-add: ## Block ip=... by hand; never expires, as fail2ban never sees it
+	@test -n "$(ip)" || { echo 'usage: make blocklist-add ip=<address>'; exit 2; }
+	tools/cloudflare_block_list.py add $(ip)
+
+blocklist-remove: ## Unblock ip=... at Cloudflare
+	@test -n "$(ip)" || { echo 'usage: make blocklist-remove ip=<address>'; exit 2; }
+	tools/cloudflare_block_list.py remove $(ip)
+
+# fail2ban is told first, so its ban database does not go on believing the
+# addresses are banned; that unbans every jail, sshd's included. Not with days=:
+# an age-filtered clear only removes entries older than every bantime, and must
+# leave fail2ban's live bans alone. While jaguar still writes to the list, all=1
+# removes jaguar's current bans too.
+blocklist-clear: ## Remove fail2ban's entries; all=1 everything, days=N older only
+	@if [ -z "$(days)" ] && systemctl is-active --quiet fail2ban 2>/dev/null; then \
+		sudo fail2ban-client unban --all; fi
+	tools/cloudflare_block_list.py clear $(if $(all),--all) $(if $(days),--older-than $(days))
+
+blocklist-test: ## Test the block-list script against a local stand-in for Cloudflare's API
+	tools/cloudflare_block_list_test.py
 
 ##@ Development (docker-compose.yml)
 
