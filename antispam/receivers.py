@@ -27,7 +27,7 @@ def logout_callback(sender, request, user, **kwargs):
 
 def login_failed_callback(sender, credentials, **kwargs):
     """Signal callback for a login failure event."""
-    logger.error('User login failed signal from %s: %s', sender,
+    logger.error('User login failed signal from %s: %r', sender,
                  credentials.get('username'))
 
 

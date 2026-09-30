@@ -16,7 +16,8 @@ Everything not in TARGETS below is shared by construction. What differs:
   * whether the file handlers rotate themselves, or leave that to the host
   * whether the root logger also writes to the container's output
 
-Both write every timestamp in UTC; see UTCFormatter.
+Both write every timestamp in UTC; see UTCFormatter. auth.log also writes every
+record as one line; see OneLineFormatter.
 
 `log_dir` is a parameter rather than read from the settings: these dicts name
 files, and importing a settings module to find out where would make this one a
@@ -77,6 +78,23 @@ class UTCFormatter(logging.Formatter):
     reading of the time.
     """
     converter = time.gmtime
+
+
+class OneLineFormatter(UTCFormatter):
+    """UTCFormatter, with every line break escaped: one record, one line.
+
+    For auth.log, which fail2ban reads a line at a time. Several of its messages
+    carry what a client typed, and a line break in one of them would begin a
+    line of the client's choosing -- a dated failure line, say, naming an
+    address for fail2ban to ban. Escaped, it stays inside the record's line.
+    """
+    # Every character str.splitlines() breaks on, written as its escape.
+    BREAKS = str.maketrans({
+        c: c.encode('unicode_escape').decode()
+        for c in '\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029'})
+
+    def format(self, record):
+        return super().format(record).translate(self.BREAKS)
 
 
 # The four application log files. Each gets its own handler at app_log_level,
@@ -143,6 +161,8 @@ def for_target(name, log_dir):
         handlers[app_log] = _file(
             os.path.join(log_dir, '{}.log'.format(app_log)),
             app_level, rotate, 2 * 1024 * 1024, 5)
+    # The file fail2ban reads.
+    handlers['auth']['formatter'] = 'one_line'
 
     loggers = {
         'django': {
@@ -242,6 +262,10 @@ def for_target(name, log_dir):
             },
             'simple': {
                 'class': 'sg101.settings.logging_config.UTCFormatter',
+                'format': '%(asctime)s %(levelname)s %(message)s'
+            },
+            'one_line': {
+                'class': 'sg101.settings.logging_config.OneLineFormatter',
                 'format': '%(asctime)s %(levelname)s %(message)s'
             },
         },

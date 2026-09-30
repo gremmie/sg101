@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -273,6 +273,63 @@ off, `sg101-auth` bantime 20 s):
 **Decided (Brian): the `sshd` jail keeps jaguar's 14-day bantime** over the
 package's 10 minutes, set in `jail.d/sg101.conf`, which sorts after
 `defaults-debian.conf` and so overrides it.
+
+### B3 on `beta`, and anyone could choose whom fail2ban bans — 2026-09-30
+
+**`beta.surfguitar101.com`**: Brian added a proxied A record to leopard's IPv4
+(`192.0.2.13`; no AAAA — the origin is IPv4-only). Nothing else needed
+changing: the Origin CA certificate names `*.surfguitar101.com`, the port-443
+vhost is the only one and answers any name, `ALLOWED_HOSTS` is
+`.surfguitar101.com`, cookies are host-only. leopard's database has 0 users; a
+failed login needs none.
+
+**Runbook B3 passes, both families.** Brian's browser failed a login over IPv6:
+`auth.log` and Apache's `access.log` both recorded
+`2001:db8::1`, which is exactly the Mac's public
+IPv6 (`curl -6 ifconfig.me`) and in none of the 22 Cloudflare ranges. A login
+failed from the Mac with `curl -4`: both logs recorded `192.0.2.12`, the
+Mac's public IPv4.
+
+**Found doing it: a client could write lines into `auth.log`, and so choose
+whom fail2ban bans.** Each failed login logs the typed username twice
+(`antispam/decorators.py`, `antispam/receivers.py`), raw. A username of
+`inject-probe` + newline + `2026-09-30 00:16:12,000 ERROR Login failure from
+[192.0.2.55] for forged`, posted to `beta`'s login, put **two** forged lines in
+`auth.log`, correctly dated; `fail2ban-regex` with `sg101-auth` matched both. A
+forged honeypot line matched `sg101-reg` — one hit, **14 days** — checked with
+`fail2ban-regex` only, not posted. The filters' anchor does not help: each
+forged line starts a line of its own. **jaguar has the same hole** (the same
+raw logging; `sg101-reg` has banned at Cloudflare since 2025-08-10); whether it
+was ever used is not established. `auth.log` holds other client-typed values too
+(`register_confirm`'s URL username, the email-change views, the registration
+form's messages), so a fix at the two call sites alone would leave it open.
+
+**Decided (Brian): both fixes.**
+- `OneLineFormatter` (`UTCFormatter`'s subclass) on the `auth` handler only
+  escapes every character `str.splitlines()` breaks on — `\n \r \x0b \x0c
+  \x1c \x1d \x1e \x85 \u2028 \u2029` — so every record is one line.
+  `sg101.log` keeps its line breaks for tracebacks. Nothing writing to
+  `auth.log` logs a traceback (no `.exception()` or `exc_info` on `auth`).
+- The two username messages use `%r`: `for 'steve'`, unambiguous when read.
+
+**Measured.** RED first: 6 failures across the new tests. Mutations, 6 of 6
+caught, each file restored byte-identical: the `auth` handler back on the plain
+formatter; only `\n` escaped; every file escaped (the `sg101.log` guard);
+`OneLineFormatter` not UTC; each call site unquoted. **Replayed on the dev
+stack with the fix:** the forged text stayed inside one quoted line, and
+`sg101-auth` matched only the real address. Suite and gate: 1,317 OK each.
+
+**jaguar's history: no forged lines.** Brian ran the count 2026-09-30 over
+`auth.log*` (about 135,700 lines, back to 2025-01-09): **9** lines not starting
+with a timestamp, and in the raw bytes all 9 are the second half of a
+record whose username held `\r\n` — **three spam-bot visits** (2025-05-06,
+2025-12-14, 2026-01-14), each a registration username like
+`Hi hi kwscdp9\r\n >>> https://…`, each giving three lines (the Register
+failure and the two login-failure lines). None is a dated failure or honeypot
+line; neither filter could match one. So the hole was not used within those 20
+months, but line breaks in client-typed fields arrive in ordinary traffic.
+`sg101.log*`, by contrast, is full of continuation lines, all tracebacks and
+multi-line request records — why the escaping is `auth.log`'s alone.
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 

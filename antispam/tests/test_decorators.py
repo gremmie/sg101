@@ -40,6 +40,22 @@ class LogAuthFailuresTestCase(TestCase):
         self.assertIn('steve', records[0].getMessage())
 
     @log_capture('auth')
+    def test_the_username_is_quoted(self, lc):
+        self.client.post(self.url, {'username': 'steve', 'password': 'xxx'})
+        [record] = self._failures(lc)
+        self.assertTrue(record.getMessage().endswith(" for 'steve'"))
+
+    @log_capture('auth')
+    def test_a_newline_in_the_username_stays_on_one_line(self, lc):
+        # The username is whatever the client typed. Unquoted, a newline in it
+        # would start a line of the typist's choosing in the log fail2ban reads.
+        forged = 'x\n2026-09-30 00:16:12,000 ERROR Login failure from [192.0.2.55]'
+        self.client.post(self.url, {'username': forged, 'password': 'xxx'})
+        [record] = self._failures(lc)
+        self.assertNotIn('\n', record.getMessage())
+        self.assertIn(repr(forged), record.getMessage())
+
+    @log_capture('auth')
     def test_successful_login_is_not_logged_as_a_failure(self, lc):
         response = self.client.post(self.url,
                                     {'username': 'steve', 'password': 'pwd'})

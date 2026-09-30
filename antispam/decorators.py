@@ -26,7 +26,7 @@ def log_auth_failures(auth_type):
                 if not success:
                     username = request.POST.get('username')
                     username = username if username else '(None)'
-                    logger.error("%s failure from [%s] for %s",
+                    logger.error("%s failure from [%s] for %r",
                             auth_type,
                             request.META.get('REMOTE_ADDR', '?'),
                             username)

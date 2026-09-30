@@ -475,6 +475,64 @@ TIMESTAMP_SNIPPET = (
 )
 
 
+# Every character Python's str.splitlines() treats as a line boundary, which is
+# more than a log reader splitting on newline alone would. Each is put in a
+# message and the result, as each file handler formats it, is read back.
+LINE_BREAKS = '\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029'
+
+LINE_BREAK_SNIPPET = (
+    "import json\n"
+    "import logging\n"
+    "import os\n"
+    "import sys\n"
+    "import django\n"
+    "django.setup()\n"
+    "message = 'before' + os.environ['PROBE_BREAKS'] + 'after'\n"
+    "record = logging.LogRecord('probe', logging.ERROR, 'probe', 1, message, None, None)\n"
+    "out = {}\n"
+    "for logger in [logging.root, logging.getLogger('auth')]:\n"
+    "    for h in logger.handlers:\n"
+    "        f = getattr(h, 'baseFilename', None)\n"
+    "        if f:\n"
+    "            out[os.path.basename(f)] = h.format(record)\n"
+    "sys.stdout.write(json.dumps(out))\n"
+)
+
+
+class AuthLogLineTests(SimpleTestCase):
+    """Every record in auth.log is one line.
+
+    fail2ban reads auth.log a line at a time, and several of its messages carry
+    what a client typed -- a username, an address, a confirmation key. A line
+    break in one of them would begin a line of the client's choosing: measured
+    2026-09-30, a username holding a newline and a dated failure line put that
+    line in auth.log, and fail2ban's filter matched it.
+
+    sg101.log is left alone: its tracebacks are meant to span lines.
+    """
+
+    def formatted(self, module):
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': module,
+                               'SECRET_KEY': 'x',
+                               'DB_ENGINE': 'postgresql',
+                               'PROBE_BREAKS': LINE_BREAKS},
+                              snippet=LINE_BREAK_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_auth_log_escapes_every_line_break(self):
+        for module in DEPLOYMENT_SETTINGS:
+            with self.subTest(module=module):
+                line = self.formatted(module)['auth.log']
+                self.assertEqual(line.splitlines(), [line])
+                self.assertIn('before\\n\\r', line)
+
+    def test_the_site_log_keeps_its_line_breaks(self):
+        for module in DEPLOYMENT_SETTINGS:
+            with self.subTest(module=module):
+                self.assertIn(LINE_BREAKS, self.formatted(module)['sg101.log'])
+
+
 class LogTimestampTests(SimpleTestCase):
     """Every log line's time is UTC, in both deployments.
 
