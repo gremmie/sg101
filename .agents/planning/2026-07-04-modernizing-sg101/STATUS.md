@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -330,6 +330,60 @@ line; neither filter could match one. So the hole was not used within those 20
 months, but line breaks in client-typed fields arrive in ordinary traffic.
 `sg101.log*`, by contrast, is full of continuation lines, all tracebacks and
 multi-line request records — why the escaping is `auth.log`'s alone.
+
+### Installed on leopard — 2026-09-30
+
+Brian pulled `3f3c9ef6`, ran `make prod-up` (the running `web` has
+`OneLineFormatter`) and installed fail2ban from apt: **1.1.0, active**, the
+container's version. **Requirement 2 met.** The package started its own `sshd`
+jail before ours were installed, and it was banning within minutes —
+`192.0.2.10`, `192.0.2.11` at 02:20 UTC, SSH being open to anywhere.
+
+**Requirement 7 — met for both filters, on leopard's own lines.** `fail2ban-regex`
+with the repo's filters over `var/log/django/auth.log`: every date recognized;
+`sg101-auth` extracted B3's IPv6 and IPv4 and the Mac's IPv4, never a Cloudflare
+or `172.*` address. A forged-username login posted after the fix was running
+matched **only** the real address; the forged `192.0.2.56` stayed inside the
+quoted username. The two forged `192.0.2.55` lines from before the fix still
+match — they are on disk from 00:16, past `findtime`. `sg101-reg` had no line to
+read, so one was made: the honeypot is a field check (`clean_question`), which
+Django runs before the form's `clean()` and its Turnstile call, so a scripted
+registration POST with `question` filled logs `CRITICAL … Honeypot filled
+[192.0.2.12]` — the Mac's IPv4 — and `sg101-reg` matched it.
+
+**And it banned Brian.** Brian installed the files and reloaded at about 02:25,
+two minutes after that honeypot line. `sg101-reg` (one hit, 14 days) banned
+`192.0.2.12` at 02:25:46: fail2ban read the line, inside `findtime`, on
+start. **Measured at the edge: IPv4 got 403 from `beta` and from the live
+`surfguitar101.com`** — `block_list` covers the whole zone, so jaguar's site
+too — while IPv6 got 200. `sudo fail2ban-client unban 192.0.2.12` at
+02:27:38; after it, both 200 over IPv4, the address gone from the list (339
+items). The cause was the probe, not the configuration: a test that writes a
+real ban line from the operator's own address, minutes before the jails load.
+Not `blocklist-remove` for the unban: fail2ban would still hold the ban and
+restore it on the next start.
+
+**So the full cycle has run on leopard, unplanned:** a real fail2ban ban, the
+script adding it, Cloudflare's edge refusing the address, the unban, the script
+deleting it, the edge admitting it — against the API and the edge, not just the
+log.
+
+**Criterion 2 — met, from a phone through `sg101-auth`.** Brian, on mobile data,
+failed six logins on `beta` between 02:32:00 and 02:32:37 UTC; `auth.log`
+recorded each from `2001:db8::3` (username `'Brian '`,
+the keyboard's trailing space made visible by the quoting). `sg101-auth` banned
+it; read from the API, it was on `block_list` (340 items), commented
+`fail2ban`, dated 02:32 — **the first real IPv6 ban, found and matched in the
+canonical form requirement 5 measured** — and the phone got Cloudflare's block
+page. A poll of the list every 30 s found it **gone at 02:42:51**, 10 minutes and
+14 s after the sixth failure; the list back to 339. The phone then loaded `beta`
+normally (Brian's report).
+
+**Next:** the stranded-entry cleanup (requirement 9) once Brian chooses between
+patching jaguar's `actionunban` and re-running it after jaguar shuts down;
+criterion 8's targets (`add`/`remove` live; the two clears in the container,
+since on the live list they remove jaguar's current bans); criterion 4 in the
+container with a wrong token; no Global API Key on leopard (criterion 5).
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 
