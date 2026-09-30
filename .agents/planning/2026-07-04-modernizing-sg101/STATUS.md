@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-29
+**Last updated:** 2026-09-30
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone (`0818575e`); stranded entries cleared, 270 of 345, and the wiki moved to the flip, 2026-09-30, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -379,9 +379,28 @@ page. A poll of the list every 30 s found it **gone at 02:42:51**, 10 minutes an
 14 s after the sixth failure; the list back to 339. The phone then loaded `beta`
 normally (Brian's report).
 
-**Next:** the stranded-entry cleanup (requirement 9) once Brian chooses between
-patching jaguar's `actionunban` and re-running it after jaguar shuts down;
-criterion 8's targets (`add`/`remove` live; the two clears in the container,
+### The stranded entries cleared, first run — 2026-09-30
+
+**Decided (Brian), recorded in the task file:** jaguar's `actionunban` is not
+patched; the cleanup runs now and again after the cutover.
+
+Brian ran `make blocklist-clear days=14` on leopard at `3f3c9ef6`, about 23:05
+UTC: **`removed 270 of 345 items`**, then `blocklist-show` read **75**. The count
+beforehand was read minutes earlier from the same checkout, and predicted
+exactly that: 345 items, **every one commented `fail2ban`**, 270 added before the
+cutoff (2026-09-16 23:02 UTC). Comparing the two listings: nothing appeared,
+270 went; the newest removed was added 09-16 12:17, the oldest kept 09-17
+09:38. **Criterion 6 is met for this run, with a caveat on its second clause:**
+there were no entries without the comment, so nothing shows that the filter
+would have spared one. That half rests on `blocklist-test`, not on this run.
+
+**The second run is task 10's requirement 4a**, at the end of the two-week
+watch. **Decided 2026-09-30 (Brian): the wiki goes at the DNS flip**, not at
+jaguar's shutdown (runbook C6, formerly D7). jaguar's `wiki-abuse` made every
+ban on the list, so with the wiki gone it stops adding; fourteen days after
+the flip, everything it left is old enough for `days=14` to clear.
+
+**Next:** criterion 8's targets (`add`/`remove` live; the two clears in the container,
 since on the live list they remove jaguar's current bans); criterion 4 in the
 container with a wrong token; no Global API Key on leopard (criterion 5).
 
@@ -1123,6 +1142,8 @@ Copied to `~/workspaces/bgn/sg101-evidence/irc-2026-09-25/`: the bot's tree
 retire the service.
 
 **Wiki: leave it until shutdown, then a Cloudflare redirect (runbook D7).**
+*Changed 2026-09-30 (Brian): the redirect comes at the DNS flip instead —
+runbook C6; see task 06's cleanup section.*
 Measured over the archive's 8.5 weeks: 176,001 requests. 68,220 of those were
 403s, overwhelmingly `?action=newaccount` spam. Just 35 were referred from
 `surfguitar101.com`. The redirect keeps the forum's old wiki links from

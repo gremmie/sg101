@@ -73,16 +73,18 @@ implementation. Read additional references as needed for context.
 1. D2's window has ended, by Brian's judgment and task 08's definition.
 2. D5: jaguar's mail log shows no inbound delivery to either domain for seven
    days; the command and its output are recorded.
-3. The IRC server and wiki vhost handled as task 01 recorded. Any DNS records
+3. The IRC server handled as task 01 recorded; the wiki already redirected at
+   the flip (runbook C6), so only its vhost goes with the host. Any DNS records
    that still point at jaguar's address (`173.255.245.115`) are listed from the
    live zones and removed or repointed — including the unproxied `_dc-mx`
    records.
 4. jaguar shut down by Brian, and not deleted at once: a final Linode backup or
    image kept for a period Brian chooses.
 5. The Global API Key rolled; the scoped fail2ban token keeps working.
-6. A last pass over `block_list` now that jaguar's fail2ban has stopped writing:
-   stranded `fail2ban` entries older than 14 days removed, before and after
-   counts recorded.
+6. A last read of `block_list` now that jaguar's fail2ban has stopped. The
+   cleanup itself is task 10's (requirement 4a); this only catches a ban jaguar
+   made after it, from a request that reached the wiki's vhost directly rather
+   than through Cloudflare. Any found are removed the same way, with counts.
 7. The MySQL chain removed as listed, after checking each item against the tree.
    `grep -ri mysql` over the repo afterwards shows only history and
    `.agents/` records.

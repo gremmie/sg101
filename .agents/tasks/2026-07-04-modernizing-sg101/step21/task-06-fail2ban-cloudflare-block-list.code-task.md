@@ -140,7 +140,11 @@ implementation. Read additional references as needed for context.
    than the longest bantime — `blocklist-clear` (requirement 11) with an age
    filter, not a separate tool. **jaguar writes to the same list until it is
    shut down**, so either fix jaguar's `actionunban` the same way (Brian's box;
-   his call) or run the cleanup again after shutdown.
+   his call) or run the cleanup again after shutdown. **Decided 2026-09-30
+   (Brian): jaguar is not patched; clean up once now and again after the
+   cutover.** The first run is recorded in `STATUS.md`. The wiki goes at the
+   flip (runbook C6), which stops jaguar banning; the second run is task 10's
+   requirement 4a, once jaguar's last entries are fourteen days old.
 10. **Not enabled until B3 passes on the VM.** B3's order is stated in the
     runbook; make this task's record point at it.
 11. **Makefile targets, run on leopard, calling the same script** (decided

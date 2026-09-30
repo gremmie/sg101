@@ -97,8 +97,9 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   a forgotten rebuild ships stale styling with no error anywhere.
 
 - **The `wiki` app is gone.** It minted a cookie for an external MoinMoin wiki to
-  validate against Redis. The wiki itself still runs on the old host until that
-  host is retired; its content is archived under `archive/wiki/`.
+  validate against Redis. The wiki itself still runs on the old host until the
+  cutover, when it becomes a redirect; its content is archived under
+  `archive/wiki/`.
 - **`antispam/utils.py` imports `bio`, `comments`, `forums` and `user_photos`.**
   For something with callers in several apps, follow the narrow shape of
   `antispam/decorators.py` or `antispam/turnstile.py` instead.

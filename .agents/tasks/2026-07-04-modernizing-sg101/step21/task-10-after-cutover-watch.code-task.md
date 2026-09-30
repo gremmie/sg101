@@ -67,6 +67,10 @@ implementation. Read additional references as needed for context.
    reading log says.
 4. fail2ban seen banning and unbanning on live traffic, with the list's size
    stable rather than growing.
+4a. At the end of the two weeks, `make blocklist-clear days=14` on leopard:
+   the second stranded-entry cleanup task 06 owes. By then every entry jaguar's
+   `wiki-abuse` made before the wiki went (runbook C6) is past fourteen days.
+   Before and after counts recorded, as the first run's were.
 5. The first nightly backups after cutover present in both buckets, and no
    alarm fired (or, if it fired, explained).
 6. The apex SPF question settled and recorded; any DNS change followed by the

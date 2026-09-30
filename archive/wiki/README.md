@@ -5,7 +5,7 @@ from 2013. This is its content, captured **2026-09-04** so the Django side of th
 integration could be removed without losing anything.
 
 **The wiki is still running on jaguar as of this capture** and stays up until the
-host is decommissioned. Nothing here is live: it is a shelf copy, not a
+site's cutover, when `wiki.surfguitar101.com` becomes a redirect to the main site. Nothing here is live: it is a shelf copy, not a
 replacement. If a new wiki is ever stood up, this is what feeds it.
 
 ## What is here

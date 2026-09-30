@@ -53,6 +53,9 @@ implementation. Read additional references as needed for context.
 5. The DNS change is made at a low TTL, in Cloudflare, and nothing else in the
    zone changes with it. After it, exactly one `v=spf1` per apex, MX unchanged,
    exactly one `v=DMARC1`.
+5a. Once the new site is seen serving, the wiki's redirect (runbook C6) as a
+   separate change; `wiki.surfguitar101.com` then answers with a redirect to
+   `https://surfguitar101.com/`, read with `curl -sI`.
 6. D1 (one real message, read with headers: `dkim=pass d=surfguitar101.com`,
    `spf=pass`) and B9 (the `/media` cache rule serving `HIT` from the new origin)
    done the same day.

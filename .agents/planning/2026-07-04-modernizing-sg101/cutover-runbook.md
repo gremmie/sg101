@@ -679,6 +679,23 @@ this is its first run against a real host.
 
 Low-TTL cutover in Cloudflare.
 
+### C6. Once the flip holds: the wiki becomes a redirect, not a dead name
+A separate change from C5's, made after the new site is seen serving, so the
+flip stays the only thing a rollback has to undo. Keep `wiki.surfguitar101.com`
+**proxied** in Cloudflare and add a redirect rule sending it to
+`https://surfguitar101.com/`. A redirect rule fires only on a proxied record, so
+the record has to stay (pointed anywhere, since the rule answers before the
+origin is contacted). Deleting the record instead would break the forum's old
+links to the wiki. The content is already in `archive/wiki/`.
+
+**This is also what stops jaguar adding to `block_list`.** Its `wiki-abuse`
+jail made every ban on the list; with no wiki traffic reaching jaguar it has
+nothing left to ban. The entries it already made still expire into a paged
+unban that misses most of them, so they are cleared fourteen days later, at the
+end of task 10's watch.
+*Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25; moved from shutdown
+to the flip 2026-09-30 (Brian).*
+
 ## D. After
 
 ### D1. One real message with headers
@@ -735,14 +752,7 @@ Un-excluding the logs on bobcat does not substitute for this: its rsync runs
 `--delete`, so it mirrors the same eight weeks.
 *Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
 
-### D7. At shutdown: the wiki becomes a redirect, not a dead name
-The MoinMoin vhost stays up on jaguar until shutdown. At shutdown, keep
-`wiki.surfguitar101.com` **proxied** in Cloudflare and add a redirect rule
-sending it to `https://surfguitar101.com/`. A redirect rule fires only on a
-proxied record, so the record has to stay (pointed anywhere, since the rule
-answers before the origin is contacted). Deleting the record instead would break
-the forum's old links to the wiki. The content is already in `archive/wiki/`.
-*Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
+### D7. Moved to C6 — the wiki goes at the flip, not at shutdown (Brian, 2026-09-30)
 
 ### D8. At shutdown: IRC goes with jaguar — delete `irc.surfguitar101.com`
 `ngircd` and `sg101Bot.py` are **not** moved to the new host. They stop when
