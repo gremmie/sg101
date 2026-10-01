@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 06 — fail2ban banning at Cloudflare — IN PROGRESS: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone (`0818575e`); stranded entries cleared, 270 of 345, and the wiki moved to the flip, 2026-09-30, in the commit that adds this line
+## Step 21 task 06 — fail2ban banning at Cloudflare — DONE 2026-09-30, all eight criteria met: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone (`0818575e`); stranded entries cleared, 270 of 345, and the wiki moved to the flip (`d262ca8a`); criteria 4 and 8 in a container, 8's live half and 5 on leopard, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
 action is a stdlib Python script that the Makefile's `blocklist-*` targets also
@@ -400,9 +400,85 @@ jaguar's shutdown (runbook C6, formerly D7). jaguar's `wiki-abuse` made every
 ban on the list, so with the wiki gone it stops adding; fourteen days after
 the flip, everything it left is old enough for `days=14` to clear.
 
-**Next:** criterion 8's targets (`add`/`remove` live; the two clears in the container,
-since on the live list they remove jaguar's current bans); criterion 4 in the
-container with a wrong token; no Global API Key on leopard (criterion 5).
+### Criteria 8 and 4 in a container — 2026-09-30
+
+The 09-29 setup rebuilt, at `d262ca8a`: `ubuntu:26.04` with its fail2ban
+(1.1.0, Python 3.14.4), the repo's files copied where the runbook installs them,
+the test suite's stand-in run as a server, and a test-only jail file (`sshd`
+off, polling, `sg101-auth` bantime 20 s). The tree came from `git archive`, so
+no `secrets/` from the Mac. The container has no systemd, so a `systemctl` shim
+answered the Makefile's `is-active` check from `fail2ban-client ping`: the plain
+clear's `unban --all` branch ran, as it will on leopard.
+
+**Criterion 8 — met for the two clears; `add`/`remove` passed here too, and
+are still owed live.** Seeded with two `blocklist-add` entries (`manual`), one
+real `sg101-reg` ban from a honeypot line (`2001:db8::9`), and one
+`fail2ban`-commented entry fail2ban did not know about (`192.0.2.20`, a
+stranded entry). `blocklist-remove ip=198.51.100.10` took that address alone.
+Plain `blocklist-clear`: `unban --all` printed `1` and unbanned `2001:db8::9`
+through the action; the script then removed `192.0.2.20` (`removed 1 of 2`),
+leaving the `manual` `2001:db8::10`. `all=1` removed it: 0 items.
+
+**Criterion 4 — met, for a ban and for an unban.** With a wrong token in
+`cloudflare.env`, six failures from `198.51.100.8`: fail2ban logged the
+script's stderr (the 401, `10000: Authentication error`), `returned 2`, and
+`Failed to execute ban jail 'sg101-auth' action 'cloudflare-block-list' …
+Error banning 198.51.100.8`. Then, banning `198.51.100.9` with the right token
+and swapping in the wrong one before the unban: `Failed to execute unban …`,
+the same way. Each failure ran the script twice, 35 ms apart: fail2ban retries
+a failed action once.
+
+**What a failure looks like, which the logs show and the status hides:**
+- **A failed ban still counts as a ban.** `fail2ban-client status` listed
+  `198.51.100.8` as banned for its 20 s, and nothing was on the list. At the
+  unban fail2ban ran no command for it, so there was nothing to fail.
+- **A failed unban strands the entry, and fail2ban forgets it.** Status went to
+  0 banned; `198.51.100.9` stayed on the list, commented `fail2ban`. This is
+  jaguar's stranding again, except logged. `blocklist-clear days=14` removes it
+  once it is old enough, as it did for jaguar's.
+
+So a token that stops working shows up only in `fail2ban.log`, as `ERROR`
+lines, not in `fail2ban-client status`.
+
+**Criterion 8's live half — met 2026-09-30 ~23:56 UTC (Brian, on leopard).**
+`make blocklist-add ip=192.0.2.1`: `added 192.0.2.1 to block_list, commented
+"manual"`; `blocklist-show` read 76 items, it the only `manual` one. `make
+blocklist-remove ip=192.0.2.1`: `removed 192.0.2.1 from block_list`; 75 items,
+the other 75 as before it — the same count as after the cleanup, the oldest
+still 09-17 09:38. **Criterion 8 is met.**
+
+**Criterion 5 — met 2026-09-30 (Brian, on leopard).** The other half, refusal
+of anything beyond lists, is the 09-29 probes above. `grep -rlE
+'X-Auth-Key|CF_API_KEY|GLOBAL'` over `/etc/fail2ban`, `/svr/sg101/secrets` and
+`/svr/sg101/.env` named one file, `/etc/fail2ban/action.d/cloudflare.conf`: the
+package's own Cloudflare action (`dpkg -S` in the test image), which no jail
+uses. Its `X-Auth-Key` is a header template filled from `<cftoken>`. On
+leopard, `dpkg --verify fail2ban` printed nothing, so every packaged file is as
+shipped, and `cftoken =` and `cfuser =` are empty. **No Global API Key on the
+VM.**
+
+### Closed — 2026-09-30
+
+| Criterion | Where it was met |
+|---|---|
+| 1 the leak | 331 items, 307 stranded (top of this section) |
+| 2 ban and unban, full cycle | the phone through `sg101-auth`, "Installed on leopard" |
+| 3 unban past the first page | live, position 296 of 344 (09-29); stand-in, 519 items |
+| 4 refused calls are failures | container, ban and unban, above |
+| 5 least privilege | 09-29 probes; no Global API Key, above |
+| 6 stranded entries cleared | 270 of 345, first run; second run is task 10 requirement 4a |
+| 7 filters match leopard's lines | `fail2ban-regex`, "Installed on leopard" |
+| 8 the manual targets | container (clears), leopard (`add`/`remove`) |
+
+**Answered since 09-29's open items:** one bulk `DELETE` of 270 items completed
+in one operation, so no cap at that size. **Still untested: the 60 s operation
+timeout.** The slowest operation timed was 0.6 s (09-29); the 270-item delete was not
+timed, only seen to complete.
+
+**Carried forward:** the second cleanup (task 10, requirement 4a, after the
+wiki's redirect, runbook C6); task 11's last read of the list. A token that
+stops working shows only as `ERROR` lines in `fail2ban.log`, which nothing on
+leopard reads (see the token's "no expiry" above).
 
 ## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
 
