@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.core import mail
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
 from news.models import Category, Story
 
@@ -39,7 +40,8 @@ class NewsDisplayTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_archive_page_renders(self):
-        d = self.story.date_submitted
+        # The archive's months are the site's, not UTC's.
+        d = timezone.localtime(self.story.date_submitted)
         response = self.client.get(
             reverse('news-archive_page', kwargs={'year': d.year, 'month': d.month}))
         self.assertEqual(response.status_code, 200)

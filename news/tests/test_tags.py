@@ -5,6 +5,8 @@ The tag data moved from a space-separated string plus a join table onto an array
 column on the story. These cover the parts of that move a page renders or a
 query count would notice.
 """
+import datetime
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import connection
@@ -12,6 +14,7 @@ from django.forms import modelform_factory
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from news.models import Category, PendingStory, Story
 from news.utils import attach_extra_attrs
@@ -125,7 +128,15 @@ class TagQueryCountTests(TagTestCase):
             reverse('news-index_page'))), 2)
 
     def test_the_archive_page_is_two_story_queries(self):
-        submitted = self.story.date_submitted
+        # The archive groups stories by the site's month, not UTC's. This
+        # instant is October in UTC and still September in the site's zone, so
+        # reading the month off the stored value asks for an empty page -- which
+        # is what this test did, and why it failed in the first hours of a
+        # month (UTC) and passed the rest of the time.
+        boundary = datetime.datetime(2026, 10, 1, 2, 0,
+                                     tzinfo=datetime.timezone.utc)
+        Story.objects.filter(pk=self.story.pk).update(date_submitted=boundary)
+        submitted = timezone.localtime(boundary)
         self.assertEqual(len(self.story_queries(
             reverse('news-archive_page', kwargs={'year': submitted.year,
                                                  'month': submitted.month}))), 2)
