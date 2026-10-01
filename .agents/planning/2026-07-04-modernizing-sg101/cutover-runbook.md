@@ -199,12 +199,25 @@ already tracked, and those 98 are. So:
   asked for, and on a `--delete` run anything tracked-but-absent on production
   would be deleted locally.
 
-**Sync the upload directories by name rather than syncing `media/` wholesale**,
-and check `git status media/` after the transfer — it should be clean.
+**Corrected 2026-09-30: sync `media/` whole, excluding exactly the files git
+tracks, rather than by directory name.** The named list missed `podcast/`'s
+1.4 GB of episodes (every feed enclosure points there; the table below counts
+only the one tracked logo) and `slideshow/` (the home page's), which the table
+never listed. *Source: `STATUS.md` § Step 21 task 07, "Found while drafting".*
+
+```bash
+git ls-files media | sed 's#^media/#/#' > /tmp/media-tracked
+rsync -a --exclude-from=/tmp/media-tracked jaguar:/svr/django-sites/sg101/sg101/media/ media/
+```
+
+No `--delete`. Afterwards `git status media/` shows no tracked file modified,
+and as untracked only assets that should be committed (below).
 
 **One known gap to fix while there:** three `bio.Badge` rows reference files that
 were never committed — `badges/map.png` (Map Pin), `badges/bns_badge.png` (Brave
-New Surf Pin) and `badges/script.png` (Wiki Pin). They exist on production and
+New Surf Pin) and `badges/script.png` (Wiki Pin) — and two smileys,
+`smiley/images/icon_popcorn.gif` (`:popcorn:`) and
+`smiley/images/icon_dead_frv1.gif` (`:frv1:`), found 2026-09-30. They exist on production and
 arrive with this rsync, which is the moment to commit them alongside the other
 ten so the set stops being partial. They render broken in local development
 until then, which is how this was found.

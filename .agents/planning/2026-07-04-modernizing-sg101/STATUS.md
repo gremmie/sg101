@@ -43,6 +43,347 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 07 — the dress rehearsal — IN PROGRESS: sequence drafted and its four choices decided 2026-09-30; P0–P2 done 10-01 (P2 fixed four stale verification tools); P3 next
+
+**The planned sequence, drafted before running anything** (implementation
+approach 1). Each step names who runs it: auto mode refuses Claude's writes over
+ssh to leopard, so every change there is Brian's, with Claude reading over ssh.
+**⏱** marks a step timed for the window estimate. **Steps that will not happen
+in the real window are marked *rehearsal only***, so the timed total can be
+split into "window" and "rehearsal overhead".
+
+### Found while drafting — 2026-09-30
+
+- **The dump already exists as a nightly job.** jaguar's crontab runs
+  `python /svr/scripts/mysqlbackup.py` at 02:00 (CDT) into
+  `/svr/backups/sg101YYYYMMDD.sql.bz2`, with a 7-day `find -delete`. The 09-23
+  to 09-30 files are there at ~100.5 MB, the size of July's
+  `sg10120260712.sql.bz2` (100,225,396), so July's was evidently one of these.
+  Their mtimes are 02:00:06–02:00:23. **bzip2 keeps the input's mtime**, so that
+  is when `mysqldump` finished, not when compression did: the dump takes ~7 s,
+  and compression's time is unmeasured. Read over ssh; the script's lines
+  holding credentials were not printed.
+- **The runbook has no restore command for leopard.** `tools/pg_snapshot.sh` runs
+  plain `docker compose` (the dev stack), reads `/snapshots` inside the
+  container, and the production `postgres` has no such mount. C1 says "restore"
+  and nothing more. The restore on leopard below streams the dump over stdin.
+  That route is unrun; it is what this rehearsal is for.
+- **`beta.surfguitar101.com` has no DNS record.** Brian removed it 2026-09-29
+  after B3. Re-adding it has to wait for its gate (decision 1), because
+  after P4 it serves real member data.
+
+- **B4's named directories miss 1.4 GB and the home page's slideshow.** Read
+  over ssh 2026-09-30, jaguar's `media/` (4.7 GB) against `git ls-files media`:
+
+  | dir | jaguar | git | B4 |
+  |---|---|---|---|
+  | `downloads` | 719 files, 2.7 G | 0 | named |
+  | `podcast` | 21 files, **1.4 G** | 1 (`podcast_logo.jpg`) | **"committed, no uploads"** |
+  | `user_photos` | 10,072, 593 M | 0 | named |
+  | `potd` | 1,155, 74 M | 0 | named |
+  | `avatars` | 2,856, 26 M | 1 (`default.png`) | `avatars/users` named |
+  | `slideshow` | 30, 992 K | 0 (git-ignored) | **absent** |
+  | `smiley` | 89 | 87 | committed |
+  | `badges` | 13 | 10 | committed, 3 missing named |
+  | `news`, `banners` | 22, 15 | 22, 0 | `banners` named |
+
+  **`podcast`:** all 15 `podcast_item` rows' `enclosure_url` are
+  `https://surfguitar101.com/media/podcast/…`. The 20 episode files are on
+  jaguar alone, so the podcast feed would have served 404s.
+  **`slideshow`:** `home.html:28` calls `{% slideshow_images %}`, which globs
+  `media/slideshow/*`, so the home page's slideshow would have been empty.
+  **`smiley`:** two files not in git, `icon_popcorn.gif` and
+  `icon_dead_frv1.gif`, both in use (`smiley_smiley` rows 86 `:popcorn:` and
+  87 `:frv1:`): the same gap as the three badges.
+  **Correction: sync `media/` whole, excluding exactly the files git tracks**,
+  without `--delete`. Every upload comes, no committed file is overwritten, and
+  no list of names can leave a directory out. Runbook B4 corrected to say so.
+  **Dry-run from the Mac, jaguar → an empty scratch directory:** 14,871 files
+  with the exclusion list, 14,992 without, a difference of exactly the 121
+  tracked files present on jaguar; tracked `podcast_logo.jpg`, `default.png`
+  and `news/` excluded, the five missing assets included. The Mac's rsync is
+  `openrsync` (its dry-run `--stats` read 0; counted from `--out-format`
+  instead); leopard's is GNU, so P5 repeats the count there.
+
+### Choices for Brian before P0 — all four decided 2026-09-30 (Brian), each on the recommendation
+
+1. **What gates `beta` once real data is on it.** Recommended: task 07a's
+   Cloudflare Access application, created now rather than at 07a, with only
+   Brian's address on it at first, then the record re-added. 07a needs it anyway
+   and it is the only option that keeps members out while the site is
+   reachable. The alternative is a Cloudflare rule allowing only Brian's
+   addresses, which 07a would then replace.
+2. **Which dump.** Recommended: **run `mysqlbackup.py` by hand**, timed,
+   because the real window has to take its dump after C0's freeze and cannot
+   use the 02:00 one. Its output name is the date, so a run today replaces
+   today's nightly file with a newer one.
+3. **The media route.** jaguar → leopard directly needs an ssh key from leopard
+   that jaguar accepts (none recorded). Through the Mac is two hops, and the
+   time measured would not be the window's. Recommended: a direct route,
+   decided and set up in P0, so P5 times what the window will do.
+4. **Your own address and fail2ban.** `block_list` covers the whole zone, so a
+   ban during the rehearsal also locks you out of the live site (it happened
+   2026-09-30). Recommended: B3's failed logins from the phone again, no
+   honeypot test from the Mac, and no `ignoreip` change, so the jails stay as
+   they will run.
+
+### P0 — before the clock starts (rehearsal only)
+
+1. **Mac (Claude):** `make snapshot label=pre-task-07`, since DOCKER.md §7
+   replaces the dev database.
+2. **leopard (Brian):** in `.env`, set `EMAIL_BACKEND` to the console backend
+   and empty `GCAL_CREDENTIALS_PATH`, then `make prod-up` (a `restart` does not
+   reread `.env`). Mail and calendar are off **before** any real data arrives.
+3. **Claude:** read `CELERY_BEAT_SCHEDULE` and check the task's claim that beat
+   touches only this database.
+4. **Brian, Cloudflare:** the gate (choice 1), then the proxied `beta` A record
+   to `192.0.2.13`.
+5. **Brian:** the media route (choice 3).
+6. **Claude:** record the `postgres:16` image digest on the Mac and on leopard.
+   Restoring rebuilds every index under the server's glibc, so they should
+   match; and a mismatch is worth knowing before the restore.
+
+**P0 progress, 2026-09-30:**
+- **1 done.** `sg101-20260930-192656-pre-task-07.dump`, 128 M, 7.9 s.
+- **3 done: the claim holds.** `CELERY_BEAT_SCHEDULE` is the five tasks named.
+  `pick_potd` and `max_users` write their own rows; `cleanup` runs
+  `clearsessions`, `forum_cleanup` and `PendingEmailChange.purge_expired()`;
+  `purge_messages` deletes messages both sides deleted; `reconcile_index`
+  reports. None sends mail or touches S3. `purge_messages` does delete rows
+  from leopard's copy, which C1 overwrites anyway.
+- **6 done: different builds, the same glibc.** Mac `postgres:16` is
+  `sha256:33f923b0…` arm64, PostgreSQL **16.14**; leopard's is
+  `sha256:1a6ab3f5…` amd64, **16.15**. Both are Debian with **glibc 2.41**
+  (`deb13u3` on the Mac, `u4` on leopard), and glibc's collation version is
+  its release, so text indexes sort the same. A 16.14 dump restores into
+  16.15. P4 step 15 reads `datcollversion` to confirm.
+- **2 done (Brian, `make prod-up` ~00:48 UTC 10-01).** Read inside the
+  containers: `web` and `worker` both
+  `django.core.mail.backends.console.EmailBackend`, `GCAL_CREDENTIALS_PATH`
+  `''`. Before this, `EMAIL_BACKEND` was unset on leopard, so production's
+  default (SMTP to Postmark) was in force.
+- **4 done (Brian).** An Access application on `beta.surfguitar101.com`, then
+  the proxied A record. Read from the Mac with no cookie: `302` to
+  `sg101-beta.cloudflareaccess.com/cdn-cgi/access/login/beta.surfguitar101.com`,
+  and `/robots.txt` held back too. **Brian's first visit ended in a 502, which
+  was the restart, not Access:** his request reached the proxy at 00:47:50
+  (so it had passed Access), and Apache logged `Connection reset by peer …
+  web:8000` at 00:47:53 and `Connection refused` at 00:48:01 and 00:48:15, as
+  `prod-up` replaced `web`. A refresh loaded the site.
+  **The login method was wrong, and is fixed.** A private window landed on
+  `dash.cloudflare.com`: the Access sign-in page linked only to
+  `dash.cloudflare.com/oauth2/auth` (`kind` `cf_idp`), the **Cloudflare
+  identity provider**, i.e. a Cloudflare account login, which testers do not
+  have. Brian's own browser had a dashboard session, so it passed straight
+  through. Cloudflare's docs (updated 2026-08-31): *"New Zero Trust
+  organizations use the Cloudflare identity provider as their default login
+  method. OTP is no longer added automatically."* Brian added **One-time PIN**
+  under Zero Trust → Integrations → Identity providers and selected it on the
+  application. A private window then asked for his email and a PIN arrived by
+  mail (Brian's report). Read from the Mac afterwards: the sign-in page offers
+  `otp` and no longer links to `dash.cloudflare.com`. **Task 07a's "type their
+  email address" depends on this provider, not the default.**
+- **5 done (Brian).** `~/.ssh/jaguar_rsync` on leopard, accepted by jaguar.
+  The host key leopard accepted, `SHA256:et6Ez/sl…`, matches the Mac's
+  `known_hosts` entry for jaguar and what jaguar presents. The client warns
+  that the key exchange is not post-quantum: that is jaguar's 14.04 OpenSSH,
+  and accepted for one copy of media from a host retiring in weeks.
+- **P0 complete.**
+
+### P1 — the dump (jaguar, Brian)
+
+7. ⏱ `time python /svr/scripts/mysqlbackup.py`, then `md5sum` and `bzip2 -t`
+   on the result.
+8. ⏱ Copy to the Mac into `sg101-hg-backup/snapshots/` (requirement 1). *The
+   copy to the Mac is rehearsal only if conversion moves to leopard; it is not
+   planned to.*
+
+**P1 done, 2026-09-30 ~20:06–20:10 CDT (01:06–01:10 UTC 10-01):**
+- ⏱ **Dump: 1 m 11.9 s** (`real`; `user` 1 m 7.4 s). Brian ran
+  `mysqlbackup.py` by hand; it dumps SG101 (1:11.3) and two small databases,
+  BNS and MADEIRA (0.25 s each). **The time is almost all bzip2**: the nightly
+  files' mtimes (dump finished ~7 s after 02:00, bzip2 keeping the input's
+  mtime) put `mysqldump` at ~7 s, and `user` time is compression CPU. The
+  window's dump is therefore ~1 m 12 s; skipping compression would save about
+  a minute and cost ~10× the transfer.
+- `sg10120260930.sql.bz2`, **100,545,978 bytes**, md5
+  **`c5db979ebf09bc189fec985b2c5081f7`**, `bzip2 -t` intact. It replaced
+  today's 02:00 nightly file, as decided.
+- ⏱ **Copy to the Mac: 5.3 s** (`scp`), into `sg101-hg-backup/snapshots/`
+  beside July's; md5 matches.
+
+### P2 — convert and verify (Mac, Claude)
+
+The DOCKER.md §7 procedure, as corrected 2026-09-30 below.
+9. ⏱ Load into the dev `db` service: drop and recreate MySQL's `sg101`, then
+   `bunzip2 -c … | docker compose exec -T db mysql …` (§4).
+10. ⏱ `convert.sh` → `verify.py` → `verify_data.py values` → `post_convert.py`
+    (C2 happens here) → `verify_data.py keys` → `compare_schema.py` against a
+    fresh reference database.
+11. ⏱ `smoke.py`. *Rehearsal only*, then reconvert (step 10 again) so the
+    snapshot carries no smoke traffic.
+12. ⏱ `tools/pg_snapshot.sh dump rehearsal-<date>`, with its size.
+
+**P2 — DONE 2026-09-30 evening, after a stop for Brian: the verification chain
+had not run end to end since July, and three of its tools were stale.** The
+"every check passed" this plan leaned on is the Step 11 record (July); the
+09-06 logs are `convert.sh` alone. `verify_data.py` was last changed 07-25,
+and seven migrations since then drop tables or rewrite or retype columns
+after the conversion: `core.0002` (09-04), `donations.0002` (09-06),
+`elsewhere.0003/0004` (09-06), `news.0009–0011` (09-07).
+
+| step | ⏱ | result |
+|---|---|---|
+| MySQL load (dev `db` recreated first: its container named a deleted network) | 35.0 s | 91 tables, 464,254 posts, newest 2026-09-30 16:25 |
+| `convert.sh` | 20.5 s | 701,566 rows (699,435 on 09-06); the same 4 identifier-truncation warnings as 09-06; no table with errors |
+| `verify.py` | 0.48 s (timed twice) | **OK**: 701,566 rows both sides, cp1252 text, 90 sequences |
+| `post_convert.py`, first run | 1.7 s | **failed**: `relation "public.tagging_tag" does not exist` |
+| `post_convert.py`, after the fix below | 1.1 s | OK: recorded `oembed.0001_initial` (C2 handled here, before leopard), 23 indexes, 86 FKs, 2 checks, 2 defaults |
+| reference DB `migrate` | 2.1 s | |
+| `compare_schema.py` | 0.2 s | 2 "unowned sequences": **a false positive**, below |
+| `verify_data.py` | — | **crashed**: `malformed array literal` on `news_story.tags` |
+| `crosscheck_dumpdata.sh` | — | **cannot run**: `MySQL 8.0.11 or later is required (found 5.7.44)` |
+
+**C3 / A1:** A1's two queries against the converted data returned no rows, so
+no retired network to restore. The migration's own warning goes through
+`logger.warning`, which `post_convert.py`'s output would not show either way.
+
+1. **`pattern_ops_indexes.sql` — FIXED, unstaged.** `post_convert.py` runs
+   `migrate` (which now includes `news.0011_drop_tagging_tables`) and then
+   this file, whose line 39 indexed `tagging_tag`. `01a94a32` removed the app
+   and not the line. **The real window would have stopped here.** It runs as
+   one batch, so no index and no FK rebuild had happened. Regenerated with the
+   file's own documented query from a migrations-built database: −`tagging_tag`,
+   +two `elsewhere` slug indexes (`elsewhere.0003` already creates them on a
+   converted database; `IF NOT EXISTS`). It was the only missing table the
+   file named.
+2. **`compare_schema.py` — a false positive, not fixed.** The two sequences
+   belong to tables `migrate` creates after the conversion
+   (`accounts_pendingemailchange`, `search_searchdocument`), which Django makes
+   as identity columns: `attidentity 'd'`, `pg_depend.deptype 'i'`, and
+   `pg_get_serial_sequence` resolves both, contrary to the message. Its query
+   (`compare_schema.py:130`) accepts only `serial`'s `'a'`. Fix: accept `'i'`.
+3. **`verify_data.py` — a design choice for Brian.** It compares MySQL with
+   PostgreSQL *after* `migrate`, with pinned exceptions, so every migration
+   that changes data after the conversion needs a new exception, and seven
+   have none.
+4. **`crosscheck_dumpdata.sh` — cannot run on Django 5.2**, which refuses
+   MySQL before 8.0.11 when dumping the MySQL side; the dev `db` is 5.7 to load
+   production's 5.5 dump. Dead since the Django upgrade.
+
+**Decided (Brian): (a) and retire the crosscheck.** Done, unstaged, each
+fix seen to fail first:
+- **`verify_data.py` split into two required modes.** `values` runs before
+  `post_convert.py`, beside `verify.py`, so it compares the conversion and
+  nothing a migration did afterwards; `keys` (FKs valid, Django-style,
+  orphans; the enforcement probe) runs after, on the keys `post_convert.py`
+  rebuilds. Dropped the exceptions that only `migrate` needed:
+  `auth_permission`, `django_migrations`, `auth_user.email` (`accounts.0003`).
+  Kept `forums_post.user_ip`, the conversion's own: **370 rows on today's data,
+  as in July.** *Mutation:* `news_story.title` of pk 1841 given a trailing `x`
+  in PostgreSQL → `FAILED`, naming `pk=1841` with both values.
+- **`compare_schema.py:130` accepts `deptype 'i'`** beside `'a'`. *Mutation:*
+  a free `orphan_probe_seq` → `DIFFERS … orphan_probe_seq`; dropped → OK.
+- **`crosscheck_dumpdata.sh` deleted**; DOCKER.md §7 renumbered and its notes
+  rewritten; `smoke.py`'s docstring updated. `requirements.txt`'s "nothing
+  points the ORM back at MySQL" was false while the crosscheck existed and is
+  true again. The `mysql` branch of `sg101/settings/databases.py` is now
+  unused; left for task 11, which removes the MySQL chain.
+- **Found running `smoke.py`: its four admin checks passed on a failed login.**
+  `check_admin` logged in with `SMOKE_PASSWORD` after the auth checks had
+  changed it (`smoke.py:234`); the login form came back 200, each admin page
+  302'd to `/admin/login/`, and `requests` followed that to a 200 it counted.
+  Now the login must 302, the pages are fetched without following redirects,
+  and `check_admin` sets the password it uses. *Seen failing first:* with only
+  the stricter assertions, 5 FAIL; with the password set, **36 checks OK**.
+
+**The window's P2, timed on the last clean run** (web, worker and beat stopped
+while converting, so nothing wrote to it):
+
+| step | ⏱ |
+|---|---|
+| MySQL load | 35.0 s |
+| `convert.sh` | 19.7 s (20.1, 20.5 on earlier runs) |
+| `verify.py` | 0.5 s |
+| `verify_data.py values` | 13.3 s (13.4): 551 columns, 5.75 M values |
+| `post_convert.py` | 2.2 s |
+| `verify_data.py keys` | 0.4 s: 88 FKs valid, Django-style, 0 orphans; probe rejected (23503) |
+| `compare_schema.py` | 0.2 s (+2.2 s building the reference) |
+| `pg_snapshot.sh dump` | 8.3 s |
+| **total** | **~1 m 22 s** |
+
+*Rehearsal only:* `smoke.py` 7.0 s.
+
+**Snapshot:** `snapshots/sg101-20260930-202807-rehearsal-20260930.dump`,
+119,734,729 bytes, md5 `f6545cc63dd8121451bc4cd34254ef61`.
+
+### P3 — to leopard
+
+13. ⏱ Copy the snapshot to leopard, `md5sum` on both ends.
+
+### P4 — restore, migrate, reindex (leopard, Brian; Claude prepares each command)
+
+14. ⏱ `make prod-down`, then bring `postgres` up alone (the 09-27 error-mail
+    burst came from health checks hitting an empty schema). Drop and recreate
+    the database, then
+    `docker compose -f docker-compose.prod.yml exec -T postgres pg_restore -U sg101 -d sg101 --no-owner --no-privileges < <file>`,
+    **with stderr kept and read**. `pg_snapshot.sh` throws it away with `|| true`.
+15. Read `datcollversion` and the `oembed` row.
+16. ⏱ `migrate` with its output kept: no `InconsistentMigrationHistory` (C2
+    confirmed unneeded), and any `elsewhere` retired-network warning (A1 firing
+    late).
+17. ⏱ `reindex_search`, with `vmstat 5` running in a second terminal for peak
+    memory and swap. Then `reconcile_search`: no drift (criterion 6).
+
+### P5 — media (Brian)
+
+18. On leopard, `git ls-files media | sed 's#^media/#/#' > /tmp/media-tracked`:
+    the exclusion list, anchored so a pattern matches only that path.
+19. The same command with `-n --out-format='%n'`, counted (`grep -vc '/$'`):
+    the 09-30 figure was 14,871 against 14,992 unfiltered, so expect about
+    that. Then ⏱ `rsync -a --exclude-from=/tmp/media-tracked jaguar:…/media/ media/`
+    (B4, corrected). Then `/hosted` and `/photos` into `var/public/` (B8).
+    Record bytes and time.
+20. B4a's `chown`. `git status media/`: no tracked file modified; untracked,
+    exactly the three badges and two smileys, which are committed
+    (requirement 4).
+21. ⏱ A second rsync pass: the delta C5 will run.
+22. `user_photos` rows against files on disk: a count and spot checks.
+
+### P6 — start and smoke
+
+23. `make prod-up` (C4a: worker and beat recreated with the stack).
+24. **Mail blocked, shown:** one message sent from `prod-shell`, seen in
+    `prod-logs svc=web`, and absent from Postmark's activity.
+25. `tools/prod_smoke.sh 192.0.2.13` from the Mac.
+26. B3 from the phone through `beta`; `auth.log` holds the phone's address.
+27. A snapshot on leopard, since `make snapshot` is the dev stack's:
+    `docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U sg101 -Fc sg101 > <file>`.
+    Then `tools/image_smoke.py` (B4a: it creates and deletes a scratch user).
+28. Through `beta`, a recent forum post and a recent photo from production
+    render (criterion 1).
+
+### P7 — memory under load, and the backup carried from task 05
+
+29. ⏱ `make prod-backup` while a light load runs against `beta`, sampling
+    memory: the first backup with the real ~4.7 GB of media, and `pg_dump`'s
+    peak. Compare with task 03's idle 1,384 MB; recommend staying on 4 GB or
+    resizing (criterion 5).
+30. A fresh temporary AWS admin key (task 05), the run's dump fetched from
+    `sg101-backup-db`, restored into a scratch database, row counts compared
+    with the source; the key deleted again (task 05 criterion 3).
+
+### P8 — undo, and the runbook
+
+31. Postmark's activity log and the calendar checked: nothing sent, nothing
+    changed (criterion 3). S3: `image_smoke.py`'s cleanup confirmed.
+32. **Left deliberately for 07a:** the restored site, `beta` and its gate.
+33. The timings table: each ⏱, split into window and rehearsal-only, with the
+    window's estimated total (criterion 4).
+34. The runbook corrected where the rehearsal differed (implementation
+    approach 4). At least: a restore command for leopard in C1, C2 reduced to
+    a check if P2 recorded the row, and the window's own dump in C1.
+
 ## Step 21 task 06 — fail2ban banning at Cloudflare — DONE 2026-09-30, all eight criteria met: the leak confirmed (requirement 1); the script written (`3ff52995`); requirements 5, 6 and 8 and criterion 3's live half measured 2026-09-29 (`19d98cf9`); log timestamps made UTC (`cb83e666`); action, jails and filters written and run end to end (`051f983e`); B3 passed on `beta` 2026-09-30, and a log-injection hole found and closed (`3f3c9ef6`); installed on leopard 2026-09-30, criterion 2 met from a phone (`0818575e`); stranded entries cleared, 270 of 345, and the wiki moved to the flip (`d262ca8a`); criteria 4 and 8 in a container, 8's live half and 5 on leopard, in the commit that adds this line
 
 **Decided 2026-09-28 (Brian), recorded in the task file (`ca04ed3a`):** the
