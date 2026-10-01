@@ -234,17 +234,19 @@ Then:
 # 1. Convert. Reads .env for credentials; override the databases as needed.
 MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/convert.sh
 
-# 2. Verify the conversion itself, BEFORE migrating (see the note below).
+# 2. Verify the conversion itself, BEFORE migrating (see the note below):
+#    every row, then every value in every column.
 docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
     python tools/pgloader/verify.py
+docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
+    python tools/pgloader/verify_data.py values
 
 # 3. Bring the schema up to the current migration state.
 docker compose exec -T web python tools/pgloader/post_convert.py
 
-# 4. Compare the data itself, column by column, and check referential
-#    integrity. Runs after post_convert.py, unlike step 2.
+# 4. Check referential integrity, on the foreign keys step 3 rebuilt.
 docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
-    python tools/pgloader/verify_data.py
+    python tools/pgloader/verify_data.py keys
 
 # 4b. Compare the schema against one the migrations build. Needs a reference
 #     database, which is just an empty one with migrate run against it.
@@ -254,28 +256,29 @@ docker compose exec -T postgres psql -U sg101 -d postgres \
 docker compose exec -T -e DB_NAME=sg101_reference web python manage.py migrate
 docker compose exec -T web python tools/pgloader/compare_schema.py
 
-# 5. Second opinion on the same rows, through Django's serializer.
-MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/crosscheck_dumpdata.sh
-
-# 6. Smoke the running site, reads and writes. Needs the stack up against the
+# 5. Smoke the running site, reads and writes. Needs the stack up against the
 #    converted database, which is what `docker compose up -d` now gives you.
 docker compose exec -T web python tools/pgloader/smoke.py
 ```
 
-**Keep steps 4 and 5 ahead of step 6.** Using the site changes the site:
-sessions get written and topic view counters go up. `smoke.py` removes the
-content it creates, but it cannot un-read a page, so a comparison against the
-untouched MySQL source has to happen before anything browses.
+**Keep step 2 ahead of everything else.** It compares the converted database
+with its MySQL source, so it needs the converted database exactly as the
+conversion left it. `migrate` changes it on purpose: data migrations drop
+tables, backfill columns and change types. Using the site changes it too:
+sessions get written and topic view counters go up, and `smoke.py` removes the
+content it creates but cannot un-read a page.
 
 Step 1 prints a summary and writes it to `tools/pgloader/logs/`; rejected rows,
 if there ever are any, land in `tools/pgloader/logs/rejects/`. **A non-zero
 error count must be explained, never waved through.**
 
-**Run `verify.py` before `post_convert.py`.** It compares every table's exact
-row count against MySQL, and `migrate` legitimately adds rows to
-`django_migrations` and `auth_permission` — run it after and those two are
-reported as expected growth rather than failures, but the comparison is no
-longer like-for-like.
+**Run `verify.py` and `verify_data.py values` before `post_convert.py`.** Both
+compare the converted database with MySQL, and `migrate` changes it on purpose:
+it adds rows to `django_migrations` and `auth_permission`, and data migrations
+drop tables, backfill columns and change their types. After it, the comparison
+is no longer like-for-like. `verify.py` reports those two tables as expected
+growth; `verify_data.py values` would have to be taught every data migration,
+one at a time, which is how it once went two months without a passing run.
 
 What each check covers:
 
@@ -283,13 +286,14 @@ What each check covers:
   row counts per table, every text value in the eight cp1252 tables (md5
   against MySQL's own decoding), and that every sequence sits past `MAX(pk)`
   so the next insert cannot collide.
-- **`verify_data.py`** — every column of every table, by checksum, on both
-  engines: 543 columns and 5.7 million values, with datetimes compared as the
-  application sees them, `NULL` held distinct from `''`, and booleans,
-  decimals and `inet` rendered to a common form. Also checks that every
-  foreign key holds, is enforced, and is built the way Django builds it. Four
-  differences are expected and are listed with the number of rows each may
-  affect; anything beyond that count fails.
+- **`verify_data.py values`** — every column of every table, by checksum, on
+  both engines, with datetimes compared as the application sees them, `NULL`
+  held distinct from `''`, and booleans, decimals and `inet` rendered to a
+  common form. One difference is expected, made by the conversion itself, and
+  is listed with the number of rows it may affect; anything beyond that count
+  fails.
+- **`verify_data.py keys`** — after `post_convert.py`: every foreign key holds,
+  is enforced, and is built the way Django builds it.
 - **`compare_schema.py`** — the converted schema against one the migrations
   build, across columns, indexes, constraints, foreign keys (including their
   action and deferrability), defaults and sequence ownership. This is the
@@ -299,9 +303,6 @@ What each check covers:
   pgloader's are `idx_393735_username` where Django's are
   `forums_topic_last_post_id_ed000e17_fk`, Django resolves them by
   introspection, and comparing them would bury the differences that matter.
-- **`crosscheck_dumpdata.sh`** — twelve models dumped from both engines
-  through Django's own serializer and diffed, which comes at the rows from
-  outside SQL entirely.
 - **`smoke.py`** — the running site: the read checklist, both password flows,
   the admin, and real writes (a topic, a private message, a photo), each
   checked to display and then removed again.

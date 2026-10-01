@@ -18,8 +18,8 @@ the test client, so middleware, sessions, the cache and the template layer are
 all in the path -- the same way a member would meet the site.
 
 What it creates it removes again, but it cannot un-read a page: browsing
-writes sessions and raises topic view counters. Run verify_data.py and the
-dumpdata cross-check first, while the converted database still matches its
+writes sessions and raises topic view counters. Run verify.py and
+`verify_data.py values` first, while the converted database still matches its
 source exactly.
 
 Run inside the web container, with the stack up on the database under test:
@@ -325,18 +325,26 @@ def check_write_photo(session, results):
 
 def check_admin(session, results):
     """The admin, logged in as a superuser, over a few of its pages."""
+    # The password is set here too: the auth checks change it, so whatever
+    # they left behind is not something to log in with.
     user = User.objects.get(username=SMOKE_USER)
     user.is_staff = user.is_superuser = True
+    user.set_password(SMOKE_PASSWORD)
     user.save()
 
     admin_session = requests.Session()
-    post(admin_session, BASE + reverse('accounts-login'),
-         {'username': SMOKE_USER, 'password': SMOKE_PASSWORD})
+    resp = post(admin_session, BASE + reverse('accounts-login'),
+                {'username': SMOKE_USER, 'password': SMOKE_PASSWORD})
+    results.append((resp.status_code == 302,
+                    'admin %-34s %s' % ('log in as superuser', resp.status_code)))
+    # Not following redirects is the point. The admin answers an
+    # unauthenticated request with a redirect to its own login page, which
+    # answers 200 -- so a check that follows it passes on a failed login.
     for path, label in [('/admin/', 'admin index'),
                         ('/admin/auth/user/', 'admin user list'),
                         ('/admin/forums/topic/', 'admin topic list'),
                         ('/admin/news/story/', 'admin news list')]:
-        resp = admin_session.get(BASE + path)
+        resp = admin_session.get(BASE + path, allow_redirects=False)
         results.append((resp.status_code == 200,
                         'admin %-34s %s' % (label, resp.status_code)))
 

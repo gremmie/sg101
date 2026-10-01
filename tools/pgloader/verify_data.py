@@ -33,9 +33,23 @@ the conversion could have gone wrong silently:
              tallied per column and reported, because the distinction is
              invisible on a page and load-bearing in a query.
 
+It runs twice, at two different points, because the two halves need the
+database in two different states:
+
+  values     before post_convert.py, beside verify.py. This compares what the
+             conversion wrote, and only that. After post_convert.py runs
+             migrate, any migration that rewrites data -- dropping a table,
+             backfilling a column, changing its type -- is a difference this
+             would have to be taught about, one migration at a time, and a
+             comparison that needs updating with every data migration stops
+             being run.
+  keys       after post_convert.py, which rebuilds every foreign key the way
+             Django builds it. Checking them before would only find pgloader's.
+
 Run inside the web container, which has both drivers:
 
-    docker compose exec -T web python tools/pgloader/verify_data.py
+    docker compose exec -T web python tools/pgloader/verify_data.py values
+    docker compose exec -T web python tools/pgloader/verify_data.py keys
     MYSQL_DB=sg101_pristine PG_DB=sg101 ... same
 
 Exits non-zero if anything differs.
@@ -57,22 +71,11 @@ INT_TYPES = {'int', 'bigint', 'smallint', 'mediumint'}
 # How many mismatching rows to name before giving up on a column.
 MAX_REPORTED = 10
 
-# Tables the conversion is not expected to reproduce, because something after
-# it legitimately writes to them. Reported, never silently skipped.
-EXPECTED_TABLES = {
-    'auth_permission': 'post_migrate creates permissions for every model '
-                       'added since the snapshot',
-    'django_migrations': 'migrate records what it applied',
-}
-
-# Columns that differ for a known reason, with the exact number of rows that
+# Columns the conversion itself changes, with the exact number of rows that
 # may differ. Pinning the count is the point: it explains the difference
 # without granting the column a blanket exemption, so corruption arriving
 # alongside an expected change is still a failure.
 EXPECTED_COLUMNS = {
-    ('auth_user', 'email'): (
-        1, 'accounts.0003 lowercases the one address two accounts held in '
-           'different case'),
     ('forums_post', 'user_ip'): (
         370, "the conversion maps '' to NULL, because inet has no empty "
              'value'),
@@ -265,10 +268,6 @@ def check_values(my, pg, tz):
         cols = columns_of(my, table)
         if table not in pg_types:
             failures.append('%s: missing from PostgreSQL' % table)
-            continue
-        if table in EXPECTED_TABLES:
-            explained.append('%s: not compared -- %s'
-                             % (table, EXPECTED_TABLES[table]))
             continue
 
         plan = []
@@ -477,18 +476,27 @@ def check_enforcement(pg):
     return failures
 
 
-def main():
+def main(argv):
+    if len(argv) != 2 or argv[1] not in ('values', 'keys'):
+        print('usage: verify_data.py values   (before post_convert.py)\n'
+              '       verify_data.py keys     (after post_convert.py)',
+              file=sys.stderr)
+        return 2
+    mode = argv[1]
+
     my, pg = connect()
-    tz = app_time_zone()
     print('source: mysql/%s   target: postgresql/%s\n' % (
         os.environ.get('MYSQL_DB', os.environ.get('DB_NAME', 'sg101')),
         os.environ.get('PG_DB', os.environ.get('DB_NAME', 'sg101'))))
 
     results = OrderedDict()
-    results['values'] = check_values(my, pg, tz)
-    print()
-    results['foreign keys'] = check_foreign_keys(pg)
-    results['enforcement'] = check_enforcement(pg)
+    if mode == 'values':
+        results['values'] = check_values(my, pg, app_time_zone())
+        success = 'OK -- every column matches its source'
+    else:
+        results['foreign keys'] = check_foreign_keys(pg)
+        results['enforcement'] = check_enforcement(pg)
+        success = 'OK -- referential integrity holds'
 
     failures = [f for group in results.values() for f in group]
     print()
@@ -497,9 +505,9 @@ def main():
         for f in failures:
             print('  %s' % f)
         return 1
-    print('OK -- every column matches, and referential integrity holds')
+    print(success)
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv))

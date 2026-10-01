@@ -122,12 +122,16 @@ DEFAULTS = """
     WHERE table_schema = 'public' AND column_default IS NOT NULL
       AND column_default NOT LIKE 'nextval%'"""
 
+# A serial column owns its sequence through an 'a' (auto) dependency; an
+# identity column, which is what Django creates since 4.1, through an 'i'
+# (internal) one. pg_get_serial_sequence resolves both. The converted database
+# has both kinds: pgloader's serials, and identities on tables migrate creates.
 UNOWNED_SEQUENCES = """
     SELECT c.relname
     FROM pg_class c
     WHERE c.relkind = 'S' AND c.relnamespace = 'public'::regnamespace
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
-                      WHERE d.objid = c.oid AND d.deptype = 'a')"""
+                      WHERE d.objid = c.oid AND d.deptype IN ('a', 'i'))"""
 
 DIMENSIONS = OrderedDict([
     ('column', COLUMNS),
