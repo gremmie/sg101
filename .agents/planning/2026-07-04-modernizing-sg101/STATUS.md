@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 07 — the dress rehearsal — IN PROGRESS: sequence drafted and its four choices decided 2026-09-30; P0–P2 done 10-01 (P2 fixed four stale verification tools); P3 next
+## Step 21 task 07 — the dress rehearsal — DONE 2026-10-01, all six criteria met: P2 fixed four stale verification tools (`be228a74`); the window measures ~9 m 10 s, over half of it `reindex_search`; stay on 4 GB; in the commit that adds this line
 
 **The planned sequence, drafted before running anything** (implementation
 approach 1). Each step names who runs it: auto mode refuses Claude's writes over
@@ -321,6 +321,14 @@ while converting, so nothing wrote to it):
 
 13. ⏱ Copy the snapshot to leopard, `md5sum` on both ends.
 
+**P3 done, 2026-10-01 01:35 UTC:** ⏱ **8.1 s** (`scp` from the Mac, Brian);
+md5 on leopard `f6545cc63dd8121451bc4cd34254ef61`, matching. 64 G free on `/`.
+leopard's `sg101` database and `template1` are both owner `sg101`, UTF8,
+`en_US.utf8`, collation version 2.41, the Mac's too, so a plain
+`CREATE DATABASE sg101` reproduces it. `vmstat -t -S M 5` recorded from the
+Mac over ssh from 01:36:39 UTC for P4's memory figures; idle: 988 M free,
+swap 0.
+
 ### P4 — restore, migrate, reindex (leopard, Brian; Claude prepares each command)
 
 14. ⏱ `make prod-down`, then bring `postgres` up alone (the 09-27 error-mail
@@ -334,6 +342,38 @@ while converting, so nothing wrote to it):
     late).
 17. ⏱ `reindex_search`, with `vmstat 5` running in a second terminal for peak
     memory and swap. Then `reconcile_search`: no drift (criterion 6).
+
+**P4 part A done, 2026-10-01 ~01:39 UTC (Brian; Claude read over ssh):**
+`make prod-down`; `up -d --wait postgres` healthy in 10.7 s; `DROP DATABASE
+sg101 WITH (FORCE)` / `CREATE DATABASE sg101`; then
+`pg_restore … --no-owner --no-privileges < snapshot` over stdin:
+- ⏱ **Restore: 29.8 s**, **0 lines on stderr**. The stdin route works as is.
+- **Every table matches the Mac's source**, by `count(*)` over all 84:
+  694,499 rows (464,254 posts, 15,296 users); `search_searchdocument` 0, as the
+  snapshot carries its schema only.
+- **Memory:** swap 0 and no paging throughout. `free` fell from 1,746 M to a
+  low of 478 M as the page cache grew from 1.6 G to 2.8 G with the restored
+  data: reclaimable, not pressure. CPU (us+sy) peaked at 71 % for a sample,
+  I/O wait at most 3 %.
+
+**P4 part B done, 2026-10-01 01:41–01:49 UTC (Brian; Claude read over ssh):**
+- **Step 15:** `datcollversion` 2.41, actual 2.41: no mismatch.
+  `oembed.0001_initial` present beside `forums.0001_initial`, so C2 arrived
+  with the snapshot; 77 rows in `django_migrations`.
+- ⏱ **`migrate`: 14.6 s, "No migrations to apply."** Its saved output has no
+  warning of any kind, consistent with A1's empty result (C3).
+- ⏱ **`reindex_search`: 5 m 12.8 s**, 518,081 documents (`forums.post`
+  445,166 in 4:23 of it). **3.3× the Mac's 1 m 35 s, and the longest step so
+  far.**
+- ⏱ **`reconcile_search`: 12.6 s, clean** for all 8 types (criterion 6).
+- **What bounds the reindex: one CPU core.** leopard has 2 vCPUs, AMD EPYC
+  7642. Across 78 samples: user CPU ~48 % (one core saturated; the command is
+  single-threaded), run queue 1, I/O wait 1 %, steal 3 %, **swap 0 and no
+  paging**. `free` fell to 118 M with ~3.1 G in reclaimable page cache. So
+  per-core speed, not memory or disk: a larger plan of the same shared cores
+  would not shorten it, splitting the reindex across both cores might.
+  **Open for the window, not decided here:** reindex inside the window, or
+  reopen and let search fill in for ~5 minutes.
 
 ### P5 — media (Brian)
 
@@ -350,6 +390,48 @@ while converting, so nothing wrote to it):
 21. ⏱ A second rsync pass: the delta C5 will run.
 22. `user_photos` rows against files on disk: a count and spot checks.
 
+**P5, first pass done, 2026-10-01, between 01:49 and 02:01 UTC (Brian; Claude read over ssh):**
+- **Dry-run count on leopard (GNU rsync): 14,875**, against 14,871 from the
+  Mac on 09-30. The four are two member photo uploads, image and thumbnail
+  each, on jaguar at 20:11 and 20:14 CDT, **after the dump finished at
+  20:07**. Neither has a row on leopard (newest `user_photos_photo` row
+  09-30 06:15 UTC): the rehearsal reproduced, with real data, the files-
+  without-rows gap C0's freeze exists to prevent.
+- ⏱ **B4, media: 36.9 s** for 14,875 files, **4,934,175,127 bytes**
+  (~132 MB/s), 2,560 directories created.
+- ⏱ **B8, `/hosted` and `/photos`: 1.5 s** for 1,509 files, 81,359,889 bytes:
+  B8's 1,509 of 09-19 exactly.
+- **`git status --short media/` printed nothing, and that was not the clean
+  result it looked like.** `.gitignore` lists `media/badges` and
+  `media/smiley`, so the five missing assets are *ignored*, not untracked:
+  `--ignored` shows all five (`!!`); `git diff --name-only media` is empty, so
+  no tracked file was touched. **Runbook B4's "untracked" check has to use
+  `--ignored`**, and committing them needs `git add -f`. Copied to the Mac's
+  checkout from jaguar (md5 of `map.png` matches leopard's), not yet
+  committed.
+- **Step 22, rows against files:** 26,571 `user_photos_photo` rows; of their
+  53,150 URLs, 43,508 are on S3 (older uploads, untouched by this), 9,634 point
+  at local media, and **all 9,634 have their file on leopard**. 442 files have
+  no row, mostly dated 2023 (deleted photos whose files stayed), plus the four
+  above. Separately, rows 207–210 (2013-10-24) have S3 URLs ending in a literal
+  ` fog` on both image and thumbnail: production's data as it is, carried
+  faithfully.
+
+**The ` fog` rows explained:** the suffix is in the S3 object keys
+themselves: `…3ceaa72f….JPG%20fog` answers 200 (96,742 bytes), without it
+403. All four are member EJ's, uploaded 16:52–16:57 UTC 2013-10-24, with
+normal uploads either side. `core/images/upload.py:85-112` still names a
+stored file `make_key() + os.path.splitext(<member's filename>)[1]`, so a file
+named `….JPG fog` keeps `.JPG fog`. Nothing is broken: a browser encodes the
+space and S3 serves the object. **Deferred to after the cutover (Brian,
+2026-10-01):** taking the extension from the format Pillow detects instead.
+
+**P5 done, 2026-10-01, before 02:01 UTC (Brian):**
+- **B4a:** `sudo chown -R 1000:1000 media var` (no-op in effect: `brian` is
+  uid 1000) and directories to `755`.
+- ⏱ **Second pass (C5's delta): 0.7 s, 0 files transferred**, 761 KB of file
+  list. With uploads frozen, the window's media delta costs under a second.
+
 ### P6 — start and smoke
 
 23. `make prod-up` (C4a: worker and beat recreated with the stack).
@@ -363,6 +445,39 @@ while converting, so nothing wrote to it):
 28. Through `beta`, a recent forum post and a recent photo from production
     render (criterion 1).
 
+**P6, 2026-10-01, ending 02:02 UTC:**
+- **23:** `make prod-up` (Brian); all six services up, `postgres` kept from P4
+  (so no health check met an empty schema).
+- **24, mail blocked, shown:** `make prod-manage cmd="sendtestemail
+  bgneal@gmail.com"` printed the whole message to Brian's console (Brian's
+  report). Postmark's side is P8's check.
+- **25:** ⏱ `tools/prod_smoke.sh` **on leopard, no argument: 21/21 in 1.8 s.**
+  From the Mac it would need a temporary firewall rule, since B6 admits only
+  Cloudflare to 443; runbook C5 changed to run it on the VM.
+- **What P5 brought, served:** HEAD through the local proxy, all 200 with the
+  right type: `/media/podcast/sg101_episode15.m4a` (audio/mp4),
+  `/media/slideshow/425.JPG`, a `user_photos` PNG, `badges/map.png`,
+  `smiley/images/icon_popcorn.gif`, `/hosted/all_stickers.jpg`,
+  `/photos/spPortland/images/johnny.jpg`.
+
+- **28, criterion 1's render half:** through the local proxy, the newest
+  post, #485470 (2026-09-30 16:25 CDT, topic 41505), is on its topic page,
+  and the newest photo, #27766 (09-30 01:15 CDT), has a page whose image,
+  `/media/user_photos/…t.jpeg`, answers 200 `image/jpeg`.
+- **27:** ⏱ a snapshot first, 23.4 s, 119,780,019 bytes
+  (`snapshots/leopard-pre-image-smoke.dump`; `pg_dump -Fc
+  --exclude-table-data=search_searchdocument`, finished 02:01 UTC). `web` runs
+  as `uid=1000(sg101)`. **`image_smoke.py` 7/7**: three avatars, two user
+  photos (stored as 27767 and 27768) and two photo-of-the-day thumbnails;
+  scratch user rows left: 0. Criterion 1's smoke half met.
+- **26, B3 from the phone, on the restored data: passed.** Brian, on mobile
+  data, through Access, failed one login as `b3check` at 02:04:32 UTC.
+  `auth.log`: `Login failure from [2001:db8::2]`;
+  Apache's `access.log` led its `POST /accounts/login/` line with the same
+  address. Not an edge or `172.*` address, and in the carrier's `2607:fb91::`
+  range as on 09-30, with the host part rotated (not confirmed from the
+  phone). **P6 complete.**
+
 ### P7 — memory under load, and the backup carried from task 05
 
 29. ⏱ `make prod-backup` while a light load runs against `beta`, sampling
@@ -372,6 +487,197 @@ while converting, so nothing wrote to it):
 30. A fresh temporary AWS admin key (task 05), the run's dump fetched from
     `sg101-backup-db`, restored into a scratch database, row counts compared
     with the source; the key deleted again (task 05 criterion 3).
+
+**P7 step 29 done, 2026-10-01 02:05–02:10 UTC.** A light load from a loop on
+leopard through the local proxy, one anonymous GET every ~0.5 s over seven
+pages, with `free -m` and `docker stats` every 5–8 s (40 samples). **The load
+was lighter than its page list:** `/news/` is not a page here (404; the
+archive is `/news/archive/`) and `/search/?q=…` answers 302, so two of the
+seven were not full renders. Brian ran `make prod-backup` meanwhile:
+- ⏱ **Backup: 2 m 39.4 s**: `sg101-20261001T020647Z.dump`, 115 M, then
+  "media synced", the first run with the real ~4.9 G of media (task 05's
+  carried duration).
+- **Memory (criterion 5):**
+
+  | | used max | available min | swap |
+  |---|---|---|---|
+  | under load, before the backup | 1,584 M | 2,326 M | 0 |
+  | during the backup | **1,715 M** | **2,195 M** | 0 → **14 M** |
+  | after | 1,584 M | 2,326 M | 14 M |
+
+  Of 3,910 M. Containers at their peak in the window: `web` 472 M (5 gunicorn
+  workers), `worker` 211 M, `postgres` 195 M, the backup run 173 M, `beat`
+  95 M, `proxy` 26 M, `redis` 10 M. **Swap moved for the first time**: 14 M of
+  2,543 M, `vm.swappiness` 10, with ≥ 2.2 G available throughout: idle pages
+  put out while the page cache grew, not pressure. Against task 03's idle
+  1,384 M on an empty database: +200 M with the data under load, +330 M at
+  the backup's peak. `docker stats` reported the backup container at 326 % CPU
+  on 2 vCPUs, which its short sampling interval can produce; not relied on.
+  **Recommendation: stay on shared 4 GB.** Memory peaks below half of RAM.
+  The constraint found is CPU per core (`reindex_search`, P4), which a larger
+  plan of the same shared cores would not change.
+- **Found: every topic page view queues a search reindex, which `main` does
+  not.** Both branches count a view with `topic.view_count = F('view_count') +
+  1; topic.save(force_update=True)` (`forums/views/main.py`, line 167 on
+  `main`, 172 here). `main`'s `custom_search/receivers.py` listened for
+  topics and posts only on the forums' own `topic_content_update` /
+  `post_content_update`, which a view-count save does not send.
+  `search/receivers.py` here reindexes on every `post_save`, by a recorded
+  choice (hand-sent signals can be forgotten; `post_save` cannot be
+  bypassed), priced in its docstring as "one task and one UPDATE, and the
+  forums take about 134 posts a month". **That price counted posting, not
+  viewing.** Measured over task 01's 61-day archive of jaguar's access log:
+  **2,730,422 topic views (`GET /forums/topic/…` 200), mean 44,761 a day,
+  median 39,059, max 128,696; 52 % from self-identified crawlers.** So ~45 k
+  `reindex_document` tasks a day, up to ~130 k, at 0.03–0.04 s each: roughly
+  25–90 worker-minutes a day and one rewritten search row per view, all
+  wasted, scaling with crawler traffic.
+  **The same `save()` writes every column of the topic as the view loaded
+  it**, so a reply committed between that load and the save can have its
+  topic's counters and `last_post` written back; `main` has this too (same
+  code). Not verified.
+  **The fix:** `Topic.objects.filter(pk=topic.pk).update(view_count=
+  F('view_count') + 1)`, which sends no `post_save` and writes only the
+  counter, leaving the receivers' design intact; a test that a topic view
+  queues no reindex, seen to fail first; check how the page shows the count.
+  **Decided 2026-10-01 (Brian): fix after task 07.** It ships at the flip, so
+  before task 09.
+- **What caused which peak, split by phase (Brian asked whether the
+  reindexing was behind it).** The load, and so the view-triggered reindexing,
+  ran through all three phases at a steady rate: `reindex_document` received
+  8, 12, 11, 10, 12, 18 a minute over 02:05–02:10, with the backup running
+  02:06:47–~02:09:26. **The worker's CPU spikes are the reindexing:** max 68 %
+  before the backup, 94 % during, 100 % after, mean 5–7 % throughout; the
+  backup does not use the worker. **The memory peak is the backup:** host
+  `used` max 1,584 M before, 1,715 M during, 1,611 M after, against an
+  unchanged reindex rate; the ~130 M rise matches the backup container (173 M),
+  and `postgres` CPU rose from at most 19 % to 81 % only during it (`pg_dump`).
+  So the 4 GB recommendation does not rest on a figure the bug inflated, and
+  fixing the view counter removes the worker's spikes, not memory.
+  (First counted wrong: the log lines carry the task id in brackets between
+  the name and `received`, and a pattern without it found none.)
+- The loops ran as `bash -s` under `brian`, uid 1000, **the containers' uid**,
+  so they were stopped by pid, not by pattern: on leopard a `pkill -u brian`
+  reaches gunicorn, celery and beat.
+
+**P7 step 30 done, 2026-10-01, finished by 03:03 UTC: task 05's criterion 3 met.** A
+temporary access key on IAM user `brian` (Brian), profile `sg101-admin` on the
+Mac; `sts get-caller-identity` → `arn:aws:iam::…:user/brian`. The job's own
+key cannot read objects back, by task 05's design, so this is the
+independent-identity read a real restore would make.
+- `sg101-backup-db` holds the four nightly dumps from the empty database
+  (261,890–261,901 bytes) and tonight's **`sg101-20261001T020647Z.dump`,
+  119,780,282 bytes**.
+- ⏱ **Fetch: 2.2 s** (`aws s3 cp`); ⏱ **restore into `sg101_backup_check` on
+  the Mac's dev Postgres: 8.1 s, 0 lines on stderr.**
+- **Row counts, all 84 tables, against leopard's live database: 83 equal.**
+  The 84th is `search_searchdocument`, 0 against 518,081, **by design**:
+  `backup/backup.sh:49` dumps with `--exclude-table-data=search_searchdocument`,
+  and `tools/backup_drill.sh:132-137` fails if that data appears. So a real
+  restore costs P4's 5 m 13 s `reindex_search` on top. Against P4's counts,
+  one row more, in `django_session` (186 → 187), on leopard too: written after
+  P4 by `image_smoke.py`'s login or the B3 visit.
+- **`sg101-backup-media` matches leopard's `media/` exactly: 14,996 objects,
+  4,934,941,483 bytes**, i.e. P5's 14,875 plus the 121 tracked files; nothing on
+  leopard newer than the backup's start. The first full sync uploaded
+  everything, not just reported it.
+- **Cleaned up, 03:0x UTC:** the key deleted in IAM (Brian), then refused
+  (`InvalidClientTokenId`); `~/.aws/credentials` and `~/.aws/config` removed,
+  as they held only `sg101-admin` (key names read, never values); no
+  profiles left, only the CLI's `cli/` cache. The scratch dump and
+  `sg101_backup_check` deleted.
+
+**Found doing P8's S3 check: the rehearsal never exercised the S3 upload
+path.** Step 27 ran `image_smoke.py` without `--s3`, which forces user photos
+down the local-disk branch, so it wrote nothing to `sg101.user.photos`, and
+there is nothing there to clean up (and nothing newer than 02:01 under
+leopard's `media/`). But production stores member photos in S3
+(`USER_PHOTOS_LOCAL_UPLOAD = False`, `sg101/settings/production.py:118`), and
+`--s3` is, in its own docstring, "the only thing in the project that can tell
+you the S3 code actually works": every S3 test mocks boto3. It needs no admin
+key: it uses the site's own credentials, fetches each object back over plain
+https, deletes it through `delete_photos`, confirms it is gone, and names
+objects `_image_smoke_…` so a crash leaves them findable.
+**Closed 2026-10-01 03:06 UTC (Brian): `image_smoke.py --s3` on leopard,
+12/12.** The seven as before, then photo 27771 uploaded through the view to
+`sg101.user.photos/_image_smoke_31b5…cb.jpg`, URL in the form of the existing
+rows, publicly readable (HTTP 200, JPEG 660×495, 35,614 bytes), metadata
+intact, `delete_photos` removed 2 keys (2 in S3, 0 local), refetch 403; scratch
+rows 0. Checked from the Mac: the image and its thumbnail (`…t.jpg`, not
+refetched by the script) both 403; nothing new under leopard's `media/`; no
+`ERROR`, `CRITICAL` or traceback in `web` or `worker` since 03:06. **The
+member photo path works on leopard.** For the runbook: B4a's verification
+should run `--s3` too, since the window's first member upload takes that path.
+
+**P8 step 31, criterion 3 met:** Postmark's activity shows no message since
+09-27 (Brian), so nothing left leopard by Postmark through the whole
+rehearsal; jaguar does not use Postmark (09-28), so leopard is its only
+sender. The calendar could not change: `GCAL_CREDENTIALS_PATH` was blank before
+the restore, the code refuses a blank path, and Synchronize was not used.
+
+**P8 step 33 — the window, timed (criterion 4).** Machine time per step,
+measured in this rehearsal; the gaps between steps (a person reading output,
+typing the next command) are not in it.
+
+| window step | ⏱ | where |
+|---|---|---|
+| dump on jaguar (`mysqlbackup.py`; ~7 s `mysqldump`, the rest bzip2) | 1 m 11.9 s | P1 |
+| copy jaguar → Mac | 5.3 s | P1 |
+| load into the dev MySQL | 35.0 s | P2 |
+| `convert.sh` | 19.7 s | P2 |
+| `verify.py` + `verify_data.py values` | 13.8 s | P2 |
+| `post_convert.py` + `verify_data.py keys` | 2.6 s | P2 |
+| reference DB + `compare_schema.py` | 2.4 s | P2 |
+| `pg_snapshot.sh dump` | 8.3 s | P2 |
+| copy Mac → leopard | 8.1 s | P3 |
+| stack down, `postgres` up healthy | ~11 s | P4 |
+| restore | 29.8 s | P4 |
+| `migrate` | 14.6 s | P4 |
+| **`reindex_search`** | **5 m 12.8 s** | P4 |
+| `reconcile_search` | 12.6 s | P4 |
+| media delta (C5) | 0.7 s | P5 |
+| `prod_smoke.sh` on leopard | 1.8 s | P6 |
+| **total measured** | **~9 m 10 s** | |
+
+**`reindex_search` is 57 % of it.** Reopen before it and let search fill in,
+and the measured window is **~4 minutes**. Not timed, and to add: `make
+prod-up` (the stack was healthy within 43 s of it), `image_smoke.py --s3`
+(seconds), C0's freeze, the DNS change, and every pause between steps,
+which in practice will dominate. **Outside the window:** the first media pass
+(36.9 s for 4.93 G) and B8 (1.5 s) go before it; *rehearsal only:* `smoke.py`
+(7.0 s), the backup (2 m 39 s) and its restore (2.2 s fetch, 8.1 s restore).
+
+**P8 step 32, left deliberately for task 07a:** the restored site on leopard,
+`beta.surfguitar101.com` and its Access application (one-time PIN, Brian's
+address only), and leopard's `.env` with mail to the console and
+`GCAL_CREDENTIALS_PATH` blank, which 07a replaces with its allowlisting
+backend and the real calendar key. Undone: the admin key and its profile, the
+scratch restore. In S3, nothing to undo: the `--s3` smoke removed its objects,
+and the backup buckets keep the rehearsal's data by design (requirement 10).
+
+**P8 step 34:** runbook C1–C4 rewritten from the rehearsal (the dump by hand
+after C0, the corrected §7 chain, the VM restore over stdin with `postgres`
+alone, C2 as a check, C3's retired-network check moved to A1 on the converted
+data, C4's 5 m 13 s and its open decision); B4 syncs `media/` minus tracked
+files and checks with `--ignored`; B4a adds `image_smoke.py --s3`; C5 runs
+`prod_smoke.sh` on the VM. "Ordering and timings are absent" narrowed to the
+sections the rehearsal did not walk.
+
+### Closed — 2026-10-01
+
+| criterion | met by |
+|---|---|
+| 1 the site serves the fresh data | `prod_smoke.sh` 21/21; `image_smoke.py` 7/7 and `--s3` 12/12; newest post #485470 and photo #27766 render (P6) |
+| 2 conversion verified, differences explained | P2: the whole §7 chain on today's dump, after fixing four stale tools; the one expected difference still 370 rows, as in July |
+| 3 no member contacted | Postmark empty since 09-27; calendar key blank throughout (P8) |
+| 4 every step has a time | the window table above: ~9 m 10 s measured, ~4 m with C4 after reopening |
+| 5 memory under load | peak 1,715 M of 3,910 M during the backup under load; **stay on shared 4 GB** (P7) |
+| 6 search complete | `reconcile_search` clean, all 8 types (P4) |
+
+Requirement 4's assets (three badges, two smileys) are committed with this
+record. **Carried forward:** the topic-view reindex fix, before task 09
+(Brian: after task 07); C4's reindex-before-or-after-reopening decision, for
+task 08's runbook; the ` fog` upload naming, after the cutover.
 
 ### P8 — undo, and the runbook
 
@@ -821,7 +1127,7 @@ wiki's redirect, runbook C6); task 11's last read of the list. A token that
 stops working shows only as `ERROR` lines in `fail2ban.log`, which nothing on
 leopard reads (see the token's "no expiry" above).
 
-## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28 except the full-size run and restore, carried into task 07
+## Step 21 task 05 — the backups on real accounts — DONE 2026-09-28; the full-size run (2 m 39 s) and the restore from the bucket (criterion 3) done in task 07, 2026-10-01
 
 **Split by data, not by step (Brian, 2026-09-28).** leopard holds an empty,
 freshly migrated database and 1.1 MB of committed media, so requirement 5 (the
@@ -1019,7 +1325,7 @@ production (reported 2026-09-26, date not recorded). **Not yet confirmed from
 data** — task 07a's requirement 4a counts pending events in the rehearsal
 snapshot, and task 09 falls back to the final snapshot if that did not happen.
 
-## Step 21 task 03 — leopard provisioned and hardened; worker counts required — DONE 2026-09-27: stack running on leopard, smoked, firewalled, rotation proved; memory re-read owed at task 07
+## Step 21 task 03 — leopard provisioned and hardened; worker counts required — DONE 2026-09-27: stack running on leopard, smoked, firewalled, rotation proved; memory re-read with data in task 07, 2026-10-01 (peak 1,715 M of 3,910 M)
 
 **Where it stands (2026-09-27):** secrets B1 B2 B5 in place, the stack built and
 healthy on leopard, the smoke run passed through a temporary rule, B6 applied and

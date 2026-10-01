@@ -210,8 +210,11 @@ git ls-files media | sed 's#^media/#/#' > /tmp/media-tracked
 rsync -a --exclude-from=/tmp/media-tracked jaguar:/svr/django-sites/sg101/sg101/media/ media/
 ```
 
-No `--delete`. Afterwards `git status media/` shows no tracked file modified,
-and as untracked only assets that should be committed (below).
+No `--delete`. Afterwards `git diff --name-only media` is empty (no tracked file
+touched), and `git status --short --ignored media/badges media/smiley` lists only
+assets that should be committed (below). **Plain `git status` shows nothing**:
+`.gitignore` covers both directories, so the missing assets are ignored, not
+untracked, and committing them needs `git add -f`.
 
 **One known gap to fix while there:** three `bio.Badge` rows reference files that
 were never committed — `badges/map.png` (Map Pin), `badges/bns_badge.png` (Brave
@@ -252,7 +255,11 @@ docker compose -f docker-compose.prod.yml exec web python /app/tools/image_smoke
 ```
 
 The last one drives real uploads through the real views on this deployment and
-cleans up after itself — 7/7 when the ownership is right. **Take a database
+cleans up after itself — 7/7 when the ownership is right. **Run it with `--s3`
+as well:** without it, member photos take the local-disk branch, while
+production stores them in S3 (`USER_PHOTOS_LOCAL_UPLOAD = False`). `--s3` adds
+a real upload to `sg101.user.photos`, a public fetch and a delete — 12/12 in
+task 07's rehearsal, the only check of that path the project has. **Take a database
 snapshot first**; it creates and deletes a scratch user.
 
 *Source: Step 20 task 12. The UID contract is checked on every CI run, which is
@@ -640,28 +647,65 @@ warm window, not before the flip, because until the DNS flip nothing is pointed
 at the new VM anyway.
 
 ### C1. Final snapshot → convert → restore
-`tools/pgloader/convert.sh` then `tools/pgloader/post_convert.py`, the same chain
-verified on every data migration in Step 19.
+Run in this order in task 07's rehearsal (2026-10-01); each step's time is in
+`STATUS.md` § Step 21 task 07, "the window, timed".
 
-### C2. The `oembed` migration-history unlock
-`forums/0001_initial` has declared `('oembed', '__first__')` since 2015. Now that
-oembed has a migration, `check_consistent_history` **refuses every `migrate`
-command** on a database carrying the old history. `--fake` cannot get past it —
-the check runs first. Record the row directly. Needed unless the converted
-database already carries it.
-*Source: `research/schema-drift-audit.md` § "Gotcha for the cutover runbook" —
-the section this file was named after.*
+1. **On jaguar, after C0:** `time python /svr/scripts/mysqlbackup.py`. It writes
+   `/svr/backups/sg101<date>.sql.bz2`, replacing that night's 02:00 file;
+   `md5sum` and `bzip2 -t` it. Not the nightly file: that predates the freeze.
+2. **On the Mac:** copy it beside the pristine dump in
+   `sg101-hg-backup/snapshots/`, then DOCKER.md §7 as written: load into the
+   dev `db`, `convert.sh`, `verify.py`, `verify_data.py values`,
+   `post_convert.py`, `verify_data.py keys`, `compare_schema.py`. **Stop the dev
+   `web`, `worker` and `beat` while converting** and skip `smoke.py`, so nothing
+   writes to the database before it is dumped. Then
+   `tools/pg_snapshot.sh dump <label>`, and copy the snapshot to the VM's
+   `snapshots/`; `md5sum` both ends.
+3. **On the VM:** `make prod-down`, then the database alone, replaced, and
+   restored over stdin. `pg_snapshot.sh` cannot do this here: it drives the dev
+   compose and reads a `/snapshots` mount the production `postgres` does not
+   have.
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --wait postgres
+   docker compose -f docker-compose.prod.yml exec -T postgres psql -U sg101 -d postgres \
+       -c "DROP DATABASE sg101 WITH (FORCE)" -c "CREATE DATABASE sg101"
+   docker compose -f docker-compose.prod.yml exec -T postgres pg_restore -U sg101 -d sg101 \
+       --no-owner --no-privileges < snapshots/<file> 2> /tmp/restore-errors.txt
+   ```
+   **Read `/tmp/restore-errors.txt`:** empty in the rehearsal. The plain
+   `CREATE DATABASE` matches the original (owner `sg101`, UTF8, `en_US.utf8`,
+   as `template1` is). `postgres` alone first, so no health check meets an
+   empty schema and mails ADMINS (2026-09-27).
 
-### C3. `migrate`, and **read the output**
-Not merely check the exit code. `elsewhere`'s `0004_seed_networks` logs a warning
-naming any retired network it had to keep, and the icon file to restore. That
-warning is the A1 check firing late.
+### C2. The `oembed` migration-history unlock — a check, not a step
+`forums/0001_initial` has declared `('oembed', '__first__')` since 2015, and
+`check_consistent_history` refuses every `migrate` on a database without
+`oembed.0001_initial` recorded. **`post_convert.py` records it on the Mac
+(C1 step 2)**, so the snapshot carries it. Confirm on the VM:
+`SELECT name FROM django_migrations WHERE app = 'oembed'` → `0001_initial`.
+*Source: `research/schema-drift-audit.md` § "Gotcha for the cutover runbook";
+`tools/pgloader/post_convert.py:52-58`.*
 
-### C4. `reindex_search`
+### C3. `migrate` on the VM, and A1 on the converted data
+On the VM, `docker compose -f docker-compose.prod.yml run --rm web python
+manage.py migrate` should say **"No migrations to apply"**: the migrations
+ran inside `post_convert.py` on the Mac. Anything applied here means the VM's
+code is ahead of the Mac's checkout, which is itself a finding. **The
+retired-network check is A1's query, run against the converted database on
+the Mac**, not this output: `elsewhere`'s `0004_seed_networks` reports through
+`logger.warning`, which neither `post_convert.py`'s output nor this one shows.
+An empty result is the expected one (2026-10-01).
+
+### C4. `reindex_search`, then `reconcile_search`
 The search index is **schema-only in every dump**, so it does not come across
-with a restore. `manage.py reindex_search`, then `manage.py reconcile_search` to
-confirm.
-*Source: `tools/pg_snapshot.sh` restore output; Step 12 record.*
+with a restore. `run --rm web python manage.py reindex_search`, then
+`reconcile_search`, which should say **clean**.
+**It took 5 m 13 s on the VM** (1 m 35 s on the Mac): one CPU core saturated,
+not memory or disk, so a larger plan of the same shared cores would not shorten
+it. It is over half the window's measured time. **Undecided:** reopen first and
+let search fill in, or keep it inside the window.
+*Source: `tools/pg_snapshot.sh` restore output; Step 12 record; `STATUS.md`
+§ Step 21 task 07, P4.*
 
 ### C4a. Restart the worker and beat, not just the web process
 **Celery does not autoreload, and a stale worker fails silently.** Demonstrated
@@ -683,12 +727,15 @@ deploy, not only this one.
 *Source: task 06's browser session, Brian spotted it in the worker log.*
 
 ### C5. Final media delta, then the DNS flip
-**Before the flip, run `tools/prod_smoke.sh <vm-address>` from a checkout.** It
-makes every request to the VM's own address under the site's name, so it tests
-the new origin while DNS still points at jaguar: the home page over TLS, one
-HSTS header, the redirects, the root files, `/media`, the old SG101 1.0 URLs,
-and that 8000/5432/6379 are closed. It was written against the local stack;
-this is its first run against a real host.
+**Before the flip, run `tools/prod_smoke.sh` on the VM, in its checkout, with no
+argument.** It makes every request to `127.0.0.1` under the site's name, so it
+tests the new origin while DNS still points at jaguar: the home page over TLS,
+one HSTS header, the redirects, the root files, `/media`, the old SG101 1.0
+URLs, and that 8000/5432/6379 are closed. **Not from a laptop with the VM's
+address:** B6's firewall admits only Cloudflare to 443, so that needs a
+temporary rule (as on 2026-09-27); on the VM the firewall is not in the path,
+and B6 proved it separately. Run this way in task 07's rehearsal: 21/21,
+1.8 s.
 
 Low-TTL cutover in Cloudflare.
 
@@ -788,5 +835,7 @@ Stated so the file is not mistaken for complete:
 - **Step 20 is unfinished** and will add entries; its nine task files were
   generated 2026-09-12; B5, B6 and B8 above came from it, and C5's smoke run.
   *(Step 19 closed 2026-09-09 and no longer belongs on this list.)*
-- **Ordering and timings are absent.** The sections are grouped by phase, not
-  sequenced, and nothing here estimates how long the window needs to be.
+- **Timings exist only for C1–C5** (task 07's rehearsal, 2026-10-01: ~9 m 10 s
+  of measured machine time, ~4 m if C4 moves after reopening; `STATUS.md`
+  § Step 21 task 07). The other sections are still grouped by phase, not
+  sequenced.
