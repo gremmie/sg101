@@ -20,10 +20,13 @@ from elsewhere.models import WebsiteProfile
 
 from bio.models import UserProfile
 from downloads.models import Download
+from forums.models import Category as ForumCategory
+from forums.models import Forum
 from forums.models import Post
 from forums.models import Topic
 from forums.tools import delete_user_posts
 from forums.views.main import _delete_topic
+from forums.views.main import _move_topic
 from search.models import SearchDocument
 from search.tests.test_documents import DocumentTestCase
 from weblinks.models import Link
@@ -226,6 +229,85 @@ class PrivacyTestCase(ReceiverTestCase):
 
         self.assertNotIndexed(topic)
         self.assertNotIndexed(post)
+
+    def test_moving_a_topic_into_a_private_category_purges_its_posts(self):
+        # The posts are never saved by a move, but their category is now the
+        # one the topic moved into.
+        self.index(self.topic, self.post)
+        private = self.private_forum()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            _move_topic(self.topic, self.topic.forum, private)
+
+        self.assertNotIndexed(self.topic)
+        self.assertNotIndexed(self.post)
+
+    def test_moving_a_topic_out_of_a_private_category_indexes_its_posts(self):
+        private = self.private_forum()
+        _move_topic(self.topic, self.topic.forum, private)
+        public = self.category.forums.get()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            _move_topic(self.topic, private, public)
+
+        self.assertIndexed(self.topic)
+        self.assertIndexed(self.post)
+
+    def private_forum(self):
+        category = ForumCategory.objects.create(name='Staff', slug='staff')
+        category.groups.add(self.group)
+        return Forum.objects.create(category=category, name='Back room',
+                                    slug='back-room')
+
+
+class TopicRenameTestCase(ReceiverTestCase):
+
+    def test_renaming_a_topic_retitles_its_posts(self):
+        # A post is indexed under its topic's name, at weight A.
+        self.index(self.topic, self.post)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.topic.name = 'Blackface amp'
+            self.topic.save()
+
+        self.assertEqual(self.rows_for(self.post).get().title, 'Blackface amp')
+
+    def test_a_save_that_keeps_the_name_does_not_rebuild_its_posts(self):
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.topic.sticky = True
+            self.topic.save()
+
+        # The topic's own row, and nothing for its posts.
+        self.assertEqual(len(callbacks), 1)
+
+
+class UpdateFieldsTestCase(ReceiverTestCase):
+    """A save naming only fields no document reads queues nothing."""
+
+    def test_saving_a_topics_reply_counters_queues_nothing(self):
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.topic.post_count_update()
+            self.topic.save(update_fields=['post_count', 'last_post',
+                                           'update_date'])
+
+        self.assertEqual(callbacks, [])
+
+    def test_saving_a_members_post_count_queues_nothing(self):
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.profile.forum_post_count += 1
+            self.profile.save(content_update=False,
+                              update_fields=['forum_post_count'])
+
+        self.assertEqual(callbacks, [])
+
+    def test_a_save_naming_an_indexed_field_still_reindexes(self):
+        self.index(self.topic)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.topic.name = 'Blackface amp'
+            self.topic.save(update_fields=['name', 'post_count'])
+
+        self.assertEqual(self.rows_for(self.topic).get().title, 'Blackface amp')
 
 
 class ApprovalTestCase(ReceiverTestCase):

@@ -9,6 +9,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.http import Http404
@@ -149,8 +150,9 @@ def view_links(request, slug, sort='title'):
 #######################################################################
 
 def _visit_link(request, link):
-   link.hits += 1
-   link.save()
+   # An update rather than a save: a save would reindex the link and move its
+   # update_date for a visit that changes neither.
+   Link.objects.filter(pk=link.pk).update(hits=F('hits') + 1)
    return HttpResponseRedirect(link.url)
 
 #######################################################################

@@ -12,6 +12,7 @@ from django.http import HttpResponseForbidden
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
 from django.core.paginator import InvalidPage
+from django.db.models import F
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
@@ -236,8 +237,9 @@ def request_download(request):
             except Download.DoesNotExist:
                 return HttpResponseNotFound("Download not found")
 
-            dl.hits += 1
-            dl.save()
+            # An update rather than a save: a save would reindex the download,
+            # re-render its description and move its update_date.
+            Download.objects.filter(pk=dl.pk).update(hits=F('hits') + 1)
 
             s = json.dumps({'id': dl_id, 'url': dl.file.url})
             return HttpResponse(s, content_type='application/json')

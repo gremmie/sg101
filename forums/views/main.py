@@ -169,8 +169,10 @@ def topic_index(request, id):
     if not perms.can_access(topic.forum.category, request.user):
         return HttpResponseForbidden()
 
-    topic.view_count = F('view_count') + 1
-    topic.save(force_update=True)
+    # An update rather than a save. A save writes back every column as this
+    # view loaded it, which can undo a reply committed in between, and it
+    # reindexes the topic on every view.
+    Topic.objects.filter(pk=topic.pk).update(view_count=F('view_count') + 1)
 
     posts = topic.posts.\
                 select_related('user', 'user__profile').\
@@ -511,7 +513,7 @@ def _delete_post(post):
     profile = post.user.profile
     if profile.forum_post_count > 0:
         profile.forum_post_count -= 1
-        profile.save(content_update=False)
+        profile.save(content_update=False, update_fields=['forum_post_count'])
 
     # If this post is the last_post in a topic, we need to update
     # both the topic and parent forum's last post fields. If we don't
@@ -975,7 +977,7 @@ def _bump_post_count(user):
     """
     profile = user.profile
     profile.forum_post_count += 1
-    profile.save(content_update=False)
+    profile.save(content_update=False, update_fields=['forum_post_count'])
 
 
 def _move_topic(topic, old_forum, new_forum):

@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-01
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -699,7 +699,46 @@ queryset `update()` or skipped in the receiver. Known: the topic view counter
 and anything that saves a `User` or `UserProfile` routinely (a login's
 `last_login`, post counts, badges). The receivers' reason for `post_save`, that
 a hand-sent signal can be forgotten, stands, so what changes is which saves
-happen, not how indexing is triggered. Not yet started.
+happen, not how indexing is triggered.
+
+**Audit done 2026-10-01, in the commit that adds this paragraph.** Rates from
+task 01's 61-day access log (`topic view` reproduced at 2,730,422):
+
+| save | a day | wasted tasks each | fix |
+|---|---|---|---|
+| topic view counter | 44,761 (max 128,696) | 1 topic | queryset `update()` |
+| reply: topic counters, `last_post` | ~11 | 1 topic | `update_fields`, skipped |
+| reply: `forum_post_count` | ~11 | 1 profile | `update_fields`, skipped |
+| download request `hits` | 3.1 | 1 download | queryset `update()` |
+| link visit `hits` (POST) | ~1.8 | 1 link | queryset `update()` |
+| login `last_login` | 14.7 | 0, already skipped | — |
+
+The view counter was ~99.9 % of the waste. Left as plain saves, too rare to
+matter: moderators' sticky/lock toggles, a post delete's topic save, a
+download vote. The skip is `UNINDEXED_FIELDS` in `search/receivers.py`: a save
+whose `update_fields` names only listed fields queues nothing, anything else
+reindexes, so an omission costs a task, never a stale row. Side effects gone
+with the full saves: a view writing back a concurrent reply's counters, a
+download hit re-rendering its description, and a hit moving a link's or
+download's `update_date` (read only by the admin).
+
+**Two stale-index bugs found, fixed in the same commit; `main` has both.**
+Moving a topic left its posts indexed under the old category, so a move into
+a members-only category kept them searchable; renaming a topic left its posts
+under the old title. Probed in a container first. A `pre_save` on `Topic`
+compares `forum_id` and `name` with the saved row, and `post_save` queues the
+new `reindex_topic_posts`, which also drops posts no longer indexable.
+
+**Verified:** nine new tests failed first; four mutations (a shared
+`dispatch_uid`, which Django drops silently; intersect for subset; `name` only;
+always stale) each failed at least one; suite and deprecation gate 1,333 OK.
+On the dev stack's real worker: three topic views queued nothing and the
+counter rose; a rename and its reversal ran `reindex_topic_posts` and left all
+3 posts titled as before.
+
+**Found, not fixed:** `topic.delete()` outside `_delete_topic` raises
+`IntegrityError` when the topic holds its forum's `last_post`, with or without
+this change; the admin's delete may reach it. Unchecked.
 The rest: C4's reindex-before-or-after-reopening decision, for
 task 08's runbook; the ` fog` upload naming, after the cutover.
 

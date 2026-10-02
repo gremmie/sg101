@@ -3,8 +3,8 @@ Signal handlers for the search application.
 
 These keep the index current from ordinary site activity: saving a searchable
 object queues a task to rebuild its row, deleting one queues a task to drop it,
-and changing a forum category's groups queues a rebuild of everything that
-category holds.
+changing a forum category's groups queues a rebuild of everything that
+category holds, and moving or renaming a topic queues a rebuild of its posts.
 
 Every one of them queues on transaction.on_commit and never calls delay()
 outright. A task published before its transaction commits can reach a worker
@@ -16,9 +16,10 @@ Content is indexed on post_save rather than on the forums' own
 topic_content_update / post_content_update signals, which the search stack this
 replaces listened to so that saves changing no text did not reindex. Those are
 sent from a handful of call sites by hand; one that someone forgets to add is an
-index that goes quietly stale, and post_save cannot be bypassed. A save that
-changes nothing searchable costs one task and one UPDATE, and the forums take
-about 134 posts a month.
+index that goes quietly stale, and post_save cannot be bypassed. What the old
+signals avoided is instead avoided at the saves themselves: a counter is bumped
+with a queryset update(), which sends no post_save, and bookkeeping that has to
+save names its fields in update_fields, which the handlers below recognise.
 
 Three of the senders below are not searchable models themselves. A forum
 category decides whether its topics and posts may be indexed at all; a User
@@ -36,23 +37,79 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
+from django.db.models.signals import pre_save
 
 from elsewhere.models import WebsiteProfile
 
 from bio.models import UserProfile
 from forums.models import Category
+from forums.models import Topic
 from search.documents import all_documents
 from search.tasks import reindex_category
 from search.tasks import reindex_document
+from search.tasks import reindex_topic_posts
 from search.tasks import remove_document
 
 
 UID = 'search.receivers'
 
+# Fields that bookkeeping saves name in update_fields and that no document
+# reads. A save naming only these changes nothing in the index. Anything not
+# listed reindexes, so a field missing from here costs a wasted task, never a
+# stale row.
+UNINDEXED_FIELDS = {
+    Topic: frozenset(['post_count', 'last_post', 'update_date']),
+    UserProfile: frozenset(['forum_post_count']),
+    User: frozenset(['last_login']),
+}
 
-def queue_reindex(sender, instance, **kwargs):
+# The topic fields a post's document depends on: its category, through the
+# forum, and its title.
+TOPIC_FIELDS_POSTS_READ = ('forum_id', 'name')
+
+
+def queue_reindex(sender, instance, update_fields=None, **kwargs):
     """Rebuilds this object's index row once its transaction commits."""
+    if changes_nothing_indexed(sender, update_fields):
+        return
     queue(reindex_document, sender, instance.pk)
+
+
+def changes_nothing_indexed(sender, update_fields):
+    """True if a save of sender wrote only fields no document reads."""
+    # None is a plain save, which could have changed anything.
+    return (update_fields is not None
+            and update_fields <= UNINDEXED_FIELDS.get(sender, frozenset()))
+
+
+def note_topic_changes(sender, instance, update_fields=None, **kwargs):
+    """
+    Notes whether a topic save is about to move or rename it.
+
+    Its posts are not saved when that happens, yet each is indexed under the
+    topic's name and governed by its category's privacy. Only the saved row can
+    say what changed, so it is read here, before the save overwrites it, and
+    acted on in queue_topic_posts_reindex once the save has happened.
+
+    """
+    instance._search_posts_stale = False
+    if instance.pk is None or changes_nothing_indexed(sender, update_fields):
+        return
+
+    saved = sender._default_manager.filter(pk=instance.pk).values(
+            *TOPIC_FIELDS_POSTS_READ).first()
+    if saved is None:
+        return
+
+    instance._search_posts_stale = any(
+            saved[field] != getattr(instance, field)
+            for field in TOPIC_FIELDS_POSTS_READ)
+
+
+def queue_topic_posts_reindex(sender, instance, **kwargs):
+    """Rebuilds a moved or renamed topic's posts once its save commits."""
+    if getattr(instance, '_search_posts_stale', False):
+        transaction.on_commit(partial(reindex_topic_posts.delay, instance.pk))
 
 
 def queue_removal(sender, instance, **kwargs):
@@ -105,7 +162,7 @@ def queue_user_reindex(sender, instance, created, **kwargs):
         return
 
     # Every login saves the user to stamp last_login. Nothing indexed changes.
-    if kwargs.get('update_fields') == frozenset(['last_login']):
+    if changes_nothing_indexed(sender, kwargs.get('update_fields')):
         return
 
     queue_profile_reindex(instance.pk)
@@ -143,6 +200,14 @@ def queue(task, model, object_id):
 for document in all_documents():
     post_save.connect(queue_reindex, sender=document.model, dispatch_uid=UID)
     post_delete.connect(queue_removal, sender=document.model, dispatch_uid=UID)
+
+# A topic's posts are indexed under its name and its category, and a move or a
+# rename saves the topic alone.
+# A uid of its own: Topic's post_save already has queue_reindex under UID, and
+# a second connection under the same uid and sender would be dropped silently.
+pre_save.connect(note_topic_changes, sender=Topic, dispatch_uid=UID)
+post_save.connect(queue_topic_posts_reindex, sender=Topic,
+                  dispatch_uid=UID + '.topic_posts')
 
 # Deleting a category cascades through its forums to its topics and posts,
 # each of which fires its own post_delete, so only the groups need watching.

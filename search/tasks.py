@@ -19,6 +19,8 @@ from django.db import InterfaceError
 from django.db import OperationalError
 from django.utils import timezone
 
+from forums.models import Post
+
 from search.documents import all_documents
 from search.documents import document_for_model
 from search.indexer import discard_stale
@@ -113,6 +115,25 @@ def reindex_category(category_id):
         removed = discard_stale(document, scope=scope)
         logger.info("category %s: %s %d indexed, %d removed", category_id,
                     document.model._meta.label_lower, indexed, removed)
+
+
+@shared_task(**RETRY)
+def reindex_topic_posts(topic_id):
+    """
+    Rebuilds the index rows for one topic's posts.
+
+    Queued when a topic moves or is renamed. Each post is indexed under its
+    topic's name and governed by its category's privacy, and neither change
+    saves the posts. As with a category, the posts the document no longer
+    yields -- moved into a private category -- have their rows dropped.
+
+    """
+    document = document_for_model(Post)
+    scope = {'topic': topic_id}
+    indexed = index_queryset(document, document.get_queryset().filter(**scope))
+    removed = discard_stale(document, scope=scope)
+    logger.info("topic %s: %d posts indexed, %d removed", topic_id, indexed,
+                removed)
 
 
 @shared_task(**RETRY)
