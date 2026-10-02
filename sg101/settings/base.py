@@ -237,6 +237,11 @@ EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
 # remote host a hung connection blocks the sending thread indefinitely.
 EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=20)
 
+# The only addresses core.mail_backends.AllowlistEmailBackend sends to, for a
+# copy of the site where mail must reach its testers and nobody else. Read
+# only by that backend, which sends nothing at all while this is empty.
+EMAIL_ALLOWLIST = env.list('EMAIL_ALLOWLIST', default=[])
+
 # The address the site sends from. Kept independent of ADMINS -- deriving it
 # from the first admin tuple meant adding or reordering an admin would silently
 # change every outbound From address.

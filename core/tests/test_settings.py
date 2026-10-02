@@ -156,6 +156,38 @@ class UserPhotoUploadSettingsTests(SimpleTestCase):
         self.assertIn('elsewhere.example.com', err)
 
 
+
+class EmailAllowlistSettingsTests(SimpleTestCase):
+    """EMAIL_ALLOWLIST is read from the environment as the backend reads it.
+
+    Read through core.mail_backends.allowlist() rather than the raw setting,
+    because what matters is the set of addresses the backend ends up allowing
+    from a value typed into .env, spaces and capitals included.
+    """
+
+    SNIPPET = (
+        "from core.mail_backends import allowlist\n"
+        "import sys\n"
+        "sys.stdout.write(','.join(sorted(allowlist())))\n"
+    )
+
+    def test_a_comma_separated_list_reaches_the_backend(self):
+        code, out, err = _run({
+            'SECRET_KEY': 'x',
+            'EMAIL_ALLOWLIST': 'Tester@Example.com, brian@example.com',
+        }, snippet=self.SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        self.assertEqual(out, 'brian@example.com,tester@example.com')
+
+    def test_unset_or_empty_allows_nobody(self):
+        for value in (None, ''):
+            with self.subTest(EMAIL_ALLOWLIST=value):
+                code, out, err = _run({'SECRET_KEY': 'x',
+                                       'EMAIL_ALLOWLIST': value},
+                                      snippet=self.SNIPPET)
+                self.assertEqual(code, 0, msg=err)
+                self.assertEqual(out, '')
+
 class SettingsImportIsolationTests(SimpleTestCase):
     """Importing a settings module must not reconfigure the running one.
 
