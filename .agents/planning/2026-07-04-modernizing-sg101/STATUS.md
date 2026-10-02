@@ -676,7 +676,31 @@ sections the rehearsal did not walk.
 
 Requirement 4's assets (three badges, two smileys) are committed with this
 record. **Carried forward:** the topic-view reindex fix, before task 09
-(Brian: after task 07); C4's reindex-before-or-after-reopening decision, for
+(Brian: after task 07), **widened 2026-10-01 (Brian) into an audit: every
+place `main` avoided a reindex, checked against `modernize`**, on the concern
+that `modernize` reindexes much more than it needs to. `main` reindexed topics,
+posts and profiles only from explicit call sites, and nothing else that saved
+them reindexed anything:
+
+| signal on `main` | sent from |
+|---|---|
+| `notify_new_topic` | `forums/admin.py:51`, `forums/forms.py:141`, `forums/tools.py:112`, `forums/views/main.py:1087` |
+| `notify_updated_topic` | `forums/admin.py:49`, `forums/views/main.py:446` |
+| `notify_new_post` | `forums/admin.py:74`, `forums/forms.py:64`, `forums/forms.py:142`, `forums/tools.py:113`, `forums/views/main.py:590` |
+| `notify_updated_post` | `forums/admin.py:72`, `forums/views/main.py:441` |
+| `notify_profile_content_update` | `bio/models.py:139`, `bio/views.py:236` |
+
+`search/receivers.py` reindexes on every `post_save` instead, and on saves of
+`User`, forum categories and members' links. **The audit: every save of a
+searchable model, or of a sender the receivers listen to, that changes nothing
+searchable**, each found, measured if it is frequent, and either turned into a
+queryset `update()` or skipped in the receiver. Known: the topic view counter
+(~45 k a day). Unchecked: the counter and `last_post` bookkeeping on a reply,
+and anything that saves a `User` or `UserProfile` routinely (a login's
+`last_login`, post counts, badges). The receivers' reason for `post_save`, that
+a hand-sent signal can be forgotten, stands, so what changes is which saves
+happen, not how indexing is triggered. Not yet started.
+The rest: C4's reindex-before-or-after-reopening decision, for
 task 08's runbook; the ` fog` upload naming, after the cutover.
 
 ### P8 — undo, and the runbook
