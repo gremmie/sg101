@@ -110,6 +110,13 @@ the real site.
    serious template rendering failures. Everything else is expected to go to the
    list for after the cutover.
 
+## Testers
+
+**Volunteered (recorded 2026-10-01, Brian):** Fady, Kojack, Emilien03,
+kick_the_reverb and synchro, by site username. Their email addresses are not
+recorded here; they come from each account when the Access policy and the mail
+allowlist are built (requirement 7).
+
 ## Reference Documentation
 **Required:**
 - `.agents/tasks/2026-07-04-modernizing-sg101/step21/task-07-dress-rehearsal.code-task.md`
