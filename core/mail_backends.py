@@ -5,10 +5,10 @@ AllowlistEmailBackend is for a copy of the site with real member data on it,
 where mail has to reach the people testing it and nobody else. It is never a
 default; a deployment chooses it with EMAIL_BACKEND.
 
-It sits at the backend rather than in core.tasks.send_mail because the backend
-is the one place every path meets: Django's password reset, mail_admins from
-AdminEmailHandler and core.functions.email_admins all send without going
-through send_mail.
+It sits at the backend rather than in core.functions.send_mail because the
+backend is the one place every path meets. Django's error mail -- mail_admins,
+called by AdminEmailHandler -- never goes through send_mail, and a check there
+would also have to be remembered by any path added later that does not either.
 
 """
 import logging

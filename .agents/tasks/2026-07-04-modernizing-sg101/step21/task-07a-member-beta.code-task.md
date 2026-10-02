@@ -56,11 +56,14 @@ through it. The calendar page itself embeds the live Google Calendar in an ifram
 
 **Mail is the dangerous part, and the site will generate plenty of it.**
 Testers will post and send private messages, and each of those notifies real
-subscribers and recipients through `core.tasks.send_mail`. Other paths skip that
-function: Django's password reset, `mail_admins` from `AdminEmailHandler`, and
-`email_admins`. `tools/email_smoke.py` names all ten. The one place every path
-passes through is `EMAIL_BACKEND`, which production already reads from the
-environment. So the setting belongs there: a backend that filters recipients
+subscribers and recipients through `core.tasks.send_mail`. One path skips that
+function: Django's `mail_admins`, called by `AdminEmailHandler` for error mail.
+*(Corrected 2026-10-01: this said Django's password reset and `email_admins`
+skip it too. Both go through `core.functions.send_mail`, password reset since
+Step 16's `SitePasswordResetForm`; `tools/email_smoke.py`'s `UNWRAPPED_PATHS`
+lists only the error mail.)* `tools/email_smoke.py` names all ten. The one place
+every path passes through is `EMAIL_BACKEND`, which production already reads
+from the environment. So the setting belongs there: a backend that filters recipients
 against an allowlist, not a check in `send_mail`, which would miss the other
 paths. Task 07's console backend blocks everything. The beta needs mail to reach
 testers, because registration, password reset and notifications are among the

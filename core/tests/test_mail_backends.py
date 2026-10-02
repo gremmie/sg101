@@ -170,8 +170,9 @@ class MailPathTestCase(TestCase):
     """
     The site's mail paths, each sending through the backend once it is chosen.
 
-    Not every path goes through core.functions.send_mail, which is why the
-    filter is a backend; these check that the ones that do not still reach it.
+    Django's error mail never goes through core.functions.send_mail, which is
+    why the filter is a backend. The password reset does, through its own
+    form; it is here because it is the path a tester is likeliest to use.
 
     """
     def setUp(self):

@@ -43,6 +43,72 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend, implementation approach 1, committed (`8b1c09ce`); host configuration next
+
+**A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
+Brian's request.** None of the eleven put the new stack in front of anyone but
+Brian before the DNS flip. Task 07a keeps task 07's rehearsed site up for a few
+days at `beta.surfguitar101.com` for a handful of invited members, who log in as
+themselves; everything they write is discarded when C1 restores a fresh
+snapshot. It sits between 07 and 08. The task file holds the decisions and the
+reasoning; this section only points at them.
+
+**Decided 2026-09-26 (Brian), recorded in the task:** access through Cloudflare
+Access (Zero Trust organization `sg101-beta` created, Free plan; the application
+was created in task 07, with one-time PIN and Brian's address only); mail through a new allowlisting email backend, the only code the task
+adds; the real Google Calendar workflow runs end to end, with beta events
+deleted by hand afterwards; testers told not to donate; findings compiled at the
+end, possibly as GitHub issues, and Brian decides which delay task 09.
+
+**Runbook A3 marked done:** Brian deleted the 32 pending `gcalendar` rows in
+production (reported 2026-09-26, date not recorded). **Not yet confirmed from
+data** — task 07a's requirement 4a counts pending events in the rehearsal
+snapshot, and task 09 falls back to the final snapshot if that did not happen.
+
+**Testers (2026-10-01):** Fady, Kojack, Emilien03, kick_the_reverb and synchro
+volunteered; recorded by username in the task file's "Testers" section, each
+read as an active account in the dev copy of the data. Their addresses are not
+yet chosen: read from their accounts, or given by them.
+
+### Approach 1 — the allowlisting backend — DONE 2026-10-01, `8b1c09ce`
+
+Requirements 1 and 2 and criterion 2. `core.mail_backends.AllowlistEmailBackend`
+subclasses the SMTP backend; `EMAIL_ALLOWLIST` is read with `env.list` in
+`base.py`, documented commented-out in `.env.example`, and the default in no
+settings module. Every `to`/`cc`/`bcc` address not listed is removed and logged
+(`allowlist dropped field=… to=… from=…`, no subject, as `log_send`); a message
+with nobody left is not sent and logged. Matching ignores case and reads the
+address out of `Name <addr>`, the form `mail_admins` produces. Empty, blank or
+missing sends nothing.
+
+- **Tests:** ten on the backend, three paths through it once chosen (the site's
+  `send_mail`, Django's `mail_admins`, a real password-reset POST), two in
+  `test_settings.py` reading a typed value through to the backend in a
+  subprocess. Seen to fail first (no module).
+- **Mutations, each failing at least one test:** an empty list allowing all;
+  `bcc` unfiltered; case-sensitive; drops unlogged; sending with no recipients;
+  no `parseaddr`; the path tests on the plain SMTP backend; the setting
+  hard-coded `[]`. Suite and gate 1,348 OK; CI green.
+- **Not yet proved over real SMTP:** the dev stack has no mail catcher. That
+  proof is requirement 5, on leopard, before any invitation.
+- **Known and left:** a wholly dropped message still gets `send_mail`'s
+  `outcome=sent` line after its drop lines.
+
+**Corrected 2026-10-01, a claim three places repeated:** the task file said
+Django's password reset and `email_admins` skip `core.functions.send_mail`.
+Both go through it, password reset since Step 16's `SitePasswordResetForm`; only
+Django's `mail_admins` (error mail) skips it, as `tools/email_smoke.py`'s
+`UNWRAPPED_PATHS` says. The design is unaffected: the backend still catches
+every path. Fixed in the task file and in `core/mail_backends.py`'s docstring
+in the commit that adds this paragraph; **`8b1c09ce`'s commit message repeats
+the error and, being pushed, stays as written.**
+
+**Next, approach 2 (leopard; Brian runs the writes):** requirement 4 — `.env`
+with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
+token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —
+`Site.domain` to `beta.surfguitar101.com`; restart with worker and beat. Then
+requirement 5's proof.
+
 ## Step 21 task 07 — the dress rehearsal — DONE 2026-10-01, all six criteria met: P2 fixed four stale verification tools (`be228a74`); the window measures ~9 m 10 s, over half of it `reindex_search`; stay on 4 GB; in the commit that adds this line
 
 **The planned sequence, drafted before running anything** (implementation
@@ -1365,28 +1431,6 @@ both swap devices were back with `vm.swappiness` 10; `logrotate.timer`,
 `apt-daily-upgrade.timer` and Docker were active; `systemctl --failed` was
 empty; a queued task ran; nothing listened on 25. Nothing had to be done by
 hand.
-
-## Step 21 task 07a — a member beta before the cutover — PLANNED 2026-09-26
-
-**A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
-Brian's request.** None of the eleven put the new stack in front of anyone but
-Brian before the DNS flip. Task 07a keeps task 07's rehearsed site up for a few
-days at `beta.surfguitar101.com` for a handful of invited members, who log in as
-themselves; everything they write is discarded when C1 restores a fresh
-snapshot. It sits between 07 and 08. The task file holds the decisions and the
-reasoning; this section only points at them.
-
-**Decided 2026-09-26 (Brian), recorded in the task:** access through Cloudflare
-Access (Zero Trust organization `sg101-beta` created, Free plan, no application
-yet); mail through a new allowlisting email backend, the only code the task
-adds; the real Google Calendar workflow runs end to end, with beta events
-deleted by hand afterwards; testers told not to donate; findings compiled at the
-end, possibly as GitHub issues, and Brian decides which delay task 09.
-
-**Runbook A3 marked done:** Brian deleted the 32 pending `gcalendar` rows in
-production (reported 2026-09-26, date not recorded). **Not yet confirmed from
-data** — task 07a's requirement 4a counts pending events in the rehearsal
-snapshot, and task 09 falls back to the final snapshot if that did not happen.
 
 ## Step 21 task 03 — leopard provisioned and hardened; worker counts required — DONE 2026-09-27: stack running on leopard, smoked, firewalled, rotation proved; memory re-read with data in task 07, 2026-10-01 (peak 1,715 M of 3,910 M)
 
