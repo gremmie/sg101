@@ -97,6 +97,14 @@ gives a total with no category breakdown, and the baseline is what makes a later
 discrepancy explainable rather than merely visible.
 *Source: `STATUS.md` § Step 16 task 09, "What is still owed".*
 
+### A6. Move Postmark off the trial plan
+The account is on Postmark's trial, **100 emails per period**; 18 were used by
+2026-10-02, during task 07a's beta (Brian). The live site's whole outbound mail
+will not fit in it. Change to a paid plan before C5's DNS flip, and confirm in
+the dashboard that the new limit is in force. The mail volume the plan has to
+cover is A5's baseline, not a guess.
+*Source: `STATUS.md` § Step 21 task 07a.*
+
 ## B. Host preparation
 
 ### B1. `secrets/gcal/gcal-service-account.json` — DONE on leopard 2026-09-27

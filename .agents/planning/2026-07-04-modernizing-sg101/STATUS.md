@@ -179,6 +179,10 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   behaviour, not new with the stack. **After cutover, no action planned**
   (Brian, 2026-10-02).
 
+**Postmark is on its trial plan: 100 emails per period, 18 used by 2026-10-02**
+(Brian). Enough for the beta; not for the live site. Recorded as runbook A6, a
+paid plan before the DNS flip.
+
 **Approach 2, as planned (leopard; Brian runs the writes) — done 2026-10-02, recorded above:** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
 token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —
