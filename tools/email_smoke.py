@@ -61,8 +61,10 @@ from django.conf import settings  # noqa: E402
 from django.contrib.auth.models import User  # noqa: E402
 from django.contrib.sites.models import Site  # noqa: E402
 from django.core.mail import mail_admins  # noqa: E402
+from django.core.mail.backends.smtp import EmailBackend as SMTPBackend  # noqa: E402
 from django.test import override_settings  # noqa: E402
 from django.utils import timezone  # noqa: E402
+from django.utils.module_loading import import_string  # noqa: E402
 
 from accounts.forms import (ForgotUsernameForm, RegisterForm,  # noqa: E402
                             SitePasswordResetForm)
@@ -371,7 +373,8 @@ def check_live_backend():
     the thing that confuses them.
     """
     problems = []
-    if 'smtp' not in settings.EMAIL_BACKEND:
+    # By class, not by name: the allowlisting backend sends over SMTP too.
+    if not issubclass(import_string(settings.EMAIL_BACKEND), SMTPBackend):
         problems.append('EMAIL_BACKEND is %s, which sends nothing off this box'
                         % settings.EMAIL_BACKEND)
     if settings.EMAIL_HOST in ('', 'localhost', '127.0.0.1'):

@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-02
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -102,6 +102,16 @@ Django's `mail_admins` (error mail) skips it, as `tools/email_smoke.py`'s
 every path. Fixed in the task file and in `core/mail_backends.py`'s docstring
 in the commit that adds this paragraph; **`8b1c09ce`'s commit message repeats
 the error and, being pushed, stays as written.**
+
+**Found 2026-10-02, before requirement 5 could run: `email_smoke.py --live`
+refused the allowlisting backend.** `check_live_backend()` matched `smtp` in
+the backend's dotted path, which `core.mail_backends.AllowlistEmailBackend`
+lacks, so on the configured beta it would have exited with "sends nothing off
+this box". Now a subclass check against Django's SMTP backend. Two tests: the
+allowlisting backend accepted (seen to fail first with leopard's error), and the
+console backend refused with otherwise-good provider settings. Replacing the check
+with `if False:` failed both refusal tests. Suite and gate 1,350 OK. In the commit
+that adds this paragraph; leopard needs it pulled before requirement 5.
 
 **Next, approach 2 (leopard; Brian runs the writes):** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark

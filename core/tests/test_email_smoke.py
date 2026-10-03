@@ -273,3 +273,22 @@ class LiveModeTestCase(unittest.TestCase):
         EMAIL_HOST_PASSWORD='token', EMAIL_USE_TLS=True)
     def test_live_accepts_a_configured_provider(self):
         self.assertIn('smtp.postmarkapp.com', self.tool.check_live_backend())
+
+    @override_settings(
+        EMAIL_BACKEND='core.mail_backends.AllowlistEmailBackend',
+        EMAIL_HOST='smtp.postmarkapp.com', EMAIL_HOST_USER='token',
+        EMAIL_HOST_PASSWORD='token', EMAIL_USE_TLS=True)
+    def test_live_accepts_the_allowlisting_backend(self):
+        # It sends over SMTP, so the beta can prove its allowlist with --live.
+        # A check on the backend's dotted path refused it: no "smtp" in it.
+        self.assertIn('smtp.postmarkapp.com', self.tool.check_live_backend())
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend',
+        EMAIL_HOST='smtp.postmarkapp.com', EMAIL_HOST_USER='token',
+        EMAIL_HOST_PASSWORD='token', EMAIL_USE_TLS=True)
+    def test_live_refuses_a_backend_that_does_not_send_over_smtp(self):
+        # The provider settings alone are not enough: the backend must use them.
+        with self.assertRaises(SystemExit) as caught:
+            self.tool.check_live_backend()
+        self.assertIn('EMAIL_BACKEND', str(caught.exception))
