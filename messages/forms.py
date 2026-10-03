@@ -156,6 +156,5 @@ def notify_receiver(new_msg):
             })
 
     subject = 'New private message for %s at %s' % (new_msg.receiver.username, site.name)
-    from_email = settings.GPP_NO_REPLY_EMAIL + '@' + site.domain
-    send_mail(subject, email_body, from_email, [new_msg.receiver.email],
+    send_mail(subject, email_body, settings.NO_REPLY_EMAIL, [new_msg.receiver.email],
               category=EmailCategory.PM_NOTIFICATION)

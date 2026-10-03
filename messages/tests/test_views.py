@@ -556,6 +556,7 @@ class BasicTestCase(TestCase):
         email = mail.outbox[0]
         self.assertEqual(len(email.recipients()), 1)
         self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
+        self.assertEqual(email.from_email, 'no_reply@surfguitar101.com')
         self.assertTrue(email.subject.endswith('A user has flagged a private message'))
 
     def test_inbox_full(self):
@@ -668,6 +669,7 @@ class BasicTestCase(TestCase):
             email = mail.outbox[0]
             self.assertEqual(len(email.recipients()), 1)
             self.assertEqual(email.recipients()[0], 'pj@example.com')
+            self.assertEqual(email.from_email, 'no_reply@surfguitar101.com')
             self.assertTrue(email.subject.startswith('Private messages from'))
 
 
@@ -706,6 +708,7 @@ class EmailTestCase(TestCase):
             email = mail.outbox[0]
             self.assertEqual(len(email.recipients()), 1)
             self.assertEqual(email.recipients()[0], 'eddie@example.com')
+            self.assertEqual(email.from_email, 'no_reply@surfguitar101.com')
             self.assertTrue(email.subject.startswith('New private message'))
 
     def test_the_notification_is_categorized(self):

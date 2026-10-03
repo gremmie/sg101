@@ -113,6 +113,32 @@ console backend refused with otherwise-good provider settings. Replacing the che
 with `if False:` failed both refusal tests. Suite and gate 1,350 OK. In the commit
 that adds this paragraph; leopard needs it pulled before requirement 5.
 
+**Approach 2 on leopard, 2026-10-02 (Brian):** requirement 4a, zero
+`Event.pending_events` on the beta database before `GCAL_CREDENTIALS_PATH` was
+set, which confirms runbook A3 from a real snapshot. Requirements 4 and 6
+applied: `.env` with the allowlisting backend, six addresses (the five testers
+plus `ADMINS`) and the calendar key; `Site.domain` set; `make prod-up`. Read in
+`web`, `worker` and `beat` afterwards: each on the allowlisting backend with
+six entries, `web` able to read the key. Requirement 5's proof is next.
+
+**Requirement 5's first live run, 2026-10-02: the allowlist held, and Postmark
+refused the sender.** `--only admin_notification` to `admin@surfguitar101.com`
+and an unlisted address of Brian's: the unlisted one logged `allowlist dropped`
+and was not sent. The listed one was accepted over SMTP and then rejected in
+Postmark's activity log, `400`, `no_reply@beta.surfguitar101.com` "is not a
+Sender Signature". The smoke tool reported `ok`, as its docstring warns an SMTP
+handoff will. **This settles the task file's `no_reply@beta` question: Postmark
+refuses it.** Five senders built `no_reply@<Site.domain>`, among them both PM
+notification paths, so testers' notifications would have failed the same way.
+Fixed by `NO_REPLY_EMAIL`, a whole address defaulting to
+`no_reply@surfguitar101.com`, replacing `GPP_NO_REPLY_EMAIL` (local part only).
+Production is unchanged: its `Site.domain` is `surfguitar101.com`. Five tests
+assert the sender against the tests' `example.com` site, each seen to fail
+first, plus the two mocked `email_admins`/`email_managers` tests; suite and gate
+1,350 OK. Not chosen: verifying `beta.surfguitar101.com` in Postmark (DNS on the
+live zone, and a sender production never uses), or a signature for the one
+address (confirmed by mail to a mailbox that does not exist).
+
 **Next, approach 2 (leopard; Brian runs the writes):** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
 token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —

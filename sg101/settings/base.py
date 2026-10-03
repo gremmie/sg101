@@ -250,7 +250,7 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
 
 # The From address for Django's own error mail: mail_admins(), which the
 # AdminEmailHandler logging handler calls. This is a different path from
-# core.functions.email_admins(), which sends from GPP_NO_REPLY_EMAIL. Django
+# core.functions.email_admins(), which sends from NO_REPLY_EMAIL. Django
 # defaults SERVER_EMAIL to root@localhost -- accepted by a local relay, and
 # rejected by a transactional provider that will not sign for that domain.
 SERVER_EMAIL = env('SERVER_EMAIL', default='admin@surfguitar101.com')
@@ -350,8 +350,9 @@ CELERY_BEAT_SCHEDULE = {
 #######################################################################
 # sg101 Specific Settings
 #######################################################################
-# Local part only; the Site domain is appended where it is used.
-GPP_NO_REPLY_EMAIL = env('GPP_NO_REPLY_EMAIL', default='no_reply')
+# The whole address, not built from Site.domain: a copy of the site on another
+# hostname must still send from a domain the mail provider has verified.
+NO_REPLY_EMAIL = env('NO_REPLY_EMAIL', default='no_reply@surfguitar101.com')
 AVATAR_DIR = 'avatars'
 MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
 MAX_AVATAR_SIZE_PIXELS = 100

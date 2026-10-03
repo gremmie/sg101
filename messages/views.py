@@ -406,14 +406,13 @@ def _email_pms(request, msg_ids):
             msgs[0].subject)
     if count > 1:
         subject += ' (et al.)'
-    from_email = '{}@{}'.format(settings.GPP_NO_REPLY_EMAIL, site.domain)
     msg_body = render_to_string('messages/pm_email.txt', {
                     'site': site,
                     'user': user,
                     'msgs': msgs,
                     'admin_email': admin_email,
                 })
-    send_mail(subject, msg_body, from_email, [email_addr],
+    send_mail(subject, msg_body, settings.NO_REPLY_EMAIL, [email_addr],
               category=EmailCategory.PM_NOTIFICATION)
 
     msg = '{} message{} sent to email.'.format(count, '' if count == 1 else 's')

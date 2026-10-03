@@ -87,7 +87,7 @@ def email_admins(subject, message):
     subject = '[%s] %s' % (site.name, subject)
     send_mail(subject,
             message,
-            '%s@%s' % (settings.GPP_NO_REPLY_EMAIL, site.domain),
+            settings.NO_REPLY_EMAIL,
             [mail_tuple[1] for mail_tuple in settings.ADMINS],
             category=EmailCategory.ADMIN_NOTIFICATION)
 
@@ -98,7 +98,7 @@ def email_managers(subject, message):
     subject = '[%s] %s' % (site.name, subject)
     send_mail(subject,
             message,
-            '%s@%s' % (settings.GPP_NO_REPLY_EMAIL, site.domain),
+            settings.NO_REPLY_EMAIL,
             [mail_tuple[1] for mail_tuple in settings.MANAGERS],
             category=EmailCategory.ADMIN_NOTIFICATION)
 

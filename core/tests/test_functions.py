@@ -129,7 +129,7 @@ class EmailAdminsTestCase(unittest.TestCase):
     @patch('core.functions.settings')
     @patch('core.functions.Site.objects.get_current')
     def test_email_admins(self, current_mock, settings_mock, send_mail_mock):
-        settings_mock.GPP_NO_REPLY_EMAIL = 'nope'
+        settings_mock.NO_REPLY_EMAIL = 'nope@sender.com'
         settings_mock.ADMINS = [
             ('Alice', 'alice@example.com'),
             ('Bob', 'bob@example.com'),
@@ -141,7 +141,7 @@ class EmailAdminsTestCase(unittest.TestCase):
         email_admins(subject='Subject', message='Message')
 
         self.assertEqual(send_mail_mock.mock_calls, [
-            call('[Site] Subject', 'Message', 'nope@site.com',
+            call('[Site] Subject', 'Message', 'nope@sender.com',
                  ['alice@example.com', 'bob@example.com'],
                  category=EmailCategory.ADMIN_NOTIFICATION),
         ])
@@ -152,7 +152,7 @@ class EmailManagersTestCase(unittest.TestCase):
     @patch('core.functions.settings')
     @patch('core.functions.Site.objects.get_current')
     def test_email_admins(self, current_mock, settings_mock, send_mail_mock):
-        settings_mock.GPP_NO_REPLY_EMAIL = 'nope'
+        settings_mock.NO_REPLY_EMAIL = 'nope@sender.com'
         settings_mock.MANAGERS = [
             ('Alice', 'alice@example.com'),
             ('Bob', 'bob@example.com'),
@@ -164,7 +164,7 @@ class EmailManagersTestCase(unittest.TestCase):
         email_managers(subject='Subject', message='Message')
 
         self.assertEqual(send_mail_mock.mock_calls, [
-            call('[Site] Subject', 'Message', 'nope@site.com',
+            call('[Site] Subject', 'Message', 'nope@sender.com',
                  ['alice@example.com', 'bob@example.com'],
                  category=EmailCategory.ADMIN_NOTIFICATION),
         ])

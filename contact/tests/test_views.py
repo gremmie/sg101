@@ -52,7 +52,10 @@ class BaseTestCase(TestCase):
         self.assertEqual(len(email.recipients()), 1)
         self.assertEqual(email.extra_headers['Reply-To'],
                          self.post_data['email'])
-        self.assertEqual(email.from_email, 'no_reply@example.com')
+        # The configured sender, not one built from Site.domain: a copy of the
+        # site on another hostname must still send from a domain the mail
+        # provider has verified.
+        self.assertEqual(email.from_email, 'no_reply@surfguitar101.com')
         self.assertEqual(email.recipients()[0], 'admin@surfguitar101.com')
         self.assertTrue(self.post_data['subject'] in email.subject)
         msg = email.message().as_string()
