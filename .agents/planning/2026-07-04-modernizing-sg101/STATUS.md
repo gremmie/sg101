@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place 2026-10-02; the invitation next
+## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; the beta runs to Monday 2026-10-05
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
 Brian's request.** None of the eleven put the new stack in front of anyone but
@@ -164,6 +164,19 @@ complete it: `RegisterForm.clean_email` (`accounts/forms.py:98`) refuses an
 address an account already holds, and the allowlist holds only those addresses,
 so a new address's confirmation mail is dropped. The invitation tells testers not
 to try. Allowlisting a second address per tester was offered and declined.
+
+**Requirement 8 done: the invitation sent by Brian, 2026-10-02**, to the five
+testers. It covers the snapshot being a few days old and discarded, mail
+reaching testers only, no registration, no donations, calendar additions only,
+the testers' usernames for private messages, and reports to
+`https://surfguitar101.com/forums/topic/41524/` on the live site. The beta ends
+tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
+
+**Findings so far, for requirement 9 (Brian marks each):**
+- A new poll does not appear in the sidebar for up to an hour. `poll_block` /
+  `poll_block_v3` is a `{% cache 3600 %}` fragment in `base.html` and
+  `v3/base.html`, and nothing deletes it when a poll is saved. Existing
+  behaviour, not new with the stack. Unmarked.
 
 **Approach 2, as planned (leopard; Brian runs the writes) — done 2026-10-02, recorded above:** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
