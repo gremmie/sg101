@@ -178,6 +178,17 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   `v3/base.html`, and nothing deletes it when a poll is saved. Existing
   behaviour, not new with the stack. **After cutover, no action planned**
   (Brian, 2026-10-02).
+- Hotlinking an image in the forums gave a tester an error, and the admins an
+  `Internal Server Error: /user_photos/hotlink/` email with no traceback.
+  Reproduced by Brian 2026-10-03; all three attempts in leopard's `sg101.log`
+  were a photo *page* URL (`/user_photos/photo/27544/`), not an image.
+  `download_file` saved the HTML, Pillow refused it, and `hotlink_image`'s
+  `except Exception` turned that into a JSON 500 carrying `str(ex)`, temp path
+  and all. Django's `log_response` mails any 5xx at ERROR, so the mail has no
+  `exc_info`. A non-200 fetch is worse: `remove_file(None)` ends in
+  `os.remove(None)`. Existing behaviour: `main` has the same three pieces.
+  **After cutover, and decide first whether to keep the feature** (Brian,
+  2026-10-03): GitHub issue #5.
 
 **Postmark is on its trial plan: 100 emails per period, 18 used by 2026-10-02**
 (Brian). Enough for the beta; not for the live site. Recorded as runbook A6, a
