@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend, implementation approach 1, committed (`8b1c09ce`); host configuration next
+## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place 2026-10-02; the invitation next
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
 Brian's request.** None of the eleven put the new stack in front of anyone but
@@ -139,7 +139,26 @@ first, plus the two mocked `email_admins`/`email_managers` tests; suite and gate
 live zone, and a sender production never uses), or a signature for the one
 address (confirmed by mail to a mailbox that does not exist).
 
-**Next, approach 2 (leopard; Brian runs the writes):** requirement 4 — `.env`
+**Requirement 5 proved, 2026-10-02 (Brian, leopard on `ab54cdd1`).** Both paths
+into the backend, `--live` to `admin@surfguitar101.com` and an unlisted Proton
+address of Brian's: `admin_notification` arrived from `no_reply@surfguitar101.com`,
+accepted by Postmark; `django error mail` arrived from `admin@surfguitar101.com`.
+Proton received nothing either time. Criterion 1's smoke half is met; its other
+half, a tester's post notifying non-testers, comes during the beta.
+
+**Requirement 7 done, 2026-10-02 (Brian).** The Access application's Allow
+policy holds the five testers' addresses and Brian's; an unlisted address got no
+code and did not reach the site. `noindex`: a response header transform rule
+(hostname equals `beta.surfguitar101.com`, set `X-Robots-Tag: noindex`), seen
+in devtools on a logged-in page; it is one more thing for teardown. Turnstile's
+widget lists the hostname, and registration and the contact form both validated
+there. `tools/prod_smoke.sh` on leopard, all checks passed after the two
+rebuilds. **It checks the origin, not the hostname:** it hard-codes
+`surfguitar101.com` and resolves to the origin, so the Cloudflare path is
+covered by the browser checks instead, not by the script. Next, requirement 8:
+the invitation, Brian's.
+
+**Approach 2, as planned (leopard; Brian runs the writes) — done 2026-10-02, recorded above:** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
 token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —
 `Site.domain` to `beta.surfguitar101.com`; restart with worker and beat. Then
