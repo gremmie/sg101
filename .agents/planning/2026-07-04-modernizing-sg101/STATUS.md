@@ -176,7 +176,8 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
 - A new poll does not appear in the sidebar for up to an hour. `poll_block` /
   `poll_block_v3` is a `{% cache 3600 %}` fragment in `base.html` and
   `v3/base.html`, and nothing deletes it when a poll is saved. Existing
-  behaviour, not new with the stack. Unmarked.
+  behaviour, not new with the stack. **After cutover, no action planned**
+  (Brian, 2026-10-02).
 
 **Approach 2, as planned (leopard; Brian runs the writes) — done 2026-10-02, recorded above:** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
