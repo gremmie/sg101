@@ -158,6 +158,13 @@ rebuilds. **It checks the origin, not the hostname:** it hard-codes
 covered by the browser checks instead, not by the script. Next, requirement 8:
 the invitation, Brian's.
 
+**Registration is left out of the beta, and Brian tests it himself after the
+beta and before the cutover (decided 2026-10-02).** On the beta no tester can
+complete it: `RegisterForm.clean_email` (`accounts/forms.py:98`) refuses an
+address an account already holds, and the allowlist holds only those addresses,
+so a new address's confirmation mail is dropped. The invitation tells testers not
+to try. Allowlisting a second address per tester was offered and declined.
+
 **Approach 2, as planned (leopard; Brian runs the writes) — done 2026-10-02, recorded above:** requirement 4 — `.env`
 with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
 token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —
