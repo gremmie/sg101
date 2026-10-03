@@ -189,6 +189,30 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   `os.remove(None)`. Existing behaviour: `main` has the same three pieces.
   **After cutover, and decide first whether to keep the feature** (Brian,
   2026-10-03): GitHub issue #5.
+- A tester's six calendar submissions on 2026-10-03 all failed, silently. Every
+  `POST /calendar/add/` (03:20 to 05:27 UTC) answered 200 — `add_event` answers
+  302 only when the form is valid — bar one 403, `CSRF cookie not set`, which
+  the next POST eight seconds later passed. The tester has no `Event` rows.
+  Form errors are logged nowhere, so the cause is unknown: the hidden
+  `time_zone`, `image_check` on the description, the date format, or start
+  after end. Whether it is existing behaviour is unknown with it. Also a dead
+  `{{ form.time_zome }}` in `gcalendar/event.html`. GitHub issue #6. Unmarked.
+- The same tester clicked a dead link in news story 173 (2007): the relative
+  `modules.php?name=GCalendar`, resolving under `/news/story/173/` and 404ing.
+  Measured on the snapshot: 62 PHP-Nuke `modules.php` links in 52 of 1,705
+  stories; 29 reach Apache's rewrites (Forums viewtopic `t=`/`p=`, `sid=`), 33
+  in 27 stories 404 (Podcast, viewforum, Content and others, and six relative
+  links). All 52 stories are HTML only, no markup, so a fix rewrites the stored
+  HTML. Existing content; the live site has the same links. GitHub issue #7.
+  Unmarked.
+
+**Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
+Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
+`worker`, `beat`, `proxy`, `redis` and `postgres` container logs since the
+01:15 UTC restart hold no error, warning, traceback, timeout or kill. Only three
+people had used the beta: Brian, kick_the_reverb and synchro, by `auth.log`'s
+login lines and the access log's clients. The access log sees only what passed
+Cloudflare Access, so a tester stopped at the PIN page would not appear.
 
 **Postmark is on its trial plan: 100 emails per period, 18 used by 2026-10-02**
 (Brian). Enough for the beta; not for the live site. Recorded as runbook A6, a
