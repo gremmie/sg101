@@ -230,6 +230,25 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   added to the key's website restrictions, and the map loads. Beta only; the
   live hostname is unchanged by the cutover. Added to task 07a's teardown
   (requirement 10).
+- Kojack could not log in, typing `kojack` for the account `Kojack`; reported
+  2026-10-03, read from leopard's logs 2026-10-04. **New with the stack, and
+  not the password hash**: his was already `pbkdf2_sha256` from a live-site
+  login 2026-09-16. Django's `ModelBackend` matches the username exactly;
+  jaguar's `*_ci` collation had matched it in any case. The collation audit
+  (`research/collation-audit.md`) converted registration, member search, PMs,
+  donations and the profile and gallery URLs, and checked password reset, but
+  not login itself. His reset worked (new password set 00:59:05 UTC) and the
+  next five logins as `kojack` still failed; six failures from 00:58:03 to
+  01:02:39 meet the `sg101-auth` jail's 6 in 10 minutes, so fail2ban probably
+  banned him for 10 minutes (`/var/log/fail2ban.log` needs sudo; not read).
+  7,052 of 15,296 usernames carry uppercase. **Fixed** (Brian, 2026-10-04):
+  `accounts.backends.CaseInsensitiveModelBackend`, `ModelBackend` with the
+  lookup on `LOWER(username)`, so it uses 0002's existing unique index (an
+  `__iexact` compiles to `UPPER()` and could not); `aauthenticate` too. Tests
+  for the login view, other cases, a non-ASCII name and the hasher run on a
+  missing account; three mutations each seen to fail their test. Case only:
+  jaguar's `utf8_general_ci` also ignored accents, and ten usernames carry
+  them; not restored. Needs `make prod-up` on leopard.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
