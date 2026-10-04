@@ -205,7 +205,9 @@ allowlist are built (requirement 7).
     application);
     `EMAIL_BACKEND` and `EMAIL_ALLOWLIST` removed from `.env`; no donation
     recorded on the beta since the snapshot (a count of `Donation` rows) and none
-    in PayPal; beta uploads cleaned out of the S3 bucket; `https://beta.surfguitar101.com/*`
+    in PayPal (the row count cannot catch one: PayPal sends a beta donation's IPN
+    to jaguar, as it did Kojack's on 2026-10-04, so PayPal's list is the check);
+    beta uploads cleaned out of the S3 bucket; `https://beta.surfguitar101.com/*`
     removed from the Google Maps key's website restrictions (added 2026-10-03
     so the band map would draw); Cloudflare's `X-Robots-Tag: noindex` response
     header rule for the `beta` hostname deleted, and the hostname removed from

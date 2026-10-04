@@ -287,6 +287,21 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   test through the full middleware stack, seen to fail on `same-origin`.
   **Deployed and verified 2026-10-04:** Brian pulled and ran `make prod-up` on
   leopard, and the embed plays on the beta.
+- **Kojack donated on the beta**, despite the invitation; $5.00, 2026-10-04.
+  Read from the logs the same day (UTC): logged in to the beta 04:52:18
+  (`auth.log`), `GET /donations/` 04:57:48 (Apache), paid 04:58:59 by PayPal's
+  `payment_date`, and **jaguar** logged the IPN at 04:59:14 and `IPN: donation
+  saved`. The beta's `sg101.log`, rotated files included, has no IPN line. The
+  form sends PayPal no `notify_url`, so the IPN goes to the URL in the PayPal
+  account's settings, the live site, whatever host served the form. **So task
+  07a's premise was wrong:** a beta donation is not recorded in the beta's
+  database to be discarded; it lands in production's and is kept. Nothing to
+  reconcile. Brian found the row on jaguar, from Kojack and listed as
+  anonymous, which is the form's default (`item_anon_number` is the radio
+  checked on load). The teardown check counting the beta's `Donation` rows
+  cannot catch one; PayPal's list can, and the task file now says so. The
+  URL in the PayPal settings was not read; if it names the hostname rather than
+  jaguar's address, the cutover moves IPNs to leopard with no change.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
