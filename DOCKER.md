@@ -594,6 +594,7 @@ docker compose exec -T postgres pg_dump -U sg101 -d sg101 -Fc \
 | Goal | Command |
 | --- | --- |
 | Build and start | `dcp up -d --build` |
+| Deploy a pull with migrations | `make prod-deploy` (maintenance on, `migrate`, restart, off) |
 | Status and health | `dcp ps` |
 | Stop, keep data | `dcp down` |
 | Follow a service's output | `dcp logs -f web` (or `proxy`, `worker`, `beat`) |

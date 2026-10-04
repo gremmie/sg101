@@ -829,6 +829,41 @@ and so has never reached ports 6667/6697 by name anyway. The bot's code and
 ngircd's config are copied to `~/workspaces/bgn/sg101-evidence/irc-2026-09-25/`.
 *Source: `STATUS.md` § Step 21 task 01, decided 2026-09-25.*
 
+### D9. Routine deploys, from the cutover on
+jaguar's `hg up` and a touch of the `.wsgi` file has no equivalent here: the
+code and the hashed static files are built into the `sg101-app:prod` image, so
+a pull changes nothing until the containers are replaced. **Nothing runs
+`migrate` but you.**
+
+```bash
+git pull
+git diff --stat ORIG_HEAD.. -- '*/migrations/*'   # empty: no migrations
+make prod-up        # no migrations
+make prod-deploy    # migrations
+```
+
+- **`make prod-up`** builds while the old containers serve, then replaces
+  `web`, `worker` and `beat`. `proxy` is replaced with them. Visitors meet
+  a gap: refused connections while the proxy restarts, then a 503 with
+  `offline.html` (the vhost's `ErrorDocument`) until gunicorn listens, and a
+  request caught mid-shutdown gets Apache's bare 502. Measured 2026-10-01 on
+  leopard at 20–30 s. Fine at this site's ~1 request a second.
+- **`make prod-deploy`** builds first, turns maintenance mode on, runs
+  `migrate` from the new image, replaces the containers, waits for `web` to
+  pass its health check, then turns maintenance mode off. Measured on the Mac
+  2026-10-03: 14 s in all, 503 `offline.html` for about 7 s with one real
+  migration applied, and about 2.5 s of refused connections as `proxy` was
+  replaced. **If any step fails it stops with maintenance mode still on**:
+  read the output, fix, then rerun it or `make prod-maint-off`.
+- Either way, check `make prod-ps` afterwards, and that a deferred task still
+  runs (C4a): save a story, watch `make prod-logs svc=worker` for
+  `reindex_document ... succeeded`.
+- A change under `apache/` alone needs neither: `make prod-proxy-reload`.
+
+*Source: `STATUS.md` § Step 21 task 07a, the podcast detail fix
+(2026-10-03); the gap from leopard's Apache `error.log`, 2026-10-01; the
+`Makefile`'s `prod-deploy` comment.*
+
 ---
 
 ## Known gaps in this list

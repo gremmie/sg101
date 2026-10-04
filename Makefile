@@ -34,7 +34,7 @@ days ?=
 
 .PHONY: help \
 	prod-maint-on prod-maint-off prod-maint-status \
-	prod-build prod-up prod-down prod-ps prod-logs prod-shell prod-bash \
+	prod-build prod-up prod-deploy prod-down prod-ps prod-logs prod-shell prod-bash \
 	prod-manage prod-check prod-proxy-reload prod-smoke prod-browser \
 	prod-backup prod-backup-drill \
 	cloudflare-ranges-check firewall-plan firewall-apply firewall-check firewall-test \
@@ -69,8 +69,24 @@ prod-maint-status: ## Show whether maintenance mode is on
 prod-build: ## Build every image, including the backup image
 	$(DCP) --profile backup build
 
-prod-up: prod-build ## Build, then start the stack in the background
+prod-up: prod-build ## Build, then start the stack; runs no migrations (see prod-deploy)
 	$(DCP) up -d
+
+# A deploy that may carry migrations; prod-up never runs them. The build comes
+# first, while the old containers still serve. Maintenance mode then covers the
+# rest: migrate runs from the new image before the new containers start, so they
+# never serve against the old schema, and --wait holds until gunicorn answers
+# its health check. The first `up` replaces every changed service; the second
+# only waits, and on web alone: naming a service would leave worker and beat on
+# the old code, and proxy's check goes through Apache, which answers 503 while
+# maintenance mode is on. If any step fails, make stops with maintenance mode
+# still on.
+prod-deploy: prod-build ## Deploy a pull that has migrations: maintenance on, migrate, restart, off
+	@$(MAKE) --no-print-directory prod-maint-on
+	$(DCP) run --rm --no-deps web python manage.py migrate --noinput
+	$(DCP) up -d
+	$(DCP) up -d --wait web
+	@$(MAKE) --no-print-directory prod-maint-off
 
 prod-down: ## Stop the stack and keep its data
 	$(DCP) down
