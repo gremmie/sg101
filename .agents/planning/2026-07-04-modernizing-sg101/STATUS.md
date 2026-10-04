@@ -273,6 +273,20 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   rolled back: 3,896 retired in 0.33 s, 11,399 current hashes untouched. Three
   mutations each seen to fail their test. Needs `make prod-deploy` on leopard
   (a migration); at the cutover, C3's `migrate` runs it.
+- YouTube embeds showed "Video player configuration error" on the beta,
+  reported by Fady 2026-10-04 (news story 1031; fine on the live site, nothing
+  in the console). **New with the stack, and not the beta hostname:**
+  `SecurityMiddleware`, added in Step 20, sends `Referrer-Policy: same-origin`
+  by default, so the browser sends no `Referer` to `youtube-nocookie.com`, and
+  YouTube refuses an embed without one. jaguar sends no policy (read from its
+  response headers), so browsers apply their own default,
+  `strict-origin-when-cross-origin`. The live hostname would have broken the
+  same way at the cutover. Apache sets no `Referrer-Policy`. **Fixed**
+  (`1bd6f1d1`): `SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'` in
+  `base.py`, so other sites learn the origin and never the path; a response
+  test through the full middleware stack, seen to fail on `same-origin`.
+  **Deployed and verified 2026-10-04:** Brian pulled and ran `make prod-up` on
+  leopard, and the embed plays on the beta.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
