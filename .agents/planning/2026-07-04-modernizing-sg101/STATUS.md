@@ -218,8 +218,8 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   fallback — `solution: "html"`, no `swfPath`, `Jplayer.swf` deleted — with a
   podcast view test under a files-only storage and `core/tests/test_static.py`,
   which fails on any template's literal static name that is not a file. Both
-  seen to fail on the old template with production's message. Needs `make
-  prod-up` on leopard, and an episode played in a browser.
+  seen to fail on the old template with production's message. **Deployed and
+  verified 2026-10-04:** episodes played in a browser by Brian and by Fady.
 - The band map did not draw on the beta, reported by Fady 2026-10-03. The
   page, `bandmap.js` and `/bandmap/query/` all answered 200; the Google Maps
   key in `bandmap/bandmap_base.html` is restricted by website, and allowed only
@@ -248,7 +248,31 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   for the login view, other cases, a non-ASCII name and the hasher run on a
   missing account; three mutations each seen to fail their test. Case only:
   jaguar's `utf8_general_ci` also ignored accents, and ten usernames carry
-  them; not restored. Needs `make prod-up` on leopard.
+  them; not restored. **Deployed and verified 2026-10-04:** leopard at
+  `046505e6`; Brian logged in as `brian`, and `auth.log` recorded `Brian`.
+- **2,662 accounts hold a bare, unsalted MD5 password hash, and cannot log in
+  with their password on the new stack.** Measured on leopard 2026-10-04: all
+  `^[0-9a-f]{32}$`; joined 2006 to 2011-02-23; **none has logged in since
+  2011-02-24**, and 688 never did (`last_login` 1970). Each login on the old
+  site re-hashed the password, so these are exactly the members who have not
+  returned since. 2,650 active, 2,657 with an address, 878 have posted. jaguar's
+  Django 1.8 lists `UnsaltedMD5PasswordHasher` in its default `PASSWORD_HASHERS`
+  (read from its `global_settings.py`); Django 5.2 no longer ships the class,
+  and `identify_hasher` raises `Unknown password hashing algorithm
+  'unsalted_md5'`. So a returning member gets "invalid password" and needs a
+  reset, where jaguar logged them in. The hashes are also unsalted: 15 and 11
+  accounts share two values, the second MD5 of `123456`, and any copy of the
+  database or a backup carries them. Nothing in `.agents/` recorded it before.
+  **1,234 more hold Django's old salted `sha1$`**: joined to 2012-05-06, none
+  logged in since that day; 1,187 active, 1,231 with an address, 363 posted.
+  Django 5.2 dropped that hasher too. **Decided (Brian, 2026-10-04): mark both
+  unusable**, rather than wrap them so the old passwords still work.
+  `accounts.0009_retire_unreadable_password_hashes` gives each its own
+  `make_password(None)` marker; nothing else on the account changes, and a
+  reset still gets them in. Dry run on the dev database's production copy,
+  rolled back: 3,896 retired in 0.33 s, 11,399 current hashes untouched. Three
+  mutations each seen to fail their test. Needs `make prod-deploy` on leopard
+  (a migration); at the cutover, C3's `migrate` runs it.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
