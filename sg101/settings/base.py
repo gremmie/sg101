@@ -199,6 +199,9 @@ INSTALLED_APPS = [
     'ygroup',
 ]
 
+# Usernames match without regard to case, as they did under MySQL's collation.
+AUTHENTICATION_BACKENDS = ['accounts.backends.CaseInsensitiveModelBackend']
+
 LOGIN_URL = 'accounts-login'
 LOGIN_REDIRECT_URL = 'bio-me'
 LOGOUT_URL = 'accounts-logout'
