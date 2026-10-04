@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
 from django.http import HttpResponse
 from django.test import TestCase, RequestFactory
+from django.urls import reverse
 from unittest.mock import patch, Mock
 
 from core.functions import get_ip
@@ -195,3 +196,18 @@ class WhosOnlineMiddlewareTestCase(TestCase):
         mock_report_visitor.assert_called_once_with('127.0.0.1')
         mock_report_user.assert_not_called()
         mock_get_ip.assert_called_once_with(self.request)
+
+
+class ReferrerPolicyTestCase(TestCase):
+    """What the browser is told to send other sites about where it came from.
+
+    YouTube refuses to play an embed that arrives with no Referer, showing a
+    player error and nothing in the console. Django's default, same-origin,
+    sends none to any other site; this is the browsers' own default, and what
+    the site relied on before it sent a policy at all.
+    """
+
+    def test_other_sites_are_told_the_origin(self):
+        response = self.client.get(reverse('contact-form'))
+        self.assertEqual(response['Referrer-Policy'],
+                         'strict-origin-when-cross-origin')

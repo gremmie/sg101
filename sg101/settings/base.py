@@ -131,6 +131,11 @@ MIDDLEWARE = [
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
+# Not Django's default of same-origin, which sends no Referer to other sites:
+# YouTube refuses to play an embed without one. This is the browsers' own
+# default, so other sites learn the origin and never the path.
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 ROOT_URLCONF = 'sg101.urls'
 
 TEMPLATES = [
