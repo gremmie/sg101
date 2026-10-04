@@ -299,9 +299,9 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   reconcile. Brian found the row on jaguar, from Kojack and listed as
   anonymous, which is the form's default (`item_anon_number` is the radio
   checked on load). The teardown check counting the beta's `Donation` rows
-  cannot catch one; PayPal's list can, and the task file now says so. The
-  URL in the PayPal settings was not read; if it names the hostname rather than
-  jaguar's address, the cutover moves IPNs to leopard with no change.
+  cannot catch one; PayPal's list can, and the task file now says so. **The
+  IPN URL in the PayPal settings names the hostname** (read by Brian,
+  2026-10-04), so the cutover moves IPNs to leopard with no change in PayPal.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
