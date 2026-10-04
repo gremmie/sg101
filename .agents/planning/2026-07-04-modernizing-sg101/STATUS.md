@@ -205,6 +205,21 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   links). All 52 stories are HTML only, no markup, so a fix rewrites the stored
   HTML. Existing content; the live site has the same links. GitHub issue #7.
   Unmarked.
+- Every podcast detail page was a 500, reported by Fady and reproduced by Brian
+  2026-10-03: `ValueError: Missing staticfiles manifest entry for
+  'js/jplayer'`. `podcast/detail.html` gave jPlayer `swfPath: "{% static
+  "js/jplayer" %}"`, a directory, and `ManifestStaticFilesStorage`'s manifest
+  lists only files. **New with the stack** (`ec02945f`): jaguar's storage only
+  prefixed `STATIC_URL`, and `main` has the same line. The test settings use
+  the plain storage and `podcast` had no tests, so the suite could not see it.
+  Every other literal `{% static %}` name and local `GPP_THIRD_PARTY_*` path,
+  99 in all, was checked against leopard's `staticfiles.json`: `js/jplayer` was
+  the only one missing. **Fixed** (Brian, 2026-10-03) by dropping the Flash
+  fallback — `solution: "html"`, no `swfPath`, `Jplayer.swf` deleted — with a
+  podcast view test under a files-only storage and `core/tests/test_static.py`,
+  which fails on any template's literal static name that is not a file. Both
+  seen to fail on the old template with production's message. Needs `make
+  prod-up` on leopard, and an episode played in a browser.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
