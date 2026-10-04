@@ -302,6 +302,16 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   cannot catch one; PayPal's list can, and the task file now says so. **The
   IPN URL in the PayPal settings names the hostname** (read by Brian,
   2026-10-04), so the cutover moves IPNs to leopard with no change in PayPal.
+- Markdown lists seemed to work on jaguar with `-` or `*` but only `-` on the
+  beta (Brian, 2026-10-04). **Not a difference, and existing behaviour:** Brian's
+  test post (485519) had a blank line before its `-` list and none before its
+  `*` list. A list straight after a paragraph line needs that blank line, with
+  either marker, in both libraries. The same three inputs were run through
+  jaguar's Markdown 2.5.1 and the beta's 3.10.3: both make a paragraph of
+  `Intro:` followed directly by `- one`; for `* one`, 2.5.1 makes italics and 3.10.3
+  leaves the asterisks; with the blank line both make a `<ul>`. Fady's post
+  (485510) is the same case, plus an expectation that the editor continues
+  a list on Return, which it never has. **No action (Brian, 2026-10-04).**
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
