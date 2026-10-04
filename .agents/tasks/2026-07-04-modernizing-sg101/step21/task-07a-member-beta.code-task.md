@@ -205,7 +205,11 @@ allowlist are built (requirement 7).
     application);
     `EMAIL_BACKEND` and `EMAIL_ALLOWLIST` removed from `.env`; no donation
     recorded on the beta since the snapshot (a count of `Donation` rows) and none
-    in PayPal; beta uploads cleaned out of the S3 bucket. **Calendar:**
+    in PayPal; beta uploads cleaned out of the S3 bucket; `https://beta.surfguitar101.com/*`
+    removed from the Google Maps key's website restrictions (added 2026-10-03
+    so the band map would draw); Cloudflare's `X-Robots-Tag: noindex` response
+    header rule for the `beta` hostname deleted, and the hostname removed from
+    Turnstile's widget (both added for requirement 7). **Calendar:**
     before the beta database is overwritten, list every event it put on Google
     (`status=ON_CAL` rows whose `google_id` is not in production's, or created
     after the snapshot), then delete each one from Google by hand. This list is

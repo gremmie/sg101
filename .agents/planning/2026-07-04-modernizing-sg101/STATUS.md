@@ -220,6 +220,16 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   which fails on any template's literal static name that is not a file. Both
   seen to fail on the old template with production's message. Needs `make
   prod-up` on leopard, and an episode played in a browser.
+- The band map did not draw on the beta, reported by Fady 2026-10-03. The
+  page, `bandmap.js` and `/bandmap/query/` all answered 200; the Google Maps
+  key in `bandmap/bandmap_base.html` is restricted by website, and allowed only
+  `surfguitar101.com`. Measured with the key against the Static Maps API: a
+  `surfguitar101.com` referer passed the site check (refused only because Static
+  Maps is not enabled on the key), while `beta.`, `www.` and `example.com` were
+  refused at it. **Fixed** (Brian, 2026-10-03): `https://beta.surfguitar101.com/*`
+  added to the key's website restrictions, and the map loads. Beta only; the
+  live hostname is unchanged by the cutover. Added to task 07a's teardown
+  (requirement 10).
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
