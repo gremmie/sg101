@@ -80,10 +80,12 @@ prod-up: prod-build ## Build, then start the stack; runs no migrations (see prod
 # only waits, and on web alone: naming a service would leave worker and beat on
 # the old code, and proxy's check goes through Apache, which answers 503 while
 # maintenance mode is on. If any step fails, make stops with maintenance mode
-# still on.
+# still on. The migrate run brings up web's dependencies, postgres and redis,
+# and waits for their health checks, so this also works on a stack that is
+# down; when they are already running it leaves them alone.
 prod-deploy: prod-build ## Deploy a pull that has migrations: maintenance on, migrate, restart, off
 	@$(MAKE) --no-print-directory prod-maint-on
-	$(DCP) run --rm --no-deps web python manage.py migrate --noinput
+	$(DCP) run --rm web python manage.py migrate --noinput
 	$(DCP) up -d
 	$(DCP) up -d --wait web
 	@$(MAKE) --no-print-directory prod-maint-off
