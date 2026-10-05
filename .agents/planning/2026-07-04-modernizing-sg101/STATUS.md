@@ -188,7 +188,10 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   `exc_info`. A non-200 fetch is worse: `remove_file(None)` ends in
   `os.remove(None)`. Existing behaviour: `main` has the same three pieces.
   **After cutover, and decide first whether to keep the feature** (Brian,
-  2026-10-03): GitHub issue #5.
+  2026-10-03): GitHub issue #5. *(Attributed 2026-10-05 from Apache's
+  `access.log` by user agent: the tester was synchro, 05:32 and 05:33 UTC; the
+  third 500, 14:26, was Brian's reproduction. synchro's next hotlink, 15:45,
+  answered 200, and so did Fady's at 21:21.)*
 - A tester's six calendar submissions on 2026-10-03 all failed, silently. Every
   `POST /calendar/add/` (03:20 to 05:27 UTC) answered 200 — `add_event` answers
   302 only when the form is valid — bar one 403, `CSRF cookie not set`, which
@@ -197,7 +200,16 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   `time_zone`, `image_check` on the description, the date format, or start
   after end. Whether it is existing behaviour is unknown with it. Also a dead
   `{{ form.time_zome }}` in `gcalendar/event.html`. GitHub issue #6. Unmarked.
-- The same tester clicked a dead link in news story 173 (2007): the relative
+  *Added 2026-10-05, from Apache's `access.log`:* the tester was synchro, by
+  user agent and the login at 02:33. **synchro's seventh POST, 15:40 UTC the
+  same day, answered 302 to `?thanks=1`**, so the form validated and an `Event`
+  was saved. "No `Event` rows" was read before 15:00, so both hold. Kojack
+  showed the same pattern 2026-10-05: one 200 at 18:44:24, then a 302
+  seventeen seconds later. So a member can get past it, which points at a field
+  error they could correct, not a broken path. Which field is still unknown, and
+  the database was not read for either event.
+- The same tester (synchro, 02:52 UTC) clicked a dead link in news story 173
+  (2007): the relative
   `modules.php?name=GCalendar`, resolving under `/news/story/173/` and 404ing.
   Measured on the snapshot: 62 PHP-Nuke `modules.php` links in 52 of 1,705
   stories; 29 reach Apache's rewrites (Forums viewtopic `t=`/`p=`, `sid=`), 33
