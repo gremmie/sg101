@@ -6,9 +6,11 @@ from django.contrib import admin
 from django.conf import settings
 
 from contests.models import Contest
+from core.admin import PlainTextFieldsMixin
 
 
-class ContestAdmin(admin.ModelAdmin):
+class ContestAdmin(PlainTextFieldsMixin, admin.ModelAdmin):
+    plain_text_fields = ['meta_description']
     list_display = ['title', 'is_public', 'creation_date', 'end_date',
             'contestant_count', 'winner_count']
     list_editable = ['is_public']
@@ -19,8 +21,7 @@ class ContestAdmin(admin.ModelAdmin):
     actions = ['pick_winners']
 
     class Media:
-        js = (['js/contests/contests_admin.js'] +
-                settings.GPP_THIRD_PARTY_JS['tiny_mce'])
+        js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
     def contestant_count(self, obj):
         return obj.contestants.count()

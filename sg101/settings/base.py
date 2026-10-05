@@ -495,6 +495,7 @@ GPP_THIRD_PARTY_JS = {
         'js/markitup/sets/markdown/set.js',
     ],
     'tiny_mce': [
+        'js/tiny_mce_preinit.js',
         'js/tiny_mce/tiny_mce.js',
         'js/tiny_mce_init_std.js',
     ],

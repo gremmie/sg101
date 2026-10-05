@@ -6,6 +6,8 @@ from django.contrib.admin.widgets import AdminTextInputWidget
 from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
 
+from core.admin import PlainTextFieldsMixin
+
 from forums.tools import create_topic
 from news.models import PendingStory
 from news.models import Story
@@ -34,8 +36,9 @@ class CategoryAdmin(admin.ModelAdmin):
     list_editable = ['forum_slug']
 
 
-class PendingStoryAdmin(admin.ModelAdmin):
+class PendingStoryAdmin(PlainTextFieldsMixin, admin.ModelAdmin):
     formfield_overrides = TAG_FIELD_OVERRIDES
+    plain_text_fields = ['short_markup', 'long_markup', 'meta_description']
     list_display = ['title', 'date_submitted', 'submitter']
     list_filter = ['date_submitted']
     search_fields = ['title', 'short_text', 'long_text']
@@ -107,11 +110,12 @@ class PendingStoryAdmin(admin.ModelAdmin):
             story.save()
 
     class Media:
-        js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']
+        js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
-class StoryAdmin(admin.ModelAdmin):
+class StoryAdmin(PlainTextFieldsMixin, admin.ModelAdmin):
     formfield_overrides = TAG_FIELD_OVERRIDES
+    plain_text_fields = PendingStoryAdmin.plain_text_fields
     list_display = ['title', 'date_submitted', 'submitter', 'category']
     list_filter = ['date_submitted', 'category']
     search_fields = ['title', 'short_text', 'long_text']
@@ -140,7 +144,7 @@ class StoryAdmin(admin.ModelAdmin):
     fix_text.short_description = "Fix text on selected stories"
 
     class Media:
-        js = ['js/news_admin.js'] + settings.GPP_THIRD_PARTY_JS['tiny_mce']
+        js = settings.GPP_THIRD_PARTY_JS['tiny_mce']
 
 
 admin.site.register(Category, CategoryAdmin)
