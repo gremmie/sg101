@@ -6121,3 +6121,155 @@ Neither is called a gap.
    has no send after 00:38:13.
 3. **Every report reads `p=quarantine`** and no row carries a disposition other
    than `none`.
+
+### Twenty-fifth reading — 2026-10-05, covering 2026-09-28 through 2026-10-04: Postmark appears as a source IP through the member beta, a neighbour on jaguar's /64 passes DMARC on SPF, and the first quarantine dispositions in the corpus
+
+**`tools/dmarc_fetch.py` found 23 new reports** in 23 messages from All Mail and
+Spam since 09-13, none already held and no conflicts. **The corpus is 163
+reports, 230 rows, 1,849 messages.** Evaluated pairs by row (SPF/DKIM): 189
+`pass`/`pass`, 27 `fail`/`pass`, 10 `pass`/`fail`, 4 `fail`/`fail`. Published
+policy: **16 `p=none`, 147 `p=quarantine`.** Dispositions: 1,846 `none`, **3
+`quarantine`, the first in the corpus.**
+
+This reading covers the 23 new reports. They hold 46 rows and 197 messages.
+
+| Reporter (endpoints) | Reports | Windows | Msgs |
+|---|---|---|---|
+| `google.com` | 7 | 09-28 → 10-04 | 147 |
+| `Yahoo` (`yahoo.com`, `aol.com`, `att.net`) | 10 | 09-28 → 10-04 | 35 |
+| `comcast.net` | 2 | 09-28 → 09-29 | 9 |
+| `Outlook.com` (`protection.outlook.com`) | 3 | 09-28, 10-02, 10-03 | 5 |
+| `GMX` (`gmx.net`) | 1 | 10-01 | 1 |
+
+**jaguar's `mail.log` was not read for this reading**, so jaguar's direct
+deliveries are not reconciled. leopard's side was read: `email.log` (which
+starts 2026-10-03 01:03 UTC) and the `ERROR` lines of `sg101.log`, both in UTC.
+Addresses were reduced to their domains on the host before printing.
+
+#### Scoring the twenty-fourth reading's predictions: two held, one falsified
+
+1. **HELD.** Google's 09-28 report has no `104.30.*` rows at all, so the six
+   msmtp sends of 09-28 00:02–00:38 UTC were not counted a second time.
+2. **HELD, vacuously.** There is no `104.30.*` row in Google's 09-28 report to
+   match.
+3. **FALSIFIED in its second half.** All 23 reports read `p=quarantine`. Three
+   rows carry `disposition=quarantine` (below). The prediction was written as
+   though every non-`none` disposition would mean trouble; these three are the
+   policy working.
+
+#### Postmark appears as a source IP, and all three rows reconcile to a send
+
+STATUS item 3's missing half was Postmark delivering straight to a receiver's
+MX, which the twenty-fourth reading said "needs the cutover". **The member beta
+produced it first**, through the allowlisting backend, which lets mail reach
+testers' own addresses:
+
+| Report | Source | Msgs | leopard `email.log` (UTC) |
+|---|---|---|---|
+| Google 10-02 | `50.31.156.114` | 1 | 10-03 02:31:23, `pm_notification` to `gmail.com` |
+| Google 10-03 | `50.31.156.121` | 1 | 10-04 00:58:18, `password_reset` to `gmail.com` (Kojack's reset) |
+| Yahoo `att.net` 10-04 | `50.31.156.121` | 1 | 10-04 20:02:24, `pm_notification` to `att.net` |
+
+Each passes SPF on `pm-bounces.surfguitar101.com` (aligned under relaxed SPF)
+and carries both `d=pm.mtasv.net` and `d=surfguitar101.com`.
+
+**`email.log`'s `outcome=sent` is not delivery.** It logs one line per
+recipient before the allowlist runs. Four other `gmail.com` sends on 10-03
+(02:28:52, 02:38:45, 02:43:29, 02:56:28) and the `mail.de` one each have an
+`allowlist dropped` line and were never handed to Postmark. Reconciling against
+`sent` alone would have predicted five Google rows for 10-02, not one.
+`msorensen.net` takes ten sends across the window and is hosted at IONOS
+(`mx00/01.1and1.com`), which does not report.
+
+**Another forward test of Google's UTC−7 day, on a third source.** On a UTC day
+the three Google sends would fall 10-03, 10-04 and none; Google filed 10-02,
+10-03 and none for 10-04. Only the UTC−7 day fits.
+
+#### leopard's forward to `admin@`: two of three Google days reconcile exactly
+
+| Google day (UTC−7) | `104.30.*` msgs | leopard: `admin@` sends + Django error mail | |
+|---|---|---|---|
+| 10-02 | 5 | 3 (`email.log`, 01:16:05, 01:16:06, 02:58:51) + 2 (`/user_photos/hotlink/` 500s) | **exact** |
+| 10-03 | 20 | 1 (`email.log`, 10-04 04:54:43) + 20 (19 `/podcast/N/` 500s, 1 hotlink 500) | **21 against 20** |
+| 10-04 | 2 | 2 (`email.log`, 10-04 12:20:36 contact form, 10-05 00:33:58) + 0 | **exact** |
+
+The two `admin@` sends from `no_reply@beta.surfguitar101.com` at 10-03 01:03 are
+excluded: Postmark refused that sender (`400`, recorded in `STATUS.md`).
+Django's error mail goes through `mail_admins`, which `email.log` does not see,
+so it was counted from `sg101.log`'s `Internal Server Error` lines.
+**The 10-03 surplus of one is UNRESOLVED.** leopard's msmtp journal was not
+read, but host mail could only add to the expected side, not remove from it.
+
+#### A neighbour on jaguar's /64 passes DMARC as this domain
+
+Google's 09-30 report:
+
+```
+2600:3c01::2000:96ff:fe4a:23be   1  none  pass  fail   spf:surfguitar101.com=pass
+```
+
+**That is not jaguar.** jaguar has one global IPv6 address,
+`2600:3c01::f03c:91ff:fe70:e820` (read from `ip -6 addr` on jaguar 2026-10-05),
+and its MAC `f2:3c:91:70:e8:20` is the one its address derives from. The source's
+PTR is `newsite.akigroup.com`; `whois` puts it in Linode's `2600:3c00::/24`.
+It passes SPF because the apex record authorizes
+`ip6:2600:3c01::f03c:91ff:fe70:e820/64`, the whole /64, and on Linode that
+default /64 is shared with other customers' instances. SPF passed and aligned
+on `surfguitar101.com`, so **DMARC passed and `p=quarantine` never applied.**
+No DKIM signature from this domain verified.
+
+**No prior reading recorded this**: the term was carried over from the
+pre-existing record in Phase 1, and the decision not to copy it to another zone
+argued only that nothing had been shown to use it. **What the message was is
+unknown**: one message, one receiver, one window. A misconfigured neighbour
+using this domain as an envelope sender, and deliberate spoofing, both look
+like this.
+
+**No DNS change now (Brian, 2026-10-05):** the cutover is close, and task 10
+settles the apex SPF question after it. When it does, the fix is to drop the
+`ip6:` term, or narrow it to `/128` if jaguar is still sending. **Reopen
+trigger: any second row from `2600:3c01::/64` other than jaguar's own address.**
+
+#### Three spoofs quarantined: the first non-`none` dispositions
+
+Google 09-30: three messages from `119.59.99.226` (METRABYTE-TH, Bangkok; PTR
+`stock.obrienmumford.org`), each with SPF on an unrelated domain
+(`dmkarashop.com`, `wuttanabat.com`, `chiangraipool.com`) and no DKIM. Aligned on
+neither; **disposition `quarantine`.** This is the first time in 163 reports that
+the policy has acted on anything.
+
+#### Failure classes
+
+- **DSN class: two.** Google 09-28 and 09-29, `173.255.245.115`, `pass`/`fail`
+  with SPF on `mail.surfguitar101.com` and no `<dkim>` element.
+- **Over-long-line class: none.** 09-20 through 10-04 is now fifteen clean
+  windows since 09-19. It is intermittent, so it stays on the cutover's
+  before/after list.
+- **Gmail-relay forwards:** 11 messages (10-01: 6, 10-03: 1, 10-04: 4), SPF
+  `fail` on `gmail.com`, carried by DKIM, `disposition=none`.
+
+#### Endpoints with no report yet
+
+| Endpoint | Missing windows since 09-27 |
+|---|---|
+| `comcast.net` | 09-27, 09-30 → 10-04 |
+| `protection.outlook.com` | 09-27, 09-29 → 10-01, 10-04 |
+
+**These are not called gaps.** Without jaguar's `mail.log` it is unmeasured
+whether those endpoints received any traffic in those windows, and Microsoft has
+filed four days late before.
+
+#### Predictions for the twenty-sixth reading
+
+1. **Google's 10-05 report carries exactly 4 messages from Postmark
+   `50.31.156.*` sources.** leopard's `email.log` has four `gmail.com` sends on
+   Google's 10-05 day (10-05 20:24:04, 20:33:19, 21:07:56; 10-06 00:00:43) and no
+   `allowlist dropped` line after 10-03 02:56. Fewer means a send was dropped or
+   lost; more means the UTC−7 day or the log is wrong.
+2. **No Postmark source row in any Yahoo-filed report for 10-05.** leopard sent
+   nothing to a Yahoo-hosted domain that day.
+3. **No further row from `2600:3c01::2000:96ff:fe4a:23be`.** A second one makes
+   it a pattern rather than a single event, and any other non-jaguar address in
+   `2600:3c01::/64` would show the exposure is not one neighbour's.
+4. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
+   aligned on neither mechanism.

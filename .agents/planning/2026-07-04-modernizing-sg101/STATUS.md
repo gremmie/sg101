@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty-four DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the twenty-five DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -8701,6 +8701,19 @@ Django log. Postmark as a *source IP* delivering straight to a receiver's MX is
 still absent, and only the cutover produces that. **Item 1**: no over-long-line
 failure 09-20 → 09-27; the class is intermittent and stays live. **Item 2** is
 unchanged.
+
+**UPDATED 2026-10-05 by the twenty-fifth reading.** 147 `p=quarantine` reports
+(163 in the corpus, 1,849 messages). **Item 3 is closed early, by the member
+beta:** Postmark appears as a source IP (`50.31.156.114`, `.121`) in three rows,
+Google 10-02 and 10-03 and AT&T 10-04, and each matches one allowlisted send in
+leopard's `email.log`. **Item 1**: no over-long-line failure through 10-04.
+**Item 2** is unchanged. **New, and left until task 10 (Brian, 2026-10-05):** a
+host that is not jaguar, `2600:3c01::2000:96ff:fe4a:23be`
+(`newsite.akigroup.com`), passed DMARC as `surfguitar101.com` on SPF alone,
+because the apex record authorizes jaguar's whole Linode /64. There's no DNS
+change before the cutover; the reading has the evidence and a reopen trigger.
+The first `disposition=quarantine` rows also appeared: three spoofs from
+`119.59.99.226`.
 
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report

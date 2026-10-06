@@ -35,7 +35,11 @@ Several earlier steps closed with an item that needed production:
   per apex with the `ip4:`/`ip6:` terms and `-all` intact, MX still
   `route1/2/3.mx.cloudflare.net`, one `v=DMARC1`. Note the apex SPF still names
   **jaguar's** address; whether it should now name the VM's is a question for
-  this task (the VM sends through Postmark, not directly).
+  this task (the VM sends through Postmark, not directly). **The `ip6:` term
+  authorizes jaguar's whole Linode /64, which is shared**, and a neighbour,
+  `2600:3c01::2000:96ff:fe4a:23be`, passed DMARC as this domain on it in
+  Google's 09-30 report (twenty-fifth DMARC reading). Drop it or narrow it to
+  `/128` here; Brian deferred the change past the cutover on 2026-10-05.
 - **`.agents/summary/` was generated 2026-08-27** and describes jaguar, Apache +
   `mod_wsgi`. It became false at the flip. Regenerate with
   `/agent-sops:codebase-summary`, then review `AGENTS.md` — its facts about the
