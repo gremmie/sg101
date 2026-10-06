@@ -53,6 +53,13 @@ takes minutes, and two or three days' notice to members is enough. S0 now reads
 "as soon as the date is set". **T0 is tentatively Wednesday 2026-10-07 at 14:00
 CDT (19:00 UTC)**, so the stop point is 15:00 CDT.
 
+**S0 done 2026-10-06 except A4's daily readings, which run from here.** A6:
+Postmark on a paid plan, and healthchecks.io on its paid plan (Brian). A5:
+jaguar's mail logs copied to `sg101-evidence/jaguar-mail-2026-10-06/`, with D6
+extended to finish the baseline up to the freeze. The announcement is posted on
+the forum (Brian): the date, the whole site behind the maintenance page, the
+dormant-password note, and thanks to the five testers by username.
+
 **2 pm is about as quiet as any hour; the site has no quiet hour.** jaguar's
 access log over 16 days (09-20 to 10-05, read 2026-10-05) averages 5,898
 requests an hour at the quietest (06:00 CDT) and 6,950 at 14:00; the busiest is

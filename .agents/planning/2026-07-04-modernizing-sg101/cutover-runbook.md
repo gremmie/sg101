@@ -338,12 +338,17 @@ The pre-cutover window is the **only** chance to take it. **It is already on
 disk:** jaguar's `/var/log/mail.log*` held four weeks on 2026-10-05, back to
 09-06, rotating weekly. Copy all of them into
 `~/workspaces/bgn/sg101-evidence/` with a `MANIFEST.sha256`, as D6 does, before
-another week rotates out. The baseline is then read from the copy. Postmark's dashboard
+another week rotates out. The baseline is then read from the copy.
+**Copied 2026-10-06 ~01:50 UTC** to `sg101-evidence/jaguar-mail-2026-10-06/`:
+`mail.log*` and `mail.err*`, 10 files, sizes matching the listing taken first,
+manifest 10/10 OK. `mail.log` runs from 09-06 07:22 to 10-05 20:48 CDT. **The
+last two days before the freeze are not in it**, so D6's day-after pull takes
+`mail.log` and `mail.log.1` too. Postmark's dashboard
 gives a total with no category breakdown, and the baseline is what makes a later
 discrepancy explainable rather than merely visible.
 *Source: `STATUS.md` § Step 16 task 09, "What is still owed".*
 
-### A6. Move Postmark off the trial plan
+### A6. Move Postmark off the trial plan — DONE 2026-10-06 (Brian); healthchecks.io moved to its paid plan the same day
 The account is on Postmark's trial, **100 emails per period**; 18 were used by
 2026-10-02, during task 07a's beta (Brian). The live site's whole outbound mail
 will not fit in it. Change to a paid plan before C5's DNS flip, and confirm in
@@ -1068,7 +1073,8 @@ decommission project closed.*
 ### D6. Pull jaguar's logs again — the day after the flip, and last thing before shutdown
 Same pull as the 2026-09-25 archive, into a new dated directory beside it under
 `~/workspaces/bgn/sg101-evidence/`: sg101's and the wiki's Apache log
-directories and the Django `logs/` directory, `rsync -a`, then a size check
+directories and the Django `logs/` directory, and, on the day after only,
+`/var/log/mail.log` and `mail.log.1` to finish A5's baseline up to the freeze, `rsync -a`, then a size check
 against a listing taken first and a `MANIFEST.sha256`. **Deadline: before about
 2026-11-20**, when the eight-week rotation passes the end of the previous pull
 and the record gets a hole. If shutdown is later than that, pull in between.
