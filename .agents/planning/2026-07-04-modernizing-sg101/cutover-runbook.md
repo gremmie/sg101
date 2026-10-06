@@ -50,11 +50,13 @@ every deploy after the cutover; **D7** moved to C6.
    cloudflare-ranges-check` and `make firewall-check` from the Mac. ~5 min
 6. **A1**: the retired-network query against jaguar. ~1 min
 7. **B4** media pass (⏱ 36.9 s for the whole 4.93 G in task 07; a delta is
-   less), then **B4a**'s chown; **B8** (⏱ 1.5 s).
+   less) and **B8** (⏱ 1.5 s), both with B4's `RSYNC_RSH` exported, then
+   **B4a**'s chown.
 8. On leopard: `git pull`; `git status apache/ docker-compose.prod.yml` is
    clean; `.env` has no `EMAIL_BACKEND` or `EMAIL_ALLOWLIST` and does have
    `GCAL_CREDENTIALS_PATH` (key names only, as in B14). Then `make prod-build`,
-   so the window never waits on an image. ~ build time unmeasured. **Leave the
+   so the window never waits on an image. ⏱ 2 m 54.9 s on 2026-10-06; 6.5 s
+   cached, which is what step 17 adds if nothing is pulled in between. **Leave the
    stack down**: its database is still task 07a's beta copy, and it would
    send mail for real.
 9. Walk this runbook with Claude (task 09, approach 1).
@@ -79,7 +81,8 @@ every deploy after the cutover; **D7** moved to C6.
     clean. Inside the window (decided 2026-10-05).
 19. **B4a**'s `image_smoke.py`, then `--s3`. ~seconds. The snapshot it asks
     for is C1's restore file.
-20. **C5**: the final media delta ⏱ 0.7 s (re-run B4a's chown after it), then
+20. **C5**: the final media delta ⏱ 0.7 s, B4's commands with its
+    `RSYNC_RSH` exported (re-run B4a's chown after it), then
     `tools/prod_smoke.sh` on leopard ⏱ 1.8 s, 21/21.
 21. **The pre-flip browser check**, part 1 of the *Smoke checklist*. ~15 min
 22. Re-close the firewall: `make firewall-apply`, then `make firewall-check`
@@ -123,16 +126,36 @@ not a fix made in a hurry.
 - [ ] B4a: `image_smoke.py` 7/7, and `--s3` 12/12.
 - [ ] C5: `tools/prod_smoke.sh` all PASS.
 - [ ] **Nothing written before the freeze is missing** (task 09, criterion 2):
-      the newest IDs match on both hosts, read on jaguar with
-      `SELECT MAX(id) FROM forums_post; SELECT MAX(id) FROM messages_message;
-      SELECT MAX(id) FROM auth_user; SELECT MAX(id) FROM user_photos_photo;`
-      and on leopard in `make prod-shell` with the same four tables'
-      `.objects.latest('id').id`, before part 1 of the smoke checklist adds
-      rows of its own.
+      the newest IDs match on both hosts, before part 1 of the smoke
+      checklist adds rows of its own: *The ID check*, below.
 - [ ] Part 1 of the *Smoke checklist* passed.
 - [ ] `make firewall-check` passes: step 22 removed the temporary rule.
 - [ ] A6: Postmark shows the paid plan's limit.
 - [ ] The clock reads before T0 + 60 minutes.
+
+**The ID check, from the Mac.** The same SQL on both hosts, so the outputs
+compare line for line. The leopard half was run on the beta's copy 2026-10-06.
+Django 5.2's `shell` runs a script from stdin; jaguar's 1.8 does not, hence
+`python -` there.
+
+```bash
+ssh brian@jaguar 'cd /svr/django-sites/sg101/sg101 && DJANGO_SETTINGS_MODULE=sg101.settings.production /svr/django-sites/sg101/bin/python -' <<'PY'
+import django; django.setup()
+from django.db import connection
+c = connection.cursor()
+for t in ('forums_post', 'messages_message', 'auth_user', 'user_photos_photo'):
+    c.execute('SELECT MAX(id) FROM ' + t)
+    print('%s %s' % (t, c.fetchone()[0]))
+PY
+
+ssh brian@leopard 'cd /svr/sg101 && docker compose -f docker-compose.prod.yml exec -T web python manage.py shell' <<'PY'
+from django.db import connection
+c = connection.cursor()
+for t in ('forums_post', 'messages_message', 'auth_user', 'user_photos_photo'):
+    c.execute('SELECT MAX(id) FROM ' + t)
+    print('%s %s' % (t, c.fetchone()[0]))
+PY
+```
 
 ## Smoke checklist
 
@@ -262,7 +285,7 @@ request that still reaches it is refused rather than written.
 
 ## A. Before the maintenance window
 
-### A1. Check for networks members picked after the seed list was frozen
+### A1. Check for networks members picked after the seed list was frozen — clean at T−1, 2026-10-06
 `elsewhere`'s seeding keeps any network a profile row points at, so the data is
 safe either way — but the retired networks' **icon files were deleted**, and
 production serves static through `ManifestStaticFilesStorage`, where a missing
@@ -286,7 +309,7 @@ migration also reports it in its own output — see C3 — so this is the early
 warning, not the only one.
 *Source: `STATUS.md` § Step 19 Phase C task 03.*
 
-### A2. Re-run the production working-copy audit
+### A2. Re-run the production working-copy audit — clean at T−1, 2026-10-06
 `fab update` is `hg pull --update`, which preserves uncommitted working-copy
 edits across deploys **silently** — production ran one for ~20 months without
 anyone knowing. Audited clean 2026-08-16, but production stays live on the old
@@ -469,9 +492,17 @@ only the one tracked logo) and `slideshow/` (the home page's), which the table
 never listed. *Source: `STATUS.md` § Step 21 task 07, "Found while drafting".*
 
 ```bash
+export RSYNC_RSH='ssh -i ~/.ssh/jaguar_rsync -o IdentitiesOnly=yes'
 git ls-files media | sed 's#^media/#/#' > /tmp/media-tracked
-rsync -a --exclude-from=/tmp/media-tracked jaguar:/svr/django-sites/sg101/sg101/media/ media/
+rsync -a --stats --exclude-from=/tmp/media-tracked jaguar:/svr/django-sites/sg101/sg101/media/ media/
 ```
+
+**Run it on leopard, and name the key.** jaguar accepts leopard through
+`~/.ssh/jaguar_rsync` (comment `leopard-media-sync`, set up in task 07), which
+is not a default key name, and leopard's `~/.ssh/config` has an entry only for
+GitHub. Without `RSYNC_RSH` every rsync from jaguar fails with `Permission
+denied (publickey)`, as S1's first attempt did on 2026-10-06. The export lasts
+the shell, so B8 and C5's delta in the same session inherit it.
 
 No `--delete`. Afterwards `git diff --name-only media` is empty (no tracked file
 touched), and `git status --short --ignored media/badges media/smiley` lists only
@@ -606,7 +637,13 @@ origin: open the provider's dashboard and allow 443 (and 80) from your own
 address only, not from anywhere. The dashboard is the fallback because it works
 even when your machine's script or token does not. Write down what you changed.
 
-**Re-close:** `make firewall-apply`, then `make firewall-check`. Because `apply`
+**Re-close:** `make firewall-apply`, then `make firewall-check`, from the Mac,
+with `LINODE_TOKEN` in the environment and these four settings:
+
+```bash
+export FIREWALL_PROVIDER=linode FIREWALL_LINODE_ID=175729041 FIREWALL_SSH_FROM=anywhere FIREWALL_HTTP=drop
+```
+ Because `apply`
 replaces the whole rule set, it removes the emergency rule along with anything
 else not in the plan — and `firewall-check` passing is what proves it did.
 Then repeat **Verify** step 1.
@@ -823,8 +860,14 @@ task 03 read jaguar's vhost: `Alias /hosted/` and `Alias /photos/` point into
 access log current that day (window not measured; not split by path or by bot).
 
 The new proxy serves both from `var/public/{hosted,photos}` in the checkout.
-**`rsync` both there from jaguar**, then spot-check one file from each through
-the site. `var/` is git-ignored, so nothing but this step puts them there.
+**`rsync` both there from jaguar**, with B4's `RSYNC_RSH` set, then spot-check
+one file from each through the site:
+
+```bash
+rsync -a --stats jaguar:/svr/www/surfguitar101.com/public/hosted/ var/public/hosted/
+rsync -a --stats jaguar:/svr/www/surfguitar101.com/public/photos/ var/public/photos/
+```
+ `var/` is git-ignored, so nothing but this step puts them there.
 *Source: `STATUS.md` § Step 20 task 03.*
 
 ### B13. Confirm `make` is on the VM — DONE: `make prod-up` in use on leopard since 2026-09-29
@@ -892,7 +935,16 @@ a real run mails only when there is a result. Test the path it uses instead:
 **On jaguar**, edit `sg101/apache/sg101.wsgi`, set `OFFLINE = True`, and `touch`
 it — mod_wsgi reloads on mtime, which is what `fab touch` already does. The site
 then answers **503 for GET and 405 for everything else**, serving
-`sg101/templates/offline.html`.
+`sg101/templates/offline.html`. As commands, then the check that it took (read
+against the file 2026-10-06: the flag is line 6, `OFFLINE = False`):
+
+```bash
+ssh brian@jaguar "cd /svr/django-sites/sg101/sg101 && sed -i 's/^OFFLINE = False$/OFFLINE = True/' sg101/apache/sg101.wsgi && touch sg101/apache/sg101.wsgi && grep -n '^OFFLINE' sg101/apache/sg101.wsgi"
+curl -s -o /dev/null -w '%{http_code}\n' https://surfguitar101.com/            # 503
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://surfguitar101.com/    # 405
+```
+
+R0 and R1 undo it with `False` and `True` swapped.
 
 **The 405 is the point, not the notice.** Everything between the final snapshot
 (C1) and the final media delta (C5) is a window where a member posting produces
@@ -903,6 +955,14 @@ refuses the write rather than losing it.
 `/svr/django-sites/sg101/sg101/`. The `modernize` branch deleted that script as
 Python 2.7 host configuration, so the copy in the git tree is gone and the one
 that matters is untouched by that deletion.
+
+**`OFFLINE` stops only the web process.** jaguar's Celery beat and worker keep
+running (read 2026-10-06). Neither matters. Of `main`'s beat schedule, only
+`max_users` (every 15 minutes) and `search_queue` (every 20) fall in the
+afternoon: `max_users` writes a row only on a new record of users online, which
+a frozen site cannot set, and `search_queue` feeds the old Xapian index, which
+is not converted. The rest run between midnight and 02:00, and jaguar's only
+cron jobs are the 02:00 dump and the 03:00 cleanup. Leave them running.
 
 **The new host needs nothing here.** Until C5 no member can reach it; after,
 its flag is `make prod-maint-on`. See *Maintenance notices*. **jaguar stays

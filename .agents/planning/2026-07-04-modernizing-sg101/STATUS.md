@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-06
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,103 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 21 task 09 — the cutover — S1 (T−1) in progress 2026-10-06: A1, A2, B4/B4a/B8, step 8 and the walk-through done
+
+**A1, against jaguar's live MySQL (Brian ran it; auto mode refused the
+production read):** both queries return no rows. No member has picked a retired
+network since the seed list was frozen, so no icon needs restoring. C3 runs the
+same query on the converted data.
+
+**A2, all four parts pass:**
+
+- **jaguar:** `hg id` is `2f00d05e5166 default`, no `+`; `hg status` shows no
+  tracked change and `hg diff` is empty. Nine untracked files: the two known
+  `ssl_images_cache.json` / `.json.bz2`, five `.orig` backups from an hg merge
+  or revert (one is `sg101/settings/production.py.orig`), `podcast_new.json` and
+  `podcast_pre_ssl.json`. The 08-16 record names only the cache files, but it
+  recorded Brian's "no outstanding edits", not a file list, so whether the other
+  seven are new is not known. None is imported or read, so none is a finding.
+- **leopard (`/svr/sg101`):** `## modernize...origin/modernize [behind 2]`,
+  nothing modified; `git status --ignored apache/ docker-compose.prod.yml` is
+  empty, so no git-ignored file hides behind the bind mount. Step 8's `git pull`
+  closes the two commits.
+- **`make cloudflare-ranges-check`:** OK, 15 IPv4 and 7 IPv6.
+- **`make firewall-check`** (Brian, with `FIREWALL_SSH_FROM=anywhere`,
+  `FIREWALL_HTTP=drop`, firewall 175729041): OK, the live rules match the plan.
+
+**B4's rsync could not reach jaguar, and the runbook never said how it should.**
+The first S1 attempt (Brian, 2026-10-06) failed all three rsyncs with `brian@jaguar:
+Permission denied (publickey)`, copying nothing. Task 07 set up
+`~/.ssh/jaguar_rsync` on leopard for this route (P0 item 5), and jaguar still
+lists it (`leopard-media-sync`); a connection naming it answers. But leopard's
+`~/.ssh/config` covers only GitHub, so plain `jaguar:` offers default keys
+only, and how P5 passed the key was not recorded. The window's C5 delta would
+have failed the same way. **Runbook B4 now exports `RSYNC_RSH` with the key**,
+and B8, S1 step 7 and S2 step 20 point at it (Brian chose the runbook over a
+`Host jaguar` entry on leopard).
+
+**Step 7, the second attempt (Brian, 2026-10-06), with `RSYNC_RSH` set:**
+
+- ⏱ **B4, media: 0.81 s**, 49 files created (4,176,589 bytes) of 14,918; 4.94 G
+  in all. They are member uploads since task 07's pass: `user_photos` daily
+  from 10-01 to 10-06, and two avatars.
+- ⏱ **B8: 0.45 s and 0.47 s, nothing transferred.** `hosted/` 90 files and
+  `photos/` 1,419: the 1,509 of 09-19 and 10-01 again.
+- **B4a**'s chown and chmod, then checked over ssh: `git diff --name-only
+  media` empty; `git status --short --ignored media/badges media/smiley` empty
+  (the five assets are committed now); no file under `media/` or `var/` owned
+  by a uid other than 1000, no directory other than 755. The spot check
+  *through the site* waits for the pre-flip browser check, as nothing serves
+  leopard today.
+
+**Step 8, checked over ssh:** leopard level with `origin/modernize` after
+`git pull --ff-only`; `apache/` and `docker-compose.prod.yml` clean. `.env`,
+by key name: no `EMAIL_BACKEND`, no `EMAIL_ALLOWLIST`, `GCAL_CREDENTIALS_PATH`
+present.
+
+**`postgres` is running, and `web`, `worker` and `beat` are not.** The beta's
+teardown stopped everything; `sg101-backup.timer` (04:30 UTC daily) starts
+`postgres` as the backup's dependency and leaves it up, which is when it
+started. It sends no mail, so "leave the stack down" holds. It also means
+tonight's backup (2026-10-07 04:30 UTC) copies the beta's database once more,
+and the first backup of the cutover's data is the 04:30 UTC run after it.
+
+⏱ **`make prod-build`: 2 m 54.9 s (Brian), then 6.5 s run again at once
+(Claude, over ssh).** The window's `make prod-up` (S2 step 17) runs
+`prod-build` first, so the second figure is what step 17 adds, provided the
+build context does not change before then. Nothing scheduled changes it: the
+stack is down, so `var/log` is still, and C5's media delta comes after step 17.
+**Why the first build took three minutes: a new base image.** `docker history
+sg101-app:prod` shows every layer after `FROM python:3.12` rebuilt today, on a
+base of Python 3.12.15 published about 19 hours before. A changed base misses
+the cache at every layer, `apt-get` and the 307 MB `pip install` included. A
+`git pull` would not: `.dockerignore` drops `.agents`, and any other change
+misses only at `COPY . /app` and after. **So step 17's build is ~6.5 s unless
+the base image changes, and nothing on the day pulls one.** One consequence:
+the window runs on 3.12.15, which neither the rehearsal nor the beta ran;
+`prod_smoke.sh`, `image_smoke.py` and the browser check are the first to.
+
+**S1 step 9, the walk-through (2026-10-06, with Claude):** each window step
+read against the host it runs on. Changed in the runbook:
+
+- **C0 has its commands and a check.** The flag, handler and `offline.html`
+  were read on jaguar: line 6 is `OFFLINE = False`; GET gets 503, anything
+  else 405. Now a `sed` and `touch`, then two `curl`s for 503 and 405.
+- **C0 says jaguar's Celery keeps running, and why that is fine.** jaguar runs
+  beat and a worker, and `OFFLINE` stops neither. Its crontab and `main`'s
+  beat schedule were read: nothing in the afternoon writes a row that matters
+  or sends mail.
+- **The go/no-go ID check is two commands**, one per host, printing the same
+  four lines. The leopard half was run on the beta copy (`run --rm
+  --no-deps`). The old wording, `.objects.latest('id').id` in `make
+  prod-shell`, meant typing four model imports under the clock.
+- **B6's *Re-close* names the firewall settings** S2 step 22 needs; they were
+  only in task 03's record.
+
+Confirmed with no change: leopard's maintenance flag is off, as it must stay
+until the flip; `snapshots/` exists on leopard, and `.dockerignore` excludes
+it, so C1's copy does not touch the build.
 
 ## Step 21 task 08 — the runbook completed — DONE 2026-10-05: four decisions taken and the dry read passed (Brian); cutover set tentatively for Wednesday 2026-10-07, 14:00 CDT (19:00 UTC)
 
