@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; testing ended 2026-10-05, findings marked, teardown pending
+## Step 21 task 07a — a member beta before the cutover — DONE 2026-10-05: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; testing ended 2026-10-05, findings marked, registration tested, torn down
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
 Brian's request.** None of the eleven put the new stack in front of anyone but
@@ -366,7 +366,7 @@ token; 4a — count `Event.pending_events` before the calendar key goes in; 6 �
 `Site.domain` to `beta.surfguitar101.com`; restart with worker and beat. Then
 requirement 5's proof.
 
-### Ending the beta — testing over 2026-10-05; teardown not started
+### Ending the beta — DONE 2026-10-05: testing over, registration tested, torn down
 
 **Testing ended the evening of 2026-10-05.** Kojack and synchro said in the
 thread they were ready to close.
@@ -378,32 +378,69 @@ for one short session each. **Only two distinct tracebacks** reached
 `sg101.log` from 10-02 on: the hotlink 500 (#5) and the podcast 500 (fixed).
 That covers requirement 3.
 
+**Brian's registration test passed on the beta, 2026-10-05.** This was the
+check left out of the beta on 2026-10-02. He registered a new account and
+logged in with it (reported by Brian). The account lives only in the beta
+database, so C1's restore discards it. Any address added to `EMAIL_ALLOWLIST`
+for the test goes when the teardown removes the allowlist.
+
 **The real calendar round trip worked.** Brian approved synchro's event on
 10-03 and Kojack's on 10-05, and both reached Google. Kojack confirmed the
 subscription mail too: he got a notification when Brian replied to a topic
 Kojack had subscribed to.
 
-**Teardown (requirement 10), Brian's to run. The calendar comes first, because
-it needs the beta database:**
+**Teardown (requirement 10), run by Brian 2026-10-05. The calendar came first,
+because it needed the beta database:**
 
-- [ ] List every event the beta put on Google: `status=ON_CAL` rows created
-      after the snapshot, or with a `google_id` not in production's. At least
-      synchro's (approved 10-03) and Kojack's (approved 10-05). Delete each from
-      Google by hand. After C1, nothing in the site's database refers to them.
-- [ ] Count `Donation` rows since the snapshot on the beta, and check PayPal's
+- [x] List every event the beta put on Google: `status=ON_CAL` rows created
+      after the snapshot, or with a `google_id` not in production's. Delete each
+      from Google by hand. After C1, nothing in the site's database refers to
+      them. **Listed 2026-10-05** (beta database, `date_submitted` from 10-01
+      UTC): two, both `On Calendar`. This list is the only record of them:
+      - pk 1614, Kojack, "EVENT CALENDAR TEST", submitted 10-05 18:44:41 UTC,
+        `eid=ZTQwYjJ1Y3JuNmJhY3U1czUwY3BpOXJqZG8gaTgxbHUzZmtoNTdzZ3FxZW5vZ2VmZDl2NzhAZw`
+      - pk 1613, synchro, "Synchro to be awarded Chet Atkins CGP", submitted
+        10-03 15:40:56 UTC,
+        `eid=M3V0dW1jaHMzZ2EwanF1ZmdwM3FiN2EzcDQgaTgxbHUzZmtoNTdzZ3FxZW5vZ2VmZDl2NzhAZw`
+
+      Both submission times match the `302` POSTs in Apache's log. **Both
+      deleted from Google by Brian, 2026-10-05.**
+- [x] Count `Donation` rows since the snapshot on the beta, and check PayPal's
       list for anything besides Kojack's $5 of 10-04, which jaguar recorded.
-- [ ] Remove the `beta` DNS record and the Access application. The
+      **Beta rows: none** (`payment_date` from 10-01, read 2026-10-05). **PayPal
+      checked by Brian, 2026-10-05: nothing else.**
+- [x] Remove the `beta` DNS record and the Access application. The
       `sg101-beta` organization can stay.
-- [ ] Remove `EMAIL_BACKEND` and `EMAIL_ALLOWLIST` from leopard's `.env`.
-- [ ] Clean the beta's uploads out of the S3 bucket.
-- [ ] Remove `https://beta.surfguitar101.com/*` from the Google Maps key's
+- [x] Remove `EMAIL_BACKEND` and `EMAIL_ALLOWLIST` from leopard's `.env`.
+      The stack was then stopped (`make prod-down`), not restarted, so no
+      mail can go out from the beta database to real members before C1.
+- [x] Clean the beta's uploads out of the S3 bucket. **Listed 2026-10-05**
+      (`upload_date` from 10-01): four rows with contiguous pks 27772–27775:
+      Brian 10-03 02:21 (`kAPzPb1_TROEz4IZoe3BRQ.gif`), synchro 10-03 05:33
+      (`AoUe-hCuSIevWtMhYssROQ.jpeg`), and Fady 10-03 21:25
+      (`858jVmcXT4iWE3Dpru6IDA.jpg`) and 10-05 00:32 (`JMFMRqYKQiGEeAFa1IxU4A.png`).
+      The keys are random names, so none can be a production photo's. To
+      delete, run the beta admin's "Delete selected photos from DB & S3"
+      action while the beta is still reachable. **All four deleted by Brian,
+      2026-10-05.**
+- [x] Remove `https://beta.surfguitar101.com/*` from the Google Maps key's
       website restrictions.
-- [ ] Delete Cloudflare's `X-Robots-Tag: noindex` rule for the `beta`
+- [x] Delete Cloudflare's `X-Robots-Tag: noindex` rule for the `beta`
       hostname, and remove the hostname from Turnstile's widget.
 
+**Checked 2026-10-05 after Brian reported every step done:**
+`beta.surfguitar101.com` is `NXDOMAIN` at 1.1.1.1, and `curl` cannot resolve
+it. leopard's `.env` holds neither `EMAIL_BACKEND` nor `EMAIL_ALLOWLIST`
+(counted by key name; no values printed), and no container is running. The
+Access application, the `noindex` rule, Turnstile's hostname and the Maps
+restriction are on Brian's word: they can't be read from here, and with the
+hostname gone, none of them can serve anything. Brian posted a closing note in the
+thread.
+
 The `Site` row needs nothing, because C1's restore replaces it. Task 09's undo
-list now names every item above (acceptance criterion 7). Still open after
-teardown: a closing post in the thread, and Brian's go/no-go for task 08.
+list names every item above (acceptance criterion 7). **leopard is stopped
+until task 09**, and C4a's start brings it up with the real settings. **Next:
+Brian's go/no-go for task 08.**
 
 ## Step 21 task 07 — the dress rehearsal — DONE 2026-10-01, all six criteria met: P2 fixed four stale verification tools (`be228a74`); the window measures ~9 m 10 s, over half of it `reindex_search`; stay on 4 GB; in the commit that adds this line
 
