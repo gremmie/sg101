@@ -140,6 +140,16 @@ Confirmed with no change: leopard's maintenance flag is off, as it must stay
 until the flip; `snapshots/` exists on leopard, and `.dockerignore` excludes
 it, so C1's copy does not touch the build.
 
+**C5's "write each record down", done at T−1 (Brian, 2026-10-06):** the zone
+exported to `~/Documents/SG101/sg101-jaguar-dns.txt`, and runbook C5 now
+lists the two records the flip changes and what R1 restores. Two things read
+from the export. **No `AAAA` record exists**, so the flip is two `A` records;
+the edge answers IPv6 for a proxied name regardless. **`irc.surfguitar101.com`
+is gone:** recorded 2026-09-23 (Step 20 task 07) as an explicit proxied
+record, it is not in the export and the zone's own name server returns
+nothing for it. Who removed it, and when, is not recorded; D8's deletion is
+already done.
+
 ## Step 21 task 08 — the runbook completed — DONE 2026-10-05: four decisions taken and the dry read passed (Brian); cutover set tentatively for Wednesday 2026-10-07, 14:00 CDT (19:00 UTC)
 
 **The dry read, 2026-10-05: Brian read the runbook through and found nothing

@@ -1068,6 +1068,19 @@ The site's records are proxied, so the change takes effect at Cloudflare's
 edge, with no client DNS cache to wait out. Confirm they still show proxied
 afterwards.
 
+**Written down 2026-10-06 (Brian):** the whole zone, exported from Cloudflare
+to `~/Documents/SG101/sg101-jaguar-dns.txt`. Four `A` records hold jaguar's
+173.255.245.115, and there is no `AAAA`:
+
+| record | proxied | at the flip |
+|---|---|---|
+| `surfguitar101.com` | yes | → leopard, **192.0.2.13** |
+| `www.surfguitar101.com` | yes | → leopard, **192.0.2.13** |
+| `wiki.surfguitar101.com` | yes | C6, not here |
+| `mail.surfguitar101.com` | **no** | unchanged: jaguar's own Postfix and its SPF record, until D5 |
+
+R1 step 5 sets the first two back to 173.255.245.115, proxied.
+
 ### C6. Once the flip holds: the wiki becomes a redirect, not a dead name
 A separate change from C5's, made after the new site is seen serving, so the
 flip stays the only thing a rollback has to undo. Keep `wiki.surfguitar101.com`
