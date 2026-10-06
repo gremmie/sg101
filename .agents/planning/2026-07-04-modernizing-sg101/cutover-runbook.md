@@ -1,7 +1,8 @@
 # Cutover runbook — Step 21
 
-**Started 2026-09-06.** Owned by Step 21; **not yet complete**, and it should not
-be read as if it were. It exists because items that only matter on cutover day
+**Started 2026-09-06; sequenced and completed by task 08, 2026-10-05.** Owned by
+Step 21. Follow *Run it in this order* on the day; the A–D entries after it say
+how and why. It exists because items that only matter on cutover day
 have been accumulating in four different files since July — `STATUS.md`,
 `implementation/plan.md`, `research/schema-drift-audit.md` and
 `research/dmarc-readings.md` — and one of them,
@@ -17,6 +18,245 @@ belongs here.
 **Every entry needs a source.** An item nobody can trace to a measurement or a
 decision is a guess, and guesses are what a runbook is least able to survive.
 Entries below are sourced; anything added later should be too.
+
+---
+
+## Run it in this order
+
+Written in task 08 (2026-10-05). Each step points at the entry that says how;
+the entries below say why. **⏱** is machine time measured in task 07's
+rehearsal (`STATUS.md` § Step 21 task 07, "the window, timed"); **~** is an
+estimate, not measured. The pauses between steps, while someone reads output
+and types the next command, are not in any ⏱ and will dominate.
+
+T0 is the moment of C0. **Stop point: T0 + 60 minutes.** If the go/no-go has not
+passed by then, take rollback **R0** and pick a new date.
+
+**Already done, nothing to do on the day:** A3, B1, B2, B5, B7, B10, B11, B12,
+B13 and B14 (each heading says when). B3's live recheck is S3 step 27. **B6** is
+done, and its *Emergency open* and *Re-close* are S2 steps 21–22. **D9** is for
+every deploy after the cutover; **D7** moved to C6.
+
+### S0. As soon as the date is set
+1. Announce the date and time to members (task 09, requirement 1). Two or
+   three days' notice is enough for a window this short. ~
+2. **A6**: Postmark onto a paid plan. ~
+3. **A4**: DMARC readings go daily, through T+14.
+4. **A5**: copy jaguar's mail logs. The baseline is read from them, so this is
+   a copy, not a week of collection. ~5 min
+
+### S1. The day before (T−1)
+5. **A2**: the working-copy audit on jaguar and leopard, plus `make
+   cloudflare-ranges-check` and `make firewall-check` from the Mac. ~5 min
+6. **A1**: the retired-network query against jaguar. ~1 min
+7. **B4** media pass (⏱ 36.9 s for the whole 4.93 G in task 07; a delta is
+   less), then **B4a**'s chown; **B8** (⏱ 1.5 s).
+8. On leopard: `git pull`; `git status apache/ docker-compose.prod.yml` is
+   clean; `.env` has no `EMAIL_BACKEND` or `EMAIL_ALLOWLIST` and does have
+   `GCAL_CREDENTIALS_PATH` (key names only, as in B14). Then `make prod-build`,
+   so the window never waits on an image. ~ build time unmeasured. **Leave the
+   stack down**: its database is still task 07a's beta copy, and it would
+   send mail for real.
+9. Walk this runbook with Claude (task 09, approach 1).
+
+### S2. The window (T0)
+10. Post the notice that the site is going down now. ~1 min
+11. **C0**: freeze jaguar. **This is T0.** ~1 min
+12. **C1** step 1, the dump on jaguar: ⏱ 1 m 11.9 s, then `md5sum` and
+    `bzip2 -t`. ~30 s
+13. **C1** step 2 on the Mac: ⏱ 1 m 35 s in all (copy 5.3 s, load 35.0 s,
+    `convert.sh` 19.7 s, verify 13.8 s, `post_convert.py` 2.6 s,
+    `compare_schema.py` 2.4 s, `pg_snapshot.sh dump` 8.3 s, copy to leopard
+    8.1 s). **A1's query against the converted database** goes here (C3).
+14. **C1** step 3 on leopard: `postgres` up ⏱ ~11 s, restore ⏱ 29.8 s; read
+    `/tmp/restore-errors.txt`.
+15. **C2**: the `oembed` row. ~seconds
+16. **C3**: `migrate` says "No migrations to apply". ⏱ 14.6 s
+17. `make prod-up`, which starts `web`, `worker` and `beat` fresh (**C4a**). ⏱
+    healthy within 43 s in task 07. **No maintenance flag on leopard**: until
+    the flip nobody but you can reach it (see *Maintenance notices*).
+18. **C4**: `reindex_search` ⏱ 5 m 12.8 s, then `reconcile_search` ⏱ 12.6 s,
+    clean. Inside the window (decided 2026-10-05).
+19. **B4a**'s `image_smoke.py`, then `--s3`. ~seconds. The snapshot it asks
+    for is C1's restore file.
+20. **C5**: the final media delta ⏱ 0.7 s (re-run B4a's chown after it), then
+    `tools/prod_smoke.sh` on leopard ⏱ 1.8 s, 21/21.
+21. **The pre-flip browser check**, part 1 of the *Smoke checklist*. ~15 min
+22. Re-close the firewall: `make firewall-apply`, then `make firewall-check`
+    (B6). ~1 min
+23. **Go/no-go**, the list below. ~2 min. Any "no" is **R0**.
+24. **C5**: the DNS flip. ~1 min. **The rollback window opens here** and closes
+    at flip + 24 h.
+25. Part 2 of the *Smoke checklist*, through Cloudflare. ~10 min
+26. **C6**: the wiki's redirect, as its own change. ~2 min
+
+**Expected length:** ⏱ ~9 m 50 s of measured machine time from C1 through C5
+(task 07's ~9 m 10 s plus `make prod-up`), and **~45 minutes** to the flip with
+the pauses, the browser check and the go/no-go. The 60-minute stop point leaves
+~15 minutes of slack.
+
+### S3. After
+27. The first hour: `docker stats` and `make prod-ps` open in a terminal. No
+    test before the flip ran at the live rate (`STATUS.md` § Step 21 task 08),
+    so this is the first look at it, against R1's "the site cannot serve".
+    Same day: **D1** (one real message with headers), **B9** (the `/media`
+    cache rule), and **B3** on live traffic (your address in `auth.log` and
+    `access.log`).
+28. **D3**, every mail path live, once.
+29. **D4**: Postmark's bounce dashboard, daily for two weeks; A4's daily DMARC
+    readings run alongside.
+30. The day after: **D6**, jaguar's logs.
+31. Flip + 24 h: the rollback window closes. From here, fix forward.
+32. Task 10's two-week watch. jaguar stays frozen and warm (**D2**) until task
+    11, which also carries **D5** and **D8**.
+
+## Go/no-go — before the DNS flip
+
+Every line must be true. Each is one command or one look. **Any "no" is R0**,
+not a fix made in a hurry.
+
+- [ ] `/tmp/restore-errors.txt` is empty: `wc -c /tmp/restore-errors.txt` → 0.
+- [ ] C2: `oembed` `0001_initial` is in `django_migrations`.
+- [ ] C3: `migrate` said "No migrations to apply".
+- [ ] `make prod-ps`: every service up, `web` healthy.
+- [ ] C4: `reconcile_search` reported clean.
+- [ ] B4a: `image_smoke.py` 7/7, and `--s3` 12/12.
+- [ ] C5: `tools/prod_smoke.sh` all PASS.
+- [ ] **Nothing written before the freeze is missing** (task 09, criterion 2):
+      the newest IDs match on both hosts, read on jaguar with
+      `SELECT MAX(id) FROM forums_post; SELECT MAX(id) FROM messages_message;
+      SELECT MAX(id) FROM auth_user; SELECT MAX(id) FROM user_photos_photo;`
+      and on leopard in `make prod-shell` with the same four tables'
+      `.objects.latest('id').id`, before part 1 of the smoke checklist adds
+      rows of its own.
+- [ ] Part 1 of the *Smoke checklist* passed.
+- [ ] `make firewall-check` passes: step 22 removed the temporary rule.
+- [ ] A6: Postmark shows the paid plan's limit.
+- [ ] The clock reads before T0 + 60 minutes.
+
+## Smoke checklist
+
+Current as of 2026-10-05 (task 08). **`tools/prod_smoke.sh` already covers** the
+home page over TLS, one HSTS header, the redirects, the root files, `/media`,
+the old SG101 1.0 URLs and the closed ports, and **`image_smoke.py`** covers
+avatar, member-photo (`--s3`: the real bucket) and photo-of-the-day uploads
+through the real views. Nothing below repeats them. `tools/pgloader/smoke.py`,
+the Step 11 script the Step 13 list was built on, writes as a scratch user and
+is **rehearsal-only**: it is not run against the real database.
+
+### Part 1 — before the flip, straight at leopard
+Open the temporary rule from B6's *Emergency open* (443 from your address
+only), then a throwaway Chrome profile that sends the site's name to leopard.
+It has no remembered HSTS (the live site sends `max-age=604800`), so you can
+click past the Origin CA certificate:
+
+```bash
+open -na "Google Chrome" --args --user-data-dir="$(mktemp -d)" \
+    --host-resolver-rules="MAP surfguitar101.com <VM IPv4>" https://surfguitar101.com/
+```
+
+Everything written here is real and stays: these are the first rows on the new
+host, and the mail goes out for real.
+
+**Reads**, each a page that renders:
+- [ ] The forum index, a topic, `/forums/unread/`.
+- [ ] A news story with a YouTube embed, which plays (the referrer fix, 07a).
+- [ ] A podcast episode page, which plays (the jPlayer fix, 07a).
+- [ ] `/bandmap/`: the map draws (the key allows `surfguitar101.com`).
+- [ ] `/calendar/`, `/potd/`, `/downloads/`, `/links/`, `/polls/`,
+      `/donations/` (look; do not donate), a member's profile.
+- [ ] Search: a phrase, and the forum quick search.
+- [ ] Feeds: `/feeds/news/`, `/feeds/forums/`, `/podcast/feed.xml/`, each XML.
+- [ ] The admin: the news story form shows TinyMCE (#19).
+
+**Writes**, as a member would:
+- [ ] Log in as `brian` in lower case (the case-insensitive login, 07a).
+- [ ] Register a new account with a Gmail plus-address: Turnstile passes on
+      the real hostname, and the confirmation mail arrives.
+- [ ] Reply in a topic, then `make prod-logs svc=worker` shows
+      `reindex_document ... succeeded` (**C4a**), and the reply is found by
+      search.
+- [ ] A private message to the new account; its notification mail arrives.
+- [ ] A photo uploaded through the post editor, and shown in the post.
+- [ ] A calendar event submitted, approved in the admin, Synchronized, and
+      seen on the real Google Calendar; then delete it there and in the admin.
+
+### Part 2 — after the flip, through Cloudflare
+- [ ] `curl -sI https://surfguitar101.com/` → 200 with a `cf-ray` header, and
+      the request in leopard's `var/log/apache/access.log` with your real
+      address (task 09, criterion 1).
+- [ ] In a normal browser: the home page, a topic, a reply posted.
+- [ ] A failed login on purpose: your address in `var/log/django/auth.log`
+      (B3).
+
+## Rollback
+
+Decided 2026-10-05 (Brian); the reasoning is in `STATUS.md` § Step 21 task 08.
+**The default is to fix forward.** A rollback is for a fault that cannot be:
+
+- the site cannot serve: `web` keeps failing, or pages broadly answer 500;
+- the data is wrong: rows or files missing or damaged against jaguar;
+- a fault every member meets that cannot be fixed within an hour or two, such
+  as login or posting broken for everyone.
+
+One broken page, one feature with a workaround, or one category of mail is a
+fix-forward.
+
+### R0. Before the flip — abort, nothing lost
+jaguar holds every write; leopard has had none but yours.
+1. On jaguar: `OFFLINE = False` in `sg101/apache/sg101.wsgi`, and `touch` it.
+2. If the temporary firewall rule is still open: `make firewall-apply`, then
+   `make firewall-check`.
+3. On leopard: `make prod-down`.
+4. If part 1 of the smoke checklist put an event on Google, delete it there.
+5. Post: the move is postponed and the site is back as it was.
+
+### R1. After the flip, within 24 hours — flip back, lose the window's writes
+1. On leopard: `make prod-maint-on`. Writes stop at once.
+2. **List what is about to be lost**, in `make prod-shell`: the posts, PMs,
+   accounts and photos with IDs above the go/no-go line's, and every event
+   approved since the flip. Save the list with the rollback's record.
+3. Delete from the real Google Calendar each event step 2 listed.
+4. **Donations:** PayPal sends IPNs to the hostname, so a donation made in the
+   window is recorded only on leopard. Take each from PayPal's activity list and
+   add it on jaguar by hand.
+5. In Cloudflare, point the site's records back at the values C5 wrote down.
+6. On jaguar: `OFFLINE = False`, and `touch` the `.wsgi`.
+7. Check: `curl -sI https://surfguitar101.com/` → 200, and a post from step
+   2's list is **not** there (it is jaguar answering).
+8. Post the notice below, on jaguar.
+9. On leopard: `make prod-down`. Record what happened in `STATUS.md`.
+
+**The notice** (fill in the brackets):
+
+> We moved SurfGuitar101 to its new server on [date] and had to move back to the
+> old one at [time] because [one line]. Anything posted, sent or uploaded
+> between [flip time] and [rollback time] did not come back with us: forum
+> posts, private messages, new accounts and photos from that window are lost.
+> Sorry — please re-post what you can. We'll try the move again once it's fixed.
+
+### After 24 hours
+No rollback. Fix forward, with `make prod-maint-on` around any repair that
+needs the site closed. jaguar stays frozen and warm (D2) only for a disaster
+that leaves nothing on leopard to fix.
+
+## Maintenance notices — which host, and in what order
+
+| when | who sees what | mechanism |
+|---|---|---|
+| T−7 to T0 | the announcement | a forum post or news story (S0) |
+| T0 (C0) to the flip | jaguar's `offline.html`: 503 for reads, 405 for writes | jaguar's `OFFLINE` flag (C0) |
+| the flip onward | the new site, live | leopard, **no flag** |
+| repairs, R1 step 1 | leopard's `offline.html`, 503 for everything | `make prod-maint-on` / `prod-maint-off` (Apache, `var/maintenance/on`) |
+
+**Leopard needs no notice before the flip.** Cloudflare sends the name to jaguar
+and B6 admits only Cloudflare, so no member can reach leopard until C5. Leopard's
+flag would also fail `prod_smoke.sh` and the browser check, since it has no
+address bypass: while it is on, it answers 503 to you as well.
+
+**The Cloudflare Snippet** Step 20 chose as the primary mechanism was never built
+and is not needed (decided 2026-10-05). jaguar stays frozen after the flip, so a
+request that still reaches it is refused rather than written.
 
 ---
 
@@ -76,23 +316,29 @@ fails on any difference — 15 IPv4 and 7 IPv6 when last verified.
 *Source: `STATUS.md`; the original audit is in the Step 15 record; Step 20 tasks
 03, 04 and 07.*
 
-### A3. Delete the 32 pending `gcalendar` rows in production, not just locally — DONE
+### A3. Delete the 32 pending `gcalendar` rows in production, not just locally — DONE, confirmed 2026-10-02
 Step 21 converts a **fresh** production snapshot, so rows deleted only in the dev
 database come back with it and land in the pending queue on the new host.
 **Done by Brian in production**, reported 2026-09-26; the date of the deletion is
-not recorded. **Not yet confirmed from data:** task 07's fresh snapshot is the
-first place to see it, as a count of pending events in the restored database
-(task 07a, requirement 4a). If the count is not zero, this entry reopens.
+not recorded. **Confirmed from data 2026-10-02:** task 07a's requirement 4a
+counted zero `Event.pending_events` in the rehearsal snapshot, before the
+calendar key went in.
 *Source: `STATUS.md` § the `NEW`/`NEW_APRV` decision, settled 2026-08-31.*
 
 ### A4. Move DMARC readings to daily
-From ~1 week before the flip to ~2 weeks after. Three open items resolve in that
+From when the date is set to ~2 weeks after the flip. Reports arrive one per
+day per receiver whatever the reading cadence, so the "before" half is already
+in `~/dmarc`; reading daily is what keeps the comparison at one resolution. Three open items resolve in that
 interval and each needs both halves at the same resolution; a before/after
 comparison across a change of cadence is not a comparison.
 *Source: `research/dmarc-readings.md`, cadence table.*
 
 ### A5. Collect the jaguar-side email baseline
-The pre-cutover window is the **only** chance to take it. Postmark's dashboard
+The pre-cutover window is the **only** chance to take it. **It is already on
+disk:** jaguar's `/var/log/mail.log*` held four weeks on 2026-10-05, back to
+09-06, rotating weekly. Copy all of them into
+`~/workspaces/bgn/sg101-evidence/` with a `MANIFEST.sha256`, as D6 does, before
+another week rotates out. The baseline is then read from the copy. Postmark's dashboard
 gives a total with no category breakdown, and the baseline is what makes a later
 discrepancy explainable rather than merely visible.
 *Source: `STATUS.md` § Step 16 task 09, "What is still owed".*
@@ -130,8 +376,8 @@ public Turnstile test keys, which pass every bot, and has no Postmark token.
 Production needs real `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` from a
 widget created in the Cloudflare dashboard. **Brian created one and wrote
 leopard's `.env`**, reported 2026-09-27; the variable names were checked there
-(`STATUS.md` § B2). The widget's hostname list must include
-`beta.surfguitar101.com` for task 07a as well as `surfguitar101.com`. It also
+(`STATUS.md` § B2). The widget's hostname list is `surfguitar101.com`; task
+07a's `beta` entry was removed at its teardown (2026-10-05). It also
 needs `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` (the Postmark server token, in
 both) and the `EMAIL_HOST`/`EMAIL_PORT`/`EMAIL_USE_TLS` lines `.env.example`
 shows commented out.
@@ -146,7 +392,7 @@ recorded. Changing it later logs everyone out and voids outstanding reset and
 signup links; Django's `SECRET_KEY_FALLBACKS` eases that.
 *Source: memory `modernizing-sg101-planning`; `AGENTS.md`; Step 21 task 03.*
 
-### B3. Real client IP at the new front door
+### B3. Real client IP at the new front door — PASSED on `beta` 2026-09-30; recheck on live traffic after the flip
 **The rewrite that makes every `REMOTE_ADDR` reader correct exists only as Apache
 config on the box being retired.** Without it, on cutover day every IP the site
 records silently becomes a proxy address.
@@ -177,13 +423,17 @@ and what the application recorded is only visible on the host. So:
 4. Repeat over IPv6 if the origin publishes an AAAA record.
 
 **Then, and only then, enable fail2ban** (Step 21). In the wrong order it bans
-Cloudflare.
+Cloudflare. **Both done:** the check passed over both address families on
+`beta` on 2026-09-30, and fail2ban was installed on leopard the same day (`STATUS.md`
+§ Step 21 task 06). Steps 1–3 run once more on live traffic after the flip
+(S3 step 27).
 *Source: `research/dmarc-readings.md` § "A cutover requirement this exposed";
 Step 20 tasks 03 and 04.*
 
-### B4. The media tree
-**Nothing has been migrated.** The 4,577 local-disk user photos ride this step's
-rsync; the S3 work in Step 15 changed where *new* uploads go, not where the old
+### B4. The media tree — first full pass done 2026-10-01 (task 07); re-run at T−1, delta at C5
+**The first full pass ran in task 07: ⏱ 36.9 s for 4.93 G.** The pass the day
+before (S1) and C5's delta only copy what changed since. The 4,577 local-disk
+user photos ride this step's rsync; the S3 work in Step 15 changed where *new* uploads go, not where the old
 ones are.
 *Source: `STATUS.md` § Step 15; `implementation/plan.md` Step 21.*
 
@@ -293,10 +543,10 @@ firewall** (decided 2026-09-23, Step 20 task 07). A firewall on the VM itself
 was rejected: Docker forwards a published port to the container before the VM's
 own input rules see it, so those rules would look right and filter nothing.
 
-**Treat this as unexercised on the VM.** The ranges file, the plan and the
-checks were built in Step 20 task 07. The Linode adapter was built in Step 21
-task 02 and tested against a local stand-in for Linode's API
-(`make firewall-test`). No rule has been applied to the VM yet.
+**Applied to leopard 2026-09-27**, refusal measured (`STATUS.md` § Step 21 task
+03). The ranges file, the plan and the checks were built in Step 20 task 07; the
+Linode adapter in Step 21 task 02. What remains on the day is *Emergency open*
+and *Re-close* below, for part 1 of the smoke checklist (S2 steps 21–22).
 
 **Decide these with the provider, before the window** — `firewall-apply`
 refuses to run until the first two are set:
@@ -358,7 +608,7 @@ Then repeat **Verify** step 1.
 *Source: Step 20 task 07 (task file § Decided 2026-09-23); `STATUS.md` § Step 16
 task 03 Open register.*
 
-### B7. Choose the backup buckets — and the constraint they must satisfy
+### B7. Choose the backup buckets — and the constraint they must satisfy — DONE: chosen 2026-09-22, provisioned in B12
 **Two buckets, decided 2026-09-22** — dumps and media, because their retention
 is opposite (dumps expire at 90 days; media never does). Everything below
 applies to both. Provisioning them is B12.
@@ -387,7 +637,7 @@ Lightsail instead, S3 shares its provider and fails the constraint** — the
 bucket then goes elsewhere.
 *Source: Step 20 task 06.*
 
-### B12. Provision the backups, and prove the alarm reaches you — DONE on leopard 2026-09-28 except step 7 (task 07)
+### B12. Provision the backups, and prove the alarm reaches you — DONE on leopard 2026-09-28; step 7 done in task 07, 2026-10-01
 The job, the buckets' rules and the restore are built and drilled locally
 (`tools/backup_drill.sh`, DOCKER.md *Backups, and restoring from them*). What
 cannot be drilled locally is everything with a real account behind it.
@@ -560,7 +810,7 @@ origin. `tools/prod_smoke.sh` checks the origin half of this already; the edge
 half needs the real DNS.
 *Source: Step 20 task 08.*
 
-### B8. `/hosted` and `/photos` — content from jaguar's document root
+### B8. `/hosted` and `/photos` — content from jaguar's document root — done 2026-10-01 (task 07, ⏱ 1.5 s); re-run at T−1
 Two directories that were **not in the repo and recorded nowhere** until Step 20
 task 03 read jaguar's vhost: `Alias /hosted/` and `Alias /photos/` point into
 `/svr/www/surfguitar101.com/public/`. Measured 2026-09-19: **`hosted/` 16 MB,
@@ -572,7 +822,7 @@ The new proxy serves both from `var/public/{hosted,photos}` in the checkout.
 the site. `var/` is git-ignored, so nothing but this step puts them there.
 *Source: `STATUS.md` § Step 20 task 03.*
 
-### B13. Confirm `make` is on the VM
+### B13. Confirm `make` is on the VM — DONE: `make prod-up` in use on leopard since 2026-09-29
 The repo's `Makefile` holds shortcuts for the everyday production commands,
 among them `make prod-maint-on`. Minimal server images often leave `make` out,
 and nobody has checked this VM's. **If it is missing, the shortcut fails with
@@ -649,10 +899,10 @@ refuses the write rather than losing it.
 Python 2.7 host configuration, so the copy in the git tree is gone and the one
 that matters is untouched by that deletion.
 
-**The new host is not covered by this.** Its maintenance mechanism is
-Cloudflare-side — see the Step 20 record; it needs to be in place before D2's
-warm window, not before the flip, because until the DNS flip nothing is pointed
-at the new VM anyway.
+**The new host needs nothing here.** Until C5 no member can reach it; after,
+its flag is `make prod-maint-on`. See *Maintenance notices*. **jaguar stays
+frozen after the flip**, through D2's warm window, so it can never quietly
+accept a write that leopard does not have.
 
 ### C1. Final snapshot → convert → restore
 Run in this order in task 07's rehearsal (2026-10-01); each step's time is in
@@ -710,8 +960,8 @@ with a restore. `run --rm web python manage.py reindex_search`, then
 `reconcile_search`, which should say **clean**.
 **It took 5 m 13 s on the VM** (1 m 35 s on the Mac): one CPU core saturated,
 not memory or disk, so a larger plan of the same shared cores would not shorten
-it. It is over half the window's measured time. **Undecided:** reopen first and
-let search fill in, or keep it inside the window.
+it. It is over half the window's measured time. **Decided 2026-10-05 (Brian):
+inside the window**, so `reconcile_search` is clean before the go/no-go.
 *Source: `tools/pg_snapshot.sh` restore output; Step 12 record; `STATUS.md`
 § Step 21 task 07, P4.*
 
@@ -745,7 +995,13 @@ temporary rule (as on 2026-09-27); on the VM the firewall is not in the path,
 and B6 proved it separately. Run this way in task 07's rehearsal: 21/21,
 1.8 s.
 
-Low-TTL cutover in Cloudflare.
+**The flip.** In Cloudflare, list the records that point at jaguar's
+addresses and **write each one's current value down** first; R1 restores
+them. Change only the site's records to leopard's addresses. The wiki is C6,
+`irc` is D8, and MX, SPF and DMARC stay untouched (task 09, requirement 5).
+The site's records are proxied, so the change takes effect at Cloudflare's
+edge, with no client DNS cache to wait out. Confirm they still show proxied
+afterwards.
 
 ### C6. Once the flip holds: the wiki becomes a redirect, not a dead name
 A separate change from C5's, made after the new site is seen serving, so the
@@ -868,17 +1124,9 @@ make prod-deploy    # migrations
 
 ## Known gaps in this list
 
-Stated so the file is not mistaken for complete:
+As of task 08 (2026-10-05):
 
-- **The smoke checklist is not here.** A Step 13 version exists in
-  `STATUS-archive-steps-01-15.md`; whether it is still current is unchecked.
-- **No rollback procedure is written down** beyond "keep jaguar warm and flip
-  DNS back". What that means for data written to the new host during the window
-  has not been decided.
-- **Step 20 is unfinished** and will add entries; its nine task files were
-  generated 2026-09-12; B5, B6 and B8 above came from it, and C5's smoke run.
-  *(Step 19 closed 2026-09-09 and no longer belongs on this list.)*
-- **Timings exist only for C1–C5** (task 07's rehearsal, 2026-10-01: ~9 m 10 s
-  of measured machine time, ~4 m if C4 moves after reopening; `STATUS.md`
-  § Step 21 task 07). The other sections are still grouped by phase, not
-  sequenced.
+- **Steps marked ~ are estimates.** Only C1–C5 and B4/B8 were timed (task 07).
+  `make prod-build`, the browser check and every pause between steps were not.
+- **The dry read with Brian is still to come** (task 08, approach 4). Whatever
+  does not make sense out of order is fixed then.

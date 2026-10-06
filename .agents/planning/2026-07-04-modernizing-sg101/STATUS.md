@@ -43,6 +43,120 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 08 — the runbook completed — DONE 2026-10-05: four decisions taken and the dry read passed (Brian); cutover set tentatively for Wednesday 2026-10-07, 14:00 CDT (19:00 UTC)
+
+**The dry read, 2026-10-05: Brian read the runbook through and found nothing
+to change.** He asked to cut over within days, not after a week's lead. **None
+of S0 needed the week:** A5's baseline is already on disk (jaguar's `mail.log`
+holds four weeks, back to 09-06), A4's "before" half is already in `~/dmarc`, A6
+takes minutes, and two or three days' notice to members is enough. S0 now reads
+"as soon as the date is set". **T0 is tentatively Wednesday 2026-10-07 at 14:00
+CDT (19:00 UTC)**, so the stop point is 15:00 CDT.
+
+**2 pm is about as quiet as any hour; the site has no quiet hour.** jaguar's
+access log over 16 days (09-20 to 10-05, read 2026-10-05) averages 5,898
+requests an hour at the quietest (06:00 CDT) and 6,950 at 14:00; the busiest is
+17:00 at 7,254. That is a spread of 23 % around about 1.8 requests a second, most
+of it automated: with a crude bot filter on the user agent, 3,492 to 4,259 an
+hour remain. The runbook's "low-traffic hour" buys little here.
+
+**leopard under the beta: no pressure, and not much load to show it.** From
+`sar`'s 10-minute samples, 10-02 to 10-05 UTC, on 2 vCPUs and 3,910 M:
+
+| day | CPU busy, avg / peak | load-1 peak | memory used, peak | available, min | swap used, peak |
+|---|---|---|---|---|---|
+| 10-02 | 4.6 % / 23.6 % | 1.14 | 28.1 % | 2,288 M | 1.7 % |
+| 10-03 | 4.6 % / 9.8 % | 0.82 | 31.1 % | 2,164 M | 1.7 % |
+| 10-04 | 5.0 % / 12.8 % | 0.78 | 30.3 % | 2,196 M | 2.7 % |
+| 10-05 | 5.0 % / 11.0 % | 0.88 | 28.1 % | 2,271 M | 1.7 % |
+
+No OOM kill or hung task is visible to an unprivileged `journalctl -k` (it shows
+only the user's own messages without the `adm` group, so this is not a full
+read). Apache's `error.log` has backend refusals only at 10-04 03:55, 04:15 and
+15:27, the length of a `make prod-up`, and the weekly graceful restart.
+**The two peaks were not member traffic:** 10-02 17:40 (23.6 %, with 38.8 swap
+pages a second) had no requests in the access log, and 10-04 01:10 (31.4 pages
+a second) had two. Builds are the likely cause, but older images are pruned, so
+this is not measured. **The beta's busiest hour was 466 requests (10-03, 02:00
+UTC), about 7 % of the live rate.** Neither the beta nor task 07's P7 (one
+anonymous GET every ~0.5 s) approaches live traffic, and the busiest minute
+Step 20 measured was 506 requests (8.4 a second). **The known constraint is CPU
+per core**, which P4's reindex showed; the topic-view reindex P7 found was fixed
+in the reindex audit before the beta. **So watch after the flip**: `docker
+stats` and `make prod-ps` through the first hour, against R1's "the site cannot
+serve" trigger.
+
+
+The runbook now opens with *Run it in this order* (S0–S3, 32 steps), then the
+go/no-go list, the smoke checklist, rollback (R0, R1) and the maintenance
+notices table. The A–D entries remain as the how and why. Stale entries
+corrected: A3 confirmed (07a, 4a), B2's `beta` hostname gone, B3 passed and
+fail2ban installed (task 06), B4 and B8 first passes timed (task 07), B6
+applied (task 03), B12 step 7 and B13 done, C0's maintenance note, C4
+decided, C5's flip written out. *Known gaps* now lists only the estimates and
+the dry read.
+
+### The four decisions — Brian, 2026-10-05, each on the recommendation
+
+1. **Rollback: abort free before the flip (R0); flip back within 24 hours of
+   it, losing the window's writes (R1); fix forward after that.** The default
+   is fix-forward. R1 is for a fault that cannot be fixed forward, and the
+   runbook names the triggers so it is not a judgment made under pressure.
+   **Rejected: carrying rows back to MySQL**, which needs Postgres → MySQL
+   tooling that does not exist: days of work, untested, for a case that
+   should not arise. **Rejected: no rollback at all after reopening**, because
+   the first hours are when a missed fault is likeliest and cheapest to undo.
+   The cost of R1 is small and stated: the Step 12 record measured about 12
+   forum posts a day (`STATUS-archive-steps-01-15.md`, "Caching the parser"),
+   so 24 hours bounds the loss at roughly a day's posts, plus PMs and sign-ups.
+   **Donations are the exception that needs a step, not a loss:** PayPal sends
+   IPNs to the hostname (07a, 2026-10-04), so a donation in the window is only
+   in leopard's database and is copied to jaguar by hand from PayPal's list.
+2. **Stop point: T0 + 60 minutes**, T0 being C0. Abandoning costs nothing:
+   jaguar was only frozen. The expected time to the flip is ~45 minutes
+   (an estimate; ⏱ ~9 m 50 s of it is measured).
+3. **The pre-flip check goes straight at leopard**: B6's emergency rule for
+   Brian's address, and a throwaway Chrome profile mapping the name to
+   leopard. That is `make prod-browser`'s command with leopard's address in
+   place of `127.0.0.1`, so nothing is built. **Rejected: building the
+   Cloudflare maintenance Snippet** with an address bypass, so the check could
+   run through the edge after the flip. It is new work, needs binding only
+   while in use (the Workers free tier is 100k requests a day against ~90.8k
+   measured), and moves the first look at the real site to after the flip,
+   where undoing it costs members' writes.
+4. **`reindex_search` stays inside the window** (5 m 13 s), so
+   `reconcile_search` is clean before the go/no-go. Moving it after reopening
+   would save five minutes but leave search returning partial results while
+   members are back.
+
+### Found while writing it
+
+- **Leopard needs no maintenance flag before the flip, and must not have one.**
+  Until C5, Cloudflare sends the name to jaguar and B6 admits only Cloudflare,
+  so no member can reach leopard. Apache's flag has no address bypass: on, it
+  answers 503 to everyone, which would fail `prod_smoke.sh` (the home page is
+  one of its checks) and the browser check. **So the window's only notice is
+  jaguar's `OFFLINE`**, and leopard's flag is for repairs after the flip and
+  for R1's first step.
+- **The Cloudflare Snippet was never built.** Step 20 task 02 recorded it as
+  the primary maintenance mechanism and Apache as the backstop; nothing since
+  built it, and C0 still called leopard's maintenance
+  "Cloudflare-side". With decision 3 it is not needed.
+- **The live site sends HSTS** (`strict-transport-security: max-age=604800`,
+  read 2026-10-05), so a normal browser cannot click past leopard's Origin CA
+  certificate. The throwaway profile has none remembered. That is also why
+  `make prod-browser` uses one.
+- **Both `surfguitar101.com` and `www` are proxied** (`server: cloudflare`,
+  read 2026-10-05), so the flip takes effect at the edge. The runbook's old
+  "low-TTL cutover" mattered only for an unproxied record.
+- **`image_smoke.py` says "do not point this at production"**, and S2 runs it
+  on the freshly restored database before anyone else can reach it. That is
+  the rehearsal's condition (a snapshot on hand, C1's restore file, and no
+  member writes to collide with) and it cleans up after itself.
+- **The go/no-go's data check compares the newest IDs** of posts, PMs, users
+  and photos on both hosts, before the smoke checklist adds rows. That is
+  task 09's criterion 2, made into one look before the flip, not after it.
+
 ## Step 21 task 07a — a member beta before the cutover — DONE 2026-10-05: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; testing ended 2026-10-05, findings marked, registration tested, torn down
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
