@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-02
+**Last updated:** 2026-10-05
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; the beta runs to Monday 2026-10-05
+## Step 21 task 07a — a member beta before the cutover — IN PROGRESS: planned 2026-09-26; testers recorded (`718bec9b`); the allowlisting backend committed (`8b1c09ce`); host configured, the allowlist proved live, Access and `noindex` in place, the invitation sent 2026-10-02; testing ended 2026-10-05, findings marked, teardown pending
 
 **A twelfth task file, `step21/task-07a-member-beta.code-task.md`, added at
 Brian's request.** None of the eleven put the new stack in front of anyone but
@@ -199,7 +199,8 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   Form errors are logged nowhere, so the cause is unknown: the hidden
   `time_zone`, `image_check` on the description, the date format, or start
   after end. Whether it is existing behaviour is unknown with it. Also a dead
-  `{{ form.time_zome }}` in `gcalendar/event.html`. GitHub issue #6. Unmarked.
+  `{{ form.time_zome }}` in `gcalendar/event.html`. GitHub issue #6. **After
+  cutover** (Brian, 2026-10-05).
   *Added 2026-10-05, from Apache's `access.log`:* the tester was synchro, by
   user agent and the login at 02:33. **synchro's seventh POST, 15:40 UTC the
   same day, answered 302 to `?thanks=1`**, so the form validated and an `Event`
@@ -215,8 +216,8 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   stories; 29 reach Apache's rewrites (Forums viewtopic `t=`/`p=`, `sid=`), 33
   in 27 stories 404 (Podcast, viewforum, Content and others, and six relative
   links). All 52 stories are HTML only, no markup, so a fix rewrites the stored
-  HTML. Existing content; the live site has the same links. GitHub issue #7.
-  Unmarked.
+  HTML. Existing content; the live site has the same links. **After cutover**,
+  tracked as GitHub issue #7 (Brian, 2026-10-05).
 - Every podcast detail page was a 500, reported by Fady and reproduced by Brian
   2026-10-03: `ValueError: Missing staticfiles manifest entry for
   'js/jplayer'`. `podcast/detail.html` gave jPlayer `swfPath: "{% static
@@ -323,7 +324,29 @@ tentatively Monday evening, 2026-10-05, sooner if it checks out. Voluntary.
   `Intro:` followed directly by `- one`; for `* one`, 2.5.1 makes italics and 3.10.3
   leaves the asterisks; with the blank line both make a `<ul>`. Fady's post
   (485510) is the same case, plus an expectation that the editor continues
-  a list on Return, which it never has. **No action (Brian, 2026-10-04).**
+  a list on Return, which it never has. **No action (Brian, 2026-10-04).** He may
+  look at it after the cutover alongside other Markdown oddities; #24 (sub-lists)
+  and #25 (continuing a list on Return) are open.
+- **Reported in the testers' thread** (`/forums/topic/41524/` on the live site,
+  read 2026-10-05) and not recorded above. Brian answered each there; all are
+  **after cutover**:
+  - Dead links on `/podcast/` (iTunes, North Sea Surf Music Radio, Fiberglass
+    Jungle), Kojack and synchro, 10-04. Broken on the live site too. GitHub
+    issue #8.
+  - The V3 post editor, used for news submissions, lacks emoji and video-embed
+    buttons; Fady and synchro (a thumbs-up), 10-04. GitHub issue #9.
+  - "Ever" for "Every" in the last paragraph of `/about/`, Kojack, 10-05.
+    Existing text (`sg101/templates/fixed/about.html:36`). GitHub issue #26.
+  - Plain `http(s)://` text in a calendar event's description is not made a
+    link, Fady, 10-05. **Not a defect (Brian, 2026-10-05):** the description is
+    rendered by `site_markup` at save time (`gcalendar/forms.py:144`), and its
+    `core/mdexts/urlize.py` links bare `http(s)://`, `www.` and `.com`/`.net`/`.org`
+    text; Brian saw a plain `http` link clickable. Why the other events' links
+    were not was not read; the `where` field is not marked up.
+- **TinyMCE missing from the admin's news story form**, found by Brian 10-05.
+  GitHub issue #19, closed by `76d58a23`. **Not on leopard:** it runs
+  `1bd6f1d1`, and `76d58a23` and `4a477c6e` are the code commits since. The
+  cutover deploys both. Not marked.
 
 **Nothing failed beneath Django during the beta, read 2026-10-03 at 14:45 UTC.**
 Apache's `error.log` has nothing after 2026-10-01's restarts; the `web`,
@@ -342,6 +365,45 @@ with the backend, the allowlist (testers plus `ADMINS`) and the real Postmark
 token; 4a — count `Event.pending_events` before the calendar key goes in; 6 —
 `Site.domain` to `beta.surfguitar101.com`; restart with worker and beat. Then
 requirement 5's proof.
+
+### Ending the beta — testing over 2026-10-05; teardown not started
+
+**Testing ended the evening of 2026-10-05.** Kojack and synchro said in the
+thread they were ready to close.
+**All five testers logged in and used the site** (read 2026-10-05 from
+`auth.log` and Apache's `access.log`, following each login's IP and user
+agent): synchro and Fady across three days each, covering most of the site;
+Kojack on three days once the login fix landed; kick_the_reverb and Emilien03
+for one short session each. **Only two distinct tracebacks** reached
+`sg101.log` from 10-02 on: the hotlink 500 (#5) and the podcast 500 (fixed).
+That covers requirement 3.
+
+**The real calendar round trip worked.** Brian approved synchro's event on
+10-03 and Kojack's on 10-05, and both reached Google. Kojack confirmed the
+subscription mail too: he got a notification when Brian replied to a topic
+Kojack had subscribed to.
+
+**Teardown (requirement 10), Brian's to run. The calendar comes first, because
+it needs the beta database:**
+
+- [ ] List every event the beta put on Google: `status=ON_CAL` rows created
+      after the snapshot, or with a `google_id` not in production's. At least
+      synchro's (approved 10-03) and Kojack's (approved 10-05). Delete each from
+      Google by hand. After C1, nothing in the site's database refers to them.
+- [ ] Count `Donation` rows since the snapshot on the beta, and check PayPal's
+      list for anything besides Kojack's $5 of 10-04, which jaguar recorded.
+- [ ] Remove the `beta` DNS record and the Access application. The
+      `sg101-beta` organization can stay.
+- [ ] Remove `EMAIL_BACKEND` and `EMAIL_ALLOWLIST` from leopard's `.env`.
+- [ ] Clean the beta's uploads out of the S3 bucket.
+- [ ] Remove `https://beta.surfguitar101.com/*` from the Google Maps key's
+      website restrictions.
+- [ ] Delete Cloudflare's `X-Robots-Tag: noindex` rule for the `beta`
+      hostname, and remove the hostname from Turnstile's widget.
+
+The `Site` row needs nothing, because C1's restore replaces it. Task 09's undo
+list now names every item above (acceptance criterion 7). Still open after
+teardown: a closing post in the thread, and Brian's go/no-go for task 08.
 
 ## Step 21 task 07 — the dress rehearsal — DONE 2026-10-01, all six criteria met: P2 fixed four stale verification tools (`be228a74`); the window measures ~9 m 10 s, over half of it `reindex_search`; stay on 4 GB; in the commit that adds this line
 

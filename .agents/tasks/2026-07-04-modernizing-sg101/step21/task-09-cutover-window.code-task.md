@@ -19,6 +19,14 @@ warm as the fallback task 08 defined.
   calendar key removed or pointed at a scratch calendar. The real stack needs
   the real Postmark token and the real calendar key back, and C4a's restart so
   the worker and beat read them.
+  **Task 07a's beta added more, and each must be gone before the window**
+  (07a requirement 10; the checklist is in `STATUS.md`, *Ending the beta*):
+  the beta's events deleted from the real Google Calendar, listed from the
+  beta database *before* C1 overwrites it; no beta donation in PayPal; the
+  `beta` DNS record and the Access application removed; `EMAIL_BACKEND` and
+  `EMAIL_ALLOWLIST` out of `.env`; the beta's S3 uploads cleaned out; the
+  `beta` hostname removed from the Google Maps key, from Cloudflare's
+  `noindex` rule and from Turnstile's widget.
 - **Pre-window items with a lead time:** A4 (DMARC readings go daily about a week
   before) and A5 (the jaguar-side email baseline — the only chance to take it).
 - **A2 re-runs the production working-copy audit** (`hg status`, `hg diff` on
