@@ -52,6 +52,7 @@ reading log stops*.
 | 24 | 2026-09-28 | 09-20 → 09-27 | leopard appears through Cloudflare's forward — sixteen messages, fifteen matched to the send log; UTC−7 holds on a new source; two new forwarders; six of seven predictions held, the seventh already falsified |
 | 25 | 2026-10-05 | 09-28 → 10-04 | Postmark appears as a source IP through the member beta; a neighbour on jaguar's /64 passes on SPF; the first quarantine dispositions |
 | 26 | 2026-10-06 | 10-05 | the first daily reading (A4); Google's Postmark rows reconcile on the UTC−7 day, five for five; a spoof from another Linode region quarantined |
+| 27 | 2026-10-07 | 10-06 | the last whole day before the freeze: jaguar alone, no Postmark row as leopard sent nothing; a fifth forwarder, at `cloudfilter.net` |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6341,3 +6342,75 @@ in the `From`. Aligned on neither, and quarantined, as the policy intends.
    `192.0.2.13` in any report.** leopard sends only through Postmark (B14).
 2. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
    aligned on neither mechanism.
+
+### Twenty-seventh reading — 2026-10-07, covering 2026-10-06: the last whole day before the freeze; jaguar alone, a fifth forwarder, and both predictions held
+
+**The last window that is entirely jaguar's.** The freeze is 10-07 19:00 UTC,
+so the 10-07 window is split between the two hosts and the readings from it on
+are not a clean baseline day. `tools/dmarc_fetch.py -a <account>` scanned 31
+messages: **4 new**, 27 already held, no conflicts. **The corpus is 171
+reports.** All four are for the 10-06 window, and every one reads
+`p=quarantine`. No Microsoft report, as in the twenty-sixth reading.
+
+| Reporter | Source | Msgs | Disposition | DKIM / SPF |
+|---|---|---|---|---|
+| `google.com` | `173.255.245.115` (jaguar) | 16 | none | pass / pass |
+| `google.com` | `173.255.245.115` (jaguar) | 1 | none | **fail** / pass, SPF on `mail.surfguitar101.com` |
+| `google.com` | `35.89.44.34` | 1 | none | pass / **fail** |
+| `comcast.net` | `173.255.245.115` | 36 | none | pass / pass |
+| `yahoo.com` | `173.255.245.115` | 5 | none | pass / pass |
+| `aol.com` | `173.255.245.115` | 1 | none | pass / pass |
+
+**jaguar's `mail.log` was not read**, as in the twenty-sixth reading; A5's copy
+does not reach 10-06, and D6's day-after pull does.
+
+#### No Postmark row, because leopard sent nothing
+
+leopard's `email.log`, read 2026-10-07: the last send is 10-06 00:46:51 UTC,
+the beta's `registration` test, which falls in Google's 10-05 UTC−7 window and
+was counted by the twenty-sixth reading. Nothing after it. The only service up
+on leopard is `postgres` (S1 step 8 left the stack down), so **zero Postmark
+rows is the expected count**, and that is what every report shows.
+
+#### A fifth forwarder
+
+| Source | Operator (whois, PTR) | SPF domain | Window | Msgs |
+|---|---|---|---|---|
+| `35.89.44.34` | Amazon, `35.71.64.0 – 35.95.255.255`; `omta35.uswest2.a.cloudfilter.net` | `surfguitar101.com` | 10-06 | 1 |
+
+New to the corpus. **It fails SPF and passes DKIM `d=surfguitar101.com`**, so
+it is carried through DMARC by DKIM alone, `disposition=none`, the same shape as
+the four forwarders in the twenty-fourth reading. Unlike pair, it does not
+rewrite the envelope sender, so SPF is evaluated against this domain and fails.
+**Whose mailbox forwards through it was not investigated.**
+
+#### Failure classes
+
+- **DSN class: one more.** Google 10-06, `173.255.245.115`, `pass`/`fail`, SPF
+  on `mail.surfguitar101.com` and no `<dkim>` element. By the twenty-second
+  reading's discriminator, that is a bounce. Not matched to `mail.log`.
+
+#### Scoring the twenty-sixth reading's predictions: both held
+
+1. **HELD.** No row from `2001:db8::4` or
+   `192.0.2.13`.
+2. **HELD.** Every report reads `p=quarantine`, and no row has a non-`none`
+   disposition, including the two aligned on only one mechanism.
+
+#### Predictions for the twenty-eighth reading
+
+The 10-07 window spans the freeze (19:00 UTC) and, if the go/no-go passes, the
+flip. Google's window is the UTC−7 day, 10-07 07:00 to 10-08 07:00 UTC.
+
+1. **No jaguar row reflects a send after the freeze.** jaguar's Celery keeps
+   running under `OFFLINE` (runbook C0), but nothing it schedules in the
+   afternoon sends mail. Its rows should fall below a normal day's in
+   proportion to the hours lost; D6's `mail.log` pull confirms the count.
+2. **Google's Postmark rows equal leopard's `email.log` sends to `gmail.com`
+   in Google's window**, starting with part 1 of the smoke checklist's
+   registration to a Gmail plus-address. A count that differs means a send was
+   lost, or the UTC−7 day is wrong.
+3. **No row from leopard's own addresses**, `2001:db8::4`
+   or `192.0.2.13`: it sends only through Postmark (B14).
+4. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
