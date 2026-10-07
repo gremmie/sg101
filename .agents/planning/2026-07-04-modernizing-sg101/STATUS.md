@@ -143,10 +143,64 @@ parts passed on it.
 
 ### S3, after — in progress
 
-- **27, the first hour:** sampled every 5 minutes to 15:45. At 19:50:35 UTC,
-  every service healthy, `web` 7.6 % CPU and 502 MiB, load 0.34, **469
-  requests in the last 5 minutes, 0 5xx**. Same day still to do: **D1**, **B9**
-  and **D3** (step 28).
+- **27, the first hour — passed.** Twelve samples, every 5 minutes from
+  19:50:35 to 20:46:44 UTC (`ps`, a `docker stats --no-stream`, `uptime`, and
+  the last 5 minutes of `access.log`). **Every service healthy in every
+  sample; 0 5xx in all twelve**; 438 to 876 requests per 5 minutes (jaguar's
+  14:00 hour averaged 6,950, ~580 per 5 minutes, task 08); 1-minute load at most 0.60 on 2 vCPUs; `web`
+  502–539 MiB. `web`'s CPU read 0–11 % except **one 92 % at 20:05:46**, a
+  one-second sample beside a 0.34 load, so an instant, not load. **R1's "the
+  site cannot serve" never came near.**
+- **B9 passes**: `/media/podcast/sg101_episode15.m4a` twice through
+  Cloudflare, `cache-control: max-age=2592000, public` from the new origin both
+  times, `cf-cache-status` `REVALIDATED` then `HIT`. The first was a
+  revalidation, not a `MISS`, because the edge still held jaguar's copy.
+- **D1 passes**: the PM notification from part 1 (19:30:37 UTC, Gmail, read by
+  Brian) carries `dkim=pass header.i=@surfguitar101.com` (selector
+  `20260817033844pm`), `spf=pass` for `pm-bounces.surfguitar101.com` from
+  Postmark's `50.31.156.116`, and `dmarc=pass (p=QUARANTINE … dis=NONE)`.
+  Aligned on both mechanisms; Postmark's own `pm.mtasv.net` signature rides
+  alongside. `Message-Id` is `<…@mtasv.net>`: **Postmark replaces Django's**,
+  so `email_smoke.py`'s "Message-ID still carries the dead domain" expectation
+  is out of date.
+- **D3 passes, at the second attempt.** `email_smoke.py --live` to a Gmail
+  plus-address and an Outlook address of Brian's, 20:21 UTC: 43/43 checks, every
+  path live through Postmark. **Gmail: 11 of 11 in the Inbox. Outlook: 10 Inbox,
+  1 Junk.** Headers of one of each, read by Brian:
+
+  | | password reset (Inbox) | smoke admin notification (Junk) |
+  |---|---|---|
+  | SPF / DKIM `surfguitar101.com` / DMARC | pass / pass / pass | pass / pass / pass |
+  | `compauth` | pass, reason=100 | pass, reason=100 |
+  | `X-MS-Exchange-Organization-SCL` | **1** | **5** |
+  | delivery | `dest:I` | `dest:J`, `OFR:SpamFilterAuthJ` |
+
+  **The Junk verdict is on content, not authentication**: the smoke admin
+  notice's whole body is "Body of the admin notification.", and admin mail
+  reaches admins only. **Member-facing mail scores SCL 1, against SCL 3 in the
+  pre-Postmark capture**, which is what the provider move was for.
+- **`email_smoke.py`'s first `--live` run (20:18 UTC) sent nothing**, and
+  showed three faults in the tool, none in the site:
+  1. **A scratch user collides with a real account.** `forgot_username`,
+     `password_reset` and the `email_change` notice create a user with the
+     recipient's address; `bgneal@gmail.com` is Brian's account, so
+     `auth_user_email_lower_uniq` refused it, rendering failed, and the live
+     pass never ran (correctly: "nothing was sent"; no mail arrived, Brian).
+     A plus-address went round it. No rows were left behind.
+  2. **The render pass logs to `email.log` as if it sent.** Its locmem sends are
+     logged `outcome=sent`, and none of them left the host: 17 lines at
+     20:18:37.3–40.9 UTC (the failed run) and 20 at 20:21:27.8–31.6 (the second
+     run's render pass). The second run's real sends are the 20 lines at
+     20:21:32.6–54.1. **The twenty-eighth DMARC reading's prediction 2 counts
+     Gmail sends in `email.log`, so it must exclude the 37 render lines.** Also:
+     each inbox got 11 messages but `email.log` holds 10 per address, because
+     the Django error mail goes through Django's admin mail, not the site's
+     wrapper, and is not logged there.
+  3. **Its password-reset link is `http://`.** The tool calls `form.save()`
+     without `use_https`, so Django's default applies. The site's own view
+     passes `request.is_secure()`, which `SECURE_PROXY_SSL_HEADER` and the
+     vhost's `X-Forwarded-Proto` make true: **a real reset requested on the
+     live site (Brian, `brianTesting`) carries `https://`.**
 - **`apt upgrade` on leopard, 2026-10-07 20:02 UTC (Brian), an hour after the
   flip:** `sudo`, `libfreetype6`, `sg3-utils`, `sg3-utils-udev`,
   `libsgutils2-1.48`. No Docker package, so the daemon and the containers did
