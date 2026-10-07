@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,127 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 09 — the cutover — S1 (T−1) in progress 2026-10-06: A1, A2, B4/B4a/B8, step 8 and the walk-through done
+## Step 21 task 09 — the cutover — S2 DONE 2026-10-07: frozen ~14:00 CDT, flipped ~14:43; S3 in progress, rollback window open until 2026-10-08 ~14:43 CDT
+
+**surfguitar101.com is served by leopard.** T0 (C0) at about 14:00 CDT, the
+go/no-go at 14:42, the flip at about 14:43: **43 minutes**, against the 60-minute
+stop point and the ~45 estimated. Every go/no-go line passed and nothing was
+rolled back. Brian ran the jaguar, Cloudflare, Linode and browser steps; Claude
+ran the Mac and leopard steps over ssh.
+
+### S2, the window, as it ran
+
+⏱ is `time`'s `real`, as in task 07. Clock times are CDT unless marked UTC.
+
+| step | ⏱ / when | result |
+|---|---|---|
+| 10, the notice | before C0 | posted (Brian) |
+| 11, **C0** | ~14:00; checked 14:01:06 | line 6 `OFFLINE = True`; GET 503, POST 405 |
+| 12, C1 step 1, the dump | 1 m 11.7 s | `sg10120261007.sql.bz2`, 100,592,622 bytes, md5 `e64759f1f3d9d580be1e6e189b61f0c8`, `bzip2 -t` OK, mtime 14:02 |
+| 13, copy to the Mac | 5.0 s | md5 matches |
+| MySQL load | 34.3 s | 91 tables, 464,430 posts, newest 2026-10-07 13:59:33 |
+| `convert.sh` | 17.5 s | 702,067 rows; the same 4 identifier-truncation warnings; no rejects |
+| `verify.py` | 0.57 s | OK, 90 sequences |
+| `verify_data.py values` | 13.3 s | OK; the expected 370 `forums_post.user_ip` rows |
+| `post_convert.py` | 2.5 s | 23 indexes, 86 FKs, 2 checks, 2 defaults; `oembed.0001_initial` recorded |
+| `verify_data.py keys` | 0.4 s | 88 FKs valid, deferrable, NO ACTION, 0 orphans |
+| `compare_schema.py` | 0.2 s | OK |
+| **A1 on the converted data (C3)** | | both queries, 0 rows |
+| `pg_snapshot.sh dump` | 8.2 s | `sg101-20261007-140636-cutover-20261007.dump`, 129 M |
+| copy to leopard | 7.1 s | md5 `586c66ef95bef93250ed26536ee0d2be` both ends |
+| 14, `postgres` up / restore | 11.0 s / 24.7 s | `/tmp/restore-errors.txt` 0 bytes |
+| 15, **C2** | | `oembed` `0001_initial` present |
+| 16, **C3** `migrate` | 16.9 s | "No migrations to apply" |
+| 17, `make prod-up` | **1 m 48.9 s** | `web` healthy by 14:10:39; see below |
+| 18, **C4** `reindex_search` | 5 m 2.1 s | 518,285 documents |
+| `reconcile_search` | 12.1 s | clean, 8 types |
+| 20, **C5** media delta | 1.2 s | 16 files, 666,037 bytes; see below |
+| 19, `image_smoke.py` | | 7/7; `--s3` 12/12 |
+| `tools/prod_smoke.sh` | 0.95 s | all PASS |
+| **ID check** | before part 1 | identical on both hosts: `forums_post` 485649, `messages_message` 33170, `auth_user` 15873, `user_photos_photo` 27799 |
+| 21, part 1 of the smoke checklist | after 14:13 | every read and write passed (Brian); the reply, post 485651, indexed by the worker at 19:24:09 UTC and found in `SearchDocument` |
+| 22, re-close | | `make firewall-apply`, `make firewall-check` pass (Brian); a direct request to leopard timed out at 14:42:17 |
+| A6 | | Postmark's dashboard shows the paid plan (Brian) |
+| 23, **go/no-go** | 14:42 | all lines true |
+| 24, **the flip** | ~14:43 | both `A` records to 192.0.2.13, still proxied (Brian) |
+| 25, part 2 | 14:44–14:47 | below |
+| 26, **C6** | after part 2 | redirect rule, 301 (Brian); below |
+
+**The dump came well inside the freeze**: the newest post, 13:59:33, is
+before C0, and the file's mtime, 14:02, is after it. Machine time from C1 to
+the end of C5 was about 10 m 40 s, the ⏱ rows above summed, against task 07's ⏱ ~9 m 50 s; the
+difference is `make prod-up`.
+
+**Part 2, through Cloudflare:** `curl -sI https://surfguitar101.com/` gave 200
+with a `cf-ray` and `strict-transport-security: max-age=604800`; `www` gave a
+301 to the apex. That `HEAD /` is in leopard's `access.log` under Brian's own
+IPv6 address (task 09, criterion 1), beside live traffic carrying real client
+addresses, Googlebot among them. Brian then posted a reply in a normal browser
+(indexed 19:45:48 UTC) and failed a login on purpose: **B3 passes on live
+traffic** — `auth.log` has `Login failure from [<Brian's IPv6>] for 'Brian'`
+and the same address leads the `POST /accounts/login/` line in `access.log`,
+the line fail2ban parses.
+
+**C6:** `https://wiki.surfguitar101.com/`, an old page with a query string,
+and plain `http://` each answer one 301 to `https://surfguitar101.com/`.
+
+**The closing notice is posted** (Brian), on leopard.
+
+### Four things the window found
+
+1. **`make prod-up` rebuilt every layer: 1 m 48.9 s, not S1's predicted 6.5 s
+   build.** `docker history` shows every layer after `FROM` built at
+   19:08:47–19:09:47 UTC, `apt-get` and the 307 MB `pip install` included, on
+   the same Python 3.12.15 base S1 built on (2026-10-06T04:40Z). So it is not
+   S1's explanation, a new base. The build cache is not empty (11.95 GB, all
+   reclaimable) and leopard has no prune timer: only `sg101-backup.timer`.
+   **Cause not found.** BuildKit's own garbage collection is a candidate, not
+   a finding. It cost about a minute and changed nothing else.
+2. **Runbook C1 step 2's "stop the dev `web`" contradicts the commands it
+   points at.** `convert.sh` (line 51) and every DOCKER.md §7 check run
+   `docker compose exec web`. Only `worker` and `beat` were stopped; `web`
+   writes only when asked to, and nothing asked. **Runbook C1 step 2 corrected**
+   2026-10-07.
+3. **B4a's chown was a no-op**, so it was skipped and C5's delta ran ahead of
+   `image_smoke.py` rather than after it, saving a `sudo` round trip. After the
+   rsync, `find media var -not -uid 1000` and `find media var -type d -not
+   -perm 755` were both empty: leopard's `brian` is uid 1000, so files an
+   unprivileged rsync creates are already owned right. `git diff --name-only
+   media` stayed empty.
+4. **Post ID 485650 was used and is gone.** Not a missing post: the ID check
+   matched before anything wrote. The only writer between it and Brian's reply
+   (485651) that cleans up after itself is `image_smoke.py`, which ran at
+   ~19:12 UTC, when the worker logged a `reindex_document`, and reported 0
+   scratch rows left. That it was the photo-in-post check is an inference from
+   the timing, not traced.
+
+Also from S1, borne out: leopard's base is Python 3.12.15, which neither the
+rehearsal nor the beta ran; `prod_smoke.sh`, `image_smoke.py` and both browser
+parts passed on it.
+
+### S3, after — in progress
+
+- **27, the first hour:** sampled every 5 minutes to 15:45. At 19:50:35 UTC,
+  every service healthy, `web` 7.6 % CPU and 502 MiB, load 0.34, **469
+  requests in the last 5 minutes, 0 5xx**. Same day still to do: **D1**, **B9**
+  and **D3** (step 28).
+- **`apt upgrade` on leopard, 2026-10-07 20:02 UTC (Brian), an hour after the
+  flip:** `sudo`, `libfreetype6`, `sg3-utils`, `sg3-utils-udev`,
+  `libsgutils2-1.48`. No Docker package, so the daemon and the containers did
+  not restart (Docker last started 10-04, at the previous upgrade, which took
+  `docker-ce` to 29.8.2); no `/var/run/reboot-required`. The site answered 200
+  locally and through Cloudflare at 15:03 CDT.
+- **The first backup of the cutover's data is 2026-10-08 04:30 UTC.** Last
+  night's copied the beta's database (S1).
+- **A4:** the twenty-seventh DMARC reading (10-06, the last whole day of jaguar
+  alone) was taken this morning; the twenty-eighth covers the split 10-07
+  window, and its predictions are in `research/dmarc-readings.md`.
+- **30, the day after: D6**, jaguar's logs, including `mail.log` and
+  `mail.log.1` for the days A5's copy missed.
+- **31: the rollback window closes 2026-10-08 ~14:43 CDT.** After it, fix
+  forward. jaguar stays frozen (`OFFLINE = True`) and warm (D2).
+
+### S1 (T−1) — DONE 2026-10-06: A1, A2, B4/B4a/B8, step 8 and the walk-through
 
 **A1, against jaguar's live MySQL (Brian ran it; auto mode refused the
 production read):** both queries return no rows. No member has picked a retired

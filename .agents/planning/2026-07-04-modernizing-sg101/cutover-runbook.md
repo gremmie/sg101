@@ -980,8 +980,10 @@ Run in this order in task 07's rehearsal (2026-10-01); each step's time is in
    `sg101-hg-backup/snapshots/`, then DOCKER.md §7 as written: load into the
    dev `db`, `convert.sh`, `verify.py`, `verify_data.py values`,
    `post_convert.py`, `verify_data.py keys`, `compare_schema.py`. **Stop the dev
-   `web`, `worker` and `beat` while converting** and skip `smoke.py`, so nothing
-   writes to the database before it is dumped. Then
+   `worker` and `beat` while converting, and leave `web` up**: `convert.sh` and
+   every §7 check run through `docker compose exec web`, and `web` writes only
+   when a request reaches it. Skip `smoke.py`, so nothing writes to the
+   database before it is dumped. Then
    `tools/pg_snapshot.sh dump <label>`, and copy the snapshot to the VM's
    `snapshots/`; `md5sum` both ends.
 3. **On the VM:** `make prod-down`, then the database alone, replaced, and
