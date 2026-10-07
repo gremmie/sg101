@@ -50,6 +50,8 @@ reading log stops*.
 | 22 | 2026-09-12 | 09-07 → 09-11 | a second forwarder at web.de; four more exact Google days; three endpoints file nothing for 09-07 — **addendum: the hole is ours, Yahoo alone did not file, and the two failures are bounces**; **second addendum: 09-07 recovered — the classes separate inside the report, and the class tally was wrong since reading 19** |
 | 23 | 2026-09-21 | 09-11 → 09-20 | Comcast counts evaluations, not messages — 16 for two; ten exact Google days; a twelfth endpoint; the local `rua` copy has been dead since the MX flip — **addendum: the collection path was automated the same day and recovered four lost reports; `web.de` is a reporter and counts every window twice; prediction 6 falsified** |
 | 24 | 2026-09-28 | 09-20 → 09-27 | leopard appears through Cloudflare's forward — sixteen messages, fifteen matched to the send log; UTC−7 holds on a new source; two new forwarders; six of seven predictions held, the seventh already falsified |
+| 25 | 2026-10-05 | 09-28 → 10-04 | Postmark appears as a source IP through the member beta; a neighbour on jaguar's /64 passes on SPF; the first quarantine dispositions |
+| 26 | 2026-10-06 | 10-05 | the first daily reading (A4); Google's Postmark rows reconcile on the UTC−7 day, five for five; a spoof from another Linode region quarantined |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6272,4 +6274,70 @@ filed four days late before.
    it a pattern rather than a single event, and any other non-jaguar address in
    `2600:3c01::/64` would show the exposure is not one neighbour's.
 4. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
+   aligned on neither mechanism.
+
+### Twenty-sixth reading — 2026-10-06, covering 2026-10-05: the first daily reading; Google's five Postmark messages reconcile on the UTC−7 day, and a spoof from another Linode region is quarantined
+
+**The first reading at A4's daily cadence**, which runs to two weeks after the
+flip. `tools/dmarc_fetch.py -a <account>` scanned 27 messages: **4 new**, 23
+already held, no conflicts. **The corpus is 167 reports.** All four new reports
+are for the 10-05 window. Every one reads `p=quarantine`.
+
+| Reporter | Source | Msgs | Disposition | DKIM / SPF |
+|---|---|---|---|---|
+| `google.com` | `173.255.245.115` (jaguar) | 20 | none | pass / pass |
+| `google.com` | `50.31.156.113`, `.118`, `.121` (Postmark) | 2 + 1 + 2 | none | pass / pass |
+| `google.com` | `2600:3c04::2000:8cff:fe2d:1b81` | 1 | **quarantine** | fail / fail |
+| `comcast.net` | `173.255.245.115` | 28 | none | pass / pass |
+| `yahoo.com` | `173.255.245.115` | 2 | none | pass / pass |
+| `aol.com` | `173.255.245.115` | 1 | none | pass / pass |
+
+**jaguar's `mail.log` was not read**, so its four rows (51 by the reporters' counts) are not
+reconciled; A5's copy holds the logs if a later reading needs them. Comcast's
+28 is evaluations, not messages (reading 23).
+
+#### Google's Postmark rows: five sends, five messages
+
+leopard's `email.log` (UTC), addresses reduced to domains on the host. Google's
+10-05 window is the UTC−7 day, 10-05 07:00 to 10-06 07:00 UTC:
+
+| `email.log` (UTC) | Category | To |
+|---|---|---|
+| 10-05 20:24:04 | `topic_notification` | `gmail.com` |
+| 10-05 20:33:19 | `topic_notification` | `gmail.com` |
+| 10-05 21:07:56 | `pm_notification` | `gmail.com` |
+| 10-06 00:00:43 | `pm_notification` | `gmail.com` |
+| 10-06 00:46:51 | `registration` | `gmail.com` |
+
+Exactly five, and the 10-05 00:33 `admin_notification` falls in the 10-04
+window. The three `msorensen.net` sends that day go to 1&1 (`mx00.1and1.com`),
+which has never filed a report in this corpus. **Under a plain UTC day the count
+would have been three**, so the UTC−7 day holds again, on a third source.
+
+#### The quarantined row is a spoof, not leopard
+
+leopard's only global IPv6 address is `2001:db8::4` (read
+2026-10-06). The failing source is in `2600:3c04::`, a different Linode prefix
+from both hosts, and its row carries **SPF `pass` for `lambaygroup.com`** and no
+DKIM result: a host that is allowed to send for its own domain, putting ours
+in the `From`. Aligned on neither, and quarantined, as the policy intends.
+
+#### Scoring the twenty-fifth reading's predictions: three held, one falsified
+
+1. **FALSIFIED: five, not four.** The fifth is the 10-06 00:46:51
+   `registration` send, the beta's registration test, made after the
+   prediction was written on 10-05. The log and the UTC−7 day are both right;
+   the prediction counted a day that had not finished.
+2. **HELD.** The Yahoo and AOL reports for 10-05 have jaguar rows only.
+3. **HELD.** No row from `2600:3c01::2000:96ff:fe4a:23be`, and no other
+   non-jaguar address in `2600:3c01::/64`. The new IPv6 row is in a different
+   prefix.
+4. **HELD.** Every report reads `p=quarantine`, and the one `quarantine`
+   disposition is on a row aligned on neither mechanism.
+
+#### Predictions for the twenty-seventh reading
+
+1. **No row from leopard's `2001:db8::4` or
+   `192.0.2.13` in any report.** leopard sends only through Postmark (B14).
+2. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
    aligned on neither mechanism.
