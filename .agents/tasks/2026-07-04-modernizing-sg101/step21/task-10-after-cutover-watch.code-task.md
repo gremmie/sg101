@@ -75,6 +75,14 @@ implementation. Read additional references as needed for context.
    the second stranded-entry cleanup task 06 owes. By then every entry jaguar's
    `wiki-abuse` made before the wiki went (runbook C6) is past fourteen days.
    Before and after counts recorded, as the first run's were.
+4b. `web`'s memory read daily: `docker stats --no-stream` for the container,
+   and each gunicorn worker's RSS and elapsed time from `ps` inside it, so a
+   restart is not mistaken for a plateau. gunicorn runs five workers with no
+   `--max-requests`, so nothing recycles them. Starting points: 502–539 MiB in
+   the first hour after the flip, **691 MiB** (workers 150–168 MB) on
+   2026-10-08 22:30 UTC, 12½ h after the 10:00 UTC reboot. A plateau needs
+   nothing; growth that continues past the first few days calls for
+   `--max-requests` with jitter, recorded with the readings that show it.
 5. The first nightly backups after cutover present in both buckets, and no
    alarm fired (or, if it fired, explained).
 6. The apex SPF question settled and recorded; any DNS change followed by the
@@ -91,7 +99,7 @@ implementation. Read additional references as needed for context.
 ## Implementation Approach
 1. D3 in the first days, while D4's watch is running.
 2. A short daily check against a fixed list (bounces, DMARC, fail2ban list
-   size, backup alarm), recorded as one line a day.
+   size, backup alarm, `web`'s memory), recorded as one line a day.
 3. Regenerate the summary at the end of the two weeks, once nothing is moving.
 
 ## Acceptance Criteria
@@ -105,8 +113,8 @@ implementation. Read additional references as needed for context.
 2. **Two weeks watched**
    - Given the daily checks
    - When the two weeks end
-   - Then bounces, DMARC and the block list's size each have fourteen recorded
-     readings
+   - Then bounces, DMARC, the block list's size and `web`'s memory each have
+     fourteen recorded readings
 
 3. **Edge blocking holds**
    - Given live traffic
