@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-08
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 09 — the cutover — S2 DONE 2026-10-07: frozen ~14:00 CDT, flipped ~14:43; S3 in progress, rollback window open until 2026-10-08 ~14:43 CDT
+## Step 21 task 09 — the cutover — DONE 2026-10-08: frozen 2026-10-07 ~14:00 CDT, flipped ~14:43; S3 steps 27–31 done, the rollback window closed 2026-10-08 ~14:43 CDT with no rollback; step 32 is task 10
 
 **surfguitar101.com is served by leopard.** T0 (C0) at about 14:00 CDT, the
 go/no-go at 14:42, the flip at about 14:43: **43 minutes**, against the 60-minute
@@ -141,7 +141,7 @@ Also from S1, borne out: leopard's base is Python 3.12.15, which neither the
 rehearsal nor the beta ran; `prod_smoke.sh`, `image_smoke.py` and both browser
 parts passed on it.
 
-### S3, after — in progress
+### S3, after — DONE 2026-10-08, steps 27–31; step 32 is task 10
 
 - **27, the first hour — passed.** Twelve samples, every 5 minutes from
   19:50:35 to 20:46:44 UTC (`ps`, a `docker stats --no-stream`, `uptime`, and
@@ -254,6 +254,19 @@ parts passed on it.
   not restart (Docker last started 10-04, at the previous upgrade, which took
   `docker-ce` to 29.8.2); no `/var/run/reboot-required`. The site answered 200
   locally and through Cloudflare at 15:03 CDT.
+- **leopard rebooted itself 2026-10-08 10:00 UTC (05:00 CDT), inside the
+  rollback window, and came back unaided** (Brian noticed). unattended-upgrades
+  installed kernel `7.0.0-38` at 06:59 UTC, and `52leopard-reboot`'s
+  `Automatic-Reboot-Time "10:00"` took it; up again 10:01:51. In sg101's
+  `access.log` the last request before is 10:00:00 and the first after
+  10:02:02, then **5 × 503** (`offline.html` while gunicorn started) to
+  10:02:03, and 302/200 from 10:02:04: **about two minutes**, during which
+  visitors met Cloudflare's own error page, which leopard does not log. All six
+  containers up and healthy since, the same ~3 minutes the 2026-09-28 reboot
+  test measured. Running `7.0.0-38`, nothing pending a reboot (checked 17:27
+  CDT). **The automatic reboot does not wait for maintenance mode**, and
+  visitors see Cloudflare's error page rather than `offline.html`. It is
+  **kept as it is, for now (Brian, 2026-10-08).**
 - **The first backup of the cutover's data ran 2026-10-08 04:30 UTC, and
   passed.** The journal (Brian, via `sudo`): started 04:30:20, wrote
   `sg101-20261008T043024Z.dump`, **115M**, at 04:30:48, `media synced` at
@@ -277,8 +290,13 @@ parts passed on it.
   freeze. jaguar's sg101 `access.log` ends 10-07 14:45:45 CDT, two minutes
   after the flip. **D6's second pull, last thing before shutdown, is still
   owed**, by about 2026-11-20 (runbook D6).
-- **31: the rollback window closes 2026-10-08 ~14:43 CDT.** After it, fix
-  forward. jaguar stays frozen (`OFFLINE = True`) and warm (D2).
+- **31: the rollback window closed 2026-10-08 ~14:43 CDT, unused** (Brian
+  confirmed past it at 17:26). From here, fix forward. jaguar stays frozen
+  (`OFFLINE = True`) and warm (D2) through task 10, and D4's bounce check and
+  A4's daily DMARC readings carry on under it.
+- **Carried out of this task, still open: the Redis-on-restore gap** above.
+  The follow-up is a `rebuild_redis` management command doing what was done by
+  hand, and a line in DOCKER.md §8 and the runbook to run it after any restore.
 
 ### S1 (T−1) — DONE 2026-10-06: A1, A2, B4/B4a/B8, step 8 and the walk-through
 
