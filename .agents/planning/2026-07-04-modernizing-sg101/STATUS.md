@@ -254,8 +254,13 @@ parts passed on it.
   not restart (Docker last started 10-04, at the previous upgrade, which took
   `docker-ce` to 29.8.2); no `/var/run/reboot-required`. The site answered 200
   locally and through Cloudflare at 15:03 CDT.
-- **The first backup of the cutover's data is 2026-10-08 04:30 UTC.** Last
-  night's copied the beta's database (S1).
+- **The first backup of the cutover's data ran 2026-10-08 04:30 UTC, and
+  passed.** The journal (Brian, via `sudo`): started 04:30:20, wrote
+  `sg101-20261008T043024Z.dump`, **115M**, at 04:30:48, `media synced` at
+  04:30:56, `Deactivated successfully` at 04:30:57, 37 s in all.
+  healthchecks.io shows the check green (Brian). The objects in the two buckets
+  were not listed; task 10's requirement 5 still asks for that. The previous night's run copied the beta's
+  database (S1).
 - **A4:** the twenty-seventh DMARC reading (10-06, the last whole day of jaguar
   alone) was taken this morning; the twenty-eighth covers the split 10-07
   window, and its predictions are in `research/dmarc-readings.md`.
