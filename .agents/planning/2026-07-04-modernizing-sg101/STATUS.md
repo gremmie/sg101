@@ -259,8 +259,19 @@ parts passed on it.
 - **A4:** the twenty-seventh DMARC reading (10-06, the last whole day of jaguar
   alone) was taken this morning; the twenty-eighth covers the split 10-07
   window, and its predictions are in `research/dmarc-readings.md`.
-- **30, the day after: D6**, jaguar's logs, including `mail.log` and
-  `mail.log.1` for the days A5's copy missed.
+- **30, the day after: D6 — DONE 2026-10-08 ~12:30 CDT (Claude).**
+  `~/workspaces/bgn/sg101-evidence/jaguar-logs-2026-10-08/`, 587 MB, 84 files,
+  `rsync -aR` from jaguar as `brian`, the same layout as the 09-25 archive plus
+  `var/log/mail.log` and `mail.log.1`. A `find -printf` listing taken on
+  jaguar first (`source-listing/before.txt`): all 84 present with identical
+  sizes, every `.gz` passes `gzip -t`, `MANIFEST.sha256` 84 lines and
+  `shasum -c` clean; the manifest's own SHA-256 is
+  `5facb68c51765bceb2a99e5f3d101810eba7b5dffac7986be8147d3206b46277`.
+  **The mail baseline is now continuous** from 09-27 07:15 to 10-08 12:18 CDT
+  (`mail.log.1` ends 10-05 06:32, `mail.log` starts 06:35), covering the
+  freeze. jaguar's sg101 `access.log` ends 10-07 14:45:45 CDT, two minutes
+  after the flip. **D6's second pull, last thing before shutdown, is still
+  owed**, by about 2026-11-20 (runbook D6).
 - **31: the rollback window closes 2026-10-08 ~14:43 CDT.** After it, fix
   forward. jaguar stays frozen (`OFFLINE = True`) and warm (D2).
 
