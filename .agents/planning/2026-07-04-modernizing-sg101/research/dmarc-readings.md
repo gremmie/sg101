@@ -53,6 +53,7 @@ reading log stops*.
 | 25 | 2026-10-05 | 09-28 → 10-04 | Postmark appears as a source IP through the member beta; a neighbour on jaguar's /64 passes on SPF; the first quarantine dispositions |
 | 26 | 2026-10-06 | 10-05 | the first daily reading (A4); Google's Postmark rows reconcile on the UTC−7 day, five for five; a spoof from another Linode region quarantined |
 | 27 | 2026-10-07 | 10-06 | the last whole day before the freeze: jaguar alone, no Postmark row as leopard sent nothing; a fifth forwarder, at `cloudfilter.net` |
+| 28 | 2026-10-08 | 10-07 | the flip day: both hosts reconcile exactly at Google and Yahoo; the `cloudfilter.net` forwarder is `thegogorillas.com`'s; jaguar delivers to Comcast after the flip |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6413,4 +6414,155 @@ flip. Google's window is the UTC−7 day, 10-07 07:00 to 10-08 07:00 UTC.
 3. **No row from leopard's own addresses**, `2001:db8::4`
    or `192.0.2.13`: it sends only through Postmark (B14).
 4. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
+
+### Twenty-eighth reading — 2026-10-08, covering 2026-10-07: the flip day; both hosts reconcile exactly at Google and Yahoo, the `cloudfilter.net` forwarder is `thegogorillas.com`'s, and jaguar delivers to Comcast after the flip
+
+**The first window with both hosts in it.** The freeze was 10-07 19:00 UTC and
+the flip 19:43 UTC. `tools/dmarc_fetch.py -a <account>` scanned **2 messages,
+both new**, no conflicts. **The corpus is 173 reports.** Both are for the 10-07
+window and read `p=quarantine`. **Comcast, AOL and Microsoft have not filed for
+10-07 yet.**
+
+**Only two messages were scanned because the other 171 report mails are in
+Gmail's Trash.** Brian moved the already-analyzed reports there. `--dry-run
+--all --include-trash` finds 2 in All Mail and 171 in Trash, all already held,
+so nothing is lost, and Gmail's 30-day purge does not matter once a report is in
+`~/dmarc`. The fetch does not search the trash by default, so **a report trashed
+before it is fetched would be missed**. Trashing only after a reading keeps that
+from happening, and `--include-trash` covers it if it ever does.
+
+| Reporter | Source | Msgs | Disposition | DKIM / SPF |
+|---|---|---|---|---|
+| `google.com` | `50.31.156.113`–`.126`, nine addresses (Postmark) | 23 | none | pass / pass |
+| `google.com` | `173.255.245.115` (jaguar) | 5 | none | pass / pass |
+| `google.com` | `209.85.220.41` (Gmail relay) | 2 | none | pass / **fail**, SPF on `gmail.com` |
+| `google.com` | `44.202.169.34` | 1 | none | pass / **fail** |
+| `yahoo.com` | `173.255.245.115` (jaguar) | 4 | none | pass / pass |
+| `yahoo.com` | `50.31.156.113`, `.116`, `.120` (Postmark) | 3 | none | pass / pass |
+
+Every Postmark row carries both `d=pm.mtasv.net` and `d=surfguitar101.com` and
+passes SPF on `pm-bounces.surfguitar101.com`. No row aligned on neither
+mechanism, and no DSN or over-long-line row.
+
+#### Google's Postmark rows: 23 against 22 logged sends plus one unlogged
+
+leopard's `email.log` (UTC), addresses reduced to domains on the host. Google's
+window is the UTC−7 day, 10-07 07:00 to 10-08 07:00 UTC. The 37 render-pass
+lines of `email_smoke.py` (20:18:37–40, 20:21:27–31, `STATUS.md` § Step 21
+task 10) are excluded, since none left the host:
+
+| `email.log` (UTC) | `gmail.com` sends |
+|---|---|
+| 10-07 19:29:02, 19:30:37, 20:12:22 | 3 (`registration`, `pm_notification` ×2) |
+| 10-07 20:21:32–53, the smoke run's live pass | 10 |
+| 10-07 20:31:22, 20:38:41 | 2 (`password_reset`, `pm_notification`) |
+| 10-08 01:14:00 | 1 (`pm_notification`) |
+| 10-08 02:22:02–06, 02:52:34–38 | 6 (`topic_notification`) |
+| **Logged** | **22** |
+
+**The twenty-third message is the smoke run's Django error mail**, which goes
+through `mail_admins` rather than the site's wrapper and so is not in
+`email.log`. `STATUS.md` records each smoke inbox receiving 11 messages against
+10 logged lines. `sg101.log` has no `ERROR` line in the window, so there was no
+other error mail. **22 + 1 = 23, exact.** Prediction 2 asked for this count
+with the render lines excluded. Counting them would have predicted 37 or more.
+
+#### Yahoo's Postmark rows: the plain UTC day, three for three
+
+leopard sent `yahoo.com` three messages on the UTC day 10-07: 22:35:00,
+23:07:08 and 23:41:01. Yahoo's report shows 3. **Under Google's UTC−7 day the
+count would have been 9**, so Yahoo's window is the UTC day, as its report's
+`date_range` states.
+
+#### jaguar: five Google and four Yahoo deliveries, the last three hours before the freeze
+
+jaguar's `/var/log/mail.log` read directly as `brian` (in `adm`), not yet D6's
+archived pull. jaguar logs in CDT (UTC−5). `status=sent` lines by relay:
+
+| jaguar (CDT) | Relay | Window |
+|---|---|---|
+| 10-07 02:01:15 (Brian's nightly cron mail, `orig_to=<brian>`), 06:13:08, 07:39:33, 08:25:05, 11:01:04 | Google | Google 10-07: **5** |
+| 10-07 07:38:51, 07:39:33, 09:16:56, 11:01:03 | Yahoo | Yahoo 10-07: **4** |
+
+**Both are exact.** jaguar's last site delivery was 10-07 11:01:13 CDT (16:01
+UTC), to `thegogorillas.com`, and postfix took **no new message after the
+freeze** except the cron mail of 10-08 02:01:12 CDT. jaguar's volume fell with
+the hours lost: Google 20, 17, then 5 across 10-05 to 10-07.
+
+**jaguar's cron mail keeps sending after the flip.** It goes out at 02:01 CDT,
+07:01 UTC, one minute into Google's UTC−7 day, so **each Google window from
+10-08 on carries one jaguar row for as long as jaguar runs**. That row is
+expected and does not mean the site is sending from jaguar.
+
+#### A jaguar delivery to Comcast after the flip
+
+Queue ID `38C525869BC`, a site message to `comcast.net`, was queued 10-06
+09:51:56 CDT. `mx1.mxge.comcast.net` answered `451 4.2.0 Try Again Later` after
+DATA on every attempt, about every 70 minutes, for 48 hours. **It was accepted
+at 10-08 09:51:21 CDT (14:51 UTC), `delay=172766`**, a day after the flip. So
+**Comcast's report for 10-08 should carry one jaguar row**, and that row comes
+from jaguar's queue, not from any new send.
+
+This also gives a test of reading 23's claim that Comcast counts evaluations.
+**jaguar delivered nothing to Comcast on 10-07.** Its only Comcast traffic was
+21 deferred attempts on the UTC day (10-06 19:22 to 10-07 18:41 CDT). If
+Comcast's 10-07 report carries a jaguar row, then Comcast evaluates DMARC
+before it defers, and the row's count is set against 21.
+
+#### The `cloudfilter.net` forwarder is `thegogorillas.com`'s
+
+| Source | Operator (whois, PTR) | SPF domain | Window | Msgs |
+|---|---|---|---|---|
+| `44.202.169.34` | Amazon, `44.192.0.0/10`; `omta035.useast.a.cloudfilter.net` | `surfguitar101.com` | 10-07 | 1 |
+
+This is the operator from the twenty-seventh reading
+(`omta35.uswest2.a.cloudfilter.net`), at a second address. It carries only
+`d=surfguitar101.com`, not `pm.mtasv.net`, so **the message came from jaguar**.
+jaguar sent one message to `thegogorillas.com` in each of the two windows:
+10-06 05:07:07 CDT and 10-07 11:01:13 CDT. Its MX, `mail.thegogorillas.com`
+(`50.87.184.247`, `unifiedlayer.com`), is a shared host. **One forwarded row
+per window, against one send per window, is a match, not yet a confirmation.**
+leopard sent `thegogorillas.com` one message at 10-08 14:13:09 UTC, which sets
+up a test (prediction 3 below).
+
+#### The member's Gmail relay carries Postmark mail
+
+`209.85.220.41` carried 2 messages. They are the first relay rows to carry
+`d=pm.mtasv.net`, so they began as Postmark deliveries to a Google mailbox,
+which then forwarded them to another Google mailbox. **The first hop is
+already among the 23 above**, so the forward does not affect that count.
+
+#### Scoring the twenty-seventh reading's predictions: all four held, two with caveats
+
+1. **HELD, for the reports in hand.** No jaguar row reflects a site send after
+   the freeze; the last one was 16:01 UTC. Its rows fell to 5 and 4. Caveat:
+   the 48-hour Comcast deferral means jaguar *did* deliver after the flip, and
+   that delivery falls in Comcast's 10-08 window, not this one.
+2. **HELD.** 23 Postmark messages = 22 `email.log` sends + the unlogged error
+   mail, on the UTC−7 day.
+3. **HELD.** No row from `2001:db8::4` or
+   `192.0.2.13`.
+4. **HELD.** Both reports read `p=quarantine`, and every disposition is
+   `none`. The rows aligned on one mechanism only are the two forwarders.
+
+#### Predictions for the twenty-ninth reading
+
+1. **Comcast's 10-08 report carries a jaguar row for `38C525869BC`.** For
+   10-07, if Comcast files, a jaguar row means Comcast evaluates DMARC on
+   deferred attempts: 21 of them on the UTC day.
+2. **Google's 10-08 report carries exactly one jaguar row, the 02:01:13 CDT
+   cron mail**, plus anything else jaguar's queue still holds at reading time.
+   Anything more means jaguar is still sending site mail.
+3. **Google's 10-08 report carries a `cloudfilter.net` row with
+   `d=pm.mtasv.net`**, from leopard's 14:13:09 UTC send to
+   `thegogorillas.com`. If it is there, that confirms the forwarder's owner.
+   If not, the one-for-one match was a coincidence.
+4. **If Microsoft files for 10-07, it carries 11 Postmark messages to
+   `outlook.com`**: the smoke run's 10 live sends at 20:21:33–54 UTC and its
+   error mail.
+5. **Google's 10-08 Postmark rows equal leopard's `email.log` `gmail.com`
+   sends from 10-08 07:00 to 10-09 07:00 UTC**, plus any Django error mail in
+   `sg101.log`. That is the first full day of live traffic.
+6. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
