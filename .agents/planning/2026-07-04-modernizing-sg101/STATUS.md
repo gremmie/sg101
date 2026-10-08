@@ -201,6 +201,53 @@ parts passed on it.
      passes `request.is_secure()`, which `SECURE_PROXY_SSL_HEADER` and the
      vhost's `X-Forwarded-Proto` make true: **a real reset requested on the
      live site (Brian, `brianTesting`) carries `https://`.**
+  4. **Its scratch users reach Redis.** Creating `_email_smoke` fires
+     `accounts.stats`' new-user task, so `accounts:new_users`, the ten newest
+     members, read `_email_smoke` ten times after the two runs, and
+     `accounts:user_count` counted users that were deleted again. Rebuilt with
+     the rest of Redis, below.
+- **Redis kept the beta's state through the cutover, and the restore made it
+  wrong — rebuilt 2026-10-08 ~00:40 UTC (Brian noticed the home page).**
+  `redis` has a volume (`redis_data`), so the beta's teardown and C1's restore,
+  which replaced only Postgres, left it as the beta wrote it. **The post and
+  account IDs the beta minted were minted again by jaguar's real activity**, so
+  the stale cache did not merely show old entries: it put beta content under
+  links that now lead to real posts. Found, against the database:
+  - **db 0, `forums.latest`:** the combined forum feed, 35 of 50 entries wrong
+    (Redis held Kojack's beta post as 485536; in Postgres 485536 is Brian's of
+    10-04); the home page's recent topics, 25 of 27 wrong (beta titles such as
+    "TEST TOPIC" on topic IDs that are now real topics, and real topics bumped
+    by beta replies); the post and topic counts off by ~100.
+  - **db 0, `accounts.stats`:** the newest-members list all `_email_smoke`
+    (fault 4 above), the member count 16 high.
+  - **db 2, the session cache:** 21 `cached_db` sessions from before the flip,
+    9 of them the beta's — among them users 15868 and 15869, beta accounts
+    whose IDs now belong to two real members. Not usable: `SESSION_COOKIE_DOMAIN`
+    is `None`, so the beta's cookies were host-only for a name that no longer
+    resolves.
+
+  **The rebuild, in `make prod-shell`, with the module's own functions:** the
+  forum and account keys deleted; `_update_post_feeds()` replayed oldest-first
+  over the newest 50 public posts overall plus the newest 50 per public forum
+  (750 posts); `_update_latest_topics()` replayed over the last post of the 50
+  most recently active public topics; the counts and the newest-members list
+  set from Postgres. 8.7 s. **Checked against the database:** the combined
+  feed and all 15 forum feeds equal the newest 50 IDs; all 750 cached posts
+  byte-identical to `_serialize_post()`; 750 post keys, 750 reference counts;
+  the 50 recent topics in order with matching title, date and author; counts
+  445,354 posts, 35,345 topics, 15,303 users. The forum feed's 5-minute
+  `cache_page` copy then expired; the live home page and `/feeds/forums/`
+  carry no beta entry (one match left is a real post naming the Surfy Bear
+  reverb). **The 21 pre-flip cached sessions were deleted** from db 2: 12
+  have a `django_session` row and reload from it, so nobody was logged out,
+  and the 9 that do not are gone.
+
+  **The gap: no step resets Redis on a restore.** C1 replaced the database and
+  left Redis holding state keyed by IDs the new database reuses. Any future
+  restore over a running site meets the same thing. It needs the forum and
+  account keys in db 0 rebuilt (the procedure above) and db 2's session cache
+  cleared, or the restore runbook to say so. Not yet written into DOCKER.md §8
+  or the runbook.
 - **`apt upgrade` on leopard, 2026-10-07 20:02 UTC (Brian), an hour after the
   flip:** `sudo`, `libfreetype6`, `sg3-utils`, `sg3-utils-udev`,
   `libsgutils2-1.48`. No Docker package, so the daemon and the containers did
