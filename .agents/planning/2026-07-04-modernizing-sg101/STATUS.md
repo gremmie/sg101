@@ -1754,7 +1754,14 @@ counter rose; a rename and its reversal ran `reindex_topic_posts` and left all
 
 **Found, not fixed:** `topic.delete()` outside `_delete_topic` raises
 `IntegrityError` when the topic holds its forum's `last_post`, with or without
-this change; the admin's delete may reach it. Unchecked.
+this change; the admin's delete may reach it. **ACCEPTED, not fixed (Brian,
+2026-10-09).** Only the Django admin reaches it; Brian is the only admin and
+does not delete topics there; members and moderators delete through
+`_delete_topic`, which handles the case. The data-loss form is gone: both
+`last_post` fields are `SET_NULL`, not the `CASCADE` of the 2026-08-05 loss, so
+the worst case is an error page in the admin, and an integrity error aborts its
+transaction (not reproduced to watch the rollback). The fix, if it is ever
+wanted: route the admin's delete through `_delete_topic`.
 The rest: C4's reindex-before-or-after-reopening decision, for
 task 08's runbook; the ` fog` upload naming, after the cutover.
 
