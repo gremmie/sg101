@@ -91,7 +91,7 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
-## Site work — hotlink images (#5) and the image host list — DONE 2026-10-09, in the commit that adds this line
+## Site work — hotlink images (#5) and the image host list — DONE 2026-10-09, `0589f21c`; live on leopard ~01:45 UTC, checked by Brian
 
 **The feature failed 95% of the time, unreported.** jaguar's archived access
 logs (the 09-25 and 10-08 pulls, late July to the flip): **19 hotlink attempts,
@@ -167,7 +167,10 @@ message, and a full traceback in the log.
 page in a forum reply, and a web page in the v3 Compose editor, each showed its
 message as plain text; a real image added its code to the post box.
 
-## Step 21 follow-up — email_smoke's faults — DONE 2026-10-09, in the commit that adds this line; not yet pulled on leopard
+**Live (Brian, 2026-10-09 ~01:50 UTC):** leopard pulled to `0589f21c` and
+`make prod-up`; hotlink works on the live site. #5 closed by the commit.
+
+## Step 21 follow-up — email_smoke's faults — DONE 2026-10-09, `2d4c344a`; on leopard since `0589f21c`'s pull, not yet run there
 
 The four faults D3's first live run showed in `tools/email_smoke.py` (task 09,
 S3), and the stale Message-ID guidance D1 found. Decided with Brian at the
