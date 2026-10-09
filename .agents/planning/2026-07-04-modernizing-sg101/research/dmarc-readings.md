@@ -54,7 +54,7 @@ reading log stops*.
 | 26 | 2026-10-06 | 10-05 | the first daily reading (A4); Google's Postmark rows reconcile on the UTC−7 day, five for five; a spoof from another Linode region quarantined |
 | 27 | 2026-10-07 | 10-06 | the last whole day before the freeze: jaguar alone, no Postmark row as leopard sent nothing; a fifth forwarder, at `cloudfilter.net` |
 | 28 | 2026-10-08 | 10-07 | the flip day: both hosts reconcile exactly at Google and Yahoo; the `cloudfilter.net` forwarder is `thegogorillas.com`'s; jaguar delivers to Comcast after the flip |
-| 29 | 2026-10-09 | 10-08 (+ Comcast, Microsoft 10-07) | the first full day on leopard: Postmark reconciles exactly at five endpoints, with a Workspace domain telling UTC−7 from UTC; Comcast's deferral loop counts 42 and 25, exact to the reception; Microsoft reads 12 against 11 sent |
+| 29 | 2026-10-09 | 10-08 (+ Comcast, Microsoft 10-07) | the first full day on leopard: Postmark reconciles exactly at five endpoints, with a Workspace domain telling UTC−7 from UTC; Comcast's deferral loop counts 42 and 25, exact to the reception; Microsoft's 12 for 11 is a timed-out attempt received twice |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6568,7 +6568,7 @@ already among the 23 above**, so the forward does not affect that count.
 6. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
 
-### Twenty-ninth reading — 2026-10-09, covering 2026-10-08 (and Comcast's and Microsoft's 10-07): the first full day on leopard; every Postmark row reconciles exactly at five endpoints, Comcast's deferral loop counts to the reception, and Microsoft reads one more than Postmark sent
+### Twenty-ninth reading — 2026-10-09, covering 2026-10-08 (and Comcast's and Microsoft's 10-07): the first full day on leopard; every Postmark row reconciles exactly at five endpoints, Comcast's deferral loop counts to the reception, and Microsoft's one extra is a retry
 
 **The first window with leopard alone sending site mail.** `tools/dmarc_fetch.py
 -a <account>` scanned 9 messages: **7 new**, 2 already held, no conflicts. **The
@@ -6628,12 +6628,21 @@ own record (API `messages/outbound`, 10-06 to 10-09) holds exactly 11
 `hotmail.com` password reset at 10-09 03:30:48 UTC, outside the window. Every
 row's `envelope_to` is `outlook.com`.
 
-**So Microsoft counted 12 for 11 sent.** The likeliest explanation is Comcast's:
-one message received twice, perhaps a Postmark retry after a transient answer,
-with each reception evaluated. **That is not measured.** Postmark's per-message
-delivery events (`/messages/outbound/{id}/details`) would settle it. Reading them
-on leopard was refused this session by the auto-mode permission check, so the
-question stays open.
+**So Microsoft counted 12 for 11 sent, and the twelfth is a retry.** Postmark's
+delivery events (`/messages/outbound/{id}/details`, read 2026-10-09) show ten
+of the eleven delivered on the first attempt. The eleventh, the `Password reset`
+handed to Postmark at 20:21:46 UTC, has two events:
+
+| UTC | Event | Postmark's detail |
+|---|---|---|
+| 20:22:46 | `Transient` | `421 4.4.2 … failed to send message to 50.31.156.113->outlook-com.olc.protection.outlook.com … Timed Out waiting 59.999999664s for response to Some(Command(".\r\n"))`, MX `52.101.60.181` |
+| 20:25:52 | `Delivered` | `250 2.6.0 … Queued mail for delivery`, MX `52.101.60.153` |
+
+**This is Comcast's mechanism at a second receiver.** The first attempt timed out
+waiting for the reply to the end-of-data `.`, so Microsoft had the whole message
+and evaluated it. The retry was evaluated again. 10 + 2 = 12, exact. Like
+Comcast's, **Microsoft's `count` is receptions, not messages**, and
+reconciling against a send log needs the sender's per-attempt record.
 
 #### Comcast's deferral loop: 42 and 25, exact to the reception
 
@@ -6675,7 +6684,7 @@ forwarder's does, and DKIM carries alignment.
 `209.85.220.41` carried one Postmark message forwarded from one Google mailbox to
 another. Its first hop is among the 31.
 
-#### Scoring the twenty-eighth reading's predictions: three held, two held with a caveat, one falsified
+#### Scoring the twenty-eighth reading's predictions: three held, two held with a caveat, one falsified, and explained
 
 1. **HELD, both halves.** Comcast's 10-08 report carries jaguar's row: 25, the
    acceptance plus that day's 24 deferred receptions. Comcast filed for 10-07 with
@@ -6686,7 +6695,9 @@ another. Its first hop is among the 31.
 2. **HELD in substance, but the count was wrong.** jaguar has one row, `count=2`,
    not 1: the cron mail and a root mail. No jaguar site mail.
 3. **HELD.** The `cloudfilter.net` row carries `d=pm.mtasv.net`.
-4. **FALSIFIED by one.** Microsoft reads 12. Postmark sent 11.
+4. **FALSIFIED by one, explained.** Microsoft reads 12 for the 11 Postmark sent:
+   one message timed out after its body was sent and was received again on the
+   retry. The prediction counted messages, and Microsoft counts receptions.
 5. **HELD.** 31 = 29 `gmail.com` + 2 `muohio.edu`, with no error mail. The
    prediction did not foresee the Workspace domain, but nothing in the count is
    left unexplained.
@@ -6701,7 +6712,7 @@ another. Its first hop is among the 31.
    leopard's `comcast.net` sends on the UTC day, unless Comcast deferred one of
    them.
 3. **If Microsoft files for 10-09, it reads 1**: the `hotmail.com` password reset
-   at 03:30:48 UTC. A reading of 2 points the same way as the 12-for-11 above.
+   at 03:30:48 UTC, plus one for every `Transient` event Postmark records against it.
 4. **Google's 10-09 Postmark rows equal leopard's `gmail.com` plus `muohio.edu`
    sends from 10-09 07:00 to 10-10 07:00 UTC**, plus any Django error mail.
 5. **Yahoo, AOL and AT&T match their UTC-day sends exactly.**
