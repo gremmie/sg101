@@ -54,6 +54,7 @@ reading log stops*.
 | 26 | 2026-10-06 | 10-05 | the first daily reading (A4); Google's Postmark rows reconcile on the UTC−7 day, five for five; a spoof from another Linode region quarantined |
 | 27 | 2026-10-07 | 10-06 | the last whole day before the freeze: jaguar alone, no Postmark row as leopard sent nothing; a fifth forwarder, at `cloudfilter.net` |
 | 28 | 2026-10-08 | 10-07 | the flip day: both hosts reconcile exactly at Google and Yahoo; the `cloudfilter.net` forwarder is `thegogorillas.com`'s; jaguar delivers to Comcast after the flip |
+| 29 | 2026-10-09 | 10-08 (+ Comcast, Microsoft 10-07) | the first full day on leopard: Postmark reconciles exactly at five endpoints, with a Workspace domain telling UTC−7 from UTC; Comcast's deferral loop counts 42 and 25, exact to the reception; Microsoft reads 12 against 11 sent |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6566,3 +6567,143 @@ already among the 23 above**, so the forward does not affect that count.
    `sg101.log`. That is the first full day of live traffic.
 6. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
+
+### Twenty-ninth reading — 2026-10-09, covering 2026-10-08 (and Comcast's and Microsoft's 10-07): the first full day on leopard; every Postmark row reconciles exactly at five endpoints, Comcast's deferral loop counts to the reception, and Microsoft reads one more than Postmark sent
+
+**The first window with leopard alone sending site mail.** `tools/dmarc_fetch.py
+-a <account>` scanned 9 messages: **7 new**, 2 already held, no conflicts. **The
+corpus is 180 reports.** Two are late reports for 10-07 (Comcast, Microsoft); five
+are for 10-08 (Google, Yahoo, AOL, AT&T, Comcast). Every report reads
+`p=quarantine` and every disposition is `none`. **AOL never filed for 10-07**, and
+Microsoft has not filed for 10-08 yet.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF |
+|---|---|---|---|---|
+| `comcast.net` | 10-07 | `173.255.245.115` (jaguar) | **42** | pass / pass |
+| `Outlook.com` | 10-07 | `50.31.156.113`–`.124`, seven addresses (Postmark) | **12** | pass / pass |
+| `google.com` | 10-08 | `50.31.156.113`–`.126`, ten addresses (Postmark) | 31 | pass / pass |
+| `google.com` | 10-08 | `173.255.245.115` (jaguar) | 2 | pass / pass |
+| `google.com` | 10-08 | `209.85.220.41` (Gmail relay) | 1 | pass / **fail**, SPF on `gmail.com` |
+| `google.com` | 10-08 | `44.202.169.34` (`cloudfilter.net`) | 1 | pass / **fail** |
+| `yahoo.com` | 10-08 | Postmark, five addresses | 8 | pass / pass |
+| `aol.com` (Yahoo) | 10-08 | Postmark, two addresses | 2 | pass / pass |
+| `att.net` (Yahoo) | 10-08 | Postmark, two addresses | 2 | pass / pass |
+| `comcast.net` | 10-08 | `173.255.245.115` (jaguar) | **25** | pass / pass |
+| `comcast.net` | 10-08 | Postmark, two addresses | 2 | pass / pass |
+
+Every Postmark row carries `d=pm.mtasv.net` and `d=surfguitar101.com` and passes
+SPF on `pm-bounces.surfguitar101.com`. No row aligned on neither mechanism, and no
+DSN or over-long-line row.
+
+#### The Postmark rows against leopard's `email.log`
+
+`email.log` (`/svr/sg101/var/log/django/`, UTC) holds 184 `outcome=sent`
+recipient lines in all. `sg101.log` and `sg101.log.1` hold **no `ERROR` line on
+10-08 or 10-09**, so no Django error mail went out unlogged this time.
+
+| Endpoint | Window | `email.log` sends | Report |
+|---|---|---|---|
+| Google | UTC−7 day, 10-08 07:00 → 10-09 07:00 UTC | 29 `gmail.com` + **2 `muohio.edu`** | **31**, exact |
+| Yahoo | UTC day 10-08 | 8 `yahoo.com` | 8, exact |
+| AOL | UTC day 10-08 | 2 `aol.com` (18:44:08, 18:46:05) | 2, exact |
+| AT&T | UTC day 10-08 | 2 `att.net` (02:22:05, 02:52:37) | 2, exact |
+| Comcast | UTC day 10-08 | 2 `comcast.net` (18:44:09, 18:46:06) | 2, exact |
+
+**`muohio.edu` is a Google Workspace domain** (MX `aspmx.l.google.com`), so
+Google counts it with `gmail.com`, as reading 21 saw Google do with tenant
+domains. **This is what tells the windows apart, and it is a fresh forward test
+of UTC−7.** The `gmail.com` count is 29 under either window. The two `muohio.edu`
+sends fall at 10-08 20:53:41 and 10-09 01:53:09 UTC. Under the UTC day only the
+first counts, which would give 30. Under UTC−7 both count: **31**, as the report
+reads.
+
+#### Microsoft's 10-07: 12 messages, against 11 that Postmark sent
+
+Prediction 4 expected 11 `outlook.com` messages: the smoke run's 10 live sends
+and its error mail. `email.log` holds 30 `outlook.com` lines for 10-07, which
+are 20 render-pass lines and the 10 live sends at 20:21:33–54 UTC. **Postmark's
+own record (API `messages/outbound`, 10-06 to 10-09) holds exactly 11
+`outlook.com` messages**: those 10 and `[Django] Smoke test error report` at
+20:21:56 UTC. The only other Microsoft-hosted recipient in that span is a
+`hotmail.com` password reset at 10-09 03:30:48 UTC, outside the window. Every
+row's `envelope_to` is `outlook.com`.
+
+**So Microsoft counted 12 for 11 sent.** The likeliest explanation is Comcast's:
+one message received twice, perhaps a Postmark retry after a transient answer,
+with each reception evaluated. **That is not measured.** Postmark's per-message
+delivery events (`/messages/outbound/{id}/details`) would settle it. Reading them
+on leopard was refused this session by the auto-mode permission check, so the
+question stays open.
+
+#### Comcast's deferral loop: 42 and 25, exact to the reception
+
+Reading 23 found that Comcast's `count` is end-of-DATA receptions, and that every
+retry cycle reaches both Comcast MX hosts. Queue ID `38C525869BC` is the second
+test of that, and it passes on both days. In jaguar's `mail.log` (CDT, shifted
+to UTC):
+
+| UTC day | Receptions in jaguar's log | Report |
+|---|---|---|
+| 10-07 | 40 `451 … (in reply to end of DATA command)` + 2 `lost connection … while sending end of data` (the 10-06 19:21–19:22 CDT cycle, one per MX) | **42** |
+| 10-08 | 24 `451` at end of DATA (12 cycles) + the `250` acceptance at 14:51:21 UTC | **25** |
+
+**So Comcast also evaluates a message whose connection was lost after the body
+was sent.** Postfix warns "message may be sent more than once" for exactly that
+case. jaguar's queue is now empty (`mailq`, 10-09), so this loop is finished.
+
+#### jaguar's two Google messages: the cron mail and a root mail
+
+| jaguar (CDT) | Queue ID | Origin |
+|---|---|---|
+| 10-08 02:01:13 | `241AA58650F` | Brian's nightly cron mail, `orig_to=<brian>` |
+| 10-09 00:57:26 | `5ADE05864DF` | `uid=0 from=<root>`, `orig_to=<root>`, 1,546 bytes |
+
+The next cron mail, at 10-09 02:01:12 CDT (07:01:12 UTC), falls just past this
+window and into the next one. **Neither message is site mail.** The second is
+something run as root on jaguar at about 05:57 UTC on 10-09. Postfix does not log
+a subject, so what it was is not recorded here.
+
+#### The `cloudfilter.net` forwarder is confirmed as `thegogorillas.com`'s
+
+`44.202.169.34` carried one message with **`d=pm.mtasv.net`** as well as
+`d=surfguitar101.com`, so it came from Postmark. leopard sent `thegogorillas.com`
+exactly one message in the window, at 14:13:09 UTC. Together with reading 28's
+jaguar match, **two senders now line up one-for-one with this forwarder**, which
+settles who runs it. Its SPF fails on `pm-bounces.surfguitar101.com`, as every
+forwarder's does, and DKIM carries alignment.
+
+`209.85.220.41` carried one Postmark message forwarded from one Google mailbox to
+another. Its first hop is among the 31.
+
+#### Scoring the twenty-eighth reading's predictions: three held, two held with a caveat, one falsified
+
+1. **HELD, both halves.** Comcast's 10-08 report carries jaguar's row: 25, the
+   acceptance plus that day's 24 deferred receptions. Comcast filed for 10-07 with
+   a jaguar row although jaguar delivered nothing to it that day, so **Comcast
+   evaluates on deferred attempts**. The count is 42, not the predicted 21:
+   prediction 1 counted retry cycles where reading 23's rule counts receptions,
+   two per cycle.
+2. **HELD in substance, but the count was wrong.** jaguar has one row, `count=2`,
+   not 1: the cron mail and a root mail. No jaguar site mail.
+3. **HELD.** The `cloudfilter.net` row carries `d=pm.mtasv.net`.
+4. **FALSIFIED by one.** Microsoft reads 12. Postmark sent 11.
+5. **HELD.** 31 = 29 `gmail.com` + 2 `muohio.edu`, with no error mail. The
+   prediction did not foresee the Workspace domain, but nothing in the count is
+   left unexplained.
+6. **HELD.** Every report reads `p=quarantine`, and every disposition is `none`.
+
+#### Predictions for the thirtieth reading
+
+1. **Google's 10-09 report carries exactly one jaguar message, the 02:01:12 CDT
+   cron mail** (07:01:12 UTC), plus any further root mail. jaguar's queue is
+   empty, so there is no retry to add.
+2. **Comcast's 10-09 report has no jaguar row.** Its Postmark rows equal
+   leopard's `comcast.net` sends on the UTC day, unless Comcast deferred one of
+   them.
+3. **If Microsoft files for 10-09, it reads 1**: the `hotmail.com` password reset
+   at 03:30:48 UTC. A reading of 2 points the same way as the 12-for-11 above.
+4. **Google's 10-09 Postmark rows equal leopard's `gmail.com` plus `muohio.edu`
+   sends from 10-09 07:00 to 10-10 07:00 UTC**, plus any Django error mail.
+5. **Yahoo, AOL and AT&T match their UTC-day sends exactly.**
+6. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
+   aligned on neither mechanism.

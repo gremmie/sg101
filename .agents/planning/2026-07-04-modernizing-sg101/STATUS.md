@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-09
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -15,7 +15,7 @@ only way that goes unnoticed.
 |---|---|
 | **`STATUS.md`** (this file) | the **active** step and everything still pending |
 | **`STATUS-archive-steps-01-15.md`** | Steps 1–15, closed, plus the original PDD planning record |
-| **`research/dmarc-readings.md`** | the twenty-five DMARC aggregate readings — a periodic instrument log |
+| **`research/dmarc-readings.md`** | the DMARC aggregate readings — a periodic instrument log |
 | **`cutover-runbook.md`** | what to do on cutover day, and only that — started 2026-09-06, owned by Step 21 |
 
 **The split is by kind, not by size.** A reading log has its own natural home and
@@ -50,14 +50,56 @@ When work is committed, the heading is part of the commit.
 | day | DMARC | Postmark | block list | backup | `web` memory | notes |
 |---|---|---|---|---|---|---|
 | 10-08 (read 10-09 ~01:05 UTC) | 28th reading (10-07 window): every row `none`, Postmark and jaguar reconcile exactly | 94 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive (API `deliverystats`, `stats/outbound`) | **84** entries, all `fail2ban`, dated 09-17→10-07; **none dated 10-08** | 04:30 UTC run passed (journal, healthchecks.io) | 496 MiB, workers 121–123 MB at 48 min old: **reset by the `cef58161` deploy** (691 MiB at 22:30 before it) | first full day on leopard |
+| 10-09 (read 10-09 ~17:35 UTC) | 29th reading (10-08 window): every row `none`; Postmark reconciles exactly at Google, Yahoo, AOL, AT&T and Comcast; **Microsoft's 10-07 reads 12 against 11 Postmark sent, unexplained** | 114 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive; the one all-time bounce is still the `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **84** entries, unchanged; newest dated 10-07 18:06; **none dated 10-08 or 10-09** | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 565 MiB; workers 127–150 MB RSS at 15 h 49 min old (started 01:46, the hotlink deploy) | no list entry, as expected: the list was 83/84 wiki bans, and a site ban lasts 10 min; fail2ban checked below |
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
-(task 07a), not matched to it. **No block-list entry is dated 10-08**, the
-first full day of live traffic: requirement 4 asks for fail2ban seen banning on
-it, and that has not been seen yet. If the next reading also adds nothing,
-`sudo fail2ban-client status` per jail on leopard (Brian) says whether the
-jails are matching anything.
+(task 07a), not matched to it.
+
+**fail2ban is matching and banning on leopard: checked 2026-10-09 ~17:45 UTC.**
+The block list's silence on 10-08 and 10-09 was not a fault, for two reasons:
+
+- **83 of its 84 entries are jaguar's `wiki-abuse` bans** (the other is
+  `sg101-auth`), matched against jaguar's `/var/log/fail2ban.log*`. Since 09-17,
+  jaguar's Cloudflare-actioned jails banned 124 times as `wiki-abuse`, once as
+  `sg101-auth` and never as `sg101-reg`; its `ssh` (416) and `postfix` (63)
+  jails ban locally. leopard has no wiki jail, so the list's feed is now the
+  two site jails, at about one ban in three weeks.
+- **An `sg101-auth` ban lasts 10 minutes** (`bantime = 10m`, jaguar's), and
+  the unban takes it off the list. A daily look at the list cannot see one.
+
+`sudo fail2ban-client status` per jail (Brian), counting since the server
+started at 10-08 10:01:58 UTC:
+
+| jail | total failed | total banned | currently banned |
+|---|---|---|---|
+| `sg101-auth` | 89 | 1 | 0 |
+| `sg101-reg` | 0 | 0 | 0 |
+| `sshd` | 426 | 231 | 231 |
+
+**The 89 is exact against `auth.log`**: 89 `Login`/`Register failure` lines
+since 10:01:58, from 45 addresses. Exactly one address reached `maxretry = 6`
+within `findtime`: six `Login` failures ending **10-09 14:31:06 UTC**, so it
+was banned then and unbanned about 14:41, before the 17:35 look at the list.
+**`sg101-reg` is 0 because there is no honeypot line to match**: `auth.log`
+holds 73 Turnstile refusals (`Please verify you aren't a robot`) and no
+`Honeypot filled`, so bots are stopped before the honeypot field is checked.
+**`sshd` bans locally** at 14 days.
+
+**The ban is in `/var/log/fail2ban.log`** (`sudo grep 14:3`, Brian):
+six `[sg101-auth] Found 192.0.2.9` lines from 14:30:31 to 14:31:06, then
+`NOTICE [sg101-auth] Ban 192.0.2.9` at 14:31:06.638, as `auth.log`
+predicted. **No `ERROR` line follows it** before 14:38:44, where the excerpt
+ends, so the Cloudflare add did not fail visibly. The log is otherwise all
+`sshd` traffic, with `sshd` bans at 14:37:07 and 14:37:13. **The unban is
+there too**: `NOTICE [sg101-auth] Unban 192.0.2.9` at 14:41:06.110,
+exactly `bantime` later (`sudo grep -E "14:4[0-3].*sg101-auth|ERROR"`, Brian).
+**The whole log holds no `ERROR` line**, so neither Cloudflare call failed.
+**Requirement 4's first half is met on live traffic:** a ban from a site jail,
+added to the list and taken off again. Its second half, the list's size stable
+rather than growing, is read at the start and end of the two weeks (criterion 3).
+It starts at 84, all but one of them `wiki-abuse` entries, which requirement 4a's
+`blocklist-clear days=14` removes at the end.
 
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
