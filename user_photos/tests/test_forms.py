@@ -4,12 +4,15 @@ Tests for the forms in the user_photos application.
 from contextlib import contextmanager
 
 from unittest import mock
+
+from PIL import UnidentifiedImageError
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from user_photos.forms import HotLinkImageForm
+from core.download import DownloadError, NotAccepted, TooLarge
+from user_photos.forms import HotLinkError, HotLinkImageForm
 
 
 @contextmanager
@@ -71,6 +74,77 @@ class HotLinkImageFormTestCase(TestCase):
         new_url = 'https://img.example.com/a.jpg'
         upload_mock.return_value = (new_url, None)
         result = form.save()
-        dl_mock.assert_called_once_with(url)
+        dl_mock.assert_called_once_with(url, timeout=10,
+                                        max_bytes=10 * 1024 * 1024,
+                                        accept='image/')
         self.assertEqual(result, new_url)
+
+
+@mock.patch('user_photos.forms.rate_limit_user')
+class HotLinkFailureTestCase(TestCase):
+    """What a member is told when a hot-link cannot work.
+
+    Measured from jaguar's logs before the cutover: 18 of 19 attempts failed,
+    nearly all of them a YouTube or shop page pasted where an image address
+    belongs, and every one reached the member as a server error.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('test_user', '', 'password')
+
+    def form(self, url='https://example.com/a.jpg'):
+        form = HotLinkImageForm({'url': url}, user=self.user)
+        self.assertTrue(form.is_valid(), form.errors)
+        return form
+
+    def test_youtube_links_are_refused_without_a_fetch(self, rate_limit_mock):
+        for url in ('https://youtu.be/irzp0W_LG5g?si=x',
+                    'https://www.youtube.com/watch?v=irzp0W_LG5g',
+                    'https://m.youtube.com/watch?v=irzp0W_LG5g',
+                    'https://youtube.com/shorts/abc'):
+            with self.subTest(url=url):
+                with mock.patch('user_photos.forms.download_file') as dl_mock:
+                    form = HotLinkImageForm({'url': url}, user=self.user)
+                    self.assertFalse(form.is_valid())
+                    self.assertIn('Video Attachments', str(form.errors))
+                    self.assertFalse(dl_mock.called)
+
+    @mock.patch('user_photos.forms.download_file')
+    def test_a_web_page_says_to_copy_the_image_address(self, dl_mock,
+                                                        rate_limit_mock):
+        dl_mock.side_effect = NotAccepted('text/html')
+        with self.assertRaisesMessage(HotLinkError, 'Copy Image Address'):
+            self.form().save()
+
+    @mock.patch('user_photos.forms.download_file')
+    def test_a_failed_fetch_says_so(self, dl_mock, rate_limit_mock):
+        dl_mock.side_effect = DownloadError('404')
+        with self.assertRaisesMessage(HotLinkError, "couldn't download"):
+            self.form().save()
+
+    @mock.patch('user_photos.forms.download_file')
+    def test_too_large_says_so(self, dl_mock, rate_limit_mock):
+        dl_mock.side_effect = TooLarge('big')
+        with self.assertRaisesMessage(HotLinkError, '10 MB'):
+            self.form().save()
+
+    @mock.patch('user_photos.forms.download_file', return_value='/tmp/x.jpg')
+    @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
+    @mock.patch('user_photos.forms.process_upload')
+    def test_an_unreadable_image_says_so(self, upload_mock, dl_mock,
+                                         rate_limit_mock):
+        upload_mock.side_effect = UnidentifiedImageError('cannot identify')
+        with self.assertRaises(HotLinkError) as raised:
+            self.form().save()
+        self.assertIn("isn't an image", str(raised.exception))
+        self.assertNotIn('/tmp', str(raised.exception))
+
+    @mock.patch('user_photos.forms.download_file', return_value='/tmp/x.jpg')
+    @mock.patch('user_photos.forms.remove_file', new=fake_remove_file)
+    @mock.patch('user_photos.forms.process_upload')
+    def test_an_unexpected_failure_is_not_disguised(self, upload_mock, dl_mock,
+                                                   rate_limit_mock):
+        upload_mock.side_effect = RuntimeError('S3 is down')
+        with self.assertRaises(RuntimeError):
+            self.form().save()
 

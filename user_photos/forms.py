@@ -3,10 +3,11 @@ import hashlib
 import os.path
 from urllib.parse import urlsplit
 
+from PIL import UnidentifiedImageError
 from django import forms
 from django.conf import settings
 
-from core.download import download_file
+from core.download import DownloadError, NotAccepted, TooLarge, download_file
 from core.functions import remove_file, TemporaryFile
 from core.images.upload import process_upload
 from core.services import get_redis_connection
@@ -104,6 +105,32 @@ class UploadForm(forms.Form):
         return md5.hexdigest()
 
 
+class HotLinkError(Exception):
+    """A hot-link that cannot work; the message is for the member."""
+
+
+# A slow or huge download holds one of the web workers for as long as it runs.
+HOTLINK_TIMEOUT = 10                     # seconds
+HOTLINK_MAX_BYTES = 10 * 1024 * 1024     # far above any photo; it is resized
+
+YOUTUBE_HOSTS = {'youtube.com', 'www.youtube.com', 'm.youtube.com',
+                 'music.youtube.com', 'youtu.be'}
+
+YOUTUBE_MESSAGE = (
+    "YouTube videos can't be added as images. In a forum post, add the video "
+    "under Video Attachments below the post box. Elsewhere, paste the "
+    "video's link into your text.")
+WEB_PAGE_MESSAGE = (
+    "That address isn't an image; it's probably a web page. Open the page, "
+    "right-click the picture, choose Copy Image Address, and paste that here.")
+FETCH_FAILED_MESSAGE = (
+    "We couldn't download an image from that address. Check that it opens "
+    "in your browser, then try again.")
+TOO_LARGE_MESSAGE = "That image is larger than 10 MB, which is our limit."
+UNREADABLE_MESSAGE = (
+    "That file isn't an image we can read. Try a JPEG, PNG or GIF.")
+
+
 class HotLinkImageForm(forms.Form):
     """Form for hot-linking images. If the supplied URL's host is on
     a white-list, return it as-is. Otherwise attempt to download the image at
@@ -121,6 +148,9 @@ class HotLinkImageForm(forms.Form):
         self.url_parts = urlsplit(the_url)
         if self.url_parts.scheme not in ['http', 'https']:
             raise forms.ValidationError("Invalid URL scheme")
+        # The commonest mistake by far, and one that needs no fetch to spot.
+        if self.url_parts.hostname in YOUTUBE_HOSTS:
+            raise forms.ValidationError(YOUTUBE_MESSAGE)
         return the_url
 
     def clean(self):
@@ -134,8 +164,20 @@ class HotLinkImageForm(forms.Form):
                 self.url_parts.hostname in settings.USER_IMAGES_SOURCES):
             return url
 
-        # Try to download the file
-        with remove_file(download_file(url)) as path:
-            url, _ = process_upload(self.user, path)
+        try:
+            path = download_file(url, timeout=HOTLINK_TIMEOUT,
+                                 max_bytes=HOTLINK_MAX_BYTES, accept='image/')
+        except NotAccepted:
+            raise HotLinkError(WEB_PAGE_MESSAGE)
+        except TooLarge:
+            raise HotLinkError(TOO_LARGE_MESSAGE)
+        except DownloadError:
+            raise HotLinkError(FETCH_FAILED_MESSAGE)
+
+        with remove_file(path):
+            try:
+                url, _ = process_upload(self.user, path)
+            except UnidentifiedImageError:
+                raise HotLinkError(UNREADABLE_MESSAGE)
 
         return url

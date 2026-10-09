@@ -91,6 +91,82 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
+## Site work — hotlink images (#5) and the image host list — DONE 2026-10-09, in the commit that adds this line
+
+**The feature failed 95% of the time, unreported.** jaguar's archived access
+logs (the 09-25 and 10-08 pulls, late July to the flip): **19 hotlink attempts,
+1 success, 18 returned 500.** Its `sg101.log` (June–September) shows why: of 30
+fetches, 14 were YouTube links and most of the rest product, Instagram, Facebook
+or Google pages, all page addresses rather than image addresses. One address
+made 5 attempts. **The forum pages never showed the server's message at
+all:** the markItUp editor's handler alerted `'Oops, there was an error: ' +`
+the HTTP status text, so every failure read "Internal Server Error".
+
+**Decided with Brian:**
+
+- **`USER_IMAGES_SOURCES` loses `dl.dropboxusercontent.com` and
+  `scontent-ord1-1.xx.fbcdn.net`.** Measured against every `<img>` in
+  `forums_post.html` (cutover dump): Dropbox 76 images, last 2016-02, 3 of 3
+  sampled answer 404; the Facebook host 8 images, last 2016-05, and
+  **NXDOMAIN**. Kept: `s3.amazonaws.com` (25,066), `s3-us-west-1` (21,705),
+  `surfguitar101.com` (4,670, all `/media/user_photos/`), and
+  `lh3.googleusercontent.com` (111, last 2024-08, 3 of 3 still load). Old
+  posts render as before; `image_check` runs only on save.
+- **#5 fixed as the issue suggested**, plus a **10 s timeout** (there was none:
+  a stalled server held a gunicorn worker) and a **10 MB cap** (the body
+  streamed to `/tmp` unbounded).
+- **SSRF** (the server fetches any URL a member gives it, internal ones
+  included): **filed as #30**, not in this change.
+- **Both clients show the server's message**, not the status text.
+
+**The change:**
+
+- `core/download.py`: `download_file()` raises `DownloadError`, or its
+  subclasses `NotAccepted` (with the content type) and `TooLarge`. It never
+  returns `None`, so the `os.remove(None)` path is gone. It takes `accept`
+  and `max_bytes`, refuses a declared oversize body before reading it, stops
+  a streamed one at the cap, and leaves nothing on disk when it raises.
+- `user_photos/forms.py`: YouTube hosts are refused in `clean_url` with no
+  fetch, and the message points forum posters to Video Attachments. `save()`
+  maps each failure to `HotLinkError` with a plain message: probably a web
+  page (copy the image address), couldn't download, over 10 MB, unreadable.
+- `user_photos/views.py`: `HotLinkError` → 400 with its message; anything else →
+  `logger.exception` and a 500 with a generic message, not the exception text,
+  which once named a server temp path. **Form errors are now collected as the
+  plain strings:** `as_text()` had HTML-escaped the apostrophes and added
+  `* `, which the clients would show verbatim. That was found in the real-fetch
+  check below, and it also stopped non-field errors appearing twice.
+- `static/js/markitup/sets/markdown/set.js` (forum pages) and
+  `sg101/static/js/v3/post_box.js`: show `error_msg`, falling back to the
+  status text if the body isn't JSON; v3 uses `.text()`, not `.html()`. The
+  forum editor's **photo upload** handler at line 177 has the same
+  status-text-only alert and is unchanged.
+- `static/css/base.css`: the hotlink box on the older pages (the forum forms)
+  fills its form's width. Blueprint styles `type=text` but not `type=url`, so
+  it was left at the browser's default of about 20 characters. v3 pages do not
+  load `base.css`.
+
+**Tests:** `core/tests/test_download.py` rewritten around a fake response and
+real temp files (11), plus new form (6), view (2) and `image_check` host (2)
+tests, each seen to fail first. Exception classes were added on their own
+first, so each test failed on its behaviour, not on an import. **Mutation
+battery, 15, all caught**, after one test was strengthened (the declared-size
+refusal was also caught by the streaming cap, so it now asserts the body was
+never read) and one mutation was redone because it did not reproduce its
+fault. Suite **1430 OK**, and the deprecation gate, run separately, **1430 OK**.
+
+**Real fetches on the dev stack**, through the view as a member: a YouTube
+link → 400 with the video hint; `www.python.org/` (HTML, 200) → 400 with the
+copy-the-image-address message; Guitar Center and Fender → 400 "couldn't
+download" (both refuse the server's request); a 404 image → the same; a real
+PNG → 200, image and thumbnail stored, no temp file left. An unexpected
+failure (a missing media directory, hit by accident) → 500, the generic
+message, and a full traceback in the log.
+
+**In a browser on the dev stack (Brian, 2026-10-09):** a YouTube link and a web
+page in a forum reply, and a web page in the v3 Compose editor, each showed its
+message as plain text; a real image added its code to the post box.
+
 ## Step 21 follow-up — email_smoke's faults — DONE 2026-10-09, in the commit that adds this line; not yet pulled on leopard
 
 The four faults D3's first live run showed in `tools/email_smoke.py` (task 09,

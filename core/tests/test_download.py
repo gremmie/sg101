@@ -1,190 +1,128 @@
+"""
+Tests for core.download.download_file.
+
+requests.get is replaced by a fake response; everything after it -- the temp
+file, the size counting, the cleanup -- runs for real against a temporary
+directory, because those are the parts that went wrong.
+"""
+import os
+import shutil
+import tempfile
 import unittest
-from urllib.parse import urlparse, ParseResult
+from unittest.mock import patch
 
-from unittest.mock import call, patch, mock_open, Mock
+import requests
 
-from core.download import download_file
+from core.download import DownloadError, NotAccepted, TooLarge, download_file
+
+
+class FakeResponse:
+    def __init__(self, status_code=200, content=b'', content_type='image/jpeg',
+                 content_length=None):
+        self.status_code = status_code
+        self.content = content
+        self.headers = {}
+        if content_type:
+            self.headers['content-type'] = content_type
+        if content_length is not None:
+            self.headers['content-length'] = str(content_length)
+        self.closed = False
+        self.read = False
+
+    def iter_content(self, chunk_size=1):
+        self.read = True
+        for start in range(0, len(self.content), chunk_size):
+            yield self.content[start:start + chunk_size]
+
+    def close(self):
+        self.closed = True
 
 
 class DownloadFileTestCase(unittest.TestCase):
-    """Unit tests for the download_file function."""
 
-    # Patch only requests.get, not the whole requests module: patching the module
-    # would turn requests.RequestException into a Mock, and `except
-    # requests.RequestException` can't catch a non-exception on Python 3.
-    @patch('core.download.requests.get')
-    def test_get_throws_exception(self, get_mock):
-        get_mock.side_effect = RuntimeError('ope')
-        r = None
-        try:
-            r = download_file('url', path='path', timeout=5.0)
-        except RuntimeError:
-            pass
-        except Exception as e:
-            self.fail('Unexpected exception {}'.format(e))
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir)
+        # Temporary files the function makes for itself land here too, so a
+        # test can see whether one was left behind.
+        patcher = patch('core.download.tempfile.tempdir', self.dir)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
-        self.assertIsNone(r)
-        self.assertEqual(get_mock.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-        ])
+    def leftovers(self):
+        return os.listdir(self.dir)
 
-    @patch('core.download.requests')
-    def test_get_returns_non_success(self, requests_mock):
-        response_mock = Mock()
-        response_mock.status_code = 404
-        requests_mock.get.return_value = response_mock
-        r = download_file('url', path='path', timeout=5.0)
+    def get(self, response):
+        return patch('core.download.requests.get', return_value=response)
 
-        self.assertIsNone(r)
-        self.assertEqual(requests_mock.get.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-        ])
+    def test_an_image_is_saved_and_its_path_returned(self):
+        with self.get(FakeResponse(content=b'JPEGDATA')) as get:
+            path = download_file('https://example.com/a.jpg', timeout=5,
+                                 accept='image/')
+        with open(path, 'rb') as fp:
+            self.assertEqual(fp.read(), b'JPEGDATA')
+        self.assertTrue(path.endswith('.jpg'))
+        get.assert_called_once_with('https://example.com/a.jpg', stream=True,
+                                    timeout=5)
 
-    @patch('core.download.os.stat')
-    @patch('core.download.shutil.copyfileobj')
-    @patch('core.download.requests')
-    def test_happy_path_with_path_argument(self, requests_mock, copy_mock,
-                                           stat_mock):
-        response_mock = Mock()
-        response_mock.status_code = 200
-        requests_mock.get.return_value = response_mock
+    def test_a_given_path_is_used(self):
+        target = os.path.join(self.dir, 'given.png')
+        with self.get(FakeResponse(content=b'PNG', content_type='image/png')):
+            self.assertEqual(download_file('https://example.com/x', target),
+                             target)
 
-        stat_mock.st_size = 512
+    def test_no_content_type_takes_the_suffix_from_the_url(self):
+        with self.get(FakeResponse(content=b'GIF', content_type=None)):
+            path = download_file('https://example.com/pic.gif')
+        self.assertTrue(path.endswith('.gif'))
 
-        open_mock = mock_open()
-        with patch('builtins.open', open_mock):
-            r = download_file('url', path='path', timeout=5.0)
+    def test_a_non_200_raises(self):
+        with self.get(FakeResponse(status_code=404)):
+            with self.assertRaises(DownloadError):
+                download_file('https://example.com/gone.jpg')
+        self.assertEqual(self.leftovers(), [])
 
-        self.assertEqual(r, 'path')
-        self.assertEqual(requests_mock.get.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-        ])
-        self.assertTrue(response_mock.raw.decode_content)
-        self.assertEqual(copy_mock.mock_calls, [
-            call(response_mock.raw, open_mock.return_value),
-        ])
+    def test_a_request_failure_raises_a_download_error(self):
+        with patch('core.download.requests.get',
+                   side_effect=requests.ConnectTimeout('slow')):
+            with self.assertRaises(DownloadError):
+                download_file('https://example.com/a.jpg', timeout=5)
 
-    @patch('core.download.os.remove')
-    @patch('core.download.shutil.copyfileobj')
-    @patch('core.download.requests')
-    def test_copyfileobj_raises(self, requests_mock, copy_mock, remove_mock):
-        response_mock = Mock()
-        response_mock.status_code = 200
-        requests_mock.get.return_value = response_mock
+    def test_a_web_page_is_refused_before_anything_is_saved(self):
+        response = FakeResponse(content=b'<html>', content_type='text/html; charset=utf-8')
+        with self.get(response):
+            with self.assertRaises(NotAccepted) as raised:
+                download_file('https://youtu.be/x', accept='image/')
+        self.assertEqual(raised.exception.content_type, 'text/html')
+        self.assertEqual(self.leftovers(), [])
+        self.assertTrue(response.closed)
 
-        copy_mock.side_effect = IOError
+    def test_a_missing_content_type_is_refused_when_one_is_required(self):
+        with self.get(FakeResponse(content=b'?', content_type=None)):
+            with self.assertRaises(NotAccepted):
+                download_file('https://example.com/a', accept='image/')
 
-        open_mock = mock_open()
-        with patch('builtins.open', open_mock):
-            try:
-                download_file('url', path='path', timeout=5.0)
-            except IOError:
-                pass
-            else:
-                self.fail('Should have thrown')
+    def test_a_declared_size_over_the_cap_is_refused_before_reading(self):
+        response = FakeResponse(content=b'x' * 100, content_length=100)
+        with self.get(response):
+            with self.assertRaises(TooLarge):
+                download_file('https://example.com/big.jpg', max_bytes=10)
+        self.assertEqual(self.leftovers(), [])
+        self.assertFalse(response.read)
 
-        self.assertEqual(requests_mock.get.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-        ])
-        self.assertTrue(response_mock.raw.decode_content)
-        self.assertEqual(copy_mock.mock_calls, [
-            call(response_mock.raw, open_mock.return_value),
-        ])
-        self.assertEqual(remove_mock.mock_calls, [
-            call('path'),
-        ])
+    def test_an_undeclared_size_over_the_cap_is_stopped_and_removed(self):
+        response = FakeResponse(content=b'x' * 100)
+        with self.get(response):
+            with self.assertRaises(TooLarge):
+                download_file('https://example.com/big.jpg', max_bytes=10)
+        self.assertEqual(self.leftovers(), [])
 
+    def test_a_size_at_the_cap_is_accepted(self):
+        with self.get(FakeResponse(content=b'x' * 10)):
+            path = download_file('https://example.com/a.jpg', max_bytes=10)
+        self.assertEqual(os.path.getsize(path), 10)
 
-    @patch('core.download.os')
-    @patch('core.download.tempfile')
-    @patch('core.download.mimetypes')
-    @patch('core.download.os.remove')
-    @patch('core.download.shutil.copyfileobj')
-    @patch('core.download.requests')
-    def test_happy_path_with_suffix(self, requests_mock, copy_mock, remove_mock,
-                                    mime_mock, tempfile_mock, os_mock):
-        response_mock = Mock()
-        response_mock.status_code = 200
-        requests_mock.get.return_value = response_mock
-
-        response_mock.headers.get.return_value = 'image/jpeg'
-        mime_mock.guess_extension.return_value = '.jpe'
-        fd_mock = Mock()
-        tempfile_mock.mkstemp.return_value = (fd_mock, 'temp-path')
-
-        open_mock = mock_open()
-        with patch('builtins.open', open_mock):
-            download_file('url', timeout=5.0)
-
-        self.assertEqual(requests_mock.get.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-            call().headers.get('content-type'),
-        ])
-        self.assertEqual(response_mock.headers.get.mock_calls, [
-            call('content-type'),
-        ])
-        self.assertEqual(mime_mock.guess_extension.mock_calls, [
-            call('image/jpeg'),
-        ])
-        self.assertEqual(tempfile_mock.mkstemp.mock_calls, [
-            call(suffix='.jpg'),
-        ])
-        self.assertEqual(os_mock.close.mock_calls, [
-            call(fd_mock),
-        ])
-        self.assertTrue(response_mock.raw.decode_content)
-        self.assertEqual(copy_mock.mock_calls, [
-            call(response_mock.raw, open_mock.return_value),
-        ])
-
-
-    @patch('core.download.urlparse')
-    @patch('core.download.os')
-    @patch('core.download.tempfile')
-    @patch('core.download.mimetypes')
-    @patch('core.download.os.remove')
-    @patch('core.download.shutil.copyfileobj')
-    @patch('core.download.requests')
-    def test_happy_path_with_no_suffix(self, requests_mock, copy_mock,
-                                       remove_mock, mime_mock, tempfile_mock,
-                                       os_mock, urlparse_mock):
-        response_mock = Mock()
-        response_mock.status_code = 200
-        requests_mock.get.return_value = response_mock
-
-        response_mock.headers.get.return_value = None
-        urlparse_mock.return_value = ParseResult(
-                scheme='https', netloc='www.example.com', path='/something.txt',
-                params='', query='', fragment='')
-        os_mock.path.splitext.return_value = ('/something', '.txt')
-        fd_mock = Mock()
-        tempfile_mock.mkstemp.return_value = (fd_mock, 'temp-path')
-
-        open_mock = mock_open()
-        with patch('builtins.open', open_mock):
-            download_file('url', timeout=5.0)
-
-        self.assertEqual(requests_mock.get.mock_calls, [
-            call('url', stream=True, timeout=5.0),
-            call().headers.get('content-type'),
-        ])
-        self.assertEqual(response_mock.headers.get.mock_calls, [
-            call('content-type'),
-        ])
-        self.assertEqual(urlparse_mock.mock_calls, [
-            call('url'),
-        ])
-        self.assertEqual(mime_mock.guess_extension.mock_calls, [])
-        self.assertEqual(os_mock.path.splitext.mock_calls, [
-            call('/something.txt'),
-        ])
-        self.assertEqual(tempfile_mock.mkstemp.mock_calls, [
-            call(suffix='.txt'),
-        ])
-        self.assertEqual(os_mock.close.mock_calls, [
-            call(fd_mock),
-        ])
-        self.assertTrue(response_mock.raw.decode_content)
-        self.assertEqual(copy_mock.mock_calls, [
-            call(response_mock.raw, open_mock.return_value),
-        ])
+    def test_a_not_accepted_and_a_too_large_are_both_download_errors(self):
+        # One except clause in the caller covers every way a fetch can fail.
+        self.assertTrue(issubclass(NotAccepted, DownloadError))
+        self.assertTrue(issubclass(TooLarge, DownloadError))

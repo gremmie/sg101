@@ -1,5 +1,6 @@
 """Views for the user_photos application."""
 import json
+import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,9 +15,12 @@ from django.utils.decorators import method_decorator
 from django.contrib import messages
 
 from core.functions import is_ajax
-from user_photos.forms import HotLinkImageForm, UploadForm
+from user_photos.forms import HotLinkError, HotLinkImageForm, UploadForm
 from user_photos.models import Photo
 from user_photos.storage import delete_photos
+
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -227,17 +231,21 @@ def hotlink_image(request):
             try:
                 ret['url'] = form.save()
                 status_code = 200
-            except Exception as ex:
+            except HotLinkError as ex:
                 ret['error_msg'] = str(ex)
+            except Exception:
+                logger.exception("hotlink_image failed for %s",
+                                 request.POST.get('url'))
+                ret['error_msg'] = ("Sorry, something went wrong on our end "
+                                    "and the image couldn't be added. Please "
+                                    "try again later.")
                 status_code = 500
         else:
-            # gather form error messages
-            errors = []
-            non_field_errors = form.non_field_errors().as_text()
-            if non_field_errors:
-                errors.append(non_field_errors)
-            for field_errors in form.errors.values():
-                errors.append(field_errors.as_text())
+            # The messages themselves: the clients show this as text, so
+            # as_text()'s escaping and bullets would reach the member verbatim.
+            # form.errors holds the non-field errors too.
+            errors = [message for field_errors in form.errors.values()
+                      for message in field_errors]
             ret['error_msg'] = '\n'.join(errors)
     else:
         ret['error_msg'] = 'Image linking is temporarily disabled'

@@ -418,10 +418,8 @@ USER_PHOTOS_RATE_LIMIT = (50, 86400)   # number / seconds
 #                               go. This is the one that gets written to, by
 #                               the USER_PHOTOS_* settings above.
 USER_IMAGES_SOURCES = [
-    'dl.dropboxusercontent.com',
     's3.amazonaws.com',
     's3-us-west-1.amazonaws.com',
-    'scontent-ord1-1.xx.fbcdn.net',
     'lh3.googleusercontent.com',
     'surfguitar101.com',
 ]

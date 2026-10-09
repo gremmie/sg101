@@ -155,8 +155,13 @@ $(document).ready(function() {
          },
          error: function(xhr, textStatus, ex) {
             $hotLinkStatus.removeClass('success').addClass('alert');
-            var resp = $.parseJSON(xhr.responseText);
-            $hotLinkStatus.html("Error: " + ex + ' - ' + resp.error_msg);
+            var message = ex;
+            try {
+               message = $.parseJSON(xhr.responseText).error_msg || ex;
+            } catch (e) {
+               // not JSON, e.g. a proxy's error page; the status text will do
+            }
+            $hotLinkStatus.text(message);
             $hotLinkStatus.fadeIn(700);
          }
       });

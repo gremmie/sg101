@@ -79,6 +79,32 @@ class ImageCheckTestCase(unittest.TestCase):
         self.assertTrue(result)
 
 
+class ImageSourcesTestCase(unittest.TestCase):
+    """The hosts member content may show images from, with no list passed in.
+
+    Reviewed 2026-10-09 against every image in the forum posts: Dropbox's
+    direct links were last used in 2016 and the sampled ones answer 404, and
+    the Facebook CDN host no longer resolves. Removing them leaves old posts
+    rendering as before -- the check runs only when content is saved.
+    """
+
+    def check(self, host):
+        return image_check('<img src="https://%s/a.jpg">' % host)
+
+    def test_the_kept_hosts_are_accepted(self):
+        for host in ('s3.amazonaws.com', 's3-us-west-1.amazonaws.com',
+                     'surfguitar101.com', 'lh3.googleusercontent.com'):
+            with self.subTest(host=host):
+                self.assertTrue(self.check(host))
+
+    def test_the_retired_hosts_are_refused(self):
+        for host in ('dl.dropboxusercontent.com',
+                     'scontent-ord1-1.xx.fbcdn.net'):
+            with self.subTest(host=host):
+                with self.assertRaises(ImageCheckError):
+                    self.check(host)
+
+
 class CleanHtmlTestCase(unittest.TestCase):
     def test_all_whitespace(self):
         text = '  \t   \n  '

@@ -208,7 +208,13 @@ $(document).ready(function() {
             $hotLinkFormSubmit.removeAttr('disabled').val('Hot Link');
          },
          error: function(xhr, textStatus, ex) {
-            alert('Oops, there was an error: ' + ex);
+            var message = ex;
+            try {
+               message = $.parseJSON(xhr.responseText).error_msg || ex;
+            } catch (e) {
+               // not JSON, e.g. a proxy's error page; the status text will do
+            }
+            alert(message);
          }
       });
    }

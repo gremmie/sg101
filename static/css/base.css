@@ -473,6 +473,16 @@ input.search {
    padding: 5px;
 }
 
+/* Blueprint styles type=text, not type=url, so this was left at the browser's
+   default width: too narrow for most image addresses. */
+#hot-link-form input[type=url] {
+   width: 100%;
+   box-sizing: border-box;
+   margin: 0.5em 0;
+   padding: 5px;
+   border: 1px solid #bbb;
+}
+
 ul.logo-block {
    margin: 1.5em 3em 1.5em 3em;
    background-color: white;
