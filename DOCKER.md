@@ -102,9 +102,10 @@ The ~460k-post dump takes a minute or two. It loads cleanly because the `db`
 service runs with 5.5-style `sql_mode=` (empty) — MySQL 5.7's default strict mode
 would otherwise reject the old `0000-00-00` dates in the dump.
 
-Now **convert it to PostgreSQL** — section 7. Then reload
-http://localhost:8000 and you should see real forum/news content; log in with a
-known account from the snapshot.
+Now **convert it to PostgreSQL** — section 7, then
+`docker compose exec web python manage.py rebuild_redis --noinput` (section 8
+says why). Then reload http://localhost:8000 and you should see real forum/news
+content; log in with a known account from the snapshot.
 
 ## 5. Run the test suite
 
@@ -393,9 +394,23 @@ rebuild you can just run.
 
 ```bash
 tools/pg_snapshot.sh restore sg101-20260805-191413-pre-task-06.dump
+docker compose exec web python manage.py rebuild_redis --noinput   # ~3 s
 docker compose exec web python manage.py reindex_search     # ~1m35s
 docker compose exec web python manage.py reconcile_search   # expect "clean"
 ```
+
+**Redis is not part of the database, and a restore leaves it describing the old
+one.** The forum feeds, the home page's recent topics, the post, topic and user
+counts and the newest members are kept in Redis, keyed by post, topic and user
+IDs, and the restored database reuses those IDs for different rows: the home
+page then shows old content under links that lead to real posts. The Django
+cache, which holds sessions and the public forum list, is stale the same way.
+`rebuild_redis` clears the cache and rebuilds that state from the database, then
+checks it, and fails naming each difference if they disagree; `--check` runs the
+check alone and changes nothing. It leaves who's online, the upload rate limiter
+and the Celery broker alone. Outside a restore, `make manage cmd="rebuild_redis
+--check"` checks the development stack, and `make prod-manage
+cmd="rebuild_redis --check"` checks production.
 
 This replaces the database, so it asks you to type its name first. It stops
 `web`/`worker`/`beat` before restoring — they hold connections, and those
@@ -731,6 +746,7 @@ admin aws s3 cp "s3://$DUMPS_BUCKET/sg101-<time>.dump" - |
     dcp exec -T postgres sh -c \
     'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges'
 dcp start web worker beat
+dcp exec web python manage.py rebuild_redis --noinput   # section 8
 dcp exec web python manage.py reindex_search     # the dump has no index rows
 dcp exec web python manage.py reconcile_search   # should report no drift
 rm var/maintenance/on

@@ -228,20 +228,9 @@ def _update_latest_topics(conn, post):
     There is a template tag and forum view that uses this information.
 
     """
-    # serialize topic attributes
     topic_id = post.topic.id
-    # timestamp(), not time.mktime(timetuple()): timetuple() discards the
-    # offset and mktime() reads the remainder as container-local time, so the
-    # score was only ever right when the container's clock happened to agree
-    # with TIME_ZONE. _deserialize_topic_date() is the other half of this.
-    topic_score = int(post.creation_date.timestamp())
-
-    topic_content = {
-        'title': post.topic.name,
-        'author': post.user.username,
-        'date': topic_score,
-        'url': post.topic.get_latest_post_url()
-    }
+    topic_content = _topic_content(post)
+    topic_score = topic_content['date']
     topic_json = json.dumps(topic_content)
     key = UPDATED_TOPIC_KEY % topic_id
 
@@ -265,6 +254,182 @@ def _update_latest_topics(conn, post):
 
         # now delete the oldest num_to_del topics
         conn.zremrangebyrank(UPDATED_TOPICS_SET_KEY, start, stop)
+
+
+def _topic_content(post):
+    """The updated-topic entry for a topic whose newest post is `post`."""
+    # timestamp(), not time.mktime(timetuple()): timetuple() discards the
+    # offset and mktime() reads the remainder as container-local time, so the
+    # score was only ever right when the container's clock happened to agree
+    # with TIME_ZONE. _deserialize_topic_date() is the other half of this.
+    return {
+        'title': post.topic.name,
+        'author': post.user.username,
+        'date': int(post.creation_date.timestamp()),
+        'url': post.topic.get_latest_post_url()
+    }
+
+
+def rebuild(conn):
+    """
+    Replaces everything this module keeps in Redis with what the database says
+    it should be: the feeds, the posts they hold, the updated topics and the
+    counts. For use after a database restore, which leaves Redis describing the
+    old database under IDs the restored one reuses.
+
+    The feeds and topics are replayed oldest first through the same functions
+    that maintain them on a live site, so they come out exactly as live
+    processing would have left them.
+
+    """
+    public_forums = _public_forum_ids()
+
+    keys = list(conn.scan_iter('forums:*'))
+    if keys:
+        conn.delete(*keys)
+
+    feeds = _expected_feeds(public_forums)
+    post_ids = set().union(*feeds.values())
+    posts = Post.objects.filter(id__in=post_ids).select_related(
+            'topic', 'topic__forum', 'user').order_by('creation_date', 'id')
+    for post in posts:
+        _update_post_feeds(conn, post)
+
+    for post in reversed(_expected_topic_posts(public_forums)):
+        _update_latest_topics(conn, post)
+
+    post_count, topic_count = _expected_counts(public_forums)
+    conn.set(POST_COUNT_KEY, post_count)
+    conn.set(TOPIC_COUNT_KEY, topic_count)
+
+
+def verify(conn):
+    """
+    Compares what this module keeps in Redis with the database, and returns a
+    list of the differences found, as messages. An empty list means they agree.
+    Nothing is written.
+
+    """
+    public_forums = _public_forum_ids()
+    problems = []
+
+    # The feeds: exactly the expected lists, and no others.
+    feeds = _expected_feeds(public_forums)
+    held_keys = {key for key in conn.scan_iter(FORUM_RSS_KEY % '*')}
+    held_keys.add(ALL_FORUMS_RSS_KEY)
+    for key in sorted(held_keys | set(feeds)):
+        expected = feeds.get(key, [])
+        actual = [int(n) for n in conn.lrange(key, 0, -1)]
+        if actual != expected:
+            problems.append(_describe_list(key, actual, expected))
+
+    # The posts the feeds hold: present, current, and counted once per list.
+    references = {}
+    for ids in feeds.values():
+        for post_id in ids:
+            references[post_id] = references.get(post_id, 0) + 1
+
+    cached_ids = {int(key.rsplit(':', 1)[1])
+                  for key in conn.scan_iter(POST_KEY % '*')}
+    if cached_ids != set(references):
+        problems.append("post keys: %d not in any feed, %d missing" % (
+            len(cached_ids - set(references)),
+            len(set(references) - cached_ids)))
+
+    refcounts = {int(member): score for member, score in
+                 conn.zrange(POST_SET_KEY, 0, -1, withscores=True)}
+    if refcounts != references:
+        wrong = sorted(set(refcounts) ^ set(references) |
+                       {n for n in refcounts.keys() & references.keys()
+                        if refcounts[n] != references[n]})
+        problems.append("%s: %d post(s) counted wrongly, e.g. %s" % (
+            POST_SET_KEY, len(wrong), wrong[:5]))
+
+    posts = Post.objects.filter(id__in=references).select_related(
+            'topic', 'topic__forum', 'user')
+    stale = [POST_KEY % post.id for post in posts
+             if conn.get(POST_KEY % post.id) != _serialize_post(post)]
+    if stale:
+        problems.append("%d cached post(s) are not the post as it is now, "
+                        "e.g. %s" % (len(stale), ', '.join(stale[:5])))
+
+    # The updated topics: the most recently active, newest first.
+    topic_posts = _expected_topic_posts(public_forums)
+    expected = [post.topic.id for post in topic_posts]
+    actual = [int(n) for n in conn.zrevrange(UPDATED_TOPICS_SET_KEY, 0, -1)]
+    if actual != expected:
+        problems.append(_describe_list(UPDATED_TOPICS_SET_KEY, actual,
+                                       expected))
+    for post in topic_posts:
+        key = UPDATED_TOPIC_KEY % post.topic.id
+        topic_json = conn.get(key)
+        if topic_json is None or json.loads(topic_json) != _topic_content(post):
+            problems.append("%s is not the topic as it is now" % key)
+
+    post_count, topic_count = _expected_counts(public_forums)
+    for key, expected in ((POST_COUNT_KEY, post_count),
+                          (TOPIC_COUNT_KEY, topic_count)):
+        actual = conn.get(key)
+        if actual is None or int(actual) != expected:
+            problems.append("%s is %s, expected %d" % (key, actual, expected))
+
+    return problems
+
+
+def _describe_list(key, actual, expected):
+    """One line saying how a list of IDs in Redis differs from the expected one."""
+    for n, (held, wanted) in enumerate(zip(actual, expected)):
+        if held != wanted:
+            break
+    else:
+        n = min(len(actual), len(expected))
+    held = actual[n] if n < len(actual) else None
+    wanted = expected[n] if n < len(expected) else None
+    return "%s holds %d ID(s), expected %d; first difference at position " \
+           "%d: %s, expected %s" % (key, len(actual), len(expected), n, held,
+                                    wanted)
+
+
+def _public_forum_ids():
+    # Not Forum.objects.public_forum_ids(): that reads the cache, which after a
+    # restore may still describe the old database.
+    return list(Forum.objects.filter(
+        category__groups__isnull=True).values_list('id', flat=True))
+
+
+def _expected_feeds(public_forums):
+    """
+    The feeds the database implies, as a dict of Redis key to post IDs, newest
+    first. A forum with no posts has no feed.
+
+    """
+    posts = Post.objects.order_by('-creation_date', '-id')
+    feeds = {
+        ALL_FORUMS_RSS_KEY: list(posts.filter(
+            topic__forum__in=public_forums).values_list(
+                'id', flat=True)[:MAX_POSTS]),
+    }
+    for forum_id in public_forums:
+        ids = list(posts.filter(topic__forum=forum_id).values_list(
+                'id', flat=True)[:MAX_POSTS])
+        if ids:
+            feeds[FORUM_RSS_KEY % forum_id] = ids
+    return feeds
+
+
+def _expected_topic_posts(public_forums):
+    """The newest post of each of the most recently active topics, newest first."""
+    topics = Topic.objects.filter(
+            forum__in=public_forums, last_post__isnull=False).select_related(
+            'last_post', 'last_post__user', 'last_post__topic').order_by(
+            '-last_post__creation_date', '-last_post__id')
+    return [topic.last_post for topic in topics[:MAX_UPDATED_TOPICS]]
+
+
+def _expected_counts(public_forums):
+    """The public post and topic counts, in that order."""
+    return (Post.objects.filter(topic__forum__in=public_forums).count(),
+            Topic.objects.filter(forum__in=public_forums).count())
 
 
 def get_latest_posts(num_posts=MAX_POSTS, forum_id=None):

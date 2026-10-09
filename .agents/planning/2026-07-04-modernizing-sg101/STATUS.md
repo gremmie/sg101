@@ -43,6 +43,61 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 follow-up — the Redis rebuild after a restore — DONE 2026-10-08, in the commit that adds this line; not yet deployed to leopard
+
+**`manage.py rebuild_redis`**, the hand rebuild of 2026-10-08 (task 09, S3) made
+a command, with a check. Decided with Brian at the planning checkpoint, each on
+the recommendation:
+
+- **db 0:** `forums:*` and `accounts:*` rebuilt; `banners:url:*` and
+  `core:stats` deleted, since both refill from the database on next use;
+  `whos_online:*` and `user_photos:counts:*` left, being live state rather than
+  derived. db 1, the Celery broker, untouched.
+- **db 2:** the whole Django cache cleared (`cache.clear()`, which is `FLUSHDB`
+  on the cache's database, read from Django's source), **first**, because
+  `Forum.objects.public_forum_ids()` is cached there. The rebuild and the check
+  query the public forums directly rather than trust it.
+- **`--check`** runs the comparison alone and changes nothing; a rebuild always
+  ends with it. Either fails, naming each difference in one line.
+- **A prompt**, skipped by `--noinput`, as `flush` does.
+
+**The code:** `rebuild()` and `verify()` in `forums/latest.py` and
+`accounts/stats.py`, beside the keys they own; `forums/management/commands/
+rebuild_redis.py` is the thin command. Feeds and topics are replayed oldest
+first through `_update_post_feeds()` and `_update_latest_topics()`, as the hand
+rebuild did, so they come out as live processing leaves them. The updated-topic
+entry moved into `_topic_content()` so the check compares the same dictionary;
+the newest-members length is now `MAX_NEW_USERS`. "Newest" is by
+`creation_date`, ID as the tie-break; **on the cutover dump, ID order and date
+order agree for the newest 500 posts**, so the choice matters for correctness,
+not in practice.
+
+**Tests:** `forums/tests/test_rebuild_redis.py`, 29, against the real test
+Redis (db 14), the caps patched to 3. Written first and seen to fail (24 of 26
+at first; the other two passed only because an unknown command also raises
+`CommandError`, and were tightened to the message). **Mutation battery, 23
+mutations, all caught** after two fixes it forced: sorting by ID survived until
+the backdating test also ran the check, and three `verify()` checks no test
+exercised (reference counts, stray post keys, a stale cached forum list) got
+tests. One mutation was discarded and redone because it did not reproduce its
+fault (it appended `None` rather than removing the check). Suite **1405 OK**,
+and the deprecation gate, run separately, **1405 OK**.
+
+**On real data** (the dev stack, holding the cutover dump): `--check` on empty
+forum state failed as it should; the rebuild took **3.2 s** (8.7 s by hand);
+`--check` then passed in 2.1 s. 750 cached posts and reference counts, 50
+topics, 10 newest members; counts 445,342 posts, 35,344 topics, 15,302 users,
+against production's 445,354 / 35,345 / 15,303 at the hand rebuild, the
+difference being the live site's hours after the freeze. Four corruptions made
+by hand in dev Redis were each named by `--check`.
+
+**Documented:** DOCKER.md §8 (why, and the step after a snapshot restore), §10
+(after replacing the live database, before maintenance mode comes off), §4 (after
+loading a production snapshot); the runbook's C4b says it was missing from the
+10-07 window and points at DOCKER.md. **Not yet run on leopard**: production's
+state was rebuilt by hand and has not been restored since, so `--check` there is
+the first use whenever it is deployed.
+
 ## Step 21 task 09 — the cutover — DONE 2026-10-08: frozen 2026-10-07 ~14:00 CDT, flipped ~14:43; S3 steps 27–31 done, the rollback window closed 2026-10-08 ~14:43 CDT with no rollback; step 32 is task 10
 
 **surfguitar101.com is served by leopard.** T0 (C0) at about 14:00 CDT, the
@@ -246,8 +301,8 @@ parts passed on it.
   left Redis holding state keyed by IDs the new database reuses. Any future
   restore over a running site meets the same thing. It needs the forum and
   account keys in db 0 rebuilt (the procedure above) and db 2's session cache
-  cleared, or the restore runbook to say so. Not yet written into DOCKER.md §8
-  or the runbook.
+  cleared, or the restore runbook to say so. **Closed by `rebuild_redis`**,
+  below this task (§ *the Redis rebuild after a restore*).
 - **`apt upgrade` on leopard, 2026-10-07 20:02 UTC (Brian), an hour after the
   flip:** `sudo`, `libfreetype6`, `sg3-utils`, `sg3-utils-udev`,
   `libsgutils2-1.48`. No Docker package, so the daemon and the containers did
@@ -294,9 +349,8 @@ parts passed on it.
   confirmed past it at 17:26). From here, fix forward. jaguar stays frozen
   (`OFFLINE = True`) and warm (D2) through task 10, and D4's bounce check and
   A4's daily DMARC readings carry on under it.
-- **Carried out of this task, still open: the Redis-on-restore gap** above.
-  The follow-up is a `rebuild_redis` management command doing what was done by
-  hand, and a line in DOCKER.md §8 and the runbook to run it after any restore.
+- **Carried out of this task: the Redis-on-restore gap** above, closed by
+  `rebuild_redis` (§ *the Redis rebuild after a restore*, next).
 
 ### S1 (T−1) — DONE 2026-10-06: A1, A2, B4/B4a/B8, step 8 and the walk-through
 

@@ -1051,6 +1051,14 @@ watch the worker log for `reindex_document ... succeeded`. This applies to any
 deploy, not only this one.
 *Source: task 06's browser session, Brian spotted it in the worker log.*
 
+### C4b. `rebuild_redis` — missing from the 2026-10-07 window, added after
+C1 replaced the database and left Redis as the beta wrote it, so the home page
+showed beta posts under IDs real posts had since taken; it was rebuilt by hand
+on 2026-10-08 (`STATUS.md` § Step 21 task 09, S3). **For any later restore:**
+after the restore and before maintenance mode comes off,
+`run --rm web python manage.py rebuild_redis --noinput`, which must end
+"Redis matches the database". The procedure lives in DOCKER.md §8 and §10.
+
 ### C5. Final media delta, then the DNS flip
 **Before the flip, run `tools/prod_smoke.sh` on the VM, in its checkout, with no
 argument.** It makes every request to `127.0.0.1` under the site's name, so it
