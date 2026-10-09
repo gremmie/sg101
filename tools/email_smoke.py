@@ -45,7 +45,9 @@ core/tests/test_email_smoke.py asserts the rule holds.
 """
 import argparse
 import base64
+import contextlib
 import copy
+import logging
 import os
 import sys
 import traceback
@@ -62,6 +64,7 @@ from django.contrib.auth.models import User  # noqa: E402
 from django.contrib.sites.models import Site  # noqa: E402
 from django.core.mail import mail_admins  # noqa: E402
 from django.core.mail.backends.smtp import EmailBackend as SMTPBackend  # noqa: E402
+from django.db.models.signals import post_save  # noqa: E402
 from django.test import override_settings  # noqa: E402
 from django.utils import timezone  # noqa: E402
 from django.utils.module_loading import import_string  # noqa: E402
@@ -69,6 +72,7 @@ from django.utils.module_loading import import_string  # noqa: E402
 from accounts.forms import (ForgotUsernameForm, RegisterForm,  # noqa: E402
                             SitePasswordResetForm)
 from accounts.models import PendingEmailChange, PendingUser  # noqa: E402
+from accounts.stats import on_user_save  # noqa: E402
 from accounts.utils import (make_confirmation_token,  # noqa: E402
                             send_email_change_confirmation,
                             send_email_change_notice)
@@ -152,6 +156,26 @@ def check(label, fn):
 # Producers -- one per EmailCategory, each addressing only what it is given.
 ###############################################################################
 
+@contextlib.contextmanager
+def scratch_user(email):
+    """A throwaway user for the paths that need an account, deleted after.
+
+    Creating a User fires accounts.stats' new-user task, which would put the
+    scratch name in the home page's newest members and count a user that is
+    about to be deleted. That receiver is detached while the user exists.
+    """
+    post_save.disconnect(sender=User, dispatch_uid='accounts.stats')
+    try:
+        user = User.objects.create_user(SCRATCH, email, 'smoke-password')
+        try:
+            yield user
+        finally:
+            user.delete()
+    finally:
+        post_save.connect(on_user_save, sender=User,
+                          dispatch_uid='accounts.stats')
+
+
 def registration_confirmation(to):
     """accounts.forms.RegisterForm.save()"""
     form = RegisterForm(ip='127.0.0.1')
@@ -166,13 +190,10 @@ def registration_confirmation(to):
 
 def forgot_username(to):
     """accounts.forms.ForgotUsernameForm.save()"""
-    user = User.objects.create_user(SCRATCH, to, 'smoke-password')
-    try:
+    with scratch_user(to):
         form = ForgotUsernameForm()
         form.cleaned_data = {'email': to}
         form.save()
-    finally:
-        user.delete()
     return 'accounts/forgot_user_email.txt'
 
 
@@ -182,28 +203,24 @@ def password_reset(to):
     Templates and form_class are named to match accounts/urls.py; a reset run
     with Django's defaults would render a different message than the site does.
     """
-    user = User.objects.create_user(SCRATCH, to, 'smoke-password')
-    try:
+    with scratch_user(to):
         form = SitePasswordResetForm({'email': to})
         assert form.is_valid(), form.errors
+        # The site's view passes request.is_secure(), true behind the proxy;
+        # with no request here Django would default to http.
         form.save(domain_override=Site.objects.get_current().domain,
                   email_template_name='accounts/password_reset_email.txt',
-                  from_email=settings.DEFAULT_FROM_EMAIL)
-    finally:
-        user.delete()
+                  from_email=settings.DEFAULT_FROM_EMAIL,
+                  use_https=True)
     return 'accounts/password_reset_email.txt'
 
 
 def email_change_confirmation(to):
     """accounts.utils.send_email_change_confirmation() -- to the NEW address."""
-    user = User.objects.create_user(SCRATCH, 'old-address@example.com',
-                                    'smoke-password')
-    try:
+    with scratch_user('old-address@example.com') as user:
         change = PendingEmailChange(user=user, new_email=to,
                                     key=make_confirmation_token())
         send_email_change_confirmation(change)
-    finally:
-        user.delete()
     return 'accounts/email_change_email.txt'
 
 
@@ -214,14 +231,11 @@ def email_change_notice(to):
     category to a producer that runs both: they are two different templates and
     a smoke run that exercised only one would miss half the path.
     """
-    user = User.objects.create_user(SCRATCH, to, 'smoke-password')
-    try:
+    with scratch_user(to) as user:
         change = PendingEmailChange(user=user,
                                     new_email='new-address@example.com',
                                     key=make_confirmation_token())
         send_email_change_notice(change)
-    finally:
-        user.delete()
     return 'accounts/email_change_notice.txt'
 
 
@@ -397,6 +411,24 @@ def check_live_backend():
                           settings.EMAIL_HOST)
 
 
+def check_recipients_are_not_members(recipients):
+    """Refuse an address that already belongs to an account.
+
+    Some paths need a scratch user carrying the recipient's address, and the
+    database allows one account per address, case-insensitively, so the run
+    fails before anything is sent. Getting round the collision would be worse:
+    the site's own lookups would then find the real account too, and the
+    password reset path would mail a working reset link for it.
+    """
+    taken = [address for address in recipients
+             if User.objects.filter(email__iexact=address).exists()]
+    if taken:
+        raise SystemExit(
+            '  these addresses belong to accounts: %s\n'
+            '  Use a plus-address instead (you+smoke@gmail.com): it reaches the '
+            'same inbox and no account has it.' % ', '.join(taken))
+
+
 def require_recipients(recipients):
     """--live with no addresses would fall back to the producers' defaults."""
     if not recipients:
@@ -433,9 +465,9 @@ HEADER_EXPECTATIONS = """
   dmarc=pass      absent entirely in the 2026-08-12 baseline
   compauth=pass   Microsoft only; reason=100 is the good one
   HELO            Postmark's, never jaguar.deathofagremmie.com
-  Message-ID      STILL carries the dead domain -- Django builds it, not
-                  Postfix, so neither the interim fix nor Postmark changes it.
-                  A pass here would need explaining, not celebrating.
+  Message-ID      Postmark's own, <...@mtasv.net>: it replaces the one Django
+                  builds. The dead domain belongs nowhere in the headers now;
+                  seeing it means the message did not go through Postmark.
   SCL             Microsoft only. The pre-Postmark capture scored SCL=3 while
                   still reaching the Inbox; record it, because if it does not
                   improve the provider move did not buy what it was for.
@@ -541,9 +573,9 @@ def read_headers(path):
         if DEAD_DOMAIN in line.lower() and header not in where:
             where.append(header)
     print('  %-10s %s' % ('dead domain', ', '.join(where) or 'absent'))
-    if where and where != ['Message-ID']:
-        print('  NOTE: %s appears outside Message-ID, which is NOT expected'
-              % DEAD_DOMAIN)
+    if where:
+        print('  NOTE: %s appears, which is NOT expected: did this message '
+              'go through Postmark?' % DEAD_DOMAIN)
 
     assert 'pass' in found['dmarc'], \
         'no dmarc=pass in these headers -- that is the whole point of the step'
@@ -566,20 +598,11 @@ def main(live_to=None, only=None):
     if live_to:
         check_live_backend()
     recipients = require_recipients(live_to) if live_to else ['nobody@example.com']
+    check_recipients_are_not_members(recipients)
 
-    # Pass one always runs, and always into locmem under the sentinel. It is
-    # what makes a live send safe: a template with a hole in it is caught here,
-    # before anything is put on the wire. Rendering strictly during the live
-    # pass instead would mail the sentinel to a real person, and with no outbox
-    # to inspect nothing would notice.
     print('\n== rendering %s, nothing sent'
           % ('every path' if only is None else only))
-    with override_settings(EMAIL_BACKEND=LOCMEM,
-                           TEMPLATES=strict_templates()):
-        for label, producer in paths:
-            for to in recipients:
-                check('%s -> %s' % (label, to),
-                      lambda p=producer, t=to: render_and_inspect(p, t))
+    render_pass(paths, recipients)
 
     if live_to:
         if [r for r in results if not r[0]]:
@@ -619,6 +642,33 @@ def every_path(only=None):
                          % (only, ''.join('    %s\n' % label
                                           for label, _ in paths)))
     return chosen
+
+
+def render_pass(paths, recipients):
+    """Run every path into locmem under the sentinel, sending nothing.
+
+    Always runs, before any live send. It is what makes a live send safe: a
+    template with a hole in it is caught here, before anything is put on the
+    wire. Rendering strictly during the live pass instead would mail the
+    sentinel to a real person, and with no outbox to inspect nothing would
+    notice.
+
+    email.log is silenced for it: the site logs a send whatever the backend, so
+    each rendered message would otherwise be recorded `outcome=sent` beside the
+    real sends.
+    """
+    email_log = logging.getLogger('email')
+    was_disabled = email_log.disabled
+    email_log.disabled = True
+    try:
+        with override_settings(EMAIL_BACKEND=LOCMEM,
+                               TEMPLATES=strict_templates()):
+            for label, producer in paths:
+                for to in recipients:
+                    check('%s -> %s' % (label, to),
+                          lambda p=producer, t=to: render_and_inspect(p, t))
+    finally:
+        email_log.disabled = was_disabled
 
 
 def render_and_inspect(producer, to):

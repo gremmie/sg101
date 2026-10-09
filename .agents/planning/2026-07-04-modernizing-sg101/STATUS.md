@@ -77,6 +77,45 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
+## Step 21 follow-up — email_smoke's faults — DONE 2026-10-09, in the commit that adds this line; not yet pulled on leopard
+
+The four faults D3's first live run showed in `tools/email_smoke.py` (task 09,
+S3), and the stale Message-ID guidance D1 found. Decided with Brian at the
+planning checkpoint, each on the recommendation:
+
+1. **A recipient that is a member's address is refused up front**,
+   `check_recipients_are_not_members()`, case-insensitively as the database's
+   constraint is, before anything renders, suggesting a plus-address. Avoiding
+   the collision instead would have been worse: the site's lookups would then
+   find the real account, and `password_reset` would mail a working reset
+   link for it.
+2. **The render pass silences the `email` logger** and restores it after;
+   it moved into `render_pass()`. The live pass still logs. The site's own
+   logging is unchanged.
+3. **The reset link is `https://`**: `use_https=True`, as the site's view
+   gets from `request.is_secure()` behind the proxy.
+4. **Scratch users no longer reach Redis.** `scratch_user()`, a context
+   manager replacing four copies of create/try/delete, detaches
+   `accounts.stats`' `post_save` receiver while the user exists and reattaches
+   it after.
+5. **`HEADER_EXPECTATIONS`** now says Message-ID is Postmark's own
+   (`<…@mtasv.net>`) and the dead domain belongs nowhere; `--check-headers`
+   flags it anywhere, Message-ID included.
+
+**Tests:** ten new in `core/tests/test_email_smoke.py` (33 in the module),
+written first; seven failed for the intended reasons (fault 4's count read
+104 for 100, one per scratch user). Two more were added before the mutation
+battery because nothing tested that `main()` calls the member check, or that
+the logger comes back on. **Mutation battery, 11 mutations, all caught**, each
+by its fault's own test. Suite **1415 OK**, and the deprecation gate, run
+separately, **1415 OK**.
+
+**Through the real entry point on the dev stack:** `email_smoke.py` passes
+13/13 and adds **0** lines to `email.log`; the old code, run the same way
+against the same file, added **10**, and put `_email_smoke` at the head of dev
+Redis's newest members, which `rebuild_redis` then repaired. Not run `--live`:
+that sends real mail and is Brian's to run.
+
 ## Step 21 follow-up — the Redis rebuild after a restore — DONE 2026-10-08, `cef58161`; deployed to leopard 2026-10-09 ~00:15 UTC, `--check` clean
 
 **`manage.py rebuild_redis`**, the hand rebuild of 2026-10-08 (task 09, S3) made
@@ -257,7 +296,7 @@ parts passed on it.
   Aligned on both mechanisms; Postmark's own `pm.mtasv.net` signature rides
   alongside. `Message-Id` is `<…@mtasv.net>`: **Postmark replaces Django's**,
   so `email_smoke.py`'s "Message-ID still carries the dead domain" expectation
-  is out of date.
+  is out of date. **Fixed 2026-10-09** (§ *email_smoke's faults*).
 - **D3 passes, at the second attempt.** `email_smoke.py --live` to a Gmail
   plus-address and an Outlook address of Brian's, 20:21 UTC: 43/43 checks, every
   path live through Postmark. **Gmail: 11 of 11 in the Inbox. Outlook: 10 Inbox,
@@ -275,7 +314,8 @@ parts passed on it.
   reaches admins only. **Member-facing mail scores SCL 1, against SCL 3 in the
   pre-Postmark capture**, which is what the provider move was for.
 - **`email_smoke.py`'s first `--live` run (20:18 UTC) sent nothing**, and
-  showed three faults in the tool, none in the site:
+  showed three faults in the tool, none in the site (four, with the fourth
+  found later; **all fixed 2026-10-09**, § *email_smoke's faults*):
   1. **A scratch user collides with a real account.** `forgot_username`,
      `password_reset` and the `email_change` notice create a user with the
      recipient's address; `bgneal@gmail.com` is Brian's account, so

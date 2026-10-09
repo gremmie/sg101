@@ -16,16 +16,23 @@ scripts and is not a package.
 
 """
 import base64
+import contextlib
 import importlib.util
+import io
+import logging
 import os
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.test.signals import template_rendered
 
+from accounts.stats import NEW_USERS_KEY, USER_COUNT_KEY
 from core.email_categories import EmailCategory
+from core.services import get_redis_connection
 
 TOOL = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -292,3 +299,155 @@ class LiveModeTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit) as caught:
             self.tool.check_live_backend()
         self.assertIn('EMAIL_BACKEND', str(caught.exception))
+
+
+class MemberRecipientTestCase(TestCase):
+    """A recipient that is a member's address is refused before anything runs.
+
+    The scratch users some paths need carry the recipient's address, and the
+    database allows one account per address, case-insensitively: on 2026-10-07
+    the first live run against an address with an account rendered nothing and
+    sent nothing. Avoiding the collision would not be enough either -- the
+    site's own lookups would then find the real account, and the password reset
+    path would mail a working reset link for it.
+    """
+
+    def setUp(self):
+        self.tool = load_tool()
+        User.objects.create_user('a_member', 'Member@Example.com', 'x')
+
+    def test_a_member_address_is_refused_whatever_its_case(self):
+        with self.assertRaises(SystemExit) as raised:
+            self.tool.check_recipients_are_not_members(
+                ['other@example.com', 'member@example.com'])
+        message = str(raised.exception)
+        self.assertIn('member@example.com', message)
+        self.assertIn('plus-address', message)
+        self.assertNotIn('other@example.com', message)
+
+    def test_addresses_without_an_account_pass(self):
+        self.tool.check_recipients_are_not_members(
+            ['member+smoke@example.com', 'nobody@example.com'])
+
+    def test_a_live_run_to_a_member_stops_before_rendering(self):
+        # send_inline reconfigures the shared Celery app and the live-backend
+        # check refuses the test settings; neither is what is under test.
+        with patch.object(self.tool, 'send_inline'), \
+                patch.object(self.tool, 'check_live_backend'), \
+                patch.object(self.tool, 'render_pass') as render_pass, \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                self.tool.main(live_to=['member@example.com'])
+        render_pass.assert_not_called()
+
+
+class RenderPassLogTestCase(TestCase):
+    """The render pass sends nothing, so it must log nothing.
+
+    email.log records one line per message, written whatever the backend, and
+    the 2026-10-07 run wrote 37 `outcome=sent` lines for messages that went into
+    an in-memory outbox -- indistinguishable from real sends in the log that
+    exists to count them.
+    """
+
+    def setUp(self):
+        self.tool = load_tool()
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+    def test_a_producer_on_its_own_does_log(self):
+        # Without this the test below would pass with logging still off.
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            with self.assertLogs('email', level='INFO'):
+                self.tool.contact_form(SMOKE_TO)
+
+    def test_the_render_pass_logs_nothing(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertNoLogs('email', level='INFO'):
+                self.tool.render_pass(self.tool.every_path(), [SMOKE_TO])
+        self.assertTrue(all(ok for ok, _, _ in self.tool.results),
+                        self.tool.results)
+        # And the live sends that follow it are logged again.
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            with self.assertLogs('email', level='INFO'):
+                self.tool.contact_form(SMOKE_TO)
+
+
+class PasswordResetLinkTestCase(TestCase):
+    """The reset link a member gets is https; the tool's should be too."""
+
+    def test_the_reset_link_is_https(self):
+        tool = load_tool()
+        mail.outbox = []
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            tool.password_reset(SMOKE_TO)
+        body = mail.outbox[0].body
+        self.assertIn('https://', body)
+        self.assertNotIn('http://', body)
+
+
+class ScratchUserStatsTestCase(TestCase):
+    """Scratch users never reach the newest-members list or the user count.
+
+    Creating a User fires accounts.stats' new-user task, which on 2026-10-07 put
+    `_email_smoke` ten times into the home page's newest members and counted
+    users that were deleted again. Runs against the real test Redis (db 14),
+    since what is asserted is what lands there.
+    """
+
+    def setUp(self):
+        self.tool = load_tool()
+        self.conn = get_redis_connection()
+        self.flush()
+        self.addCleanup(self.flush)
+        self.conn.set(USER_COUNT_KEY, 100)
+        self.conn.rpush(NEW_USERS_KEY, 'newest_member')
+
+    def flush(self):
+        self.conn.delete(USER_COUNT_KEY, NEW_USERS_KEY)
+
+    def test_producers_leave_the_user_stats_alone(self):
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            for producer in self.tool.COVERED.values():
+                producer(SMOKE_TO)
+        self.assertEqual(self.conn.get(USER_COUNT_KEY), '100')
+        self.assertEqual(self.conn.lrange(NEW_USERS_KEY, 0, -1),
+                         ['newest_member'])
+
+    def test_the_stats_receiver_is_reconnected_afterwards(self):
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self.tool.forgot_username(SMOKE_TO)
+        User.objects.create_user('real_newcomer', 'new@example.com', 'x')
+        self.assertEqual(self.conn.lindex(NEW_USERS_KEY, 0), 'real_newcomer')
+
+
+class DeadDomainTestCase(unittest.TestCase):
+    """Postmark replaces Django's Message-ID, so the dead domain belongs nowhere.
+
+    Before the move the guidance was that Message-ID would still carry it; D1
+    on 2026-10-07 found `<...@mtasv.net>` instead. Seeing it anywhere now means
+    a message did not go through Postmark.
+    """
+
+    def test_the_dead_domain_in_message_id_is_flagged(self):
+        tool = load_tool()
+        headers = ('Authentication-Results: mx.example; dmarc=pass\n'
+                   'Message-ID: <123@%s>\n' % tool.DEAD_DOMAIN)
+        with tempfile.NamedTemporaryFile('w', suffix='.txt') as fp:
+            fp.write(headers)
+            fp.flush()
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                tool.read_headers(fp.name)
+        self.assertIn('NOTE', out.getvalue())
+
+    def test_the_guidance_no_longer_expects_it(self):
+        tool = load_tool()
+        self.assertNotIn('STILL carries the dead domain',
+                         tool.HEADER_EXPECTATIONS)
