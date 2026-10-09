@@ -43,6 +43,40 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 21 task 10 — the after-cutover watch — IN PROGRESS, started 2026-10-08
+
+### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
+
+**The `ip6:` term is gone from the apex SPF record** (Brian, Cloudflare,
+2026-10-09 ~00:30 UTC). It read
+`ip6:2600:3c01::f03c:91ff:fe70:e820/64`: jaguar's address, but with a `/64`
+that authorizes Linode's whole shared block, and a neighbour,
+`2600:3c01::2000:96ff:fe4a:23be`, passed DMARC as this domain on it in
+Google's 09-30 report (twenty-fifth DMARC reading). Removed rather than narrowed
+to `/128`, because **the term authorized nothing of ours**, measured
+2026-10-09: jaguar has one global IPv6 address (SLAAC, stable), but its Postfix
+is `inet_protocols = ipv4`, and its `mail.log` holds no delivery to an IPv6
+relay; leopard sends only through Postmark, which passes SPF on
+`pm-bounces.surfguitar101.com`.
+
+| | before | after |
+|---|---|---|
+| apex | `v=spf1 ip4:173.255.245.115 ip6:2600:3c01::f03c:91ff:fe70:e820/64 include:_spf.mx.cloudflare.net -all` | `v=spf1 ip4:173.255.245.115 include:_spf.mx.cloudflare.net -all` |
+
+**The three checks after the change**, at `ada.ns.cloudflare.com`, 1.1.1.1 and
+8.8.8.8 (TTL 300), all passed: one `v=spf1` at the apex with `-all` intact; MX
+`route1/2/3.mx.cloudflare.net`; one `v=DMARC1`, `p=quarantine`, unchanged. The
+`google-site-verification` TXT is untouched.
+
+**`mail.surfguitar101.com`'s SPF is unchanged and was never IPv6**:
+`v=spf1 ip4:173.255.245.115 -all`, as published 2026-08-20. It is the HELO
+identity jaguar's bounces are checked against (the DSN class in the DMARC
+readings), so it stays while jaguar sends.
+
+**What is left for task 11:** both records' `ip4:173.255.245.115` and the
+`mail.surfguitar101.com` record itself go when jaguar stops sending; until then
+its nightly cron mail and any queued retry rely on them.
+
 ## Step 21 follow-up — the Redis rebuild after a restore — DONE 2026-10-08, `cef58161`; deployed to leopard 2026-10-09 ~00:15 UTC, `--check` clean
 
 **`manage.py rebuild_redis`**, the hand rebuild of 2026-10-08 (task 09, S3) made
