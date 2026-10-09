@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 follow-up — the Redis rebuild after a restore — DONE 2026-10-08, in the commit that adds this line; not yet deployed to leopard
+## Step 21 follow-up — the Redis rebuild after a restore — DONE 2026-10-08, `cef58161`; deployed to leopard 2026-10-09 ~00:15 UTC, `--check` clean
 
 **`manage.py rebuild_redis`**, the hand rebuild of 2026-10-08 (task 09, S3) made
 a command, with a check. Decided with Brian at the planning checkpoint, each on
@@ -94,9 +94,15 @@ by hand in dev Redis were each named by `--check`.
 **Documented:** DOCKER.md §8 (why, and the step after a snapshot restore), §10
 (after replacing the live database, before maintenance mode comes off), §4 (after
 loading a production snapshot); the runbook's C4b says it was missing from the
-10-07 window and points at DOCKER.md. **Not yet run on leopard**: production's
-state was rebuilt by hand and has not been restored since, so `--check` there is
-the first use whenever it is deployed.
+10-07 window and points at DOCKER.md.
+
+**Deployed and checked on leopard, 2026-10-09 ~00:15 UTC (Brian):** `git pull`
+to `cef58161`, `make prod-up` (web, worker and beat replaced; proxy, postgres
+and redis left running, their images unchanged), then `make prod-manage
+cmd="rebuild_redis --check"`: **"Redis matches the database."** So the hand
+rebuild of 2026-10-08 ~00:40 UTC, and the live processing of the day since it,
+agree with the database on every feed, cached post, reference count, latest
+topic, count and the newest members.
 
 ## Step 21 task 09 — the cutover — DONE 2026-10-08: frozen 2026-10-07 ~14:00 CDT, flipped ~14:43; S3 steps 27–31 done, the rollback window closed 2026-10-08 ~14:43 CDT with no rollback; step 32 is task 10
 
