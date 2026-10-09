@@ -45,6 +45,20 @@ When work is committed, the heading is part of the commit.
 
 ## Step 21 task 10 — the after-cutover watch — IN PROGRESS, started 2026-10-08
 
+### The daily watch — one line a day (requirement 2's list)
+
+| day | DMARC | Postmark | block list | backup | `web` memory | notes |
+|---|---|---|---|---|---|---|
+| 10-08 (read 10-09 ~01:05 UTC) | 28th reading (10-07 window): every row `none`, Postmark and jaguar reconcile exactly | 94 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive (API `deliverystats`, `stats/outbound`) | **84** entries, all `fail2ban`, dated 09-17→10-07; **none dated 10-08** | 04:30 UTC run passed (journal, healthchecks.io) | 496 MiB, workers 121–123 MB at 48 min old: **reset by the `cef58161` deploy** (691 MiB at 22:30 before it) | first full day on leopard |
+
+**Postmark's one all-time bounce is typed "SMTP API error"**: by its type
+probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
+(task 07a), not matched to it. **No block-list entry is dated 10-08**, the
+first full day of live traffic: requirement 4 asks for fail2ban seen banning on
+it, and that has not been seen yet. If the next reading also adds nothing,
+`sudo fail2ban-client status` per jail on leopard (Brian) says whether the
+jails are matching anything.
+
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
 **The `ip6:` term is gone from the apex SPF record** (Brian, Cloudflare,
