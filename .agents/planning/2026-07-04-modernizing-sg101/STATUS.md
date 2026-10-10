@@ -111,10 +111,53 @@ still reading the request body** when the 30-second default timeout killed it.
 Apache's `error.log` agrees: `AH01084: pass request body failed … (32)Broken
 pipe`. **The cause is that Apache streams the body to gunicorn as it arrives**,
 so a sync worker waits on the member's upload speed. The member reloaded the page at 10:18:34 and did not
-retry. **Not fixed and not yet decided.** The likely options are making Apache
-buffer the body before proxying (`proxy-sendcl`), or raising gunicorn's
-`--timeout`. Not yet checked: how large the upload was, or whether
-Cloudflare buffers it first. **The worker's replacement explains the fifth RSS
+retry. **Fixed at Cloudflare 2026-10-10 (Brian): a Configuration Rule makes Cloudflare
+buffer the whole body before forwarding.** Cloudflare has documented
+**Request Body Buffering** as a Configuration Rules setting since 2026-01-27:
+`standard` (the default) "allows Cloudflare products to inspect a prefix of
+the request body", and does not say what happens to the rest. `full`
+"buffers the entire request body before sending it to the origin". `none`
+streams. The 10:18 stall shows the default streamed the rest. The rule
+`Buffer request bodies before origin` matches
+`(http.host eq "surfguitar101.com" and http.request.method eq "POST")`,
+which covers all three upload paths (`bio` avatars, `user_photos`,
+`downloads`), and sets buffering to `full`. It uses 1 of the Free plan's
+10 Configuration Rules. The rules list shows its action as blank, but the rule
+editor shows `Full`.
+
+**Checked live, 16:55 UTC:** a 1,000,327-byte multipart POST to `/` from the
+Mac, rate-limited to 20 KB/s, with an `Origin` header and a dummy `csrftoken`
+cookie so that Django's CSRF check reads the body before it rejects the
+request. curl took 48.9 s to send it and received the `403` at 48.91 s.
+**Apache logged the request at 16:56:18**, 48 s after the upload began. Under
+streaming, Apache logs the time the headers arrive, as it did at 10:17:47.
+gunicorn logged no `WORKER TIMEOUT`, and no worker restarted (all five
+unchanged by `ps`). **So Cloudflare held the body until it was complete, and
+the worker read it in one burst.** This also settles the caveat that a search
+summary raised, and the official settings page does not carry: that the
+setting needs Cloudflare's "latest CDN proxy". On this Free zone, it takes
+effect.
+
+**An Apache `LimitRequestBody` on the upload paths would add little now.**
+With `full` buffering, the member's upload is complete at Cloudflare before
+Apache sees any of it, so a `413` would arrive no sooner than the form's own
+size error. All it would save is gunicorn reading an oversized body at LAN
+speed. Not done. Not checked: how large the 10:18 upload was.
+
+**Nothing reaches gunicorn around the rule:** probed 2026-10-10 ~17:10 UTC from
+the Mac, with `--resolve` pointing `surfguitar101.com` at leopard itself.
+Ports 443 and 80 timed out on both `192.0.2.13` and
+`2001:db8::4`, while the Mac reached Google over IPv6 in
+the same minute. That is the firewall's effect, not `make firewall-check`,
+which runs from the Mac with the Linode token. **`AGENTS.md` now records the
+rule** under *Non-obvious things*, because the rule lives only in the
+Cloudflare dashboard.
+
+**The member was new.** `auth.log`, same address (`192.0.2.1`): registered
+as `Thw_Ghostfires` at 10:09:13 and confirmed at 10:09:47. A login as
+`The_Ghostfires` failed at 10:10:13, and the avatar POST followed at 10:17:47.
+A `contact_form` mail went to `admin@` at 10:17:00. Its sender is not in the
+logs, so who sent it is not known. **The worker's replacement explains the fifth RSS
 figure in the 10-10 line, so it is not a memory reset.**
 
 **jaguar's `wiki-abuse` entries are draining off the list.** jaguar's fail2ban

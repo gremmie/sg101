@@ -78,6 +78,14 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   `core.middleware.RealClientIP` puts it back into `REMOTE_ADDR`. Use
   `core.functions.get_ip`, and never prefer `X-Forwarded-For` — any client can
   forge it.
+- **Slow uploads are absorbed by a Cloudflare rule, not by anything here.**
+  gunicorn's sync workers read the request body themselves and are killed after
+  30 s, and Apache passes the body through as it arrives. A Configuration Rule,
+  `Buffer request bodies before origin` (every `POST` to `surfguitar101.com`,
+  Request Body Buffering `Full`), makes Cloudflare hold the whole upload first.
+  It lives only in the Cloudflare dashboard. If it goes, a slow upload returns as
+  a `502` and a `WORKER TIMEOUT` in the `web` logs. The origin firewall admits
+  only Cloudflare, so nothing reaches gunicorn around it.
 - **Log retention differs per file and limits what you can ask.** `sg101.log`
   rotates at 100 KB x 10 (~5 months); `auth.log` at 2 MB x 5 (19+ months).
 - **The `messages` app collides with `django.contrib.messages`.** Resolved in
