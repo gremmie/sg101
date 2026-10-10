@@ -51,7 +51,7 @@ When work is committed, the heading is part of the commit.
 |---|---|---|---|---|---|---|
 | 10-08 (read 10-09 ~01:05 UTC) | 28th reading (10-07 window): every row `none`, Postmark and jaguar reconcile exactly | 94 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive (API `deliverystats`, `stats/outbound`) | **84** entries, all `fail2ban`, dated 09-17→10-07; **none dated 10-08** | 04:30 UTC run passed (journal, healthchecks.io) | 496 MiB, workers 121–123 MB at 48 min old: **reset by the `cef58161` deploy** (691 MiB at 22:30 before it) | first full day on leopard |
 | 10-09 (read 10-09 ~17:35 UTC) | 29th reading (10-08 window): every row `none`; Postmark reconciles exactly at Google, Yahoo, AOL, AT&T and Comcast; Microsoft's 10-07 reads 12 for 11 sent: one attempt timed out after the body and was retried, so received twice (Postmark delivery events) | 114 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive; the one all-time bounce is still the `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **84** entries, unchanged; newest dated 10-07 18:06; **none dated 10-08 or 10-09** | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 565 MiB; workers 127–150 MB RSS at 15 h 49 min old (started 01:46, the hotlink deploy) | no list entry, as expected: the list was 83/84 wiki bans, and a site ban lasts 10 min; fail2ban checked below |
-| 10-10 (read 10-10 ~16:30 UTC) | 30th reading (10-09 window): every row `none`; Postmark exact at Google, Yahoo, AT&T; jaguar sends Google 2 extra a day, **certbot failing on `edtaxidermy.com`** | 132 sent 10-07→10, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` | **78**, down 6: jaguar's fail2ban is unbanning `wiki-abuse` at its 5-day bantime and taking each off the list; no new entry | 04:30 UTC run `Result=success`, exit 0 at 04:31:11; healthchecks.io not checked | 585 MiB; four workers 129–150 MB RSS at 1 d 14 h 44 min; **the fifth at 6 h 12 min, replaced after a `WORKER TIMEOUT`** at 10:18 UTC (below) | a member's avatar upload got a 502 |
+| 10-10 (read 10-10 ~16:30 UTC) | 30th reading (10-09 window): every row `none`; Postmark exact at Google, Yahoo, AT&T; jaguar sends Google 2 extra a day, **certbot failing on `edtaxidermy.com`** | 132 sent 10-07→10, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` | **78**, down 6: jaguar's fail2ban is unbanning `wiki-abuse` at its 5-day bantime and taking each off the list; no new entry | 04:30 UTC run `Result=success`, exit 0 at 04:31:11; healthchecks.io not checked | 585 MiB; four workers 129–150 MB RSS at 1 d 14 h 44 min; **the fifth at 6 h 12 min, replaced after a `WORKER TIMEOUT`** at 10:18 UTC (below) | a member's avatar upload got a 502; CPU up from 14:00, a distributed scraper (below) |
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -159,6 +159,36 @@ as `Thw_Ghostfires` at 10:09:13 and confirmed at 10:09:47. A login as
 A `contact_form` mail went to `admin@` at 10:17:00. Its sender is not in the
 logs, so who sent it is not known. **The worker's replacement explains the fifth RSS
 figure in the 10-10 line, so it is not a memory reset.**
+
+**leopard's CPU rose on 10-10 because of a distributed scraper, and it has
+headroom: checked 17:18 UTC (Brian saw the rise on Linode's graph).** sysstat
+shows user CPU at 5–6% through all of 10-09, then **12–13% from 14:00 UTC on
+10-10**, still 80%+ idle at the peak. The rest of the machine is unstressed:
+load 0.18/0.31/0.42 on 2 CPUs; 2.1 GB of 3.9 GB available; 17 MB of swap used
+with `si`/`so` 0; PSI CPU "some" 2%, memory and I/O 0; disk 37%; `/forums/` in
+0.27–0.34 s from the Mac. One `docker stats` snapshot put the Celery worker at
+49%, but five samples after it were all under 0.4%: a task was running.
+
+**The load is one browser string from tens of thousands of addresses.** From
+14:00 to 17:18 UTC, 38,641 requests claimed Chrome on macOS (36,188 of them
+`Chrome/142.0.0.0`) from **33,843 distinct addresses**, rarely more than a few
+each, the largest /16s being `84.37` and `142.147`. They send no referrer and
+walk post IDs: 33,402 `/forums/post/N/`, each a `302` to its topic page, and
+14,658 `/forums/topic/N/`. **That is a scraper behind a residential proxy
+pool.** Site traffic went from about 5,000 requests an hour on 10-09 to
+18,399 at 15:00. **It is not new.** `Chrome/142` on macOS fetching
+`/forums/post/` made 50,071 requests on 10-08, 25,336 on 10-09 and 62,633 on
+10-10 by 17:18, in bursts: 10-10 peaked at 04:00 and again from 13:00 to
+16:00.
+
+**Nothing done, deliberately.** The cost so far is about 7 points of CPU.
+fail2ban cannot see it, since no address repeats enough. Blocking the browser
+string would catch real members on Macs. **If the bursts grow, Cloudflare is
+where to stop it** (Bot Fight Mode, or a rate-limiting or challenge rule on
+`/forums/post/`), which is Brian's decision in the dashboard. **The daily
+watch now counts it:** `Chrome/142` on macOS requests to `/forums/post/` per
+UTC day in Apache's `access.log`, alongside sysstat's daily user-CPU average
+(`sar -u -f /var/log/sysstat/saDD`; 10-09 averaged 5.45%).
 
 **jaguar's `wiki-abuse` entries are draining off the list.** jaguar's fail2ban
 still runs, and with a 5-day `wiki-abuse` bantime its unbans take entries off
