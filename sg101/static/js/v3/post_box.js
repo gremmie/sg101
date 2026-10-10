@@ -28,7 +28,7 @@ function editorPrependLines(textArea, s) {
 function editorLink(textArea) {
    var i = textArea.selectionStart;
    var j = textArea.selectionEnd;
-   var url = window.prompt("Please enter a URL:", "http://");
+   var url = window.prompt("Please enter a URL:", "https://");
    if (!url) return;
    var link;
    if (i == j) {
