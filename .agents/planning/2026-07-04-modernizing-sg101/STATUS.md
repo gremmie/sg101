@@ -275,7 +275,7 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
-## Site work — Markdown fixed pages (#31) and the colophon rewritten (#11) — DONE 2026-10-10, in the commit that adds this line; not yet deployed
+## Site work — Markdown fixed pages (#31) and the colophon rewritten (#11) — DONE 2026-10-10, `03b319c9` (+ `a6f1bc64` for tos.html); live on leopard 2026-10-10 via `make prod-up`, checked by Brian
 
 **`make_fixed_page` picks the converter by extension.** `.rst` is docutils as
 before; `.md` is plain `markdown.markdown()`, not `core.markup`: that pipeline
