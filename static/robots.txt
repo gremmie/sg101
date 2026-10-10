@@ -1,39 +1,50 @@
+# robots.txt for surfguitar101.com -- audited 2026-10-10 (issue #23).
+# Format: RFC 9309, where a group is one or more User-agent lines and its rules.
+#
+# Cloudflare caches this file: after changing it, purge /robots.txt there, or
+# crawlers keep the old copy.
+
+# Crawlers that collect AI training data. AI search crawlers, which cite and
+# link to the site (Claude-SearchBot, OAI-SearchBot, PerplexityBot), are allowed.
 User-agent: Amazonbot
-Disallow: /
-
-User-agent: AwarioBot
-Disallow: /
-
-User-agent: AwarioRssBot
-Disallow: /
-
-User-agent: AwarioSmartBot
-Disallow: /
-
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: CCBot
 User-agent: ClaudeBot
-Disallow: /
-
+User-agent: Google-Extended
 User-agent: GPTBot
-Disallow: /
-
 User-agent: meta-externalagent
 Disallow: /
 
+# SEO, marketing and monitoring tools.
+User-agent: AhrefsBot
+User-agent: AwarioBot
+User-agent: AwarioRssBot
+User-agent: AwarioSmartBot
+User-agent: DotBot
 User-agent: MJ12bot
-Disallow: /
-
-User-agent: PetalBot
-Disallow: /
-
 User-agent: SemrushBot
-Disallow: /
-
 User-agent: SemrushBot-BA
-Disallow: /
-
+User-agent: SEOkicks
+User-agent: SERankingBacklinksBot
 User-agent: serpstatbot
+User-agent: trendictionbot
 Disallow: /
 
+# Search engines with no audience here.
+User-agent: Baiduspider
+User-agent: PetalBot
+User-agent: Sogou web spider
+Disallow: /
+
+# Everyone else. Crawl-delay is honoured by Bing and Yandex and ignored by
+# Google. The disallowed paths are redirects to pages crawlers already reach
+# (each post's link, a topic's latest post), or pages with nothing to index.
 User-agent: *
-Crawl-delay: 30
-Allow: /
+Crawl-delay: 5
+Disallow: /forums/post/
+Disallow: /forums/topic/*/latest/
+Disallow: /accounts/
+Disallow: /search/
+Disallow: /messages/
+Disallow: /admin/
