@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-09
+**Last updated:** 2026-10-10
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -51,6 +51,7 @@ When work is committed, the heading is part of the commit.
 |---|---|---|---|---|---|---|
 | 10-08 (read 10-09 ~01:05 UTC) | 28th reading (10-07 window): every row `none`, Postmark and jaguar reconcile exactly | 94 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive (API `deliverystats`, `stats/outbound`) | **84** entries, all `fail2ban`, dated 09-17→10-07; **none dated 10-08** | 04:30 UTC run passed (journal, healthchecks.io) | 496 MiB, workers 121–123 MB at 48 min old: **reset by the `cef58161` deploy** (691 MiB at 22:30 before it) | first full day on leopard |
 | 10-09 (read 10-09 ~17:35 UTC) | 29th reading (10-08 window): every row `none`; Postmark reconciles exactly at Google, Yahoo, AOL, AT&T and Comcast; Microsoft's 10-07 reads 12 for 11 sent: one attempt timed out after the body and was retried, so received twice (Postmark delivery events) | 114 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive; the one all-time bounce is still the `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **84** entries, unchanged; newest dated 10-07 18:06; **none dated 10-08 or 10-09** | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 565 MiB; workers 127–150 MB RSS at 15 h 49 min old (started 01:46, the hotlink deploy) | no list entry, as expected: the list was 83/84 wiki bans, and a site ban lasts 10 min; fail2ban checked below |
+| 10-10 (read 10-10 ~16:30 UTC) | 30th reading (10-09 window): every row `none`; Postmark exact at Google, Yahoo, AT&T; jaguar sends Google 2 extra a day, **certbot failing on `edtaxidermy.com`** | 132 sent 10-07→10, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` | **78**, down 6: jaguar's fail2ban is unbanning `wiki-abuse` at its 5-day bantime and taking each off the list; no new entry | 04:30 UTC run `Result=success`, exit 0 at 04:31:11; healthchecks.io not checked | 585 MiB; four workers 129–150 MB RSS at 1 d 14 h 44 min; **the fifth at 6 h 12 min, replaced after a `WORKER TIMEOUT`** at 10:18 UTC (below) | a member's avatar upload got a 502 |
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -100,6 +101,44 @@ added to the list and taken off again. Its second half, the list's size stable
 rather than growing, is read at the start and end of the two weeks (criterion 3).
 It starts at 84, all but one of them `wiki-abuse` entries, which requirement 4a's
 `blocklist-clear days=14` removes at the end.
+
+**A member's avatar upload got a 502: a slow upload outlived gunicorn's worker
+timeout, 2026-10-10 10:18 UTC.** One `POST /profile/avatar/`: Apache logged it
+at 10:17:47 (`502`, Firefox on Windows), and gunicorn logged `[CRITICAL] WORKER
+TIMEOUT (pid:11)` at 10:18:18. The traceback ends in `multipartparser` →
+`gunicorn/http/unreader.py` → `handle_abort`, `SystemExit: 1`: **the worker was
+still reading the request body** when the 30-second default timeout killed it.
+Apache's `error.log` agrees: `AH01084: pass request body failed … (32)Broken
+pipe`. **The cause is that Apache streams the body to gunicorn as it arrives**,
+so a sync worker waits on the member's upload speed. The member reloaded the page at 10:18:34 and did not
+retry. **Not fixed and not yet decided.** The likely options are making Apache
+buffer the body before proxying (`proxy-sendcl`), or raising gunicorn's
+`--timeout`. Not yet checked: how large the upload was, or whether
+Cloudflare buffers it first. **The worker's replacement explains the fifth RSS
+figure in the 10-10 line, so it is not a memory reset.**
+
+**jaguar's `wiki-abuse` entries are draining off the list.** jaguar's fail2ban
+still runs, and with a 5-day `wiki-abuse` bantime its unbans take entries off
+Cloudflare's list. `192.0.2.8`, listed 10-05 06:58, was unbanned 10-10
+06:58 UTC to the minute. The six gone since 10-09 are all `wiki-abuse`
+entries. The newest, listed 10-07 18:06, is due off about 10-12 18:06. **That
+leaves requirement 4a's `blocklist-clear days=14` little to do**, provided
+jaguar keeps running until then.
+
+**jaguar's certbot fails twice a day, and each failure mails Google.** Its
+`certbot -q renew` cron prints only on failure, and has mailed root at each run
+since `edtaxidermy.com` entered its 30-day window, 10-09 04:50 UTC. **The
+failure mail (Brian) says why: the `http-01` challenge gets a 404 from
+Cloudflare**, because `edtaxidermy.com` has been served from Cloudflare since
+09-13 and the validator never reaches jaguar. Every certificate on jaguar is for
+a name it no longer serves, so nothing is at risk. `bravenewsurf.com`
+(10-15), `surfguitar101.com` (10-17), `themadeira.net` (10-18) and
+`wiki.surfguitar101.com` (10-28) reach the window next. All five names resolve to
+Cloudflare now. **Disabled 2026-10-10 11:39 CDT (Brian):** the line in `/etc/cron.d/certbot` is
+commented out (checked: line 11 reads `# 0 */12 * * * root …`). cron re-reads
+`cron.d` by mtime, so no restart was needed. jaguar has no `systemctl`, so no
+timer runs certbot. **Expected:** no root mail at the 12:00 or 00:00 CDT runs,
+and Google's jaguar count back to the cron mail alone from the 10-11 window.
 
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 

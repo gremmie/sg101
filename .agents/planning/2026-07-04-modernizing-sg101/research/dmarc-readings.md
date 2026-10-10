@@ -55,6 +55,7 @@ reading log stops*.
 | 27 | 2026-10-07 | 10-06 | the last whole day before the freeze: jaguar alone, no Postmark row as leopard sent nothing; a fifth forwarder, at `cloudfilter.net` |
 | 28 | 2026-10-08 | 10-07 | the flip day: both hosts reconcile exactly at Google and Yahoo; the `cloudfilter.net` forwarder is `thegogorillas.com`'s; jaguar delivers to Comcast after the flip |
 | 29 | 2026-10-09 | 10-08 (+ Comcast, Microsoft 10-07) | the first full day on leopard: Postmark reconciles exactly at five endpoints, with a Workspace domain telling UTC−7 from UTC; Comcast's deferral loop counts 42 and 25, exact to the reception; Microsoft's 12 for 11 is a timed-out attempt received twice |
+| 30 | 2026-10-10 | 10-09 | a quiet day, exact at Google, Yahoo and AT&T, with three forwarders each matched to a send; jaguar's two extra Google messages are certbot failing to renew `edtaxidermy.com` |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -6718,3 +6719,126 @@ another. Its first hop is among the 31.
 5. **Yahoo, AOL and AT&T match their UTC-day sends exactly.**
 6. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a row
    aligned on neither mechanism.
+
+### Thirtieth reading — 2026-10-10, covering 2026-10-09: a quiet day, exact at all three reporters; jaguar's extra Google mail is certbot failing to renew
+
+`tools/dmarc_fetch.py -a <account>` scanned 12 messages: **3 new**, 9 already
+held. **The corpus is 183 reports**, all three for 10-09 and all `p=quarantine`
+with every disposition `none`. **No report is missing.** leopard sent nothing to
+`comcast.net`, `aol.com` or a Microsoft domain on the UTC day 10-09, and jaguar
+sent nothing to them either, so there was nothing for Comcast, AOL or Microsoft
+to file. Microsoft's report for the `hotmail.com` send of 10-09 03:30:48 UTC is
+not in yet, and neither is any Microsoft report for 10-08, which had no
+Microsoft send.
+
+| Reporter | Source | Msgs | DKIM / SPF |
+|---|---|---|---|
+| `google.com` | `50.31.156.115`, `.116`, `.124` (Postmark) | 4 | pass / pass |
+| `google.com` | `173.255.245.115` (jaguar) | **3** | pass / pass |
+| `google.com` | `104.30.8.10` (`i-ba.cloudflare-email.net`) | 1 | pass / pass |
+| `google.com` | `35.89.44.34` (`omta35.uswest2.a.cloudfilter.net`) | 1 | pass / **fail** |
+| `google.com` | `44.202.169.38` (`omta039.useast.a.cloudfilter.net`) | 1 | pass / **fail** |
+| `yahoo.com` | `50.31.156.113`, `.124` (Postmark) | 2 | pass / pass |
+| `att.net` (Yahoo) | `50.31.156.113` (Postmark) | 1 | pass / pass |
+
+#### Every Postmark row reconciles
+
+| Endpoint | Window | leopard `email.log` | Report |
+|---|---|---|---|
+| Google | UTC−7 day, 10-09 07:00 → 10-10 07:00 UTC | 4 `gmail.com` (08:43:07, 08:58:00, 10:51:44, 10-10 00:59:37); no `muohio.edu` | **4**, exact |
+| Yahoo | UTC day 10-09 | 2 `yahoo.com` (01:51:55, 08:43:12) | 2, exact |
+| AT&T | UTC day 10-09 | 1 `att.net` (01:51:52) | 1, exact |
+
+`sg101.log` holds no `ERROR` in the Google window, so no error mail went out.
+The first `ERROR` since is at 10-10 10:18:19, in the next window (see
+`STATUS.md`, the 10-10 watch line).
+
+**The three forwarded rows each match a send.**
+
+- **`104.30.8.10` is Cloudflare Email Routing.** It carried leopard's
+  `admin_notification` to `admin@surfguitar101.com` at 10-10 01:41:02 UTC, which
+  Email Routing forwards to Gmail. It carries three signatures (`surfguitar101.com`,
+  `pm.mtasv.net` and `cloudflare-email.net`), and SPF passes on
+  `surfguitar101.com` through the apex's `include:_spf.mx.cloudflare.net`.
+  Reading 24 saw the same address do the same thing.
+- **The two `cloudfilter.net` rows are `thegogorillas.com`'s**, as reading 29
+  settled: leopard sent it one message at 10-09 08:43:10 and one at 10-10
+  00:59:41 UTC, both in the window, and both rows carry `d=pm.mtasv.net`.
+  This is the forwarder's west-coast address from reading 27 and a third
+  east-coast one.
+
+#### jaguar: the cron mail and two certbot failures
+
+jaguar's three Google messages, in the window 10-09 02:00 → 10-10 02:00 CDT:
+
+| jaguar (CDT) | Queue ID | Origin |
+|---|---|---|
+| 10-09 02:01:12 | `73EF25864EC` | Brian's nightly cron mail, `uid=1000` |
+| 10-09 12:39:53 | `E7C6F586502` | `uid=0`, root cron session opened 12:00:01, closed 12:39:52 |
+| 10-10 00:11:03 | `D5EF25864DF` | `uid=0`, root cron session opened 00:00:01, closed 00:11:02 |
+
+The reading-29 root mail (10-09 00:57:26) fits the same pattern: session opened
+00:00:01, closed 00:57:25. **The job is `/etc/cron.d/certbot`**: `0 */12 * * *
+… perl -e 'sleep int(rand(3600))' && certbot -q renew`, a run at 00:00 and 12:00
+with a random sleep of up to an hour, which matches all three. `-q` prints only
+on failure, so **each mail is a failed renewal**.
+
+**The certificate is `edtaxidermy.com`'s.** Read from jaguar's port 443 by SNI:
+
+| Name | `notAfter` | Enters the 30-day renewal window |
+|---|---|---|
+| `edtaxidermy.com` | 2026-11-08 04:50 UTC | **2026-10-09 04:50 UTC** |
+| `bravenewsurf.com` | 2026-11-14 16:23 | 10-15 |
+| `surfguitar101.com` | 2026-11-16 16:17 | 10-17 |
+| `themadeira.net` | 2026-11-17 04:35 | 10-18 |
+| `wiki.surfguitar101.com` | 2026-11-27 16:54 | 10-28 |
+
+The first failure, 10-09 05:57 UTC, is the first run after `edtaxidermy.com`
+entered its window, and no root mail went out before it.
+
+**The mail's body (Brian, 2026-10-10) gives the cause:** `Failed authorization
+procedure`, `http-01` `unauthorized` for both `www.edtaxidermy.com` and
+`edtaxidermy.com`: `Invalid response from
+http://edtaxidermy.com/.well-known/acme-challenge/…: 404`, fetched at Cloudflare
+addresses (`2606:4700:…`). **Let's Encrypt's challenge never reaches jaguar.**
+`edtaxidermy.com` has been served from Cloudflare since 2026-09-13 (the
+jaguar-decommission project), so jaguar's webroot answer is not where the
+validator looks. The same is true of every name on the list: `bravenewsurf.com`
+and `themadeira.net` moved in September, and `surfguitar101.com` and the wiki at
+the 10-07 flip. **jaguar's certificates serve nothing**, so the failures cost
+nothing beyond the mail. **Unless certbot is stopped, jaguar sends Google two more
+messages a day**. Each run tries every due certificate in one mail, so the
+names in the last column lengthen that mail and do not add to the count.
+
+#### Scoring the twenty-ninth reading's predictions: four held, two had nothing to score
+
+1. **HELD.** One cron mail plus root mail. That clause turned out to cover two
+   more messages.
+2. **Nothing to score.** Comcast received nothing on 10-09 from either host and
+   filed no report.
+3. **Not yet.** Microsoft has not filed for 10-09. Postmark records the
+   `hotmail.com` reset as delivered at 03:30:49 UTC with no `Transient` event,
+   so the prediction stays at 1.
+4. **HELD.** 4 = 4, with no `muohio.edu` and no error mail.
+5. **HELD** for Yahoo and AT&T. AOL received nothing and filed nothing.
+6. **HELD.**
+
+#### Predictions for the thirty-first reading
+
+1. **Microsoft's 10-09 report, when it comes, reads 1.**
+2. **Google's 10-10 jaguar count is the 02:01 CDT cron mail plus one per failed
+   certbot run** in 10-10 02:00 → 10-11 02:00 CDT. *Overtaken the same day:*
+   Brian disabled the certbot cron at 11:39 CDT, before the 12:00 run, so the
+   expected count is **1**, the cron mail alone. A root mail would mean the
+   cron was not the only thing running certbot.
+3. **Google's 10-10 Postmark rows equal leopard's `gmail.com` and `muohio.edu`
+   sends from 10-10 07:00 to 10-11 07:00 UTC**, plus any Django error mail. The
+   10:18 worker timeout is logged by gunicorn rather than by Django's request
+   handling, so it should not have sent one: **an error mail in Postmark from
+   10:18 would falsify that.** Cloudflare Email Routing adds a row for the
+   `contact_form` to `admin@` at 10:17:00.
+4. **Yahoo's 10-10 equals its UTC-day sends.** leopard sent `gmx.at` two
+   messages at 15:37:47 and 16:14:23. If a GMX or `web.de` report arrives, it
+   carries them, doubled if reading 23's `web.de` double count applies.
+5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
