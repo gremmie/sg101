@@ -60,18 +60,28 @@ MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + list(MIDDLEWA
 INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
 # The toolbar disables RedirectsPanel and ProfilingPanel by default, so an empty
 # DISABLE_PANELS does not mean "leave the defaults alone", it means "turn both
-# on". ProfilingPanel is wanted, so it stays enabled by omission -- but
+# on". Both are named here, matching those defaults:
+#
 # RedirectsPanel is deprecated upstream and slated for removal, and it
 # interrupts every dev redirect with an interstitial to do a job HistoryPanel
 # now does without one: history keeps the toolbar data for the redirecting
 # request, so it can be inspected after the redirect has been followed.
+#
+# ProfilingPanel stays on the toolbar, to be switched on for a single page.
+# Enabled for every request it breaks concurrent ones -- cProfile allows one
+# profiler at a time and runserver is threaded, so a page's parallel /media/
+# requests fail with "Another profiling tool is already active" -- and it was
+# on when runserver was OOM-killed.
 #
 # SHOW_TOOLBAR_CALLBACK: the toolbar's own default gates on REMOTE_ADDR being in
 # INTERNAL_IPS, and behind Docker's bridge host requests arrive NAT'd from the
 # gateway (172.18.0.x), never 127.0.0.1 -- so the toolbar would stay hidden.
 # Show it whenever DEBUG is on.
 DEBUG_TOOLBAR_CONFIG = {
-    'DISABLE_PANELS': {'debug_toolbar.panels.redirects.RedirectsPanel'},
+    'DISABLE_PANELS': {
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    },
     'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
 }
 

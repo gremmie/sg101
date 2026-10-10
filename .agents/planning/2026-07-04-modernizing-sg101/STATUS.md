@@ -275,6 +275,34 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
+## Dev only — the toolbar's ProfilingPanel off by default — DONE 2026-10-10, in the commit that adds this line
+
+**Dev `runserver` was OOM-killed at 2026-10-10 21:01:11 UTC.** Docker recorded
+`OOMKilled=true`, exit 247; the VM's kernel log shows the killed process was
+`web`'s `python` at **6.9 GB anon RSS** (`runserver`; the prod stack's gunicorn
+and celery processes in the same table were 6–40 MB). From 20:43, and heavily
+at 21:00, `/media/` requests returned 500, all 23 that day
+`ValueError: Another profiling tool is already active`: `cProfile` allows one
+profiler at a time and `runserver` is threaded. The same error is in the two
+previous rotated logs (8 and 22), and on 08-28 (below, Step 20).
+**Not measured:** that the profiling panel is what grew the process to 6.9 GB.
+The 500s are confirmed; the memory link is inferred from the timing.
+
+**Decided with Brian: disable it.** The "ProfilingPanel is wanted" comment
+recorded preservation, not a choice: 2026-08-15 (`9b854e86`) left it "exactly
+as it has been", and nothing in `.agents/` shows it was wanted. The 08-28 note
+declined to disable it on the strength of that comment.
+`DISABLE_PANELS` now names both panels the toolbar disables by default; the
+panel stays on the toolbar to switch on for a single page.
+
+**Measured on dev `runserver`:** 30 parallel `/media/` requests with profiling
+enabled: **25 returned 500**, 5 the expected 404. With it disabled: **30 of 30
+404**. (The log count is useless here: the burst's tracebacks rotated
+`sg101.log` mid-run.) Tests: two new assertions failed against the old setting
+first; mutations emptied, key misspelled and ProfilingPanel dropped each fail
+exactly the tests the `DebugToolbarWiringTests` docstring names. Suite and
+deprecation gate 1,435 OK each.
+
 ## Site work — Markdown fixed pages (#31) and the colophon rewritten (#11) — DONE 2026-10-10, `03b319c9` (+ `a6f1bc64` for tos.html); live on leopard 2026-10-10 via `make prod-up`, checked by Brian
 
 **`make_fixed_page` picks the converter by extension.** `.rst` is docutils as
@@ -7009,7 +7037,8 @@ The same error appears four more times in the rotated log, all four at
 `production.py` never does. The endpoint itself answers `200 {"code":
 "FAIL-123"}` to a direct request. Not fixed — disabling `ProfilingPanel` would
 contradict the deliberate decision recorded at `local.py:60-69`; a reload wins
-the race.
+the race. **Reversed 2026-10-10**, after the panel's 500s preceded
+an OOM kill: see "the toolbar's ProfilingPanel off by default" above.
 
 **`accounts/static/js/accounts_code.js` is a `$.get()` with no error handler**,
 so *any* failure of that endpoint renders as an eternal "Please wait…" with no

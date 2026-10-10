@@ -293,6 +293,8 @@ TOOLBAR_WIRING_SNIPPET = (
 
 REDIRECTS_PANEL = 'debug_toolbar.panels.redirects.RedirectsPanel'
 REDIRECTS_PANEL_ID = 'RedirectsPanel'
+PROFILING_PANEL = 'debug_toolbar.panels.profiling.ProfilingPanel'
+PROFILING_PANEL_ID = 'ProfilingPanel'
 
 
 class DebugToolbarWiringTests(SimpleTestCase):
@@ -316,24 +318,23 @@ class DebugToolbarWiringTests(SimpleTestCase):
     which panels come out enabled, and only an enabled panel intercepts
     anything.
 
-    ProfilingPanel is asserted enabled for the same reason RedirectsPanel is
-    asserted disabled: the toolbar disables both by default, so an empty
-    DISABLE_PANELS does not mean "leave the defaults alone" -- it means "turn
-    both on". Naming both pins the setting from both directions, and mutating
-    the configuration shows why both are needed:
+    ProfilingPanel is asserted off by default but still on the toolbar, so it
+    can be switched on for one page. Enabled for every request it makes
+    concurrent requests fail -- cProfile allows one profiler at a time, and
+    runserver is threaded -- and it was enabled when runserver was OOM-killed.
+    The toolbar disables both panels by default, so an empty DISABLE_PANELS
+    does not mean "leave the defaults alone" -- it means "turn both on".
+    Mutating the configuration shows which assertion catches what:
 
       * toolbar moved to index 1 -> the middleware case alone. The panels are
         unaffected by where the middleware sits.
-      * DISABLE_PANELS emptied -> the config case, and RedirectsPanel comes out
+      * DISABLE_PANELS emptied -> the config case, and both panels come out
         enabled.
-      * the DISABLE_PANELS key misspelled -> the config case, and
-        *ProfilingPanel* is lost. RedirectsPanel stays off, because the
-        toolbar's own default already disables it -- so the typo is invisible
-        from RedirectsPanel's side and only the ProfilingPanel assertion
-        catches it.
-      * ProfilingPanel added to DISABLE_PANELS -> the same two.
-
-    So no single assertion here covers the setting; the pair does.
+      * the DISABLE_PANELS key misspelled -> the config case alone. The
+        toolbar's defaults then disable the same two panels, so nothing a
+        browser shows changes; only the config dict sees the typo.
+      * ProfilingPanel dropped from DISABLE_PANELS -> the config case and the
+        profiling case.
 
     Nothing here covers SHOW_TOOLBAR_CALLBACK, which only affects whether the
     toolbar is visible.
@@ -354,9 +355,9 @@ class DebugToolbarWiringTests(SimpleTestCase):
         self.assertEqual(wiring['first_middleware'],
                          'debug_toolbar.middleware.DebugToolbarMiddleware')
 
-    def test_redirects_panel_is_the_only_one_turned_off(self):
+    def test_redirects_and_profiling_panels_are_turned_off(self):
         self.assertEqual(self.toolbar_wiring()['disabled_panels'],
-                         [REDIRECTS_PANEL])
+                         sorted([PROFILING_PANEL, REDIRECTS_PANEL]))
 
     def test_redirects_panel_is_not_enabled_on_the_toolbar(self):
         """Off where it counts: the panel set the toolbar actually consults."""
@@ -364,11 +365,15 @@ class DebugToolbarWiringTests(SimpleTestCase):
         self.assertIn(REDIRECTS_PANEL_ID, wiring['all_panels'])
         self.assertNotIn(REDIRECTS_PANEL_ID, wiring['enabled_panels'])
 
-    def test_the_panels_that_do_its_job_stay_enabled(self):
-        """HistoryPanel replaces RedirectsPanel; ProfilingPanel is wanted."""
-        enabled = self.toolbar_wiring()['enabled_panels']
-        self.assertIn('HistoryPanel', enabled)
-        self.assertIn('ProfilingPanel', enabled)
+    def test_profiling_panel_is_available_but_not_enabled(self):
+        """Switched on per page from the toolbar, never for every request."""
+        wiring = self.toolbar_wiring()
+        self.assertIn(PROFILING_PANEL_ID, wiring['all_panels'])
+        self.assertNotIn(PROFILING_PANEL_ID, wiring['enabled_panels'])
+
+    def test_the_panel_that_does_its_job_stays_enabled(self):
+        """HistoryPanel replaces RedirectsPanel."""
+        self.assertIn('HistoryPanel', self.toolbar_wiring()['enabled_panels'])
 
 
 DEPLOYED_LOGGING_SNIPPET = (
