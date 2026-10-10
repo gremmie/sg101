@@ -18,7 +18,7 @@ it to open the firewall. Standard library only, so any python3 runs it.
     tools/origin_firewall.py apply          replace the provider's rules with the plan
     tools/origin_firewall.py check          compare the live rules with the plan
 
-Settings, from the environment:
+Settings:
 
     FIREWALL_SSH_FROM   where SSH is allowed from: "anywhere", or CIDR ranges
                         separated by spaces
@@ -35,14 +35,29 @@ For FIREWALL_PROVIDER=linode (Linode Cloud Firewall):
                         nothing else; it is never printed
     LINODE_API_URL      optional; defaults to https://api.linode.com/v4
 
+Each comes from the environment, or else from firewall/settings.env, which
+holds the settled decisions as KEY=value lines. The environment wins, so an
+emergency `FIREWALL_SSH_FROM=<cidr> tools/origin_firewall.py apply` still works.
+The file is committed, so it refuses LINODE_TOKEN, and any line it does not
+understand.
+
+LINODE_TOKEN comes from the environment, or else from the login keychain,
+stored once with:
+
+    security add-generic-password -a "$USER" -s sg101-linode-firewall -w
+
+Omitting the value after -w makes it prompt, keeping it out of shell history.
+
 Exit status: 0 OK, 1 a difference found, 2 an error or a refusal.
 """
 from __future__ import annotations
 
 import argparse
+import functools
 import ipaddress
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -50,6 +65,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RANGES = 'apache/cloudflare-ranges.txt'
+SETTINGS = 'firewall/settings.env'
+# What the settings file may hold. LINODE_TOKEN is deliberately absent.
+FILE_SETTINGS = ('FIREWALL_PROVIDER', 'FIREWALL_LINODE_ID', 'FIREWALL_SSH_FROM',
+                 'FIREWALL_HTTP', 'LINODE_API_URL')
+KEYCHAIN_SERVICE = 'sg101-linode-firewall'
 CF_IPV4 = 'https://www.cloudflare.com/ips-v4'
 CF_IPV6 = 'https://www.cloudflare.com/ips-v6'
 LINODE_API_URL = 'https://api.linode.com/v4'
@@ -62,9 +82,54 @@ class Refused(Exception):
     """Stop with exit status 2, printing the message to stderr."""
 
 
+@functools.cache
+def file_settings() -> dict[str, str]:
+    """The settings file's KEY=value lines; none if there is no file. A line it
+    does not understand stops everything rather than being skipped, as in the
+    ranges file: a mistyped key would otherwise leave its setting unset, or set
+    by whatever the shell happened to hold."""
+    try:
+        lines = (ROOT / SETTINGS).read_text().splitlines()
+    except FileNotFoundError:
+        return {}
+    except OSError:
+        raise Refused(f'cannot read {SETTINGS}')
+    found = {}
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        name, sep, value = line.partition('=')
+        name = name.strip()
+        if name == 'LINODE_TOKEN':
+            raise Refused(f'{SETTINGS}: LINODE_TOKEN does not belong in a committed '
+                          'file; use the environment or the login keychain')
+        # Only a key is ever printed, never a value or a whole line: either
+        # could be a pasted secret.
+        if not sep:
+            raise Refused(f'{SETTINGS}: a line that is not KEY=value')
+        if name not in FILE_SETTINGS:
+            raise Refused(f'{SETTINGS}: not a setting this tool reads: {name}')
+        found[name] = value.strip()
+    return found
+
+
 def setting(name: str) -> str:
-    """An environment setting, where empty counts as unset."""
-    return os.environ.get(name, '')
+    """A setting from the environment, or else the settings file, where empty
+    counts as unset."""
+    return os.environ.get(name, '') or file_settings().get(name, '')
+
+
+def keychain_token() -> str:
+    """LINODE_TOKEN from the login keychain, or empty if there is none or no
+    keychain to ask."""
+    try:
+        result = subprocess.run(
+            ['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'],
+            capture_output=True, text=True)
+    except OSError:
+        return ''
+    return result.stdout.strip() if result.returncode == 0 else ''
 
 
 def is_range(text: str) -> bool:
@@ -198,14 +263,16 @@ def require_plan(action: str) -> None:
 class Linode:
     def __init__(self) -> None:
         self.firewall_id = setting('FIREWALL_LINODE_ID')
-        self.token = setting('LINODE_TOKEN')
+        self.token = setting('LINODE_TOKEN') or keychain_token()
         if not self.firewall_id:
             raise Refused('FIREWALL_LINODE_ID is unset: '
                           'the ID of the Linode Cloud Firewall to manage')
         if not self.firewall_id.isdigit():
             raise Refused(f'FIREWALL_LINODE_ID must be a number, not: {self.firewall_id}')
         if not self.token:
-            raise Refused('LINODE_TOKEN is unset: a Linode token with Firewalls read/write')
+            raise Refused('LINODE_TOKEN is unset, and the login keychain has no '
+                          f'{KEYCHAIN_SERVICE} item: a Linode token with Firewalls '
+                          'read/write')
         base = setting('LINODE_API_URL') or LINODE_API_URL
         self.url = f'{base}/networking/firewalls/{self.firewall_id}/rules'
 

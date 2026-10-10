@@ -183,6 +183,36 @@ commented out (checked: line 11 reads `# 0 */12 * * * root …`). cron re-reads
 timer runs certbot. **Expected:** no root mail at the 12:00 or 00:00 CDT runs,
 and Google's jaguar count back to the cron mail alone from the 10-11 window.
 
+**The firewall targets take no arguments now (2026-10-10).** `make firewall-check` used to need five environment variables
+retyped every time, four of them decisions already recorded here. Now:
+
+- **`firewall/settings.env`** (committed) holds those four:
+  `FIREWALL_PROVIDER=linode`, `FIREWALL_LINODE_ID=175729041`,
+  `FIREWALL_SSH_FROM=anywhere` and `FIREWALL_HTTP=drop`, each one what
+  `firewall-check` passed with on 10-06. An environment variable of the same
+  name still wins, so an emergency `FIREWALL_SSH_FROM=<cidr> make
+  firewall-apply` works unchanged. **The guard keeps its point:** the values
+  are still explicit and reviewable, now in one place.
+- **`LINODE_TOKEN`** comes from the environment, or else from the login
+  keychain, service `sg101-linode-firewall`, the way `tools/dmarc_fetch.py`
+  reads its password. Brian stores it once, with `security
+  add-generic-password -a "$USER" -s sg101-linode-firewall -w`. The settings
+  file refuses a `LINODE_TOKEN` line, and refusals print only a key, never a
+  value.
+- **Tests:** 10 new in `tools/origin_firewall_test.py` (33 in all), written
+  first; all 10 failed for the intended reasons. A stand-in `security` is put
+  first on `PATH`, so the real keychain is never asked. **Mutation battery: 8
+  mutations, all caught** (file ignored; file over environment; keychain
+  before environment; no keychain; the token-in-file refusal removed; an
+  unknown key skipped; a bad line echoed; the wrong keychain service). 33 OK
+  under Python 3.14 and under `/usr/bin/python3` 3.9.6.
+- **Through the real entry point:** `make firewall-plan` with no arguments
+  shows no `UNDECIDED`. `make firewall-check` with no token reaches the
+  keychain and refuses, naming the service, before any network call.
+- **Against Linode (Brian, 2026-10-10):** the token is stored in the keychain,
+  and a bare `make firewall-check` passed, so the live rules still match the
+  plan.
+
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
 **The `ip6:` term is gone from the apex SPF record** (Brian, Cloudflare,

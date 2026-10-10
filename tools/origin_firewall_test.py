@@ -10,8 +10,15 @@ nothing. It returns rules and addresses in the reverse of the order they were
 stored, so a check that depended on order would fail here.
 
 The tool runs as a separate process, as it does from the Makefile. It and the
-ranges file are copied into a scratch tree first: the tool finds the file
+ranges file are copied into a scratch tree first: the tool finds its files
 relative to itself, so a test can break the copy without touching the real one.
+The tree starts with no settings file, so a test sees only the settings it
+passes unless it writes one.
+
+The login keychain is replaced too: a stand-in `security` comes first on PATH,
+answering with FAKE_KEYCHAIN_TOKEN, or "not found" when that is empty, and
+logging its arguments. The real keychain is never asked, so a token stored there
+cannot reach the stand-in API or change what a refusal test sees.
 
     python3 tools/origin_firewall_test.py
     /usr/bin/python3 tools/origin_firewall_test.py    # the tool under that interpreter
@@ -39,6 +46,18 @@ TOKEN = f'test-token-{os.getpid()}-do-not-print'
 EMERGENCY = {'action': 'ACCEPT', 'protocol': 'TCP', 'ports': '443', 'label': 'emergency',
              'addresses': {'ipv4': ['203.0.113.7/32']}}
 RULES_PATH = re.compile(r'^/v4/networking/firewalls/(\d+)/rules$')
+KEYCHAIN_SERVICE = 'sg101-linode-firewall'
+FAKE_SECURITY = """#!{python}
+import os, sys
+with open(os.environ['FAKE_KEYCHAIN_LOG'], 'a') as log:
+    log.write(' '.join(sys.argv[1:]) + '\\n')
+token = os.environ.get('FAKE_KEYCHAIN_TOKEN', '')
+if not token:
+    print('security: SecKeychainSearchCopyNext: The specified item could not '
+          'be found in the keychain.', file=sys.stderr)
+    sys.exit(44)
+print(token)
+"""
 
 
 class StandIn:
@@ -155,6 +174,14 @@ class OriginFirewallTest(unittest.TestCase):
         shutil.copy(ROOT / 'apache/cloudflare-ranges.txt', cls.tree / 'apache')
         cls.ranges_file = cls.tree / 'apache/cloudflare-ranges.txt'
         cls.good_ranges = cls.ranges_file.read_text()
+        (cls.tree / 'firewall').mkdir()
+        cls.settings_file = cls.tree / 'firewall/settings.env'
+        cls.fake_bin = cls.tree / 'fake-bin'
+        cls.fake_bin.mkdir()
+        security = cls.fake_bin / 'security'
+        security.write_text(FAKE_SECURITY.format(python=sys.executable))
+        security.chmod(0o755)
+        cls.keychain_log = cls.tree / 'keychain.log'
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -164,13 +191,17 @@ class OriginFirewallTest(unittest.TestCase):
     def setUp(self) -> None:
         self.stand_in.reset()
         self.ranges_file.write_text(self.good_ranges)
+        self.settings_file.unlink(missing_ok=True)
+        self.keychain_log.write_text('')
 
     def fw(self, action: str, **settings: str) -> tuple[int, str]:
         """Run the tool with complete settings, each overridable; an empty
         string is how a test leaves a setting unset. Returns the exit status and
         stdout and stderr together."""
         env = {
-            'PATH': os.environ['PATH'], 'HOME': os.environ.get('HOME', ''),
+            'PATH': f'{self.fake_bin}{os.pathsep}{os.environ["PATH"]}',
+            'HOME': os.environ.get('HOME', ''),
+            'FAKE_KEYCHAIN_LOG': str(self.keychain_log), 'FAKE_KEYCHAIN_TOKEN': '',
             'FIREWALL_PROVIDER': 'linode', 'FIREWALL_LINODE_ID': FIREWALL_ID,
             'LINODE_TOKEN': TOKEN, 'LINODE_API_URL': self.stand_in.url,
             'FIREWALL_HTTP': 'allow', 'FIREWALL_SSH_FROM': 'anywhere',
@@ -368,6 +399,82 @@ class OriginFirewallTest(unittest.TestCase):
             with self.subTest(var=var):
                 out = self.assert_refuses('apply', **{var: ''})
                 self.assertIn(f'{var} is unset', out)
+
+    def test_no_token_anywhere_asks_the_keychain_and_says_so(self) -> None:
+        out = self.assert_refuses('check', LINODE_TOKEN='')
+        self.assertIn(KEYCHAIN_SERVICE, out)
+        self.assertIn(f'-s {KEYCHAIN_SERVICE} -w', self.keychain_log.read_text())
+
+    # --- the settings file and the keychain -----------------------------------
+
+    def write_settings(self, *lines: str) -> None:
+        self.settings_file.write_text('# a comment, then a blank line\n\n'
+                                      + ''.join(f'{line}\n' for line in lines))
+
+    def settled(self) -> None:
+        """The settings file as committed, but naming the stand-in's firewall."""
+        self.write_settings('FIREWALL_PROVIDER=linode',
+                            f'FIREWALL_LINODE_ID={FIREWALL_ID}',
+                            'FIREWALL_SSH_FROM=anywhere', 'FIREWALL_HTTP=drop')
+
+    UNSET = {'FIREWALL_PROVIDER': '', 'FIREWALL_LINODE_ID': '',
+             'FIREWALL_SSH_FROM': '', 'FIREWALL_HTTP': ''}
+
+    def test_the_settings_file_supplies_what_the_environment_does_not(self) -> None:
+        self.settled()
+        self.apply(**self.UNSET)
+        self.assertEqual(sorted(r['ports'] for r in self.stand_in.rules['inbound']),
+                         ['22', '443'])
+        rc, out = self.fw('check', **self.UNSET)
+        self.assertEqual(rc, 0, out)
+
+    def test_plan_shows_the_settings_files_decisions(self) -> None:
+        self.settled()
+        rc, out = self.fw('plan', **self.UNSET)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn('UNDECIDED', out)
+        self.assertIn('tcp 80  refused', out)
+
+    def test_the_environment_overrides_the_settings_file(self) -> None:
+        self.settled()
+        self.apply(FIREWALL_HTTP='allow', FIREWALL_SSH_FROM='198.51.100.7/32')
+        self.assertEqual(self.stand_in.addresses_on('80'), self.planned_ranges())
+        self.assertEqual(self.stand_in.addresses_on('22'), ['198.51.100.7/32'])
+
+    def test_the_token_comes_from_the_keychain_when_unset(self) -> None:
+        rc, out = self.fw('apply', LINODE_TOKEN='', FAKE_KEYCHAIN_TOKEN=TOKEN)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(TOKEN, out)
+
+    def test_a_token_in_the_environment_is_used_before_the_keychain(self) -> None:
+        rc, out = self.fw('apply', FAKE_KEYCHAIN_TOKEN=f'stale-{os.getpid()}')
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.keychain_log.read_text(), '')
+
+    def test_a_token_in_the_settings_file_is_refused_and_not_printed(self) -> None:
+        self.settled()
+        self.settings_file.write_text(self.settings_file.read_text()
+                                      + f'LINODE_TOKEN={TOKEN}\n')
+        for action in ('plan', 'apply', 'check'):
+            with self.subTest(action=action):
+                rc, out = self.fw(action, **self.UNSET)
+                self.assertEqual(rc, 2, out)
+                self.assertEqual(self.stand_in.requests, [], out)
+                self.assertIn('LINODE_TOKEN does not belong', out)
+                self.assertNotIn(TOKEN, out)
+
+    def test_a_bad_settings_line_is_refused(self) -> None:
+        cases = {'not KEY=value': f'{TOKEN}',
+                 'an unknown setting': 'FIREWALL_HTTPS=drop',
+                 'a mistyped value': 'FIREWALL_HTTP=dorp'}
+        for name, line in cases.items():
+            for action in ('plan', 'apply', 'check'):
+                with self.subTest(case=name, action=action):
+                    self.write_settings(line)
+                    rc, out = self.fw(action, FIREWALL_HTTP='')
+                    self.assertEqual(rc, 2, out)
+                    self.assertEqual(self.stand_in.requests, [], out)
+                    self.assertNotIn(TOKEN, out)
 
     def test_a_malformed_ranges_line_is_refused(self) -> None:
         self.ranges_file.write_text(self.good_ranges + 'not-a-range\n')
