@@ -1,17 +1,17 @@
 name: CI
 
-# Runs the existing test suite on every push/PR to the modernization branch,
-# using the SAME Docker image and services as local dev (Python 3.12 /
+# Runs the existing test suite on every push to any branch and on every PR to
+# `main`, using the SAME Docker image and services as local dev (Python 3.12 /
 # PostgreSQL 16) for parity -- the `postgres` service comes from
 # docker-compose.yml rather than a GitHub-hosted service container, so CI and a
 # developer's laptop run the identical database.
-# `main` intentionally has no CI: it's preserved legacy history and predates the
-# Docker/CI setup, which live only on `modernize`.
+# Every branch is tested because work happens on short-lived feature branches
+# that merge to `main` when deployed, and `main` is what production pulls.
 on:
   push:
-    branches: [modernize]
+    branches: ['**']
   pull_request:
-    branches: [modernize]
+    branches: [main]
 
 jobs:
   test:

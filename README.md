@@ -9,9 +9,11 @@ donations tracking, and an event calendar.
 
 ## Branches
 
-- **`modernize`** — the active branch. Everything below describes it.
-- **`main`** — preserved legacy history from before the modernization, kept
-  for reference. It has no CI and does not run on a modern stack.
+- **`main`** — the active branch, and what production deploys. Everything
+  below describes it. The modernization was done on a `modernize` branch and
+  merged here once it was live.
+- **Feature branches** — work happens on short-lived branches cut from `main`
+  and merged back when that work is deployed.
 
 ## Tech stack
 
@@ -94,8 +96,8 @@ script by itself is not the gate.
 
 ## Continuous integration
 
-GitHub Actions runs the suite on every push and pull request to `modernize`
-(`.github/workflows/ci.yml`). CI seeds `.env` from `.env.example` and builds the
+GitHub Actions runs the suite on every push to any branch and on every pull
+request to `main` (`.github/workflows/ci.yml`). CI seeds `.env` from `.env.example` and builds the
 same Compose image used locally, so the database in CI is identical to a
 developer's rather than merely similar.
 

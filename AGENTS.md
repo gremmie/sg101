@@ -14,10 +14,12 @@ calendar.
 
 **Python 3.12 / Django 5.2 LTS / PostgreSQL 16 / Redis / Celery. Git.**
 
-The repo is **mid-modernization, and none of it is deployed yet.** Production
-still runs the old code (Python 2.7, Django 1.8, MySQL, Apache + `mod_wsgi`) on
-the old host, jaguar, until the Step 21 cutover. So what this repo does and what
-the live site does can differ. Which steps are done, and why, is in
+**This repo is what production runs.** The modernization went live on
+2026-10-08: production is the Docker Compose stack on the host leopard, behind
+Cloudflare. The old host, jaguar (Python 2.7, Django 1.8, MySQL), is frozen and
+due to be decommissioned. **`main` is the deployed branch.** Work happens on
+short-lived branches cut from `main` and merged back when deployed. The
+modernization's record, and what is still open from it, is in
 `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`, which is
 authoritative; this file does not track it.
 
@@ -105,14 +107,15 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   a forgotten rebuild ships stale styling with no error anywhere.
 
 - **The `wiki` app is gone.** It minted a cookie for an external MoinMoin wiki to
-  validate against Redis. The wiki itself still runs on the old host until the
-  cutover, when it becomes a redirect; its content is archived under
-  `archive/wiki/`.
+  validate against Redis. `wiki.surfguitar101.com` now answers a 301 to the
+  site, and the wiki's content is archived under `archive/wiki/`.
 - **`antispam/utils.py` imports `bio`, `comments`, `forums` and `user_photos`.**
   For something with callers in several apps, follow the narrow shape of
   `antispam/decorators.py` or `antispam/turnstile.py` instead.
 - **`fabfile.py` is stale** — it runs `hg pull --update`, from before the move to
-  git. It is not the deploy path; deployment is Step 21 and hasn't happened.
+  git. It is not the deploy path: deploys are `git pull` then `make prod-up`
+  (or `make prod-deploy` when there are migrations) on leopard. See
+  `.agents/planning/2026-07-04-modernizing-sg101/cutover-runbook.md` § D9.
 - **`tools/xapian_installer.sh` is a leftover** of the search stack removed in
   Step 4. Nothing uses it.
 - **Search `.agents/` before concluding something is undocumented.** A great deal
