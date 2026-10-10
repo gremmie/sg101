@@ -1,7 +1,8 @@
 """make_fixed_page.py
 
 A management command to generate HTML files that can be {% include'd %} by a
-generic flatpage-like system. We currently support restructured text as input.
+generic flatpage-like system. Input may be restructured text (.rst) or Markdown
+(.md); the file's extension selects the converter.
 
 I chose "fixed" page since I didn't want to confuse this with Django's flatpage
 system.
@@ -14,13 +15,20 @@ import os.path
 import glob
 
 import docutils.core
+import markdown
 from django.core.management.base import LabelCommand, CommandError
 from django.conf import settings
 
 
 class Command(LabelCommand):
-    help = "Generate HTML from restructured text files"
+    help = "Generate HTML from restructured text or Markdown files"
     args = "<inputfile1> <inputfile2> ... | all"
+
+    # file extension -> name of the method that converts it to HTML
+    converters = {
+        '.rst': 'transform_rst',
+        '.md': 'transform_markdown',
+    }
 
     def handle_label(self, filename, **kwargs):
         """Process input file(s)"""
@@ -32,8 +40,17 @@ class Command(LabelCommand):
         self.dst_dir = os.path.join(settings.PROJECT_PATH, 'templates', 'fixed')
 
         if filename == 'all':
-            files = glob.glob("%s%s*.rst" % (self.src_dir, os.path.sep))
-            files = [os.path.basename(f) for f in files]
+            files = []
+            for ext in self.converters:
+                files.extend(os.path.basename(f) for f in
+                        glob.glob("%s%s*%s" % (self.src_dir, os.path.sep, ext)))
+
+            # Two sources for one page would silently overwrite each other.
+            pages = [os.path.splitext(f)[0] for f in files]
+            dupes = sorted({p for p in pages if pages.count(p) > 1})
+            if dupes:
+                raise CommandError("More than one source file for: %s" %
+                        ", ".join(dupes))
         else:
             files = [filename]
 
@@ -42,6 +59,11 @@ class Command(LabelCommand):
 
     def process_page(self, filename):
         """Processes one fixed page"""
+
+        ext = os.path.splitext(filename)[1]
+        if ext not in self.converters:
+            raise CommandError("%s: unsupported file type; expected one of %s"
+                    % (filename, ", ".join(self.converters)))
 
         # retrieve source text
         src_path = os.path.join(self.src_dir, filename)
@@ -52,7 +74,7 @@ class Command(LabelCommand):
             raise CommandError(str(ex))
 
         # transform text
-        content = self.transform_input(src_text)
+        content = getattr(self, self.converters[ext])(src_text)
 
         # write output
         basename = os.path.splitext(os.path.basename(filename))[0]
@@ -67,7 +89,7 @@ class Command(LabelCommand):
         prefix = os.path.commonprefix([src_path, dst_path])
         self.stdout.write("%s -> %s\n" % (filename, dst_path[len(prefix):]))
 
-    def transform_input(self, src_text):
+    def transform_rst(self, src_text):
         """Transforms input restructured text to HTML"""
 
         # `writer=`, not `writer_name=`: the latter is deprecated and goes away
@@ -78,3 +100,10 @@ class Command(LabelCommand):
                     'doctitle_xform': False,
                     'initial_header_level': 2,
                     })['html_body']
+
+    def transform_markdown(self, src_text):
+        """Transforms input Markdown to HTML"""
+
+        # Not core.markup: that is for member content, and its nl2br extension
+        # would break every hard-wrapped line. These files are our own.
+        return markdown.markdown(src_text)

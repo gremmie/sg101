@@ -275,6 +275,47 @@ readings), so it stays while jaguar sends.
 `mail.surfguitar101.com` record itself go when jaguar stops sending; until then
 its nightly cron mail and any queued retry rely on them.
 
+## Site work — Markdown fixed pages (#31) and the colophon rewritten (#11) — DONE 2026-10-10, in the commit that adds this line; not yet deployed
+
+**`make_fixed_page` picks the converter by extension.** `.rst` is docutils as
+before; `.md` is plain `markdown.markdown()`, not `core.markup`: that pipeline
+is for member content, and its `nl2br` puts a `<br>` at every hard-wrapped line.
+`all` globs both; it refuses when one page has two sources (they would
+overwrite each other), and an unknown extension is a `CommandError` instead of
+silently going through docutils. Four new tests, each seen failing first
+(3 FAIL, 1 ERROR, all for the expected reason); six mutations, all caught, the
+file restored byte-identical. One mutation was redone: `if False:` on the
+extension check raised `KeyError`, not the old fault, so it was rerun as a
+fallback to docutils, which is what the old code did. Suite and deprecation gate
+1,434 OK each.
+
+**The colophon is now `sg101/fixed/colophon.md`; `colophon.rst` is deleted.**
+The source and its output had diverged: django-tagging was removed from
+`colophon.html` by hand and stayed in the `.rst`, so the next `all` would have
+put it back. The rewrite was checked by Brian on the dev server. Choices, with
+Brian:
+
+- **Credited:** Foundation, jQuery and jQuery UI (9 templates still use it),
+  FamFamFam (the Silk icons are still served); libraries Celery, Pillow,
+  Python-Markdown, Bleach; Apache in front of Gunicorn, PostgreSQL, Redis,
+  Ubuntu.
+- **Left out by choice:** Linode, Cloudflare, Postmark, S3.
+- **Beta testers by name, from their own profiles** (dev database). Brian
+  supplied Fady's name. **synchro is credited by handle** until he gives
+  permission to use his real name: his profile shows none, so he hasn't chosen
+  to publish it.
+- **Links checked 2026-10-10:** FamFamFam's site is gone, so it now links to
+  `github.com/legacy-icons/famfamfam-silk` (Brian); `ken.crashmatics.com` does
+  not resolve and `crashmatics.com` is a parked lander, so both names are kept
+  unlinked; Pillow moved to `python-pillow.org`. gnu.org answers 403 to a
+  scripted GET and 200 to HEAD: bot screening, not a dead link.
+
+**`tos.html` regenerated in its own commit.** `tos.rst` has two headings that
+slug to `terms-of-service`; docutils 0.23 names the second
+`terms-of-service-1` where the 2012 output said `id1`. Confirmed in the
+container: setting `auto_id_prefix='id'` gives `id1` back. Nothing links to
+`#id1`.
+
 ## Site work — hotlink images (#5) and the image host list — DONE 2026-10-09, `0589f21c`; live on leopard ~01:45 UTC, checked by Brian
 
 **The feature failed 95% of the time, unreported.** jaguar's archived access
@@ -13228,7 +13269,8 @@ Its next paragraph is worse, because it is present tense: the site "runs on" an
 **Apache server** with **mod_wsgi**, a **MySQL database**, the **Xapian** search
 engine and **memcached** — four claims, none of them true today, and Step 21
 changes the first two again. **A rewrite wants to wait for Step 21**, since the
-host and the web server are decided there.
+host and the web server are decided there. **Done 2026-10-10:** see "Markdown fixed
+pages (#31) and the colophon rewritten (#11)" above.
 
 ## Step 19 Phase C task 05 — news tags are a PostgreSQL `ArrayField`, BUILT 2026-09-07, `7064614b` + `7fc3c37c`, PUSHED
 
