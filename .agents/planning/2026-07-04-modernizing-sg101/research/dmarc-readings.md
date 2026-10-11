@@ -6842,3 +6842,99 @@ names in the last column lengthen that mail and do not add to the count.
    carries them, doubled if reading 23's `web.de` double count applies.
 5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
+
+### Thirty-first reading — 2026-10-11, covering 2026-10-10 (and Microsoft's 10-09): exact at four reporters, GMX files and does not double, and disabling certbot took jaguar back to one message
+
+`tools/dmarc_fetch.py -a <account>` scanned 17 messages: **5 new**, 12 already
+held, no conflicts. **The corpus is 188 reports.** One is Microsoft's late
+report for 10-09; four are for 10-10 (Google, Yahoo, AT&T, GMX). Every report
+reads `p=quarantine` and every disposition is `none`. leopard sent nothing to
+`comcast.net`, `aol.com` or a Microsoft domain on the UTC day 10-10, and neither
+Comcast, AOL nor Microsoft filed for it.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF |
+|---|---|---|---|---|
+| `Outlook.com` | 10-09 | `50.31.156.114` (Postmark) | **1** | pass / pass |
+| `google.com` | 10-10 | `50.31.156.113`–`.126`, nine addresses (Postmark) | **24** | pass / pass |
+| `google.com` | 10-10 | `173.255.245.115` (jaguar) | **1** | pass / pass |
+| `google.com` | 10-10 | `104.30.10.185` (Cloudflare Email Routing) | 1 | pass / pass |
+| `google.com` | 10-10 | `209.85.220.41` (Gmail relay) | 2 | pass / **fail**, SPF on `gmail.com` |
+| `google.com` | 10-10 | `35.89.44.38` (`cloudfilter.net`) | 1 | pass / **fail** |
+| `yahoo.com` | 10-10 | Postmark, five addresses | 7 | pass / pass |
+| `att.net` (Yahoo) | 10-10 | `50.31.156.124` (Postmark) | 1 | pass / pass |
+| `gmx.net` | 10-10 | `50.31.156.113`, `.116` (Postmark) | 2 | pass / pass |
+
+No row aligned on neither mechanism. **GMX's rows carry only
+`d=surfguitar101.com`**, not `pm.mtasv.net` as well: GMX reports the aligned
+signature alone.
+
+#### Every Postmark row reconciles
+
+| Endpoint | Window | leopard `email.log` | Report |
+|---|---|---|---|
+| Microsoft | UTC day 10-09 | 1 `hotmail.com` (03:30:48) | **1**, exact |
+| Google | UTC−7 day, 10-10 07:00 → 10-11 07:00 UTC | 21 `gmail.com` + **3 `muohio.edu`** (23:53:48, 01:15:07, 02:53:13) | **24**, exact |
+| Yahoo | UTC day 10-10 | 7 `yahoo.com` | 7, exact |
+| AT&T | UTC day 10-10 | 1 `att.net` (22:48:35) | 1, exact |
+| GMX | UTC day 10-10 | 2 `gmx.at` (15:37:47, 16:14:23) | 2, exact |
+
+**UTC−7 passes again on the `muohio.edu` sends**: only the 23:53:48 one falls
+on the UTC day, which would give 15 + 1 = 16 against Google's 24. The other two
+domains in the window, `msorensen.net` (MX `1and1.com`) and `hushmail.com`, are
+not Google-hosted, and Google does not count them.
+
+`sg101.log` holds one `ERROR` in the Google window, gunicorn's `Error handling
+request POST /profile/avatar/` at 10:18:19, the worker timeout. Google's count
+is exact without an error mail, and the one Email Routing row is matched below,
+and **Postmark's own record confirms Django did not mail the timeout**: its
+`messages/outbound` for 10:00 → 10:40 UTC (the API reads `-04:00`) holds two
+messages, the `Registration Confirmation` at 10:09:15 and the contact form's
+`Feedback: Change username` at 10:17:00, both `Sent`.
+
+**The forwarded rows each match a send.**
+
+- **`104.30.10.185` is Cloudflare Email Routing**, a new address in its range:
+  the `contact_form` to `admin@surfguitar101.com` at 10:17:00 UTC, as
+  prediction 3 named. leopard's other `admin@` send that UTC day, the
+  01:41:02 `admin_notification`, fell in reading 30's Google window.
+- **`35.89.44.38` is `thegogorillas.com`'s forwarder**: leopard sent it one
+  message in the window, 23:50:51 UTC.
+- **`209.85.220.41` carried two messages forwarded between Google mailboxes**;
+  their first hops are among the 24.
+
+#### jaguar: the cron mail alone
+
+jaguar's `mail.log.1`, window 10-10 02:00 → 10-11 02:00 CDT, holds one Google
+delivery: **`A576D586502`, Brian's nightly cron mail, 10-10 02:01:12 CDT**
+(`uid=1000`). The last root mail is `D5EF25864DF` at 10-10 00:11:03 CDT, the
+certbot failure reading 30 already counted, in the previous window. **So
+disabling `/etc/cron.d/certbot` at 11:39 CDT stopped the failures**, and nothing
+else runs certbot.
+
+**A new root mail falls in the next window**: `935E95864ED`, `uid=0
+from=<root>`, at 10-11 06:47:01 CDT (11:47:01 UTC), to Gmail, the same minute
+`mail.log` rotated. That is Sunday's `cron.weekly`: **the mail tells Brian
+that a newer Ubuntu release is available** (Brian, 2026-10-11). It is not site
+mail and not a fault.
+
+#### Scoring the thirtieth reading's predictions: all five held
+
+1. **HELD.** Microsoft's 10-09 reads 1, the `hotmail.com` password reset.
+2. **HELD.** One jaguar message, the cron mail; no root mail from 12:00 CDT on.
+3. **HELD.** 24 = 21 + 3, the `contact_form` row is there, and Postmark
+   holds no error mail from 10:18.
+4. **HELD.** Yahoo 7 = 7. GMX filed, and read 2 for 2: **reading 23's `web.de`
+   double count does not apply at GMX**.
+5. **HELD.**
+
+#### Predictions for the thirty-second reading
+
+1. **Google's 10-11 jaguar count is 2**: the 02:01:12 CDT cron mail (07:01:12
+   UTC) and the 06:47:01 CDT `cron.weekly` upgrade notice.
+2. **Google's 10-11 Postmark rows equal leopard's `gmail.com` and `muohio.edu`
+   sends from 10-11 07:00 to 10-12 07:00 UTC**, plus any Django error mail.
+3. **Microsoft's 10-11 reads 1**: the `hotmail.com` `forgot_username` at
+   14:30:12 UTC, plus one for every `Transient` event Postmark records against it.
+4. **Yahoo, AT&T and GMX match their UTC-day sends exactly.**
+5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
