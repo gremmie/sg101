@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-11
+**Last updated:** 2026-10-12
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -53,6 +53,7 @@ When work is committed, the heading is part of the commit.
 | 10-09 (read 10-09 ~17:35 UTC) | 29th reading (10-08 window): every row `none`; Postmark reconciles exactly at Google, Yahoo, AOL, AT&T and Comcast; Microsoft's 10-07 reads 12 for 11 sent: one attempt timed out after the body and was retried, so received twice (Postmark delivery events) | 114 sent 10-07→09, **0 bounced, 0 complaints**, 0 inactive; the one all-time bounce is still the `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **84** entries, unchanged; newest dated 10-07 18:06; **none dated 10-08 or 10-09** | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 565 MiB; workers 127–150 MB RSS at 15 h 49 min old (started 01:46, the hotlink deploy) | no list entry, as expected: the list was 83/84 wiki bans, and a site ban lasts 10 min; fail2ban checked below |
 | 10-10 (read 10-10 ~16:30 UTC) | 30th reading (10-09 window): every row `none`; Postmark exact at Google, Yahoo, AT&T; jaguar sends Google 2 extra a day, **certbot failing on `edtaxidermy.com`** | 132 sent 10-07→10, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` | **78**, down 6: jaguar's fail2ban is unbanning `wiki-abuse` at its 5-day bantime and taking each off the list; no new entry | 04:30 UTC run `Result=success`, exit 0 at 04:31:11; healthchecks.io not checked | 585 MiB; four workers 129–150 MB RSS at 1 d 14 h 44 min; **the fifth at 6 h 12 min, replaced after a `WORKER TIMEOUT`** at 10:18 UTC (below) | a member's avatar upload got a 502; CPU up from 14:00, a distributed scraper (below) |
 | 10-11 (read 10-11 ~15:15 UTC) | 31st reading (10-10 window): every row `none`; Postmark exact at Google (24 on UTC−7, incl. 3 `muohio.edu`), Yahoo, AT&T, GMX (2, not doubled) and Microsoft's 10-09 (1); jaguar back to the cron mail alone after certbot was disabled | 166 sent 10-07→11, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **78**, unchanged; newest dated 10-07; **none dated 10-08 → 10-11** | 04:30 UTC run `Result=success`, exit 0 at 04:30:52 (`systemctl show`); healthchecks.io not checked | 542 MiB; five workers 128–133 MB RSS at 18 h old (restarted 10-10 21:13:35 UTC); no `WORKER TIMEOUT` since | a `cron.weekly` root mail from jaguar at 06:47 CDT: Ubuntu's upgrade notice (Brian). Scraper: `Chrome/142` macOS `/forums/post/` 77,065 on 10-10, 19,544 on 10-11 to 15:00; a second crawler, Windows Chrome/116, 131, 133, 144, since 10-10, 43% of it from Tencent (AS132203) and Alibaba (AS45102) clouds, no address shared with the first; user CPU 10-10 6.94%, 10-11 6.50% to 15:00 (10-09 5.45%) (below) |
+| 10-12 (read 10-12 ~23:40 UTC) | 32nd reading (10-11 window): every row `none`; Postmark exact at Google (20 on UTC−7) and Yahoo (7); 5 `cloudfilter.net` rows = 5 `thegogorillas.com` sends; jaguar 2, the cron mail and the `cron.weekly` notice; **Microsoft's 10-11 not yet filed** | 231 sent 10-07→12, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **71**, down 7 from 78 (`make blocklist-show`, Brian): `wiki-abuse` entries still draining at their 5-day bantime | 04:30 UTC run `Result=success`, exit 0 at 04:30:36 (`systemctl show`); healthchecks.io not checked | 566 MiB; five workers 128–150 MB RSS at 2 d 2 h (restarted 10-10 21:13 UTC); no `WORKER TIMEOUT`, no `ERROR` in `sg101.log` 10-11 or 10-12 | Crawl **grew in requests, not CPU**: no-referrer `/forums/post/` 76,936 on 10-11 (46,076 addresses), 88,786 on 10-12 to 23:40 (59,632); `Chrome/142` macOS 25,241 → 34,030; Windows crawler 9,638 → 11,727; all traffic 181,773 → 208,703, 5,900–12,000 an hour on 10-12. User CPU 10-11 6.20%, 10-12 5.96% to 23:40 (10-10 6.94%); load 0.13–0.26 (below) |
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -209,6 +210,16 @@ watch, no Cloudflare rule yet.** If it grows, the candidates are a managed
 challenge on AS132203, AS45102 and AS398781, or on no-referrer
 `/forums/post/`. Bot Fight Mode is the last resort: the Free plan cannot exempt
 PayPal's IPN callback or the feed readers from it.
+
+**Still crawled on 10-12, harder, and cheaper (read 23:45 UTC).** No-referrer
+`/forums/post/` requests were 88,786 by 23:40, 15% above all of 10-11, from
+59,632 addresses. `Chrome/142` on macOS is back on `84.37` and `142.147`, its
+10-10 /16s. The Windows crawler's share from the four Tencent and Alibaba /16s
+named above fell to 609 of 11,741: it now also comes from `43.166`, `43.153`
+and `47.84`, not yet attributed by whois. **User CPU fell anyway**, 5.96% for
+the day against 6.20% on 10-11, with steal down from 1.10% to 0.40%. By
+requests it has grown; by cost it has not. **Brian decided 2026-10-12: keep
+watching while the cost stays tolerable**; no Cloudflare rule yet.
 
 **jaguar's `wiki-abuse` entries are draining off the list.** jaguar's fail2ban
 still runs, and with a 5-day `wiki-abuse` bantime its unbans take entries off
