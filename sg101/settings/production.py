@@ -64,13 +64,15 @@ SECURE_HSTS_SECONDS = 604800
 # Both backends are named explicitly even though 'default' is Django's own
 # choice: STORAGES replaced a pair of standalone settings, so writing only the
 # half that differs would hide where user uploads go. That entry is what moves
-# when media goes to object storage.
+# when media goes to object storage. Static files go through core's subclass of
+# Django's manifest storage, which also hashes the names JavaScript modules
+# import each other by (core/storage.py says why).
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+        'BACKEND': 'core.storage.ManifestStaticFilesStorage',
     },
 }
 

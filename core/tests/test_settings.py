@@ -956,7 +956,11 @@ class ProductionStaticAndSecurityTests(SimpleTestCase):
         self.assertFalse(settings_read['hsts_preload'])
 
     def test_static_files_are_served_from_a_manifest(self):
-        """The hashed names are what let WhiteNoise mark assets immutable."""
+        """The hashed names are what let WhiteNoise mark assets immutable.
+
+        core's subclass rather than Django's own, so that JavaScript modules
+        import each other by hashed name too (core/tests/test_storage.py).
+        """
         self.assertEqual(
             self.production_settings()['staticfiles_backend'],
-            'django.contrib.staticfiles.storage.ManifestStaticFilesStorage')
+            'core.storage.ManifestStaticFilesStorage')

@@ -118,3 +118,63 @@ lists `test-browser` under Development.
 
 **Not yet measured: CI.** The test needs `ajax.googleapis.com` until jQuery is
 self-hosted; CI's duration before and after is read on the push.
+
+## Step 2 task 01 — hashed module imports in production's static storage — DONE 2026-10-12
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step02/task-01-hashed-module-imports.code-task.md`.
+Branch `post-box-vanilla`, on `8110f467`.
+
+**What changed.** `core/storage.py`: `ManifestStaticFilesStorage`, Django's
+class with `support_js_module_import_aggregation = True`. It's a class
+attribute that `HashedFilesMixin.__init__` reads, not a constructor argument,
+so `STORAGES` `OPTIONS` can't set it; a subclass is the only way.
+`production.py` names it. `core/tests/test_settings.py`'s
+`test_static_files_are_served_from_a_manifest` now expects it.
+`core/tests/test_storage.py` is new: 4 tests, run through `collectstatic`
+itself with only the given tree collected into a temporary `STATIC_ROOT`.
+
+**Found while exploring: Django rewrites an `import … from` or `export … from`
+only when a semicolon ends it** (Django 5.2.17, `HashedFilesMixin`'s patterns
+end `\s*;`). Measured through `collectstatic`:
+
+| entry module | result |
+|---|---|
+| `import … from './c.js';`, `'../b.js';`, `export … from '../a.js';` | all three hashed, each naming a file that exists |
+| `import { b } from '../b.js'` (no `;`), then other code | **left as `'../b.js'`; collectstatic succeeds.** Silent in production |
+| the same, then `export { a } from '../a.js';` | the export's rewrite runs on across the line: `collectstatic` raises `ValueError: The file 'm/a.7fe5b7cbaa60.js' could not be found`, so the image build fails |
+
+A first probe that called `post_process` directly showed the third row
+writing `../a.7fe5b7cbaa60.7fe5b7cbaa60.js` silently. That was the probe
+discarding the exceptions `post_process` yields, not what `collectstatic`
+does. **Brian chose a standing real-tree test** over a semicolon lint or the
+synthetic test alone: `test_the_site_modules_import_only_hashed_files`
+collects `sg101/static/js/v3/` under the new storage. It fails if any relative
+`from`/`import` specifier in a hashed module is unhashed or names a file that
+wasn't written. Its specifier pattern is written independently of Django's,
+so it finds the statements Django skips. **It has no imports to check until
+step 2 task 02**; until then it asserts only that `js/v3/sg101.js` was
+collected.
+
+**Tests first.** With `STORAGE` pointed at Django's own class: the hashing
+test failed (all three specifiers unhashed), the semicolon test found no
+`missing` reason (nothing was rewritten to double-hash), and the production
+test failed on the class name. The real-tree test passed (no imports yet).
+
+**Mutations, each restored and confirmed identical with `cmp`:**
+
+| mutation | result |
+|---|---|
+| `support_js_module_import_aggregation = False` | 2 failures: hashing test (unhashed list), and `ValueError not raised` in the build-fails test |
+| `sg101/static/js/v3/zz_planted.js` with `import './sg101.js'` and no `;` | real-tree test fails: `('js/v3/zz_planted.408810aaea62.js', './sg101.js', 'unhashed')`; file deleted |
+| the helper's `unhashed` branch removed | the missing-semicolon test fails (`[] != [… 'unhashed']`) |
+
+**Production's own `collectstatic`:** `docker build --target prod` (the
+Dockerfile runs it under `sg101.settings.production`) succeeded: `1120 static
+files copied to '/app/static_root', 1120 post-processed`, and
+`staticfiles.json` holds 1,120 entries. The image was removed afterwards.
+
+**Suite and gate:** 1,440 OK each (1,436 + 4), the gate as its own run, no new
+warnings.
+
+**For task 02:** every `import`/`export … from` in the new modules must end in
+a semicolon. The real-tree test will fail on any that doesn't.
