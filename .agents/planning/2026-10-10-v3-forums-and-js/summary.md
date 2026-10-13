@@ -18,6 +18,7 @@ PDD run 2026-10-10. GitHub #9, #16, #17, #18.
 | `research/jquery3.md` | jQuery 3.7.1 + one-line Foundation patch + jQuery UI 1.13.3 match 2.2.4 |
 | `design/detailed-design.md` | the design, standalone |
 | `implementation/plan.md` | 12 steps with a checklist, branches and demos |
+| `STATUS.md` | what each task did and measured, from step 1 on |
 
 ## The design in brief
 

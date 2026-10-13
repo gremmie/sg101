@@ -145,7 +145,7 @@ CMD ["sh", "-c", "exec gunicorn sg101.wsgi:application \
 # --- dev ---------------------------------------------------------------------
 # The test suite and the debug toolbar, layered on the runtime image. The dev
 # requirements pull the runtime ones through `-r`, but those are already
-# installed by the layers above, so this resolves to the three tools it adds.
+# installed by the layers above, so this resolves to the tools it adds.
 # No COPY needed: the source, requirements file included, arrived above.
 FROM prod AS dev
 
@@ -164,6 +164,16 @@ FROM prod AS dev
 USER root
 
 RUN pip install -r requirements_dev.txt
+
+# The headless Chromium the browser tests drive, and the Debian libraries it
+# needs (--with-deps runs apt-get, so this stays as root). --only-shell skips
+# the full headed browser, which the tests never use.
+#
+# By default Playwright stores browsers under the installing user's home. A
+# fixed path is found whichever user the container runs as, and it sits outside
+# /app, where the bind mount would hide anything written under it.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN playwright install --with-deps --only-shell chromium
 
 # Development runs the auto-reloading server; compose overrides this per service
 # anyway, but the target's own default should not be gunicorn.

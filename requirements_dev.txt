@@ -15,3 +15,8 @@ testfixtures==12.3.0
 django-debug-toolbar==7.1.1
 # Runs the `coverage run --source='.' / report / xml` sequence CI invokes.
 coverage==7.15.4
+# Drives a headless Chromium for the browser tests. The browser itself is not a
+# pip package: the Dockerfile's `dev` target installs it with `playwright
+# install`, which fetches the build this version expects, so a bump here
+# changes the browser too.
+playwright==1.63.0

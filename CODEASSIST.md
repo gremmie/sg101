@@ -50,8 +50,9 @@ that the mutation actually exercises the behaviour the test claims to cover.
 
 ## Where the record goes
 
-**`STATUS.md` gets the durable write-up** —
-`.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`. A commit message is
+**`STATUS.md` gets the durable write-up** — the one in the task's own project,
+`.agents/planning/<project_name>/STATUS.md`: the modernization's for its
+tasks, `2026-10-10-v3-forums-and-js/STATUS.md` for the V3 forums. A commit message is
 not a substitute; the commit is found only by someone who already knows to look
 for it.
 
