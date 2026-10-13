@@ -178,3 +178,129 @@ warnings.
 
 **For task 02:** every `import`/`export … from` in the new modules must end in
 a semicolon. The real-tree test will fail on any that doesn't.
+
+## Step 2 task 02 — the post box as ES modules, on news submit — DONE 2026-10-12
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step02/task-02-post-box-modules.code-task.md`.
+Branch `post-box-vanilla`, on `eb49bdf9`.
+
+**What changed.**
+
+- **Modules**, under `sg101/static/js/v3/`, no jQuery, every import ending in
+  `;`:
+  - `core/http.js`: `postForm` and `RequestError`. The design's `getJSON` is
+    left until something calls it.
+  - `post_box/editor.js`, `post_box.js` (entry), `preview.js`, `hot_link.js`
+    and `uploads.js`.
+  - Two small ones the design didn't name: `status.js` (show or hide a modal's
+    callout) and `image_form.js` (the post-and-insert flow hot-link and upload
+    share; `uploads.js` leaves it when multi-upload arrives).
+- **`news/submit_news.html`** loads the entry module in place of
+  `jquery.form.min.js` and `post_box.js`.
+- **The shared templates are unchanged.** The modules hook onto the old ids
+  and classes (`.v3-editor`, `#hot-link-form`, `#photo-status`…), so task 03
+  has no leftover hooks to remove there.
+- **Hot-link and upload insert at the caret**, on their own line.
+- **One behaviour the design didn't name, Claude's call:** a textarea the
+  member never focused reports its caret at 0 (a form re-shown with its
+  text), so an image goes **at the end** there, as before (`trackCaret` in
+  `editor.js`).
+- **Preview's `alert()` is gone**; a failure shows in the panel.
+
+**Brian decided 2026-10-12:**
+
+1. **R10's server fix moved here from step 5.** `upload_ajax_v3` now puts
+   every message in `error_msg`, as plain messages (not `as_text()` bullets),
+   and its `form.save()` exception path logs and returns a generic sentence
+   instead of `str(ex)`, mirroring `hotlink_image`. Without it `http.js` could
+   only say "Bad Request". The old script reads `error_msg` too, so the other
+   ten pages get the reasons now.
+2. **CI's coverage runs with `--concurrency=greenlet,thread`** (`ci.yml`, with
+   a comment).
+
+**The coverage question, answered.** Measured locally (`coverage run
+--source=core/tests,news/tests`, news browser tests):
+
+- **Without the flag:** `core/tests/browser.py` 72%, missing 40–42 and 54–61,
+  everything after the first Playwright call; `news/tests/test_browser.py`
+  85%.
+- **With `greenlet,thread`:** 95% and 100%. The two lines still missing (49,
+  the preset-variable branch; 65, `self.fail`) genuinely don't run.
+- **`thread` must stay listed:** with `greenlet` alone, `comments/views.py`
+  under the browser tests read 29% against 37%, because the live server's
+  thread went untraced.
+- **CI's exact command** (coverage, `--concurrency=greenlet,thread`, under the
+  gate) ran locally: 1,450 OK.
+
+**Tests.** `news/tests/test_browser.py` now has 9 tests in two classes:
+
+- `SubmitPostBoxTestCase`: the modal, bold, link (prompt answered), preview,
+  preview's failure (session cookie cleared: the view's "only available to
+  logged-in users" shows in the panel), hot-link at the caret, and hot-link
+  into a never-focused box.
+- `SubmitUploadTestCase`: local upload under a temporary `MEDIA_ROOT`; an
+  upload at the caret, and a non-image whose reason shows.
+- `user_photos/tests/test_upload_views.py` gained the disabled and non-image
+  messages, and the 500 now asserts a generic message and a logged traceback.
+
+**Written first, against the old script:** 5 of the 7 tests then written
+passed, and both at-caret tests failed as they should (the image appended
+after `second`). Two faults in my own tests surfaced on the way, both fixed:
+
+- **The status callouts start out hidden, already holding "Success! …"**, so
+  `to_contain_text('Success')` passed with nothing inserted. Every status
+  assertion now also requires `to_be_visible()`.
+- **The upload test's temporary `MEDIA_ROOT` lacked `user_photos/`**, so local
+  upload raised `FileNotFoundError` (a 500). The class now creates it, as
+  `user_photos/tests/test_storage.py` and `core/tests/images/test_real_images.py`
+  do.
+
+The three new view tests failed first on the old view, each for the reason
+research topic 6 recorded.
+
+**Mutations, each restored and confirmed identical with `cmp`:**
+
+| mutation | caught by |
+|---|---|
+| `insertAtCursor` always appends | both at-caret tests |
+| `X-Requested-With` not sent | 4 tests (hot-link and upload get 405) |
+| `http.js` ignores `error_msg` | the non-image test (shows "Bad Request") |
+| preview's failure sent to `alert()` | the preview-failure test |
+| `upload_ajax_v3`'s form error back under `msg` | the view test and the browser test |
+| never-focused check removed | **survived at first** (see below); then the never-focused test |
+
+**The surviving mutation was a test that didn't reproduce the fault.** The
+first version set the textarea's value from script, and Chromium then puts
+the caret at the end, so "use the selection" and "append" agreed. Rewritten to
+re-show the form from the server (submitted without a title through
+`form.submit()`, which skips the browser's `required` check), where the caret
+really is 0. A first version waited with `wait_for_load_state()`, which
+returned on the old page's finished load. The Hot-link click then landed on
+the page being navigated away from, so the new page had no active post box;
+the mutation run showed the error "Cannot read properties of null". It now
+waits inside `expect_navigation()`. **Passed 5 of 5 plain; failed 3 of 3
+mutated, with the image at the top**, which is the fault itself.
+
+**A look at the page** (a throwaway browser test, not committed; screenshots
+in the session scratchpad): at 360 px and 1280 px, news submit loads the six
+modules and **no `jquery.form.min.js`**, the console is empty, the desktop
+layout is unchanged, and the preview modal opens at phone width.
+
+**Suite and gate:** 1,450 OK each (1,440 + 2 view tests + 8 browser tests), as
+separate runs.
+
+**Two fixes to the shared modals from Brian's review** (`core/v3/post_box_modals.html`,
+so every post box page gets them):
+
+- **The hot-link field's placeholder is `https://`**, not `http://`.
+- **The help's nested-list example now nests.** Python-Markdown nests a list
+  item only when it is indented **4 spaces**. The example used 3, so it
+  rendered as one flat list, on jaguar too. Measured with `site_markup`: 3
+  spaces flat, 4 nested; 2-space bullets flat, 4-space nested. The example
+  now uses 4 spaces and says "if you indent 4 spaces", and rendered from the
+  template it nests. **Left alone, deliberately:** making 2- and 3-space
+  nesting work would take a third-party extension, and since `Post.html` is
+  rendered at save it would also need a data migration. Also left alone: the
+  example's bulleted and numbered lists, pasted together, merge into one
+  `<ul>`, because Python-Markdown doesn't start a new list on a change of type
+  without `sane_lists`.

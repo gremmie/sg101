@@ -7,9 +7,11 @@ at the same seams the app uses (the UploadForm and the delete_photos helper), so
 the tests exercise the view logic without touching Pillow or Amazon.
 """
 import json
+import logging
 
 from unittest import mock
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -170,8 +172,44 @@ class UploadAjaxV3Tests(TestCase):
         form_mock.return_value.is_valid.return_value = True
         form_mock.return_value.save.side_effect = ValueError('boom')
 
-        response = self.client.post(self.url, {'photo': 'x'}, **AJAX)
+        old_disable = logging.getLogger().manager.disable
+        logging.disable(logging.NOTSET)
+        self.addCleanup(logging.disable, old_disable)
+
+        with self.assertLogs('user_photos.views', level='ERROR') as logged:
+            response = self.client.post(self.url, {'photo': 'x'}, **AJAX)
         self.assertEqual(response.status_code, 500)
+        # The exception can name a server path or an S3 detail; the member
+        # gets a generic sentence and the operator the traceback.
+        message = json.loads(response.content)['error_msg']
+        self.assertTrue(message)
+        self.assertNotIn('boom', message)
+        self.assertIsNotNone(logged.records[0].exc_info)
+
+    def test_a_file_that_is_not_an_image_says_why(self):
+        """The commonest rejection. Its reason arrives in error_msg, as plain
+        text: the post box shows it as text, so as_text()'s bullet would
+        reach the member verbatim."""
+        self.client.login(username='uploader', password='pw')
+        not_an_image = SimpleUploadedFile('x.jpg', b'not an image',
+                                          content_type='image/jpeg')
+
+        response = self.client.post(self.url, {'image_file': not_an_image},
+                                    **AJAX)
+        self.assertEqual(response.status_code, 400)
+        payload = json.loads(response.content)
+        self.assertEqual(payload, {'url': '', 'error_msg': payload['error_msg']})
+        self.assertTrue(payload['error_msg'].startswith('Upload a valid image.'),
+                        msg=payload['error_msg'])
+
+    @override_settings(USER_PHOTOS_ENABLED=False)
+    def test_disabled_says_so(self):
+        self.client.login(username='uploader', password='pw')
+        response = self.client.post(self.url, {}, **AJAX)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(json.loads(response.content),
+                         {'url': '',
+                          'error_msg': 'Photo uploads are temporarily disabled'})
 
 
 class GalleryAndDetailTests(TestCase):

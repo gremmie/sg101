@@ -58,7 +58,6 @@
 {% endblock %}
 {% block custom_js %}
    {% if add_form %}
-      <script src="{% static "js/jquery.form.min.js" %}"></script>
-      <script src="{% static "js/v3/post_box.js" %}"></script>
+      <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
    {% endif %}
 {% endblock %}

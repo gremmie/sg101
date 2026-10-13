@@ -96,8 +96,8 @@ def upload_ajax_v3(request):
 
     We return a JSON object response to the client with the following name
     & value pairs:
-            'msg' : string error message if success is false
-            'url' : the image URL as a string if success
+            'error_msg': string error message if an error occurred
+            'url': the image URL as a string if success
     """
     ret = {'error_msg': '', 'url': ''}
     status_code = 400
@@ -116,20 +116,22 @@ def upload_ajax_v3(request):
                 photo = form.save()
                 ret['url'] = photo.url
                 status_code = 200
-            except Exception as ex:
-                ret['error_msg'] = str(ex)
+            except Exception:
+                logger.exception("upload_ajax_v3 failed for %s",
+                                 request.user.username)
+                ret['error_msg'] = ("Sorry, something went wrong on our end "
+                                    "and the image couldn't be uploaded. "
+                                    "Please try again later.")
                 status_code = 500
         else:
-            # gather form error messages
-            errors = []
-            non_field_errors = form.non_field_errors().as_text()
-            if non_field_errors:
-                errors.append(non_field_errors)
-            for field_errors in form.errors.values():
-                errors.append(field_errors.as_text())
-            ret['msg'] = '\n'.join(errors)
+            # The messages themselves: the clients show this as text, so
+            # as_text()'s escaping and bullets would reach the member verbatim.
+            # form.errors holds the non-field errors too.
+            errors = [message for field_errors in form.errors.values()
+                      for message in field_errors]
+            ret['error_msg'] = '\n'.join(errors)
     else:
-        ret['msg'] = 'Photo uploads are temporarily disabled'
+        ret['error_msg'] = 'Photo uploads are temporarily disabled'
         status_code = 403
 
     return JsonResponse(ret, status=status_code)

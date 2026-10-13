@@ -94,12 +94,19 @@ jobs:
       # -e passes it INTO the container. A workflow-level `env:` block would set
       # it on the runner, where the suite does not run, and an unbound gate looks
       # exactly like a passing one.
+      #
+      # --concurrency names greenlet because the browser tests run on
+      # Playwright's sync API, which is built on greenlets. Without it coverage
+      # stops tracing a browser test at its first Playwright call, and reports
+      # the lines after it as missed although they ran. thread is the default
+      # and stays listed: naming any value replaces it, and the live server the
+      # browser tests drive runs in a thread.
       - name: Run test suite with coverage, under the deprecation gate
         run: >
           docker compose run --rm
           -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)"
           web
-          sh -c "coverage run --source='.' manage.py test --noinput --settings=sg101.settings.docker_test
+          sh -c "coverage run --concurrency=greenlet,thread --source='.' manage.py test --noinput --settings=sg101.settings.docker_test
           && coverage report
           && coverage xml"
 
