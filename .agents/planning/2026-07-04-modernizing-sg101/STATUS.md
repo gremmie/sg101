@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-13
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -54,6 +54,7 @@ When work is committed, the heading is part of the commit.
 | 10-10 (read 10-10 ~16:30 UTC) | 30th reading (10-09 window): every row `none`; Postmark exact at Google, Yahoo, AT&T; jaguar sends Google 2 extra a day, **certbot failing on `edtaxidermy.com`** | 132 sent 10-07→10, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` | **78**, down 6: jaguar's fail2ban is unbanning `wiki-abuse` at its 5-day bantime and taking each off the list; no new entry | 04:30 UTC run `Result=success`, exit 0 at 04:31:11; healthchecks.io not checked | 585 MiB; four workers 129–150 MB RSS at 1 d 14 h 44 min; **the fifth at 6 h 12 min, replaced after a `WORKER TIMEOUT`** at 10:18 UTC (below) | a member's avatar upload got a 502; CPU up from 14:00, a distributed scraper (below) |
 | 10-11 (read 10-11 ~15:15 UTC) | 31st reading (10-10 window): every row `none`; Postmark exact at Google (24 on UTC−7, incl. 3 `muohio.edu`), Yahoo, AT&T, GMX (2, not doubled) and Microsoft's 10-09 (1); jaguar back to the cron mail alone after certbot was disabled | 166 sent 10-07→11, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **78**, unchanged; newest dated 10-07; **none dated 10-08 → 10-11** | 04:30 UTC run `Result=success`, exit 0 at 04:30:52 (`systemctl show`); healthchecks.io not checked | 542 MiB; five workers 128–133 MB RSS at 18 h old (restarted 10-10 21:13:35 UTC); no `WORKER TIMEOUT` since | a `cron.weekly` root mail from jaguar at 06:47 CDT: Ubuntu's upgrade notice (Brian). Scraper: `Chrome/142` macOS `/forums/post/` 77,065 on 10-10, 19,544 on 10-11 to 15:00; a second crawler, Windows Chrome/116, 131, 133, 144, since 10-10, 43% of it from Tencent (AS132203) and Alibaba (AS45102) clouds, no address shared with the first; user CPU 10-10 6.94%, 10-11 6.50% to 15:00 (10-09 5.45%) (below) |
 | 10-12 (read 10-12 ~23:40 UTC) | 32nd reading (10-11 window): every row `none`; Postmark exact at Google (20 on UTC−7) and Yahoo (7); 5 `cloudfilter.net` rows = 5 `thegogorillas.com` sends; jaguar 2, the cron mail and the `cron.weekly` notice; **Microsoft's 10-11 not yet filed** | 231 sent 10-07→12, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **71**, down 7 from 78 (`make blocklist-show`, Brian): `wiki-abuse` entries still draining at their 5-day bantime | 04:30 UTC run `Result=success`, exit 0 at 04:30:36 (`systemctl show`); healthchecks.io not checked | 566 MiB; five workers 128–150 MB RSS at 2 d 2 h (restarted 10-10 21:13 UTC); no `WORKER TIMEOUT`, no `ERROR` in `sg101.log` 10-11 or 10-12 | Crawl **grew in requests, not CPU**: no-referrer `/forums/post/` 76,936 on 10-11 (46,076 addresses), 88,786 on 10-12 to 23:40 (59,632); `Chrome/142` macOS 25,241 → 34,030; Windows crawler 9,638 → 11,727; all traffic 181,773 → 208,703, 5,900–12,000 an hour on 10-12. User CPU 10-11 6.20%, 10-12 5.96% to 23:40 (10-10 6.94%); load 0.13–0.26 (below) |
+| 10-13 (read 10-13 ~17:25 UTC) | 33rd reading (10-12 window): every row `none`; Postmark exact at Google (20 on UTC−7), Yahoo (6), AOL (1), Comcast (2) and Microsoft's 10-11 (1); 6 `cloudfilter.net` rows = 6 `thegogorillas.com` sends; jaguar 1, the cron mail | 247 sent 10-07→13, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError` (API `deliverystats`, `stats/outbound`) | **71**, unchanged; newest dated 10-07 12:49. **Not draining any more: 70 of the 71 are `wiki-abuse` entries stranded by jaguar's one-page `actionunban`** (below) | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 565 MiB; five workers 127–150 MB RSS at 2 d 20 h (restarted 10-10 21:13 UTC); no `WORKER TIMEOUT` since 10-12 23:40, no `ERROR` in `sg101.log` 10-13 | No mail from 06:29:54 UTC to 17:25: quiet, not a fault. Every reply has its notifications, and the one later post is a new topic. Crawl: no-referrer `/forums/post/` 89,615 for all of 10-12 (59,988 addresses), 48,164 on 10-13 to 17:23 (27,565); **`Chrome/142` macOS fell to 2,200** (34,058 on 10-12); all Windows Chrome strings 36,566 → 25,556, now spread over versions 104–133 (a wider count than the 10-12 row's four versions); all traffic 211,193 → 129,423, 2,900–8,300 an hour on 10-13. User CPU 10-12 5.97%, 10-13 6.15% to 17:20; load 0.31–0.68 |
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -228,6 +229,32 @@ Cloudflare's list. `192.0.2.8`, listed 10-05 06:58, was unbanned 10-10
 entries. The newest, listed 10-07 18:06, is due off about 10-12 18:06. **That
 leaves requirement 4a's `blocklist-clear days=14` little to do**, provided
 jaguar keeps running until then.
+
+*Corrected 2026-10-13: the paragraph above is only partly right. Some of
+jaguar's unbans take their entry off the list, but many do not, so
+`blocklist-clear` still has nearly the whole list to remove.* The list held 71
+at 17:25 UTC on 10-13, the same as on 10-12, although no `wiki-abuse` ban on it
+is still inside its 5-day bantime. Comparing it with every action in jaguar's
+`fail2ban.log*` (09-14 on):
+
+| entry's last event in jaguar's log | on the list |
+|---|---|
+| `wiki-abuse` unban before 10-08 (09-22 → 10-07) | 54 |
+| `wiki-abuse` ban, never unbanned (09-23 → 09-25) | 12 |
+| `wiki-abuse` unban from 10-08 (10-10 13:44 → 10-11 11:00 CDT) | 4 |
+| `sg101-auth` unban, 10-07 07:59 CDT | 1 |
+
+Of the 21 `wiki-abuse` unbans from 10-08 on, 17 removed their entry. **This is
+task 06's known leak, not a new fault**: jaguar's `actionunban` searches only
+the first page of 25 items, so an unban removes its entry only if that entry
+is on the first page. The 12 never unbanned are the restart task 06
+inferred, now in the log: `Stopping all jails` at 09-25 11:19:09 CDT, jails
+started again at 11:20:26. The stop logged 23 `wiki-abuse` unbans, but none for
+these 12, all banned before it (09-23 15:30 → 09-25 10:38). Why the stop
+skipped them is not known. **4a's
+`blocklist-clear days=14` removes all 71 if run after 10-21 12:49 UTC**, when
+the newest entry turns 14 days old. That is what task 06 decided
+(`actionunban` not patched; clear again after the cutover).
 
 **jaguar's certbot fails twice a day, and each failure mails Google.** Its
 `certbot -q renew` cron prints only on failure, and has mailed root at each run
