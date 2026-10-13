@@ -75,3 +75,46 @@ committed:
 OK after, and 1,435 OK under the deprecation gate as its own run. The only
 `WARNING` lines are the suite's existing `email` log output, present before the
 change too.
+
+## Step 1 task 02 — the browser test base class and the upload modal test — DONE 2026-10-12
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step01/task-02-browser-test-base-and-upload-modal-test.code-task.md`.
+Branch `post-box-vanilla`, on `2de1ffc0`.
+
+**What was added.** `core/tests/browser.py`: `BrowserTestCase(StaticLiveServerTestCase)`,
+tagged `browser`. It sets `DJANGO_ALLOW_ASYNC_UNSAFE` in `setUpClass` and puts
+back whatever was there before; it holds one Chromium per class and a fresh
+context and page per test. `login(user)` copies a `Client.force_login` session
+cookie (`sg101_sessionid`) into the context. A `pageerror` listener fails the
+test in a cleanup, naming each error. The class-level teardown is done with
+`addClassCleanup`, so a failure partway through `setUpClass` still closes what
+was opened. `news/tests/test_browser.py`: logged in on `news-submit`, clicking
+`a.editor-upload` makes `#upload-modal` visible. `make test-browser` runs only
+the tag. No settings module changed.
+
+**Written test first.** Against a stub base class whose `login` did nothing,
+the test failed with `Page.click: Timeout 30000ms exceeded`, waiting for the
+Upload button: the anonymous request had redirected to the login page. With
+the base class it passed in 0.78 s.
+
+**Mutations, each run and reverted (`git checkout` on the template; the base
+class restored from a copy and confirmed identical with `cmp`):**
+
+| mutation | result |
+|---|---|
+| `foundation.min.js` tag removed from `v3/base.html` | **2 failures**: `Locator expected to be visible`, and the collector's `$(...).foundation is not a function` (thrown by `sg101.js`) |
+| an inline `<script>throw new Error(…)</script>` after `sg101.js` | **1 failure**, the collector's, naming the error; the modal opened |
+| the `addClassCleanup(cls._restore_async_unsafe)` line removed | the env check below reads `after 'true'` |
+
+**The override does not leak.** A throwaway script ran the class through
+Django's test runner inside the `web` container, reading the variable before
+and after: unset → unset (`None`), and preset to `'preset'` → `'preset'`.
+
+**Counts (`make`, in the dev stack):** `make test-browser` 1 test; `make test
+t="--exclude-tag browser"` 1,435; `make test` **1,436**; `make
+deprecation-gate` 1,436 OK. Its one non-`email` warning line, `Empty
+recipient_list in send_mail`, appeared in task 01's gate run too. `make help`
+lists `test-browser` under Development.
+
+**Not yet measured: CI.** The test needs `ajax.googleapis.com` until jQuery is
+self-hosted; CI's duration before and after is read on the push.

@@ -39,7 +39,7 @@ days ?=
 	prod-backup prod-backup-drill \
 	cloudflare-ranges-check firewall-plan firewall-apply firewall-check firewall-test \
 	blocklist-show blocklist-add blocklist-remove blocklist-clear blocklist-test \
-	up down ps logs shell bash manage psql test deprecation-gate css \
+	up down ps logs shell bash manage psql test test-browser deprecation-gate css \
 	snapshot snapshots
 
 help: ## Show this list
@@ -213,6 +213,9 @@ psql: ## PostgreSQL prompt
 
 test: ## Run the test suite, or only t="labels"
 	$(DC) exec web python manage.py test $(TEST_SETTINGS) $(t)
+
+test-browser: ## Run only the browser tests, or only those in t="labels"
+	$(DC) exec web python manage.py test $(TEST_SETTINGS) --tag browser $(t)
 
 # Running tools/deprecation_gate.sh by itself only prints the filter. The gate
 # is this run of the suite with that filter applied.
