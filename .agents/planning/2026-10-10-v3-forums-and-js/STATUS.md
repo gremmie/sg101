@@ -304,3 +304,110 @@ so every post box page gets them):
   example's bulleted and numbered lists, pasted together, merge into one
   `<ul>`, because Python-Markdown doesn't start a new list on a change of type
   without `sane_lists`.
+
+## Step 2 task 03 — every post box on the modules, the old script deleted — IN PROGRESS 2026-10-14
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step02/task-03-post-box-rollout.code-task.md`.
+Branch `post-box-vanilla`, on `03c770cd`. Uncommitted; the manual walk is
+still to do.
+
+**Re-measured first, and the lists match the task file:** `grep -rl
+'js/v3/post_box.js' . --include='*.html'` named 10 templates (the task's 11
+less news submit), and `jquery.form` named 14 (those 10 plus the four forum
+templates).
+
+**What changed.**
+
+- **The ten pages** (`bio/edit_profile`, `contests/contest_detail`,
+  `downloads/add`, `downloads/download_detail`, `gcalendar/event`,
+  `messages/compose`, `messages/view_message`, `news/story`,
+  `polls/poll_detail`, `potd/view`): the `jquery.form.min.js` and
+  `js/v3/post_box.js` tags became the one entry `<script type="module">`, at
+  the same place and indentation. Nothing else on them moved.
+- **`sg101/static/js/v3/post_box.js` is deleted.** `static/js/jquery.form.min.js`
+  stays (it's in the top-level `static/`, not `sg101/static/`).
+- **The shared templates had no hooks used only by the old script**, as task
+  02 recorded. **Brian chose to remove two pieces of dead markup**: the
+  commented-out `tabs-panel` line in `core/v3/post_box.html`, and the empty
+  `#photo-upload-progress` div in `core/v3/post_box_modals.html`.
+
+**`#photo-upload-progress` isn't unreferenced, as I first claimed.** Brian
+found it in `static/js/markitup/sets/markdown/set.js:129`, my search having
+covered `sg101/static` only. markItUp uses the div as its switch: if it's
+there, markItUp calls `ajaxForm` on `#photo-upload-form` and inserts into
+`#id_body`. The removal still stands. markItUp is loaded (the `markitup`
+bundle in `base.py`) only by the four forum templates, and by
+`comments/markdown_preview.html` for its CSS. None of them includes the v3
+modals; their upload form is `user_photos/image_forms.html`, which keeps its
+div. On a v3 page the div could only have woken markItUp's handler.
+
+**For step 8: the forum pages' jQuery Form isn't dead.** The task file's
+"only `post_box.js` calls jQuery Form" was measured over `sg101/static/js`.
+Across both static trees, the one non-minified caller left is markItUp's
+`set.js` (`ajaxForm`), on the forum pages.
+
+**Test.** `bio/tests/test_browser.py`, `EditProfilePostBoxTestCase`: with
+both boxes holding `first\nsecond` and the caret after `first` in one box, a
+hot-link from that box's button puts the image there, on its own line at the
+caret, and leaves the other box unchanged. One test for the signature (the
+second box) and one for `profile_text`. Hot-link only: the active post box is
+chosen in the entry module before either form posts, and upload at the caret
+is already covered on news submit.
+
+- **Against the old script:** both failed at the at-caret assertion, with the
+  image in the right box but appended (`first\nsecond\n![image](…)`).
+- **After the switch:** both pass.
+- **Mutation:** the entry module set `active` to the page's first
+  `.v3-editor textarea` instead of the clicked one. The signature test failed
+  (signature unchanged, the image in `profile_text`) and the `profile_text`
+  test passed, which is right, since it can't tell the two apart. Restored,
+  byte-identical (`shasum`, and an empty `git diff`).
+
+**Production hashes the imports.** `collectstatic` under
+`sg101.settings.production` with `SECRET_KEY=build-time-only`, as the
+Dockerfile runs it, but with `STATIC_ROOT` overridden to a temporary directory
+in the web container (production's `STATIC_ROOT` is inside the bind-mounted
+tree). 1,127 manifest entries. Every import in the eight hashed modules names
+a hashed file that exists, e.g. `post_box.0fd555f9fd06.js` imports
+`./editor.909edb7e6c35.js`, `./hot_link.455fe229c2b3.js`,
+`./preview.f39fddda5085.js` and `./uploads.c4e8cbd18d9b.js`, and
+`image_form.js` and `preview.js` import `../core/http.f3b4cba2538b.js`. No
+`js/v3/post_box.*.js` was collected.
+
+**Suite and gate:** 1,452 OK each (1,450 + the 2 new tests), as separate
+runs. `core/tests/test_static.py` passes, so no template names a missing
+static file. `make test-browser`: 11 OK.
+
+**A news story can't show the comment form any more** (Brian, during the
+walk). `news/story.html` renders it, and loads the post box, only for
+`story.version == 0` with `can_comment_on` (comments allowed, under 30 days
+old); later stories comment in a forum topic. The dev database's newest
+version-0 story is from 2015-11-27 (989 in all), so the branch is
+unreachable. The switch there is kept, so no page names the deleted script.
+**The walk uses POTD's comment form instead**, the same
+`{% render_comment_form_v3 %}`.
+
+**The manual walk (Brian, 2026-10-14)**, on the dev stack with
+`USER_PHOTOS_LOCAL_UPLOAD=True`: news submit, profile edit (both boxes),
+message compose and POTD's comment form, at phone and desktop widths. Toolbar,
+preview, hot-link and upload work on each, and the console shows nothing new.
+
+- **Two console messages on every modal are Foundation's, and pre-existing.**
+  Chrome refuses Reveal's `aria-hidden="true"` on `<body>` as a modal opens
+  (an error), and on `.reveal-overlay`, which holds the modal Reveal then
+  focuses (a warning). Both are in the vendored `foundation.min.js`
+  (`_makeOverlay`, and `open`'s `t("body")…attr("aria-hidden", …)`); the post
+  box modules set neither `aria-hidden` nor focus. Left for the step that
+  patches `foundation.min.js`.
+- **Network, spot-checked on compose by a headless probe** at 375 and 1280
+  px, logged in through a session made directly (so `last_login` was left
+  alone) and deleted afterwards: all eight modules 200, no request for
+  `jquery.form.min.js` or the old `v3/post_box.js`, no page errors. The only
+  non-2xx is a 404 for a sidebar POTD thumbnail missing from dev's `media/`.
+
+**Still to do:** commit, push and CI.
+
+**Separate change, its own commit:** `sg101/settings/dev.py` reads
+`USER_PHOTOS_LOCAL_UPLOAD` from the environment (default `False`;
+production pins it `False`), and `.env.example` documents it. Before that it
+was a constant, and `.env` couldn't turn it on.

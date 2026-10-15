@@ -47,6 +47,5 @@
 {% block custom_js %}
 {% js_tags 'jquery-ui' %}
 <script src="{% static "js/v3/autocomplete.js" %}"></script>
-<script src="{% static "js/jquery.form.min.js" %}"></script>
-<script src="{% static "js/v3/post_box.js" %}"></script>
+<script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
 {% endblock %}

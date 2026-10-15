@@ -99,8 +99,7 @@
 {% block custom_js %}
 {% if contest.is_active %}
    <script type="text/javascript" src="{% static "js/comments.js" %}"></script>
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/v3/post_box.js" %}"></script>
+   <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
    <script type="text/javascript">
       var contest_id = {{ contest.id }};
    </script>

@@ -88,7 +88,6 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 {% block custom_js %}
    {% if story.can_comment_on %}
       <script src="{% static "js/comments.js" %}"></script>
-      <script src="{% static "js/jquery.form.min.js" %}"></script>
-      <script src="{% static "js/v3/post_box.js" %}"></script>
+      <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
    {% endif %}
 {% endblock %}

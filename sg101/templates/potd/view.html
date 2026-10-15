@@ -84,6 +84,5 @@ with the site staff, you can <a href="{% url 'contact-form' %}">contact us direc
 {% endblock %}
 {% block custom_js %}
    <script src="{% static "js/comments.js" %}"></script>
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/v3/post_box.js" %}"></script>
+   <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
 {% endblock %}
