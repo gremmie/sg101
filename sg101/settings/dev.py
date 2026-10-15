@@ -85,6 +85,10 @@ DEBUG_TOOLBAR_CONFIG = {
     'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
 }
 
+# Photo uploads go to S3 unless .env says to keep them under MEDIA_ROOT, which
+# needs media/user_photos/ to exist.
+USER_PHOTOS_LOCAL_UPLOAD = env.bool('USER_PHOTOS_LOCAL_UPLOAD', default=False)
+
 # Logging: shared configuration, with this deployment's differences applied.
 LOGGING = logging_config.for_target('dev',
                                     log_dir=os.path.join(PROJECT_PATH, 'logs'))
