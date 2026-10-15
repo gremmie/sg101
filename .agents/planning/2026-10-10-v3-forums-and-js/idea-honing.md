@@ -323,6 +323,11 @@ How:
   in.
 - **CI must test the feature branches.** It must run on pushes to any branch
   and on pull requests to `main`, not only on `modernize` as now.
+- **This project's planning and status changes are committed on the step's
+  branch** (`STATUS.md`, the plan, the task files), and reach `main` when the
+  step deploys. `STATUS.md` cites commits and measurements of that branch's
+  code, which `main` doesn't hold until then. Planning done between branches,
+  before the next one is cut, goes on `main`. (Brian, 2026-10-14)
 
 ### Prerequisite: `modernize` becomes `main` (proposed, not yet approved)
 

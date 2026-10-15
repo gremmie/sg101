@@ -397,8 +397,9 @@ preview, hot-link and upload work on each, and the console shows nothing new.
   (an error), and on `.reveal-overlay`, which holds the modal Reveal then
   focuses (a warning). Both are in the vendored `foundation.min.js`
   (`_makeOverlay`, and `open`'s `t("body")…attr("aria-hidden", …)`); the post
-  box modules set neither `aria-hidden` nor focus. Left for the step that
-  patches `foundation.min.js`.
+  box modules set neither `aria-hidden` nor focus. **Brian put the fix in
+  step 3** (`implementation/plan.md`, step 3 guidance), which already patches
+  `foundation.min.js`.
 - **Network, spot-checked on compose by a headless probe** at 375 and 1280
   px, logged in through a session made directly (so `last_login` was left
   alone) and deleted afterwards: all eight modules 200, no request for

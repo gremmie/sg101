@@ -152,6 +152,21 @@ the datepickers and the autocompletes behave exactly as on 2.2.4.
   `jquery-ui` entries point at the local copies. The old design's
   `jquery` 1.11 entry is untouched, since it goes in step 12.
 - **The one-line Foundation patch**, recorded in the README.
+- **Reveal's `aria-hidden` (Brian, 2026-10-14).** Opening any Reveal modal,
+  Foundation sets `aria-hidden="true"` on `<body>`, and the overlay it creates
+  (`_makeOverlay`) carries `aria-hidden="true"` while holding the modal it
+  focuses. Chrome refuses both and logs an error and a warning, on every post
+  box modal (step 2 task 03's walk). **Required:** with a modal open, neither
+  `<body>` nor any ancestor of the focused modal has `aria-hidden="true"`, and
+  `aria-hidden` is put back as it was on close. **Not yet decided:** how. A
+  second patch to the vendored file, recorded in the README with the first,
+  is the likely shape. Measure first, before choosing:
+  - whether Foundation 6.9.0 changed this upstream (its fix shows the intent,
+    though there's no upgrade, Q12/Q13)
+  - what Firefox and Safari do with `aria-hidden` on `<body>`, where Chrome
+    refuses it
+  - whether the overlay needs to be hidden from assistive technology at all,
+    or `inert` on the page behind does that job
 - **`comments.js`:** `.size()` → `.length`.
 
 **Tests.**
@@ -162,6 +177,10 @@ the datepickers and the autocompletes behave exactly as on 2.2.4.
   `bio/member_search` appear directly under their inputs. **Mutation:** load
   jQuery UI 1.11.0, and the autocomplete test fails, since its menu sits at
   (0, 0).
+- **Browser:** with a post box modal open, `<body>` and the modal's ancestors
+  have no `aria-hidden="true"`, and Chrome logs no console error. **Mutation:**
+  put back each of Reveal's two `aria-hidden` settings in turn, and the test
+  fails each time.
 - **Manual (design §7.3), at phone and desktop widths:**
   - the navigation drilldown and dropdown
   - the Orbit banner
