@@ -305,11 +305,11 @@ so every post box page gets them):
   `<ul>`, because Python-Markdown doesn't start a new list on a change of type
   without `sane_lists`.
 
-## Step 2 task 03 — every post box on the modules, the old script deleted — IN PROGRESS 2026-10-14
+## Step 2 task 03 — every post box on the modules, the old script deleted — DONE 2026-10-14 (`0d7024fa`)
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step02/task-03-post-box-rollout.code-task.md`.
-Branch `post-box-vanilla`, on `03c770cd`. Uncommitted; the manual walk is
-still to do.
+Branch `post-box-vanilla`, on `03c770cd`; committed `0d7024fa`, after
+`758b2747` (the separate dev settings change below).
 
 **Re-measured first, and the lists match the task file:** `grep -rl
 'js/v3/post_box.js' . --include='*.html'` named 10 templates (the task's 11
@@ -405,7 +405,7 @@ preview, hot-link and upload work on each, and the console shows nothing new.
   `jquery.form.min.js` or the old `v3/post_box.js`, no page errors. The only
   non-2xx is a 404 for a sidebar POTD thumbnail missing from dev's `media/`.
 
-**Still to do:** commit, push and CI.
+**Step 2 is complete.** Steps 1 and 2 merge to `main` and deploy together.
 
 **Separate change, its own commit:** `sg101/settings/dev.py` reads
 `USER_PHOTOS_LOCAL_UPLOAD` from the environment (default `False`;
