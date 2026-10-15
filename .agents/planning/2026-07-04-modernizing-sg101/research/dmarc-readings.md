@@ -60,6 +60,7 @@ reading log stops*.
 | 32 | 2026-10-12 | 10-11 | exact at Google and Yahoo; jaguar's two messages as predicted; Microsoft not yet filed |
 | 33 | 2026-10-13 | 10-12 (+ Microsoft 10-11) | exact at five reporters; the sixth `cloudfilter.net` row is the 06:29 send; jaguar back to the cron mail |
 | 34 | 2026-10-15 | 10-13 | the quietest Google day since the flip, 1 for 1; exact at Yahoo, Comcast and GMX; all five predictions held |
+| 35 | 2026-10-15 | 10-14 | exact at Google (21) and Yahoo (8); jaguar's 3 for a predicted 1 is two sudo-failure mails, almost certainly the thirty-fourth reading's own probe |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -7131,5 +7132,88 @@ Django error mail sits in Google's count. jaguar's next cron mail,
    one address.
 4. **Comcast, GMX, AOL, AT&T and Microsoft file nothing for 10-14**: leopard
    sent them nothing on the UTC day.
+5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
+
+### Thirty-fifth reading — 2026-10-15, covering 2026-10-14: exact at Google (21) and Yahoo (8); jaguar's 3 for a predicted 1 is the thirty-fourth reading's own probe
+
+`tools/dmarc_fetch.py -a <account>` scanned 30 messages: **2 new**, 28 already
+held, no conflicts. **The corpus is 201 reports.** Both are for 10-14, Google
+and Yahoo. Every report reads `p=quarantine` and every disposition is `none`.
+leopard sent nothing to Comcast, GMX, AOL, AT&T or a Microsoft domain on the UTC
+day 10-14, and none of them filed. Read 10-15 ~17:20 UTC.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF |
+|---|---|---|---|---|
+| `google.com` | 10-14 | `50.31.156.113`–`.126`, nine addresses (Postmark) | **21** | pass / pass |
+| `google.com` | 10-14 | `173.255.245.115` (jaguar) | **3** | pass / pass |
+| `google.com` | 10-14 | `209.85.220.41` (Gmail relay) | 5 | pass / **fail**, SPF on `gmail.com` |
+| `yahoo.com` | 10-14 | Postmark, six addresses | 8 | pass / pass |
+
+No row aligned on neither mechanism, and no `cloudfilter.net` row.
+
+#### Every row reconciles
+
+| Endpoint | Window | Sender's log | Report |
+|---|---|---|---|
+| Google, Postmark | UTC−7 day, 10-14 07:00 → 10-15 07:00 UTC | leopard `email.log`: 21 `gmail.com` (one at 18:47:08, twenty from 10-15 00:38:05 to 01:57:45) | **21**, exact |
+| Google, forwarders | same | leopard `email.log`: no `thegogorillas.com` send | **0** `cloudfilter.net` rows, exact |
+| Google, jaguar | 10-14 02:00 → 10-15 02:00 CDT | jaguar `mail.log`: `637575864DF`, the cron mail, 02:01:13 CDT; **`70CDD5864EC` and `7C7E2586572`, two root mails at 19:37:27 CDT** | **3**, exact |
+| Yahoo | UTC day 10-14 | leopard `email.log`: 8 `yahoo.com`, all to one address | 8, exact |
+
+leopard's `email.log` holds 15 sends on the UTC day 10-14 and 48 in Google's
+window, all `outcome=sent`. The window's other domains, `msorensen.net` (6),
+`hushmail.com` (4), `rockisland.com` and `mail.de`, are not reporters. Its
+`att.net` (4), `comcast.net` and `aol.com` sends fell after UTC midnight, so
+they belong to those reporters' 10-15. None went to
+`admin@surfguitar101.com`, so there is no Email Routing row. `sg101.log` holds
+no `ERROR` or `CRITICAL` line dated 10-14 or 10-15, so no Django error mail
+sits in Google's count.
+
+`209.85.220.41` carried five Postmark messages forwarded from one Google mailbox
+to another. Their first hops are among the 21. Two recipients got exactly five
+messages each in the window, so the count alone does not say whose forward it
+is.
+
+#### jaguar's two extra messages are the thirty-fourth reading's probe
+
+Both root mails were queued at 19:37:26 CDT, which is 10-15 00:37:26 UTC, three
+minutes before the thirty-fourth reading's recorded read time. jaguar's
+`auth.log` shows where they came from: an ssh login as `brian` from
+`192.0.2.12` at 19:37:24, then two
+`sudo: brian : a password is required ; TTY=unknown ; … COMMAND=/bin/true`
+lines at 19:37:26, and a disconnect the same second. **sudo mails root on a
+failed authentication, and root forwards to Gmail**, so each non-interactive
+`sudo -n true` put one message into Google's jaguar row. A scripted sudo check
+over ssh, made at the minute the thirty-fourth reading was taken, is almost
+certainly that reading's own work, and the next reading counted it. Do not run
+one again: jaguar's sudo is already known to need Brian's password, and a probe
+that mails root disturbs the cron-mail baseline these readings depend on. This
+reading ran no `sudo` on jaguar.
+
+#### Scoring the thirty-fourth reading's predictions: four held, one falsified and explained
+
+1. **FALSIFIED, and explained.** jaguar's count is 3, not 1: the cron mail plus
+   two sudo-failure mails, almost certainly from the reading's own probe (above).
+2. **HELD.** 21 = 21 `gmail.com`. All but one were sent after the prediction's
+   "so far 1". No `thegogorillas.com` send and no `cloudfilter.net` row.
+3. **HELD.** Yahoo 8, exact.
+4. **HELD so far.** Comcast, GMX, AOL, AT&T and Microsoft have filed nothing for
+   10-14. Microsoft has filed up to four days late before, but a report for a
+   day leopard sent it nothing would itself be a finding.
+5. **HELD.**
+
+#### Predictions for the thirty-sixth reading
+
+1. **Google's 10-15 jaguar count is 1**: `B6EC65864EC`, the 02:01:13 CDT cron
+   mail, unless jaguar's root mails again. No `sudo` is to be run on jaguar
+   before it is read.
+2. **Google's 10-15 Postmark rows equal leopard's `gmail.com` sends from 10-15
+   07:00 to 10-16 07:00 UTC**, plus any Django error mail: so far 1, at
+   13:29:20. No `thegogorillas.com` send so far, so no `cloudfilter.net` row.
+3. **Yahoo's 10-15 matches the UTC day's `yahoo.com` sends**: so far 6.
+4. **AT&T reads 4, Comcast 1 and AOL 1 for 10-15**, exact to the sends of
+   00:38 → 01:57 UTC, plus any later ones. GMX and Microsoft file nothing for
+   10-15 unless leopard sends to them before midnight.
 5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
