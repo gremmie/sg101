@@ -406,7 +406,10 @@ preview, hot-link and upload work on each, and the console shows nothing new.
   `jquery.form.min.js` or the old `v3/post_box.js`, no page errors. The only
   non-2xx is a 404 for a sidebar POTD thumbnail missing from dev's `media/`.
 
-**Step 2 is complete.** Steps 1 and 2 merge to `main` and deploy together.
+**Step 2 is complete. Steps 1 and 2 are deployed** (2026-10-14). `main`
+merged into `post-box-vanilla` (`3244bed3`), CI green there, and `main`
+fast-forwarded to it, CI green again. Brian deployed with `git pull` and
+`make prod-up` (no migrations), and the live post box works.
 
 **Separate change, its own commit:** `sg101/settings/dev.py` reads
 `USER_PHOTOS_LOCAL_UPLOAD` from the environment (default `False`;
