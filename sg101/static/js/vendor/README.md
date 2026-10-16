@@ -43,10 +43,38 @@ To check them all: `shasum -a 256 -c` against the hashes above.
 
 Foundation 6.2.0's `dist/foundation.min.js` (SHA-256
 `a34cbbdb75973d8660d0153c6c5580a19c62934bd7c74a045f5c53eb79453813` as
-released), with one change. The stylesheet is built from Foundation 6.3.1's
-Sass; the JavaScript was never upgraded with it.
+released), with the changes below. The stylesheet is built from Foundation
+6.3.1's Sass; the JavaScript was never upgraded with it.
 
 - **`(window).load(function` → `(window).on("load",function`**, the only
   occurrence. jQuery 3 removed `.load(handler)`, so the original call is taken
   as an AJAX `.load(url)`, throws, and stops the rest of Foundation's
   initialisation: no Reveal modal opens.
+- **Reveal no longer sets `aria-hidden`** on `<body>` or on the overlay
+  holding the open modal, and no longer leaves `<body>` with
+  `aria-hidden="false"` on close. Three edits, in `_makeOverlay`, `open` and
+  `close`'s `finishUp`:
+  - `.attr({tabindex:-1,"aria-hidden":!0})` → `.attr({tabindex:-1})`
+  - `t("body").addClass("is-reveal-open").attr("aria-hidden",…)` →
+    `t("body").addClass("is-reveal-open")`
+  - `t("body").attr({"aria-hidden":!1,tabindex:""})` →
+    `t("body").attr({tabindex:""})`
+
+  Both settings hid the open modal itself: it sits inside the overlay, which
+  is inside `<body>`. ARIA forbids `aria-hidden` on `<body>` and tells
+  browsers to ignore it there, and Chrome also refuses it on an ancestor of
+  the focused element, logging an error and a warning for each modal.
+  Foundation 6.3.0 made the same removal upstream. Reveal still keeps Tab
+  inside an open modal.
+- **Closing a Reveal modal puts focus back on the link that opened it**,
+  Foundation 6.5.0's fix. Two edits:
+  - `open` first records `this.$activeAnchor`: the focused element if it is
+    one of the modal's opening links, otherwise all of them.
+  - `close` ends with `this.$activeAnchor.focus()`.
+
+  6.2.0 returned focus only when a modal was closed from the keyboard. Closed
+  with the mouse, focus stayed on the button inside the modal, which `close`
+  then marks `aria-hidden="true"`: Chrome blocks that with a warning, and
+  focus falls to `<body>`. Recording the link used matters where several post
+  boxes share one set of modals, as on the profile edit page; 6.4.0's
+  `this.$anchor.focus()` would land on the last of them.

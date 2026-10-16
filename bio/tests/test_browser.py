@@ -46,6 +46,18 @@ class EditProfilePostBoxTestCase(BrowserTestCase):
         expect(self.profile_text).to_have_value(IMAGE_AT_CARET)
         expect(self.signature).to_have_value(CARET_TEXT)
 
+    def test_closing_a_modal_by_mouse_returns_focus_to_the_link_that_opened_it(self):
+        # Both boxes have a Preview link opening the one shared modal. Focusing
+        # every opening link in turn would end on the second box's, so the
+        # first box's is the one that shows focus went back to the link used.
+        preview = self.page.locator('.v3-editor', has=self.profile_text).locator('.editor-preview')
+        preview.click()
+        modal = self.page.locator('#preview-modal')
+        expect(modal).to_be_visible()
+        modal.locator('button.button').click()
+        expect(modal).to_be_hidden()
+        expect(preview).to_be_focused()
+
 
 def assert_directly_under(test, widget, field):
     """Assert widget's top edge meets field's bottom, and their left edges align.

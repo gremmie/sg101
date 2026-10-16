@@ -47,6 +47,33 @@ class SubmitPostBoxTestCase(BrowserTestCase):
         self.page.locator('a.editor-upload[data-open="upload-modal"]').click()
         expect(self.page.locator('#upload-modal')).to_be_visible()
 
+    def test_an_open_modal_is_not_hidden_from_assistive_technology(self):
+        # Chrome logs its "Blocked aria-hidden" messages only once something
+        # asks for the accessibility tree, which a headless test never does,
+        # so the attributes are checked rather than the console.
+        self.page.locator('a.editor-upload[data-open="upload-modal"]').click()
+        modal = self.page.locator('#upload-modal')
+        expect(modal).to_be_visible()
+
+        hidden = modal.evaluate('''m => {
+            const hidden = [];
+            for (let e = m; e; e = e.parentElement) {
+                if (e.getAttribute('aria-hidden') === 'true') hidden.push(e.tagName);
+            }
+            return hidden;
+        }''')
+        self.assertEqual(hidden, [])
+
+    def test_closing_a_modal_leaves_body_as_it_was(self):
+        body = self.page.locator('body')
+        before = body.get_attribute('aria-hidden')
+        self.page.locator('a.editor-upload[data-open="upload-modal"]').click()
+        modal = self.page.locator('#upload-modal')
+        expect(modal).to_be_visible()
+        modal.locator('.close-button').click()
+        expect(modal).to_be_hidden()
+        self.assertEqual(body.get_attribute('aria-hidden'), before)
+
     def test_bold_wraps_the_selection(self):
         self.textarea.fill('hello world')
         self.select(6, 11)
