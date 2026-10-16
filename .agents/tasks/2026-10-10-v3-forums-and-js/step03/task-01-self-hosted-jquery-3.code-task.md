@@ -3,7 +3,7 @@
 ## Description
 Every V3 page loads jQuery 3.7.1 from the site's own static files instead
 of Google's 2.2.4, and jQuery UI moves from Google's 1.11.0 to a self-hosted
-1.13.3. Two small fixes go with it: Foundation 6.3.1 calls an API jQuery 3
+1.13.3. Two small fixes go with it: Foundation 6.2.0's JavaScript calls an API jQuery 3
 removed, and `comments.js` calls another. Browser tests prove that Foundation,
 the datepicker and the autocomplete still behave as they do on 2.2.4.
 
@@ -11,7 +11,8 @@ the datepicker and the autocomplete still behave as they do on 2.2.4.
 Research topic 8 (`research/jquery3.md`) swapped jQuery in a headless
 browser across eight V3 pages and found exactly what breaks:
 
-- **Foundation 6.3.1 calls `$(window).load(function …)`** once, in its
+- **Foundation's JavaScript (6.2.0; the task first said 6.3.1) calls
+  `$(window).load(function …)`** once, in its
   triggers utility. jQuery 3.0 removed `.load(handler)`, so the call throws,
   the rest of `foundation.min.js`'s init is skipped, and **no Reveal modal
   opens**. Fix: in `sg101/static/js/v3/foundation.min.js` change
@@ -74,7 +75,7 @@ Facts about today's tree (checked 2026-10-15):
 2. `sg101/static/js/vendor/README.md` lists each file with its version, source
    URL and SHA-256. It also records the hand edit to
    `sg101/static/js/v3/foundation.min.js`: what changed, why (jQuery 3 removed
-   `.load(handler)`), and that the file is otherwise Foundation 6.3.1's
+   `.load(handler)`), and that the file is otherwise Foundation 6.2.0's
    release. Task 02 adds a second entry there.
 3. `v3/base.html` loads jQuery with `{% static %}`. Both `jquery-ui` entries in
    `settings/base.py` name the local files.

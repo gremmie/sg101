@@ -415,3 +415,105 @@ fast-forwarded to it, CI green again. Brian deployed with `git pull` and
 `USER_PHOTOS_LOCAL_UPLOAD` from the environment (default `False`;
 production pins it `False`), and `.env.example` documents it. Before that it
 was a constant, and `.env` couldn't turn it on.
+
+## Step 3 task 01 — jQuery 3.7.1 and jQuery UI 1.13.3, served from the site — DONE 2026-10-15 (`bea6525f`)
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step03/task-01-self-hosted-jquery-3.code-task.md`.
+Branch `jquery-3`, on `8f282a3c` (the step's task files); committed `bea6525f`.
+
+**What changed.**
+
+- **`sg101/static/js/vendor/`** (new): `jquery-3.7.1.min.js`, and
+  `jquery-ui-1.13.3/` holding `jquery-ui.min.js`, the `redmond` theme's
+  `jquery-ui.min.css` and the 13 images it names, all from code.jquery.com.
+  The two `.js` files' SRI hashes both appear on releases.jquery.com
+  (`sha256-/JqT3SQf…` and `sha256-sw0iNNXm…`). `README.md` lists each file's
+  version, source and SHA-256 (16 rows, rechecked against the files), and the
+  Foundation edit.
+- **`v3/base.html`** loads jQuery from `{% static %}`. **`settings/base.py`**:
+  both `jquery-ui` entries name the local files. The old design's `jquery`
+  1.11.1 entry is unchanged.
+- **`foundation.min.js`**: `(window).load(function` → `(window).on("load",function`,
+  the one occurrence. **`comments.js`**: `.size()` → `.length`.
+- The two browser-test docstrings that said the tests need Google's CDN are
+  shortened to their first line.
+
+**The vendored Foundation JavaScript is 6.2.0, not 6.3.1.** The design, the
+research, the plan and both task files said 6.3.1. The file reports
+`Foundation.version` `"6.2.0"`, was last changed 2016-03-03 ("Update to
+Foundation 6.2", `4b6639d5`), and its SHA-256 (`a34cbbdb…53813`) equals
+`foundation-sites@6.2.0`'s `dist/foundation.min.js` from jsDelivr. 6.2.1–6.2.4
+don't match. Only the Sass is 6.3.1 (`sg101/package.json`). Research topic 8's
+fixes still hold, since its probe ran against this file. Corrected in design
+§4.3 and task 02's Background (whose 6.9.0 comparison needs the right base),
+and recorded in the vendor README. **Then everywhere else, on Brian's call**
+(2026-10-15): edited in place in the design (overview, R3, R7, both diagrams,
+Appendix A and D), `summary.md`, `research/research-plan.md` and task 01's file.
+The records (`rough-idea.md`, `idea-honing.md`, research topics 7 and 8) keep
+their text with a dated correction beside it. Research topic 7's CSS comparison
+is unaffected, because it compares Sass.
+
+**Tests.** All browser tests, using `BrowserTestCase`, which also fails a test
+on any uncaught page error.
+
+| Test | Today's tree (2.2.4, UI 1.11.0) | After | Mutation, and what it showed |
+|---|---|---|---|
+| `news` `SubmitJQueryTestCase.test_page_runs_jquery_3_7_1` | **fails**, `'2.2.4' != '3.7.1'` | passes | (the red run) |
+| `news` `SubmitJQueryTestCase.test_page_requests_nothing_from_googles_cdn` | **fails**, lists Google's 2.2.4 URL | passes | (the red run) |
+| `news` `SubmitPostBoxTestCase.test_upload_button_opens_the_upload_modal` (step 1's) | passes | passes | Foundation patch reverted: modal not visible, and an uncaught page error |
+| `bio` `EditProfileDatepickerTestCase` (new) | passes | passes | 1.11.0 still passes (research predicted it). A `beforeShow` that moves the widget to (0, 0): fails, top −743 against the field's 379 |
+| `bio` `MemberSearchAutocompleteTestCase` (new) | passes | passes | `jquery-ui` JS back to Google's 1.11.0: fails, menu top 0 against 519.5, and `r.getClientRects is not a function`, research's fault exactly |
+| `polls` `PollCommentTestCase` (new file) | — | passes | `.size()` put back: fails, no `1.`, and `$(...).size is not a function` |
+
+Each mutated file was restored from a copy and `cmp` showed it byte-identical.
+The placement tests assert the widget's top within 5 px of the field's bottom,
+and left edges within 5 px.
+
+**The comment test is on a poll, not a news story** as the task file said.
+News stories take comments only at `version == 0`; current stories are
+`NEWS_VERSION = 2` and discuss in a forum topic, so a new story renders no
+comment form. `comments.js` also runs on downloads, POTD and contests. A
+browser test replaced the task's manual comment on dev, so nothing was written
+to the dev database.
+
+**Old-design forum pages, on dev.** A headless probe logged in through a
+session made directly and deleted afterwards (checked), and loaded `topic`,
+`new_topic`, `new_post` and `edit_post`. Each ran jQuery 1.11.1 with jQuery UI
+1.13.3, and **no page error** on any. The only non-2xx responses were dev
+`media/` files (two avatars, one POTD thumbnail). The probe's first run named
+Django's `ModelBackend` in the session, not the site's
+`accounts.backends.CaseInsensitiveModelBackend`, so the three posting pages
+redirected to login and weren't checked. Fixed and re-run; the figures above
+are from that run.
+
+**Production-style `collectstatic`**, under `sg101.settings.production` with
+`STATIC_ROOT` overridden to a temporary directory in a throwaway container:
+succeeds. All three vendored files and `foundation.min.js` get hashed names,
+and all 13 image `url()`s in the hashed theme CSS are rewritten to hashed names
+that exist.
+
+**Suite and gate**, as separate runs: 1457 tests OK each. The two `celery`
+`ERROR` log lines in both are tests that make SMTP refuse on purpose.
+
+**Brian's manual check on dev (2026-10-15): looks good.** Two things it
+turned up, neither from this change:
+
+- **The home page slideshow is empty on dev.** `{% slideshow_images %}` reads
+  `MEDIA_ROOT/slideshow/`, which dev's `media/` lacks (git-ignored; production's
+  copy is only on leopard). Five numbered placeholders were generated into dev's
+  `media/slideshow/`. Dev's cache is `LocMemCache`, per process, so clearing the
+  `home_slideshow` fragment from `manage.py shell` does nothing; restarting
+  `web` empties it.
+- **Orbit (the phone-width banner) shows nothing if the page loads at desktop
+  width and the window is then narrowed. Not a regression.** Measured headless,
+  each way on jQuery 3.7.1 and with the request swapped for Google's 2.2.4:
+  loaded at 375 px, both show the logo, advance to the second slide within
+  6 s, and raise no error. Loaded at 1280 px and narrowed to 375, both leave
+  `.orbit-container` at `height: 0px` and the slides at `max-height: 0px`,
+  still rotating. The banner is `hide-for-medium`, so Orbit initialises hidden,
+  measures 0, and doesn't re-measure. A phone loads at phone width, so visitors
+  don't meet it. To check Orbit by hand, narrow the window *then* reload.
+  Not fixed; it's Foundation 6.2.0's behaviour.
+
+**Not done here:** the manual walk of the menus, Orbit and Cycle (task 03),
+and Reveal's `aria-hidden` (task 02).

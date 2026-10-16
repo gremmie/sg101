@@ -12,7 +12,9 @@ implement the one he chooses.
 ## Background
 Found in step 2 task 03's manual walk (STATUS, 2026-10-14). The post box
 modules set neither `aria-hidden` nor focus. Both settings are in the vendored
-`sg101/static/js/v3/foundation.min.js` (Foundation 6.3.1):
+`sg101/static/js/v3/foundation.min.js`, which is Foundation **6.2.0**'s
+`dist/foundation.min.js` plus task 01's patch, not 6.3.1 (only the Sass is
+6.3.1; `STATUS.md`, step 3 task 01):
 
 - `open` calls `t("body")…attr("aria-hidden", …)`, which Chrome refuses as an
   **error**.
@@ -22,7 +24,8 @@ modules set neither `aria-hidden` nor focus. Both settings are in the vendored
 
 Brian put the fix into step 3 on 2026-10-14 (`59400010`), since step 3 already
 patches `foundation.min.js`. There is no Foundation upgrade (Q12, Q13): even
-if 6.9.0 fixed it, the fix is a patch to the vendored 6.3.1.
+if 6.9.0 fixed it, the fix is a patch to the vendored 6.2.0. Compare
+Reveal in 6.2.0 with 6.9.0, not 6.3.1 with 6.9.0.
 
 The plan names three measurements to make before choosing:
 - whether Foundation 6.9.0 changed this upstream. Its fix shows the intent.

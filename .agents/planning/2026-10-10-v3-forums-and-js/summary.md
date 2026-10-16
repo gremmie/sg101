@@ -30,8 +30,8 @@ PDD run 2026-10-10. GitHub #9, #16, #17, #18.
   padding), **multi-image upload** (up to 10, one request per image, per-file
   results), and **a video button shown only on the forums**, which attaches,
   not inserts.
-- **jQuery 3.7.1 and jQuery UI 1.13.3 are self-hosted.** Foundation 6.3.1
-  stays, with one line patched.
+- **jQuery 3.7.1 and jQuery UI 1.13.3 are self-hosted.** Foundation stays
+  (6.3.1's Sass, 6.2.0's JavaScript), with one line of the JavaScript patched.
 - **The forums move to V3 in three releases,** starting from `v3-dev`'s
   templates, with a screenshot review before the rest is built.
 - **The shoutbox and `base.html` are retired,** and with them Blueprint,

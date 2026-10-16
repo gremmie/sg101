@@ -13,7 +13,8 @@ the busiest part of the site, were the last big piece. A 2017 branch, `v3-dev`,
 converted three forum pages before the work stopped. Today the site still runs
 two designs: `base.html` (Blueprint, jQuery 1.11, jQuery UI, markItUp, the
 shoutbox), used by the forums and a few leftovers, and `v3/base.html`
-(Foundation 6.3.1, jQuery 2.2.4), used by everything else.
+(Foundation 6.3.1's Sass with 6.2.0's JavaScript, jQuery 2.2.4), used by
+everything else.
 
 This project finishes the job:
 
@@ -24,7 +25,7 @@ This project finishes the job:
 - **The shoutbox and `base.html` are retired**, and with them Blueprint, jQuery
   1.11 and markItUp.
 
-Foundation stays on 6.3.1.
+Foundation stays where it is: 6.3.1's Sass, 6.2.0's JavaScript.
 
 ## 2. Detailed requirements
 
@@ -42,7 +43,8 @@ Consolidated from `idea-honing.md`. The question each comes from is in brackets.
   - **Flatpages are out of scope.** They are GitHub #33, independent of this
     project. If #33 hasn't landed when `base.html` is retired, that step
     deletes `flatpages/default.html`. [Q5]
-- **R3.** Stay on Foundation 6.3.1. A framework change or Foundation upgrade is
+- **R3.** Stay on Foundation as it is (6.3.1's Sass, 6.2.0's JavaScript). A
+  framework change or Foundation upgrade is
   out of scope. [Q12, Q13]
 - **R4.** Out of scope: video embedding outside the forums [Q8], replacing
   jQuery UI's datepicker and autocomplete [research topic 8], and the image
@@ -56,7 +58,7 @@ Consolidated from `idea-honing.md`. The question each comes from is in brackets.
 - **R6.** No build step. Plain files served as they are, using native ES
   modules (`<script type="module">`) where sharing code helps. [Q2]
 - **R7.** jQuery 3.7.1 replaces 2.2.4, served from the site, not Google's CDN.
-  It requires: a one-line patch to the vendored Foundation 6.3.1, jQuery UI
+  It requires: a one-line patch to the vendored Foundation 6.2.0 JavaScript, jQuery UI
   1.11.0 → 1.13.3 (JS and theme), and `comments.js` `.size()` → `.length`.
   There is no jQuery Migrate in production. [Q13, research topic 8]
 
@@ -131,7 +133,7 @@ Consolidated from `idea-honing.md`. The question each comes from is in brackets.
 flowchart LR
   subgraph Before
     B1["base.html<br/>Blueprint · jQuery 1.11 (Google CDN)<br/>jQuery UI 1.11 · markItUp · shoutbox"]
-    B2["v3/base.html<br/>Foundation 6.3.1 · jQuery 2.2.4 (Google CDN)"]
+    B2["v3/base.html<br/>Foundation 6.3.1 Sass, 6.2.0 JS · jQuery 2.2.4 (Google CDN)"]
     F1[forums: 19 templates] --> B1
     S1[shoutbox] --> B1
     FP[flatpages/default.html] --> B1
@@ -139,7 +141,7 @@ flowchart LR
     PB1["post_box.js (jQuery, jQuery Form)"] --> B2
   end
   subgraph After
-    A2["v3/base.html<br/>Foundation 6.3.1 (patched) · jQuery 3.7.1 (local)"]
+    A2["v3/base.html<br/>Foundation 6.3.1 Sass, 6.2.0 JS (patched) · jQuery 3.7.1 (local)"]
     F2[forums: V3 templates] --> A2
     V2[~60 V3 templates] --> A2
     PB2["post_box/*.js<br/>ES modules, no jQuery"] --> A2
@@ -152,7 +154,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph classic["Classic scripts, end of v3/base.html"]
-    JQ[jQuery 3.7.1] --> FND[Foundation 6.3.1, patched] --> SG[sg101.js<br/>CSRF for jQuery AJAX, iframe wrapping]
+    JQ[jQuery 3.7.1] --> FND[Foundation 6.2.0 JS, patched] --> SG[sg101.js<br/>CSRF for jQuery AJAX, iframe wrapping]
     JQ --> JUI[jQuery UI 1.13.3<br/>only on its 4 pages]
   end
   subgraph modules["ES modules, no jQuery"]
@@ -371,7 +373,7 @@ attaching is unchanged.**
 - **`sg101/static/js/v3/foundation.min.js`:** the one `(window).load(function`
   becomes `(window).on("load",function`. The vendor README records the change,
   why (jQuery 3 removed `.load(handler)`), and that the file is otherwise
-  Foundation 6.3.1's release.
+  Foundation 6.2.0's release.
 - **`comments/static/js/comments.js:26`:** `.size()` → `.length`.
 - **Not changed:** the deprecated-but-working APIs (`.bind`, `jQuery.trim`,
   event shorthands). They matter only for jQuery 4.
@@ -583,9 +585,9 @@ flowchart LR
 | Choice | For | Against | Decided |
 |---|---|---|---|
 | Plain ES modules, no bundler | nothing to build or commit; every browser `browserslist` targets supports them | no npm packages; needs the storage subclass (§3.3) | Q2 |
-| jQuery 3.7.1 + patched Foundation 6.3.1 + jQuery UI 1.13.3 | proved identical to 2.2.4 on 8 pages; security fixes | a hand-edited vendored file; jQuery UI is maintenance-only | Q13, topic 8 |
+| jQuery 3.7.1 + patched Foundation 6.2.0 JS + jQuery UI 1.13.3 | proved identical to 2.2.4 on 8 pages; security fixes | a hand-edited vendored file; jQuery UI is maintenance-only | Q13, topic 8 |
 | jQuery Migrate kept in production | no patch needed | loads more and hides removed-API use instead of fixing it | rejected |
-| Foundation 6.9.0 | plugin fixes; fewer Sass deprecations | 283 of 1,298 rules change (menus, buttons, tables); whole-site screenshot review; 123 KB JS vs 104 | rejected, Q13 |
+| Foundation 6.9.0 | plugin fixes; fewer Sass deprecations | 283 of 1,298 rules change (menus, buttons, tables); whole-site screenshot review; 123 KB JS vs 104 (today's 6.2.0) | rejected, Q13 |
 | Bootstrap 5, Tailwind, or plain CSS | maintained, or no jQuery | rewrite of ~60 finished V3 templates | out of scope, Q12 |
 | Playwright for Python | drives real pages against the live server, in the suite and CI | ~270 MB in the dev image; the async override | Q9, topic 3 |
 
@@ -634,7 +636,7 @@ flowchart LR
 ## Appendix D. Constraints and limitations
 
 - **A hand-edited vendored file.** `foundation.min.js` must not be replaced
-  by a fresh 6.3.1 download without re-applying the patch. The README and the
+  by a fresh 6.2.0 download without re-applying the patch. The README and the
   modal browser test guard it.
 - **jQuery UI 1.13.3 is maintenance-only upstream.** Replacing the datepicker
   and autocomplete is a later project.

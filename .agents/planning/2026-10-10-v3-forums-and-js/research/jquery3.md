@@ -10,6 +10,9 @@ both, every page probed matched jQuery 2.2.4 exactly.** Q13's premise that
 "Foundation 6.3.1 declares `jquery >= 2.2.0`, which admits 3.x" was wrong in
 practice. Its own code calls an API jQuery 3 removed.
 
+**Corrected 2026-10-15:** the vendored JavaScript is Foundation **6.2.0** (hash-matched to its release); only the Sass is 6.3.1. See `STATUS.md`, step 3 task 01. Every finding here holds: the probe ran against
+the file the site serves.
+
 ## Method
 
 A headless Chromium (Playwright, in a throwaway container sharing the dev

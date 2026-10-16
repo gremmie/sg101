@@ -10,6 +10,8 @@ work. Possible meanings, from smallest to largest:
 - **A. Tidy what's there.** Keep jQuery and Foundation 6.3.1's JavaScript, but
   move to one jQuery version, serve it locally instead of from Google's CDN,
   and drop jQuery UI and markItUp once the forums no longer need them.
+
+  **Corrected 2026-10-15:** the vendored JavaScript is Foundation **6.2.0** (hash-matched to its release); only the Sass is 6.3.1. See `STATUS.md`, step 3 task 01.
 - **B. No jQuery in new code.** New and rewritten code (the post box, the
   forums) is plain modern JavaScript. jQuery stays only for as long as
   Foundation's JavaScript needs it.
@@ -360,7 +362,7 @@ What was known when deciding (npm registry, read 2026-10-10):
 
 - **Foundation is barely moving.** The latest release is **6.9.0
   (2024-09-27)**, after 6.8.0/6.8.1 (2023-08-18) and 6.7.5 (2022-07-12). The
-  site is on 6.3.1 (2017).
+  site is on 6.3.1 (2017). **Corrected 2026-10-15:** the vendored JavaScript is Foundation **6.2.0** (hash-matched to its release); only the Sass is 6.3.1. See `STATUS.md`, step 3 task 01.
 - **6.9.0 still requires jQuery**: a `jquery >= 3.6.0` peer dependency. Under
   Q1, jQuery stays as long as Foundation does.
 - **Bootstrap 5** (5.3.8) is maintained and has no jQuery.
@@ -396,7 +398,9 @@ Why:
 
 - **jQuery 3 doesn't need the Foundation upgrade.** Foundation 6.3.1 declares
   `jquery >= 2.2.0` (`node_modules/foundation-sites/package.json`), which
-  admits 3.x. That's declared, not yet tested in a browser.
+  admits 3.x. That's declared, not yet tested in a browser. **Corrected
+  2026-10-15:** that `package.json` is the npm package the Sass builds from.
+  The JavaScript the site loads is 6.2.0's (`STATUS.md`, step 3 task 01).
 - **Without jQuery 3, the Foundation upgrade buys little:** plugin bug fixes
   of no known effect here, fewer Sass deprecations that only matter after Dart
   Sass 2.0 or 3.0, and a smaller jump later.
@@ -420,3 +424,8 @@ Reveal (no post box modal). A one-line patch to the vendored
 menu on jQuery 3, and 1.13.3 fixes that. With both, every page probed matched
 2.2.4. **The decision stands; the jQuery 3 step grows by the patch and the
 jQuery UI bump.** See `research/jquery3.md`.
+
+**Correction (2026-10-15):** every "Foundation 6.3.1" in Q13 that means the
+JavaScript should read 6.2.0. The vendored `foundation.min.js` is 6.2.0's
+release, hash-matched; only the Sass is 6.3.1 (`STATUS.md`, step 3 task 01).
+The decision stands: Foundation stays as it is, Sass and JavaScript both.

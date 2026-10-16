@@ -12,6 +12,11 @@ declarations per selector. Class usage was checked by grepping every `.html`,
 `archive/`, `.agents/` and the vendored Foundation bundle). No browser
 rendering yet.
 
+**Corrected 2026-10-15:** the CSS comparison below is right, since the Sass is
+6.3.1. The site's *JavaScript* is Foundation **6.2.0** (hash-matched to its
+release; `STATUS.md`, V3 forums step 3 task 01), so a JavaScript upgrade would
+start from 6.2.0, and "today's bundle" is 6.2.0's.
+
 ## What the site uses
 
 - **Sass:** `main.scss` includes nearly every Foundation component, using the
@@ -64,7 +69,7 @@ not yet done.
 
 - **jQuery ≥ 3.6 required** (peer dependency). The site loads 2.2.4.
 - **Packaging allows no build step (Q2):** `dist/js/foundation.min.js`
-  (197 KB, all plugins, against 104 KB for today's 6.3.1 bundle), or the
+  (197 KB, all plugins, against 104 KB for today's bundle), or the
   individual UMD files in `dist/js/plugins/`. Core, the five plugins the
   site uses, and their ten utilities come to **123 KB** as separate
   `<script>` tags.

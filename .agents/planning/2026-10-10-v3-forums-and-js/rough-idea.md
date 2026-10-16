@@ -24,6 +24,8 @@ the order and approach of all four issues depend on each other.
   what-input and Foundation 6.3.1's JavaScript. All the jQuery comes from
   Google's CDN.
 - **Foundation 6.3.1's JavaScript requires jQuery.**
+
+  **Corrected 2026-10-15:** the vendored JavaScript is Foundation **6.2.0** (hash-matched to its release); only the Sass is 6.3.1. See `STATUS.md`, step 3 task 01.
 - **The V3 editor is `sg101/static/js/v3/post_box.js`.** It is 221 lines of
   mostly plain JavaScript, used by 12 templates.
 - **Pages still on the old design:** forums (19 templates), shoutbox (3),
