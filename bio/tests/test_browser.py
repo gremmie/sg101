@@ -15,11 +15,7 @@ IMAGE_AT_CARET = 'first\n![image]({})\nsecond'.format(HOT_LINK_URL)
 
 
 class EditProfilePostBoxTestCase(BrowserTestCase):
-    """The profile edit page has two post boxes sharing one set of modals.
-
-    The page loads jQuery from ajax.googleapis.com, so these tests need
-    outbound network access to Google's CDN.
-    """
+    """The profile edit page has two post boxes sharing one set of modals."""
 
     def setUp(self):
         super().setUp()
@@ -49,3 +45,50 @@ class EditProfilePostBoxTestCase(BrowserTestCase):
         self.hot_link_into(self.profile_text)
         expect(self.profile_text).to_have_value(IMAGE_AT_CARET)
         expect(self.signature).to_have_value(CARET_TEXT)
+
+
+def assert_directly_under(test, widget, field):
+    """Assert widget's top edge meets field's bottom, and their left edges align.
+
+    jQuery UI positions its widgets against the field. When that fails, as
+    1.11.0's autocomplete does on jQuery 3, the widget still shows, at the
+    page's top-left.
+    """
+    widget_box = widget.bounding_box()
+    field_box = field.bounding_box()
+    test.assertAlmostEqual(widget_box['y'], field_box['y'] + field_box['height'], delta=5)
+    test.assertAlmostEqual(widget_box['x'], field_box['x'], delta=5)
+
+
+class EditProfileDatepickerTestCase(BrowserTestCase):
+    """The birthday field on the profile edit page opens jQuery UI's datepicker."""
+
+    def setUp(self):
+        super().setUp()
+        self.login(User.objects.create_user('pjmoto', '', 'pw'))
+        self.page.goto(self.live_server_url + reverse('bio-edit_profile'))
+
+    def test_datepicker_opens_under_the_birthday_field(self):
+        birthday = self.page.locator('#id_birthday')
+        birthday.focus()
+        datepicker = self.page.locator('#ui-datepicker-div')
+        expect(datepicker).to_be_visible()
+        assert_directly_under(self, datepicker, birthday)
+
+
+class MemberSearchAutocompleteTestCase(BrowserTestCase):
+    """The member search field suggests usernames with jQuery UI's autocomplete."""
+
+    def setUp(self):
+        super().setUp()
+        User.objects.create_user('brianneal', '', 'pw')
+        self.login(User.objects.create_user('pjmoto', '', 'pw'))
+        self.page.goto(self.live_server_url + reverse('bio-member_search'))
+
+    def test_suggestions_appear_under_the_search_field(self):
+        username = self.page.locator('#id_username')
+        username.press_sequentially('br')
+        menu = self.page.locator('ul.ui-autocomplete')
+        expect(menu).to_be_visible()
+        expect(menu).to_contain_text('brianneal')
+        assert_directly_under(self, menu, username)

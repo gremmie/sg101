@@ -23,7 +23,7 @@ $(document).ready(function() {
                 var newDiv = $('#comment-container > div:last');
                 newDiv.hide();
                 var num = $('.comment-list', newDiv);
-                num.html($('#comment-container > div').size() + ".");
+                num.html($('#comment-container > div').length + ".");
                 newDiv.fadeIn(3000);
                 postButton.removeAttr('disabled').val('Post Comment');
                 var count = $('#comment-count');

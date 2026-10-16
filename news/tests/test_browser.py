@@ -28,11 +28,7 @@ IMAGE_AT_CARET = re.compile(r'^first\n!\[image\]\((\S+)\)\nsecond$')
 
 
 class SubmitPostBoxTestCase(BrowserTestCase):
-    """The post box on the story submission page, in a real browser.
-
-    The page loads jQuery from ajax.googleapis.com, so these tests need
-    outbound network access to Google's CDN.
-    """
+    """The post box on the story submission page, in a real browser."""
 
     def setUp(self):
         super().setUp()
@@ -176,3 +172,21 @@ class SubmitUploadTestCase(BrowserTestCase):
         expect(status).to_contain_text('Upload a valid image.')
         expect(self.page.locator('#photo-upload-submit')).to_be_enabled()
         expect(self.textarea).to_have_value(CARET_TEXT)
+
+
+class SubmitJQueryTestCase(BrowserTestCase):
+    """The V3 pages run the site's own copy of jQuery, not Google's."""
+
+    def setUp(self):
+        super().setUp()
+        self.requests = []
+        self.page.on('request', lambda request: self.requests.append(request.url))
+        self.login(User.objects.create_user('pjmoto', '', 'pw'))
+        self.page.goto(self.live_server_url + reverse('news-submit'))
+
+    def test_page_runs_jquery_3_7_1(self):
+        self.assertEqual(self.page.evaluate('jQuery.fn.jquery'), '3.7.1')
+
+    def test_page_requests_nothing_from_googles_cdn(self):
+        google = [url for url in self.requests if 'ajax.googleapis.com' in url]
+        self.assertEqual(google, [])

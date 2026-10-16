@@ -486,7 +486,7 @@ GPP_THIRD_PARTY_JS = {
         'js/jquery.jeditable.mini.js',
     ],
     'jquery-ui': [
-        'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js',
+        'js/vendor/jquery-ui-1.13.3/jquery-ui.min.js',
     ],
     'markitup': [
         'js/markitup/jquery.markitup1.1.14.min.js',
@@ -501,7 +501,7 @@ GPP_THIRD_PARTY_JS = {
 
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': [
-        'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/redmond/jquery-ui.css',
+        'js/vendor/jquery-ui-1.13.3/jquery-ui.min.css',
     ],
     'markitup': [
         'js/markitup/skins/markitup/style.css',
