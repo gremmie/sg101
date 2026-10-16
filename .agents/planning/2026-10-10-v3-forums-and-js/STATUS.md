@@ -517,3 +517,131 @@ turned up, neither from this change:
 
 **Not done here:** the manual walk of the menus, Orbit and Cycle (task 03),
 and Reveal's `aria-hidden` (task 02).
+
+## Step 3 task 02 — Reveal stops hiding the open modal from assistive technology — DONE 2026-10-16 (`1fdb2e58`)
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step03/task-02-reveal-aria-hidden.code-task.md`.
+Branch `jquery-3`, on `f8939e80`; committed `1fdb2e58`.
+
+**The three measurements.**
+
+1. **Foundation 6.3.0 already removed both settings, and 6.9.0 has neither.**
+   `js/foundation.reveal.js` from jsDelivr for 6.2.0, 6.3.0, 6.3.1 and
+   6.4–6.9: from 6.3.0 on, `_makeOverlay` creates the overlay with no
+   `aria-hidden`, `open` doesn't touch `<body>`'s, and `close` leaves `<body>`
+   alone. No version adds `aria-modal` or `inert`. 6.3.0's only addition was a
+   shared focus trap (`Keyboard.trapFocus`). Our 6.2.0 already keeps Tab inside
+   an open modal with its own `tab_forward`/`tab_backward`.
+2. **What browsers do with `aria-hidden` on `<body>`.** The ARIA editor's
+   draft (`w3c.github.io/aria/#aria-hidden`, read 2026-10-15): authors MUST NOT
+   use it on `html` or `body`, and user agents MUST NOT expose the hidden state
+   there. `aria-hidden="false"` is now a synonym of unset. Chrome refuses it,
+   which is the error we saw. Firefox fixed it in Bugzilla 1880578 (Firefox
+   139), and WebKit in bug 269523 (2024). **The Firefox and WebKit rows come from
+   their bug trackers, not a measurement:** the installed Playwright has no
+   `page.accessibility`, and only Chrome's tree is reachable, over CDP. So the
+   setting does nothing on current browsers. On older ones it hides the whole
+   page, the open modal included.
+3. **The overlay doesn't need hiding.** It's an empty `div` holding only the
+   modal, so hiding it can only hide the modal. Chrome refuses that too,
+   because focus is inside. `inert` would be new behaviour, not a replacement.
+
+**Measured in Chrome before the change** (dev, news submit, upload modal,
+probe logged in through a session made and deleted for it): on open, `<body>`
+is `aria-hidden="true"` and the modal's ancestors with `aria-hidden="true"`
+are the overlay and `<body>`. Chrome's accessibility tree (CDP
+`Accessibility.getFullAXTree`) shows both refused: the dialog not ignored,
+and 1,255 of 1,332 nodes exposed, the page behind included. Both console
+messages appear. After close, `<body>` is left with `aria-hidden="false"`.
+
+**Brian chose option A** (2026-10-15): do what Foundation 6.3.0 did, no
+`aria-modal` (B) and no `inert` (C), as the smallest hand edit that matches
+upstream and meets the requirement.
+
+**What changed.**
+
+- **`foundation.min.js`**, three edits, each checked to occur once: the
+  overlay's `.attr({tabindex:-1,"aria-hidden":!0})` → `.attr({tabindex:-1})`;
+  `open`'s `<body>` `.attr("aria-hidden",…)` removed; `close`'s
+  `t("body").attr({"aria-hidden":!1,tabindex:""})` → `.attr({tabindex:""})`.
+  `tabindex` is left as 6.2.0 has it.
+- **Vendor README** records them next to task 01's patch.
+- **Two browser tests** in `news` `SubmitPostBoxTestCase`:
+  `test_an_open_modal_is_not_hidden_from_assistive_technology` (no ancestor of
+  the open upload modal has `aria-hidden="true"`), and
+  `test_closing_a_modal_leaves_body_as_it_was` (`<body>`'s `aria-hidden` after
+  close equals before). The second closes with the modal's close button.
+  Escape pressed straight after opening arrives before Reveal binds its key
+  handler (in a `setTimeout`), so the modal stays open.
+
+**Tests, red then green, and the mutations.** Before the change: the first
+failed with `['DIV', 'BODY']`, the second with `'false' != None`. After it,
+both pass. Each of Reveal's settings put back alone, restored from a copy and
+`cmp`-checked after each:
+
+| Put back | Fails |
+|---|---|
+| `<body>` `aria-hidden` on open | both: `['BODY']`, and `'true' != None` (nothing resets it on close any more) |
+| the overlay's `aria-hidden` | the first: `['DIV']` |
+| `<body>` `aria-hidden="false"` on close | the second: `'false' != None` |
+
+**A console assertion was written and removed, because it couldn't fail.** The
+first test also asserted that no console message mentions `aria-hidden`. With
+the two assertions swapped and the `<body>` setting put back, it passed. The
+DOM assertion caught the mutation. Measured on the unpatched file: with the
+modal open 2.5 s, Chrome logs **nothing**; both messages appear only once
+something requests the accessibility tree (the probe's CDP call; in a person's
+browser, DevTools or assistive technology). A headless test never does, so the
+test checks the attributes, and a comment says why. **The message check is
+the probe's instead.** After the change, with the tree requested, no console
+message at all, `<body>` has no `aria-hidden` before, during or after, no
+ancestor of the open modal is hidden, and the dialog is exposed.
+
+**Suite and gate**, as separate runs, before the follow-up below: 1459 tests OK each (18 browser tests).
+
+**Found, not fixed: the upload dialog's accessible name is `""`**, a
+Font Awesome glyph. Reveal sets `aria-labelledby` to its opening link, whose
+only content is the icon. The other modals weren't checked. Not in this
+task's scope.
+
+**Then a third `aria-hidden`, found by Brian on dev (2026-10-16): closing a
+modal with the mouse.** Chrome's console: `Blocked aria-hidden on an element
+because its descendant retained focus`, focus on `<button.button>`, ancestor
+`div.small.reveal#preview-modal`. `close` ends by marking the modal itself
+`aria-hidden="true"`. 6.2.0 moves focus back to the opening link only for
+Escape and Enter. A mouse click leaves it on the button inside. Measured
+with the probe (preview modal, accessibility tree requested), identical on
+task 01's committed file and on task 02's change, so **it predates this task**:
+
+| Closed by | Focus after | Chrome |
+|---|---|---|
+| mouse click on "Close" | lost to `<body>` | the warning |
+| Enter on "Close" | the Preview link | nothing |
+| Escape | the Preview link | nothing |
+
+Upstream, 6.4.0 added `this.$anchor.focus()` at the end of `close`, and 6.5.0
+made it `this.$activeAnchor`, recorded in `open` as the focused opening link,
+else all of them. **Brian chose the 6.5.0 port** (option 1 of three; the
+others were 6.4.0's version, which on profile edit's two shared-modal post
+boxes ends on the wrong one, and leaving it). Two more edits to
+`foundation.min.js`: `open` records `$activeAnchor` first; `close` ends with
+`this.$activeAnchor.focus()`. With an overlay, `close`'s hide finishes after
+it returns, so focus moves before `aria-hidden` is set. README records both.
+
+**Test:** `bio` `EditProfilePostBoxTestCase.test_closing_a_modal_by_mouse_returns_focus_to_the_link_that_opened_it`:
+open the preview from the **first** post box, close it with a mouse click on
+"Close", and that box's Preview link is focused. Red before (`Locator
+expected to be focused`), green after. **The first box, not the second as
+first written:** `$anchor` holds both links in page order, and focusing each
+in turn ends on the second. So the second box's link would pass with 6.4.0's
+version too. Mutations, each restored and `cmp`-checked: the `focus()` call
+removed, fails; `this.$anchor.focus()` (6.4.0), fails.
+
+**Probe after the change:** all three close paths leave focus on the Preview
+link with no message, and each of the four post box modals (hot-link, upload,
+preview, help) closed with its × returns focus to its own link with no message.
+
+Suite and gate after: 1460 OK each (19 browser tests).
+
+**Left for task 03:** every post box modal opened and closed by hand with the
+console open. The fix is in Reveal itself, so it reaches every modal.
