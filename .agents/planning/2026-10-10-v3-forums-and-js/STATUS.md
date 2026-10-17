@@ -645,3 +645,109 @@ Suite and gate after: 1460 OK each (19 browser tests).
 
 **Left for task 03:** every post box modal opened and closed by hand with the
 console open. The fix is in Reveal itself, so it reaches every modal.
+
+## Step 3 task 03 — the jQuery 3 walk, two more Foundation fixes, the menu icon a button — DONE 2026-10-17
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step03/task-03-jquery-3-walk-and-ship.code-task.md`.
+Branch `jquery-3`, on `89239ee7`.
+
+**The walk, by a headless probe** on the dev stack at 375 × 812 and 1280 ×
+900, each width loaded at that width. It logged in as a fixed user (pk 2)
+through a session made directly and deleted afterwards (`last_login`
+unchanged, checked), and hid the dev debug toolbar, whose `#djDebugRoot`
+sits over the phone menu and takes its clicks. A snapshot was taken first
+(`sg101-20261017-144908-before-jquery3-walk.dump`). The comments it posted
+were deleted at the end, and a count afterwards found none.
+
+| Checked | Result |
+|---|---|
+| `jQuery.fn.jquery`, and requests to `googleapis.com` | `3.7.1`, none, at both widths |
+| Cycle, home page | advances (placeholder 4 → 5), both widths |
+| Orbit, loaded at 375 | 94.7 px high, rotates on its own, next button works |
+| Dropdowns, 1280 | Forums opens on hover and closes on leave; Site → Polls navigates |
+| Drilldown, 375 | the icon opens the menu; Surf Music, Back, then Site → Polls navigate. **A page error on the icon tap**, below |
+| Comment on a download (985) and on the POTD | posted and numbered, both widths. Dev has no open poll; `PollCommentTestCase` covers polls |
+| Post box modals: hot-link, upload, preview, help, closed with ×; preview also with its Close button and Escape; news submit, and both boxes of profile edit | with Chrome's accessibility tree requested (CDP), no ancestor of an open modal `aria-hidden`, `<body>`'s `aria-hidden` unchanged after close, no console message. **Escape on profile edit's first box returned focus to the second box's link**, below |
+
+The only console errors were 404s for files dev's `media/` lacks (the probe
+reported every other 4xx response separately, and there were none). The
+probe's `#medium-menu` visibility check read false at both widths because
+that box is 0 px high (its children float); the links in it are visible.
+
+**1. The phone menu icon raised `Syntax error, unrecognized expression: #` on
+every tap, on jQuery 3 only.** Swapping in Google's 2.2.4 removed it. The
+icon was `<span class="menu-icon dark" data-toggle>`, the markup 6.2.0's docs
+show, and 6.2.0's `[data-toggle]` click handler built `"#" + ""`. jQuery 2's
+quick-ID regex takes `#` as an empty ID (`#([\w-]*)`), jQuery 3's needs a
+character (`#([\w-]+)`), so it goes to the selector engine, which throws. The
+menu still opened, because ResponsiveToggle binds the icon itself. Foundation
+6.3.0 added the guard. The file's eleven other `"#"+…` selectors are in
+plugins no template uses (accordion, tabs, slider, sticky, Abide's
+`equalto`, `data-toggle-focus`, tab bar).
+
+**2. Task 02's focus port was incomplete.** 6.2.0's three keyboard handlers
+(Escape on the window, Escape on the modal, Enter on a `[data-close]` button,
+from a `setTimeout(…, 1)`) each focus `$anchor` after `close` has focused
+`$activeAnchor`, so on profile edit focus ends on the last box's link. A
+focus trail measured it on the unpatched file: Enter, box 1 then box 2 15 ms
+later; Escape, box 1 then box 2 in the same millisecond. 6.4.0 had removed
+all three when it put the focus call into `close`; task 02 ported only that
+half. News submit, with one box, never showed it.
+
+**Brian chose (2026-10-17): both upstream ports, and the template change as
+well**, then also the icon as a `<button>`, which it should have been: a
+`<span>` takes no keyboard focus, so a keyboard user at phone width couldn't
+open the menu at all.
+
+**What changed.**
+
+- **`foundation.min.js`**, four edits, each checked for its occurrence count
+  (1, 2, 1): the `[data-toggle]` guard; the `$anchor.focus()` dropped from
+  both Escape handlers; the Enter-on-close `setTimeout` branch → `||`. 6.4.0
+  deleted the modal's whole keydown handler, which 6.3.0's
+  `Keyboard.trapFocus` had replaced; 6.2.0 has no `trapFocus`, and that
+  handler holds its Tab trap, so only the focus moves went. Vendor README
+  records them.
+- **`v3/base.html`**: `<button class="menu-icon dark" type="button"
+  data-toggle="medium-menu" aria-label="Menu">`. The value is what
+  Foundation 6.9.0's docs ask for, and 6.9.0's ResponsiveToggle accepts it
+  or empty. With it, the triggers handler finds `#medium-menu`, which has no
+  `toggle.zf.trigger` handler, and does nothing. **Unchanged look, measured:**
+  the same box (20 × 16 at 8, 271), the same computed padding, border,
+  background and display (Foundation's global `button` reset is in the built
+  CSS), and the menu bar's screenshots are byte-identical. No Sass changed.
+
+**Tests**, red before and green after:
+
+| Test | Before |
+|---|---|
+| `core` `PhoneMenuTestCase.test_tapping_the_menu_icon_opens_the_menu` (new file) | fails: the `#` page error |
+| `…test_an_empty_data_toggle_raises_no_error` (clicks an injected bare `data-toggle`) | added once the template named the menu, so the guard has its own test |
+| `…test_the_menu_icon_opens_the_menu_from_the_keyboard` | fails: the span isn't focusable |
+| `bio` `EditProfilePostBoxTestCase.test_closing_a_modal_with_escape_…` | fails: focus on box 2 |
+| `…test_escape_with_focus_outside_the_modal_…` | (written for the mutation below) |
+| `…test_closing_a_modal_with_enter_…` | **passed at first, and couldn't fail**: `to_be_focused` checked before 6.2.0's 1 ms timer moved focus. Now waits for a timer queued after it; fails |
+
+Mutations, each alone, restored from a copy and `cmp`-checked:
+
+| Put back | Fails |
+|---|---|
+| no `[data-toggle]` guard | the empty `data-toggle` test (`#` page error) |
+| `$anchor.focus()` in the modal's Escape handler | the Escape test |
+| `$anchor.focus()` in the window's Escape handler | **nothing at first**: with focus inside, the modal's handler closes first, and `close` unbinds the window's before the key bubbles to it. The focus-outside test, added for it, fails |
+| the Enter `setTimeout` | the Enter test |
+| the icon a `<span>` | the keyboard test |
+| bare `data-toggle` in the template | **nothing, and by design**: with the guard, bare and named behave the same |
+
+**The probe again after the change:** every row passes but the 404s and the
+0-height box above, and Escape on profile edit's first box returns focus to
+its own link.
+
+**Suite and gate**, as separate runs: 1466 tests OK each. `make test-browser`:
+25 OK.
+
+**Brian's hand check on dev (2026-10-17): works** — at phone width, Tab to
+the menu icon and Enter opens the menu; on profile edit, Escape on the first
+box's preview returns focus to its own link.
+
+**Not yet:** the merge to `main`, CI on both, and the deploy.

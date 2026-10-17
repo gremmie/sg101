@@ -7,7 +7,7 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 
 - [x] Step 1: Playwright in the dev image, and the first browser test
 - [x] Step 2: The post box as ES modules, without jQuery — **ships**
-- [ ] Step 3: jQuery 3.7.1 and jQuery UI 1.13.3, self-hosted — **ships**
+- [x] Step 3: jQuery 3.7.1 and jQuery UI 1.13.3, self-hosted — **ships**
 - [ ] Step 4: Smileys in the post box (#9) — **ships**
 - [ ] Step 5: Upload error messages, then multiple image uploads (#16) — **ships**
 - [ ] Step 6: Port the `v3-dev` reading pages, and the screenshot review
