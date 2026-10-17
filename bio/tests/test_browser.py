@@ -58,6 +58,41 @@ class EditProfilePostBoxTestCase(BrowserTestCase):
         expect(modal).to_be_hidden()
         expect(preview).to_be_focused()
 
+    def open_first_box_preview(self):
+        preview = self.page.locator('.v3-editor', has=self.profile_text).locator('.editor-preview')
+        preview.click()
+        modal = self.page.locator('#preview-modal')
+        expect(modal).to_be_visible()
+        # Reveal binds its key handlers in a setTimeout(0) after opening; one
+        # more lets them in first.
+        self.page.evaluate('new Promise(resolve => setTimeout(resolve, 0))')
+        return preview, modal
+
+    def test_closing_a_modal_with_escape_returns_focus_to_the_link_that_opened_it(self):
+        preview, modal = self.open_first_box_preview()
+        self.page.keyboard.press('Escape')
+        expect(modal).to_be_hidden()
+        expect(preview).to_be_focused()
+
+    def test_escape_with_focus_outside_the_modal_returns_focus_to_the_link_that_opened_it(self):
+        # With focus inside, the modal's own key handler closes it, and closing
+        # unbinds the window's before the key reaches it. This reaches that one.
+        preview, modal = self.open_first_box_preview()
+        self.page.evaluate('document.activeElement.blur()')
+        self.page.keyboard.press('Escape')
+        expect(modal).to_be_hidden()
+        expect(preview).to_be_focused()
+
+    def test_closing_a_modal_with_enter_returns_focus_to_the_link_that_opened_it(self):
+        preview, modal = self.open_first_box_preview()
+        modal.locator('button.button').focus()
+        self.page.keyboard.press('Enter')
+        expect(modal).to_be_hidden()
+        # Foundation 6.2.0 moved focus again from a setTimeout(1) on Enter, so
+        # the assertion waits for a timer queued after it.
+        self.page.evaluate('new Promise(resolve => setTimeout(resolve, 1))')
+        expect(preview).to_be_focused()
+
 
 def assert_directly_under(test, widget, field):
     """Assert widget's top edge meets field's bottom, and their left edges align.

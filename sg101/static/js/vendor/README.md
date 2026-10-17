@@ -78,3 +78,23 @@ released), with the changes below. The stylesheet is built from Foundation
   focus falls to `<body>`. Recording the link used matters where several post
   boxes share one set of modals, as on the profile edit page; 6.4.0's
   `this.$anchor.focus()` would land on the last of them.
+- **The keyboard handlers no longer move focus after closing**, finishing
+  that fix as Foundation 6.4.0 did. 6.2.0's three keyboard handlers each
+  focused `this.$anchor` (every opening link, ending on the last) after
+  `close` had already focused the one used:
+  - Escape, on the window and on the modal (two identical occurrences):
+    `close:function(){e.options.closeOnEsc&&(e.close(),e.$anchor.focus())}` →
+    `close:function(){e.options.closeOnEsc&&e.close()}`
+  - Enter on a `[data-close]` button: the
+    `?setTimeout(function(){e.$anchor.focus()},1):` branch → `||`.
+
+  6.4.0 deleted the modal's whole keydown handler, since 6.3.0's shared
+  `Keyboard.trapFocus` had replaced it. 6.2.0 has no `trapFocus`, and the same
+  handler keeps Tab inside an open modal, so only the focus moves are gone.
+- **A `[data-toggle]` with no value no longer throws**, Foundation 6.3.0's
+  fix. The click handler `function(){r(t(this),"toggle")}` →
+  `function(){var e=t(this).data("toggle");e?r(t(this),"toggle"):t(this).trigger("toggle.zf.trigger")}`,
+  the same shape as the `[data-close]` handler beside it. It built the
+  selector `"#" + ""`: jQuery 2 read `#` as an empty ID lookup, jQuery 3 hands
+  it to its selector engine, which raises `Syntax error, unrecognized
+  expression: #`. 6.2.0's docs show the responsive menu's icon that way.
