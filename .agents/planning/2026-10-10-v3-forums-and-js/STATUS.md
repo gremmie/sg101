@@ -750,4 +750,16 @@ its own link.
 the menu icon and Enter opens the menu; on profile edit, Escape on the first
 box's preview returns focus to its own link.
 
-**Not yet:** the merge to `main`, CI on both, and the deploy.
+**Step 3 is complete and deployed** (2026-10-17). `main` merged into
+`jquery-3` (`609896c6`), CI green there, and `main` fast-forwarded to it, CI
+green again. Brian deployed with `git pull` and `make prod-up` (no
+migrations), and the live menu and post box modals work.
+
+- **Console errors on Brian's first live load, gone after a hard refresh.**
+  The text wasn't kept. Measured afterwards: the HTML is `cf-cache-status:
+  DYNAMIC` with no `Cache-Control`, `Last-Modified` or `ETag`, every script
+  and stylesheet it names is content-hashed and 200, and the live
+  `foundation.min.f1df7c78409f.js` is the committed file (its hash, and it
+  holds the `[data-toggle]` guard). So a fresh load can't pair new HTML with
+  old assets. Most likely a page held from before the deploy (an open tab, or
+  the back/forward cache). Not reproduced.
