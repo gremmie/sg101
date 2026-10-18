@@ -63,6 +63,7 @@ reading log stops*.
 | 35 | 2026-10-15 | 10-14 | exact at Google (21) and Yahoo (8); jaguar's 3 for a predicted 1 is two sudo-failure mails, almost certainly the thirty-fourth reading's own probe |
 | 36 | 2026-10-16 | 10-15 | exact at Google, Yahoo, AOL and AT&T; jaguar back to the cron mail; Comcast not yet filed |
 | 37 | 2026-10-17 | 10-16 (+ Comcast 10-15) | exact at Google (18), Yahoo and AT&T; Comcast files its 10-15 row; all five predictions held |
+| 38 | 2026-10-18 | 10-17 | exact at Google (6 + jaguar 1); Yahoo's only row is a spoof from `209.85.208.101` as `bogotabureau.com`, quarantined: the corpus's fourth quarantined row, the first since 09-30 |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -7358,5 +7359,77 @@ mailboxes; their first hops are among the 18.
    neither files for 10-17 unless leopard sends to them before midnight.
 4. **Comcast, AOL, GMX and Microsoft file nothing for 10-16 or 10-17** unless
    leopard sends to them before midnight on 10-17: it sent them nothing on 10-16.
+5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
+
+### Thirty-eighth reading — 2026-10-18, covering 2026-10-17: exact at Google; Yahoo files for a spoof, quarantined under the policy
+
+`tools/dmarc_fetch.py -a <account>` scanned 40 messages: **2 new**, 38 already
+held, no conflicts. **The corpus is 211 reports.** Both are for 10-17: Google
+and Yahoo. Every report reads `p=quarantine`. Read 10-18 ~21:40 UTC.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF | Disposition |
+|---|---|---|---|---|---|
+| `google.com` | 10-17 | `50.31.156.114` → `.126`, five addresses (Postmark) | **6** | pass / pass | none |
+| `google.com` | 10-17 | `173.255.245.115` (jaguar) | **1** | pass / pass | none |
+| `yahoo.com` | 10-17 | `209.85.208.101` (a Google server) | 1 | **fail / fail**; authenticated as `bogotabureau.com` (SPF and DKIM pass there) | **quarantine** |
+
+The Yahoo row is not ours: a message whose header `From` claimed
+`surfguitar101.com`, sent through Google's infrastructure and signed for
+`bogotabureau.com`. It aligned on neither mechanism, so Yahoo quarantined it
+as the policy asks. Yahoo has no Postmark row for 10-17, and leopard sent
+Yahoo nothing that day.
+
+**The corpus holds four quarantined rows in all**, every one aligned on
+neither mechanism: three in Google's 09-30 report, from `119.59.99.226`, each
+authenticated as a different domain (`dmkarashop.com`, `wuttanabat.com`,
+`chiangraipool.com`), and this one. Counted with `dmarc_report.py` over the
+whole corpus, rows whose disposition isn't `none`.
+
+#### Every row reconciles
+
+| Endpoint | Window | Sender's log | Report |
+|---|---|---|---|
+| Google, Postmark | UTC−7 day, 10-17 07:00 → 10-18 07:00 UTC | leopard `email.log`: 6 `gmail.com` (17:46:34 → 10-18 02:07:59), 0 `muohio.edu` | **6**, exact |
+| Google, forwarders | same | leopard `email.log`: no `thegogorillas.com` send | **0** `cloudfilter.net` rows, exact |
+| Google, jaguar | 10-17 02:00 → 10-18 02:00 CDT | jaguar `mail.log`: `E7B9A586507`, the cron mail, 02:01:15 CDT | **1**, exact |
+| Yahoo, Postmark | UTC day 10-17 | leopard `email.log`: no `yahoo.com` send | **0** Postmark rows, exact |
+| AT&T | UTC day 10-17 | leopard `email.log`: no `att.net` send | no report, exact |
+
+leopard's `email.log` holds 11 sends on the UTC day 10-17 (8 `gmail.com`, 2
+`muohio.edu`, 1 `msorensen.net`) and 6 in Google's window, all
+`outcome=sent`. The two `muohio.edu` sends fall before 07:00 UTC, in the
+thirty-seventh reading's window. Five of the six window sends are topic
+notifications and one a private-message notification. `sg101.log` holds no
+`ERROR` or `CRITICAL` line dated 10-17 or 10-18, so no Django error mail sits
+in Google's count.
+
+#### Scoring the thirty-seventh reading's predictions: four held, one held on the count
+
+1. **HELD.** One jaguar message, `E7B9A586507`.
+2. **HELD.** 6 = 6 `gmail.com` + 0 `muohio.edu`. No Django error mail, no
+   `cloudfilter.net` row.
+3. **HELD ON THE COUNT, NOT ON THE FILING.** Yahoo's and AT&T's Postmark counts
+   match leopard's sends, 0 each. But "neither files for 10-17" missed: Yahoo
+   filed, for the spoof, which no prediction about our own mail could see.
+   AT&T filed nothing.
+4. **HELD, SO FAR.** Comcast, AOL, GMX and Microsoft filed nothing for 10-16 or
+   10-17. Comcast has filed a day late before.
+5. **HELD, AND EXERCISED.** Every report reads `p=quarantine`, and the one
+   non-`none` disposition is on the row aligned on neither mechanism.
+
+#### Predictions for the thirty-ninth reading
+
+1. **Google's 10-18 jaguar count is 2**: `819C35864DF`, the 02:01:12 CDT cron
+   mail, and `BEE2B5864EC` at 06:47:02 CDT, from root (uid 0): the Sunday
+   `run-parts --report /etc/cron.weekly` in `/etc/crontab`, as on 10-11.
+   Unless jaguar's root mails again before 10-19 02:00 CDT.
+2. **Google's 10-18 Postmark rows equal leopard's `gmail.com` and `muohio.edu`
+   sends from 10-18 07:00 to 10-19 07:00 UTC**, plus any Django error mail: so
+   far 6 `gmail.com` (to 20:59:43 UTC).
+3. **Yahoo's, AT&T's and Microsoft's 10-18 match the UTC day's sends**: so far
+   4 `yahoo.com`, 1 `att.net` and 3 `hotmail.com`, so all three should file.
+4. **Comcast, AOL and GMX file nothing for 10-18** unless leopard sends to them
+   before midnight: so far it has not.
 5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
