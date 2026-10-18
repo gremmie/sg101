@@ -42,9 +42,10 @@ export function insertLink(textarea, url) {
 
 // Replaces the selection with text and leaves the caret after it. With
 // ownLine, newlines are added where needed so the text sits on a line of its
-// own. The textarea keeps its selection while a modal has the focus, so this
-// works from a modal's button too.
-export function insertAtCursor(textarea, text, { ownLine = false } = {}) {
+// own; with padded, spaces, so it is a word of its own (a smiley code renders
+// only between whitespace). The textarea keeps its selection while a modal
+// has the focus, so this works from a modal's button too.
+export function insertAtCursor(textarea, text, { ownLine = false, padded = false } = {}) {
    const end = textarea.value.length;
    const placed = focused.has(textarea);
    const i = placed ? textarea.selectionStart : end;
@@ -57,6 +58,14 @@ export function insertAtCursor(textarea, text, { ownLine = false } = {}) {
       }
       if (after && !after.startsWith('\n')) {
          text += '\n';
+      }
+   }
+   if (padded) {
+      if (before && !/\s$/.test(before)) {
+         text = ' ' + text;
+      }
+      if (after && !/^\s/.test(after)) {
+         text += ' ';
       }
    }
    replaceText(textarea, i, j, text);

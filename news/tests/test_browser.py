@@ -232,6 +232,27 @@ class SubmitSmileyPickerTestCase(BrowserTestCase):
         self.addCleanup(cache.clear)
         self.login(User.objects.create_user('pjmoto', '', 'pw'))
         self.page.goto(self.live_server_url + reverse('news-submit'))
+        self.textarea = self.page.locator('.v3-editor textarea')
+        self.modal = self.page.locator('#smiley-modal')
+
+    def open_picker(self):
+        self.page.locator('a.editor-smiley').click()
+        expect(self.modal).to_be_visible()
+
+    def smiley(self, code):
+        return self.modal.locator('button[data-code="{}"]'.format(code))
+
+    def place_caret(self, text, caret):
+        self.textarea.fill(text)
+        self.textarea.evaluate('(t, i) => { t.focus(); t.setSelectionRange(i, i); }', caret)
+
+    def drag_title(self, dx, dy):
+        handle = self.modal.locator('.smiley-modal-title').bounding_box()
+        x, y = handle['x'] + 20, handle['y'] + handle['height'] / 2
+        self.page.mouse.move(x, y)
+        self.page.mouse.down()
+        self.page.mouse.move(x + dx, y + dy, steps=5)
+        self.page.mouse.up()
 
     def test_smiley_button_opens_every_smiley_and_done_closes_it(self):
         self.page.locator('a.editor-smiley[data-open="smiley-modal"]').click()
@@ -240,3 +261,99 @@ class SubmitSmileyPickerTestCase(BrowserTestCase):
         expect(modal.locator('button[data-code]')).to_have_count(Smiley.objects.count())
         modal.get_by_role('button', name='Done').click()
         expect(modal).to_be_hidden()
+
+    def test_a_smiley_goes_in_at_the_caret_with_one_space_each_side(self):
+        # The same results core's SmileyPaddingTestCase renders as images.
+        cases = [
+            ('abcd', 2, 'ab :-) cd'),
+            ('abc', 3, 'abc :-)'),
+            ('abc', 0, ':-) abc'),
+            ('a  b', 2, 'a :-) b'),
+            ('', 0, ':-)'),
+        ]
+        self.open_picker()
+        for text, caret, expected in cases:
+            with self.subTest(text=text, caret=caret):
+                self.place_caret(text, caret)
+                self.smiley(':-)').click()
+                expect(self.textarea).to_have_value(expected)
+
+    def test_a_second_smiley_follows_the_first_with_one_space(self):
+        self.place_caret('abcd', 2)
+        self.open_picker()
+        self.smiley(':-)').click()
+        self.smiley(':D').click()
+        expect(self.textarea).to_have_value('ab :-) :D cd')
+
+    def test_the_same_smiley_twice_is_spaced_once(self):
+        self.place_caret('abcd', 2)
+        self.open_picker()
+        self.smiley(':-)').click()
+        self.smiley(':-)').click()
+        expect(self.textarea).to_have_value('ab :-) :-) cd')
+
+    def test_the_picker_stays_open_after_a_smiley_is_clicked(self):
+        self.open_picker()
+        self.smiley(':-)').click()
+        expect(self.textarea).to_have_value(':-)')
+        expect(self.modal).to_be_visible()
+
+    def test_the_post_can_be_clicked_into_while_the_picker_is_open(self):
+        self.open_picker()
+        overlay = self.modal.evaluate("m => !!m.closest('.reveal-overlay')")
+        self.assertFalse(overlay)
+        # The picker sits over the middle of the page; the post's right edge is clear.
+        box = self.textarea.bounding_box()
+        self.textarea.click(position={'x': box['width'] - 10, 'y': 10})
+        expect(self.textarea).to_be_focused()
+        expect(self.modal).to_be_visible()
+
+    def test_the_picker_can_be_dragged_by_its_title(self):
+        self.open_picker()
+        expect(self.modal.locator('.smiley-modal-grip')).to_be_visible()
+        before = self.modal.bounding_box()
+        self.drag_title(-150, 60)
+        after = self.modal.bounding_box()
+        self.assertAlmostEqual(after['x'], before['x'] - 150, delta=2)
+        self.assertAlmostEqual(after['y'], before['y'] + 60, delta=2)
+
+    def test_the_title_cannot_be_dragged_off_screen(self):
+        self.open_picker()
+        title = self.modal.locator('.smiley-modal-title')
+        self.drag_title(-3000, -3000)
+        box = title.bounding_box()
+        self.assertGreaterEqual(box['y'], 0)
+        self.assertGreaterEqual(box['x'] + box['width'], 100)
+
+        self.drag_title(6000, 6000)
+        box = title.bounding_box()
+        viewport = self.page.viewport_size
+        self.assertLessEqual(box['y'] + box['height'], viewport['height'])
+        self.assertLessEqual(box['x'], viewport['width'] - 100)
+
+    def test_the_picker_is_not_dragged_on_a_phone(self):
+        self.page.set_viewport_size({'width': 375, 'height': 812})
+        self.page.reload()
+        self.open_picker()
+        expect(self.modal.locator('.smiley-modal-grip')).to_be_hidden()
+        before = self.modal.bounding_box()
+        self.drag_title(-100, 60)
+        self.assertEqual(self.modal.bounding_box(), before)
+
+    def test_the_close_button_in_the_title_bar_closes_the_picker(self):
+        # The button sits on the drag handle; pressing it must not start a drag.
+        self.open_picker()
+        self.modal.locator('.smiley-modal-title .close-button').click()
+        expect(self.modal).to_be_hidden()
+
+    def test_the_title_bar_stays_at_the_top_as_the_picker_scrolls(self):
+        # Short enough that the picker overflows even though the test server
+        # serves no media, so the smiley images take no room.
+        self.page.set_viewport_size({'width': 1280, 'height': 300})
+        self.open_picker()
+        heights = self.modal.evaluate('m => [m.clientHeight, m.scrollHeight]')
+        scrolled = self.modal.evaluate('m => { m.scrollTop = m.scrollHeight; return m.scrollTop; }')
+        self.assertGreater(scrolled, 0, heights)
+        modal = self.modal.bounding_box()
+        title = self.modal.locator('.smiley-modal-title').bounding_box()
+        self.assertAlmostEqual(title['y'], modal['y'], delta=2)

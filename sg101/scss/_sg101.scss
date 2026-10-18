@@ -159,6 +159,52 @@
    }
 }
 
+// The smiley picker's title bar, which drags it at medium and up. It spans
+// the modal's padding, and sticks to the top as the picker scrolls, holding
+// the close button.
+.smiley-modal-title {
+   position: sticky;
+   top: -$reveal-padding;
+   z-index: 1;
+   margin: (-$reveal-padding) (-$reveal-padding) $reveal-padding;
+   padding: rem-calc(10) $reveal-padding;
+   background: $primary-color;
+   color: $white;
+   font-size: $lead-font-size;
+
+   @include breakpoint(medium) {
+      cursor: move;
+      touch-action: none;
+      user-select: none;
+   }
+
+   .close-button {
+      top: 50%;
+      transform: translateY(-50%);
+      color: $white;
+
+      &:hover,
+      &:focus {
+         color: rgba($white, 0.7);
+      }
+   }
+}
+
+// Two columns of three dots, shown only where the picker can be dragged.
+.smiley-modal-grip {
+   display: none;
+
+   @include breakpoint(medium) {
+      display: inline-block;
+      width: rem-calc(10);
+      height: rem-calc(18);
+      margin-right: rem-calc(12);
+      vertical-align: rem-calc(-2);
+      background-image: radial-gradient(circle, rgba($white, 0.7) 1.6px, transparent 1.8px);
+      background-size: 5px 6px;
+   }
+}
+
 .smiley-picker-heading {
    margin: rem-calc(12) 0 rem-calc(4);
    font-weight: bold;

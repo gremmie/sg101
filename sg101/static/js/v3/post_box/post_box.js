@@ -9,6 +9,7 @@
 import { insertLink, prependLines, trackCaret, wrapSelection } from './editor.js';
 import { initHotLink } from './hot_link.js';
 import { showPreview } from './preview.js';
+import { initSmileys } from './smileys.js';
 import { initUploads } from './uploads.js';
 
 let active = null;
@@ -16,6 +17,7 @@ const getActive = () => active;
 
 const resetHotLink = initHotLink(getActive);
 const resetUploads = initUploads(getActive);
+initSmileys(getActive);
 
 const TEXT_BUTTONS = {
    '.editor-bold': (textarea) => wrapSelection(textarea, '**'),
@@ -37,6 +39,7 @@ const TEXT_BUTTONS = {
 const MODAL_BUTTONS = {
    '.editor-hot-link': () => resetHotLink(),
    '.editor-upload': () => resetUploads(),
+   '.editor-smiley': () => {},
    '.editor-preview': (textarea) => showPreview(textarea),
    '.editor-help': () => {},
 };
@@ -44,6 +47,11 @@ const MODAL_BUTTONS = {
 for (const editor of document.querySelectorAll('.v3-editor')) {
    const textarea = editor.querySelector('textarea');
    trackCaret(textarea);
+   // The smiley picker leaves the page usable, so the member can move to
+   // another post box while it is open.
+   textarea.addEventListener('focus', () => {
+      active = textarea;
+   });
 
    for (const [selector, action] of Object.entries(TEXT_BUTTONS)) {
       editor.querySelector(selector)?.addEventListener('click', (event) => {

@@ -1,5 +1,6 @@
 """Browser tests for the bio app's pages."""
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.urls import reverse
 from playwright.sync_api import expect
 
@@ -16,9 +17,13 @@ IMAGE_AT_CARET = 'first\n![image]({})\nsecond'.format(HOT_LINK_URL)
 
 class EditProfilePostBoxTestCase(BrowserTestCase):
     """The profile edit page has two post boxes sharing one set of modals."""
+    fixtures = ['smilies.json']
 
     def setUp(self):
         super().setUp()
+        # The smiley picker reads smileys through get_smilies, which caches them.
+        cache.clear()
+        self.addCleanup(cache.clear)
         self.user = User.objects.create_user('pjmoto', '', 'pw')
         self.login(self.user)
         self.page.goto(self.live_server_url + reverse('bio-edit_profile'))
@@ -57,6 +62,17 @@ class EditProfilePostBoxTestCase(BrowserTestCase):
         modal.locator('button.button').click()
         expect(modal).to_be_hidden()
         expect(preview).to_be_focused()
+
+    def test_smileys_go_into_the_box_last_clicked_into(self):
+        # The picker leaves the page usable, so the member can move to the
+        # other box without closing it.
+        self.page.locator('.v3-editor', has=self.profile_text).locator('.editor-smiley').click()
+        modal = self.page.locator('#smiley-modal')
+        expect(modal).to_be_visible()
+        self.signature.evaluate('(t, i) => { t.focus(); t.setSelectionRange(i, i); }', CARET)
+        modal.locator('button[data-code=":-)"]').click()
+        expect(self.signature).to_have_value('first :-)\nsecond')
+        expect(self.profile_text).to_have_value(CARET_TEXT)
 
     def open_first_box_preview(self):
         preview = self.page.locator('.v3-editor', has=self.profile_text).locator('.editor-preview')

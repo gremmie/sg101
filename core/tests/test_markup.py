@@ -5,6 +5,7 @@ Tests for the core markup module.
 import textwrap
 import unittest
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.markup import Markdown, markdown, SiteMarkup, site_markup
@@ -160,3 +161,36 @@ class SiteMarkdupTestCase(TestCase):
     def test_site_markup_function(self):
         output = site_markup(self.TEST_TEXT)
         self.assertEqual(output, self.EXPECTED)
+
+
+class SmileyPaddingTestCase(TestCase):
+    """The text the post box's smiley picker leaves renders every smiley.
+
+    A code becomes an image only between whitespace or line ends, so the
+    picker pads what it inserts. These are the results its browser tests
+    expect (news/tests/test_browser.py, SubmitSmileyPickerTestCase).
+    """
+    fixtures = ['smilies.json']
+
+    PADDED = {
+        'ab :-) cd': 1,
+        'ab :-) :D cd': 2,
+        # One space between two of the same code: the first match takes it,
+        # and only the regex's lookbehind lets the second match too.
+        'ab :-) :-) cd': 2,
+        'abc :-)': 1,
+        ':-) abc': 1,
+        'a :-) b': 1,
+    }
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def test_each_padded_code_renders_as_an_image(self):
+        for text, count in self.PADDED.items():
+            with self.subTest(text=text):
+                self.assertEqual(site_markup(text).count('<img '), count)
+
+    def test_an_unpadded_code_stays_text(self):
+        self.assertNotIn('<img ', site_markup('ab:-)cd'))
