@@ -335,7 +335,7 @@
         "fields": {
             "is_extra": true, 
             "image": "smiley/images/icon_lol.gif", 
-            "code": ":lol:", 
+            "code": ":laugh:", 
             "title": "Laughing"
         }
     }, 

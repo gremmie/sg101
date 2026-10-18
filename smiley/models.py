@@ -4,12 +4,18 @@ Models for the smiley application.
 import re
 
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.conf import settings
 from django.core.cache import cache
 from django.utils.html import format_html
 from django.contrib.sites.models import Site
 
 CACHE_TIMEOUT = 60 * 60      # seconds
+
+# Every key the manager below caches under; a change to any smiley clears them.
+CACHE_KEYS = ['smiley_map', 'smileys', 'smileys_extra',
+              'smiley_regexes_rel', 'smiley_regexes_abs']
 
 
 class SmileyManager(models.Manager):
@@ -103,3 +109,10 @@ class Smiley(models.Model):
                 return (u'![%s](%s://%s%s "%s")' % (
                     self.title, settings.SITE_SCHEME, site.domain, self.image.url, self.title))
         return u''
+
+
+@receiver(post_save, sender=Smiley)
+@receiver(post_delete, sender=Smiley)
+def clear_smiley_cache(sender, **kwargs):
+    """Drop the cached smileys, so an edit in the admin shows at once."""
+    cache.delete_many(CACHE_KEYS)
