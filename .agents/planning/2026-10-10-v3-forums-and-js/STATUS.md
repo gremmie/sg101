@@ -873,3 +873,92 @@ screenshots show images in the cells that were blank before, so those were
 animated GIFs on a blank frame.
 
 **Suite and gate**, as separate runs: 1480 tests OK each.
+
+## Step 4 task 02 — clicking a smiley inserts it; the picker non-modal and draggable — DONE 2026-10-18
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step04/task-02-smileys-module.code-task.md`.
+Branch `smileys`, on `3d737781`.
+
+**What changed.**
+
+- **`editor.js`**: `insertAtCursor(…, { padded })`, beside `ownLine`. A space
+  goes before the code unless it starts the text or follows whitespace, and
+  after unless it ends the text or whitespace follows; the caret ends after
+  the trailing space, so the next smiley lands after it.
+- **`post_box/smileys.js`** (new): a click on a `[data-code]` button inserts
+  that code, padded, into the active post box. Focus stays on the picker.
+  Dragging by the title (`.smiley-modal-title`) uses pointer events to set the
+  modal's `top` and `left`, only at Foundation's medium breakpoint and up
+  (`matchMedia('(min-width: 40em)')`, checked as each drag starts). The title
+  can't leave the window vertically, and at least 100 px of it stays on screen
+  across; its edges are measured as the drag starts, since it sits inside the
+  modal's padding (the first version clamped the modal and left 68 px of the
+  title, which the test caught).
+- **`post_box.js`**: wires `initSmileys`, and focusing a textarea makes it the
+  active box. Every modal sees that; only the overlay-less picker can be open
+  while it happens.
+- **`post_box_modals.html`**: `data-overlay="false"
+  data-close-on-click="false"` on `#smiley-modal`, and the title's class. No
+  change to `foundation.min.js` (measured before the task, recorded in its
+  file).
+- **Sass**: `.smiley-modal-title` at medium and up: `cursor: move`,
+  `touch-action: none`, `user-select: none` (a drag doesn't select the title's
+  text). The rebuilt CSS differs from the committed one by that rule only.
+
+**Tests**, red first except the render test:
+
+| Test | Asserts |
+|---|---|
+| `core` `SmileyPaddingTestCase` (new) | the strings the browser tests expect render one image per code through `site_markup`, including `ab :-) :-) cd`; `ab:-)cd` stays text. It checks the renderer against the picker's output, so it passed before the picker existed |
+| `news` `SubmitSmileyPickerTestCase` (6 cases, 7 new tests) | mid-word, end, start, between spaces and empty text, exact results; two different smileys and the same one twice, each spaced once; the picker stays open after a click; no overlay, and a click in the post focuses it with the picker open; dragging the title moves the modal by the drag at 1280; dragged far up-left and far down-right, the title stays on screen; at 375 a drag moves nothing |
+| `bio` `EditProfilePostBoxTestCase.test_smileys_go_into_the_box_last_clicked_into` | picker opened from the first box, caret placed in the second, a smiley goes into the second only |
+
+Mutations, each alone, restored from a copy and `cmp`-checked:
+
+| Mutation | Fails |
+|---|---|
+| picker inserts unpadded | padding cases, two in a row, the profile edit test |
+| no space before | the same |
+| no space after | padding cases, two in a row |
+| drag handler not installed | drag |
+| drag on phones too | the phone test |
+| drag unclamped | off-screen |
+| focus not tracked | the profile edit test |
+| overlay back | post usable, drag (the overlay takes the pointer) |
+| `data-close-on-click` removed | post usable |
+| the picker closes after a smiley | stays open, padding cases, two in a row |
+| the renderer's lookbehind removed | **nothing at first**: two *different* codes are each matched by their own regex, so the lookbehind only matters for the same code twice, whose first match takes the shared space. `ab :-) :-) cd` added to the render test (and a same-code browser test beside it); then it fails |
+
+**Accepted, not fixed:** Reveal keeps Tab inside an open modal, so a
+keyboard user can't Tab from the picker into the post; Escape closes it and
+returns focus to the button. A window resize re-centres a dragged picker
+(recorded in the task file).
+
+**Then a title bar, Brian's review (2026-10-18).** He asked for something on
+the title that says it drags. Mocked up at 1280: a grey band with a grip, the
+site's primary blue, a dotted texture; then blue with a grip in 70% white or
+light blue (#8fc3e6). **His choice: blue, grip in 70% white.** The title is
+now the modal's first child (`div.smiley-modal-title`, out of the Foundation
+row) spanning the modal's padding, `$primary-color` behind white text at
+`$lead-font-size`, with the × inside it in white. It is `position: sticky`:
+the picker scrolls when taller than its 80% `max-height`, which would have
+carried the drag handle and the × out of reach. The grip
+(`span.smiley-modal-grip`, two columns of three CSS-drawn dots, not a glyph)
+shows only at medium and up, where dragging works.
+
+The × on the handle needed one code change, test first: the drag handler
+captured the pointer on any press, so the click never reached the ×
+(`test_the_close_button_in_the_title_bar_closes_the_picker` failed: "expected
+to be hidden"). Presses that start on a button are now left alone.
+
+New tests: the × closes the picker; the grip is visible at 1280 and hidden at
+375 (added to the drag and phone tests); the title stays at the modal's top
+after the picker scrolls. That one first failed for a reason of its own: the
+test server serves no media, so the picker held no image heights and never
+overflowed at 600 px; it runs at 300 px. Mutations, built CSS or module
+edited, restored and `cmp`-checked: not sticky, fails the scroll test; button
+presses start drags, fails the × test; grip hidden everywhere, fails the drag
+test. On dev with images loaded: screenshots at 1280 × 900, 375 × 812, and
+1280 × 500 scrolled 200 px with the bar still on top; no page errors.
+
+**Suite and gate**, as separate runs: 1493 tests OK each.
