@@ -33,7 +33,9 @@ the built `main.min.css` with it: the application image has no Node.
 2. At about 375 px and desktop width: the toolbar's buttons fit on one row,
    the modal scrolls and its Done button is reachable, and the console is
    clean. Walk the picker on news submit, profile edit (both boxes), message
-   compose and one comment form.
+   compose and one comment form. At desktop width, drag the picker aside,
+   click into the post to move the cursor, and add smileys there; compare
+   with the old forums' "more smileys" window, which it is meant to match.
 3. In Firefox or Safari (Brian's browser, by hand): the network panel shows
    no smiley image requests until the modal opens.
 4. If anything writes to the dev database, take a snapshot first

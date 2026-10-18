@@ -763,3 +763,113 @@ migrations), and the live menu and post box modals work.
   holds the `[data-toggle]` guard). So a fresh load can't pair new HTML with
   old assets. Most likely a page held from before the deploy (an open tab, or
   the back/forward cache). Not reproduced.
+
+## Step 4 task 01 — the smiley picker modal and its toolbar button — DONE 2026-10-17
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step04/task-01-smiley-picker-modal.code-task.md`.
+Branch `smileys`, on `cea6761d` (the step's task files).
+
+**Brian's decisions (2026-10-17):** render the picker into the page rather
+than fetch it on open (the task file's Background holds the measurements);
+**the icon is ☺** (U+263A with U+FE0E, candidate B of three screenshotted at
+375 px: the site's `smile.gif`, ☺, Foundation's `fi-like`); and test the two
+shared templates directly, plus one page in a browser, rather than every page
+that includes the modals.
+
+**What changed.**
+
+- **`{% smiley_picker %}`** in `smiley/templatetags/smiley_tags.py`, beside
+  `smiley_farm`: `get_smilies()` then `get_smilies(extra=True)`, into
+  `smiley/smiley_picker.html`. Each smiley is `<button type="button"
+  data-code>` around `<img loading="lazy" alt="code" title="title code">`,
+  the code escaped by autoescaping.
+- **`#smiley-modal`** in `post_box_modals.html` (which now loads
+  `smiley_tags`), built like the help modal: `small reveal modal-scrollable`,
+  ×, and a **Done** button. Done has no `aria-label`, so its name is its text.
+- **The toolbar button**, before hot-link: `<a class="editor-smiley"
+  data-open="smiley-modal" aria-label="Smileys">` around `<span
+  class="size-21">☺︎</span>`. Shown on small screens. No Sass changed.
+
+**Tests**, all red first (the tag didn't exist; no button; no modal):
+
+| Test | Asserts |
+|---|---|
+| `smiley` `SmileyPickerTestCase` (new file; the app had no tests) | the exact button order is the main set then the extras; one button per smiley; every image lazy with alt text; a code `:"<&:`, created for the test since no real code holds those characters, renders `data-code=":&quot;&lt;&amp;:"` |
+| `core` `PostBoxTestCase.test_toolbar_has_a_smiley_button_shown_on_small_screens` | opens `smiley-modal`, named "Smileys", no `hide-for-small-only` |
+| `core` `PostBoxModalsTestCase` (new) | the include holds `#smiley-modal` with the picker and a Done button that closes |
+| `news` `SubmitSmileyPickerTestCase` (browser) | the button opens the modal with every smiley; Done closes it |
+
+The smiley tests clear the cache in `setUp`: `get_smilies` caches for an hour
+and the test `LocMemCache` outlives a test. The first core test class was
+written under the name of an existing `PostBoxTestCase` further down the same
+file, which shadowed it, so its tests never ran; caught by the run count, and
+merged into the existing class.
+
+**The order test first classified codes as main or extra, and failed on real
+data: `:lol:` is two rows**, main "LOL" (pk 13) and extra "Laughing" (pk 30),
+in the fixture and on dev. It now compares the whole sequence. Below for what
+the duplicate does.
+
+Mutations, each alone, restored from a copy and `cmp`-checked; all ten caught:
+
+| Mutation | Fails |
+|---|---|
+| extras first | order |
+| extras dropped | order, one-button, lazy, browser |
+| `{{ s.code\|safe }}` | escaping |
+| no `loading="lazy"` | lazy |
+| no `alt` | lazy |
+| button `hide-for-small-only` | toolbar |
+| button without `data-open` | toolbar, browser |
+| button without `aria-label` | toolbar |
+| no `{% smiley_picker %}` in the modal | modal include, browser |
+| Done relabelled | modal include, browser |
+
+**On dev, by a headless probe** (session made and deleted, toolbar hidden as
+in step 3 task 03): at 375 and 1280, **0 smiley image requests before the
+modal opens and 85 after**, no page errors. The toolbar's six buttons fit at
+375. At phone width Reveal shows a `small` modal full-screen. A few blank
+cells in the screenshots aren't missing files (none is, checked against
+`MEDIA_ROOT`); probably animated GIFs on a blank frame, not confirmed.
+
+**The duplicate `:lol:`, fixed in the data by Brian (2026-10-17).**
+`get_smiley_regexes` builds one regex per row and the first match wins, so
+`:lol:` rendered as "Laughing" (`icon_lol.gif`), measured through
+`site_markup` on dev, and the main set's "LOL" image was never shown. Brian
+changed Laughing's code to `:laugh:` in the admin on dev and production.
+Posts saved before keep the HTML they were rendered with. The `smilies.json`
+fixture is changed to match.
+
+**Then: nothing cleared the smiley caches on an admin edit**, so production
+kept the old regexes in Redis for up to an hour. Brian asked for it here.
+`smiley/models.py` lists the manager's five keys in `CACHE_KEYS`
+(`smiley_map`, `smileys`, `smileys_extra`, `smiley_regexes_rel`,
+`smiley_regexes_abs`; nothing else holds smiley data past one call, since
+`SiteMarkup` and `SmilifyHtml` are built per use), and `post_save` and
+`post_delete` receivers delete them. The admin's bulk delete still sends
+`post_delete` per row. `smiley` `SmileyCacheTestCase` (new): one test per
+cached view, each caching it, editing a smiley and seeing the edit, plus a
+delete. All six red first; **the delete test passed at first and couldn't
+fail**: `delete()` sets `pk` to `None`, so it checked `None` was absent. It
+keeps the pk first now. Mutations: each key dropped from the list, each
+receiver removed; all seven caught.
+
+**Brian's review of the look (2026-10-17):** a "More smileys" heading before
+the extras (of a rule or a heading, mocked up at both widths), space above
+Done, and padding round each smiley. The tag now passes `main` and `extra`
+separately. Sass in `_sg101.scss`: `.smiley-picker` (1 rem below, buttons
+0.25 rem × 0.5 rem padding and `cursor: pointer`, since Foundation's button
+reset leaves the arrow) and `.smiley-picker-heading`. **Then hover and pressed
+states**, Brian's request: Foundation's global reset strips a bare `<button>`
+of every visual cue, so a click showed nothing. `:hover` is `$light-gray`
+(#e6e6e6), `:active` `$medium-gray` (#cacaca); screenshotted at rest, hovered,
+pressed and keyboard-focused (Chrome's focus ring, `outline: auto`; Foundation
+removes the outline only after mouse input). **A rebuild of the
+unchanged Sass reproduced the committed `main.min.css` byte for byte first;**
+after each change the built file differs from the committed one only by the new `.smiley-picker` rules.
+Test: `test_the_extras_are_headed_more_smileys`, red first; mutations
+(heading removed, heading above the main set) both caught. The later
+screenshots show images in the cells that were blank before, so those were
+animated GIFs on a blank frame.
+
+**Suite and gate**, as separate runs: 1480 tests OK each.
