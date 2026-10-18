@@ -1,0 +1,9 @@
+<div class="smiley-picker">
+{% for s in main %}
+<button type="button" data-code="{{ s.code }}"><img loading="lazy" src="{{ s.image.url }}" alt="{{ s.code }}" title="{{ s.title }} {{ s.code }}"></button>
+{% endfor %}
+<p class="smiley-picker-heading">More smileys</p>
+{% for s in extra %}
+<button type="button" data-code="{{ s.code }}"><img loading="lazy" src="{{ s.image.url }}" alt="{{ s.code }}" title="{{ s.title }} {{ s.code }}"></button>
+{% endfor %}
+</div>

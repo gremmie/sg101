@@ -1,3 +1,4 @@
+{% load smiley_tags %}
 <div class="small reveal" id="hot-link-modal" data-reveal>
    <button class="close-button" data-close aria-label="Close modal" type="button">
       <span aria-hidden="true">&times;</span>
@@ -210,6 +211,25 @@ This is not part of the quote because of the blank line.
       <div class="columns text-right">
          <button class="button" data-close aria-label="Close modal" type="button">
             Close
+         </button>
+      </div>
+   </div>
+</div>
+
+<div class="small reveal modal-scrollable" id="smiley-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <p class="lead">Smileys</p>
+         {% smiley_picker %}
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns text-right">
+         <button class="button" data-close type="button">
+            Done
          </button>
       </div>
    </div>

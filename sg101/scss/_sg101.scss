@@ -142,6 +142,28 @@
    overflow-y: auto;
 }
 
+.smiley-picker {
+   margin-bottom: rem-calc(16);
+
+   button {
+      padding: rem-calc(4) rem-calc(8);
+      cursor: pointer;
+
+      &:hover {
+         background: $light-gray;
+      }
+
+      &:active {
+         background: $medium-gray;
+      }
+   }
+}
+
+.smiley-picker-heading {
+   margin: rem-calc(12) 0 rem-calc(4);
+   font-weight: bold;
+}
+
 div.band-balloon {
    width: 150px;
    height: 75px;

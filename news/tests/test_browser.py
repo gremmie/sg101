@@ -6,12 +6,14 @@ import tempfile
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
 from playwright.sync_api import expect
 
 from core.tests.browser import BrowserTestCase
+from smiley.models import Smiley
 
 
 # An allowed image host with https is returned as-is, without a fetch.
@@ -217,3 +219,24 @@ class SubmitJQueryTestCase(BrowserTestCase):
     def test_page_requests_nothing_from_googles_cdn(self):
         google = [url for url in self.requests if 'ajax.googleapis.com' in url]
         self.assertEqual(google, [])
+
+
+class SubmitSmileyPickerTestCase(BrowserTestCase):
+    """The post box's smiley button opens a modal of every smiley."""
+    fixtures = ['smilies.json']
+
+    def setUp(self):
+        super().setUp()
+        # The picker reads smileys through get_smilies, which caches them.
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.login(User.objects.create_user('pjmoto', '', 'pw'))
+        self.page.goto(self.live_server_url + reverse('news-submit'))
+
+    def test_smiley_button_opens_every_smiley_and_done_closes_it(self):
+        self.page.locator('a.editor-smiley[data-open="smiley-modal"]').click()
+        modal = self.page.locator('#smiley-modal')
+        expect(modal).to_be_visible()
+        expect(modal.locator('button[data-code]')).to_have_count(Smiley.objects.count())
+        modal.get_by_role('button', name='Done').click()
+        expect(modal).to_be_hidden()

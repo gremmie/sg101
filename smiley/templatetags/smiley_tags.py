@@ -24,3 +24,12 @@ def smiley_farm():
     """An inclusion tag that displays all of the smilies in clickable form."""
     return {'smilies': Smiley.objects.get_smilies(), }
 
+
+
+@register.inclusion_tag('smiley/smiley_picker.html')
+def smiley_picker():
+    """An inclusion tag that displays every smiley as a button, main set first."""
+    return {
+        'main': Smiley.objects.get_smilies(),
+        'extra': Smiley.objects.get_smilies(extra=True),
+    }

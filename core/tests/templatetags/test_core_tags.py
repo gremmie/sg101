@@ -7,6 +7,7 @@ import os
 import re
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.template import Context, Template
@@ -268,3 +269,30 @@ class PostBoxTestCase(TestCase):
         rendered = self.TEMPLATE.render(Context({'field': field}))
         self.assertIn('div class="v3-editor"', rendered)
         self.assertIn('<textarea', rendered)
+
+    def test_toolbar_has_a_smiley_button_shown_on_small_screens(self):
+        field = AddNewsForm()['short_markup']
+        rendered = self.TEMPLATE.render(Context({'field': field}))
+        button = re.search(r'<a [^>]*class="editor-smiley[^"]*"[^>]*>', rendered)
+        self.assertIsNotNone(button)
+        self.assertIn('data-open="smiley-modal"', button.group(0))
+        self.assertIn('aria-label="Smileys"', button.group(0))
+        self.assertNotIn('hide-for-small-only', button.group(0))
+
+
+class PostBoxModalsTestCase(TestCase):
+    """The modals a page's post boxes share, one set per page."""
+    fixtures = ['smilies.json']
+
+    def setUp(self):
+        # The picker reads smileys through get_smilies, which caches them.
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def test_include_the_smiley_picker_with_a_done_button(self):
+        rendered = Template("{% include 'core/v3/post_box_modals.html' %}").render(Context({}))
+        modal = re.search(r'<div [^>]*id="smiley-modal".*?(?=<div [^>]*data-reveal|\Z)',
+                          rendered, re.S)
+        self.assertIsNotNone(modal)
+        self.assertIn('data-code=', modal.group(0))
+        self.assertRegex(modal.group(0), r'<button [^>]*data-close[^>]*>\s*Done\s*</button>')
