@@ -1011,3 +1011,14 @@ failed first, 2 of each of the five modals, and passes after. The probe again
 on that page: one picker, every check passes at both widths.
 
 **Suite and gate**, as separate runs: 1494 tests OK each. `make test-browser`: 37 OK.
+
+**Step 4 is complete and deployed** (2026-10-19). Committed `17974260`
+(the fix) and `03ec9cca` (this record); `main` merged into `smileys`
+(`0fdcd154`), CI green there, and `main` fast-forwarded to it, CI green
+again. Brian deployed with `git pull` and `make prod-up` (no migrations, no
+CSS rebuild). Measured on leopard afterwards: the checkout on `0fdcd154`,
+`web` and `worker` restarted and healthy, and the running image holds
+`smileys.js`, the picker in `post_box_modals.html`, and no modals include in
+`download_detail.html`. **Brian's spot check on the live site:** smileys
+insert, and the preview shows them as images. #9 closed, naming `0fdcd154`;
+branch `smileys` deleted.
