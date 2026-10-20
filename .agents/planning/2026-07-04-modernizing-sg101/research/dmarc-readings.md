@@ -7501,3 +7501,65 @@ so no Django error mail sits in Google's count.
    AT&T show no Postmark row for 10-19: leopard sent them nothing that UTC day.
 5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
+
+### Fortieth reading — 2026-10-20, covering 2026-10-19: exact at Google, AOL and Comcast; Microsoft files its 10-18 row; all five predictions held
+
+`tools/dmarc_fetch.py -a <account>` scanned 47 messages: **4 new**, 43 already
+held, no conflicts. **The corpus is 218 reports.** Three are for 10-19 (Google,
+AOL, Comcast) and one is Microsoft's late 10-18. Every report reads
+`p=quarantine`, and every row's disposition is `none`. Read 10-20 ~22:25 UTC.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF | Disposition |
+|---|---|---|---|---|---|
+| `google.com` | 10-19 | `50.31.156.114` → `.121`, six addresses (Postmark) | **6** | pass / pass | none |
+| `google.com` | 10-19 | `173.255.245.115` (jaguar) | **1** | pass / pass | none |
+| `aol.com` | 10-19 | `50.31.156.116`, `.121` (Postmark) | **2** | pass / pass | none |
+| `comcast.net` | 10-19 | `50.31.156.118`, `.121` (Postmark) | **2** | pass / pass | none |
+| `protection.outlook.com` | 10-18 | `50.31.156.114` (1), `.116` (2) (Postmark) | **3** | pass / pass | none |
+
+No relay row and no forwarder row.
+
+#### Every row reconciles
+
+| Endpoint | Window | Sender's log | Report |
+|---|---|---|---|
+| Google, Postmark | UTC−7 day, 10-19 07:00 → 10-20 07:00 UTC | leopard `email.log`: 6 `gmail.com` (08:54:14 → 10-20 02:50:57), 0 `muohio.edu` | **6**, exact |
+| Google, forwarders | same | leopard `email.log`: no `thegogorillas.com` send | **0** `cloudfilter.net` rows, exact |
+| Google, jaguar | 10-19 02:00 → 10-20 02:00 CDT | jaguar `mail.log.1` + `mail.log`: `96ED758650E`, the cron mail, 02:01:13 CDT | **1**, exact |
+| AOL | UTC day 10-19 | leopard `email.log`: 2 `aol.com` | **2**, exact |
+| Comcast | UTC day 10-19 | leopard `email.log`: 2 `comcast.net` | **2**, exact, on time |
+| Microsoft | UTC day 10-18 | leopard `email.log`: 3 `hotmail.com` | **3**, exact, a day late |
+
+leopard's `email.log` holds 28 sends on the UTC day 10-19 (26 topic
+notifications, 2 registration: 20 `gmail.com`, 2 each `aol.com`,
+`comcast.net`, `mail.de`, `rockisland.com`), and 8 in Google's window, all
+`outcome=sent`. Of the window's 6 `gmail.com` sends, 3 fall after the
+thirty-ninth reading was taken: two topic notifications at 10-20 02:28 and a
+PM notification at 02:50:57. `sg101.log` holds no `ERROR` or `CRITICAL` line
+dated 10-19 or 10-20, so no Django error mail sits in Google's count.
+
+#### Scoring the thirty-ninth reading's predictions: all five held
+
+1. **HELD.** One jaguar message, `96ED758650E`, the 02:01 CDT cron mail.
+2. **HELD.** 6 = 6 `gmail.com` + 0 `muohio.edu`. No Django error mail.
+3. **HELD.** AOL 2 = 2 and Comcast 2 = 2, both on time.
+4. **HELD.** Microsoft filed 10-18 with 3, two days after the day. Yahoo and
+   AT&T filed nothing for 10-19, and leopard sent them nothing that UTC day.
+5. **HELD.** Every report reads `p=quarantine`, and every disposition is
+   `none`.
+
+#### Predictions for the forty-first reading
+
+1. **Google's 10-20 jaguar count is 1**: `E05B65864EC`, the 02:01:14 CDT cron
+   mail. Unless jaguar's root mails again before 10-21 02:00 CDT.
+2. **Google's 10-20 Postmark rows equal leopard's `gmail.com` and `muohio.edu`
+   sends from 10-20 07:00 to 10-21 07:00 UTC**, plus any Django error mail: so
+   far 0 (to 22:22 UTC). A Google report of 0 Postmark rows may not be filed
+   at all.
+3. **Yahoo and Comcast file for 10-20, 1 message each**, matching the UTC
+   day's 1 `yahoo.com` and 1 `comcast.net` send so far; Comcast may file a day
+   late.
+4. **Microsoft, AOL and AT&T file nothing for 10-19 or 10-20** (so far):
+   leopard sent them nothing on either UTC day.
+5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
+   row aligned on neither mechanism.
