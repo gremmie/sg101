@@ -962,3 +962,52 @@ test. On dev with images loaded: screenshots at 1280 × 900, 375 × 812, and
 1280 × 500 scrolled 200 px with the bar still on top; no page errors.
 
 **Suite and gate**, as separate runs: 1493 tests OK each.
+
+## Step 4 task 03 — the smiley walk, the download page's doubled modals — DONE 2026-10-19
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step04/task-03-smileys-walk-and-ship.code-task.md`.
+Branch `smileys`, on `0c95789e`.
+
+**The walk, by a headless probe** on the dev stack at 375 × 812 and 1280 ×
+900, logged in as pk 2 through a session made directly and deleted after
+(`last_login` unchanged, checked), with the dev debug toolbar hidden, as in
+step 3 task 03. A snapshot was taken first
+(`sg101-20261019-190742-before-smileys-walk.dump`). Nothing was posted; the
+message it viewed was already read. Eight pages, every one that includes the
+post box modals: news submit, profile edit (both boxes), message compose,
+message view, a download's comment form (985), calendar add, downloads add.
+
+| Checked | Result |
+|---|---|
+| **The demo**, news submit at 1280: smileys at the start, after "up", at the end, then preview | `:argh: Surf is up :-( and the reverb is wet :no:`; the preview holds three smiley images |
+| Toolbar on one row | 6 buttons at 375, the last ending at x 323; 13 at 1280 |
+| Smiley image requests | 0 before the picker opens, 85 after, every page, both widths |
+| Done reachable, and closes | every page and box, both widths; at 375 the picker is full-screen and scrolls (941 px of content in 812) |
+| A smiley goes into the box it was opened from | every page; profile edit's two boxes each separately |
+| At 1280: drag the picker aside, click into line two of the post, insert | the post takes focus with the picker open, and the smiley lands in line two |
+| Page errors, console errors | none but 404s for files dev's `media/` lacks (a POTD thumbnail, an avatar) |
+
+**Lazy loading outside Chromium, by Brian (2026-10-19):** in Firefox and
+Safari, no smiley image is requested until the picker opens.
+
+**Against the old forums' "More Smileys" window** (`core/comment_dialogs.html`,
+a jQuery UI dialog, opened on a new-post page): that holds only the extra set
+in a narrow box; the picker holds both sets. Both drag and stay open while
+smileys go in.
+
+**Seen, and left as task 02 designed it:** the drag keeps 100 px of the title
+bar on screen, so a picker dragged far down or right can put Done, or the ×,
+outside the window. Dragging the bar back brings them in. The probe met it at
+first by dragging 500 px.
+
+**The download page held every post box modal twice**, the picker among them:
+`download_detail.html` included `post_box_modals.html` beside a comment form
+that includes it too (both since 2016), so each modal id appeared twice. The
+picker still worked there (the probe inserted at both widths); the others went
+unchecked. **Brian chose to fix it here (2026-10-19):** the page's own include
+is gone, which leaves the modals to signed-in members, as on the other four
+pages with a comment form. `downloads` `DownloadBrowseTests.test_details_has_one_of_each_post_box_modal`
+failed first, 2 of each of the five modals, and passes after. The probe again
+on that page: one picker, every check passes at both widths.
+
+**Suite and gate**, as separate runs: 1494 tests OK each. `make test-browser`: 37 OK.
