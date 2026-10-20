@@ -66,6 +66,14 @@ class DownloadBrowseTests(TestCase):
         response = self.client.get(reverse('downloads-details', args=[self.download.id]))
         self.assertEqual(response.status_code, 200)
 
+    def test_details_has_one_of_each_post_box_modal(self):
+        # The comment form brings its own modals; a second copy repeats their ids.
+        response = self.client.get(reverse('downloads-details', args=[self.download.id]))
+        for modal in ('hot-link-modal', 'upload-modal', 'preview-modal', 'help-modal',
+                      'smiley-modal'):
+            with self.subTest(modal=modal):
+                self.assertContains(response, 'id="{}"'.format(modal), count=1)
+
     def test_details_404_for_non_public(self):
         hidden = make_download(self.user, self.category, title='Hidden', public=False)
         response = self.client.get(reverse('downloads-details', args=[hidden.id]))
