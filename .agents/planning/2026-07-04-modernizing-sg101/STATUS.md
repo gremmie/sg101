@@ -88,9 +88,6 @@ the block list and `web`'s memory each have fourteen readings.
 
 **What the watch does not close in task 10:**
 
-- **Requirement 1, in part:** D3 sent every path to Gmail and Outlook on
-  10-08, but `Authentication-Results` were read for one message at each, not
-  per path.
 - **Requirement 7:** regenerate `.agents/summary/` and review `AGENTS.md`.
 - **Requirement 8:** Step 17's after-measurement, which waits on post-cutover
   months.
@@ -339,6 +336,39 @@ retyped every time, four of them decisions already recorded here. Now:
 - **Against Linode (Brian, 2026-10-10):** the token is stored in the keychain,
   and a bare `make firewall-check` passed, so the live rules still match the
   plan.
+
+### Requirement 1, every mail path at two receivers — DONE 2026-10-21, from the receivers' own DMARC reports
+
+D3's live pass (10-07 20:21 UTC, § *S3, after*) sent every path to a Gmail
+and an Outlook address of Brian's: 11 messages to each, the ten paths plus the
+smoke run's Django error mail. Brian read `Authentication-Results` for one
+message at each receiver; both passed.
+
+**The rest are settled by each receiver's aggregate report for 10-07, not by
+headers.** A report row is the receiver's own SPF, DKIM and alignment verdict,
+the same evaluation the header records. It covers every message, though it
+cannot say which path a message was:
+
+- **Outlook: all 11 pass.** Microsoft's 10-07 report (Report-ID
+  `e8140ccaf62b45dc88994e9cfaa1a795`) holds 12 messages, every one from
+  Postmark, `dkim:surfguitar101.com=pass`, `spf:pm-bounces.surfguitar101.com=pass`,
+  disposition `none`. The twenty-ninth reading accounts for all 12 against
+  Postmark's own record: the smoke run's 11, with the password reset received
+  twice after a timed-out first attempt. Microsoft received nothing else from
+  the site that day, so every row is a smoke message.
+- **Gmail: all 11 pass.** Google's 10-07 report (Report-ID
+  `641366756687206067`, UTC−7 day) holds 23 direct Postmark messages, every
+  one passing both and aligned. The twenty-eighth reading reconciles the 23
+  exactly with leopard's sends, and they include the smoke run's 10 live
+  paths and its error mail. The report's other non-jaguar rows are forwards
+  (Gmail relay, `cloudfilter.net`), aligned on DKIM.
+
+**Criterion 1 is met**: on every path, at both receivers, DKIM passes for
+`surfguitar101.com` and SPF passes, aligned through
+`pm-bounces.surfguitar101.com`. Placement is a separate matter from
+authentication: Gmail put 11 of 11 in the Inbox, and Outlook put 10 in the
+Inbox and the smoke admin notification in Junk on content (SCL 5,
+`SpamFilterAuthJ`). Admin mail reaches admins only.
 
 ### Requirement 5, the backups — DONE 2026-10-21: both buckets listed, no alarm
 
