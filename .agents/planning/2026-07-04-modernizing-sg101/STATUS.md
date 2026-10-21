@@ -91,9 +91,6 @@ the block list and `web`'s memory each have fourteen readings.
 - **Requirement 1, in part:** D3 sent every path to Gmail and Outlook on
   10-08, but `Authentication-Results` were read for one message at each, not
   per path.
-- **Requirement 5, in part:** the nightly run passed every day, but no reading
-  in this file lists the objects in the two buckets, which the requirement
-  asks for (§ *S3, after* says so of the first run).
 - **Requirement 7:** regenerate `.agents/summary/` and review `AGENTS.md`.
 - **Requirement 8:** Step 17's after-measurement, which waits on post-cutover
   months.
@@ -342,6 +339,31 @@ retyped every time, four of them decisions already recorded here. Now:
 - **Against Linode (Brian, 2026-10-10):** the token is stored in the keychain,
   and a bare `make firewall-check` passed, so the live rules still match the
   plan.
+
+### Requirement 5, the backups — DONE 2026-10-21: both buckets listed, no alarm
+
+The buckets were listed from leopard at ~18:30 UTC with the job's own
+credential (`docker compose … --profile backup run --rm --no-deps
+--entrypoint sh backup`, then `aws s3 ls --recursive --summarize`). That
+credential has `s3:ListBucket`, so no other key was needed.
+
+- **Dumps bucket: every night since the cutover is there.** Fourteen dumps,
+  `sg101-20261008T043024Z.dump` to `sg101-20261021T043038Z.dump`, one per
+  night with none missing, each uploaded 04:30:29 → 04:31:04 UTC. They grow
+  steadily, from 119,880,031 to 119,958,679 bytes. The two before the flip,
+  10-06 and 10-07, are byte-identical (119,826,080), as a frozen database
+  should be. 28 objects in all; the older ones are pre-cutover runs, which
+  `lifecycle-db.json` expires at 90 days.
+- **Media bucket: the live tree plus two objects.** 15,064 objects and
+  4,939,809,185 bytes, against 15,062 files and 4,939,802,508 bytes under
+  `/svr/sg101/media`. The two extra objects are avatars (3,302 and 3,375
+  bytes), which account for the 6,677-byte difference exactly. They are
+  files the site has deleted since an earlier sync. `backup.sh` syncs
+  without `--delete`, so the bucket keeps them, as intended. No local file
+  is missing from the bucket.
+- **No alarm fired**: healthchecks.io green throughout, no alert since 10-08
+  (Brian, 2026-10-21). The journal agrees: every daily row records
+  `Result=success`, exit 0.
 
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
