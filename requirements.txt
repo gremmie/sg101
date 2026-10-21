@@ -156,6 +156,13 @@ python-dateutil==2.9.0.post0
 # it waits for its own change rather than riding a dependency bump.
 repoze.timeago==0.5
 requests==2.34.2
+# The root-certificate bundle requests and botocore verify against, in place of
+# the system store; Python's ssl module uses the system store instead. It
+# arrives through requests, and is pinned so a CA Mozilla withdraws stops being
+# trusted when this pin moves, not whenever the resolver next happens to pick a
+# newer one. 2026.10.19 drops emSign ECC Root CA - G3 after the eMudhra key
+# incident; the other three emSign roots stay trusted.
+certifi==2026.10.19
 # core/s3.py, which stores and deletes member photo uploads in S3. This replaces
 # the boto (v2) that was dropped at the Python 3 flip: v2 is Python-2 era and
 # abandoned, and uploading had been failing from production since AWS finished
