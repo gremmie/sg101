@@ -89,8 +89,20 @@ the block list and `web`'s memory each have fourteen readings.
 **What the watch does not close in task 10:**
 
 - **Requirement 7:** regenerate `.agents/summary/` and review `AGENTS.md`.
-- **Requirement 8:** Step 17's after-measurement, which waits on post-cutover
-  months.
+- **Requirement 8: open, revisit 2027-01-08**, three full months after the
+  cutover. Step 17's after-measurement repeats § *Step 17 — the spam
+  baseline, read from the database* for the months since 10-08: profiles
+  with `status = STA_SPAMMER` (4, `bio/models.py`), counted by month of
+  `status_date` and of `User.date_joined`, against all registrations by
+  `date_joined`. The before is ~1.4–1.6 a month (2026-01 → 07: 1, 2, 1, 3,
+  2, 1, 1). Two caveats from that section govern the reading. **The newest
+  months understate**, because an account is flagged some time after it
+  registers. **The 2025-07 cliff had no identified cause**, so a quiet after
+  does not show the layers work, and a rise does not show they fail. If
+  three months cannot tell the two apart, extend to six (2027-04-08) rather
+  than force a verdict. `turnstile.log` and `auth.log`'s refusals are the
+  direct instrument for what the layers stop; Step 17's plan named
+  `grep Turnstile turnstile.log*` as its after.
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
