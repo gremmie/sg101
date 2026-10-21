@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-20
+**Last updated:** 2026-10-21
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -62,6 +62,41 @@ When work is committed, the heading is part of the commit.
 | 10-18 (read 10-18 ~21:40 UTC) | 38th reading (10-17 window): Postmark exact at Google (6 on UTC−7, all `gmail.com`); jaguar 1, the cron mail; **Yahoo's only row is a spoof**, 1 message from `209.85.208.101` authenticated as `bogotabureau.com`, aligned on neither mechanism, **quarantined**: the corpus's fourth quarantined row, the first since Google's 09-30 (`research/dmarc-readings.md`); no Postmark row at Yahoo, and no send to it; four predictions held, the fifth on the count | 366 sent 10-07→18, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **72**, unchanged (`tools/cloudflare_block_list.py show` on leopard); newest still `192.0.2.7` at 10-17 14:48. The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:30:56 (`systemctl show`); healthchecks.io not checked | 587 MiB; five workers 126–149 MB RSS at 24 h 56 min: **reset by the step 3 deploy**, `web` started 10-17 20:45:32 UTC (575 MiB at 2 d 14 h before it); no `WORKER TIMEOUT`, 5 worker boots, all at start; no `ERROR` or `CRITICAL` in `sg101.log` 10-17 or 10-18 | 11 sends on the UTC day 10-17, 19 on 10-18 to 20:59, all `sent`. **21 `5xx` on 10-17, all the deploy**: 14 `503` and 7 `502` between 20:40 and 20:49, Apache's `Connection refused` to `web:8000` at 20:45:32; 0 `5xx` on 10-18. **Traffic up**: all requests 215,447 on 10-17 (6,635–13,671 an hour), 282,651 on 10-18 to 21:41 (to 15,309 an hour; 179,954 for all of 10-16). From 10-16 to 10-18, `Chrome/146` macOS 13,593 → 62,885 from about the same addresses (7,488 → 8,677), `Chrome/155` Linux 2,861 → 32,271 across 11,354 addresses, and undeclared bots 39,523 → 69,507 from ~970 addresses; no-referrer `/forums/post/` flat, 57,895 on 10-17 (45,375 addresses) and 67,163 on 10-18 (49,394). User CPU 10-17 7.74%, 10-18 9.65% to 21:40; one-minute load averaged 0.38 and 0.53 (`sar -q`) |
 | 10-19 (read 10-19 ~23:50 UTC) | 39th reading (10-18 window): every row `none`; Postmark exact at Google (23 on UTC−7, all `gmail.com`), Yahoo (4) and AT&T (1); 1 `209.85.220.41` relay row, first hop among the 23; no forwarder row; jaguar 2, the cron mail and the Sunday `cron.weekly` mail; **Microsoft's 10-18 not yet filed** (3 sends); four predictions held, one pending | 394 sent 10-07→19, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **73**, up 1 from 72 (`tools/cloudflare_block_list.py show` on leopard): `192.0.2.6` at 10-18 22:43, the same shape as 10-17's `192.0.2.7` from the same /24: one registration POST that filled the honeypot, failed the question and sent no Turnstile token (`auth.log`, 22:43:00). The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:31:12 (`systemctl show`); healthchecks.io not checked | 607 MiB; five workers 131–154 MB RSS at 2 d 3 h 5 min (started 10-17 20:45:32 UTC, the step 3 deploy; 587 MiB at 24 h 56 min); no `WORKER TIMEOUT` and no worker booted since 10-18 00:00; no `ERROR` or `CRITICAL` in `sg101.log` 10-18 or 10-19 | 19 sends on the UTC day 10-18, all topic notifications; 28 on 10-19 to 23:50 (26 topic notifications, 2 registration), all `sent`; one registration confirmed 10-19. All requests 300,331 for all of 10-18 (8,148–15,309 an hour), 179,638 on 10-19 to 23:49 (5,713–8,917 in each full hour); 0 `5xx` either day. **10-18's rise is subsiding**: `Chrome/146` macOS 64,615 on 10-18 (9,658 addresses) → 16,159 on 10-19 (8,932), and `Chrome/155` Linux 32,396 (11,383 addresses) → 147; no-referrer `/forums/post/` 71,872 (53,280 addresses) → 46,840 (39,691). User CPU 10-18 9.40%, 10-19 7.11% to 23:49; one-minute load averaged 0.51 and 0.35 (`sar -q`) |
 | 10-20 (read 10-20 ~22:25 UTC) | 40th reading (10-19 window): every row `none`; Postmark exact at Google (6 on UTC−7, all `gmail.com`), AOL (2) and Comcast (2, on time); no relay or forwarder row; jaguar 1, the cron mail; **Microsoft's 10-18 filed, 3 = 3**; all five predictions held | 399 sent 10-07→20, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **74**, up 1 from 73 (`tools/cloudflare_block_list.py show` on leopard): `192.0.2.5` at 10-20 20:48, the same shape as the two before it but from a different /16: one registration POST that filled the honeypot, failed the question and sent no Turnstile token (`auth.log`, 20:48:32). Turnstile-only failures, which are most of `auth.log`'s registration lines, ban nothing. The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:31:13 (`systemctl show`); healthchecks.io not checked | 550 MiB; five workers 130–135 MB RSS at 21 h 24 min: **reset by the step 4 deploy** (`0fdcd154`), `web` started 10-20 00:58:42 UTC (607 MiB at 2 d 3 h before it); no `WORKER TIMEOUT` since 10-19 00:00, no worker booted since the deploy; no `ERROR` or `CRITICAL` in `sg101.log` 10-19 or 10-20 | 28 sends on the UTC day 10-19, 5 on 10-20 to 22:22, all `sent`. **No mail after 02:50:57 UTC: quiet, not a fault**: the four posts since (17:55, 20:47, 20:53, 22:17) are on topics with no other subscriber. All requests 180,653 for all of 10-19, 155,645 on 10-20 to ~22:20 (5,219–9,059 in each full hour); **1 `503` at 00:58, the deploy**, otherwise 0 `5xx` either day. `Chrome/146` macOS 16,240 on 10-19 (8,976 addresses) → 11,151 on 10-20 (6,188); no-referrer `/forums/post/` 32,702 on 10-20 (27,103 addresses). User CPU 10-19 7.12%, 10-20 6.87% to 22:20; one-minute load averaged 0.35 and 0.37 (`sar -q`) |
+| 10-21 (read 10-21 ~18:10 UTC) | **41st and last reading** (10-20 window): every row `none`; Postmark exact at Google (17 on UTC−7, all `gmail.com`), Yahoo (3), Comcast (1, on time) and AT&T (2); 4 `209.85.220.41` relay rows, first hops among the 17; 1 `cloudfilter.net` row = 1 `thegogorillas.com` send; jaguar 1, the cron mail; four predictions held, AT&T's "nothing" falsified by two sends after the reading, 2 = 2. **The log stops** (below) | 438 sent 10-07→21, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **75**, up 1 from 74: `192.0.2.4`, honeypot at 10-21 00:05:13 (`auth.log`), the same /16 as 10-20's. **All four `sg101-reg` entries are re-dated 10-21 13:56**: fail2ban restarted at 13:56:14 during the Docker upgrade (notes) and re-added its live bans. **Requirement 4a done**: `make blocklist-clear days=14` at 18:09 UTC, `removed 71 of 75`, **4 left**, the four live `sg101-reg` bans | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 472 MiB; five workers 115–116 MB RSS at 3 min: **reset twice today**, by the Docker upgrade at 13:55 and by the `2ea9900d` certifi deploy, `web` started 18:03:27 UTC. Neither earlier container's memory was read. **`WORKER TIMEOUT` not readable from 10-20 22:25 to 18:03**: the deploy replaced the container whose logs held it, but `access.log` has no `502` outside the two restarts. No `ERROR` or `CRITICAL` in `sg101.log` 10-20 or 10-21 | 20 sends on the UTC day 10-20, 24 on 10-21 to 15:42:57 (16 topic, 6 PM, 2 registration), all `sent`. **Two restarts, both Brian's**: an `apt-get upgrade` at 13:55:11 took containerd, `docker-ce-cli` and `docker-compose-plugin` forward, and Docker restarted every container (2 `503` at 13:55:40–41, Apache's `Connection refused` to `web:8000`). Then **the certifi deploy** at 18:03 (2 `502` and 3 `503`, 18:03:17–19), verified in `web`: pip 26.2.2, certifi 2026.10.19, `ca-certificates 20250419+deb13u1`, emSign ECC Root CA - G3 gone. The host's own `ca-certificates` went to `20260816ubuntu0.26.04.1` at 06:11 (unattended-upgrades). All requests 164,176 for all of 10-20 (5,148–9,059 an hour), 105,580 on 10-21 to ~18:06 (5,404–6,512 in each full hour); 1 `5xx` on 10-20, the 00:58 deploy. `Chrome/146` macOS 11,594 on 10-20 (6,435 addresses) → 5,241 on 10-21 (2,935); no-referrer `/forums/post/` 34,032 (28,139) → 16,901 (12,863). User CPU 10-20 6.82%, 10-21 6.23% to 18:06; one-minute load averaged 0.35 and 0.31 (`sar -q`) |
+
+### The two weeks end — 2026-10-21
+
+**Fourteen rows, 10-08 to 10-21**, so criterion 2 is met: bounces, DMARC,
+the block list and `web`'s memory each have fourteen readings.
+
+- **Bounces (requirement 2):** 438 sent and **0 bounced, 0 complaints** in
+  two weeks. The 11.9% of notification mail bound for dormant accounts
+  produced no hard bounce. The only all-time bounce is the 10-03
+  `SMTPApiError`, before the flip.
+- **DMARC (requirement 3):** read daily from the 28th reading to the 41st, then
+  stopped as the log's cadence says. Every Postmark and jaguar row passed;
+  see *When the reading log stops*.
+- **Block list (criterion 3, requirement 4a):** 84 at the start, almost all
+  of them `wiki-abuse` entries jaguar stranded; 4 after the clear, exactly
+  fail2ban's live bans. The size now tracks active bans.
+- **`web`'s memory (requirement 4b):** no growth to act on, so no
+  `--max-requests`. Readings stayed between 472 and 607 MiB after the first
+  day's 691 MiB. **The limit of the reading is the horizon**: deploys reset
+  the workers every one to three days, and the longest uninterrupted run
+  read was 2 d 20 h (565 MiB, 10-13). Growth over a week or more is not
+  measured.
+
+**What the watch does not close in task 10:**
+
+- **Requirement 1, in part:** D3 sent every path to Gmail and Outlook on
+  10-08, but `Authentication-Results` were read for one message at each, not
+  per path.
+- **Requirement 5, in part:** the nightly run passed every day, but no reading
+  in this file lists the objects in the two buckets, which the requirement
+  asks for (§ *S3, after* says so of the first run).
+- **Requirement 7:** regenerate `.agents/summary/` and review `AGENTS.md`.
+- **Requirement 8:** Step 17's after-measurement, which waits on post-cutover
+  months.
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -9849,6 +9884,30 @@ because the apex record authorizes jaguar's whole Linode /64. There's no DNS
 change before the cutover; the reading has the evidence and a reopen trigger.
 The first `disposition=quarantine` rows also appeared: three spoofs from
 `119.59.99.226`.
+
+**STOPPED 2026-10-21 by the forty-first reading**, on schedule, two weeks
+after the cutover. 222 reports in the corpus. The post-cutover part is 47
+reports with windows from 10-08 to 10-20, 374 messages, and exactly one DKIM
+failure: Yahoo's 10-17 spoof as `bogotabureau.com`, the only non-`none`
+disposition. How the four items end:
+
+1. **The over-long-line DKIM class: zero after the cutover**, as predicted.
+   No Postmark or jaguar row in the 47 reports fails DKIM. The class was
+   intermittent before (silent 09-06 → 09-18, back on 09-19), so thirteen
+   clean windows agree with the cause, Postfix wrapping after signing, being
+   off the path, without proving it alone. Site mail no longer passes through
+   Postfix at all.
+2. **`p=reject`: no longer blocked, and not decided here.** The deploy has
+   happened and the new signer is measured. In the post-cutover corpus,
+   `reject` would have changed exactly one row, the spoof. Every forwarded
+   row (Gmail relay, `cloudfilter.net`) failed SPF but aligned on DKIM, so
+   `reject` would not have dropped any of them. The decision is Brian's.
+3. **Postmark as a reporting source:** closed 10-05. Since the flip its rows
+   have matched leopard's `email.log` at every reporter, and the one
+   mismatch was explained: Microsoft's 10-07 12 for 11, a timed-out attempt
+   received twice.
+4. **The collection path:** repaired 09-21; `tools/dmarc_fetch.py` has been
+   the collection path since.
 
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report
