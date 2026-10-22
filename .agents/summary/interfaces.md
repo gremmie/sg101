@@ -63,14 +63,16 @@ because a dozen processes share each file. Rotation is the host's, in
 
 | File | Rotation | What that holds in practice |
 |---|---|---|
-| `sg101.log` | 100 KB × 10, checked daily | **about three weeks**: production writes roughly 85 KB a day |
+| `sg101.log` | 2 MB × 12, checked daily | **about ten months**: production writes roughly 85 KB a day. It was 100 KB × 10, about three weeks, until 2026-10-22 |
 | `auth.log` | 2 MB × 12 | years at the current rate |
 | `email.log`, `search.log`, `turnstile.log` | 2 MB × 5 | years at the current rate; none has rotated yet |
 | Apache `access.log`, `error.log` | weekly × 26 | six months |
 
-**So a question about anything only `sg101.log` records** — a traceback, a
-`User deactivated for spam:` line — **has about three weeks of reach.** For
-spam history read the database (`UserProfile.status`), not the log.
+**A question about anything only `sg101.log` records** — a traceback, a
+`User deactivated for spam:` line — **reaches back only to 2026-09-27**, the
+oldest line when the rotation was raised. From there the history grows until
+the larger files hold about ten months. For spam history read the database
+(`UserProfile.status`), not the log.
 `WORKER TIMEOUT` lines are gunicorn's, in `web`'s container output, and go when
 the container is replaced by a deploy.
 

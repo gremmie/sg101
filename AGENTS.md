@@ -90,10 +90,11 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   a `502` and a `WORKER TIMEOUT` in the `web` logs. The origin firewall admits
   only Cloudflare, so nothing reaches gunicorn around it.
 - **Log retention differs per file and limits what you can ask.** On leopard
-  the host's logrotate rotates them (`logrotate/sg101`): `sg101.log` at
-  100 KB x 10, which production fills in **about three weeks**; `auth.log` at
-  2 MB x 12, years at its rate. For anything older that only `sg101.log`
-  recorded, ask the database — spam deactivations are `UserProfile.status`.
+  the host's logrotate rotates them (`logrotate/sg101`): `sg101.log` and
+  `auth.log` both at 2 MB x 12, about ten months for `sg101.log` at
+  production's rate and years for `auth.log`. Until 2026-10-22 `sg101.log` was
+  100 KB x 10, about three weeks, so its history before then is short. For
+  spam deactivations ask the database (`UserProfile.status`), not the log.
 - **Two page designs coexist.** Most templates extend `v3/base.html`
   (Foundation 6, jQuery 3, the post box's ES modules); the forums, shoutbox,
   `ygroup` and the flatpage template still extend the old `base.html`
