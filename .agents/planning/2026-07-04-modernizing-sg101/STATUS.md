@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 10 — the after-cutover watch — IN PROGRESS, started 2026-10-08
+## Step 21 task 10 — the after-cutover watch — DONE 2026-10-21, requirements 1–7 met; requirement 8 open, revisit 2027-01-08
 
 ### The daily watch — one line a day (requirement 2's list)
 
@@ -88,7 +88,7 @@ the block list and `web`'s memory each have fourteen readings.
 
 **What the watch does not close in task 10:**
 
-- **Requirement 7:** regenerate `.agents/summary/` and review `AGENTS.md`.
+- **Requirement 7: done 2026-10-21**, § *Requirement 7* below.
 - **Requirement 8: open, revisit 2027-01-08**, three full months after the
   cutover. Step 17's after-measurement repeats § *Step 17 — the spam
   baseline, read from the database* for the months since 10-08: profiles
@@ -406,6 +406,43 @@ credential has `s3:ListBucket`, so no other key was needed.
 - **No alarm fired**: healthchecks.io green throughout, no alert since 10-08
   (Brian, 2026-10-21). The journal agrees: every daily row records
   `Result=success`, exit 0.
+
+### Requirement 7, the documentation — DONE 2026-10-21: the summary regenerated, `AGENTS.md` reviewed
+
+**`.agents/summary/` regenerated** with `/agent-sops:codebase-summary`
+(`consolidate=false`), all nine files. The 2026-08-27 generation described a
+codebase that had not been deployed: Apache + `mod_wsgi`, CI on `modernize`
+only, `local.py`/`docker.py` settings, the `wiki` and `tagging` apps, a
+multi-stage registration without Turnstile. `review_notes.md` lists each claim
+dropped and each one re-verified. **Criterion 4 is met**: neither the summary
+nor `AGENTS.md` describes jaguar, `mod_wsgi` or MySQL as current. Each names
+jaguar only as the old host.
+
+**`AGENTS.md` reviewed against it; four corrections:**
+
+1. **"`core` imports nothing else in the repo" was false, and always had
+   been.** `core/markup.py` imports `smiley` (since 2015), `core/tasks.py`
+   imports `accounts` inside a function, and `templatetags/core_tags.py` and
+   `custom_admin_tags.py` import models from seven apps. All four were present
+   on 2026-08-27, when both documents called `core` import-free. What holds is
+   narrower: `core`'s library modules import no app. Both documents now say
+   that.
+2. **The log-retention line was jaguar's.** On leopard `sg101.log` is 100 KB ×
+   10 under the host's logrotate, which production fills in about three weeks
+   (oldest line 2026-09-27, read 10-21). `auth.log` is 2 MB × 12, not × 5.
+3. **Two page designs coexist**, which neither document said: 56 templates
+   extend `v3/base.html`, and 26 still extend the old `base.html` (the forums,
+   the shoutbox, `ygroup`, the flatpage template). The forums are not on the
+   post box yet, though a commit subject reads as if every form moved.
+4. **Neither `make prod-up` nor `make prod-deploy` pulls the base image**,
+   which today's certifi deploy needed.
+
+The snapshot date in `AGENTS.md`'s opening paragraph is now 2026-10-21. Its
+Custom Instructions section is unchanged.
+
+**Left out, on purpose:** `README.md`'s Deployment section still says
+deploying "has not happened yet". It is user-facing prose rather than agent
+orientation, so it needs its own edit (`review_notes.md`, recommendation 1).
 
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
