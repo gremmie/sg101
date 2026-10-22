@@ -39,11 +39,12 @@ snapshots, and troubleshooting. The short version:
 ```
 cp .env.example .env          # committed template; its defaults work as-is
 docker compose build web
-docker compose up -d
-docker compose exec web python manage.py migrate
+make up
+make manage cmd=migrate
 ```
 
-The site is then on <http://localhost:8000/>.
+The site is then on <http://localhost:8000/>. `make help` lists the everyday
+commands for the dev stack and for production.
 
 Configuration is 12-factor: every setting is read from the environment via
 `django-environ`. `.env` is git-ignored and loaded into the app services by
@@ -59,12 +60,11 @@ Node (developed against v26); the application image does not contain Node and
 deploys do not build CSS.
 
 ```
-cd sg101
-npm install
-npm run build:css
+cd sg101 && npm install       # once, and after package.json changes
+make css
 ```
 
-`npm run watch:css` recompiles on save while working on the Sass.
+`npm run watch:css`, in `sg101/`, recompiles on save while working on the Sass.
 
 **Edit the Sass, never `main.min.css`.** The built file is an artifact: anything
 written into it by hand is silently discarded by the next build. Committing it
@@ -79,20 +79,23 @@ vendor prefixes `autoprefixer` emits.
 ## Running tests
 
 ```
-docker compose exec web python manage.py test --settings=sg101.settings.docker_test
+make test                     # the whole suite, or t="forums" for one app
 ```
+
+The suite includes the browser tests, which drive headless Chromium through
+Playwright; `make test-browser` runs only those.
 
 There is a **second, separate run** — the deprecation gate, which promotes
 deprecation warnings to errors. It is what has caught every Django removal a
 version before it landed, so run it before proposing a change:
 
 ```
-docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
-    python manage.py test --noinput --settings=sg101.settings.docker_test
+make deprecation-gate
 ```
 
-`tools/deprecation_gate.sh` only *prints* the warning filter — running the
-script by itself is not the gate.
+The target runs the suite with `tools/deprecation_gate.sh`'s filter in
+`PYTHONWARNINGS`. The script only *prints* that filter — running it by itself
+is not the gate. `make -n deprecation-gate` shows the full command.
 
 ## Continuous integration
 
@@ -103,10 +106,28 @@ developer's rather than merely similar.
 
 ## Deployment
 
-**There is no current automated deployment.** `fabfile.py` remains from the
-pre-modernization setup and is stale — its `update` task still runs
-`hg pull --update`, from before the move to git. Deploying to a new host is the
-last step of the modernization and has not happened yet.
+Production runs this repository's `main` branch: the Docker Compose stack in
+`docker-compose.prod.yml`, on a Linode VM behind Cloudflare, live since
+2026-10-08. Apache sits in front of gunicorn, alongside PostgreSQL, Redis and
+the Celery worker and beat. The host's own configuration (fail2ban, logrotate,
+the nightly backup timer, the origin firewall) is versioned here too, under
+`apache/`, `backup/`, `fail2ban/`, `firewall/`, `logrotate/` and `msmtp/`.
+
+A deploy is a pull on the server, then one `make` target:
+
+```
+git pull
+make prod-up        # build and restart; runs no migrations
+make prod-deploy    # instead, when the pull carries migrations
+```
+
+`prod-deploy` puts the site in maintenance mode while it migrates. Neither
+target pulls the `python:3.12` base image, so when the base image itself has a
+fix you need (its CA certificates, its pip), run `docker pull python:3.12`
+first. `make help` lists the rest of the production targets.
+
+`fabfile.py` is left over from before the modernization and is stale; its
+`update` task runs `hg pull --update`. It is not the deploy path.
 
 ## Documentation
 
