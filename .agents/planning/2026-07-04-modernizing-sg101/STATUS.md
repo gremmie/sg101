@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-22
+**Last updated:** 2026-10-23
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 11 — decommission jaguar — IN PROGRESS: preconditions met, D5 and D6 done, jaguar shut down, DNS cleaned (2026-10-22), jaguar deleted, the Global API Key changed, the block list read (2026-10-23); the MySQL chain still to remove
+## Step 21 task 11 — decommission jaguar — DONE 2026-10-23: jaguar deleted, its DNS removed, the Global API Key changed, the MySQL chain retired (`7e3a9fe6`) and deployed; Step 21 closed
 
 ### The preconditions — both met 2026-10-22
 
@@ -222,11 +222,25 @@ grep -i mysql` outside `.agents/` leaves comments explaining behaviour MySQL
 caused, migrations' `vendor == 'mysql'` branches (history), the new tests,
 the colophon fixture's 2009 library credits, and `.hgignore`.
 
-### Still to do
+### Closed — 2026-10-23
 
-- `fabfile.py` and `tools/xapian_installer.sh` in a separate commit (Brian,
-  2026-10-22).
-- Requirement 9, `plan.md` and this file closed together.
+**Merged and deployed.** `retire-mysql-chain` fast-forwarded into `main` at
+`7e3a9fe6` (CI green on the branch and on `main`), then `fabfile.py` and
+`tools/xapian_installer.sh` removed on their own, `b4ec71bb` (CI green).
+Brian deployed to leopard with `make prod-up` (no migrations); checked over
+ssh ~03:13 UTC: HEAD `b4ec71bb`, `web`/`worker`/`beat` restarted and
+healthy, no `mysqlclient`, `tools/pgloader` or `fabfile.py` in the running
+image, the site answering 200. The worker connected and reported `ready`
+with its tasks registered; **a task completing after the deploy was not
+seen**, as none had been queued in the minutes read. The branch deleted
+locally and on GitHub. The local `mysql:5.7` and `dimitri/pgloader` images
+and the `sg101_db_data` volume removed (Brian).
+
+**All nine requirements met**, with one gap stated where it arises: criterion
+3's old key could not be tried, since its only copy was on jaguar.
+**Requirement 9:** `plan.md`'s Step 21 box ticked in the same commit as this
+section, both dated 2026-10-23. **Step 21 is closed**; Step 22 (opening the
+repository) is the plan's last.
 
 ### Follow-ups, not task 11's (Brian, 2026-10-22)
 
