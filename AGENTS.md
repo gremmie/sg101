@@ -122,14 +122,11 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
 - **`antispam/utils.py` imports `bio`, `comments`, `forums` and `user_photos`.**
   For something with callers in several apps, follow the narrow shape of
   `antispam/decorators.py` or `antispam/turnstile.py` instead.
-- **`fabfile.py` is stale** — it runs `hg pull --update`, from before the move to
-  git. It is not the deploy path: deploys are `git pull` then `make prod-up`
-  (or `make prod-deploy` when there are migrations) on leopard. See
+- **Deploys are `git pull` then `make prod-up`** (or `make prod-deploy` when
+  there are migrations) on leopard. See
   `.agents/planning/2026-07-04-modernizing-sg101/cutover-runbook.md` § D9.
   Neither pulls the base image, so a fix in `python:3.12` itself (its CA
   store, its pip) needs `docker pull python:3.12` before the build.
-- **`tools/xapian_installer.sh` is a leftover** of the search stack removed in
-  Step 4. Nothing uses it.
 - **Search `.agents/` before concluding something is undocumented.** A great deal
   of apparent mystery here is recorded with the measurement attached.
 

@@ -126,9 +126,6 @@ target pulls the `python:3.12` base image, so when the base image itself has a
 fix you need (its CA certificates, its pip), run `docker pull python:3.12`
 first. `make help` lists the rest of the production targets.
 
-`fabfile.py` is left over from before the modernization and is stale; its
-`update` task runs `hg pull --update`. It is not the deploy path.
-
 ## Documentation
 
 - [`DOCKER.md`](DOCKER.md) — running the site locally, end to end.
