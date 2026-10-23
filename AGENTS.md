@@ -16,8 +16,9 @@ calendar.
 
 **This repo is what production runs.** The modernization went live on
 2026-10-08: production is the Docker Compose stack on the host leopard, behind
-Cloudflare. The old host, jaguar (Python 2.7, Django 1.8, MySQL), is frozen and
-due to be decommissioned. **`main` is the deployed branch.** Work happens on
+Cloudflare. The old host, jaguar (Python 2.7, Django 1.8, MySQL), was deleted
+on 2026-10-23; the tools that converted its MySQL data are at the git tag
+`cutover-2026-10-07`. **`main` is the deployed branch.** Work happens on
 short-lived branches cut from `main` and merged back when deployed. The
 modernization's record, and what is still open from it, is in
 `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`, which is

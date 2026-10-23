@@ -810,6 +810,24 @@ class DeployedBackendsTests(SimpleTestCase):
                 self.assertEqual(backends['engine'],
                                  'django.db.backends.postgresql')
 
+    def test_both_deployments_default_to_postgresql(self):
+        """With DB_ENGINE unset, not just set to the right thing.
+
+        Compose sets DB_ENGINE for every container, which hid that dev's
+        default was MySQL long after nothing could reach a MySQL server.
+        """
+        for name in DEPLOYMENT_SETTINGS:
+            with self.subTest(settings=name):
+                backends = self.deployed_backends(name, DB_ENGINE=None)
+                self.assertEqual(backends['engine'],
+                                 'django.db.backends.postgresql')
+
+    def test_mysql_is_not_an_engine(self):
+        """Asking for it fails at settings load, not at the first query."""
+        from sg101.settings import databases
+        with self.assertRaises(ImproperlyConfigured):
+            databases.for_engine('mysql')
+
     def test_no_deployment_hardcodes_a_unix_socket(self):
         """A socket does not cross a container boundary, so naming one is a bug.
 

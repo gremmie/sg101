@@ -1,4 +1,4 @@
-"""Smoke the running site against a converted database, reads and writes.
+"""Smoke the running site against a restored database, reads and writes.
 
 The unit suite runs against an empty schema and cannot speak to any of this.
 The lesson that produced this script is that a green suite has already missed
@@ -7,9 +7,10 @@ failed under a real worker, and a char(2) column that returned two spaces
 instead of an empty string and crashed 12,854 profile pages while every test
 passed.
 
-Reads are only half of it. A converted database can serve every page and still
-be unable to accept a new row: sequences left behind their table's MAX(pk)
-collide on the first insert, and nothing but an insert will show it. So this
+Reads are only half of it. A restored or converted database can serve every
+page and still be unable to accept a new row: sequences left behind their
+table's MAX(pk) collide on the first insert, and nothing but an insert will
+show it. So this
 logs in and actually posts, messages and uploads, then checks the new content
 comes back out, then removes what it made.
 
@@ -18,13 +19,12 @@ the test client, so middleware, sessions, the cache and the template layer are
 all in the path -- the same way a member would meet the site.
 
 What it creates it removes again, but it cannot un-read a page: browsing
-writes sessions and raises topic view counters. Run verify.py and
-`verify_data.py values` first, while the converted database still matches its
-source exactly.
+writes sessions and raises topic view counters. Run anything that compares the
+database with its source first, while the two still match exactly.
 
 Run inside the web container, with the stack up on the database under test:
 
-    docker compose exec -T web python tools/pgloader/smoke.py
+    docker compose exec -T web python tools/site_smoke.py
 
 Exits non-zero if any check fails.
 """
@@ -38,7 +38,7 @@ import django
 # sys.path[0] is this file's directory, not the project root, so the settings
 # package is not importable without help.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '..', '..'))
+                                '..'))
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sg101.settings.dev')
 django.setup()

@@ -18,9 +18,8 @@ from sg101.settings.databases import from_env
 
 
 # --- Database ----------------------------------------------------------------
-# $DB_ENGINE picks the service -- `postgresql` (the `postgres` container) or
-# `mysql` (the `db` container, which the snapshot conversion still needs); see
-# sg101/settings/databases.py. Credentials come from the environment.
+# PostgreSQL, the `postgres` container; see sg101/settings/databases.py.
+# Credentials come from the environment.
 DATABASES = from_env()
 
 # --- Redis / Celery ----------------------------------------------------------

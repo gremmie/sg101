@@ -110,7 +110,13 @@ Linode did. Expect seven days for jaguar's too.
 being created at the time. At 01:07 UTC ssh to it timed out. Its address's
 PTR still read `mail.surfguitar101.com`: that is Linode's record, which goes
 when the address is reassigned, and with the `mail` A record gone it no
-longer forward-confirms. bobcat's jaguar cron
+longer forward-confirms.
+
+**jaguar's recovery image: 15.86 GB, expiring 2026-10-29 20:06** as the
+dashboard shows it (Brian). The size matches `df`'s 16 GB used, so it is the
+whole disk. Read as Central time that is 10-30 01:06 UTC, seven days after
+the deletion, as bobcat's was. Requirement 4 met: jaguar is recoverable until
+then, and nothing on it is needed that is not already archived. bobcat's jaguar cron
 (`backup_jaguar_cron.bash`) was already commented out before it went.
 
 ### Requirement 3, DNS — no record resolves to jaguar or bobcat (2026-10-22)
@@ -156,11 +162,70 @@ four live `sg101-reg` bans task 10's clear left on 10-21
 all re-dated 10-21 13:56 by fail2ban's restart). jaguar added no entry
 after task 10's clear.
 
+### Requirements 7 and 8, the MySQL chain removed — 2026-10-23, branch `retire-mysql-chain`
+
+**Removed, each checked against the tree first:** `mysqlclient` and its
+keep-this comment (`requirements.txt`); `default-libmysqlclient-dev`,
+`default-mysql-client`, `pkg-config` and their comment (`Dockerfile`); the
+`db` service, the `mysql` profile and the `db_data` volume
+(`docker-compose.yml`); `verify.py`, `verify_data.py`, `convert.sh`,
+`sg101.load`; DOCKER.md §6 and §7. `crosscheck_dumpdata.sh` was already gone
+(`be228a74`).
+
+**Beyond the task's list (Brian, 2026-10-23, each on the recommendation):**
+
+1. **The engine switch.** `databases.py` still offered `mysql`, and
+   **`dev.py`'s default engine was MySQL**: `from_env()` defaulted to it, and
+   only compose's `DB_ENGINE=postgresql` hid that. The entry is gone and the
+   default is `postgresql`; `DB_ENGINE` stays, with one value, so nothing
+   deployed changes. Two tests in `DeployedBackendsTests`, written first and
+   seen to fail against the old code (dev read `django.db.backends.mysql`;
+   `for_engine('mysql')` was accepted). Mutations: the `mysql` entry restored
+   → only `test_mysql_is_not_an_engine` fails; a second engine made the
+   default → only `test_both_deployments_default_to_postgresql` fails (dev);
+   restored file byte-identical, green.
+2. **`post_convert.py` and `pattern_ops_indexes.sql` deleted**: they only act
+   after a pgloader run.
+3. **`compare_schema.py` and `smoke.py` kept, moved to `tools/`** (the latter
+   as `tools/site_smoke.py`, beside `image_smoke.py` and `email_smoke.py`),
+   docstrings reframed for a restored database, project-root path fixed. Run
+   from the new paths on the dev stack: `compare_schema.py` OK (533 columns,
+   88 foreign keys, 23 UNIQUEs enforced by an index, 1 accepted index);
+   `site_smoke.py` 36 checks, reads and writes, scratch user removed.
+4. **DOCKER.md §4 rewritten** as restoring a PostgreSQL dump (a nightly
+   backup copied from the dumps bucket, then `pg_snapshot.sh restore`,
+   `rebuild_redis`, `reindex_search`, `reconcile_search`); a *Checking a
+   restored database* subsection for the two tools; sections renumbered
+   (§8 → §6, §9 → §7, §10 → §8) and every internal reference and
+   `tools/image_smoke.py`'s fixed. References in `.agents/` keep the numbers
+   they had when written. **The bucket-to-`snapshots/` copy was not
+   exercised**: it needs an administrative AWS key.
+5. **`tools/pgloader/logs/` moved** to
+   `~/workspaces/bgn/sg101-evidence/pgloader-logs/` (50 files, 19 MB,
+   `MANIFEST.sha256`, identical by checksum), the cutover's own
+   `convert-20261007-140527.log` among them.
+
+Also: the two dead `connection.vendor == 'mysql'` guards in the accounts and
+bio tests; `.env.example`, `.gitignore`, `dev.py`, `pg_snapshot.sh`; the
+psycopg2 comment in `requirements.txt`, which leaned on three pgloader
+scripts and now names `tools/compare_schema.py`, the one direct importer;
+`AGENTS.md`'s line that jaguar is "due to be decommissioned".
+
+**Verified:** `docker compose config` valid, and `--profile mysql` lists no
+`db`; prod and dev targets build; in the prod image no `mysqlclient`, no
+`MySQLdb`, no `mysql` CLI, no `tools/pgloader`. **Six MySQL packages remain
+in the image, all from the `python:3.12` base itself** (Debian's full build
+image ships `default-libmysqlclient-dev`, `libmariadb*`, `mysql-common`);
+going to `python:3.12-slim` would drop them, and is its own change. Suite
+1,496 tests OK, 63 s; the deprecation gate, a separate run, 1,496 OK. `git
+grep -i mysql` outside `.agents/` leaves comments explaining behaviour MySQL
+caused, migrations' `vendor == 'mysql'` branches (history), the new tests,
+the colophon fixture's 2009 library credits, and `.hgignore`.
+
 ### Still to do
 
-- jaguar's recovery image: its size and expiry, once created.
-- Requirement 7, the MySQL chain removed; then `fabfile.py` and
-  `tools/xapian_installer.sh` in a separate commit (Brian, 2026-10-22).
+- `fabfile.py` and `tools/xapian_installer.sh` in a separate commit (Brian,
+  2026-10-22).
 - Requirement 9, `plan.md` and this file closed together.
 
 ### Follow-ups, not task 11's (Brian, 2026-10-22)

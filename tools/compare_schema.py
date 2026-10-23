@@ -1,12 +1,13 @@
-"""Diff a converted database against one Django's own migrations build.
+"""Diff a database against one Django's own migrations build.
 
-pgloader converts a MySQL schema faithfully. That is not the same as building
-the schema Django would have built, and the gap is where this conversion's
-worst problems have lived: every foreign key arrived as RESTRICT, which cannot
-be deferred, so deleting a forum topic failed against a converted database
+Production's database was not built by the migrations: it was converted from
+MySQL by pgloader, and only migrated forward from there. A converted schema is
+not the schema Django would have built, and the gap is where that conversion's
+worst problems lived: every foreign key arrived as RESTRICT, which cannot be
+deferred, so deleting a forum topic failed against the converted database
 while working against a migrated one. Row counts, column types and a green
 test suite all looked perfect throughout, because the test suite builds its
-schema from the migrations and never sees the converted one.
+schema from the migrations and never sees production's.
 
 So this compares the two schemas directly, across every dimension that
 changes behavior:
@@ -22,22 +23,25 @@ changes behavior:
   sequences    that each is owned by its column, so pg_get_serial_sequence
                resolves
 
-Names are deliberately not compared. pgloader's indexes are called things like
-idx_393735_username where Django's are forums_topic_last_post_id_ed000e17_fk;
-Django resolves them by introspection, so the names differ harmlessly and
+Names are deliberately not compared. The converted indexes are called things
+like idx_393735_username where Django's are
+forums_topic_last_post_id_ed000e17_fk; Django resolves them by introspection, so the names differ harmlessly and
 comparing them would bury the differences that matter.
 
+Run it against a restored backup, or any database whose schema is in doubt.
 Build the reference first -- an empty database with migrate run against it:
 
     docker compose exec -T postgres psql -U sg101 -d postgres \
         -c 'DROP DATABASE IF EXISTS sg101_reference WITH (FORCE)' \
         -c 'CREATE DATABASE sg101_reference'
-    docker compose exec -T -e DB_ENGINE=postgresql -e DB_NAME=sg101_reference \
+    docker compose exec -T -e DB_NAME=sg101_reference \
         web python manage.py migrate
 
 then:
 
-    docker compose exec -T web python tools/pgloader/compare_schema.py
+    docker compose exec -T web python tools/compare_schema.py
+
+PG_DB names the database to check (default sg101), REFERENCE_DB the reference.
 
 Exits non-zero if the schemas differ in a way that is not accounted for.
 """
@@ -47,12 +51,11 @@ from collections import OrderedDict
 
 import psycopg2
 
-# Tables that have no model behind them. pgloader copies them across because a
-# conversion is not the place to prune, and `core.0002_drop_legacy_tables` drops
-# them afterwards -- so whether the converted database still has them depends on
-# whether migrations have run against it yet. The reference schema is built from
-# the models and never contains them either way, so filtering them out here keeps
-# this comparison honest at both moments.
+# Tables that have no model behind them. The conversion copied them across, and
+# `core.0002_drop_legacy_tables` drops them -- so whether a database still has
+# them depends on whether that migration has run against it yet. The reference
+# schema is built from the models and never contains them either way, so
+# filtering them out here keeps this comparison honest at both moments.
 LEGACY_TABLES = {
     'auth_message',
     'core_anonlastvisit',
@@ -124,8 +127,8 @@ DEFAULTS = """
 
 # A serial column owns its sequence through an 'a' (auto) dependency; an
 # identity column, which is what Django creates since 4.1, through an 'i'
-# (internal) one. pg_get_serial_sequence resolves both. The converted database
-# has both kinds: pgloader's serials, and identities on tables migrate creates.
+# (internal) one. pg_get_serial_sequence resolves both. Production has both
+# kinds: the conversion's serials, and identities on tables migrate creates.
 UNOWNED_SEQUENCES = """
     SELECT c.relname
     FROM pg_class c
@@ -158,17 +161,17 @@ def unique_columns(conn):
     return pairs
 
 
-def reconcile_uniqueness(missing, converted):
+def reconcile_uniqueness(missing, actual):
     """Match UNIQUE constraints against equivalent unique indexes.
 
     PostgreSQL enforces uniqueness with an index either way: Django declares a
-    UNIQUE constraint and gets an index underneath, while pgloader creates the
-    index directly. The two are indistinguishable to anything inserting a row,
-    and Django finds either by introspection, so a constraint that is missing
-    only in name is not a difference worth reporting -- but one with no index
-    behind it at all certainly is.
+    UNIQUE constraint and gets an index underneath, while the conversion
+    created the index directly. The two are indistinguishable to anything
+    inserting a row, and Django finds either by introspection, so a constraint
+    that is missing only in name is not a difference worth reporting -- but one
+    with no index behind it at all certainly is.
     """
-    enforced = unique_columns(converted)
+    enforced = unique_columns(actual)
     reconciled, remaining = [], []
     for row in missing:
         table, contype, definition = row.split(' ', 2)
@@ -182,9 +185,9 @@ def reconcile_uniqueness(missing, converted):
 
 
 def main():
-    converted_name = os.environ.get('PG_DB', 'sg101')
+    actual_name = os.environ.get('PG_DB', 'sg101')
     reference_name = os.environ.get('REFERENCE_DB', 'sg101_reference')
-    converted = connect(converted_name)
+    actual = connect(actual_name)
     try:
         reference = connect(reference_name)
     except psycopg2.OperationalError as exc:
@@ -193,13 +196,13 @@ def main():
         print('build it with migrate first -- see this file\'s docstring.')
         return 2
 
-    print('converted: %s   reference: %s\n' % (converted_name, reference_name))
+    print('checked: %s   reference: %s\n' % (actual_name, reference_name))
 
     problems = []
     for label, sql in DIMENSIONS.items():
         # The legacy tables have no model, so the reference cannot contain
         # them and their absence is not a difference.
-        ours = {r for r in fetch(converted, sql)
+        ours = {r for r in fetch(actual, sql)
                 if table_of(r) not in LEGACY_TABLES}
         theirs = fetch(reference, sql)
 
@@ -214,7 +217,7 @@ def main():
 
         note = ''
         if label == 'constraint':
-            reconciled, missing = reconcile_uniqueness(missing, converted)
+            reconciled, missing = reconcile_uniqueness(missing, actual)
             if reconciled:
                 note = (', %d UNIQUE enforced by an index instead'
                         % len(reconciled))
@@ -226,10 +229,10 @@ def main():
         for row in missing:
             problems.append('%s missing: %s' % (label, row))
         for row in extra:
-            problems.append('%s only in the converted database: %s'
+            problems.append('%s only in the checked database: %s'
                             % (label, row))
 
-    unowned = sorted(fetch(converted, UNOWNED_SEQUENCES))
+    unowned = sorted(fetch(actual, UNOWNED_SEQUENCES))
     print('%-12s %4d unowned' % ('sequences', len(unowned)))
     for seq in unowned:
         problems.append('sequence not owned by its column, so '
@@ -241,7 +244,7 @@ def main():
         for problem in problems:
             print('  %s' % problem)
         return 1
-    print('OK -- the converted schema matches one built by the migrations')
+    print('OK -- the schema matches one built by the migrations')
     return 0
 
 

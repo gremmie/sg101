@@ -17,7 +17,7 @@ development container is the converted production snapshot. It creates a user,
 uploads photos as that user, and deletes all of it again in a `finally` block,
 verifying afterwards that the scratch user is gone. That cleanup has been
 exercised, but it is still a write path against real data: take a snapshot
-first with `tools/pg_snapshot.sh dump <label>` (see DOCKER.md section 8), and do
+first with `tools/pg_snapshot.sh dump <label>` (see DOCKER.md section 6), and do
 not point this at production.
 
 Without --s3 the user-photo path is forced down its LOCAL_UPLOAD branch. Both
