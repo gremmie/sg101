@@ -43,6 +43,128 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Step 22 task 01 — secret-history audit #2 — DONE 2026-10-23: clean, nothing rotated, no history rewrite (Brian)
+
+**No credential, live or dead, is in the history of any ref GitHub serves.**
+1,808 commits across `main`, `multi-upload`, `v3-dev`, `abandoned-2015`,
+the three tags, and **`refs/pull/1/head`**: a closed PR's commit (`1afd7b59`,
+2026-08-15) on no branch, which GitHub serves and the owner cannot delete. It
+was fetched to `refs/remotes/origin/pull/1` so `--all` reaches it. 550 of the
+commits are from Step 3 (`8f752f16`) on; the task file's 548 was counted
+before `4460fa68` and without `pull/1`.
+
+### The scanners were shown able to fail, and where they cannot
+
+Tools: gitleaks 8.30.1, trufflehog 3.95.9 (Homebrew). A throwaway clone
+with fake credentials committed on a branch cut from `v3-dev`, scanned with
+the exact commands used below:
+
+| planted | gitleaks | trufflehog | known-value scan |
+|---|---|---|---|
+| AWS key pair | `generic-api-key` | AWS | — |
+| PEM private key | `private-key` | PrivateKey | found |
+| UUID token as `EMAIL_HOST_PASSWORD=` (Postmark's shape) | `generic-api-key`, from the key name | **missed** | found |
+| Cloudflare-shaped token | `cloudflare-api-key` | CloudflareApiToken | found |
+| Django `SECRET_KEY` | **missed** | **missed** | found |
+| a value never committed | — | — | 0 hits |
+
+Both reached the side branch, and both delta ranges included it. **The
+first planted run was invalid:** `git add planted_*` did not match
+`planted.env`, so the UUID and Cloudflare rows were "missed" because they
+were never committed. The known-value scan's negative result exposed it; the
+rows above are from the rerun with the file committed.
+
+**So the pattern scanners cannot see this project's commonest secret
+shapes** (Django keys, UUID tokens, random passwords), and the audit rests
+on the known-value scan for those.
+
+### Commands
+
+```
+gitleaks git --log-opts="--all"             -f json -r <out> <repo>
+gitleaks git --log-opts="--all ^8f752f16^"  -f json -r <out> <repo>
+trufflehog git file://<repo> --json --no-update                          # verification on (Brian)
+trufflehog git file://<repo> --json --no-update --since-commit 8f752f16
+git log --all -p --text --format='commit %H' | python3 known_values.py <secret files>
+```
+
+`known_values.py` (stdlib, in the session scratchpad, not committed) reads
+`KEY=value`, JSON (every string field, nested) and PEM files, and searches
+the patch text for each literal value of 8 characters or more, as bytes. It
+prints key names, line counts and commits, never a value. On leopard it ran
+in place (`python3 -c`, the Mac's `git log` on stdin), so leopard's values
+never left it and nothing was written there.
+
+### Results
+
+- **gitleaks:** 8 in full history, 3 in the delta.
+- **trufflehog:** 52 in full history, 50 in the delta. **All 50 delta
+  results are trufflehog's Lob detector matching `test_` method names**
+  (e.g. `def test_delete_post_forbidden_for_anonymous`), and **trufflehog
+  marks all 50 verified**. Its verified flag is not evidence on its own.
+  Verification sent those 50 method names to Lob's API.
+- **Known-value scan, 0 secret values found:**
+  - Mac: `.env`, `secrets/gcal/…json`, `secrets/tls/origin.{key,pem}`, and
+    the old `secrets.json` in `sg101-hg-backup`.
+  - leopard: `.env`, `secrets/{backup,cloudflare,logrotate}.env`, the
+    service account key, and `origin.key`.
+  - `~/.config/sg101-linode-token`, and the keychain's
+    `sg101-linode-firewall` and `dmarc-fetch` items.
+  - Every hit was configuration that is not secret: bucket names, regions,
+    paths, `EMAIL_HOST`, the block list's name, the service account's
+    `client_email` and `project_id`.
+  - Checked and absent: `SECRET_KEY` (both hosts and `secrets.json`),
+    production's `DB_PASSWORD`, the app and backup AWS key pairs, the
+    Turnstile keys, the Postmark SMTP user and password, the Cloudflare token
+    and account ID, both healthchecks.io URLs, the service account's
+    `private_key` and `private_key_id`, the origin key, and `secrets.json`'s
+    reCAPTCHA and calendar OAuth secrets.
+  - Skipped as under 8 characters: names, ports, flags, and the dev stack's
+    5-character Compose `DB_PASSWORD`. Production's is 8 or more and was
+    checked.
+- **Never tracked:** of the 2,954 paths ever added on any ref, none
+  matches `.env`, `secrets/`, `secrets.json`, a key or certificate
+  extension, a service account JSON, an SSH key or `credentials`. The same
+  check finds `planted_key.pem` in the planted clone. The only `*.env*`
+  files ever added are the three `.example`s and `firewall/settings.env`,
+  whose single version (`1080f0cc`) holds no token.
+- **`.gitignore`:** `git check-ignore` covers every secret file on the Mac.
+  On leopard, `git status --ignored` shows only `.env` and `secrets/`, with
+  nothing untracked outside them. `git ls-files -ci` lists only site assets
+  (`media/badges`, `media/smiley/images`, the podcast logo), tracked
+  despite an ignore rule since the hg era. None is a secret.
+
+### Triage — every finding
+
+| finding | where | verdict |
+|---|---|---|
+| `key='0123456789…'` | `accounts/tests/test_views.py`, `20ad77ed` | test fixture |
+| `'sentinel-from-env-12345'` ×2 | `core/tests/test_settings.py`, `8f752f16` | test fixture |
+| Lob ×50, "verified" | 29 test files and `STATUS.md` | false positive: method names |
+| Maps v2 `ABQIAA…` ×3 | `membermap/index.html`, 2009 and 2015 | dead API version; in `v3-dev` and `abandoned-2015` trees |
+| Maps `AIzaSy…` (gitleaks once, trufflehog ×2 as "Gemini", unverified) | `bandmap/bandmap_base.html`, `0b8dfcd3` 2014 | **in `main` and served on the live band map page**: public by design |
+| `GOOGLE_OAUTH_CONSUMER_KEY` | `gpp/settings/base.py`, `311516ca` 2011 | its value is the site's domain; beside it only a filesystem path, no key material |
+
+The last four are audit #1's five, re-read here rather than carried over.
+
+### Brian's decisions, 2026-10-23
+
+- **Rotate nothing, scrub nothing.** No live credential was found, and
+  removing the old Maps keys would rewrite every hash while the live one
+  stays in the tree. Nothing from this task goes into a task 02 rewrite.
+- **The band map's Maps key is restricted** (Brian, Google Cloud console,
+  2026-10-23): HTTP referrers limited to the site, and the API limited to
+  the Maps JavaScript API. The page serves the key publicly regardless of
+  the repo, so the restriction is what protects it.
+- **No `.gitleaks.toml`, no CI scan job.** On a public repo a CI scan fires
+  after the push, when the secret is already published. Task 04's push
+  protection refuses it before publication. The planted test shows any
+  pattern scanner misses the shapes that matter most here.
+
+The raw scanner reports and the planted clone were in the session
+scratchpad and were deleted at the end. The reports held the findings'
+values.
+
 ## Step 21 task 11 — decommission jaguar — DONE 2026-10-23: jaguar deleted, its DNS removed, the Global API Key changed, the MySQL chain retired (`7e3a9fe6`) and deployed; Step 21 closed
 
 ### The preconditions — both met 2026-10-22
