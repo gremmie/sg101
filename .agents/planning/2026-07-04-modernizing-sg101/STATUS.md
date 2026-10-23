@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-21
+**Last updated:** 2026-10-22
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,138 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 21 task 11 — decommission jaguar — IN PROGRESS: preconditions met, D5 and D6 done, jaguar shut down, DNS cleaned (2026-10-22), jaguar deleted, the Global API Key changed, the block list read (2026-10-23); the MySQL chain still to remove
+
+### The preconditions — both met 2026-10-22
+
+**The cutover tag: `cutover-2026-10-07` on `4a477c6e`**, annotated, pushed
+to GitHub. No tag existed, though task 09 requirement 8 made one a
+precondition. Leopard's HEAD at the S1 pull cannot be read back now (it has
+moved on), but **the code tree can be**: every commit after `4a477c6e` up to
+the freeze (`75624957`, `89a5b754`, `9cbc2ef1`, `3f3b49f6`, `7eb8d3ca`)
+touches only `.agents/`, which `.dockerignore` drops, so the image built for
+the flip was `4a477c6e`'s tree (`git diff 4a477c6e 7eb8d3ca -- . ':!.agents'`
+empty). The tag's tree holds all of `tools/pgloader/`.
+
+**The final snapshot archived** at
+`s3://gremmie-archives/sg101/snapshots/sg10120261007.sql.bz2`, beside a
+`.md5` and a `.sha256`: 100,592,622 bytes, md5
+`e64759f1f3d9d580be1e6e189b61f0c8` (the value C1 recorded), sha256
+`cfa47da6a66fd8d4da08d6d6643fa8aaa7fccef59e7ab37ac0005ddf52cd1704`, version
+`Nx4AwRthhWATurnsG8YW417QGOdIGzLv`, SSE-S3. Downloaded back: both checksums
+and `bzip2 -t` pass. Uploaded with a temporary `sg101-admin` key, removed
+from the Mac afterwards; the key's deletion in IAM is Brian's.
+
+### Requirement 2, D5 — met: no outside delivery since at least 09-20
+
+Read 2026-10-22 ~23:00 UTC on jaguar, `/var/log/mail.log` through
+`mail.log.4.gz` (09-20 onward). **Every `postfix/smtpd ... client=` line
+in all five files is `localhost`** (328, 207, 81, 0, 0 per file, oldest
+first): mail jaguar submitted to itself, the last at the freeze, 10-07
+11:01. None from an outside host, so no inbound delivery to either domain
+for over four weeks against D5's one. Since 10-11: 3,572 connects, 36
+`NOQUEUE: reject`, nothing accepted. jaguar's only outbound was the 02:01
+UTC cron mail to Brian's Gmail, last on 10-22.
+
+### D6, the last log pull — 2026-10-22
+
+`~/workspaces/bgn/sg101-evidence/jaguar-logs-2026-10-22/`, 200 MB, 85
+files: the three directories of the earlier pulls, plus `mail.log`, `.1`
+and `.2.gz` (10-05 06:35 → 10-22 18:02 UTC, D5's record). Listing taken
+first (`source-listing/before.txt`); all 85 present at identical sizes,
+every `.gz` passes `gzip -t`, `MANIFEST.sha256` 85 lines and `shasum -c`
+clean; the manifest's own SHA-256 is
+`d35996a3fc6306fe6c118bedf29bace351d43eb1155b00c8d22aaa742eed1b08`. The
+oldest Apache logs start 08-23, so it overlaps 10-08's pull with no hole.
+jaguar served almost nothing after the flip: the sg101 vhost's current
+`access.log` is empty, the wiki's has 2 lines. **jaguar's Celery worker
+and beat were still running** on the frozen site (`max_users`,
+`process_search_queue_task` every few minutes, the last at 18:45 UTC),
+against its own database and Redis; they stopped with the box.
+
+### Requirement 4, the shutdown — jaguar off 2026-10-22, deleted 2026-10-23
+
+Shut down by Brian after D6. **An image is not possible**: Linode images
+are limited to 6 GB, and jaguar's disk held 16 GB of 95 GB. **Linode makes
+a recovery image when a Linode is deleted**, kept free for as many hours as
+the Linode ran, up to 21 days (Akamai's *Images* doc), but the doc says
+nothing about size. **Tested on bobcat first** (12 GB used, Dallas, also a
+core region), deleted by Brian 2026-10-22 after checking what it still
+held. **Its recovery image was made, and holds the whole disk: 11.93 GB**
+against `df`'s 12 GB used, so the 6 GB limit does not apply to recovery
+images. **It expires 2026-10-29 19:15, seven days after deletion, not
+21**, though bobcat ran for years: the doc's "up to 21 days" is not what
+Linode did. Expect seven days for jaguar's too.
+
+**jaguar deleted by Brian 2026-10-23 ~01:00 UTC**, its recovery image
+being created at the time. At 01:07 UTC ssh to it timed out. Its address's
+PTR still read `mail.surfguitar101.com`: that is Linode's record, which goes
+when the address is reassigned, and with the `mail` A record gone it no
+longer forward-confirms. bobcat's jaguar cron
+(`backup_jaguar_cron.bash`) was already commented out before it went.
+
+### Requirement 3, DNS — no record resolves to jaguar or bobcat (2026-10-22)
+
+Read through the API with a short-lived read-only token (Zone:DNS:Read,
+Zone:Read, all six zones; deleted afterwards), before and after Brian's
+changes:
+
+| zone | record | before | after |
+|---|---|---|---|
+| `surfguitar101.com` | apex SPF | `v=spf1 ip4:173.255.245.115 include:_spf.mx.cloudflare.net -all` | `v=spf1 include:_spf.mx.cloudflare.net -all` |
+| | `mail` A, and its SPF TXT | `173.255.245.115`; `v=spf1 ip4:173.255.245.115 -all` | deleted |
+| | `dkim._domainkey` | jaguar's opendkim key | deleted |
+| | `wiki` A, proxied | `173.255.245.115` | `192.0.2.1` (documentation address; the C6 redirect needs only a proxied record) |
+| | apex NS ×5 | `ns1`–`ns5.linode.com` | deleted |
+| `themadeira.net` | `dkim._domainkey` | jaguar's opendkim key | deleted |
+| `gremmielabs.dev` | A ×4 (`@`, `www`, `dev`, `mail`), MX, SPF, `dkim`, NS ×5 | all bobcat, `198.58.104.73` | deleted; now `MX .`, `v=spf1 -all`, `_dmarc` `p=reject`, as bravenewsurf.com |
+
+**Already gone before the read:** `irc.surfguitar101.com` (D8) and every
+`_dc-mx` record. After: no record in any zone holds jaguar's or bobcat's
+IPv4 or IPv6; the apex SPF reads the same at `ada.ns.cloudflare.com`,
+1.1.1.1 and 8.8.8.8; `wiki.surfguitar101.com/FrontPage` answers `301` to
+`https://surfguitar101.com/`. **Kept:** `themadeira.net._report._dmarc`
+`v=DMARC1`, the RFC 7489 §7.1 authorization for madeira's `rua=` to
+`admin@surfguitar101.com`.
+
+**Also removed:** an unused Cloudflare user API token created 2026-08-20,
+probably for Cloudflare's help agent (Brian, deleted 2026-10-22).
+
+### Requirements 5 and 6 — the Global API Key changed, the block list read (2026-10-23)
+
+**The Global API Key changed by Brian** (the dashboard says "Change", not
+"Roll"), after jaguar's deletion, so the copy in jaguar's fail2ban action is
+dead; until about 10-30 it exists only inside the recovery image. **Criterion
+3's first half is untested**: no copy of the old key survives off jaguar to
+try against the API, so the evidence is Cloudflare's change, not a refusal.
+**The scoped token still works**: `tools/cloudflare_block_list.py show` on
+leopard, ~01:15 UTC, read the list without error.
+
+**The last read of `block_list`: 4 items, nothing to remove.** They are the
+four live `sg101-reg` bans task 10's clear left on 10-21
+(`192.0.2.4`, `192.0.2.5`, `192.0.2.6`, `192.0.2.7`,
+all re-dated 10-21 13:56 by fail2ban's restart). jaguar added no entry
+after task 10's clear.
+
+### Still to do
+
+- jaguar's recovery image: its size and expiry, once created.
+- Requirement 7, the MySQL chain removed; then `fabfile.py` and
+  `tools/xapian_installer.sh` in a separate commit (Brian, 2026-10-22).
+- Requirement 9, `plan.md` and this file closed together.
+
+### Follow-ups, not task 11's (Brian, 2026-10-22)
+
+- **SG101's `p=reject` decision**, open since the DMARC readings ("no
+  longer blocked, and not decided"). Revisit mid-November, with about four
+  weeks of reports after jaguar's SPF entry went. Until then the `rua=`
+  copy to `admin@surfguitar101.com` stays; after it, the email copy can go
+  and Cloudflare's DMARC Management keeps the reports.
+- **themadeira.net's DMARC tightened**: it sends no mail, so its reports can
+  only show forgery or forwarding. Publish `p=reject; sp=reject; adkim=s;
+  aspf=s` with no `rua`, as bravenewsurf.com, and delete
+  `themadeira.net._report._dmarc.surfguitar101.com` with it.
 
 ## Step 21 task 10 — the after-cutover watch — DONE 2026-10-21, requirements 1–7 met; requirement 8 open, revisit 2027-01-08
 
