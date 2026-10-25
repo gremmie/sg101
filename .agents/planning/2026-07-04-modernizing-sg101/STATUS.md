@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-23
+**Last updated:** 2026-10-25
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,167 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 22 task 02 — what else goes public — IN PROGRESS 2026-10-25: every kind decided (Brian); one rewrite planned and dry-run verified, not yet run; publishing to a new repository
+
+**Member data that the site never shows is in the tree, and so in history.**
+Three things in the inventory should not be published as they are:
+- **Members' private email addresses:** 31 in `.agents/`. About half are
+  from the duplicate-email audit, each mapped to the accounts sharing it, which
+  links alt accounts. The rest are notification recipients taken from jaguar's
+  mail log.
+- **The wiki archive's edit-logs:** every edit from 2012 to 2017, each with
+  the editor's IP and hostname.
+- **A handful of client IPs.**
+
+Everything else came out publishable by measurement. **Every item in today's
+tree is also in history**, so redacting going forward would hide nothing.
+The choice per kind was to publish it, or to scrub it in one rewrite.
+
+**This section holds counts and decisions only.** The inventory, the
+values and the scrub list are in the session scratchpad and in Brian's hands,
+not in the repo (requirement 5). New records follow the same rule (`AGENTS.md`).
+
+### Method
+
+Measured on `main` @ `285da660` and on `git log --all` (four heads, three tags,
+and `refs/pull/1/head` fetched to `origin/pull/1`). These were searched for
+directly:
+- IPv4 and IPv6 literals, validated with `ipaddress`.
+- Email addresses.
+- Dashed-IP hostnames.
+- The dev database's 15,304 usernames, intersected with the backticked tokens
+  in `.agents/**/*.md`.
+
+Each public IP was classified by `ipaddress`, `apache/cloudflare-ranges.txt`
+and its context. Two counting tools had to be corrected along the way:
+- **`git grep -E` ignores `\b`.** The first infrastructure counts were zeros
+  that were not zeros. They were rerun with `-P`.
+- **The first scrub verifier was case-sensitive.** It passed a rewrite that
+  still held 2 values (146 blob hits), one of them an address the docs
+  capitalize. The scrub and the verifier were made case-insensitive, the
+  verifier was shown failing on the old output, and both were rerun.
+
+### The inventory, and Brian's decisions (2026-10-25)
+
+| kind | measured | decision |
+|---|---|---|
+| members' private emails | 34: 31 in 5 `.agents/` files, 3 only in 2 test files | **scrub** |
+| wiki edit-log addresses | 30 files, 270 lines with IP + hostname | **scrub** (blank both columns) |
+| wiki HTML footers | 58 `title="USER @ HOST[IP]"` across versions, the live wiki's own footer | **scrub** (keep USER) |
+| client IPs: members, wiki editor, attackers | 11; one also in `core/functions.py` and its test | **scrub** |
+| Brian's home and mobile IPs | 4 | **scrub** |
+| bandmates' personal emails | 2 | **scrub**; their band-domain aliases kept |
+| Brian's own addresses | `bgneal@gmail.com` 57 lines, plus 3 others | keep |
+| leopard's origin IP | IPv4 and IPv6, 13 lines in 3 files | **scrub** (the firewall admits only Cloudflare anyway) |
+| donations fixture | 3 rows **from production** (pks, real first names and amounts match the snapshot; last names and emails already fake) | **scrub** the first names |
+| other fixtures (13) | hand-written; user rows have unusable or no passwords and `example.com` addresses | keep |
+| infrastructure IDs | Linode firewall ID, bucket and IAM names, Postmark hosts, `/svr/` paths, `ssh brian@…`, calendar ID and service account, the Access team name; none usable without a credential | keep |
+| abuse analysis | ~100 lines in ~15 files; the mechanisms (fail2ban, honeypot, Turnstile, rate limits, spam phrases) are in tracked code | keep |
+| usernames | 48 backticked (some are common words); public on the site | keep |
+| wiki page bodies | band contact emails, public on the live wiki | keep |
+| other 32-hex values, third-party MTAs, Cloudflare ranges | md5s, DMARC report IDs, an etag, the `rua` mailbox (in DNS) | keep |
+
+The decisions are Brian's. The table's order is not a ranking.
+
+**Branches and tags:**
+
+| ref | what | last commit | unique vs `main` | decision |
+|---|---|---|---|---|
+| `v3-dev` | 2017 V3 forums WIP | 2018-01-07 | 7 | keep |
+| `abandoned-2015` | image-host whitelisting, abandoned | 2015-07-27 | 5 | keep |
+| `multi-upload` | V3 forums step 5 | 2026-10-20 | 1 | keep |
+| `refs/pull/1/head` | the CI-gate proof; GitHub's, undeletable | 2026-08-15 | 1 | not carried over (below) |
+| `rollout`, `pre-step-4-prune`, `cutover-2026-10-07` | all on `main` | — | 0 | keep |
+
+**GitHub issues, Actions, and data files:**
+- **The 32 issues** (#2–#33, 10 comments) contain no IPs, email addresses or
+  attachments. Kept as they are, except as follows.
+- **#30 is an unfixed SSRF**, written up with the fix. **It gets fixed and
+  deployed before task 04's flip** (Brian), so publishing it becomes harmless.
+  The fix is its own task.
+- **Actions:** 366 runs, from 07-15 to 10-23. 10 logs sampled across that
+  range hold only test addresses, `admin@`, the masked runner token and the
+  build-time dummy key. No Actions secret was ever configured or referenced, so
+  no log can hold one. Kept.
+- **No data file was ever committed:** every deleted path is code or config.
+
+### The rewrite — planned and dry-run, not run (requirement 8)
+
+There is one `git filter-repo` invocation, over a fresh mirror clone. A
+path-aware `--file-info-callback` does the scrubs above. A `--message-callback`
+applies the same literal replacement to commit messages, 8 of which carry a
+value. Each value gets its own placeholder: `memberNN@example.com`, or an
+RFC 5737 / RFC 3849 address, valid in its kind so that tests keep working.
+Task 01 chose no rewrite of its own, so this is the only one.
+
+**Dry run, 2026-10-25:**
+- **The `main` diff:** 71 files, 493 lines out and 493 in. Every line is one
+  of 131 email, 60 IP, 270 edit-log, 29 footer or 3 donor replacements, which
+  sum to exactly 493.
+- **The verifier,** over all 16,775 reachable blobs and every commit message:
+  - original: 53 of 53 values, 8 messages, 270 edit-log addresses, 58 footer
+    hosts, 6 donor names
+  - rewritten: **0 on every line**
+- **The rewritten `main`:**
+  - suite: 1496 tests OK
+  - deprecation gate: 1496 tests OK
+
+  The checkout was mounted at `/app` with `docker compose run -v`, and the
+  container saw the rewritten HEAD.
+- **1,190 of 1,809 commits change, from 2012-09-26 on:** the donations fixture
+  and the test addresses date from 2012–13. `rollout` keeps its hash. The other
+  two tags are re-pointed.
+- **SHAs cited in this file before the rewrite are pre-rewrite.** The
+  old-to-new `commit-map` goes to `gremmie-archives`, not into the repo.
+
+### Publishing — a new repository (Brian, 2026-10-25)
+
+**A force-push alone is not enough.** `refs/pull/1/head` cannot be deleted by
+the owner, and it still holds the duplicate-email audit with 14 of the
+addresses. Replaced commits also stay fetchable by SHA after a force-push, and
+`.agents/` cites 278 short SHAs.
+
+The two routes were:
+- **force-push, then a GitHub Support purge**
+- **a new repository** (chosen)
+
+**The new repository was chosen** because it never receives the old objects,
+so their absence can be checked from here rather than taken on Support's word,
+and the flip waits on no one.
+
+The steps, in order:
+1. Rename the current repo to `gremmie/sg101-private`. It stays private for
+   good and keeps the original history, PR #1 and the Actions runs.
+2. Create an empty, private `gremmie/sg101`.
+3. Push the rewritten mirror only.
+4. Check that old SHAs are absent from it, and rerun the verifier on a fresh
+   clone. It must read 0 on every line.
+5. Move leopard's read-only deploy key. A key can be on only one repo.
+6. Clone the 15 labels.
+7. Create a placeholder #1, then transfer #2–#33 in order, checking each
+   lands on its old number. 125 citations in `.agents/` and many commit
+   messages depend on the numbers.
+8. leopard: `fetch` and `reset --hard`, which keeps the ignored `.env` and
+   `secrets/` (Brian runs it).
+9. Reset the Mac clone the same way.
+
+**What was measured on the current repo:**
+- one deploy key
+- no webhooks, branch protection, rulesets, Pages, autolinks, secrets or
+  environments
+- 15 labels, 6 of them custom
+- 0 milestones
+
+### Done, and what remains
+
+- **Requirements 1–6 met.** Requirement 7: no history-preserving changes were
+  chosen, except the `AGENTS.md` rule that `.agents/` never quotes member data
+  (Brian, 2026-10-25).
+- **Requirement 8:** the rewrite is planned and dry-run verified. **It runs on
+  Brian's approval**, rerun from a fresh mirror so that it covers every commit
+  made since, with the verifier and both gates repeated.
+- **Before task 04:** the #30 fix is deployed. Task 03 comes after the rewrite.
 
 ## Step 22 task 01 — secret-history audit #2 — DONE 2026-10-23: clean, nothing rotated, no history rewrite (Brian)
 

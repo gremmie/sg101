@@ -129,6 +129,13 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   store, its pip) needs `docker pull python:3.12` before the build.
 - **Search `.agents/` before concluding something is undocumented.** A great deal
   of apparent mystery here is recorded with the measurement attached.
+- **`.agents/` is published with the repository, so it never quotes member
+  data.** No member's or mail recipient's email address, no client IP (a member,
+  an attacker or Brian's own), and not leopard's origin address. Write a count,
+  a role ("a new member", "a scanner") or an RFC 5737 / RFC 3849 placeholder
+  instead. Usernames are fine, since the site shows them. History was rewritten
+  once to remove exactly this (`STATUS.md`, Step 22 task 02); a slip afterwards
+  needs another rewrite.
 
 ## Custom Instructions
 
