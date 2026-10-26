@@ -43,7 +43,12 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 22 task 02 — what else goes public — IN PROGRESS 2026-10-25: every kind decided (Brian); one rewrite planned and dry-run verified, not yet run; publishing to a new repository
+## Step 22 task 02 — what else goes public — DONE 2026-10-25: every kind decided (Brian); history rewritten once and published to a new `gremmie/sg101`; the old repo kept private as `gremmie/sg101-private`
+
+**Commit hashes in this file and its archive that were cited before
+2026-10-25 are pre-rewrite.** They resolve only in `gremmie/sg101-private`. To
+translate one, use the old-to-new `commit-map` in Brian's `sg101-evidence`
+(§ *The rewrite, run*).
 
 **Member data that the site never shows is in the tree, and so in history.**
 Three things in the inventory should not be published as they are:
@@ -116,7 +121,7 @@ The decisions are Brian's. The table's order is not a ranking.
 | `rollout`, `pre-step-4-prune`, `cutover-2026-10-07` | all on `main` | — | 0 | keep |
 
 **GitHub issues, Actions, and data files:**
-- **The 32 issues** (#2–#33, 10 comments) contain no IPs, email addresses or
+- **The 32 issues** (#2–#33, 8 comments) contain no IPs, email addresses or
   attachments. Kept as they are, except as follows.
 - **#30 is an unfixed SSRF**, written up with the fix. **It gets fixed and
   deployed before task 04's flip** (Brian), so publishing it becomes harmless.
@@ -153,8 +158,8 @@ Task 01 chose no rewrite of its own, so this is the only one.
 - **1,190 of 1,809 commits change, from 2012-09-26 on:** the donations fixture
   and the test addresses date from 2012–13. `rollout` keeps its hash. The other
   two tags are re-pointed.
-- **SHAs cited in this file before the rewrite are pre-rewrite.** The
-  old-to-new `commit-map` goes to `gremmie-archives`, not into the repo.
+- **SHAs cited in this file before the rewrite are pre-rewrite** (the note
+  under this section's heading).
 
 ### Publishing — a new repository (Brian, 2026-10-25)
 
@@ -194,15 +199,71 @@ The steps, in order:
 - 15 labels, 6 of them custom
 - 0 milestones
 
-### Done, and what remains
+### The rewrite, run — 2026-10-25 (Brian approved it, then the GitHub steps)
 
-- **Requirements 1–6 met.** Requirement 7: no history-preserving changes were
-  chosen, except the `AGENTS.md` rule that `.agents/` never quotes member data
-  (Brian, 2026-10-25).
-- **Requirement 8:** the rewrite is planned and dry-run verified. **It runs on
-  Brian's approval**, rerun from a fresh mirror so that it covers every commit
-  made since, with the verifier and both gates repeated.
-- **Before task 04:** the #30 fix is deployed. Task 03 comes after the rewrite.
+**The rewrite:** run on a fresh mirror of GitHub. The old `main` was the
+commit that added this section's first version.
+- **The verifier,** over 16,780 blobs and every commit message: original
+  53 of 53 values (4,512 blob hits), 8 messages, 270 edit-log addresses,
+  58 footer hosts, 6 donor names; rewritten **0 on every line**.
+- **The `main` diff:** 71 files, 493 lines out and 493 in. The added lines
+  are 131 email, 60 IP, 270 edit-log, 29 footer, 3 donor and **0 other**.
+- **1,191 of 1,810 commits changed.** `rollout` kept its hash.
+- **The rewritten `main`:**
+  - suite: 1496 tests OK
+  - deprecation gate: 1496 tests OK
+
+  The container saw the rewritten HEAD.
+- **The `commit-map`** (1,810 rows) is kept, with the scrub list, the callbacks
+  and the verifier, in `sg101-evidence/step22-rewrite-2026-10-25/` (mode 600).
+  None of these is in the repo.
+
+**Publishing:**
+
+| step | result |
+|---|---|
+| rename | `gremmie/sg101` → `gremmie/sg101-private`, still private; it keeps PR #1 and the Actions runs |
+| create | a new private `gremmie/sg101` (its own repo ID), Projects and wiki off, created straight after the rename |
+| push | `git push --mirror` from the rewritten mirror, with `refs/pull/1/head` deleted first: 4 heads and 3 tags; `main` is the default |
+| absence | 5 old commits (the old `main`, PR #1's, `multi-upload`'s, `pre-step-4-prune`'s, and one 40 back on `main`) **cannot be fetched by SHA**; the control, a new commit, can. A fresh clone from GitHub verifies 0 on every line |
+| deploy key | `leopard (read-only)` deleted from the private repo and the same key added read-only to the new one; the private repo now has none |
+| labels | 15 cloned identically; GitHub's default `accessibility` label deleted to match |
+| issues | a placeholder #1 (*Reserved*, closed as not planned), then #2–#33 transferred in order: **32 of 32 identical** on number, title, body, state, labels, assignees and comments |
+
+The issue checker was shown failing on an altered copy of the snapshot. Two
+things it first flagged were GitHub's own doing, so the comparison makes
+allowance for both:
+- **Labels arrive a moment after a transfer returns.** The checker retries
+  before a mismatch counts.
+- **A transfer qualifies a bare `#5` as `gremmie/sg101#5`,** which is the same
+  issue in the new repo, and appends a newline. The checker treats those as
+  equal, and it still fails on a reference changed to another issue.
+
+**No CI ran on the mirror push.** GitHub creates no push events for a push of
+more than three branches or tags. The workflow is active, and the next push
+runs it.
+
+**The clones:**
+- **The Mac clone (Claude):** `fetch --prune --force`, then every head reset
+  to the new refs. The stale `origin/pull/1` was deleted, the reflog expired,
+  and the repo gc'd. The old commits are gone from its object store, the
+  verifier reads 0, and `.env` and `secrets/` are intact.
+- **leopard (Brian):** `fetch`, `reset --hard origin/main`, reflog expired,
+  gc'd.
+  - HEAD is `29e5817e`, level with `origin`, and the tree is clean.
+  - The old commits are gone, and `.env` and `secrets/` are intact.
+  - `fetch` works, which proves the moved key.
+  - The site answers 200, with no rebuild, as planned.
+
+### Closed
+
+- **Requirements 1–8 met.** Requirement 7's only change that keeps history is
+  the `AGENTS.md` rule that `.agents/` never quotes member data (Brian,
+  2026-10-25).
+- **Before task 04:** the #30 fix is deployed. Task 03 is next.
+- **`gremmie/sg101-private` stays private for good.** It holds the
+  unscrubbed history. Never push to the new repo from a clone made before
+  2026-10-25.
 
 ## Step 22 task 01 — secret-history audit #2 — DONE 2026-10-23: clean, nothing rotated, no history rewrite (Brian)
 
