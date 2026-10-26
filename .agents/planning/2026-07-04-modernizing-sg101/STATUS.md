@@ -43,6 +43,86 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
+## Issue #30 — hotlink SSRF fixed — 2026-10-25, branch `ssrf-hotlink`, not yet deployed (a precondition of task 04)
+
+**The fix checks every connection where its socket is opened, so redirects and
+DNS rebinding need no separate code.** `core/download.py` gives
+`download_file` its own `requests` session. The adapter's pools use connection
+classes whose `_new_conn` does this before anything is sent:
+1. **Refuses any port but 80 and 443.**
+2. **Looks the name up once** and refuses if **any** address is not global, or
+   is multicast. `is_global` is true of multicast, so that check is made on its
+   own.
+3. **Connects to the checked address.**
+
+Each redirect hop opens its own connection and gets the same check. Hops are
+capped at 5. `trust_env` is off, so a proxy from the environment cannot make
+the connection itself, past the check. The repo sets no proxy or CA-bundle
+variable; the live environment was not read, since auto mode refused it.
+
+A refusal raises `Refused`, a `DownloadError`, and is logged as a warning with
+the reason. The form already gives every `DownloadError` the generic
+"couldn't download" message, so members see nothing that tells a prober which
+internal addresses exist.
+
+**A live check found a bug that 1,510 green tests did not.** The first version
+pinned by setting urllib3's `_dns_host`. `HTTPConnection.host` is a property
+read from it, so TLS verified the certificate against the IP, and every public
+HTTPS image failed with "IP address mismatch". The fix leaves `host` alone and
+opens the socket to the checked address directly, with urllib3's own error
+mapping. A test now asserts `host` is still the name after connecting. It fails
+on the first version.
+
+**Tests:** 15 new, 14 in `core/tests/test_download.py` and 1 in
+`user_photos/tests/test_forms.py`.
+- the address table: refused and allowed addresses
+- a private literal, a name resolving to one, and a name with one internal
+  address among public ones: each refused, with no socket created
+- port 8080 refused with no lookup
+- a public name connecting to exactly the address looked up, which is looked
+  up once
+- `host` unchanged for TLS
+- an environment proxy ignored
+- an unresolvable name failing as an ordinary error
+- the refusal logged
+- through a real loopback server standing in for a public host:
+  - an image served
+  - the `Host` header carrying the name
+  - a redirect to an internal name refused before connecting
+  - the hop limit holding at 5
+- the form's message
+
+The suite and the deprecation gate pass, 1,511 tests each.
+
+**The mutation battery caught 12 of 12:**
+- the port check, the address check, and checking only the first address
+- connecting by name, and rewriting `host` to the IP (the live bug)
+- the multicast exclusion, `trust_env`, the hop limit, and the log line
+- `Refused` as a `DownloadError`
+- each of the two adapter mounts
+
+The file was restored byte-identical. Two pieces of code were removed because
+no mutation of them could fail:
+- an IPv4-mapped unwrap, since Python 3.12.15 already refuses those forms
+- a `gaierror` handler, since urllib3 already maps the lookup error
+
+**The live checks, from the dev container:**
+- **`download_file`:** a public PNG over HTTPS and an HTTP page are fetched.
+  badssl.com's expired certificate and its wrong-host certificate fail for
+  those reasons. Six internal targets are refused: Redis and Postgres by
+  port, loopback, `localhost`, the metadata address, and `web:8000`.
+- **The view,** through the test client: internal targets get the generic
+  message and a logged reason, and a public web page still gets "isn't an
+  image". Bare names (`http://redis/`) are already rejected by Django's
+  `URLField`.
+- **Not yet done:** the browser check. Claude in Chrome was not available in
+  this session.
+- **Wikimedia answers 403 to `requests` with or without the change.** Their
+  User-Agent policy is not this change's concern.
+
+`64:ff9b::/96`, the NAT64 range, counts as global in `ipaddress`. leopard has
+no NAT64, so it is noted rather than special-cased (Brian, 2026-10-25).
+
 ## Step 22 task 02 — what else goes public — DONE 2026-10-25: every kind decided (Brian); history rewritten once and published to a new `gremmie/sg101`; the old repo kept private as `gremmie/sg101-private`
 
 **Commit hashes in this file and its archive that were cited before

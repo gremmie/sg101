@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from core.download import DownloadError, NotAccepted, TooLarge
+from core.download import DownloadError, NotAccepted, Refused, TooLarge
 from user_photos.forms import HotLinkError, HotLinkImageForm
 
 
@@ -119,6 +119,14 @@ class HotLinkFailureTestCase(TestCase):
     @mock.patch('user_photos.forms.download_file')
     def test_a_failed_fetch_says_so(self, dl_mock, rate_limit_mock):
         dl_mock.side_effect = DownloadError('404')
+        with self.assertRaisesMessage(HotLinkError, "couldn't download"):
+            self.form().save()
+
+    @mock.patch('user_photos.forms.download_file')
+    def test_a_refused_address_looks_like_any_failed_fetch(self, dl_mock,
+                                                           rate_limit_mock):
+        # Saying why would tell a prober which internal addresses exist.
+        dl_mock.side_effect = Refused('10.0.0.1')
         with self.assertRaisesMessage(HotLinkError, "couldn't download"):
             self.form().save()
 
