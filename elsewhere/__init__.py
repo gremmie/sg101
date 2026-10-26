@@ -5,7 +5,8 @@ Vendored from Brian Neal's fork:
 Original upstream (Leah Culver & Chris Drackett; formerly "Django-PSN", created
 for Pownce):
     https://github.com/leah/django-elsewhere
-Neither repository ships an explicit license file.
+Upstream is BSD 3-clause licensed (leah/django-elsewhere@157b8bee); its LICENSE
+is copied alongside this file.
 
 It used to be an editable git dependency. It was vendored into the repo during the
 Python 3 interpreter flip because the fork is tiny, frozen upstream, and needed a
