@@ -1,5 +1,9 @@
 @charset 'utf-8';
 
+// The compiled CSS includes these; "/*!" keeps their notices in the build.
+/*! Foundation for Sites v6.3.1 | MIT License | (c) 2011-2017 ZURB, inc. | https://get.foundation/ */
+/*! Motion UI v1.2.3 | MIT License | (c) 2013-2017 ZURB, inc. | https://github.com/foundation/motion-ui */
+
 @import 'settings';
 @import 'sg101_settings';
 @import 'foundation';

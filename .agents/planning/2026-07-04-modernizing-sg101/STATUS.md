@@ -43,7 +43,7 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 22 task 03 — the licence — IN PROGRESS 2026-10-25: BSD 3-clause kept, copyright 2009-2026 (Brian); third-party gaps listed for Brian
+## Step 22 task 03 — the licence — DONE 2026-10-25: BSD 3-clause kept, copyright 2009-2026 (Brian); every third-party gap decided
 
 **Brian's choice (2026-10-25):** keep the BSD 3-clause `LICENSE` from 2009
 (`7b97ffb3`), and update its copyright line to `2009-2026, Brian G. Neal`.
@@ -70,17 +70,17 @@ jQuery 3.7.1, jQuery UI 1.13.3, Blueprint, jPlayer and its add-ons,
 (`license.txt`), the Foundation Icons CSS and fonts, normalize (kept in
 `main.min.css`), and `core/mdexts/urlize.py` (BSD, Rowan Nairn).
 
-The gaps, listed for Brian. Restoring a notice is in this task's scope;
-removing or replacing a library is not:
+The gaps, and Brian's decisions (2026-10-25). Restoring a notice was in this
+task's scope; removing or replacing a library was not:
 
-| item | where | gap |
-|---|---|---|
-| django-elsewhere (vendored fork) | `elsewhere/` | **neither the fork nor the upstream ever had a licence**; publishing redistributes it |
-| imagesLoaded (MIT), in use | `static/js/jquery.imagesloaded.min.js` | the minified file has no notice |
-| Foundation 6 (MIT) | compiled into `sg101/static/css/v3/main.min.css` | Foundation's notice is not in the build; its source is in `node_modules`, which is untracked |
-| the smileys | `media/smiley/images/` (89 GIFs) | origin unknown, no notice |
-| FamFamFam Silk (CC BY 2.5) | `static/icons/`: most of its 54 files; `ajax_busy.gif`, three social buttons and `stars/` do not have Silk's names | Silk is attributed on the colophon page; no licence file in the tree; the others' origin is unknown |
-| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | **removed 2026-10-25** (Brian): `.pack.js` was the served copy until `fa47628b` (2013-09-04) moved the site to 1.1.14, and `jquery.markitup.js` was never referenced by name |
+| item | where | gap | decision |
+|---|---|---|---|
+| django-elsewhere (vendored fork) | `elsewhere/` | **neither the fork nor the upstream ever had a licence**; publishing redistributes it | **published with it.** Brian is asking Leah Culver for a licence or permission. Also checked: no licence in either repo's `setup.py` or README, GitHub detects none, and it is not on PyPI. If she declines, the fallback is to reimplement it in `bio`, as a separate task |
+| imagesLoaded (MIT), in use | `static/js/jquery.imagesloaded.min.js` | the minified file has no notice | **notice restored.** The file is byte-identical to upstream's v2.1.1 minified file (v2.1.2's is the same file). Our copy was added 2013-03-10, between v2.1.1 (2012-12-16) and v2.1.2 (2013-05-20). That release's own header was prepended, and the body is unchanged |
+| Foundation 6 (MIT) | compiled into `sg101/static/css/v3/main.min.css` | Foundation's notice is not in the build; its source is in `node_modules`, which is untracked | **notices restored** for Foundation 6.3.1 and Motion UI 1.2.3, both MIT and ZURB's, as `/*!` comments in `scss/main.scss`. The build was reproducible first: a rebuild of the unchanged Sass was byte-identical. After the change, the build differs only by the two notice lines |
+| the smileys | `media/smiley/images/` (89 GIFs) | origin unknown, no notice | **kept as is** (Brian) |
+| FamFamFam Silk (CC BY 2.5) | `static/icons/`: most of its 54 files; `ajax_busy.gif`, three social buttons and `stars/` do not have Silk's names | Silk is attributed on the colophon page; no licence file in the tree; the others' origin is unknown | **kept as is** (Brian) |
+| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | `.pack.js` had no notice; neither file was referenced | **removed** (Brian, `1f53fcc2`): `.pack.js` was the served copy until `fa47628b` (2013-09-04) moved the site to 1.1.14, and `jquery.markitup.js` was never referenced by name |
 
 ## Issue #30 — hotlink SSRF fixed — DONE 2026-10-25: `6a3494af` + `2a4a8324` (User-Agent), CI green, deployed to leopard; task 04's precondition met
 
