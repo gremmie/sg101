@@ -80,7 +80,7 @@ removing or replacing a library is not:
 | Foundation 6 (MIT) | compiled into `sg101/static/css/v3/main.min.css` | Foundation's notice is not in the build; its source is in `node_modules`, which is untracked |
 | the smileys | `media/smiley/images/` (89 GIFs) | origin unknown, no notice |
 | FamFamFam Silk (CC BY 2.5) | `static/icons/`: most of its 54 files; `ajax_busy.gif`, three social buttons and `stars/` do not have Silk's names | Silk is attributed on the colophon page; no licence file in the tree; the others' origin is unknown |
-| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | `.pack.js` has no notice; neither file is referenced |
+| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | **removed 2026-10-25** (Brian): `.pack.js` was the served copy until `fa47628b` (2013-09-04) moved the site to 1.1.14, and `jquery.markitup.js` was never referenced by name |
 
 ## Issue #30 — hotlink SSRF fixed — DONE 2026-10-25: `6a3494af` + `2a4a8324` (User-Agent), CI green, deployed to leopard; task 04's precondition met
 
