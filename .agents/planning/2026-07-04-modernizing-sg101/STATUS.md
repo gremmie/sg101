@@ -117,8 +117,11 @@ no mutation of them could fail:
   `URLField`.
 - **Not yet done:** the browser check. Claude in Chrome was not available in
   this session.
-- **Wikimedia answers 403 to `requests` with or without the change.** Their
-  User-Agent policy is not this change's concern.
+- **Wikimedia answers 403 to `requests`' default User-Agent,** with or without
+  the SSRF change. **A separate commit fixes it:** `download_file` now sends
+  `SurfGuitar101/1.0 (+https://surfguitar101.com/)`, and Wikimedia then
+  serves the image (224,566 bytes, live). The stand-in server asserts the
+  header, and removing the line fails that test.
 
 `64:ff9b::/96`, the NAT64 range, counts as global in `ipaddress`. leopard has
 no NAT64, so it is noted rather than special-cased (Brian, 2026-10-25).

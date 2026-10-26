@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_PORTS = {80, 443}
 MAX_REDIRECTS = 5
+# Some image hosts, Wikimedia's among them, answer requests' default with 403.
+USER_AGENT = 'SurfGuitar101/1.0 (+https://surfguitar101.com/)'
 
 
 class DownloadError(Exception):
@@ -113,6 +115,7 @@ _session = requests.Session()
 # A proxy taken from the environment would make the connection, not us.
 _session.trust_env = False
 _session.max_redirects = MAX_REDIRECTS
+_session.headers['User-Agent'] = USER_AGENT
 _session.mount('http://', _CheckedAdapter())
 _session.mount('https://', _CheckedAdapter())
 

@@ -22,8 +22,8 @@ import requests
 from urllib3.util import connection as urllib3_connection
 
 from core.download import (MAX_REDIRECTS, DownloadError, NotAccepted, Refused,
-                           TooLarge, _CheckedHTTPSConnection, download_file,
-                           is_allowed_address)
+                           TooLarge, USER_AGENT, _CheckedHTTPSConnection,
+                           download_file, is_allowed_address)
 
 
 class FakeResponse:
@@ -256,10 +256,12 @@ class RefusedTestCase(unittest.TestCase):
 class RedirectHandler(http.server.BaseHTTPRequestHandler):
     hits = 0
     host_header = None
+    user_agent = None
 
     def do_GET(self):
         type(self).hits += 1
         type(self).host_header = self.headers.get('Host')
+        type(self).user_agent = self.headers.get('User-Agent')
         if self.path == '/loop':
             self.send_response(302)
             self.send_header('Location', '/loop')
@@ -331,6 +333,8 @@ class RedirectTestCase(unittest.TestCase):
         self.assertEqual(self.connects, [('127.0.0.1', self.port)])
         # A virtual host is chosen by name; so is the certificate TLS checks.
         self.assertEqual(RedirectHandler.host_header, 'public.test:%d' % self.port)
+        # Some hosts, Wikimedia's among them, refuse requests' default.
+        self.assertEqual(RedirectHandler.user_agent, USER_AGENT)
 
     def test_redirects_stop_after_the_hop_limit(self):
         RedirectHandler.hits = 0
