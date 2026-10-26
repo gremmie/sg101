@@ -4,7 +4,7 @@
   "description": "SurfGuitar101.com stylesheet build",
   "private": true,
   "author": "Brian Neal <bgneal@gmail.com>",
-  "license": "ISC",
+  "license": "BSD-3-Clause",
   "scripts": {
     "build:css": "sass --no-source-map --quiet-deps --load-path=node_modules/foundation-sites/scss --load-path=node_modules/motion-ui/src scss/main.scss static/css/v3/main.min.css && postcss static/css/v3/main.min.css --replace --no-map",
     "watch:css": "sass --watch --no-source-map --quiet-deps --load-path=node_modules/foundation-sites/scss --load-path=node_modules/motion-ui/src scss/main.scss static/css/v3/main.min.css"

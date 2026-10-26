@@ -43,7 +43,56 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Issue #30 — hotlink SSRF fixed — 2026-10-25, branch `ssrf-hotlink`, not yet deployed (a precondition of task 04)
+## Step 22 task 03 — the licence — IN PROGRESS 2026-10-25: BSD 3-clause kept, copyright 2009-2026 (Brian); third-party gaps listed for Brian
+
+**Brian's choice (2026-10-25):** keep the BSD 3-clause `LICENSE` from 2009
+(`7b97ffb3`), and update its copyright line to `2009-2026, Brian G. Neal`.
+Every commit is Brian's, apart from one hg `convert-repo` commit, so the
+choice was his alone to make.
+
+**Made to agree:**
+- `LICENSE`: the copyright line.
+- `sg101/package.json`: `license` changed from `ISC`, npm's default, to
+  `BSD-3-Clause`.
+- `sg101/package-lock.json`: the same change in the root entry, made by hand.
+  The lock file's 12 other `ISC` entries are dependencies' own licences.
+- `implementation/plan.md`: both places that said no `LICENSE` existed
+  (the Step 22 checklist line and its item 2) now carry a dated correction.
+
+There is no `pyproject.toml`, `setup.py` or `setup.cfg`, and the README makes
+no licence statement. `core.functions.copyright_str()` ("Copyright (C)
+2010 – year, SurfGuitar101.com", used in the feeds) is the site's content
+copyright, not the code's licence, and is left as it is.
+
+**The third-party inventory.** These carry their own notice in the tree:
+jQuery 3.7.1, jQuery UI 1.13.3, Blueprint, jPlayer and its add-ons,
+`jquery.cycle`, `jquery.form`, `jquery.jeditable`, markItUp 1.1.14, TinyMCE
+(`license.txt`), the Foundation Icons CSS and fonts, normalize (kept in
+`main.min.css`), and `core/mdexts/urlize.py` (BSD, Rowan Nairn).
+
+The gaps, listed for Brian. Restoring a notice is in this task's scope;
+removing or replacing a library is not:
+
+| item | where | gap |
+|---|---|---|
+| django-elsewhere (vendored fork) | `elsewhere/` | **neither the fork nor the upstream ever had a licence**; publishing redistributes it |
+| imagesLoaded (MIT), in use | `static/js/jquery.imagesloaded.min.js` | the minified file has no notice |
+| Foundation 6 (MIT) | compiled into `sg101/static/css/v3/main.min.css` | Foundation's notice is not in the build; its source is in `node_modules`, which is untracked |
+| the smileys | `media/smiley/images/` (89 GIFs) | origin unknown, no notice |
+| FamFamFam Silk (CC BY 2.5) | `static/icons/`: most of its 54 files; `ajax_busy.gif`, three social buttons and `stars/` do not have Silk's names | Silk is attributed on the colophon page; no licence file in the tree; the others' origin is unknown |
+| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | `.pack.js` has no notice; neither file is referenced |
+
+## Issue #30 — hotlink SSRF fixed — DONE 2026-10-25: `6a3494af` + `2a4a8324` (User-Agent), CI green, deployed to leopard; task 04's precondition met
+
+**Deployed 2026-10-25 (Brian, `make prod-up`).** In production:
+- leopard's HEAD is `2a4a8324`.
+- `web`, `worker` and `beat` were recreated and are healthy.
+- The production `web` container has `Refused`, the new User-Agent, and
+  ports `{80, 443}`.
+- The site answers 200.
+
+Brian checked the hotlink dialog in a browser before the merge: it worked.
+GitHub closed #30 from the commit.
 
 **The fix checks every connection where its socket is opened, so redirects and
 DNS rebinding need no separate code.** `core/download.py` gives
