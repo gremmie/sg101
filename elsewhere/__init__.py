@@ -18,7 +18,10 @@ Changes from upstream:
     + the static/ icons (referenced by SG101's bio/elsewhere_links templates). The
     fork's own views.py, urls.py, and templates/elsewhere/example.html were dropped
     (SG101 provides its own bio views/templates and never wired the app's URLs).
-
-The app has no migrations (unchanged from upstream); like before, Django creates
-its tables via run-syncdb, matching the tables already in the production database.
+  - Migrations, which upstream never had: 0001 describes the tables production
+    already held, 0002 follows the datetime fields' change, 0003 stores each
+    network's slug, and 0004 seeds the networks and messengers -- the 15 social
+    networks members have chosen, not upstream's 57. SG101's profile page
+    (bio/views.py) no longer lets members add a messenger, since every one of
+    those services has shut down.
 """
