@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-25
+**Last updated:** 2026-10-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,69 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Step 22 task 04 — the flip — DONE 2026-10-26: `gremmie/sg101` is public, hardened and checked from outside; Step 22 closed, and with it the plan
+
+**Preconditions, read from this file before anything changed:** task 01's
+audit clean (2026-10-23); task 02's decisions carried out, the rewrite
+published and leopard recovered from it (2026-10-25); #30 fixed and deployed
+(2026-10-25); task 03's licence committed (2026-10-25), with
+django-elsewhere's licence copied in by `0d7d2e00` (2026-10-26).
+
+**The last delta scan, with task 01's exact commands, was clean.** Task 01
+scanned through `4460fa68`, which is `97f25146` after the rewrite (the
+commit map in `sg101-evidence/step22-rewrite-2026-10-25/`). The delta is the
+23 commits on any ref that `97f25146` does not contain: the 10 on `main`
+from `473277a7` on, and 13 on the side branches. The rewrite changed those
+13 hashes, so they count as new, though task 01 scanned their content.
+
+- **gitleaks:** 0 findings, 18 commits scanned (it reads no merge diffs; 4 of
+  the 23 are merges).
+- **trufflehog:** 2, both the Lob detector matching
+  `test_delete_post_forbidden_for_anonymous` where task 01's section quotes
+  it, both marked verified again.
+- **Known-value scan (Brian ran it):** on the Mac, 32 values checked; on
+  leopard, in place as before, 37. 0 secret values. Every hit was
+  configuration: `USER_PHOTOS_REGION` and `AWS_DEFAULT_REGION` (region
+  names, `bb2e7806`, 2015) and `CLOUDFLARE_LIST_NAME`, whose value is
+  committed in `fail2ban/cloudflare.env.example` and which matched
+  `plan.md`'s text in `5810caaa`. The keychain items task 01 also checked
+  were not in this run.
+
+**The settings could not come first, as the task file planned.** On a free
+account GitHub refuses every one of them while the repo is private:
+fork-PR approval ("not allowed for private repositories"), rulesets and
+branch protection ("make this repository public"), and secret scanning
+(`security_and_analysis` was `null`). So the order was: Brian approved the
+list, flipped the visibility in the web UI (2026-10-26), and the settings
+went on straight after, with nothing pushed in between. Each was read back:
+
+| setting | value | |
+|---|---|---|
+| secret scanning | enabled | |
+| push protection | enabled | |
+| fork-PR workflow approval | `all_external_contributors` | GitHub's default is first-time contributors only. The first `gh api -f` PUT returned success and changed nothing; a JSON body did |
+| private vulnerability reporting | enabled | added by Brian |
+| ruleset `protect main` (id 25923744) | `main`: no force-push, no deletion; active, no bypass | added by Brian. **A future history rewrite must switch it off first** |
+| Dependabot alerts | off | Brian declined |
+
+Already right for a public repo: `ci.yml` runs on `push` and
+`pull_request` (not `pull_request_target`) and uses no secrets, and the
+default workflow token is read-only and cannot approve PRs.
+
+**Checked from outside, 2026-10-26:**
+- an unauthenticated `git clone https://github.com/gremmie/sg101.git` (no
+  credential helper, empty `HOME`) succeeded, at `0d7d2e00`;
+- the anonymous API reports `public` and `BSD-3-Clause`; the logged-out page
+  returns 200 and its sidebar reads "BSD-3-Clause license";
+- leopard's `git fetch` over the deploy key succeeded. leopard is at
+  `2a4a8324`; task 03's commits reach it with the next `make prod-up`.
+
+**Docs:** neither `AGENTS.md` nor `README.md` described the repo as private,
+so neither changed. `.agents/summary/` is left as its dated snapshot.
+
+**CI:** this commit's push is requirement 6's check. If that run is not
+`success`, this section is wrong.
 
 ## Step 22 task 03 — the licence — DONE 2026-10-25: BSD 3-clause kept, copyright 2009-2026 (Brian); every third-party gap decided
 
