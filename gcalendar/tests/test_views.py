@@ -102,6 +102,23 @@ class IndexTestCase(CalendarTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'ctz=US%2FPacific')
 
+    def test_the_page_aggregates_the_friends_calendars(self):
+        """Each `src` is a calendar shown alongside ours, so dropping one
+        empties its shows from the page without any error.
+
+        """
+        response = self.client.get(self.url)
+
+        for calendar_id in (
+            'i81lu3fkh57sgqqenogefd9v78',  # SG101's own
+            'qrihvvsqabp3i3uv8gj4i5lfik',  # Various Surf Radio Shows
+            '59p0500pnuvles8a0j71prauqg',  # The Electric Heaters
+        ):
+            with self.subTest(calendar_id=calendar_id):
+                self.assertContains(
+                    response,
+                    'src=%s%%40group.calendar.google.com' % calendar_id)
+
 
 class AddEventTestCase(CalendarTestCase):
 
