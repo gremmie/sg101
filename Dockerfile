@@ -11,11 +11,11 @@
 # when it was the one version shared by Django 3.2 and 5.2. Unlike that move,
 # this one needed no dependency bumps at all.
 #
-# Five pins have no wheel for this interpreter and build from source here:
-# mysqlclient, psycopg2, ftfy, simplejson and repoze.timeago. That is what the
-# apt build dependencies below are for. Together they cost about 5s of an
-# uncached build, two thirds of it psycopg2; only simplejson is new at 3.12,
-# the other four built from source on 3.10 too.
+# Four pins have no wheel for this interpreter and build from source here:
+# psycopg2, ftfy, simplejson and repoze.timeago. That is what the apt build
+# dependencies below are for. Together they cost a few seconds of an uncached
+# build, most of it psycopg2; only simplejson is new at 3.12, the other three
+# built from source on 3.10 too.
 #
 # Two targets:
 #
@@ -34,17 +34,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 # --- System build/runtime dependencies ---------------------------------------
-#   default-libmysqlclient-dev : build mysqlclient (the 1.4.x pin has no wheel)
-#   default-mysql-client       : the `mysql` CLI, to load the DB snapshot
-#   libpq-dev                  : build psycopg2 from source (headers + pg_config)
-#   pkg-config                 : mysqlclient's build finds libmysqlclient through it
-# The two MySQL entries look like leftovers now that the site runs on PostgreSQL.
-# They are not: converting a production snapshot loads the dump with the `mysql`
-# CLI, and tools/pgloader/verify.py + verify_data.py then compare both engines
-# through MySQLdb, which is what mysqlclient needs these headers to build. That
-# comparison is the only thing that catches a conversion which silently shifted
-# or dropped data, and it runs from this image. See the mysqlclient note in
-# requirements.txt before removing either one.
+#   libpq-dev : build psycopg2 from source (headers + pg_config)
 # lxml and Pillow install from manylinux wheels on 3.12, so their C-library -dev
 # headers (libxml2/libxslt, libjpeg/zlib/freetype) are not needed. Check that
 # again after either pin moves: a version with no wheel for this interpreter
@@ -58,10 +48,7 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         build-essential \
-        default-libmysqlclient-dev \
-        default-mysql-client \
-        libpq-dev \
-        pkg-config; \
+        libpq-dev; \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip

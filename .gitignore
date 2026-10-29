@@ -48,7 +48,6 @@ snapshots/*.sql.bz2
 snapshots/*.bz2
 snapshots/*.gz
 snapshots/*.dump
-snapshots/*.mysql
 snapshots/*.zip
 snapshots/*.tar
 snapshots/*.tgz

@@ -26,9 +26,14 @@
 # host 2026-09-20 -- sg101.log held 5.0 months across 10 backups, auth.log 20.4
 # months across 5.
 
+# sg101.log got the same 2M and 12 as auth.log on 2026-10-22, because keeping
+# jaguar's 100k and 10 did not keep jaguar's retention. Production writes it at
+# INFO from every process -- about 720 lines, 85 KB, a day, measured 10-19 to
+# 10-22 -- so 100k x 10 held three weeks against jaguar's five months. At that
+# rate 2M holds about 24 days a file, and 12 of them about ten months.
 /svr/sg101/var/log/django/sg101.log {
-    size 100k
-    rotate 10
+    size 2M
+    rotate 12
     missingok
     notifempty
     compress

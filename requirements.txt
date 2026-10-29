@@ -64,28 +64,12 @@ billiard==4.2.4
 amqp==5.3.1
 vine==5.1.0
 
-# mysqlclient is NOT here for Django -- the site runs on PostgreSQL and nothing
-# points the ORM back at MySQL. It is here because tools/pgloader/verify.py and
-# verify_data.py import MySQLdb: they read the MySQL source and the converted
-# PostgreSQL side by side to check that a conversion did not lose or shift
-# anything. The mysql CLI loads the dump and pgloader does the converting;
-# neither needs this driver, and only the verification does. Removing it would
-# leave a conversion unverifiable rather than failing outright -- and since those
-# tools are not part of the test suite, nothing would go red. That matters most
-# at the production cutover, which converts a fresh snapshot under a maintenance
-# window. The 1.4.x line has no wheel, so it builds from source; see the
-# Dockerfile for the two apt packages that lets it.
-mysqlclient==1.4.6
 # psycopg2, not psycopg 3, and that is now a decision rather than a leftover:
 # Django gained psycopg 3 support in 4.2, and this project looked at taking it
-# and declined for the moment. The reason is that it would not be a swap. The
-# three tools/pgloader/ scripts import psycopg2 directly and are what verify the
-# production cutover, so psycopg2 stays in the image either way; adopting
-# psycopg 3 means running two PostgreSQL drivers rather than a newer one. The
-# gain is real but small for this site's load, and it keeps better than it
-# spends: the next Django upgrade meets a psycopg 3 backend a release more
-# settled, by which time the pgloader tools may have retired with the MySQL box
-# and taken the second driver with them.
+# and declined for the moment. The gain is real but small for this site's
+# load, and it keeps better than it spends: the next Django upgrade meets a
+# psycopg 3 backend a release more settled. Only tools/compare_schema.py imports
+# psycopg2 directly, so taking psycopg 3 means porting that one script too.
 #
 # Built from source (libpq-dev in the Dockerfile), not psycopg2-binary, which
 # upstream discourages for anything but a quick trial. The old 2.9.9 pin dated
@@ -156,6 +140,13 @@ python-dateutil==2.9.0.post0
 # it waits for its own change rather than riding a dependency bump.
 repoze.timeago==0.5
 requests==2.34.2
+# The root-certificate bundle requests and botocore verify against, in place of
+# the system store; Python's ssl module uses the system store instead. It
+# arrives through requests, and is pinned so a CA Mozilla withdraws stops being
+# trusted when this pin moves, not whenever the resolver next happens to pick a
+# newer one. 2026.10.19 drops emSign ECC Root CA - G3 after the eMudhra key
+# incident; the other three emSign roots stay trusted.
+certifi==2026.10.19
 # core/s3.py, which stores and deletes member photo uploads in S3. This replaces
 # the boto (v2) that was dropped at the Python 3 flip: v2 is Python-2 era and
 # abandoned, and uploading had been failing from production since AWS finished

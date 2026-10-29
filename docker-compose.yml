@@ -1,21 +1,11 @@
 # Dockerized SG101 dev stack -- the Dockerfile's `dev` target.
 #
-# Five services by default:
+# Five services:
 #   web      - Django dev server (the site), published on http://localhost:8000
 #   worker   - Celery worker (background tasks)
 #   beat     - Celery beat (scheduled tasks)
 #   postgres - PostgreSQL 16 (the site's database)
 #   redis    - Redis (Celery broker + "who's online")
-#
-# Plus `db` (MySQL 5.7), which no longer starts on its own: it sits behind the
-# `mysql` profile, because the only thing that still needs it is converting a
-# production snapshot, which reads from MySQL and writes to Postgres -- and then
-# verifying that conversion, since tools/pgloader/verify.py and verify_data.py
-# compare both engines and default MYSQL_HOST to this service. Start it
-# when you need it:
-#     docker compose --profile mysql up
-# Which engine the app talks to is the DB_ENGINE variable (see the `environment:`
-# block on `web`); pointing it back at `mysql` needs that profile too.
 #
 # The web/worker/beat services each build from the SAME ./Dockerfile (as separate
 # images) and bind-mount the repo, so editing code on the Mac is reflected live.
@@ -35,64 +25,25 @@
 # DJANGO_SETTINGS_MODULE) is set inline and consumed by sg101/settings/dev.py.
 
 services:
-  db:
-    image: mysql:5.7
-    # mysql:5.7 ships amd64 only; run it under emulation on Apple Silicon.
-    platform: linux/amd64
-    # Opt-in. The site runs on Postgres now, so this starts only for a snapshot
-    # conversion and its verification (or to point the app back at MySQL):
-    # `--profile mysql`. Keep it: the cutover converts a fresh snapshot, and
-    # verifying that needs this service as the side to compare against.
-    profiles:
-      - mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpw
-      MYSQL_DATABASE: sg101
-      MYSQL_USER: sg101
-      MYSQL_PASSWORD: sg101
-    command:
-      # The production snapshot is utf8 (3-byte), dumped from MySQL 5.5.
-      - --character-set-server=utf8
-      - --collation-server=utf8_general_ci
-      # 5.5-style permissive sql_mode: MySQL 5.7 defaults to STRICT + NO_ZERO_DATE,
-      # which rejects the 0000-00-00 dates the legacy 5.5 dump contains and which
-      # the legacy app relies on. Empty = faithful to the old server.
-      - --sql-mode=
-    volumes:
-      - db_data:/var/lib/mysql
-      # Drop DB snapshots here (git-ignored); load them with the mysql CLI.
-      # See DOCKER.md "Load the production snapshot".
-      - ./snapshots:/snapshots:ro
-    ports:
-      # Exposed on the host so you can connect a GUI/CLI if you like.
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpw"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   postgres:
     # The site's database. 16 is the version the target architecture names, and
     # its support window (Nov 2028) outlasts every remaining rung of the Django
     # ladder: 3.2 needs 9.6+, 5.2 needs 14+, so one server version covers the
-    # whole climb. Unlike mysql:5.7 this image has an arm64 build -- no
-    # emulation on Apple Silicon.
+    # whole climb.
     image: postgres:16
     environment:
       POSTGRES_DB: sg101
       POSTGRES_USER: sg101
       POSTGRES_PASSWORD: sg101
-      # Explicit, because it's the point of the exercise: the cluster is UTF8,
-      # so the 8 latin1 tables in the MySQL snapshot get transcoded on the way
-      # in rather than carried over as mojibake.
+      # Explicit: production's cluster is UTF8, and a dump restores into one
+      # that matches it.
       POSTGRES_INITDB_ARGS: --encoding=UTF8
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Same read-only snapshot mount as `db`, for the conversion.
+      # Read-only, for tools/pg_snapshot.sh, whose restore reads the dump here.
       - ./snapshots:/snapshots:ro
     ports:
-      # 5432 on the host, so you can point a GUI/CLI (or pgloader) at it.
+      # 5432 on the host, so you can point a GUI/CLI at it.
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sg101 -d sg101"]
@@ -120,11 +71,9 @@ services:
     # Docker-topology vars (not secrets): which settings module, which database
     # engine, and where the redis service lives on the Compose network.
     #
-    # DB_ENGINE picks the database: `postgresql` (the default) or `mysql`, which
-    # needs its service started as well:
-    #     DB_ENGINE=mysql docker compose --profile mysql up
-    # Host and port default to whichever service runs that engine, so this is
-    # the only knob; DB_HOST/DB_PORT still override for anything off-Compose.
+    # DB_ENGINE names the database engine; `postgresql` is the only one. Host
+    # and port default to its service; DB_HOST/DB_PORT override for anything
+    # off-Compose.
     environment: &app_env
       DJANGO_SETTINGS_MODULE: sg101.settings.dev
       DB_ENGINE: ${DB_ENGINE:-postgresql}
@@ -135,7 +84,7 @@ services:
     env_file: &app_env_file
       - .env
     # Force sequential A/AAAA DNS lookups. Without this, resolving service names
-    # (db, redis) triggers glibc's parallel IPv4+IPv6 query; Docker's embedded DNS
+    # (postgres, redis) triggers glibc's parallel IPv4+IPv6 query; Docker's embedded DNS
     # answers the A record but not the AAAA, so each lookup blocks the full 5s
     # resolver timeout -> a ~5s stall on EVERY request (fresh DB connect per req).
     dns_opt: &app_dns_opt
@@ -144,9 +93,6 @@ services:
       - .:/app
     ports:
       - "8000:8000"
-    # `db` is deliberately absent: it lives behind the `mysql` profile, and a
-    # dependency on it would drag it into every `up` and make the app wait for a
-    # database it no longer uses.
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,5 +125,4 @@ services:
       - redis
 
 volumes:
-  db_data:
   postgres_data:

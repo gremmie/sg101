@@ -1,7 +1,9 @@
 """
 Views for the gcalendar application.
 """
+from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage
@@ -20,6 +22,30 @@ from gcalendar.forms import EventEntryForm
 from gcalendar.models import Event
 
 
+# The calendars shown on the calendar page, in order. The name is only for
+# whoever edits this list; the embed shows each calendar's own Google title.
+EMBEDDED_CALENDARS = [
+    ('SurfGuitar101', settings.GCAL_CALENDAR_ID, '#1B887A'),
+    ('Various Surf Radio Shows',
+     'qrihvvsqabp3i3uv8gj4i5lfik@group.calendar.google.com', '#AB8B00'),
+    ('The Electric Heaters',
+     '59p0500pnuvles8a0j71prauqg@group.calendar.google.com', '#2952A3'),
+]
+
+
+def _embed_url(tz):
+    """Return the Google Calendar embed URL showing EMBEDDED_CALENDARS in the
+    time zone tz.
+
+    """
+    params = [('showTitle', 0), ('mode', 'AGENDA'), ('height', 640),
+              ('wkst', 1), ('bgcolor', '#FFFFFF')]
+    for _name, calendar_id, color in EMBEDDED_CALENDARS:
+        params += [('src', calendar_id), ('color', color)]
+    params.append(('ctz', tz))
+    return 'https://www.google.com/calendar/embed?' + urlencode(params)
+
+
 def index(request):
     user = request.user
     if user.is_authenticated:
@@ -29,6 +55,7 @@ def index(request):
 
     return render(request, 'gcalendar/index.html', {
         'tz': tz,
+        'embed_url': _embed_url(tz),
         'V3_DESIGN': True,
         })
 

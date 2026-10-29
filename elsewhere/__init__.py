@@ -5,7 +5,8 @@ Vendored from Brian Neal's fork:
 Original upstream (Leah Culver & Chris Drackett; formerly "Django-PSN", created
 for Pownce):
     https://github.com/leah/django-elsewhere
-Neither repository ships an explicit license file.
+Upstream is BSD 3-clause licensed (leah/django-elsewhere@157b8bee); its LICENSE
+is copied alongside this file.
 
 It used to be an editable git dependency. It was vendored into the repo during the
 Python 3 interpreter flip because the fork is tiny, frozen upstream, and needed a
@@ -18,7 +19,10 @@ Changes from upstream:
     + the static/ icons (referenced by SG101's bio/elsewhere_links templates). The
     fork's own views.py, urls.py, and templates/elsewhere/example.html were dropped
     (SG101 provides its own bio views/templates and never wired the app's URLs).
-
-The app has no migrations (unchanged from upstream); like before, Django creates
-its tables via run-syncdb, matching the tables already in the production database.
+  - Migrations, which upstream never had: 0001 describes the tables production
+    already held, 0002 follows the datetime fields' change, 0003 stores each
+    network's slug, and 0004 seeds the networks and messengers -- the 15 social
+    networks members have chosen, not upstream's 57. SG101's profile page
+    (bio/views.py) no longer lets members add a messenger, since every one of
+    those services has shut down.
 """

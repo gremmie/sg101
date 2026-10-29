@@ -2,11 +2,9 @@
 #
 # Take and restore PostgreSQL snapshots of the dev database.
 #
-# The MySQL service is already a fallback of sorts, but restoring from it means
-# a full pgloader conversion and a cross-engine copy that has to get column
-# types, booleans and the timezone seam right by hand. A PostgreSQL dump
-# restores into a target that already has the right types, and the custom format
-# lets you pull back a single table instead of the whole database.
+# A PostgreSQL dump restores into a target that already has the right types,
+# and the custom format lets you pull back a single table instead of the whole
+# database.
 #
 # The search index is deliberately dumped WITHOUT its data. It is two thirds of
 # the database (1.1 GB of 1.7 GB) and it is derived -- `reindex_search` rebuilds
@@ -122,8 +120,7 @@ scratch)
     echo "restored into '$SCRATCH_DB', alongside '$DB_NAME' and untouched by it."
     echo
     echo "To put rows back, copy them between the two databases -- both are in the"
-    echo "same cluster, and piping \\copy keeps every column type intact, which is"
-    echo "the whole reason to come through PostgreSQL rather than the MySQL snapshot:"
+    echo "same cluster, and piping \\copy keeps every column type intact:"
     echo
     echo "  docker compose exec -T $SERVICE sh -c \"psql -U $DB_USER -d $SCRATCH_DB \\"
     echo "    -c \\\\\"\\\\copy (select * from forums_topic where forum_id=3) to stdout\\\\\" | \\"

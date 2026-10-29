@@ -28,9 +28,6 @@ def _suspend_email_uniqueness():
     gone.
 
     """
-    if connection.vendor == 'mysql':
-        return
-
     with connection.cursor() as cursor:
         cursor.execute('DROP INDEX IF EXISTS auth_user_email_lower_uniq')
 

@@ -65,6 +65,8 @@ reading log stops*.
 | 37 | 2026-10-17 | 10-16 (+ Comcast 10-15) | exact at Google (18), Yahoo and AT&T; Comcast files its 10-15 row; all five predictions held |
 | 38 | 2026-10-18 | 10-17 | exact at Google (6 + jaguar 1); Yahoo's only row is a spoof from `209.85.208.101` as `bogotabureau.com`, quarantined: the corpus's fourth quarantined row, the first since 09-30 |
 | 39 | 2026-10-19 | 10-18 | exact at Google (23 + jaguar 2, the Sunday `cron.weekly` mail), Yahoo (4) and AT&T (1); Microsoft's 10-18 not yet filed |
+| 40 | 2026-10-20 | 10-19 (+ Microsoft 10-18) | exact at Google, AOL and Comcast; Microsoft files its 10-18 row; all five predictions held |
+| 41 | 2026-10-21 | 10-20 | **the last reading**: exact at Google (17 + jaguar 1), Yahoo, Comcast and AT&T; the over-long-line DKIM class is zero across all 47 post-cutover reports; the log stops |
 
 **Reading 13 carries two addenda** — Gmail Postmaster Tools read the same
 afternoon, whose compliance panel is a 2026-08-18 snapshot with two of its three
@@ -7563,3 +7565,74 @@ dated 10-19 or 10-20, so no Django error mail sits in Google's count.
    leopard sent them nothing on either UTC day.
 5. **Every report reads `p=quarantine`.** Any non-`none` disposition is on a
    row aligned on neither mechanism.
+
+### Forty-first reading — 2026-10-21, covering 2026-10-20: exact at Google, Yahoo, Comcast and AT&T; the last reading
+
+`tools/dmarc_fetch.py -a <account>` scanned 51 messages: **4 new**, 47 already
+held, no conflicts. **The corpus is 222 reports.** All four are for 10-20:
+Google, Yahoo, Comcast and AT&T. Every report reads `p=quarantine`, and every
+row's disposition is `none`. Read 10-21 ~18:10 UTC.
+
+| Reporter | Window | Source | Msgs | DKIM / SPF | Disposition |
+|---|---|---|---|---|---|
+| `google.com` | 10-20 | `50.31.156.113` → `.126`, eight addresses (Postmark) | **17** | pass / pass | none |
+| `google.com` | 10-20 | `209.85.220.41` (Gmail relay) | 4 | pass / fail (`gmail.com`) | none |
+| `google.com` | 10-20 | `44.202.169.38` (`useast.a.cloudfilter.net`) | 1 | pass / **fail** | none |
+| `google.com` | 10-20 | `173.255.245.115` (jaguar) | **1** | pass / pass | none |
+| `yahoo.com` | 10-20 | `50.31.156.120`, `.124` (Postmark) | **3** | pass / pass | none |
+| `comcast.net` | 10-20 | `50.31.156.115` (Postmark) | **1** | pass / pass | none |
+| `att.net` | 10-20 | `50.31.156.120`, `.124` (Postmark) | **2** | pass / pass | none |
+
+The relay rows are forwards of four of the 17, aligned on DKIM; their first
+hops are among them. The `cloudfilter.net` row is `thegogorillas.com`'s
+forwarder, as in readings 29 to 33, aligned on DKIM.
+
+#### Every row reconciles
+
+| Endpoint | Window | Sender's log | Report |
+|---|---|---|---|
+| Google, Postmark | UTC−7 day, 10-20 07:00 → 10-21 07:00 UTC | leopard `email.log`: 17 `gmail.com` (22:33:28 → 10-21 03:15:20), 0 `muohio.edu` | **17**, exact |
+| Google, forwarders | same | leopard `email.log`: 1 `thegogorillas.com`, 23:49:54 | **1** `cloudfilter.net` row, exact |
+| Google, jaguar | 10-20 02:00 → 10-21 02:00 CDT | jaguar `mail.log`: `E05B65864EC`, the cron mail, 02:01:14 CDT | **1**, exact |
+| Yahoo | UTC day 10-20 | leopard `email.log`: 3 `yahoo.com` (02:28, 22:33, 23:49) | **3**, exact |
+| Comcast | UTC day 10-20 | leopard `email.log`: 1 `comcast.net`, 02:28 | **1**, exact, on time |
+| AT&T | UTC day 10-20 | leopard `email.log`: 2 `att.net` (22:33, 22:35) | **2**, exact |
+
+leopard's `email.log` holds 20 sends on the UTC day 10-20 (19 topic
+notifications, 1 PM notification: 9 `gmail.com`, 3 `yahoo.com`, 2 each
+`att.net`, `hushmail.com`, `msorensen.net`, 1 each `comcast.net`,
+`thegogorillas.com`), and 35 in Google's window, all `outcome=sent`. Every one
+of the window's 17 `gmail.com` sends falls after the fortieth reading was
+taken (22:25): two bursts of topic notifications at 22:33 and 22:35, and the
+rest between 00:17 and 03:15. `sg101.log` holds no `ERROR` or `CRITICAL` line
+dated 10-20 or 10-21, so no Django error mail sits in Google's count.
+
+#### Scoring the fortieth reading's predictions: four held, one falsified by later sends
+
+1. **HELD.** One jaguar message, `E05B65864EC`, the 02:01 CDT cron mail.
+2. **HELD.** 17 = 17 `gmail.com` + 0 `muohio.edu`. No Django error mail.
+3. **HELD.** Yahoo and Comcast both filed for 10-20, each equal to the UTC
+   day's sends. Yahoo's count was 3, not 1: two sends to it came after the
+   reading.
+4. **HELD AT MICROSOFT AND AOL, FALSIFIED AT AT&T.** AT&T filed 10-20 with 2,
+   for the two `att.net` sends at 22:33 and 22:35, after the reading was
+   taken. The prediction's "so far" covered that case, and the report still
+   matches the sender's log exactly.
+5. **HELD.** Every report reads `p=quarantine`, and every disposition is
+   `none`.
+
+#### The log stops here
+
+This is the last reading. The cadence set on 2026-09-05 (weekly, then daily
+across the Step 21 window, then stopped) ends with the two weeks after the
+cutover, so no predictions follow. `tools/dmarc_fetch.py` and
+`tools/dmarc_report.py` stay for spot checks.
+
+**The post-cutover corpus**: 47 reports with windows from 10-08 to 10-20,
+210 rows and 374 messages. **Exactly one row fails DKIM**: Yahoo's 10-17
+spoof from `209.85.208.101` as `bogotabureau.com`, which is also the only
+non-`none` disposition. Every Postmark row and every jaguar row passes DKIM
+and aligns, at every reporter that filed.
+
+How the exit items stand is recorded in `STATUS.md` under *When the reading
+log stops*.

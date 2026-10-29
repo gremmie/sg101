@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-20
+**Last updated:** 2026-10-26
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -43,7 +43,757 @@ When work is committed, the heading is part of the commit.
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
 
-## Step 21 task 10 — the after-cutover watch — IN PROGRESS, started 2026-10-08
+## Step 22 task 04 — the flip — DONE 2026-10-26: `gremmie/sg101` is public, hardened and checked from outside; Step 22 closed, and with it the plan
+
+**Preconditions, read from this file before anything changed:** task 01's
+audit clean (2026-10-23); task 02's decisions carried out, the rewrite
+published and leopard recovered from it (2026-10-25); #30 fixed and deployed
+(2026-10-25); task 03's licence committed (2026-10-25), with
+django-elsewhere's licence copied in by `0d7d2e00` (2026-10-26).
+
+**The last delta scan, with task 01's exact commands, was clean.** Task 01
+scanned through `4460fa68`, which is `97f25146` after the rewrite (the
+commit map in `sg101-evidence/step22-rewrite-2026-10-25/`). The delta is the
+23 commits on any ref that `97f25146` does not contain: the 10 on `main`
+from `473277a7` on, and 13 on the side branches. The rewrite changed those
+13 hashes, so they count as new, though task 01 scanned their content.
+
+- **gitleaks:** 0 findings, 18 commits scanned (it reads no merge diffs; 4 of
+  the 23 are merges).
+- **trufflehog:** 2, both the Lob detector matching
+  `test_delete_post_forbidden_for_anonymous` where task 01's section quotes
+  it, both marked verified again.
+- **Known-value scan (Brian ran it):** on the Mac, 32 values checked; on
+  leopard, in place as before, 37. 0 secret values. Every hit was
+  configuration: `USER_PHOTOS_REGION` and `AWS_DEFAULT_REGION` (region
+  names, `bb2e7806`, 2015) and `CLOUDFLARE_LIST_NAME`, whose value is
+  committed in `fail2ban/cloudflare.env.example` and which matched
+  `plan.md`'s text in `5810caaa`. The keychain items task 01 also checked
+  were not in this run.
+
+**The settings could not come first, as the task file planned.** On a free
+account GitHub refuses every one of them while the repo is private:
+fork-PR approval ("not allowed for private repositories"), rulesets and
+branch protection ("make this repository public"), and secret scanning
+(`security_and_analysis` was `null`). So the order was: Brian approved the
+list, flipped the visibility in the web UI (2026-10-26), and the settings
+went on straight after, with nothing pushed in between. Each was read back:
+
+| setting | value | |
+|---|---|---|
+| secret scanning | enabled | |
+| push protection | enabled | |
+| fork-PR workflow approval | `all_external_contributors` | GitHub's default is first-time contributors only. The first `gh api -f` PUT returned success and changed nothing; a JSON body did |
+| private vulnerability reporting | enabled | added by Brian |
+| ruleset `protect main` (id 25923744) | `main`: no force-push, no deletion; active, no bypass | added by Brian. **A future history rewrite must switch it off first** |
+| Dependabot alerts | off | Brian declined |
+
+Already right for a public repo: `ci.yml` runs on `push` and
+`pull_request` (not `pull_request_target`) and uses no secrets, and the
+default workflow token is read-only and cannot approve PRs.
+
+**Checked from outside, 2026-10-26:**
+- an unauthenticated `git clone https://github.com/gremmie/sg101.git` (no
+  credential helper, empty `HOME`) succeeded, at `0d7d2e00`;
+- the anonymous API reports `public` and `BSD-3-Clause`; the logged-out page
+  returns 200 and its sidebar reads "BSD-3-Clause license";
+- leopard's `git fetch` over the deploy key succeeded. leopard is at
+  `2a4a8324`; task 03's commits reach it with the next `make prod-up`.
+
+**Docs:** neither `AGENTS.md` nor `README.md` described the repo as private,
+so neither changed. `.agents/summary/` is left as its dated snapshot.
+
+**CI:** this commit's push is requirement 6's check. If that run is not
+`success`, this section is wrong.
+
+## Step 22 task 03 — the licence — DONE 2026-10-25: BSD 3-clause kept, copyright 2009-2026 (Brian); every third-party gap decided
+
+**Brian's choice (2026-10-25):** keep the BSD 3-clause `LICENSE` from 2009
+(`7b97ffb3`), and update its copyright line to `2009-2026, Brian G. Neal`.
+Every commit is Brian's, apart from one hg `convert-repo` commit, so the
+choice was his alone to make.
+
+**Made to agree:**
+- `LICENSE`: the copyright line.
+- `sg101/package.json`: `license` changed from `ISC`, npm's default, to
+  `BSD-3-Clause`.
+- `sg101/package-lock.json`: the same change in the root entry, made by hand.
+  The lock file's 12 other `ISC` entries are dependencies' own licences.
+- `implementation/plan.md`: both places that said no `LICENSE` existed
+  (the Step 22 checklist line and its item 2) now carry a dated correction.
+
+There is no `pyproject.toml`, `setup.py` or `setup.cfg`, and the README makes
+no licence statement. `core.functions.copyright_str()` ("Copyright (C)
+2010 – year, SurfGuitar101.com", used in the feeds) is the site's content
+copyright, not the code's licence, and is left as it is.
+
+**The third-party inventory.** These carry their own notice in the tree:
+jQuery 3.7.1, jQuery UI 1.13.3, Blueprint, jPlayer and its add-ons,
+`jquery.cycle`, `jquery.form`, `jquery.jeditable`, markItUp 1.1.14, TinyMCE
+(`license.txt`), the Foundation Icons CSS and fonts, normalize (kept in
+`main.min.css`), and `core/mdexts/urlize.py` (BSD, Rowan Nairn).
+
+The gaps, and Brian's decisions (2026-10-25). Restoring a notice was in this
+task's scope; removing or replacing a library was not:
+
+| item | where | gap | decision |
+|---|---|---|---|
+| django-elsewhere (vendored fork) | `elsewhere/` | **neither the fork nor the upstream ever had a licence**; publishing redistributes it | **licensed, notice added.** Leah Culver agreed to a licence; Brian's [leah/django-elsewhere#5](https://github.com/leah/django-elsewhere/pull/5), BSD 3-clause, was merged 2026-10-26 as `157b8bee`. Its `LICENSE` is copied verbatim to `elsewhere/LICENSE`, and the package docstring points to it. Before that, no licence was in either repo's `setup.py` or README, GitHub detected none, and it is not on PyPI |
+| imagesLoaded (MIT), in use | `static/js/jquery.imagesloaded.min.js` | the minified file has no notice | **notice restored.** The file is byte-identical to upstream's v2.1.1 minified file (v2.1.2's is the same file). Our copy was added 2013-03-10, between v2.1.1 (2012-12-16) and v2.1.2 (2013-05-20). That release's own header was prepended, and the body is unchanged |
+| Foundation 6 (MIT) | compiled into `sg101/static/css/v3/main.min.css` | Foundation's notice is not in the build; its source is in `node_modules`, which is untracked | **notices restored** for Foundation 6.3.1 and Motion UI 1.2.3, both MIT and ZURB's, as `/*!` comments in `scss/main.scss`. The build was reproducible first: a rebuild of the unchanged Sass was byte-identical. After the change, the build differs only by the two notice lines |
+| the smileys | `media/smiley/images/` (89 GIFs) | origin unknown, no notice | **kept as is** (Brian) |
+| FamFamFam Silk (CC BY 2.5) | `static/icons/`: most of its 54 files; `ajax_busy.gif`, three social buttons and `stars/` do not have Silk's names | Silk is attributed on the colophon page; no licence file in the tree; the others' origin is unknown | **kept as is** (Brian) |
+| markItUp, two unused copies | `static/js/markitup/jquery.markitup{,.pack}.js` | `.pack.js` had no notice; neither file was referenced | **removed** (Brian, `1f53fcc2`): `.pack.js` was the served copy until `fa47628b` (2013-09-04) moved the site to 1.1.14, and `jquery.markitup.js` was never referenced by name |
+
+## Issue #30 — hotlink SSRF fixed — DONE 2026-10-25: `6a3494af` + `2a4a8324` (User-Agent), CI green, deployed to leopard; task 04's precondition met
+
+**Deployed 2026-10-25 (Brian, `make prod-up`).** In production:
+- leopard's HEAD is `2a4a8324`.
+- `web`, `worker` and `beat` were recreated and are healthy.
+- The production `web` container has `Refused`, the new User-Agent, and
+  ports `{80, 443}`.
+- The site answers 200.
+
+Brian checked the hotlink dialog in a browser before the merge: it worked.
+GitHub closed #30 from the commit.
+
+**The fix checks every connection where its socket is opened, so redirects and
+DNS rebinding need no separate code.** `core/download.py` gives
+`download_file` its own `requests` session. The adapter's pools use connection
+classes whose `_new_conn` does this before anything is sent:
+1. **Refuses any port but 80 and 443.**
+2. **Looks the name up once** and refuses if **any** address is not global, or
+   is multicast. `is_global` is true of multicast, so that check is made on its
+   own.
+3. **Connects to the checked address.**
+
+Each redirect hop opens its own connection and gets the same check. Hops are
+capped at 5. `trust_env` is off, so a proxy from the environment cannot make
+the connection itself, past the check. The repo sets no proxy or CA-bundle
+variable; the live environment was not read, since auto mode refused it.
+
+A refusal raises `Refused`, a `DownloadError`, and is logged as a warning with
+the reason. The form already gives every `DownloadError` the generic
+"couldn't download" message, so members see nothing that tells a prober which
+internal addresses exist.
+
+**A live check found a bug that 1,510 green tests did not.** The first version
+pinned by setting urllib3's `_dns_host`. `HTTPConnection.host` is a property
+read from it, so TLS verified the certificate against the IP, and every public
+HTTPS image failed with "IP address mismatch". The fix leaves `host` alone and
+opens the socket to the checked address directly, with urllib3's own error
+mapping. A test now asserts `host` is still the name after connecting. It fails
+on the first version.
+
+**Tests:** 15 new, 14 in `core/tests/test_download.py` and 1 in
+`user_photos/tests/test_forms.py`.
+- the address table: refused and allowed addresses
+- a private literal, a name resolving to one, and a name with one internal
+  address among public ones: each refused, with no socket created
+- port 8080 refused with no lookup
+- a public name connecting to exactly the address looked up, which is looked
+  up once
+- `host` unchanged for TLS
+- an environment proxy ignored
+- an unresolvable name failing as an ordinary error
+- the refusal logged
+- through a real loopback server standing in for a public host:
+  - an image served
+  - the `Host` header carrying the name
+  - a redirect to an internal name refused before connecting
+  - the hop limit holding at 5
+- the form's message
+
+The suite and the deprecation gate pass, 1,511 tests each.
+
+**The mutation battery caught 12 of 12:**
+- the port check, the address check, and checking only the first address
+- connecting by name, and rewriting `host` to the IP (the live bug)
+- the multicast exclusion, `trust_env`, the hop limit, and the log line
+- `Refused` as a `DownloadError`
+- each of the two adapter mounts
+
+The file was restored byte-identical. Two pieces of code were removed because
+no mutation of them could fail:
+- an IPv4-mapped unwrap, since Python 3.12.15 already refuses those forms
+- a `gaierror` handler, since urllib3 already maps the lookup error
+
+**The live checks, from the dev container:**
+- **`download_file`:** a public PNG over HTTPS and an HTTP page are fetched.
+  badssl.com's expired certificate and its wrong-host certificate fail for
+  those reasons. Six internal targets are refused: Redis and Postgres by
+  port, loopback, `localhost`, the metadata address, and `web:8000`.
+- **The view,** through the test client: internal targets get the generic
+  message and a logged reason, and a public web page still gets "isn't an
+  image". Bare names (`http://redis/`) are already rejected by Django's
+  `URLField`.
+- **Not yet done:** the browser check. Claude in Chrome was not available in
+  this session.
+- **Wikimedia answers 403 to `requests`' default User-Agent,** with or without
+  the SSRF change. **A separate commit fixes it:** `download_file` now sends
+  `SurfGuitar101/1.0 (+https://surfguitar101.com/)`, and Wikimedia then
+  serves the image (224,566 bytes, live). The stand-in server asserts the
+  header, and removing the line fails that test.
+
+`64:ff9b::/96`, the NAT64 range, counts as global in `ipaddress`. leopard has
+no NAT64, so it is noted rather than special-cased (Brian, 2026-10-25).
+
+## Step 22 task 02 — what else goes public — DONE 2026-10-25: every kind decided (Brian); history rewritten once and published to a new `gremmie/sg101`; the old repo kept private as `gremmie/sg101-private`
+
+**Commit hashes in this file and its archive that were cited before
+2026-10-25 are pre-rewrite.** They resolve only in `gremmie/sg101-private`. To
+translate one, use the old-to-new `commit-map` in Brian's `sg101-evidence`
+(§ *The rewrite, run*).
+
+**Member data that the site never shows is in the tree, and so in history.**
+Three things in the inventory should not be published as they are:
+- **Members' private email addresses:** 31 in `.agents/`. About half are
+  from the duplicate-email audit, each mapped to the accounts sharing it, which
+  links alt accounts. The rest are notification recipients taken from jaguar's
+  mail log.
+- **The wiki archive's edit-logs:** every edit from 2012 to 2017, each with
+  the editor's IP and hostname.
+- **A handful of client IPs.**
+
+Everything else came out publishable by measurement. **Every item in today's
+tree is also in history**, so redacting going forward would hide nothing.
+The choice per kind was to publish it, or to scrub it in one rewrite.
+
+**This section holds counts and decisions only.** The inventory, the
+values and the scrub list are in the session scratchpad and in Brian's hands,
+not in the repo (requirement 5). New records follow the same rule (`AGENTS.md`).
+
+### Method
+
+Measured on `main` @ `285da660` and on `git log --all` (four heads, three tags,
+and `refs/pull/1/head` fetched to `origin/pull/1`). These were searched for
+directly:
+- IPv4 and IPv6 literals, validated with `ipaddress`.
+- Email addresses.
+- Dashed-IP hostnames.
+- The dev database's 15,304 usernames, intersected with the backticked tokens
+  in `.agents/**/*.md`.
+
+Each public IP was classified by `ipaddress`, `apache/cloudflare-ranges.txt`
+and its context. Two counting tools had to be corrected along the way:
+- **`git grep -E` ignores `\b`.** The first infrastructure counts were zeros
+  that were not zeros. They were rerun with `-P`.
+- **The first scrub verifier was case-sensitive.** It passed a rewrite that
+  still held 2 values (146 blob hits), one of them an address the docs
+  capitalize. The scrub and the verifier were made case-insensitive, the
+  verifier was shown failing on the old output, and both were rerun.
+
+### The inventory, and Brian's decisions (2026-10-25)
+
+| kind | measured | decision |
+|---|---|---|
+| members' private emails | 34: 31 in 5 `.agents/` files, 3 only in 2 test files | **scrub** |
+| wiki edit-log addresses | 30 files, 270 lines with IP + hostname | **scrub** (blank both columns) |
+| wiki HTML footers | 58 `title="USER @ HOST[IP]"` across versions, the live wiki's own footer | **scrub** (keep USER) |
+| client IPs: members, wiki editor, attackers | 11; one also in `core/functions.py` and its test | **scrub** |
+| Brian's home and mobile IPs | 4 | **scrub** |
+| bandmates' personal emails | 2 | **scrub**; their band-domain aliases kept |
+| Brian's own addresses | `bgneal@gmail.com` 57 lines, plus 3 others | keep |
+| leopard's origin IP | IPv4 and IPv6, 13 lines in 3 files | **scrub** (the firewall admits only Cloudflare anyway) |
+| donations fixture | 3 rows **from production** (pks, real first names and amounts match the snapshot; last names and emails already fake) | **scrub** the first names |
+| other fixtures (13) | hand-written; user rows have unusable or no passwords and `example.com` addresses | keep |
+| infrastructure IDs | Linode firewall ID, bucket and IAM names, Postmark hosts, `/svr/` paths, `ssh brian@…`, calendar ID and service account, the Access team name; none usable without a credential | keep |
+| abuse analysis | ~100 lines in ~15 files; the mechanisms (fail2ban, honeypot, Turnstile, rate limits, spam phrases) are in tracked code | keep |
+| usernames | 48 backticked (some are common words); public on the site | keep |
+| wiki page bodies | band contact emails, public on the live wiki | keep |
+| other 32-hex values, third-party MTAs, Cloudflare ranges | md5s, DMARC report IDs, an etag, the `rua` mailbox (in DNS) | keep |
+
+The decisions are Brian's. The table's order is not a ranking.
+
+**Branches and tags:**
+
+| ref | what | last commit | unique vs `main` | decision |
+|---|---|---|---|---|
+| `v3-dev` | 2017 V3 forums WIP | 2018-01-07 | 7 | keep |
+| `abandoned-2015` | image-host whitelisting, abandoned | 2015-07-27 | 5 | keep |
+| `multi-upload` | V3 forums step 5 | 2026-10-20 | 1 | keep |
+| `refs/pull/1/head` | the CI-gate proof; GitHub's, undeletable | 2026-08-15 | 1 | not carried over (below) |
+| `rollout`, `pre-step-4-prune`, `cutover-2026-10-07` | all on `main` | — | 0 | keep |
+
+**GitHub issues, Actions, and data files:**
+- **The 32 issues** (#2–#33, 8 comments) contain no IPs, email addresses or
+  attachments. Kept as they are, except as follows.
+- **#30 is an unfixed SSRF**, written up with the fix. **It gets fixed and
+  deployed before task 04's flip** (Brian), so publishing it becomes harmless.
+  The fix is its own task.
+- **Actions:** 366 runs, from 07-15 to 10-23. 10 logs sampled across that
+  range hold only test addresses, `admin@`, the masked runner token and the
+  build-time dummy key. No Actions secret was ever configured or referenced, so
+  no log can hold one. Kept.
+- **No data file was ever committed:** every deleted path is code or config.
+
+### The rewrite — planned and dry-run, not run (requirement 8)
+
+There is one `git filter-repo` invocation, over a fresh mirror clone. A
+path-aware `--file-info-callback` does the scrubs above. A `--message-callback`
+applies the same literal replacement to commit messages, 8 of which carry a
+value. Each value gets its own placeholder: `memberNN@example.com`, or an
+RFC 5737 / RFC 3849 address, valid in its kind so that tests keep working.
+Task 01 chose no rewrite of its own, so this is the only one.
+
+**Dry run, 2026-10-25:**
+- **The `main` diff:** 71 files, 493 lines out and 493 in. Every line is one
+  of 131 email, 60 IP, 270 edit-log, 29 footer or 3 donor replacements, which
+  sum to exactly 493.
+- **The verifier,** over all 16,775 reachable blobs and every commit message:
+  - original: 53 of 53 values, 8 messages, 270 edit-log addresses, 58 footer
+    hosts, 6 donor names
+  - rewritten: **0 on every line**
+- **The rewritten `main`:**
+  - suite: 1496 tests OK
+  - deprecation gate: 1496 tests OK
+
+  The checkout was mounted at `/app` with `docker compose run -v`, and the
+  container saw the rewritten HEAD.
+- **1,190 of 1,809 commits change, from 2012-09-26 on:** the donations fixture
+  and the test addresses date from 2012–13. `rollout` keeps its hash. The other
+  two tags are re-pointed.
+- **SHAs cited in this file before the rewrite are pre-rewrite** (the note
+  under this section's heading).
+
+### Publishing — a new repository (Brian, 2026-10-25)
+
+**A force-push alone is not enough.** `refs/pull/1/head` cannot be deleted by
+the owner, and it still holds the duplicate-email audit with 14 of the
+addresses. Replaced commits also stay fetchable by SHA after a force-push, and
+`.agents/` cites 278 short SHAs.
+
+The two routes were:
+- **force-push, then a GitHub Support purge**
+- **a new repository** (chosen)
+
+**The new repository was chosen** because it never receives the old objects,
+so their absence can be checked from here rather than taken on Support's word,
+and the flip waits on no one.
+
+The steps, in order:
+1. Rename the current repo to `gremmie/sg101-private`. It stays private for
+   good and keeps the original history, PR #1 and the Actions runs.
+2. Create an empty, private `gremmie/sg101`.
+3. Push the rewritten mirror only.
+4. Check that old SHAs are absent from it, and rerun the verifier on a fresh
+   clone. It must read 0 on every line.
+5. Move leopard's read-only deploy key. A key can be on only one repo.
+6. Clone the 15 labels.
+7. Create a placeholder #1, then transfer #2–#33 in order, checking each
+   lands on its old number. 125 citations in `.agents/` and many commit
+   messages depend on the numbers.
+8. leopard: `fetch` and `reset --hard`, which keeps the ignored `.env` and
+   `secrets/` (Brian runs it).
+9. Reset the Mac clone the same way.
+
+**What was measured on the current repo:**
+- one deploy key
+- no webhooks, branch protection, rulesets, Pages, autolinks, secrets or
+  environments
+- 15 labels, 6 of them custom
+- 0 milestones
+
+### The rewrite, run — 2026-10-25 (Brian approved it, then the GitHub steps)
+
+**The rewrite:** run on a fresh mirror of GitHub. The old `main` was the
+commit that added this section's first version.
+- **The verifier,** over 16,780 blobs and every commit message: original
+  53 of 53 values (4,512 blob hits), 8 messages, 270 edit-log addresses,
+  58 footer hosts, 6 donor names; rewritten **0 on every line**.
+- **The `main` diff:** 71 files, 493 lines out and 493 in. The added lines
+  are 131 email, 60 IP, 270 edit-log, 29 footer, 3 donor and **0 other**.
+- **1,191 of 1,810 commits changed.** `rollout` kept its hash.
+- **The rewritten `main`:**
+  - suite: 1496 tests OK
+  - deprecation gate: 1496 tests OK
+
+  The container saw the rewritten HEAD.
+- **The `commit-map`** (1,810 rows) is kept, with the scrub list, the callbacks
+  and the verifier, in `sg101-evidence/step22-rewrite-2026-10-25/` (mode 600).
+  None of these is in the repo.
+
+**Publishing:**
+
+| step | result |
+|---|---|
+| rename | `gremmie/sg101` → `gremmie/sg101-private`, still private; it keeps PR #1 and the Actions runs |
+| create | a new private `gremmie/sg101` (its own repo ID), Projects and wiki off, created straight after the rename |
+| push | `git push --mirror` from the rewritten mirror, with `refs/pull/1/head` deleted first: 4 heads and 3 tags; `main` is the default |
+| absence | 5 old commits (the old `main`, PR #1's, `multi-upload`'s, `pre-step-4-prune`'s, and one 40 back on `main`) **cannot be fetched by SHA**; the control, a new commit, can. A fresh clone from GitHub verifies 0 on every line |
+| deploy key | `leopard (read-only)` deleted from the private repo and the same key added read-only to the new one; the private repo now has none |
+| labels | 15 cloned identically; GitHub's default `accessibility` label deleted to match |
+| issues | a placeholder #1 (*Reserved*, closed as not planned), then #2–#33 transferred in order: **32 of 32 identical** on number, title, body, state, labels, assignees and comments |
+
+The issue checker was shown failing on an altered copy of the snapshot. Two
+things it first flagged were GitHub's own doing, so the comparison makes
+allowance for both:
+- **Labels arrive a moment after a transfer returns.** The checker retries
+  before a mismatch counts.
+- **A transfer qualifies a bare `#5` as `gremmie/sg101#5`,** which is the same
+  issue in the new repo, and appends a newline. The checker treats those as
+  equal, and it still fails on a reference changed to another issue.
+
+**No CI ran on the mirror push.** GitHub creates no push events for a push of
+more than three branches or tags. The workflow is active, and the next push
+runs it.
+
+**The clones:**
+- **The Mac clone (Claude):** `fetch --prune --force`, then every head reset
+  to the new refs. The stale `origin/pull/1` was deleted, the reflog expired,
+  and the repo gc'd. The old commits are gone from its object store, the
+  verifier reads 0, and `.env` and `secrets/` are intact.
+- **leopard (Brian):** `fetch`, `reset --hard origin/main`, reflog expired,
+  gc'd.
+  - HEAD is `29e5817e`, level with `origin`, and the tree is clean.
+  - The old commits are gone, and `.env` and `secrets/` are intact.
+  - `fetch` works, which proves the moved key.
+  - The site answers 200, with no rebuild, as planned.
+
+### Closed
+
+- **Requirements 1–8 met.** Requirement 7's only change that keeps history is
+  the `AGENTS.md` rule that `.agents/` never quotes member data (Brian,
+  2026-10-25).
+- **Before task 04:** the #30 fix is deployed. Task 03 is next.
+- **`gremmie/sg101-private` stays private for good.** It holds the
+  unscrubbed history. Never push to the new repo from a clone made before
+  2026-10-25.
+
+## Step 22 task 01 — secret-history audit #2 — DONE 2026-10-23: clean, nothing rotated, no history rewrite (Brian)
+
+**No credential, live or dead, is in the history of any ref GitHub serves.**
+1,808 commits across `main`, `multi-upload`, `v3-dev`, `abandoned-2015`,
+the three tags, and **`refs/pull/1/head`**: a closed PR's commit (`1afd7b59`,
+2026-08-15) on no branch, which GitHub serves and the owner cannot delete. It
+was fetched to `refs/remotes/origin/pull/1` so `--all` reaches it. 550 of the
+commits are from Step 3 (`8f752f16`) on; the task file's 548 was counted
+before `4460fa68` and without `pull/1`.
+
+### The scanners were shown able to fail, and where they cannot
+
+Tools: gitleaks 8.30.1, trufflehog 3.95.9 (Homebrew). A throwaway clone
+with fake credentials committed on a branch cut from `v3-dev`, scanned with
+the exact commands used below:
+
+| planted | gitleaks | trufflehog | known-value scan |
+|---|---|---|---|
+| AWS key pair | `generic-api-key` | AWS | — |
+| PEM private key | `private-key` | PrivateKey | found |
+| UUID token as `EMAIL_HOST_PASSWORD=` (Postmark's shape) | `generic-api-key`, from the key name | **missed** | found |
+| Cloudflare-shaped token | `cloudflare-api-key` | CloudflareApiToken | found |
+| Django `SECRET_KEY` | **missed** | **missed** | found |
+| a value never committed | — | — | 0 hits |
+
+Both reached the side branch, and both delta ranges included it. **The
+first planted run was invalid:** `git add planted_*` did not match
+`planted.env`, so the UUID and Cloudflare rows were "missed" because they
+were never committed. The known-value scan's negative result exposed it; the
+rows above are from the rerun with the file committed.
+
+**So the pattern scanners cannot see this project's commonest secret
+shapes** (Django keys, UUID tokens, random passwords), and the audit rests
+on the known-value scan for those.
+
+### Commands
+
+```
+gitleaks git --log-opts="--all"             -f json -r <out> <repo>
+gitleaks git --log-opts="--all ^8f752f16^"  -f json -r <out> <repo>
+trufflehog git file://<repo> --json --no-update                          # verification on (Brian)
+trufflehog git file://<repo> --json --no-update --since-commit 8f752f16
+git log --all -p --text --format='commit %H' | python3 known_values.py <secret files>
+```
+
+`known_values.py` (stdlib, in the session scratchpad, not committed) reads
+`KEY=value`, JSON (every string field, nested) and PEM files, and searches
+the patch text for each literal value of 8 characters or more, as bytes. It
+prints key names, line counts and commits, never a value. On leopard it ran
+in place (`python3 -c`, the Mac's `git log` on stdin), so leopard's values
+never left it and nothing was written there.
+
+### Results
+
+- **gitleaks:** 8 in full history, 3 in the delta.
+- **trufflehog:** 52 in full history, 50 in the delta. **All 50 delta
+  results are trufflehog's Lob detector matching `test_` method names**
+  (e.g. `def test_delete_post_forbidden_for_anonymous`), and **trufflehog
+  marks all 50 verified**. Its verified flag is not evidence on its own.
+  Verification sent those 50 method names to Lob's API.
+- **Known-value scan, 0 secret values found:**
+  - Mac: `.env`, `secrets/gcal/…json`, `secrets/tls/origin.{key,pem}`, and
+    the old `secrets.json` in `sg101-hg-backup`.
+  - leopard: `.env`, `secrets/{backup,cloudflare,logrotate}.env`, the
+    service account key, and `origin.key`.
+  - `~/.config/sg101-linode-token`, and the keychain's
+    `sg101-linode-firewall` and `dmarc-fetch` items.
+  - Every hit was configuration that is not secret: bucket names, regions,
+    paths, `EMAIL_HOST`, the block list's name, the service account's
+    `client_email` and `project_id`.
+  - Checked and absent: `SECRET_KEY` (both hosts and `secrets.json`),
+    production's `DB_PASSWORD`, the app and backup AWS key pairs, the
+    Turnstile keys, the Postmark SMTP user and password, the Cloudflare token
+    and account ID, both healthchecks.io URLs, the service account's
+    `private_key` and `private_key_id`, the origin key, and `secrets.json`'s
+    reCAPTCHA and calendar OAuth secrets.
+  - Skipped as under 8 characters: names, ports, flags, and the dev stack's
+    5-character Compose `DB_PASSWORD`. Production's is 8 or more and was
+    checked.
+- **Never tracked:** of the 2,954 paths ever added on any ref, none
+  matches `.env`, `secrets/`, `secrets.json`, a key or certificate
+  extension, a service account JSON, an SSH key or `credentials`. The same
+  check finds `planted_key.pem` in the planted clone. The only `*.env*`
+  files ever added are the three `.example`s and `firewall/settings.env`,
+  whose single version (`1080f0cc`) holds no token.
+- **`.gitignore`:** `git check-ignore` covers every secret file on the Mac.
+  On leopard, `git status --ignored` shows only `.env` and `secrets/`, with
+  nothing untracked outside them. `git ls-files -ci` lists only site assets
+  (`media/badges`, `media/smiley/images`, the podcast logo), tracked
+  despite an ignore rule since the hg era. None is a secret.
+
+### Triage — every finding
+
+| finding | where | verdict |
+|---|---|---|
+| `key='0123456789…'` | `accounts/tests/test_views.py`, `20ad77ed` | test fixture |
+| `'sentinel-from-env-12345'` ×2 | `core/tests/test_settings.py`, `8f752f16` | test fixture |
+| Lob ×50, "verified" | 29 test files and `STATUS.md` | false positive: method names |
+| Maps v2 `ABQIAA…` ×3 | `membermap/index.html`, 2009 and 2015 | dead API version; in `v3-dev` and `abandoned-2015` trees |
+| Maps `AIzaSy…` (gitleaks once, trufflehog ×2 as "Gemini", unverified) | `bandmap/bandmap_base.html`, `0b8dfcd3` 2014 | **in `main` and served on the live band map page**: public by design |
+| `GOOGLE_OAUTH_CONSUMER_KEY` | `gpp/settings/base.py`, `311516ca` 2011 | its value is the site's domain; beside it only a filesystem path, no key material |
+
+The last four are audit #1's five, re-read here rather than carried over.
+
+### Brian's decisions, 2026-10-23
+
+- **Rotate nothing, scrub nothing.** No live credential was found, and
+  removing the old Maps keys would rewrite every hash while the live one
+  stays in the tree. Nothing from this task goes into a task 02 rewrite.
+- **The band map's Maps key is restricted** (Brian, Google Cloud console,
+  2026-10-23): HTTP referrers limited to the site, and the API limited to
+  the Maps JavaScript API. The page serves the key publicly regardless of
+  the repo, so the restriction is what protects it.
+- **No `.gitleaks.toml`, no CI scan job.** On a public repo a CI scan fires
+  after the push, when the secret is already published. Task 04's push
+  protection refuses it before publication. The planted test shows any
+  pattern scanner misses the shapes that matter most here.
+
+The raw scanner reports and the planted clone were in the session
+scratchpad and were deleted at the end. The reports held the findings'
+values.
+
+## Step 21 task 11 — decommission jaguar — DONE 2026-10-23: jaguar deleted, its DNS removed, the Global API Key changed, the MySQL chain retired (`7e3a9fe6`) and deployed; Step 21 closed
+
+### The preconditions — both met 2026-10-22
+
+**The cutover tag: `cutover-2026-10-07` on `4a477c6e`**, annotated, pushed
+to GitHub. No tag existed, though task 09 requirement 8 made one a
+precondition. Leopard's HEAD at the S1 pull cannot be read back now (it has
+moved on), but **the code tree can be**: every commit after `4a477c6e` up to
+the freeze (`75624957`, `89a5b754`, `9cbc2ef1`, `3f3b49f6`, `7eb8d3ca`)
+touches only `.agents/`, which `.dockerignore` drops, so the image built for
+the flip was `4a477c6e`'s tree (`git diff 4a477c6e 7eb8d3ca -- . ':!.agents'`
+empty). The tag's tree holds all of `tools/pgloader/`.
+
+**The final snapshot archived** at
+`s3://gremmie-archives/sg101/snapshots/sg10120261007.sql.bz2`, beside a
+`.md5` and a `.sha256`: 100,592,622 bytes, md5
+`e64759f1f3d9d580be1e6e189b61f0c8` (the value C1 recorded), sha256
+`cfa47da6a66fd8d4da08d6d6643fa8aaa7fccef59e7ab37ac0005ddf52cd1704`, version
+`Nx4AwRthhWATurnsG8YW417QGOdIGzLv`, SSE-S3. Downloaded back: both checksums
+and `bzip2 -t` pass. Uploaded with a temporary `sg101-admin` key, removed
+from the Mac afterwards; the key's deletion in IAM is Brian's.
+
+### Requirement 2, D5 — met: no outside delivery since at least 09-20
+
+Read 2026-10-22 ~23:00 UTC on jaguar, `/var/log/mail.log` through
+`mail.log.4.gz` (09-20 onward). **Every `postfix/smtpd ... client=` line
+in all five files is `localhost`** (328, 207, 81, 0, 0 per file, oldest
+first): mail jaguar submitted to itself, the last at the freeze, 10-07
+11:01. None from an outside host, so no inbound delivery to either domain
+for over four weeks against D5's one. Since 10-11: 3,572 connects, 36
+`NOQUEUE: reject`, nothing accepted. jaguar's only outbound was the 02:01
+UTC cron mail to Brian's Gmail, last on 10-22.
+
+### D6, the last log pull — 2026-10-22
+
+`~/workspaces/bgn/sg101-evidence/jaguar-logs-2026-10-22/`, 200 MB, 85
+files: the three directories of the earlier pulls, plus `mail.log`, `.1`
+and `.2.gz` (10-05 06:35 → 10-22 18:02 UTC, D5's record). Listing taken
+first (`source-listing/before.txt`); all 85 present at identical sizes,
+every `.gz` passes `gzip -t`, `MANIFEST.sha256` 85 lines and `shasum -c`
+clean; the manifest's own SHA-256 is
+`d35996a3fc6306fe6c118bedf29bace351d43eb1155b00c8d22aaa742eed1b08`. The
+oldest Apache logs start 08-23, so it overlaps 10-08's pull with no hole.
+jaguar served almost nothing after the flip: the sg101 vhost's current
+`access.log` is empty, the wiki's has 2 lines. **jaguar's Celery worker
+and beat were still running** on the frozen site (`max_users`,
+`process_search_queue_task` every few minutes, the last at 18:45 UTC),
+against its own database and Redis; they stopped with the box.
+
+### Requirement 4, the shutdown — jaguar off 2026-10-22, deleted 2026-10-23
+
+Shut down by Brian after D6. **An image is not possible**: Linode images
+are limited to 6 GB, and jaguar's disk held 16 GB of 95 GB. **Linode makes
+a recovery image when a Linode is deleted**, kept free for as many hours as
+the Linode ran, up to 21 days (Akamai's *Images* doc), but the doc says
+nothing about size. **Tested on bobcat first** (12 GB used, Dallas, also a
+core region), deleted by Brian 2026-10-22 after checking what it still
+held. **Its recovery image was made, and holds the whole disk: 11.93 GB**
+against `df`'s 12 GB used, so the 6 GB limit does not apply to recovery
+images. **It expires 2026-10-29 19:15, seven days after deletion, not
+21**, though bobcat ran for years: the doc's "up to 21 days" is not what
+Linode did. Expect seven days for jaguar's too.
+
+**jaguar deleted by Brian 2026-10-23 ~01:00 UTC**, its recovery image
+being created at the time. At 01:07 UTC ssh to it timed out. Its address's
+PTR still read `mail.surfguitar101.com`: that is Linode's record, which goes
+when the address is reassigned, and with the `mail` A record gone it no
+longer forward-confirms.
+
+**jaguar's recovery image: 15.86 GB, expiring 2026-10-29 20:06** as the
+dashboard shows it (Brian). The size matches `df`'s 16 GB used, so it is the
+whole disk. Read as Central time that is 10-30 01:06 UTC, seven days after
+the deletion, as bobcat's was. Requirement 4 met: jaguar is recoverable until
+then, and nothing on it is needed that is not already archived. bobcat's jaguar cron
+(`backup_jaguar_cron.bash`) was already commented out before it went.
+
+### Requirement 3, DNS — no record resolves to jaguar or bobcat (2026-10-22)
+
+Read through the API with a short-lived read-only token (Zone:DNS:Read,
+Zone:Read, all six zones; deleted afterwards), before and after Brian's
+changes:
+
+| zone | record | before | after |
+|---|---|---|---|
+| `surfguitar101.com` | apex SPF | `v=spf1 ip4:173.255.245.115 include:_spf.mx.cloudflare.net -all` | `v=spf1 include:_spf.mx.cloudflare.net -all` |
+| | `mail` A, and its SPF TXT | `173.255.245.115`; `v=spf1 ip4:173.255.245.115 -all` | deleted |
+| | `dkim._domainkey` | jaguar's opendkim key | deleted |
+| | `wiki` A, proxied | `173.255.245.115` | `192.0.2.1` (documentation address; the C6 redirect needs only a proxied record) |
+| | apex NS ×5 | `ns1`–`ns5.linode.com` | deleted |
+| `themadeira.net` | `dkim._domainkey` | jaguar's opendkim key | deleted |
+| `gremmielabs.dev` | A ×4 (`@`, `www`, `dev`, `mail`), MX, SPF, `dkim`, NS ×5 | all bobcat, `198.58.104.73` | deleted; now `MX .`, `v=spf1 -all`, `_dmarc` `p=reject`, as bravenewsurf.com |
+
+**Already gone before the read:** `irc.surfguitar101.com` (D8) and every
+`_dc-mx` record. After: no record in any zone holds jaguar's or bobcat's
+IPv4 or IPv6; the apex SPF reads the same at `ada.ns.cloudflare.com`,
+1.1.1.1 and 8.8.8.8; `wiki.surfguitar101.com/FrontPage` answers `301` to
+`https://surfguitar101.com/`. **Kept:** `themadeira.net._report._dmarc`
+`v=DMARC1`, the RFC 7489 §7.1 authorization for madeira's `rua=` to
+`admin@surfguitar101.com`.
+
+**Also removed:** an unused Cloudflare user API token created 2026-08-20,
+probably for Cloudflare's help agent (Brian, deleted 2026-10-22).
+
+### Requirements 5 and 6 — the Global API Key changed, the block list read (2026-10-23)
+
+**The Global API Key changed by Brian** (the dashboard says "Change", not
+"Roll"), after jaguar's deletion, so the copy in jaguar's fail2ban action is
+dead; until about 10-30 it exists only inside the recovery image. **Criterion
+3's first half is untested**: no copy of the old key survives off jaguar to
+try against the API, so the evidence is Cloudflare's change, not a refusal.
+**The scoped token still works**: `tools/cloudflare_block_list.py show` on
+leopard, ~01:15 UTC, read the list without error.
+
+**The last read of `block_list`: 4 items, nothing to remove.** They are the
+four live `sg101-reg` bans task 10's clear left on 10-21
+(`192.0.2.4`, `192.0.2.5`, `192.0.2.6`, `192.0.2.7`,
+all re-dated 10-21 13:56 by fail2ban's restart). jaguar added no entry
+after task 10's clear.
+
+### Requirements 7 and 8, the MySQL chain removed — 2026-10-23, branch `retire-mysql-chain`
+
+**Removed, each checked against the tree first:** `mysqlclient` and its
+keep-this comment (`requirements.txt`); `default-libmysqlclient-dev`,
+`default-mysql-client`, `pkg-config` and their comment (`Dockerfile`); the
+`db` service, the `mysql` profile and the `db_data` volume
+(`docker-compose.yml`); `verify.py`, `verify_data.py`, `convert.sh`,
+`sg101.load`; DOCKER.md §6 and §7. `crosscheck_dumpdata.sh` was already gone
+(`be228a74`).
+
+**Beyond the task's list (Brian, 2026-10-23, each on the recommendation):**
+
+1. **The engine switch.** `databases.py` still offered `mysql`, and
+   **`dev.py`'s default engine was MySQL**: `from_env()` defaulted to it, and
+   only compose's `DB_ENGINE=postgresql` hid that. The entry is gone and the
+   default is `postgresql`; `DB_ENGINE` stays, with one value, so nothing
+   deployed changes. Two tests in `DeployedBackendsTests`, written first and
+   seen to fail against the old code (dev read `django.db.backends.mysql`;
+   `for_engine('mysql')` was accepted). Mutations: the `mysql` entry restored
+   → only `test_mysql_is_not_an_engine` fails; a second engine made the
+   default → only `test_both_deployments_default_to_postgresql` fails (dev);
+   restored file byte-identical, green.
+2. **`post_convert.py` and `pattern_ops_indexes.sql` deleted**: they only act
+   after a pgloader run.
+3. **`compare_schema.py` and `smoke.py` kept, moved to `tools/`** (the latter
+   as `tools/site_smoke.py`, beside `image_smoke.py` and `email_smoke.py`),
+   docstrings reframed for a restored database, project-root path fixed. Run
+   from the new paths on the dev stack: `compare_schema.py` OK (533 columns,
+   88 foreign keys, 23 UNIQUEs enforced by an index, 1 accepted index);
+   `site_smoke.py` 36 checks, reads and writes, scratch user removed.
+4. **DOCKER.md §4 rewritten** as restoring a PostgreSQL dump (a nightly
+   backup copied from the dumps bucket, then `pg_snapshot.sh restore`,
+   `rebuild_redis`, `reindex_search`, `reconcile_search`); a *Checking a
+   restored database* subsection for the two tools; sections renumbered
+   (§8 → §6, §9 → §7, §10 → §8) and every internal reference and
+   `tools/image_smoke.py`'s fixed. References in `.agents/` keep the numbers
+   they had when written. **The bucket-to-`snapshots/` copy was not
+   exercised**: it needs an administrative AWS key.
+5. **`tools/pgloader/logs/` moved** to
+   `~/workspaces/bgn/sg101-evidence/pgloader-logs/` (50 files, 19 MB,
+   `MANIFEST.sha256`, identical by checksum), the cutover's own
+   `convert-20261007-140527.log` among them.
+
+Also: the two dead `connection.vendor == 'mysql'` guards in the accounts and
+bio tests; `.env.example`, `.gitignore`, `dev.py`, `pg_snapshot.sh`; the
+psycopg2 comment in `requirements.txt`, which leaned on three pgloader
+scripts and now names `tools/compare_schema.py`, the one direct importer;
+`AGENTS.md`'s line that jaguar is "due to be decommissioned".
+
+**Verified:** `docker compose config` valid, and `--profile mysql` lists no
+`db`; prod and dev targets build; in the prod image no `mysqlclient`, no
+`MySQLdb`, no `mysql` CLI, no `tools/pgloader`. **Six MySQL packages remain
+in the image, all from the `python:3.12` base itself** (Debian's full build
+image ships `default-libmysqlclient-dev`, `libmariadb*`, `mysql-common`);
+going to `python:3.12-slim` would drop them, and is its own change. Suite
+1,496 tests OK, 63 s; the deprecation gate, a separate run, 1,496 OK. `git
+grep -i mysql` outside `.agents/` leaves comments explaining behaviour MySQL
+caused, migrations' `vendor == 'mysql'` branches (history), the new tests,
+the colophon fixture's 2009 library credits, and `.hgignore`.
+
+### Closed — 2026-10-23
+
+**Merged and deployed.** `retire-mysql-chain` fast-forwarded into `main` at
+`7e3a9fe6` (CI green on the branch and on `main`), then `fabfile.py` and
+`tools/xapian_installer.sh` removed on their own, `b4ec71bb` (CI green).
+Brian deployed to leopard with `make prod-up` (no migrations); checked over
+ssh ~03:13 UTC: HEAD `b4ec71bb`, `web`/`worker`/`beat` restarted and
+healthy, no `mysqlclient`, `tools/pgloader` or `fabfile.py` in the running
+image, the site answering 200. The worker connected and reported `ready`
+with its tasks registered; **a task completing after the deploy was not
+seen**, as none had been queued in the minutes read. The branch deleted
+locally and on GitHub. The local `mysql:5.7` and `dimitri/pgloader` images
+and the `sg101_db_data` volume removed (Brian).
+
+**All nine requirements met**, with one gap stated where it arises: criterion
+3's old key could not be tried, since its only copy was on jaguar.
+**Requirement 9:** `plan.md`'s Step 21 box ticked in the same commit as this
+section, both dated 2026-10-23. **Step 21 is closed**; Step 22 (opening the
+repository) is the plan's last.
+
+### Follow-ups, not task 11's (Brian, 2026-10-22)
+
+- **SG101's `p=reject` decision**, open since the DMARC readings ("no
+  longer blocked, and not decided"). Revisit mid-November, with about four
+  weeks of reports after jaguar's SPF entry went. Until then the `rua=`
+  copy to `admin@surfguitar101.com` stays; after it, the email copy can go
+  and Cloudflare's DMARC Management keeps the reports.
+- **themadeira.net's DMARC tightened**: it sends no mail, so its reports can
+  only show forgery or forwarding. Publish `p=reject; sp=reject; adkim=s;
+  aspf=s` with no `rua`, as bravenewsurf.com, and delete
+  `themadeira.net._report._dmarc.surfguitar101.com` with it.
+
+## Step 21 task 10 — the after-cutover watch — DONE 2026-10-21, requirements 1–7 met; requirement 8 open, revisit 2027-01-08
 
 ### The daily watch — one line a day (requirement 2's list)
 
@@ -62,6 +812,47 @@ When work is committed, the heading is part of the commit.
 | 10-18 (read 10-18 ~21:40 UTC) | 38th reading (10-17 window): Postmark exact at Google (6 on UTC−7, all `gmail.com`); jaguar 1, the cron mail; **Yahoo's only row is a spoof**, 1 message from `209.85.208.101` authenticated as `bogotabureau.com`, aligned on neither mechanism, **quarantined**: the corpus's fourth quarantined row, the first since Google's 09-30 (`research/dmarc-readings.md`); no Postmark row at Yahoo, and no send to it; four predictions held, the fifth on the count | 366 sent 10-07→18, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **72**, unchanged (`tools/cloudflare_block_list.py show` on leopard); newest still `192.0.2.7` at 10-17 14:48. The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:30:56 (`systemctl show`); healthchecks.io not checked | 587 MiB; five workers 126–149 MB RSS at 24 h 56 min: **reset by the step 3 deploy**, `web` started 10-17 20:45:32 UTC (575 MiB at 2 d 14 h before it); no `WORKER TIMEOUT`, 5 worker boots, all at start; no `ERROR` or `CRITICAL` in `sg101.log` 10-17 or 10-18 | 11 sends on the UTC day 10-17, 19 on 10-18 to 20:59, all `sent`. **21 `5xx` on 10-17, all the deploy**: 14 `503` and 7 `502` between 20:40 and 20:49, Apache's `Connection refused` to `web:8000` at 20:45:32; 0 `5xx` on 10-18. **Traffic up**: all requests 215,447 on 10-17 (6,635–13,671 an hour), 282,651 on 10-18 to 21:41 (to 15,309 an hour; 179,954 for all of 10-16). From 10-16 to 10-18, `Chrome/146` macOS 13,593 → 62,885 from about the same addresses (7,488 → 8,677), `Chrome/155` Linux 2,861 → 32,271 across 11,354 addresses, and undeclared bots 39,523 → 69,507 from ~970 addresses; no-referrer `/forums/post/` flat, 57,895 on 10-17 (45,375 addresses) and 67,163 on 10-18 (49,394). User CPU 10-17 7.74%, 10-18 9.65% to 21:40; one-minute load averaged 0.38 and 0.53 (`sar -q`) |
 | 10-19 (read 10-19 ~23:50 UTC) | 39th reading (10-18 window): every row `none`; Postmark exact at Google (23 on UTC−7, all `gmail.com`), Yahoo (4) and AT&T (1); 1 `209.85.220.41` relay row, first hop among the 23; no forwarder row; jaguar 2, the cron mail and the Sunday `cron.weekly` mail; **Microsoft's 10-18 not yet filed** (3 sends); four predictions held, one pending | 394 sent 10-07→19, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **73**, up 1 from 72 (`tools/cloudflare_block_list.py show` on leopard): `192.0.2.6` at 10-18 22:43, the same shape as 10-17's `192.0.2.7` from the same /24: one registration POST that filled the honeypot, failed the question and sent no Turnstile token (`auth.log`, 22:43:00). The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:31:12 (`systemctl show`); healthchecks.io not checked | 607 MiB; five workers 131–154 MB RSS at 2 d 3 h 5 min (started 10-17 20:45:32 UTC, the step 3 deploy; 587 MiB at 24 h 56 min); no `WORKER TIMEOUT` and no worker booted since 10-18 00:00; no `ERROR` or `CRITICAL` in `sg101.log` 10-18 or 10-19 | 19 sends on the UTC day 10-18, all topic notifications; 28 on 10-19 to 23:50 (26 topic notifications, 2 registration), all `sent`; one registration confirmed 10-19. All requests 300,331 for all of 10-18 (8,148–15,309 an hour), 179,638 on 10-19 to 23:49 (5,713–8,917 in each full hour); 0 `5xx` either day. **10-18's rise is subsiding**: `Chrome/146` macOS 64,615 on 10-18 (9,658 addresses) → 16,159 on 10-19 (8,932), and `Chrome/155` Linux 32,396 (11,383 addresses) → 147; no-referrer `/forums/post/` 71,872 (53,280 addresses) → 46,840 (39,691). User CPU 10-18 9.40%, 10-19 7.11% to 23:49; one-minute load averaged 0.51 and 0.35 (`sar -q`) |
 | 10-20 (read 10-20 ~22:25 UTC) | 40th reading (10-19 window): every row `none`; Postmark exact at Google (6 on UTC−7, all `gmail.com`), AOL (2) and Comcast (2, on time); no relay or forwarder row; jaguar 1, the cron mail; **Microsoft's 10-18 filed, 3 = 3**; all five predictions held | 399 sent 10-07→20, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **74**, up 1 from 73 (`tools/cloudflare_block_list.py show` on leopard): `192.0.2.5` at 10-20 20:48, the same shape as the two before it but from a different /16: one registration POST that filled the honeypot, failed the question and sent no Turnstile token (`auth.log`, 20:48:32). Turnstile-only failures, which are most of `auth.log`'s registration lines, ban nothing. The 71 stranded entries unchanged; `blocklist-clear days=14` after 10-21 12:49 UTC | 04:30 UTC run `Result=success`, exit 0 at 04:31:13 (`systemctl show`); healthchecks.io not checked | 550 MiB; five workers 130–135 MB RSS at 21 h 24 min: **reset by the step 4 deploy** (`0fdcd154`), `web` started 10-20 00:58:42 UTC (607 MiB at 2 d 3 h before it); no `WORKER TIMEOUT` since 10-19 00:00, no worker booted since the deploy; no `ERROR` or `CRITICAL` in `sg101.log` 10-19 or 10-20 | 28 sends on the UTC day 10-19, 5 on 10-20 to 22:22, all `sent`. **No mail after 02:50:57 UTC: quiet, not a fault**: the four posts since (17:55, 20:47, 20:53, 22:17) are on topics with no other subscriber. All requests 180,653 for all of 10-19, 155,645 on 10-20 to ~22:20 (5,219–9,059 in each full hour); **1 `503` at 00:58, the deploy**, otherwise 0 `5xx` either day. `Chrome/146` macOS 16,240 on 10-19 (8,976 addresses) → 11,151 on 10-20 (6,188); no-referrer `/forums/post/` 32,702 on 10-20 (27,103 addresses). User CPU 10-19 7.12%, 10-20 6.87% to 22:20; one-minute load averaged 0.35 and 0.37 (`sar -q`) |
+| 10-21 (read 10-21 ~18:10 UTC) | **41st and last reading** (10-20 window): every row `none`; Postmark exact at Google (17 on UTC−7, all `gmail.com`), Yahoo (3), Comcast (1, on time) and AT&T (2); 4 `209.85.220.41` relay rows, first hops among the 17; 1 `cloudfilter.net` row = 1 `thegogorillas.com` send; jaguar 1, the cron mail; four predictions held, AT&T's "nothing" falsified by two sends after the reading, 2 = 2. **The log stops** (below) | 438 sent 10-07→21, **0 bounced, 0 complaints**, 0 inactive; all-time bounce still the one `SMTPApiError`, not inactive (API `stats/outbound`, `deliverystats`, `bounces`) | **75**, up 1 from 74: `192.0.2.4`, honeypot at 10-21 00:05:13 (`auth.log`), the same /16 as 10-20's. **All four `sg101-reg` entries are re-dated 10-21 13:56**: fail2ban restarted at 13:56:14 during the Docker upgrade (notes) and re-added its live bans. **Requirement 4a done**: `make blocklist-clear days=14` at 18:09 UTC, `removed 71 of 75`, **4 left**, the four live `sg101-reg` bans | 04:30 UTC run `Result=success`, exit 0 at 04:31:10 (`systemctl show`); healthchecks.io not checked | 472 MiB; five workers 115–116 MB RSS at 3 min: **reset twice today**, by the Docker upgrade at 13:55 and by the `2ea9900d` certifi deploy, `web` started 18:03:27 UTC. Neither earlier container's memory was read. **`WORKER TIMEOUT` not readable from 10-20 22:25 to 18:03**: the deploy replaced the container whose logs held it, but `access.log` has no `502` outside the two restarts. No `ERROR` or `CRITICAL` in `sg101.log` 10-20 or 10-21 | 20 sends on the UTC day 10-20, 24 on 10-21 to 15:42:57 (16 topic, 6 PM, 2 registration), all `sent`. **Two restarts, both Brian's**: an `apt-get upgrade` at 13:55:11 took containerd, `docker-ce-cli` and `docker-compose-plugin` forward, and Docker restarted every container (2 `503` at 13:55:40–41, Apache's `Connection refused` to `web:8000`). Then **the certifi deploy** at 18:03 (2 `502` and 3 `503`, 18:03:17–19), verified in `web`: pip 26.2.2, certifi 2026.10.19, `ca-certificates 20250419+deb13u1`, emSign ECC Root CA - G3 gone. The host's own `ca-certificates` went to `20260816ubuntu0.26.04.1` at 06:11 (unattended-upgrades). All requests 164,176 for all of 10-20 (5,148–9,059 an hour), 105,580 on 10-21 to ~18:06 (5,404–6,512 in each full hour); 1 `5xx` on 10-20, the 00:58 deploy. `Chrome/146` macOS 11,594 on 10-20 (6,435 addresses) → 5,241 on 10-21 (2,935); no-referrer `/forums/post/` 34,032 (28,139) → 16,901 (12,863). User CPU 10-20 6.82%, 10-21 6.23% to 18:06; one-minute load averaged 0.35 and 0.31 (`sar -q`) |
+
+### The two weeks end — 2026-10-21
+
+**Fourteen rows, 10-08 to 10-21**, so criterion 2 is met: bounces, DMARC,
+the block list and `web`'s memory each have fourteen readings.
+
+- **Bounces (requirement 2):** 438 sent and **0 bounced, 0 complaints** in
+  two weeks. The 11.9% of notification mail bound for dormant accounts
+  produced no hard bounce. The only all-time bounce is the 10-03
+  `SMTPApiError`, before the flip.
+- **DMARC (requirement 3):** read daily from the 28th reading to the 41st, then
+  stopped as the log's cadence says. Every Postmark and jaguar row passed;
+  see *When the reading log stops*.
+- **Block list (criterion 3, requirement 4a):** 84 at the start, almost all
+  of them `wiki-abuse` entries jaguar stranded; 4 after the clear, exactly
+  fail2ban's live bans. The size now tracks active bans.
+- **`web`'s memory (requirement 4b):** no growth to act on, so no
+  `--max-requests`. Readings stayed between 472 and 607 MiB after the first
+  day's 691 MiB. **The limit of the reading is the horizon**: deploys reset
+  the workers every one to three days, and the longest uninterrupted run
+  read was 2 d 20 h (565 MiB, 10-13). Growth over a week or more is not
+  measured.
+
+**What the watch does not close in task 10:**
+
+- **Requirement 7: done 2026-10-21**, § *Requirement 7* below.
+- **Requirement 8: open, revisit 2027-01-08**, three full months after the
+  cutover. Step 17's after-measurement repeats § *Step 17 — the spam
+  baseline, read from the database* for the months since 10-08: profiles
+  with `status = STA_SPAMMER` (4, `bio/models.py`), counted by month of
+  `status_date` and of `User.date_joined`, against all registrations by
+  `date_joined`. The before is ~1.4–1.6 a month (2026-01 → 07: 1, 2, 1, 3,
+  2, 1, 1). Two caveats from that section govern the reading. **The newest
+  months understate**, because an account is flagged some time after it
+  registers. **The 2025-07 cliff had no identified cause**, so a quiet after
+  does not show the layers work, and a rise does not show they fail. If
+  three months cannot tell the two apart, extend to six (2027-04-08) rather
+  than force a verdict. `turnstile.log` and `auth.log`'s refusals are the
+  direct instrument for what the layers stop; Step 17's plan named
+  `grep Turnstile turnstile.log*` as its after.
 
 **Postmark's one all-time bounce is typed "SMTP API error"**: by its type
 probably the beta's `no_reply@beta…` sender refused with a `400` on 10-03
@@ -307,6 +1098,101 @@ retyped every time, four of them decisions already recorded here. Now:
 - **Against Linode (Brian, 2026-10-10):** the token is stored in the keychain,
   and a bare `make firewall-check` passed, so the live rules still match the
   plan.
+
+### Requirement 1, every mail path at two receivers — DONE 2026-10-21, from the receivers' own DMARC reports
+
+D3's live pass (10-07 20:21 UTC, § *S3, after*) sent every path to a Gmail
+and an Outlook address of Brian's: 11 messages to each, the ten paths plus the
+smoke run's Django error mail. Brian read `Authentication-Results` for one
+message at each receiver; both passed.
+
+**The rest are settled by each receiver's aggregate report for 10-07, not by
+headers.** A report row is the receiver's own SPF, DKIM and alignment verdict,
+the same evaluation the header records. It covers every message, though it
+cannot say which path a message was:
+
+- **Outlook: all 11 pass.** Microsoft's 10-07 report (Report-ID
+  `e8140ccaf62b45dc88994e9cfaa1a795`) holds 12 messages, every one from
+  Postmark, `dkim:surfguitar101.com=pass`, `spf:pm-bounces.surfguitar101.com=pass`,
+  disposition `none`. The twenty-ninth reading accounts for all 12 against
+  Postmark's own record: the smoke run's 11, with the password reset received
+  twice after a timed-out first attempt. Microsoft received nothing else from
+  the site that day, so every row is a smoke message.
+- **Gmail: all 11 pass.** Google's 10-07 report (Report-ID
+  `641366756687206067`, UTC−7 day) holds 23 direct Postmark messages, every
+  one passing both and aligned. The twenty-eighth reading reconciles the 23
+  exactly with leopard's sends, and they include the smoke run's 10 live
+  paths and its error mail. The report's other non-jaguar rows are forwards
+  (Gmail relay, `cloudfilter.net`), aligned on DKIM.
+
+**Criterion 1 is met**: on every path, at both receivers, DKIM passes for
+`surfguitar101.com` and SPF passes, aligned through
+`pm-bounces.surfguitar101.com`. Placement is a separate matter from
+authentication: Gmail put 11 of 11 in the Inbox, and Outlook put 10 in the
+Inbox and the smoke admin notification in Junk on content (SCL 5,
+`SpamFilterAuthJ`). Admin mail reaches admins only.
+
+### Requirement 5, the backups — DONE 2026-10-21: both buckets listed, no alarm
+
+The buckets were listed from leopard at ~18:30 UTC with the job's own
+credential (`docker compose … --profile backup run --rm --no-deps
+--entrypoint sh backup`, then `aws s3 ls --recursive --summarize`). That
+credential has `s3:ListBucket`, so no other key was needed.
+
+- **Dumps bucket: every night since the cutover is there.** Fourteen dumps,
+  `sg101-20261008T043024Z.dump` to `sg101-20261021T043038Z.dump`, one per
+  night with none missing, each uploaded 04:30:29 → 04:31:04 UTC. They grow
+  steadily, from 119,880,031 to 119,958,679 bytes. The two before the flip,
+  10-06 and 10-07, are byte-identical (119,826,080), as a frozen database
+  should be. 28 objects in all; the older ones are pre-cutover runs, which
+  `lifecycle-db.json` expires at 90 days.
+- **Media bucket: the live tree plus two objects.** 15,064 objects and
+  4,939,809,185 bytes, against 15,062 files and 4,939,802,508 bytes under
+  `/svr/sg101/media`. The two extra objects are avatars (3,302 and 3,375
+  bytes), which account for the 6,677-byte difference exactly. They are
+  files the site has deleted since an earlier sync. `backup.sh` syncs
+  without `--delete`, so the bucket keeps them, as intended. No local file
+  is missing from the bucket.
+- **No alarm fired**: healthchecks.io green throughout, no alert since 10-08
+  (Brian, 2026-10-21). The journal agrees: every daily row records
+  `Result=success`, exit 0.
+
+### Requirement 7, the documentation — DONE 2026-10-21: the summary regenerated, `AGENTS.md` reviewed
+
+**`.agents/summary/` regenerated** with `/agent-sops:codebase-summary`
+(`consolidate=false`), all nine files. The 2026-08-27 generation described a
+codebase that had not been deployed: Apache + `mod_wsgi`, CI on `modernize`
+only, `local.py`/`docker.py` settings, the `wiki` and `tagging` apps, a
+multi-stage registration without Turnstile. `review_notes.md` lists each claim
+dropped and each one re-verified. **Criterion 4 is met**: neither the summary
+nor `AGENTS.md` describes jaguar, `mod_wsgi` or MySQL as current. Each names
+jaguar only as the old host.
+
+**`AGENTS.md` reviewed against it; four corrections:**
+
+1. **"`core` imports nothing else in the repo" was false, and always had
+   been.** `core/markup.py` imports `smiley` (since 2015), `core/tasks.py`
+   imports `accounts` inside a function, and `templatetags/core_tags.py` and
+   `custom_admin_tags.py` import models from seven apps. All four were present
+   on 2026-08-27, when both documents called `core` import-free. What holds is
+   narrower: `core`'s library modules import no app. Both documents now say
+   that.
+2. **The log-retention line was jaguar's.** On leopard `sg101.log` is 100 KB ×
+   10 under the host's logrotate, which production fills in about three weeks
+   (oldest line 2026-09-27, read 10-21). `auth.log` is 2 MB × 12, not × 5.
+3. **Two page designs coexist**, which neither document said: 56 templates
+   extend `v3/base.html`, and 26 still extend the old `base.html` (the forums,
+   the shoutbox, `ygroup`, the flatpage template). The forums are not on the
+   post box yet, though a commit subject reads as if every form moved.
+4. **Neither `make prod-up` nor `make prod-deploy` pulls the base image**,
+   which today's certifi deploy needed.
+
+The snapshot date in `AGENTS.md`'s opening paragraph is now 2026-10-21. Its
+Custom Instructions section is unchanged.
+
+**Left out, on purpose:** `README.md`'s Deployment section still says
+deploying "has not happened yet". It is user-facing prose rather than agent
+orientation, so it needs its own edit (`review_notes.md`, recommendation 1).
 
 ### Requirement 6, the apex SPF — DONE 2026-10-09: the shared `/64` removed
 
@@ -9849,6 +10735,30 @@ because the apex record authorizes jaguar's whole Linode /64. There's no DNS
 change before the cutover; the reading has the evidence and a reopen trigger.
 The first `disposition=quarantine` rows also appeared: three spoofs from
 `119.59.99.226`.
+
+**STOPPED 2026-10-21 by the forty-first reading**, on schedule, two weeks
+after the cutover. 222 reports in the corpus. The post-cutover part is 47
+reports with windows from 10-08 to 10-20, 374 messages, and exactly one DKIM
+failure: Yahoo's 10-17 spoof as `bogotabureau.com`, the only non-`none`
+disposition. How the four items end:
+
+1. **The over-long-line DKIM class: zero after the cutover**, as predicted.
+   No Postmark or jaguar row in the 47 reports fails DKIM. The class was
+   intermittent before (silent 09-06 → 09-18, back on 09-19), so thirteen
+   clean windows agree with the cause, Postfix wrapping after signing, being
+   off the path, without proving it alone. Site mail no longer passes through
+   Postfix at all.
+2. **`p=reject`: no longer blocked, and not decided here.** The deploy has
+   happened and the new signer is measured. In the post-cutover corpus,
+   `reject` would have changed exactly one row, the spoof. Every forwarded
+   row (Gmail relay, `cloudfilter.net`) failed SPF but aligned on DKIM, so
+   `reject` would not have dropped any of them. The decision is Brian's.
+3. **Postmark as a reporting source:** closed 10-05. Since the flip its rows
+   have matched leopard's `email.log` at every reporter, and the one
+   mismatch was explained: Microsoft's 10-07 12 for 11, a timed-out attempt
+   received twice.
+4. **The collection path:** repaired 09-21; `tools/dmarc_fetch.py` has been
+   the collection path since.
 
 The UTC−7 aggregation offset is the one live thread that gates no decision. It is
 instrument characterization — a report whose day cannot be aligned is a report

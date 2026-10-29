@@ -2,8 +2,8 @@
 
 Guidance for AI coding agents working in this repository. Deeper detail lives in
 [`.agents/summary/index.md`](.agents/summary/index.md) — a snapshot generated
-2026-08-27, describing production as it ran then. Where it and this file
-disagree, this file is newer.
+2026-10-21, after the cutover. Where it and this file disagree, this file is
+newer.
 
 ## What this is
 
@@ -16,8 +16,9 @@ calendar.
 
 **This repo is what production runs.** The modernization went live on
 2026-10-08: production is the Docker Compose stack on the host leopard, behind
-Cloudflare. The old host, jaguar (Python 2.7, Django 1.8, MySQL), is frozen and
-due to be decommissioned. **`main` is the deployed branch.** Work happens on
+Cloudflare. The old host, jaguar (Python 2.7, Django 1.8, MySQL), was deleted
+on 2026-10-23; the tools that converted its MySQL data are at the git tag
+`cutover-2026-10-07`. **`main` is the deployed branch.** Work happens on
 short-lived branches cut from `main` and merged back when deployed. The
 modernization's record, and what is still open from it, is in
 `.agents/planning/2026-07-04-modernizing-sg101/STATUS.md`, which is
@@ -32,8 +33,9 @@ Every top-level directory is a Django app on the standard layout. The Django
   `production.py`, `test.py`, `docker_test.py` override it. One module per
   deployment: `dev.py` is the Compose stack, `production.py` the VM.
 - `core/` — the shared kernel: mail wrapper, Markdown rendering, Redis and S3
-  helpers, middleware, pagination. **It imports nothing else in the repo.** Keep
-  it that way.
+  helpers, middleware, pagination. **Its library modules import no app; keep
+  new ones that way.** Four older modules do: `markup.py` (`smiley`),
+  `tasks.py` (`accounts`), and the two in `templatetags/`.
 - `search/` — native PostgreSQL full-text search.
 - `antispam/` — spam phrases, auth-failure logging, Turnstile verification.
 - `tools/` — standalone scripts, run directly rather than via `manage.py`.
@@ -88,8 +90,16 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   It lives only in the Cloudflare dashboard. If it goes, a slow upload returns as
   a `502` and a `WORKER TIMEOUT` in the `web` logs. The origin firewall admits
   only Cloudflare, so nothing reaches gunicorn around it.
-- **Log retention differs per file and limits what you can ask.** `sg101.log`
-  rotates at 100 KB x 10 (~5 months); `auth.log` at 2 MB x 5 (19+ months).
+- **Log retention differs per file and limits what you can ask.** On leopard
+  the host's logrotate rotates them (`logrotate/sg101`): `sg101.log` and
+  `auth.log` both at 2 MB x 12, about ten months for `sg101.log` at
+  production's rate and years for `auth.log`. Until 2026-10-22 `sg101.log` was
+  100 KB x 10, about three weeks, so its history before then is short. For
+  spam deactivations ask the database (`UserProfile.status`), not the log.
+- **Two page designs coexist.** Most templates extend `v3/base.html`
+  (Foundation 6, jQuery 3, the post box's ES modules); the forums, shoutbox,
+  `ygroup` and the flatpage template still extend the old `base.html`
+  (Blueprint, markItUp). Check which one a page extends before changing it.
 - **The `messages` app collides with `django.contrib.messages`.** Resolved in
   `sg101/apps.py` (`DjangoMessagesConfig`), which relabels the built-in app to
   `django_messages`. Don't rename this app or its `AppConfig` without
@@ -112,14 +122,20 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
 - **`antispam/utils.py` imports `bio`, `comments`, `forums` and `user_photos`.**
   For something with callers in several apps, follow the narrow shape of
   `antispam/decorators.py` or `antispam/turnstile.py` instead.
-- **`fabfile.py` is stale** — it runs `hg pull --update`, from before the move to
-  git. It is not the deploy path: deploys are `git pull` then `make prod-up`
-  (or `make prod-deploy` when there are migrations) on leopard. See
+- **Deploys are `git pull` then `make prod-up`** (or `make prod-deploy` when
+  there are migrations) on leopard. See
   `.agents/planning/2026-07-04-modernizing-sg101/cutover-runbook.md` § D9.
-- **`tools/xapian_installer.sh` is a leftover** of the search stack removed in
-  Step 4. Nothing uses it.
+  Neither pulls the base image, so a fix in `python:3.12` itself (its CA
+  store, its pip) needs `docker pull python:3.12` before the build.
 - **Search `.agents/` before concluding something is undocumented.** A great deal
   of apparent mystery here is recorded with the measurement attached.
+- **`.agents/` is published with the repository, so it never quotes member
+  data.** No member's or mail recipient's email address, no client IP (a member,
+  an attacker or Brian's own), and not leopard's origin address. Write a count,
+  a role ("a new member", "a scanner") or an RFC 5737 / RFC 3849 placeholder
+  instead. Usernames are fine, since the site shows them. History was rewritten
+  once to remove exactly this (`STATUS.md`, Step 22 task 02); a slip afterwards
+  needs another rewrite.
 
 ## Custom Instructions
 

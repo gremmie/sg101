@@ -1,7 +1,7 @@
 # Running SG101 locally with Docker
 
 Run the SG101 site (Python 3.12 / Django 5.2 / PostgreSQL 16 / Redis) on
-your Mac inside Docker, seeded with a real production database snapshot. Docker gives us a
+your Mac inside Docker, seeded with a copy of the production database. Docker gives us a
 consistent little Linux environment that matches the target deploy platform —
 handy for a stack this far from a modern Mac's defaults.
 
@@ -9,7 +9,7 @@ New to Docker? The only concepts you need here:
 
 - **Image** — a blueprint (built from `Dockerfile`) with Python 3.12 + all the
   app's dependencies baked in.
-- **Container** — a running instance of an image. Each service (`web`, `db`, …)
+- **Container** — a running instance of an image. Each service (`web`, `postgres`, …)
   is its own container.
 - **Compose** — `docker-compose.yml` describes all the containers and how they
   talk to each other, so one command starts the whole thing.
@@ -43,10 +43,8 @@ Neither is committed to source control.
    ```
    `.env` is git-ignored; Compose loads it into the app services via `env_file:`.
 
-2. **A production DB snapshot** — put the MySQL dump in `snapshots/`, e.g.
-   `snapshots/sg101.sql.gz`. Production still runs MySQL, so a snapshot is a
-   MySQL dump and getting it into the site's PostgreSQL database means converting
-   it (sections 4 and 7 below).
+2. **A copy of the production database** — a PostgreSQL dump in `snapshots/`,
+   e.g. one of production's nightly backups (section 4 below).
 
 ## 2. Build the image
 
@@ -62,9 +60,8 @@ docker compose build
 docker compose up
 ```
 This starts five services: `postgres`, `redis`, `web`, `worker`, `beat`. The app
-runs on PostgreSQL with nothing to configure. MySQL (`db`) is **not** among them
-— it sits behind an opt-in profile now that only the snapshot conversion needs
-it (see section 6). Leave this running in this terminal (it streams logs). Open a
+runs on PostgreSQL with nothing to configure. Leave this running in this
+terminal (it streams logs). Open a
 **second** terminal for the commands below. To run it in the background instead,
 use `docker compose up -d`.
 
@@ -77,35 +74,27 @@ snapshot (once, or again after `docker compose down -v`):
 docker compose exec web python manage.py migrate
 ```
 
-## 4. Load the production snapshot
+## 4. Load a copy of production
 
-The snapshot is a **MySQL** dump and the site's database is PostgreSQL, so this
-is two steps: load the dump into the `db` service, then convert it (section 7).
-`db` only runs when you ask for it:
+Production's nightly backup is a PostgreSQL dump (`pg_dump -Fc`) in the dumps
+bucket (section 8, *Backups, and restoring from them*). Reading it needs an
+administrative credential, because the backup's own cannot. Copy the one you
+want into `snapshots/`, which is git-ignored and mounted into the `postgres`
+container:
 ```
-docker compose --profile mysql up -d db
+aws s3 cp "s3://$DUMPS_BUCKET/sg101-<time>.dump" snapshots/
 ```
 
-MySQL data persists in a Docker volume (`db_data`), so you only do this once
-(again after `docker compose down -v`). The snapshot is mounted read-only inside
-the `db` container at `/snapshots`.
-
-Decompress on the Mac and pipe into the container's `mysql` (the MySQL image has
-neither `bzip2` nor `gzip` for this). For a **bzip2** dump (what we have):
+Then restore it, rebuild what is derived from it, and check:
 ```
-bunzip2 -c snapshots/sg10120260712.sql.bz2 | docker compose exec -T db mysql -uroot -prootpw sg101
+tools/pg_snapshot.sh restore sg101-<time>.dump
+docker compose exec web python manage.py rebuild_redis --noinput
+docker compose exec web python manage.py reindex_search
+docker compose exec web python manage.py reconcile_search
 ```
-For a **gzip** dump: `gunzip -c snapshots/xxx.sql.gz | docker compose exec -T db mysql -uroot -prootpw sg101`
-For a plain **.sql**: `docker compose exec -T db mysql -uroot -prootpw sg101 < snapshots/xxx.sql`
-
-The ~460k-post dump takes a minute or two. It loads cleanly because the `db`
-service runs with 5.5-style `sql_mode=` (empty) — MySQL 5.7's default strict mode
-would otherwise reject the old `0000-00-00` dates in the dump.
-
-Now **convert it to PostgreSQL** — section 7, then
-`docker compose exec web python manage.py rebuild_redis --noinput` (section 8
-says why). Then reload http://localhost:8000 and you should see real forum/news
-content; log in with a known account from the snapshot.
+Section 6 says why each step is there. A dump of production holds password
+hashes and private messages: keep it in `snapshots/` and nowhere that syncs.
+Then reload http://localhost:8000 and you should see real forum/news content.
 
 ## 5. Run the test suite
 
@@ -178,201 +167,21 @@ aws s3 rm s3://sg101.user.photos/<key>
 Run this on any host that is going to serve uploads — it is what turns "the
 settings look right" into "a member can upload a photo here."
 
-**It writes to whatever database the settings point at** — in dev, the converted
-production snapshot. It creates a scratch user, uploads as them, and removes it
+**It writes to whatever database the settings point at** — in dev, the restored
+copy of production. It creates a scratch user, uploads as them, and removes it
 all in a `finally`, checking afterwards that the user is gone. Take a snapshot
-first anyway (section 8). Don't point it at production.
+first anyway (section 6). Don't point it at production.
 
 It forces the user-photo upload down its local-storage branch, since the S3
 branch wants live credentials and a real bucket. Both run the same PIL code, so
 the image handling is covered either way — the S3 code itself is not.
 
-## 6. MySQL, and switching engines
-
-PostgreSQL is the default and needs no configuration. MySQL is still in the
-Compose file for one reason — a production snapshot is a MySQL dump, so the
-conversion needs somewhere to read from — and it stays until the real cutover,
-which converts a fresh snapshot the same way. It does not start on its own:
-
-```
-docker compose --profile mysql up          # the whole stack, MySQL included
-docker compose --profile mysql up -d db    # just MySQL, alongside a running stack
-```
-
-To point the **app** back at MySQL, name the engine and start its service:
-```
-DB_ENGINE=mysql docker compose --profile mysql up
-```
-Host and port follow the engine automatically (`db`:3306 or `postgres`:5432), so
-`DB_ENGINE` is the only knob; `sg101/settings/databases.py` holds the mapping,
-and `DB_HOST`/`DB_PORT` override it for a database outside Compose.
-
-**A profile is a filter on both ends: `docker compose down` will not stop `db`
-either.** A plain `down -v` removes `postgres_data` and leaves `db_data` and a
-running MySQL container behind — which then holds the network open. To take the
-whole thing down, name the profile:
-```
-docker compose --profile mysql down -v
-```
-
 ---
 
-## 7. Converting MySQL data to PostgreSQL
+## 6. PostgreSQL snapshots, and getting data back
 
-This is the procedure used at cutover. It is repeatable: every run drops and
-recreates the target database, so it always starts from empty.
-
-Both databases have to be running, so bring the stack up with the `mysql`
-profile and load the dump into MySQL first (§4):
-
-```
-docker compose --profile mysql up -d
-```
-
-Then:
-
-```
-# 1. Convert. Reads .env for credentials; override the databases as needed.
-MYSQL_DB=sg101 PG_DB=sg101 tools/pgloader/convert.sh
-
-# 2. Verify the conversion itself, BEFORE migrating (see the note below):
-#    every row, then every value in every column.
-docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
-    python tools/pgloader/verify.py
-docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
-    python tools/pgloader/verify_data.py values
-
-# 3. Bring the schema up to the current migration state.
-docker compose exec -T web python tools/pgloader/post_convert.py
-
-# 4. Check referential integrity, on the foreign keys step 3 rebuilt.
-docker compose exec -T -e MYSQL_DB=sg101 -e PG_DB=sg101 web \
-    python tools/pgloader/verify_data.py keys
-
-# 4b. Compare the schema against one the migrations build. Needs a reference
-#     database, which is just an empty one with migrate run against it.
-docker compose exec -T postgres psql -U sg101 -d postgres \
-    -c "DROP DATABASE IF EXISTS sg101_reference WITH (FORCE)" \
-    -c "CREATE DATABASE sg101_reference"
-docker compose exec -T -e DB_NAME=sg101_reference web python manage.py migrate
-docker compose exec -T web python tools/pgloader/compare_schema.py
-
-# 5. Smoke the running site, reads and writes. Needs the stack up against the
-#    converted database, which is what `docker compose up -d` now gives you.
-docker compose exec -T web python tools/pgloader/smoke.py
-```
-
-**Keep step 2 ahead of everything else.** It compares the converted database
-with its MySQL source, so it needs the converted database exactly as the
-conversion left it. `migrate` changes it on purpose: data migrations drop
-tables, backfill columns and change types. Using the site changes it too:
-sessions get written and topic view counters go up, and `smoke.py` removes the
-content it creates but cannot un-read a page.
-
-Step 1 prints a summary and writes it to `tools/pgloader/logs/`; rejected rows,
-if there ever are any, land in `tools/pgloader/logs/rejects/`. **A non-zero
-error count must be explained, never waved through.**
-
-**Run `verify.py` and `verify_data.py values` before `post_convert.py`.** Both
-compare the converted database with MySQL, and `migrate` changes it on purpose:
-it adds rows to `django_migrations` and `auth_permission`, and data migrations
-drop tables, backfill columns and change their types. After it, the comparison
-is no longer like-for-like. `verify.py` reports those two tables as expected
-growth; `verify_data.py values` would have to be taught every data migration,
-one at a time, which is how it once went two months without a passing run.
-
-What each check covers:
-
-- **`verify.py`** — three things the conversion can get wrong silently: exact
-  row counts per table, every text value in the eight cp1252 tables (md5
-  against MySQL's own decoding), and that every sequence sits past `MAX(pk)`
-  so the next insert cannot collide.
-- **`verify_data.py values`** — every column of every table, by checksum, on
-  both engines, with datetimes compared as the application sees them, `NULL`
-  held distinct from `''`, and booleans, decimals and `inet` rendered to a
-  common form. One difference is expected, made by the conversion itself, and
-  is listed with the number of rows it may affect; anything beyond that count
-  fails.
-- **`verify_data.py keys`** — after `post_convert.py`: every foreign key holds,
-  is enforced, and is built the way Django builds it.
-- **`compare_schema.py`** — the converted schema against one the migrations
-  build, across columns, indexes, constraints, foreign keys (including their
-  action and deferrability), defaults and sequence ownership. This is the
-  check that catches pgloader converting MySQL faithfully but not the way
-  Django would have built it, which is where this conversion's worst problems
-  have been. Index and constraint *names* are deliberately not compared:
-  pgloader's are `idx_393735_username` where Django's are
-  `forums_topic_last_post_id_ed000e17_fk`, Django resolves them by
-  introspection, and comparing them would bury the differences that matter.
-- **`smoke.py`** — the running site: the read checklist, both password flows,
-  the admin, and real writes (a topic, a private message, a photo), each
-  checked to display and then removed again.
-
-### Things worth knowing
-
-- **The source database is only read.** MySQL is untouched, so the app can be
-  pointed back at it at any time.
-- **`tools/pgloader/sg101.load` carries the type mappings**, each commented
-  with why it exists. The ones that matter: MySQL's `latin1` is really
-  **cp1252** (declaring `latin1` mangles smart quotes and trademark signs);
-  `int(11)` must be forced to 32-bit `integer` or every primary key arrives as
-  `bigint`; the IP columns become `inet`; and `bio_userprofile.country` must
-  become `varchar`, because PostgreSQL pads `char(2)` and an unset country
-  comes back as two spaces instead of empty — which is truthy, and crashes
-  every profile page for the 12,854 members who have not set one.
-- **`post_convert.py` does several things a plain `migrate` cannot.** It fakes
-  the initial migrations of the 21 apps whose tables already exist, and it
-  first records `oembed.0001_initial`, because `forums/0001_initial` has
-  declared a dependency on oembed since 2015 and Django's consistency check
-  otherwise refuses *every* migrate command. It then applies the
-  prefix-matching indexes in `pattern_ops_indexes.sql`, which Django would
-  have created had its initials not been faked. Last it repairs three things
-  pgloader leaves in a state Django would not: the foreign keys (below), the
-  `CHECK` constraints behind `PositiveIntegerField` — MySQL says UNSIGNED,
-  which has no equivalent to carry across, so nothing stopped a negative
-  value — and two leftover column defaults, which Django never sets because
-  it applies field defaults in Python. Each is derived from Django's own
-  field definitions rather than listed, and each is idempotent.
-- **Naive datetimes are read as `TIME_ZONE`, not UTC.** MySQL `datetime`
-  carries no offset and, with `USE_TZ` off, Django wrote local wall-clock time
-  into it. Django maps `DateTimeField` to `timestamptz` on PostgreSQL, so
-  every value has to be placed on the timeline as it lands, using the session
-  timezone — and at the server default of UTC the whole database ends up 5–6
-  hours early once Django reads it back in `America/Chicago`. `convert.sh`
-  sets the timezone on the target database before loading, reading it from
-  Django so the two cannot drift. That the stored values really are local time
-  is not an assumption: the 02:00 hour is empty on every DST spring-forward
-  day across twenty years of posts, which is the gap only local time has.
-- **Foreign keys are rebuilt as `NO ACTION ... DEFERRABLE INITIALLY
-  DEFERRED`.** That is how Django's schema editor makes them, and its ORM
-  depends on it — cascades happen in Python, and the deletion collector
-  removes rows in whatever order suits it, leaving the database to confirm
-  consistency once, at commit. pgloader carries InnoDB's semantics across
-  instead and writes every constraint `ON UPDATE RESTRICT ON DELETE RESTRICT`,
-  which is checked immediately and *cannot* be deferred. Left that way,
-  ordinary operations fail against a converted database while working against
-  a migrated one: deleting a forum topic is enough, because the topic's own
-  `last_post` points at a post being removed in the same transaction.
-- **pgloader publishes an amd64 image only**, so it runs under emulation on
-  Apple Silicon. The conversion still takes well under a minute.
-- **Collation changes.** The converted database is `en_US.utf8`, where MySQL
-  used `latin1_swedish_ci`/`utf8_general_ci`. Text sorting differs — most
-  visibly `ORDER BY username` — and comparisons are now case-**sensitive**;
-  see `research/collation-audit.md` for the lookups that were adjusted.
-- **Postgres has no per-table encoding.** The eight cp1252 tables are
-  transcoded on the way in and land in a single UTF-8 database. Since nothing
-  in MySQL was `utf8mb4`, 4-byte characters (emoji) become storable for the
-  first time.
-
----
-
-## 8. PostgreSQL snapshots, and getting data back
-
-The MySQL service is a fallback of a sort — it holds the original production
-dump, and forum data has been recovered from it. But recovering that way means a
-full pgloader conversion, or a hand-written cross-engine copy that has to get
-column types, booleans and the naive-datetime-into-`timestamptz` seam right. A
-PostgreSQL snapshot restores into a target that already has the right types.
+A PostgreSQL snapshot restores into a target that already has the right types,
+and lets you pull back a single table as easily as the whole database.
 
 ```bash
 tools/pg_snapshot.sh dump                 # snapshots/sg101-<timestamp>.dump
@@ -381,7 +190,7 @@ tools/pg_snapshot.sh list
 ```
 
 **Take one before anything that writes to the database** — a rung, a migration,
-a conversion, a script you have just written. Measured on the current snapshot:
+a restore, a script you have just written. Measured on the current snapshot:
 **8 seconds and 128 MB**, which is cheap enough that there is no reason not to.
 
 **The search index is dumped without its data.** It is two thirds of the
@@ -441,15 +250,42 @@ watch, both of which have bitten:
 On 2026-08-05 a scratch script deleted a forum, and with it 4,626 topics and
 24,107 posts. `Forum.last_post` is a `OneToOneField` with `on_delete=CASCADE`
 pointing the wrong way: **deleting the post a forum points at deletes the
-forum**, and everything inside it. `tools/pgloader/smoke.py` guards this in
+forum**, and everything inside it. `tools/site_smoke.py` guards this in
 `delete_topic()`; a second script written without that guard did not.
 
-Recovery took an hour through MySQL. With a snapshot it would have been a
+Recovery took an hour, through the MySQL database the site then ran on. With a
+snapshot it would have been a
 `scratch` restore and one `\copy`. Note that a snapshot only helps if it is
 older than the damage — which is the argument for taking one at the start of a
 session rather than when something looks wrong.
 
-## 9. A host virtualenv for your editor
+### Checking a restored database
+
+Two tools check what a restore produced, beyond `reconcile_search`:
+
+- **`tools/compare_schema.py`** — the database's schema against one the
+  migrations build: columns, indexes, constraints, foreign keys (including
+  their action and deferrability), defaults and sequence ownership.
+  Production's database was converted from MySQL rather than built by the
+  migrations, and that conversion's worst problems were schema differences no
+  test could see. It needs a reference database, which is just an empty one
+  with migrate run against it:
+  ```
+  docker compose exec -T postgres psql -U sg101 -d postgres \
+      -c "DROP DATABASE IF EXISTS sg101_reference WITH (FORCE)" \
+      -c "CREATE DATABASE sg101_reference"
+  docker compose exec -T -e DB_NAME=sg101_reference web python manage.py migrate
+  docker compose exec -T web python tools/compare_schema.py
+  ```
+- **`tools/site_smoke.py`** — the running site against the restored database:
+  the read checklist, both password flows, the admin, and real writes (a
+  topic, a private message, a photo), each checked to display and then
+  removed again. It writes, so take a snapshot first.
+  ```
+  docker compose exec -T web python tools/site_smoke.py
+  ```
+
+## 7. A host virtualenv for your editor
 
 **The container is still where code runs.** Nothing in this section changes how
 the site, the test suite or CI execute — all three remain exactly as described
@@ -465,9 +301,9 @@ asdf install python 3.12.14          # the version comes from .tool-versions
 python -m venv .venv                 # 3.12.14, because you are in this directory
 .venv/bin/python -m pip install --upgrade pip
 
-# Flatten both requirements files, drop mysqlclient, swap in psycopg2-binary.
+# Flatten both requirements files and swap in psycopg2-binary.
 cat requirements.txt requirements_dev.txt \
-  | grep -v '^-r ' | grep -v '^mysqlclient' \
+  | grep -v '^-r ' \
   | sed 's/^psycopg2==/psycopg2-binary==/' > /tmp/host-reqs.txt
 .venv/bin/pip install -r /tmp/host-reqs.txt
 .venv/bin/pip install django-types
@@ -493,21 +329,13 @@ fresh clone that has not run `asdf install` yet will see `python` error in this
 directory rather than silently fall back to the global one, which is the failure
 mode you want.
 
-### The two pins that differ from the image, and why
+### The pin that differs from the image, and why
 
-Neither `mysql_config` nor `pg_config` exists on this host, and both packages
-build from source rather than shipping wheels. Homebrew could supply both, but
-neither is worth installing:
-
-- **`mysqlclient` is omitted.** Only `tools/pgloader/{verify,verify_data}.py`
-  import `MySQLdb`, both of them migration tooling — nothing in the application
-  touches it. The cost is two
-  `reportMissingModuleSource` *warnings*, not errors, because pyright ships
-  typeshed stubs for `MySQLdb` and still gives full type information for it.
-- **`psycopg2` is replaced by `psycopg2-binary`.** Same `psycopg2` module and the
-  same import surface, built with a bundled libpq, so it installs from a wheel
-  with no headers. This one matters because the site does run on PostgreSQL, so
-  the import has to resolve.
+**`psycopg2` is replaced by `psycopg2-binary`.** `pg_config` does not exist on
+this host, and `psycopg2` builds from source rather than shipping a wheel.
+Homebrew could supply it, but there is no need: `psycopg2-binary` is the same
+`psycopg2` module and the same import surface, built with a bundled libpq, so
+it installs from a wheel with no headers.
 
 ### What installed from a wheel, and what did not
 
@@ -553,7 +381,7 @@ The `.:/app` bind mount does carry `.venv` into the running container, and
 macOS-architecture wheels. Inside the container it sits inert, because nothing
 activates it and the container's Python is `/usr/local`.
 
-## 10. Running the production stack
+## 8. Running the production stack
 
 `docker-compose.prod.yml` is the stack the new host runs: the `prod` image under
 gunicorn, behind Apache, with production settings. It runs on the Mac too, which
@@ -728,7 +556,7 @@ dcp run --rm backup
 ```
 
 **Restore into a scratch database** to inspect it or copy rows back, leaving
-the live one untouched. Row-copying is described in section 8.
+the live one untouched. Row-copying is described in section 6.
 
 ```bash
 dcp exec -T postgres sh -c 'createdb -U "$POSTGRES_USER" sg101_scratch'
@@ -746,7 +574,7 @@ admin aws s3 cp "s3://$DUMPS_BUCKET/sg101-<time>.dump" - |
     dcp exec -T postgres sh -c \
     'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges'
 dcp start web worker beat
-dcp exec web python manage.py rebuild_redis --noinput   # section 8
+dcp exec web python manage.py rebuild_redis --noinput   # section 6
 dcp exec web python manage.py reindex_search     # the dump has no index rows
 dcp exec web python manage.py reconcile_search   # should report no drift
 rm var/maintenance/on
@@ -790,10 +618,8 @@ sections above are what those shortcuts run.
 | Build / rebuild the image | `docker compose build` |
 | Start everything (foreground) | `docker compose up` |
 | Start in background | `docker compose up -d` |
-| Start MySQL too (conversion) | `docker compose --profile mysql up -d` |
 | Stop (keep the DB data) | `docker compose down` |
 | Stop **and wipe the DB** | `docker compose down -v` |
-| Stop / wipe **including MySQL** | `docker compose --profile mysql down [-v]` |
 | Follow web logs | `docker compose logs -f web` |
 | A shell inside the web container | `docker compose exec web bash` |
 | Django shell | `docker compose exec web python manage.py shell` |
@@ -804,26 +630,24 @@ sections above are what those shortcuts run.
 | List snapshots | `tools/pg_snapshot.sh list` |
 | Restore the whole database | `tools/pg_snapshot.sh restore <file>` |
 | Restore a table to pick rows from | `tools/pg_snapshot.sh scratch <file> [table...]` |
-| MySQL prompt (needs the profile) | `docker compose exec db mysql -uroot -prootpw sg101` |
 
 ## How the pieces fit
 
 - **`Dockerfile`** — builds the Python 3.12 image in two targets: `prod`
   (system libs + `requirements.txt`) and `dev` (`FROM prod`, plus
   `requirements_dev.txt` — the test suite and the debug toolbar).
-- **`docker-compose.yml`** — defines the services and wires them together: five
-  by default, plus `db` (MySQL) behind the `mysql` profile. web/worker/beat all
-  build the `dev` target.
+- **`docker-compose.yml`** — defines the five services and wires them
+  together. web/worker/beat all build the `dev` target.
 - **`sg101/settings/dev.py`** — dev settings; points the DB at the container
   services and enables the debug toolbar. Redis needs nothing here: `base.py`
   reads its host and port from the environment and defaults them to the `redis`
   service. Selected via `DJANGO_SETTINGS_MODULE` in compose, and the default for
   `manage.py`.
 - **`sg101/settings/databases.py`** — maps `DB_ENGINE` to a backend, service
-  name, and port, so the settings modules never hardcode an engine.
-- **`docker-compose.prod.yml`** — the production stack (section 10): the `prod`
-  target under gunicorn, Apache in front, no MySQL, only the proxy's ports
-  published.
+  name, and port, so the settings modules never hardcode an engine. PostgreSQL
+  is the only one.
+- **`docker-compose.prod.yml`** — the production stack (section 8): the `prod`
+  target under gunicorn, Apache in front, only the proxy's ports published.
 - **`apache/`** — the proxy: a small Dockerfile for the image, and the
   configuration it reads through a bind mount.
 - **`sg101/settings/production.py`** — production settings, selected by the
@@ -831,29 +655,23 @@ sections above are what those shortcuts run.
 - **`sg101/settings/docker_test.py`** — test settings (PostgreSQL, and the
   broker on a Redis database of its own so a suite run cannot touch what the
   development stack has queued), used by both local runs and CI.
-- **`snapshots/`** — where your DB dumps live, both the MySQL production dumps
-  and the PostgreSQL snapshots `tools/pg_snapshot.sh` writes (git-ignored).
+- **`snapshots/`** — where your DB dumps live: copies of production's backups
+  and the snapshots `tools/pg_snapshot.sh` writes (git-ignored).
 
 ## Troubleshooting
 
 - **`docker: command not found`** — Docker Desktop isn't installed or running.
 - **`web` can't reach the database** — the `postgres` container is still
-  initializing on first start; `web` waits for its healthcheck, but a snapshot
-  load must wait too. Give it a few seconds and retry.
-- **`no such service: db`** — MySQL is behind a profile now; add
-  `--profile mysql` to the command (see section 6).
+  initializing on first start; `web` waits for its healthcheck, but a restore
+  must wait too. Give it a few seconds and retry.
 - **A dependency fails to compile during `build`** — expected occasionally with
   20-year-old pins; we resolve these faithful-first (bump the patch version only
   if a pin truly can't build). Note the failing package and we'll address it.
 - **Pages taking ~5 seconds each** — this was a Docker DNS quirk, now fixed via
   `dns_opt: [single-request-reopen]` on the app services. Cause: resolving a
-  service name (`db`/`redis`) makes glibc fire parallel IPv4+IPv6 DNS queries;
+  service name (`postgres`/`redis`) makes glibc fire parallel IPv4+IPv6 DNS queries;
   Docker's embedded resolver answers the IPv4 one but not IPv6, so every lookup
   blocked the full 5s resolver timeout — and Django opens a fresh DB connection
   per request, so it hit on every page. `single-request-reopen` forces the two
   lookups to happen sequentially, eliminating the stall. (If you ever see it
   return, confirm the container's `/etc/resolv.conf` has that option.)
-- **Apple Silicon note** — `db` runs the amd64 MySQL 5.7 image under emulation
-  (`platform: linux/amd64`; MySQL 5.7 has no arm64 build). Everything else,
-  Postgres included, runs native arm64. Emulation adds some DB overhead but is
-  not a major factor for typical pages, and it goes away with MySQL itself.
