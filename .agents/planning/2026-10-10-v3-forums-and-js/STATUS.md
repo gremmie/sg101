@@ -1022,3 +1022,100 @@ CSS rebuild). Measured on leopard afterwards: the checkout on `0fdcd154`,
 `download_detail.html`. **Brian's spot check on the live site:** smileys
 insert, and the preview shows them as images. #9 closed, naming `0fdcd154`;
 branch `smileys` deleted.
+
+## Step 5 task 01 — the over-quota test, three quota-counter leaks, and HEIC measured — DONE 2026-10-29
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step05/task-01-upload-error-paths-and-heic.code-task.md`.
+Branch `multi-upload`, with `main` merged in.
+
+**The over-quota test.** `UploadAjaxV3Tests.test_over_quota_says_why`
+(`user_photos/tests/test_upload_views.py`) posts a real JPEG through the
+real `UploadForm` and the real rate limit in the test redis, with
+`USER_PHOTOS_RATE_LIMIT=(0, 60)`, and expects a 400 whose payload is
+exactly `{'url': '', 'error_msg': "You've exceeded your upload quota.
+Please try again later."}`. It passed on first run, since step 2 already
+fixed the view, so it was mutation-verified: `upload_ajax_v3` changed to
+skip `__all__` when flattening `form.errors` fails this test alone
+(`error_msg` `''`); `test_a_file_that_is_not_an_image_says_why` stays
+green, so it does not cover this path. The view was restored byte-identical
+(SHA-1 checked). A first attempt at the mutation did not apply (the same
+two lines are in the hot-link view, line 249) and no result was taken from
+that run.
+
+**The quota counter leaked, and now does not.** `UploadForm.clean()` runs
+the rate limit even when the file is invalid, so the not-an-image test was
+already incrementing `user_photos:counts:uploader` in the test redis (db 14)
+for a day: one run of the class left it at 1, TTL 86400. The class's
+`setUp` now deletes that key and deletes it again on cleanup, as
+`core/tests/test_redis_ttls.py` does; after a run, none is left.
+
+**Two more leaks, older, fixed the same way.** After a full suite run db
+14 held `user_photos:counts:pjmoto` at 6 (`SubmitUploadTestCase`,
+`news/tests/test_browser.py`, which uploads for real) and
+`user_photos:counts:test_user` at 1 (`HotlinkImageTestCase`,
+`user_photos/tests/test_views.py`), each for a day. The `pjmoto` one
+mattered to task 03: its browser tests will upload up to ten files a run
+under a limit of 50 a day, so reruns would have failed as if the upload
+were broken. Brian asked for both fixed, place and time his choice of
+mine; each class's `setUp` now deletes its user's key and deletes it again
+on cleanup. Both classes increment the counter after `setUp`, so an empty
+db 14 after running them shows the cleanup at work: it was empty.
+
+**HEIC, at the server.** Sample: an 800 × 600 JPEG from
+`core/tests/images/imagemakers.py`, converted with `sips -s format heic`
+on macOS 26.7 (176,534 bytes, `ftyp` brand `heic`, HEVC Main Still). Not a
+photo from a phone: no depth map, no image sequence. Posted to
+`upload_ajax_v3` in the dev `web` container through `RequestFactory`, as
+an unsaved user (no session, no `last_login`), with
+`USER_PHOTOS_LOCAL_UPLOAD=True` forced; the probe's quota key was deleted
+after.
+
+| Sent as | Status | `error_msg` |
+|---|---|---|
+| `IMG_0001.HEIC`, `image/heic` | 400 | Upload a valid image. The file you uploaded was either not an image or a corrupted image. |
+| `IMG_0001.HEIC`, `application/octet-stream` | 400 | the same |
+| control: the source JPEG, same form | valid | — |
+
+Pillow 12.3.0, `pillow_heif` not installed. Nothing names HEIC, so a member
+is told their photo is not an image or is corrupted.
+
+**HEIC, in the browser, by Brian (2026-10-29)** on macOS, a local page with
+two file inputs, picking the same sample:
+
+| | A: no `accept` (the post box today) | B: `accept="image/jpeg,image/png,image/gif,image/webp"` |
+|---|---|---|
+| Chrome | `sample.heic`, `image/heic`, 176,534 bytes | the file cannot be selected |
+| Safari | `sample.heic`, `image/heic`, 176,534 bytes | selectable; arrives as `samplesyj4tn.jpg`, `image/jpeg`, 219,587 bytes |
+
+So with `accept` listing JPEG and not HEIC, **Safari on macOS converts the
+HEIC to JPEG itself**; Chrome greys it out and says nothing. Unmeasured:
+iOS (task 04's phone check), Firefox, and whether dropping a file on the
+input in Chrome gets past `accept`. An explicit list also stops other
+formats Pillow reads today (BMP, TIFF) from being picked.
+
+**Options, for Brian:**
+
+1. **Leave as is.** A HEIC is rejected as "not an image or corrupted".
+2. **A clearer server message.** Recognise a HEIC (its `ftyp` brand, or the
+   extension) and say so: e.g. "HEIC photos aren't supported yet. Please
+   choose a JPEG, PNG or GIF." Covers every browser and route, converts
+   nothing.
+3. **`accept` on the upload input.** Safari converts; Chrome refuses the
+   file without a reason; the server still rejects anything that gets past
+   it. Combines with 2.
+4. **Accept HEIC on the server:** `pillow-heif`, a new dependency, **and**
+   conversion to JPEG, since `core/images/upload.py` keeps the original
+   format and extension and only Safari shows a HEIC.
+
+**Brian's choice (2026-10-29): options 2 and 3, in task 02.** The
+explicit `accept` list goes on the input that task 02 already rewrites
+(adding `multiple`), and the server message with it. Task 02's file now
+carries both, with the detection rule (`ftyp` major brand `heic`, `heix`,
+`hevc` or `hevx`, or `heic` among the compatible brands; not `mif1` alone,
+which AVIF shares) and its tests. The message's wording is for Brian to
+approve there. Option 4 is not scheduled.
+
+**Suite and gate**, as separate runs, with every change above: 1513 tests
+OK each. After the suite, db 14 holds no `user_photos:*` key.
+
+Committed: not yet; left unstaged for review.
