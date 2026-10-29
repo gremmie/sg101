@@ -16,6 +16,8 @@ from django.urls import reverse
 from django.test import TestCase
 from django.test.utils import override_settings
 
+from core.services import get_redis_connection
+from core.tests.images.imagemakers import jpeg_bytes
 from user_photos.models import Photo
 
 
@@ -129,6 +131,12 @@ class UploadAjaxV3Tests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('uploader', '', 'pw')
         self.url = reverse('user_photos-upload_ajax_v3')
+        # A real form runs the real rate limit, whose counter lives a day in
+        # the test redis. Start each test at zero and leave nothing behind.
+        conn = get_redis_connection()
+        quota_key = 'user_photos:counts:uploader'
+        conn.delete(quota_key)
+        self.addCleanup(conn.delete, quota_key)
 
     def test_unauthenticated_is_forbidden(self):
         response = self.client.post(self.url, {}, **AJAX)
@@ -201,6 +209,21 @@ class UploadAjaxV3Tests(TestCase):
         self.assertEqual(payload, {'url': '', 'error_msg': payload['error_msg']})
         self.assertTrue(payload['error_msg'].startswith('Upload a valid image.'),
                         msg=payload['error_msg'])
+
+    @override_settings(USER_PHOTOS_RATE_LIMIT=(0, 60))
+    def test_over_quota_says_why(self):
+        """The quota is a non-field error, raised from the form's clean(); a
+        valid image makes it the only message."""
+        self.client.login(username='uploader', password='pw')
+        image = SimpleUploadedFile('x.jpg', jpeg_bytes(),
+                                   content_type='image/jpeg')
+
+        response = self.client.post(self.url, {'image_file': image}, **AJAX)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.content),
+                         {'url': '',
+                          'error_msg': "You've exceeded your upload quota. "
+                                       "Please try again later."})
 
     @override_settings(USER_PHOTOS_ENABLED=False)
     def test_disabled_says_so(self):

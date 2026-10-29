@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.http import JsonResponse
 
+from core.services import get_redis_connection
 from user_photos.forms import HotLinkError
 
 
@@ -24,6 +25,12 @@ class HotlinkImageTestCase(TestCase):
         self.user.save()
         self.assertTrue(self.client.login(username=self.username, password=self.pw))
         self.view_url = reverse('user_photos-hotlink')
+        # A real form runs the real rate limit, whose counter lives a day in
+        # the test redis. Start each test at zero and leave nothing behind.
+        conn = get_redis_connection()
+        quota_key = 'user_photos:counts:' + self.username
+        conn.delete(quota_key)
+        self.addCleanup(conn.delete, quota_key)
 
     def testUnauthenticatedUser(self):
         self.client.logout()

@@ -12,6 +12,7 @@ from django.urls import reverse
 from PIL import Image
 from playwright.sync_api import expect
 
+from core.services import get_redis_connection
 from core.tests.browser import BrowserTestCase
 from smiley.models import Smiley
 
@@ -161,6 +162,12 @@ class SubmitUploadTestCase(BrowserTestCase):
         self.login(self.user)
         self.page.goto(self.live_server_url + reverse('news-submit'))
         self.textarea = self.page.locator('.v3-editor textarea')
+        # Each upload counts against the real rate limit, whose counter lives
+        # a day in the test redis. Start each test at zero and leave nothing.
+        conn = get_redis_connection()
+        quota_key = 'user_photos:counts:pjmoto'
+        conn.delete(quota_key)
+        self.addCleanup(conn.delete, quota_key)
         self.files = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.files)
 
