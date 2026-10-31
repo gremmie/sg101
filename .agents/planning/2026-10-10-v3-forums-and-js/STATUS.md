@@ -1119,3 +1119,155 @@ approve there. Option 4 is not scheduled.
 OK each. After the suite, db 14 holds no `user_photos:*` key.
 
 Committed: not yet; left unstaged for review.
+
+## Step 5 task 02 — the upload modal's file list, its `accept` list, and the HEIC message — DONE 2026-10-30
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step05/task-02-multi-file-list.code-task.md`.
+Branch `multi-upload`.
+
+**Wording, Brian's (2026-10-30):** the HEIC message "HEIC photos aren't
+supported. Please choose a JPEG, PNG or GIF."; the modal's text "Choose one
+or more images from your computer or device. Each image is resized when
+uploaded, and its image code is placed in your post." (which also loses the
+old "placed your post"); after trying it on dev, Brian changed its first
+sentence to "You can upload up to 10 images from your computer or
+device." The cap message ("You can upload up to 10 images
+at a time; 2 were left out.", "1 was" for one) and the placeholder ("No
+preview" on a light-gray square) as proposed.
+
+**The HEIC message.** `user_photos/forms.py` gains `is_heic(f)`, which
+reads the file's first `ftyp` box, and `UploadImageField`, an `ImageField`
+whose `to_python` swaps Django's `invalid_image` error for the HEIC
+message when the header says HEIC. HEIC means a major brand `heic`, `heix`,
+`hevc` or `hevx`, or `heic` among the compatible brands; not `mif1` alone,
+which AVIF shares. It runs only after Pillow has failed, so a valid upload
+pays nothing. `UploadForm` uses it, so the old `upload_ajax` gets the
+message too. View tests, written first, in `UploadAjaxV3Tests`: an `ftyp`
+header (the test file's `ftyp()` builder; no encoder needed) with major
+brand `heic`, with `heix`, with `mif1` but `heic` compatible, each named;
+an `avif` / `mif1` / `miaf` file keeps "Upload a valid image." The first
+three failed with today's message before the change. Also checked against
+task 01's real `sips` HEIC, both as an in-memory upload and as a
+`TemporaryUploadedFile` on disk: the HEIC message each time; the source
+JPEG still valid.
+
+| Mutation in `forms.py` | Failed |
+|---|---|
+| `mif1` counted as HEIC | `test_another_ftyp_file_is_not_called_heic` |
+| major brand only, compatible brands not read | `test_heic_among_the_compatible_brands_is_named` |
+| `heic` the only brand | `test_a_heic_variant_brand_is_named` |
+| the swap never happens | the three HEIC tests |
+| `UploadForm` back on `forms.ImageField` | the three HEIC tests |
+
+Restored byte-identical (SHA-1 checked).
+
+**The list.** `post_box_modals.html`: the input takes
+`multiple accept="image/jpeg,image/png,image/gif,image/webp"`, with
+`<ul id="photo-upload-list">` below it. `uploads.js` no longer uses
+`image_form.js` (hot-link still does, unchanged): each `change` adds the
+chosen files to an array of `{file, url, item}` up to 10 and clears the
+input; each entry is a thumbnail from `URL.createObjectURL`, the name, and
+a remove button labelled "Remove <name>". A thumbnail whose `<img>` fails to
+load becomes the placeholder and stays. Remove revokes its URL; the reset
+`initUploads` returns, called as the modal opens, revokes them all. **Until
+task 03, Upload sends the first file in the list**, as a `FormData` of the
+form with `image_file` set to it, and clears the list on success; both
+older upload browser tests pass unchanged.
+
+The remove buttons first carried Foundation's `close-button` class. That
+positions absolutely in the modal's corner, so they stacked on one another
+(a click timed out) and made the modal's own × locator ambiguous. They
+have their own `upload-remove` style.
+
+Browser tests, written first, `news.tests.test_browser.SubmitUploadListTestCase`:
+the input's `accept` and `multiple`; 2 then 3 chosen gives 5, and the input
+is empty after; a thumbnail is a loaded `blob:` image; 12 chosen keeps the
+first 10 and says 2 were left out; 9 listed then 2 chosen keeps 10 and says
+1; removing the second of 3 leaves the other two and revokes exactly that
+thumbnail's URL; a text file shows the placeholder, no `<img>`, and stays;
+closing and reopening the modal empties the list and revokes every URL
+made. Object URLs are recorded by wrapping `URL.createObjectURL` and
+`revokeObjectURL` in an init script. Before the change: 5 errors, the
+input refusing several files, and 3 failures.
+
+| Mutation in `uploads.js` | Failed |
+|---|---|
+| no cap | both cap tests |
+| the cap ignores what is listed | `test_the_cap_counts_what_is_already_listed` |
+| input not cleared | `test_choices_add_up` |
+| remove does not revoke | `test_remove_takes_out_that_file_and_releases_its_thumbnail` |
+| reset does not revoke | `test_reopening_the_modal_empties_the_list_and_releases_every_thumbnail` |
+| no placeholder | `test_a_file_that_cannot_be_drawn_shows_a_placeholder` |
+
+Restored byte-identical (SHA-1 checked).
+
+**Remove closed the whole modal, found by Brian on dev (2026-10-30).** The
+remove handler takes the entry, and its button, out of the page during the
+click. Reveal's overlay handler then sees a target that is neither the
+modal nor inside it, and closes the modal. The remove test had passed
+regardless: it read the list's names, and Playwright reads them from a
+hidden modal too. It now asserts the modal is still visible, and failed
+first. **Fixed, Brian's choice (option A over a `stopPropagation` in
+`uploads.js`), by backporting Foundation 6.3.1's guard** (checked in
+`node_modules/foundation-sites/js/foundation.reveal.js`, 6.3.1) into the
+vendored 6.2.0 `foundation.min.js`: both of Reveal's click-to-close
+handlers, the overlay's and the overlay-less body's, gain
+`||!t.contains(document,i.target)`, so a click whose target has left the
+page is not a click outside. Each edit was matched exactly once in its
+handler. Reverting the overlay guard alone fails the remove test again;
+restored byte-identical. **The body handler's guard has no test:** Reveal
+uses it only for a modal with `data-overlay="false"` that closes on click,
+and the site has none (the smiley picker, the only overlay-less one, has
+`data-close-on-click="false"`). It is upstream's code unchanged.
+
+**A file already listed was listed again, found by Brian on dev
+(2026-10-30).** The server would not have stored it twice (`UploadForm.save()`
+returns the member's existing photo for an identical file), but the post
+would have had its code twice and the upload counted twice against the
+quota. **Brian's choice: skip it and say so.** A page never sees a file's
+path, so a file is the same if its name, size and `lastModified` match;
+two different files with one name are both kept. A skipped file does not
+count toward the 10. The message names them ("b.png is already in the
+list."; "a.png, b.png and c.png are already in the list.") and is joined
+with the cap message when both apply. The duplicate tests choose real files
+from disk, since a file handed to Playwright as bytes is not certain to
+keep its `lastModified` from one choice to the next. Five tests, written
+first: four failed with the duplicate listed; the fifth (a removed file can
+be chosen again) passed before and guards against remembering too much.
+A sixth, two different `IMG_0001.png`s both listed, was added because
+without it a name-only key passed everything.
+
+| Mutation in `uploads.js` | Failed |
+|---|---|
+| no duplicate check | the four duplicate tests |
+| skipped files count against the cap | `does_not_count_against_the_cap`, `a_skipped_file_and_the_cap_are_both_reported` |
+| the key is the name alone | `test_different_files_with_one_name_are_both_listed` |
+| a removed file stays remembered | `test_a_file_removed_can_be_chosen_again` |
+| only the first message shown | `test_a_skipped_file_and_the_cap_are_both_reported` |
+
+Restored byte-identical (SHA-1 checked).
+
+**Sass** in `sg101/scss/_sg101.scss` (`.upload-list`, `.upload-thumb`,
+`.upload-placeholder`, `.upload-name`, `.upload-remove`): 64 px thumbnails,
+`object-fit: cover`, names that wrap anywhere. Rebuilt; `main.min.css`
+changed with it. Sass prints 17 deprecation warnings with and without the
+change.
+
+**Looked at on the dev stack** at 375 × 812 and 1280 × 900, through a
+session made directly and deleted after (`last_login` unchanged), with the
+debug toolbar hidden: three PNGs (one portrait, one with a 60-character
+name) and a text file. No horizontal scroll at either width, no page
+errors; the portrait crops square, the long name wraps beside its
+thumbnail, the text file shows the placeholder.
+
+**The native input's "No file chosen".** Cleared after each choice, the
+input reads "No file chosen" beside a full list. Brian chose (2026-10-30)
+to hide it behind a styled "Choose images" button in task 03, whose file
+now asks for it.
+
+**Suite and gate**, as separate runs: 1525 tests OK each. `--tag browser`:
+45 OK. After the suite, db 14 holds no `user_photos:*` key. All three
+again after the Reveal backport: 1525, 1525, 45, OK each; and after the
+duplicate handling: 1531, 1531, 51, OK each, db 14 again empty.
+
+Committed: not yet; left unstaged for review.

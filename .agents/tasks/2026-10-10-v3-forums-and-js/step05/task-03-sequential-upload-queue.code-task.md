@@ -50,6 +50,14 @@ what happens.
    and the queue continues.
 7. Object URLs of entries that leave the list are revoked.
 8. Code comments describe the code, never the plan's step numbers.
+9. **Hide the native file input** behind a styled "Choose images" button
+   (a `<label for>` the input, or a button that clicks it). Task 02 clears
+   the input after each choice, so its own text reads "No file chosen"
+   beside a full list (Brian, 2026-10-30). The input stays in the page and
+   keyboard-reachable: hidden visually (`show-for-sr` or the like), not
+   `display: none`, and the button takes focus and opens the dialog with
+   Enter or Space. "Choosing more files is disabled" (4) applies to the
+   button too.
 
 ## Dependencies
 - Task 02 (the list).
@@ -98,7 +106,12 @@ what happens.
    - When the member removes it, adds another image and presses Upload
    - Then only the new image is sent
 
-6. **Tests seen to fail; suite and gate**
+6. **The native input is hidden**
+   - Given the upload modal
+   - When it opens
+   - Then no "No file chosen" text shows, a "Choose images" button does, and choosing files through it adds them to the list as before
+
+7. **Tests seen to fail; suite and gate**
    - Given each new browser test
    - When what it guards is broken
    - Then it fails; restored, `make test-browser`, the full suite and the deprecation gate (separate run) pass
