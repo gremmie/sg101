@@ -1271,3 +1271,32 @@ again after the Reveal backport: 1525, 1525, 45, OK each; and after the
 duplicate handling: 1531, 1531, 51, OK each, db 14 again empty.
 
 Committed: not yet; left unstaged for review.
+
+## The hot-link and upload modals' buttons: Cancel left, the action right — 2026-10-30
+
+Brian's call, after task 02: in both modals Cancel now comes first and the
+primary action (Hot-Link, Upload) last, on the right of the `text-right`
+row. Only these two modals have a pair; preview, help and the smiley picker
+have one button each. `SubmitPostBoxTestCase.test_cancel_comes_before_the_primary_action`
+reads each row's labels; it failed on both modals in the old order.
+
+Enter in a field submits through the form's first *submit* button. Cancel
+is `type="button"`, so Enter still hot-links. No test pressed Enter before;
+`test_enter_in_the_address_hot_links` does, and fails if the hot-link
+modal's Cancel is made `type="submit"` (Enter then closes the modal);
+restored byte-identical.
+
+**A void run, my mistake.** I started the full runs in the background and
+then ran single tests in the foreground while they went on. Both use the
+test database `test_sg101`, so each destroyed or shared the other's: the
+background run ended 13 browser errors and 357 gate errors, and a
+foreground run of the Enter test read "Please login to use this service".
+All of it was discarded; the checks above and the runs below were made with
+nothing else running.
+
+Suite and gate, as separate runs with nothing else running: 1533 tests OK
+each; `--tag browser`: 53 OK; db 14 empty after.
+
+Other pages still put the primary action first (`bio/edit_profile.html`,
+`bio/avatar.html`; `messages/report_message.html` already has Cancel
+first). Not changed here.

@@ -68,6 +68,16 @@ class SubmitPostBoxTestCase(BrowserTestCase):
         }''')
         self.assertEqual(hidden, [])
 
+    def test_cancel_comes_before_the_primary_action(self):
+        """The primary action is the last button in the row, on the right."""
+        for modal, primary in (('#hot-link-modal', 'Hot-Link'),
+                               ('#upload-modal', 'Upload')):
+            with self.subTest(modal=modal):
+                row = self.page.locator(modal).locator('.columns.text-right')
+                labels = row.locator('.button').evaluate_all(
+                    'buttons => buttons.map(b => (b.value || b.textContent).trim())')
+                self.assertEqual(labels, ['Cancel', primary])
+
     def test_closing_a_modal_leaves_body_as_it_was(self):
         body = self.page.locator('body')
         before = body.get_attribute('aria-hidden')
@@ -136,6 +146,20 @@ class SubmitPostBoxTestCase(BrowserTestCase):
         expect(status).to_contain_text('Success')
         expect(self.textarea).to_have_value(
             'first\n![image]({})\nsecond'.format(HOT_LINK_URL))
+
+    def test_enter_in_the_address_hot_links(self):
+        """Enter submits through the form's first submit button. Cancel comes
+        first in the row, but is a plain button, so it is not that."""
+        self.page.locator('.editor-hot-link').click()
+        address = self.page.locator('#hot-link-form input[name="url"]')
+        address.fill(HOT_LINK_URL)
+        address.press('Enter')
+
+        expect(self.page.locator('#hot-link-modal')).to_be_visible()
+        status = self.page.locator('#hot-link-status')
+        expect(status).to_be_visible()
+        expect(status).to_contain_text('Success')
+        expect(self.textarea).to_have_value('![image]({})'.format(HOT_LINK_URL))
 
 
 class SubmitUploadTestCase(BrowserTestCase):
