@@ -39,8 +39,44 @@ def rate_limit_user(user):
                 "Please try again later.")
 
 
+# ISO media brands that mean HEVC-coded HEIF. The generic 'mif1' is not
+# among them: AVIF carries it too, and Pillow reads AVIF.
+HEIC_BRANDS = {b'heic', b'heix', b'hevc', b'hevx'}
+
+
+def is_heic(f):
+    """Returns True if the file's header says it is a HEIC image.
+
+    The first box of an ISO media file is 'ftyp': its size, the type, a major
+    brand, a minor version, then the compatible brands.
+    """
+    f.seek(0)
+    header = f.read(64)
+    f.seek(0)
+    if header[4:8] != b'ftyp':
+        return False
+    size = min(int.from_bytes(header[:4], 'big'), len(header))
+    brands = [header[8:12]] + [header[i:i + 4] for i in range(16, size, 4)]
+    return not HEIC_BRANDS.isdisjoint(brands)
+
+
+class UploadImageField(forms.ImageField):
+    """An ImageField that names HEIC, the format iPhones take photos in, when
+    Pillow cannot read one, rather than calling it not an image."""
+
+    def to_python(self, data):
+        try:
+            return super().to_python(data)
+        except forms.ValidationError as e:
+            if e.code == 'invalid_image' and is_heic(data):
+                raise forms.ValidationError(
+                    "HEIC photos aren't supported. Please choose a JPEG, PNG "
+                    "or GIF.", code='heic') from e
+            raise
+
+
 class UploadForm(forms.Form):
-    image_file = forms.ImageField()
+    image_file = UploadImageField()
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user')

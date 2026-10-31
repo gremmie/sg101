@@ -1,4 +1,5 @@
 """Browser tests for the news app's pages."""
+import io
 import os
 import re
 import shutil
@@ -208,6 +209,201 @@ class SubmitUploadTestCase(BrowserTestCase):
         expect(status).to_contain_text('Upload a valid image.')
         expect(self.page.locator('#photo-upload-submit')).to_be_enabled()
         expect(self.textarea).to_have_value(CARET_TEXT)
+
+
+def png(name, color='red'):
+    """A small PNG for set_input_files, made in memory."""
+    out = io.BytesIO()
+    Image.new('RGB', (40, 30), color).save(out, 'PNG')
+    return {'name': name, 'mimeType': 'image/png', 'buffer': out.getvalue()}
+
+
+# Records every object URL the page makes and releases.
+RECORD_OBJECT_URLS = """
+    window.objectURLs = {created: [], revoked: []};
+    const create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+    URL.createObjectURL = (f) => {
+        const url = create(f);
+        window.objectURLs.created.push(url);
+        return url;
+    };
+    URL.revokeObjectURL = (url) => {
+        window.objectURLs.revoked.push(url);
+        revoke(url);
+    };
+"""
+
+
+class SubmitUploadListTestCase(BrowserTestCase):
+    """The upload modal's list of chosen files, before anything is uploaded."""
+
+    def setUp(self):
+        super().setUp()
+        self.context.add_init_script(RECORD_OBJECT_URLS)
+        self.login(User.objects.create_user('pjmoto', '', 'pw'))
+        self.page.goto(self.live_server_url + reverse('news-submit'))
+        self.modal = self.page.locator('#upload-modal')
+        self.input = self.modal.locator('input[name="image_file"]')
+        self.entries = self.modal.locator('#photo-upload-list li')
+        self.open_modal()
+
+    def open_modal(self):
+        self.page.locator('a.editor-upload').click()
+        expect(self.modal).to_be_visible()
+
+    def choose(self, *files):
+        self.input.set_input_files(list(files))
+
+    def names(self):
+        return self.entries.locator('.upload-name').all_text_contents()
+
+    def object_urls(self):
+        return self.page.evaluate('window.objectURLs')
+
+    def test_the_input_takes_several_images_of_the_formats_that_work(self):
+        # Safari converts a HEIC to JPEG when the list leaves HEIC out.
+        self.assertEqual(self.input.get_attribute('accept'),
+                         'image/jpeg,image/png,image/gif,image/webp')
+        self.assertIsNotNone(self.input.get_attribute('multiple'))
+
+    def test_choices_add_up(self):
+        self.choose(png('a.png'), png('b.png'))
+        self.choose(png('c.png'), png('d.png'), png('e.png'))
+
+        self.assertEqual(self.names(), ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'])
+        # Cleared, so a file removed from the list can be chosen again.
+        self.assertEqual(self.input.evaluate('i => i.files.length'), 0)
+
+    def test_each_entry_shows_its_thumbnail(self):
+        self.choose(png('a.png'))
+
+        thumb = self.entries.first.locator('img.upload-thumb')
+        expect(thumb).to_have_attribute('src', re.compile(r'^blob:'))
+        expect(thumb).to_have_js_property('complete', True)
+        self.assertGreater(thumb.evaluate('img => img.naturalWidth'), 0)
+
+    def test_the_cap_keeps_the_first_ten_and_says_how_many_were_left_out(self):
+        self.choose(*[png('{:02}.png'.format(n)) for n in range(1, 13)])
+
+        self.assertEqual(self.names(), ['{:02}.png'.format(n) for n in range(1, 11)])
+        status = self.page.locator('#photo-status')
+        expect(status).to_be_visible()
+        expect(status).to_have_text(
+            'You can upload up to 10 images at a time; 2 were left out.')
+
+    def test_the_cap_counts_what_is_already_listed(self):
+        self.choose(*[png('{:02}.png'.format(n)) for n in range(1, 10)])
+        self.choose(png('10.png'), png('11.png'))
+
+        self.assertEqual(len(self.names()), 10)
+        expect(self.page.locator('#photo-status')).to_have_text(
+            'You can upload up to 10 images at a time; 1 was left out.')
+
+    def test_remove_takes_out_that_file_and_releases_its_thumbnail(self):
+        self.choose(png('a.png'), png('b.png'), png('c.png'))
+        thumb_url = self.entries.nth(1).locator('img').get_attribute('src')
+
+        self.modal.get_by_role('button', name='Remove b.png').click()
+
+        # The button is gone from the page by the time its click reaches
+        # Reveal, which must not take that for a click outside the modal.
+        expect(self.modal).to_be_visible()
+        self.assertEqual(self.names(), ['a.png', 'c.png'])
+        self.assertEqual(self.object_urls()['revoked'], [thumb_url])
+
+    def on_disk(self, *names):
+        """Real files, which keep their name, size and modified time from one
+        choice to the next, as a member's do."""
+        files = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, files)
+        paths = []
+        for name in names:
+            path = os.path.join(files, name)
+            with open(path, 'wb') as f:
+                f.write(png(name)['buffer'])
+            paths.append(path)
+        return paths
+
+    def test_a_file_already_listed_is_skipped_and_named(self):
+        a, b, c = self.on_disk('a.png', 'b.png', 'c.png')
+        self.choose(a, b)
+        self.choose(b, c)
+
+        self.assertEqual(self.names(), ['a.png', 'b.png', 'c.png'])
+        expect(self.page.locator('#photo-status')).to_have_text(
+            'b.png is already in the list.')
+
+    def test_several_files_already_listed_are_named_together(self):
+        a, b, c = self.on_disk('a.png', 'b.png', 'c.png')
+        self.choose(a, b, c)
+        self.choose(a, b, c)
+
+        self.assertEqual(self.names(), ['a.png', 'b.png', 'c.png'])
+        expect(self.page.locator('#photo-status')).to_have_text(
+            'a.png, b.png and c.png are already in the list.')
+
+    def test_a_file_already_listed_does_not_count_against_the_cap(self):
+        paths = self.on_disk(*['{:02}.png'.format(n) for n in range(1, 11)])
+        self.choose(*paths[:9])
+        self.choose(paths[0], paths[9])
+
+        self.assertEqual(len(self.names()), 10)
+        expect(self.page.locator('#photo-status')).to_have_text(
+            '01.png is already in the list.')
+
+    def test_a_skipped_file_and_the_cap_are_both_reported(self):
+        paths = self.on_disk(*['{:02}.png'.format(n) for n in range(1, 12)])
+        self.choose(*paths[:9])
+        self.choose(paths[0], paths[9], paths[10])
+
+        self.assertEqual(len(self.names()), 10)
+        expect(self.page.locator('#photo-status')).to_have_text(
+            '01.png is already in the list. '
+            'You can upload up to 10 images at a time; 1 was left out.')
+
+    def test_different_files_with_one_name_are_both_listed(self):
+        """Two cameras, or two folders, can both make an IMG_0001."""
+        (first,) = self.on_disk('IMG_0001.png')
+        other = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, other)
+        second = os.path.join(other, 'IMG_0001.png')
+        Image.new('RGB', (80, 60), 'blue').save(second)
+        self.choose(first)
+        self.choose(second)
+
+        self.assertEqual(self.names(), ['IMG_0001.png', 'IMG_0001.png'])
+        expect(self.page.locator('#photo-status')).to_be_hidden()
+
+    def test_a_file_removed_can_be_chosen_again(self):
+        a, b = self.on_disk('a.png', 'b.png')
+        self.choose(a, b)
+        self.modal.get_by_role('button', name='Remove a.png').click()
+        self.choose(a)
+
+        self.assertEqual(self.names(), ['b.png', 'a.png'])
+        expect(self.page.locator('#photo-status')).to_be_hidden()
+
+    def test_a_file_that_cannot_be_drawn_shows_a_placeholder(self):
+        self.choose({'name': 'notes.txt', 'mimeType': 'text/plain',
+                     'buffer': b'not an image'})
+
+        entry = self.entries.first
+        expect(entry.locator('.upload-placeholder')).to_be_visible()
+        expect(entry.locator('.upload-placeholder')).to_have_text('No preview')
+        expect(entry.locator('img')).to_have_count(0)
+        self.assertEqual(self.names(), ['notes.txt'])
+
+    def test_reopening_the_modal_empties_the_list_and_releases_every_thumbnail(self):
+        self.choose(png('a.png'), png('b.png'))
+        created = self.object_urls()['created']
+        self.assertEqual(len(created), 2)
+
+        self.modal.locator('.close-button').click()
+        expect(self.modal).to_be_hidden()
+        self.open_modal()
+
+        expect(self.entries).to_have_count(0)
+        self.assertEqual(sorted(self.object_urls()['revoked']), sorted(created))
 
 
 class SubmitJQueryTestCase(BrowserTestCase):

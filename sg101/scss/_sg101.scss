@@ -210,6 +210,62 @@
    font-weight: bold;
 }
 
+// The upload modal's chosen files: a thumbnail, the name, a remove button.
+.upload-list {
+   margin: 0 0 $global-margin;
+   list-style: none;
+
+   li {
+      display: flex;
+      align-items: center;
+      gap: rem-calc(10);
+      padding: rem-calc(4) 0;
+      border-bottom: 1px solid $light-gray;
+   }
+}
+
+.upload-thumb,
+.upload-placeholder {
+   flex: none;
+   width: rem-calc(64);
+   height: rem-calc(64);
+}
+
+.upload-thumb {
+   object-fit: cover;
+}
+
+// Where a thumbnail can't be drawn.
+.upload-placeholder {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   background: $light-gray;
+   color: $dark-gray;
+   font-size: rem-calc(11);
+   text-align: center;
+}
+
+.upload-name {
+   flex: auto;
+   min-width: 0;
+   overflow-wrap: anywhere;
+}
+
+.upload-remove {
+   flex: none;
+   padding: 0 rem-calc(8);
+   font-size: rem-calc(24);
+   line-height: 1;
+   color: $dark-gray;
+   cursor: pointer;
+
+   &:hover,
+   &:focus {
+      color: $black;
+   }
+}
+
 div.band-balloon {
    width: 150px;
    height: 75px;

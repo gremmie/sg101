@@ -24,6 +24,16 @@ from user_photos.models import Photo
 AJAX = {'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'}
 
 
+HEIC_MESSAGE = "HEIC photos aren't supported. Please choose a JPEG, PNG or GIF."
+
+
+def ftyp(major, *compatible):
+    """An ISO media file's first box: its size, 'ftyp', the major brand, a
+    minor version, then the compatible brands."""
+    body = b'ftyp' + major + b'\x00\x00\x00\x00' + b''.join(compatible)
+    return (len(body) + 4).to_bytes(4, 'big') + body
+
+
 def make_photo(user, url='https://s3.example.com/pic.jpg'):
     return Photo.objects.create(user=user, url=url,
                                 thumb_url=url.replace('.jpg', '_thumb.jpg'),
@@ -209,6 +219,36 @@ class UploadAjaxV3Tests(TestCase):
         self.assertEqual(payload, {'url': '', 'error_msg': payload['error_msg']})
         self.assertTrue(payload['error_msg'].startswith('Upload a valid image.'),
                         msg=payload['error_msg'])
+
+    def post_unreadable(self, name, header):
+        """Posts a file Pillow cannot read whose first bytes are header."""
+        self.client.login(username='uploader', password='pw')
+        upload = SimpleUploadedFile(name, header + b'\x00' * 64,
+                                    content_type='application/octet-stream')
+        response = self.client.post(self.url, {'image_file': upload}, **AJAX)
+        self.assertEqual(response.status_code, 400)
+        return json.loads(response.content)['error_msg']
+
+    def test_a_heic_photo_is_named(self):
+        """A HEIC is an image Pillow cannot read; saying it is not an image,
+        or corrupt, would be wrong. Only the header matters, so these bytes
+        need no encoder."""
+        message = self.post_unreadable(
+            'IMG_0001.HEIC', ftyp(b'heic', b'mif1', b'heic'))
+        self.assertEqual(message, HEIC_MESSAGE)
+
+    def test_a_heic_variant_brand_is_named(self):
+        message = self.post_unreadable('IMG_0002.HEIC', ftyp(b'heix', b'mif1'))
+        self.assertEqual(message, HEIC_MESSAGE)
+
+    def test_heic_among_the_compatible_brands_is_named(self):
+        message = self.post_unreadable('IMG_0003.HEIF', ftyp(b'mif1', b'heic'))
+        self.assertEqual(message, HEIC_MESSAGE)
+
+    def test_another_ftyp_file_is_not_called_heic(self):
+        """AVIF shares the generic mif1 brand with HEIC."""
+        message = self.post_unreadable('photo.avif', ftyp(b'avif', b'mif1', b'miaf'))
+        self.assertTrue(message.startswith('Upload a valid image.'), msg=message)
 
     @override_settings(USER_PHOTOS_RATE_LIMIT=(0, 60))
     def test_over_quota_says_why(self):
