@@ -29,7 +29,7 @@
    </div>
    <form enctype="multipart/form-data" method="POST" action=".">{% csrf_token %}
       {{ form.as_p }}
-      <input type="submit" class="button" value="Update Avatar" />
       <a href="{% url 'bio-me' %}" class="secondary button">Cancel</a>
+      <input type="submit" class="button" value="Update Avatar" />
    </form>
 {% endblock %}

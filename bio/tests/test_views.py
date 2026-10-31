@@ -197,6 +197,17 @@ class ProfileTest(TestCase):
         response = self.client.get(url)
         self.assertRedirects(response, reverse('bio-me'))
 
+    def test_cancel_comes_before_the_primary_action(self):
+        """As in the post box's modals: the primary action is the last
+        button in the row."""
+        self.client.login(username='paul', password='pw')
+        for name, primary in (('bio-edit_profile', 'value="Save"'),
+                              ('bio-change_avatar', 'value="Update Avatar"')):
+            with self.subTest(page=name):
+                html = self.client.get(reverse(name)).content.decode()
+                cancel = html.index('>Cancel</a>')
+                self.assertLess(cancel, html.index(primary))
+
     def test_edit_anon(self):
         url = reverse('bio-edit_profile')
         response = self.client.get(url)

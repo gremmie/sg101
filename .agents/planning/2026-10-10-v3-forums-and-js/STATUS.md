@@ -1297,6 +1297,11 @@ nothing else running.
 Suite and gate, as separate runs with nothing else running: 1533 tests OK
 each; `--tag browser`: 53 OK; db 14 empty after.
 
-Other pages still put the primary action first (`bio/edit_profile.html`,
-`bio/avatar.html`; `messages/report_message.html` already has Cancel
-first). Not changed here.
+**The two bio pages, at Brian's request (2026-10-30).** `bio/edit_profile.html`
+(Save) and `bio/avatar.html` (Update Avatar) put the action first; Cancel
+now comes first on both. Their rows are left-aligned, like
+`messages/report_message.html`, which already had Cancel first, so the
+order is swapped and the alignment left as it is. Cancel there is a link,
+so it takes no part in submitting the form. `bio` `ProfileTest.test_cancel_comes_before_the_primary_action`
+compares the two positions in each page; it failed on both before the swap.
+Suite and gate, separate runs: 1534 tests OK each; `--tag browser`: 53 OK.
