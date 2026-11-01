@@ -1305,3 +1305,153 @@ order is swapped and the alignment left as it is. Cancel there is a link,
 so it takes no part in submitting the form. `bio` `ProfileTest.test_cancel_comes_before_the_primary_action`
 compares the two positions in each page; it failed on both before the swap.
 Suite and gate, separate runs: 1534 tests OK each; `--tag browser`: 53 OK.
+
+## Step 5 task 03 — the upload queue, and "Choose images" — DONE 2026-11-01 (`21e69dc1`)
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step05/task-03-sequential-upload-queue.code-task.md`.
+Branch `multi-upload`.
+
+**The queue.** `uploads.js` sends the list to `upload_ajax_v3` one request at
+a time, in order. A success inserts the code and marks the entry ✓; a failure
+marks it ✗ with the server's reason and the queue goes on. While it runs,
+Upload is disabled and reads "Uploading 2 of 3…"; "Choose images" and the input
+are disabled, and so is remove on entries sent or in flight. A waiting entry
+can still be removed: it is not sent, and the total shrinks. The batch ends
+with "2 of 3 added", in the success style only if all were added. Uploaded
+entries leave the list and release their object URLs; failed ones stay, and
+Upload sends them again.
+
+**Decisions the task file left open.**
+
+- **Closing the modal during a batch stops what has not been sent (Brian,
+  2026-11-01; over carrying on, or refusing to close).** The file in flight
+  finishes and its code goes in, since the server may already have it. The
+  loop checks the form's `offsetParent` between files, so it needs no jQuery
+  listener and covers Cancel, ×, Esc and a click outside alike; only Cancel
+  was tested. Opening the modal is the reset, and it does nothing to a running
+  batch except stop it: the file in flight and the rest stay listed, and the
+  rest can be uploaded when it lands.
+- **The summary replaces "Success! The image code was added to your post."**
+  One file reads "1 of 1 added". Two older upload tests changed to match.
+- **A 200 that is not the expected JSON** shows "Something went wrong with this
+  image. Please try again.", not the parser's message.
+- **The codes go into the textarea the batch began from**, not the active one:
+  opening the modal from another post box changes the active one while the file
+  in flight has yet to land.
+- **"Choose images" is a `<button type="button">` that calls `input.click()`**,
+  not a `<label>`: focus, Enter, Space and `disabled` are then the browser's.
+  The input has `show-for-sr` and `tabindex="-1"`, so there is one tab stop.
+
+**Clicking elsewhere mid-batch, measured.** The modal's overlay means the post
+can be reached only by closing the modal, which stops the batch, so at most one
+code can arrive after that. On the dev stack, with uploads intercepted: 2 files,
+the modal closed with the first in flight, then a selection made in the post
+and the first answered. 1 request was made, and the code **replaced the selected
+text**: `keep SELECTED keep` became `keep \n![image](…)\n keep`. Left as it is;
+that is what `insertAtCursor` does for every caller, and it now needs a selection
+made within one upload's time. A caret moved there is simply followed
+(`test_a_code_in_flight_goes_where_the_caret_has_moved_to`).
+
+**Tests, written first.** `news.tests.test_browser.SubmitUploadQueueTestCase`
+(20) and one in `bio.tests.test_browser.EditProfilePostBoxTestCase`, for the two
+post boxes. `LocalUploadTestCase` is split out of `SubmitUploadTestCase` to
+share its temporary `MEDIA_ROOT` and quota cleanup. Order is checked by opening
+the stored file each code points at and reading its color, not by counting
+codes. One at a time is checked by holding each upload in `page.route`. Before
+the change, 20 of the 22 tests then run failed; the two that passed (the empty-list
+message; a code following a moved caret) are covered by the mutations below.
+
+| Mutation | Failed |
+|---|---|
+| sends not awaited (parallel) | 13 tests, among them `one_request_at_a_time` |
+| stop at the first failure | `a_failure_says_why`, `no_response_marks_that_file` |
+| list order reversed | 7, among them `codes_land_in_list_order` |
+| removed from the page but not from the array | `a_file_removed_before_upload`, `a_waiting_file_removed`, `a_failed_file_removed` |
+| no check for removal in the loop | `a_waiting_file_removed` |
+| closing does not stop | `closing_during_a_batch` |
+| reopening does not stop; reset wipes a running batch | `reopening_during_a_batch`, each |
+| active textarea read at insert | `a_code_in_flight_goes_into_the_box` |
+| caret reset before inserting | `a_code_in_flight_goes_where_the_caret`, `codes_land_in_list_order` |
+| uploaded entries stay listed | 7 |
+| remove left enabled in flight | `one_request_at_a_time` |
+| remove left disabled after failing | `a_failed_file_removed`, `a_failure_says_why` |
+| "Choose images" left enabled; input left enabled | `one_request_at_a_time`, each |
+| total ignores removals; remove does not refresh it | `a_waiting_file_removed`, each |
+| ✗ not cleared on retry | `the_mark_of_a_failed_file_clears` |
+| parser's message shown | `an_answer_that_cannot_be_read` |
+| summary always success; never success | `a_failure_says_why`; `codes_land_in_list_order` |
+| empty-list check gone | `upload_with_an_empty_list` |
+| the button does nothing | the three button tests, "No file dialog opened." |
+| removal does not revoke | `files_leaving_the_list`, `remove_takes_out_that_file` |
+| input not hidden; `display: none` | `the_native_input_is_hidden`, each |
+| input a tab stop | `the_input_is_not_a_second_tab_stop` |
+
+27 in all. Restored byte-identical each time (compared with a saved copy).
+The battery's two extra keyboard-test errors are not counted as results. Their
+output was not kept; the race below is the likely cause, seen in the suite run's
+identical test and traceback.
+
+**A flaky test, and its cause measured.** The keyboard test timed out waiting
+for the file dialog in 2 of the battery's 27 runs, once under a mutation that
+could not touch it, then again in a full suite run. It did not recur in 20 runs
+without load. In a throwaway loop of open, focus, Enter, with 8 busy processes
+in the container, **31 of 120 presses got no `filechooser` event**. At each
+miss the button had the focus, the key was not prevented and the button's click
+fired, so the page was right: two guesses (Reveal moving the focus; Reveal's
+`preventDefault` while it has no focusable elements) were wrong. With the
+listener added before the page loaded, under the same load: **0 of 120**.
+`page.on('filechooser')` turns on interception without waiting for it, so
+`expect_file_chooser` just before a fast key press can lose. The class now
+listens from `setUp`; six runs of the three button tests under load passed.
+
+**Looked at on the dev stack** at 375 × 812 and 1280 × 900, through a session
+made directly and deleted after (`last_login` unchanged), the debug toolbar
+hidden, uploads intercepted so nothing reached S3: no horizontal scroll, no page
+errors, the disabled controls and the ✗ with its long reason as intended.
+**Not tried:** the task's throttled upload by hand on a real upload; held routes
+stood in for it. Task 04's walk and Brian's phone check come next.
+
+**Sass:** `.upload-detail`, `.upload-result`, a disabled `.upload-remove`.
+Rebuilt; `main.min.css` changed with it.
+
+**Two additions, after Brian tried it on dev (2026-11-01).** Both his, from what
+he saw with a throttled connection.
+
+- **Five minutes for an upload.** `core/http.js`'s 30 s covers sending the
+  file, so at 400 kbps anything over about 1.5 MB failed with "The server took
+  too long to answer", and a retry failed the same way. Research topic 1 had
+  closed the member's upload time as covered by Cloudflare's buffering, which is
+  true of gunicorn and not of a timer in the browser. A 6.5 MB photo needs about
+  1.7 Mbps to beat 30 s, and about 175 kbps to beat five minutes. `uploads.js`
+  passes `timeoutMs`; preview and hot-link keep 30 s. **This has been live for
+  single uploads since step 2.** A connection that truly hangs now takes five
+  minutes to show its ✗; closing the modal stops the rest, not that file.
+- **"Uploading…" with a spinner on the row being sent.** The button's label
+  moves only between files, so a slow file looked like nothing happening. The
+  spinner is CSS (`.upload-sending::before`), not `static/icons/ajax_busy.gif`:
+  JS cannot use `{% static %}` and production's names are hashed, it takes the
+  theme's color and the text's size, and step 12 retires the old pages' assets.
+  It does not spin under `prefers-reduced-motion`; **that rule has no test.**
+
+Without throttling the progress is barely visible on dev: recorded frame by
+frame, 3 files of 55 KB took 0.23 s and 2 of 5.4 MB took 0.29 s, stored locally
+with no S3. At 50 KB/s and 400 ms latency, 2 of 216 KB took 9.6 s, about 4.8 s
+per label.
+
+Tests, written first: `test_a_slow_upload_has_five_minutes` (Playwright's fake
+clock, still sending at 299 s, failed by 301 s),
+`test_the_row_being_sent_says_so_with_a_spinner`,
+`test_a_failed_row_loses_its_spinner`, which guards and passed before the change.
+
+| Mutation | Failed |
+|---|---|
+| the default 30 s; 4 minutes; 50 minutes | `a_slow_upload_has_five_minutes`, each |
+| the row not marked as sending | `a_slow_upload`, `the_mark_of_a_failed_file_clears`, `the_row_being_sent` |
+| sending class left on after success | `the_row_being_sent` |
+| sending class left on after failure | `a_failed_row_loses_its_spinner` |
+| no animation in the built CSS | `the_row_being_sent` |
+
+Restored byte-identical.
+
+**Suite and gate**, as separate runs with nothing else running: 1558 tests OK
+each; `--tag browser`: 77 OK. After them db 14 holds no `user_photos:*` key.
