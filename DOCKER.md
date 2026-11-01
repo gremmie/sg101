@@ -639,7 +639,8 @@ sections above are what those shortcuts run.
 - **`docker-compose.yml`** — defines the five services and wires them
   together. web/worker/beat all build the `dev` target.
 - **`sg101/settings/dev.py`** — dev settings; points the DB at the container
-  services and enables the debug toolbar. Redis needs nothing here: `base.py`
+  services and installs the debug toolbar, which stays hidden unless `.env` sets
+  `DEBUG_TOOLBAR=True` (then `docker compose up -d web`). Redis needs nothing here: `base.py`
   reads its host and port from the environment and defaults them to the `redis`
   service. Selected via `DJANGO_SETTINGS_MODULE` in compose, and the default for
   `manage.py`.

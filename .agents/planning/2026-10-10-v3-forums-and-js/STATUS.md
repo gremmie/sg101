@@ -1455,3 +1455,24 @@ Restored byte-identical.
 
 **Suite and gate**, as separate runs with nothing else running: 1558 tests OK
 each; `--tag browser`: 77 OK. After them db 14 holds no `user_photos:*` key.
+
+## The debug toolbar hidden by default in dev — 2026-11-01
+
+Brian's request: it sits over the page and he no longer uses it. `dev.py` reads
+`DEBUG_TOOLBAR` (default off) into `SHOW_DEBUG_TOOLBAR`, and only
+`SHOW_TOOLBAR_CALLBACK` looks at it; the app, middleware and `__debug__/` URLs
+stay as they were. The callback used to return `DEBUG`, which `base.py` sets
+to `True` outright, so that check decided nothing in dev and is gone.
+`tools/site_smoke.py`'s check now passes when the toolbar's presence matches
+the setting. To turn it on: `DEBUG_TOOLBAR=True` in `.env`, then
+`docker compose up -d web`.
+
+Three tests in `core.tests.test_settings.DebugToolbarWiringTests`. Default on
+fails `hidden_unless_asked_for`; returning `DEBUG` fails it and
+`debug_toolbar_false_hides_it`; never shown fails `debug_toolbar_shows_it`.
+Restored byte-identical.
+
+Measured through the real route, reading `http://localhost:8000/`: no `djDebug`
+by default; with the line added to `.env` and `up -d web`, present; with `.env`
+restored (byte-identical) and `up -d web`, gone. The smoke check, run alone,
+passed at each. The rest of `site_smoke.py` was not run.

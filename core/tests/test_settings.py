@@ -291,6 +291,15 @@ TOOLBAR_WIRING_SNIPPET = (
     "}))\n"
 )
 
+# What the toolbar's own middleware asks before showing itself.
+TOOLBAR_SHOWN_SNIPPET = (
+    "import json\n"
+    "import sys\n"
+    "from django.conf import settings\n"
+    "shown = settings.DEBUG_TOOLBAR_CONFIG['SHOW_TOOLBAR_CALLBACK'](None)\n"
+    "sys.stdout.write(json.dumps(shown))\n"
+)
+
 REDIRECTS_PANEL = 'debug_toolbar.panels.redirects.RedirectsPanel'
 REDIRECTS_PANEL_ID = 'RedirectsPanel'
 PROFILING_PANEL = 'debug_toolbar.panels.profiling.ProfilingPanel'
@@ -336,8 +345,8 @@ class DebugToolbarWiringTests(SimpleTestCase):
       * ProfilingPanel dropped from DISABLE_PANELS -> the config case and the
         profiling case.
 
-    Nothing here covers SHOW_TOOLBAR_CALLBACK, which only affects whether the
-    toolbar is visible.
+    The toolbar is hidden unless DEBUG_TOOLBAR is set, and these wiring cases
+    hold either way: only SHOW_TOOLBAR_CALLBACK reads it.
     """
 
     def toolbar_wiring(self):
@@ -374,6 +383,23 @@ class DebugToolbarWiringTests(SimpleTestCase):
     def test_the_panel_that_does_its_job_stays_enabled(self):
         """HistoryPanel replaces RedirectsPanel."""
         self.assertIn('HistoryPanel', self.toolbar_wiring()['enabled_panels'])
+
+    def toolbar_shown(self, **env):
+        """Whether the dev settings show the toolbar, given these variables."""
+        code, out, err = _run({'DJANGO_SETTINGS_MODULE': 'sg101.settings.dev',
+                               'SECRET_KEY': 'x', **env},
+                              snippet=TOOLBAR_SHOWN_SNIPPET)
+        self.assertEqual(code, 0, msg=err)
+        return json.loads(out)
+
+    def test_the_toolbar_is_hidden_unless_asked_for(self):
+        self.assertIs(self.toolbar_shown(DEBUG_TOOLBAR=None), False)
+
+    def test_debug_toolbar_shows_it(self):
+        self.assertIs(self.toolbar_shown(DEBUG_TOOLBAR='True'), True)
+
+    def test_debug_toolbar_false_hides_it(self):
+        self.assertIs(self.toolbar_shown(DEBUG_TOOLBAR='False'), False)
 
 
 DEPLOYED_LOGGING_SNIPPET = (

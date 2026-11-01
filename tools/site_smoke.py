@@ -350,11 +350,13 @@ def check_admin(session, results):
 
 
 def check_debug_toolbar(session, results):
+    """The toolbar shows exactly when DEBUG_TOOLBAR asks for it."""
+    from django.conf import settings
     resp = session.get(BASE + '/')
-    results.append(('djDebug' in resp.text,
-                    'misc  %-34s %s' % ('debug toolbar renders',
-                                        'present' if 'djDebug' in resp.text
-                                        else 'MISSING')))
+    present = 'djDebug' in resp.text
+    results.append((present == settings.SHOW_DEBUG_TOOLBAR,
+                    'misc  %-34s %s' % ('debug toolbar as configured',
+                                        'present' if present else 'absent')))
 
 
 def setup_user():

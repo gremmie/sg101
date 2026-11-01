@@ -72,16 +72,17 @@ INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
 # requests fail with "Another profiling tool is already active" -- and it was
 # on when runserver was OOM-killed.
 #
-# SHOW_TOOLBAR_CALLBACK: the toolbar's own default gates on REMOTE_ADDR being in
+# SHOW_TOOLBAR_CALLBACK: hidden unless .env sets DEBUG_TOOLBAR=True, since it sits
+# over the page. The toolbar's own default gates on REMOTE_ADDR being in
 # INTERNAL_IPS, and behind Docker's bridge host requests arrive NAT'd from the
-# gateway (172.18.0.x), never 127.0.0.1 -- so the toolbar would stay hidden.
-# Show it whenever DEBUG is on.
+# gateway (172.18.0.x), never 127.0.0.1 -- so it could never be turned on that way.
+SHOW_DEBUG_TOOLBAR = env.bool('DEBUG_TOOLBAR', default=False)
 DEBUG_TOOLBAR_CONFIG = {
     'DISABLE_PANELS': {
         'debug_toolbar.panels.profiling.ProfilingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
     },
-    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+    'SHOW_TOOLBAR_CALLBACK': lambda request: SHOW_DEBUG_TOOLBAR,
 }
 
 # Photo uploads go to S3 unless .env says to keep them under MEDIA_ROOT, which
