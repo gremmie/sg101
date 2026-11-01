@@ -162,10 +162,9 @@ class SubmitPostBoxTestCase(BrowserTestCase):
         expect(self.textarea).to_have_value('![image]({})'.format(HOT_LINK_URL))
 
 
-class SubmitUploadTestCase(BrowserTestCase):
-    """Uploading from the post box on the story submission page.
-
-    Uploads are stored locally under a temporary MEDIA_ROOT, never on S3.
+class LocalUploadTestCase(BrowserTestCase):
+    """The story submission page, with uploads stored locally under a
+    temporary MEDIA_ROOT, never on S3.
     """
 
     @classmethod
@@ -193,6 +192,13 @@ class SubmitUploadTestCase(BrowserTestCase):
         quota_key = 'user_photos:counts:pjmoto'
         conn.delete(quota_key)
         self.addCleanup(conn.delete, quota_key)
+
+
+class SubmitUploadTestCase(LocalUploadTestCase):
+    """Uploading one file from the post box."""
+
+    def setUp(self):
+        super().setUp()
         self.files = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.files)
 
@@ -216,7 +222,7 @@ class SubmitUploadTestCase(BrowserTestCase):
 
         status = self.page.locator('#photo-status')
         expect(status).to_be_visible()
-        expect(status).to_contain_text('Success')
+        expect(status).to_have_text('1 of 1 added')
         expect(self.textarea).to_have_value(IMAGE_AT_CARET)
 
     def test_a_file_that_is_not_an_image_says_why(self):
@@ -230,7 +236,9 @@ class SubmitUploadTestCase(BrowserTestCase):
 
         status = self.page.locator('#photo-status')
         expect(status).to_be_visible()
-        expect(status).to_contain_text('Upload a valid image.')
+        expect(status).to_have_text('0 of 1 added')
+        expect(self.page.locator('#photo-upload-list')).to_contain_text(
+            'Upload a valid image.')
         expect(self.page.locator('#photo-upload-submit')).to_be_enabled()
         expect(self.textarea).to_have_value(CARET_TEXT)
 
@@ -428,6 +436,416 @@ class SubmitUploadListTestCase(BrowserTestCase):
 
         expect(self.entries).to_have_count(0)
         self.assertEqual(sorted(self.object_urls()['revoked']), sorted(created))
+
+
+class SubmitUploadQueueTestCase(LocalUploadTestCase):
+    """Upload sends the list one file at a time, inserting each code as it
+    lands."""
+
+    NOT_AN_IMAGE = {'name': 'notes.jpg', 'mimeType': 'image/jpeg',
+                    'buffer': b'not an image'}
+    CODE = re.compile(r'!\[image\]\(([^)]+)\)')
+
+    def setUp(self):
+        super().setUp()
+        self.page.add_init_script(RECORD_OBJECT_URLS)
+        self.page.reload()
+        self.modal = self.page.locator('#upload-modal')
+        self.input = self.modal.locator('input[name="image_file"]')
+        self.entries = self.modal.locator('#photo-upload-list li')
+        self.submit = self.page.locator('#photo-upload-submit')
+        self.choose_button = self.modal.get_by_role('button', name='Choose images')
+        self.status = self.page.locator('#photo-status')
+        self.endpoint = reverse('user_photos-upload_ajax_v3')
+        self.sent = []
+        self.page.on('request', self.count_upload)
+        # Listening turns on Playwright's interception of the file dialog, and
+        # that is not finished when page.on returns. expect_file_chooser, opened
+        # just before a key press, loses the race under load.
+        self.choosers = []
+        self.page.on('filechooser', lambda chooser: self.choosers.append(chooser))
+        self.open_modal()
+
+    def count_upload(self, request):
+        if request.url.endswith(self.endpoint):
+            self.sent.append(request)
+
+    def open_modal(self):
+        self.page.locator('a.editor-upload').click()
+        expect(self.modal).to_be_visible()
+
+    def choose(self, *files):
+        self.input.set_input_files(list(files))
+
+    def names(self):
+        return self.entries.locator('.upload-name').all_text_contents()
+
+    def entry(self, name):
+        return self.entries.filter(has=self.page.locator(
+            '.upload-name', has_text=name))
+
+    def remove_button(self, name):
+        return self.modal.get_by_role('button', name='Remove ' + name)
+
+    def next_chooser(self):
+        for _ in range(50):
+            if self.choosers:
+                return self.choosers.pop()
+            self.page.wait_for_timeout(100)
+        self.fail('No file dialog opened.')
+
+    def hold_uploads(self):
+        """Holds every upload until its route is continued; returns the list
+        the held routes arrive in."""
+        held = []
+        self.page.route('**' + self.endpoint, lambda route: held.append(route))
+        return held
+
+    def wait_for_held(self, held, count):
+        """Waits for count uploads to be held, then long enough that a further
+        one, sent alongside them, would have arrived too."""
+        for _ in range(50):
+            if len(held) >= count:
+                break
+            self.page.wait_for_timeout(100)
+        self.page.wait_for_timeout(300)
+        self.assertEqual(len(held), count)
+
+    def colors_inserted(self):
+        """The color of each image the post's codes point at, in post order."""
+        colors = []
+        for url in self.CODE.findall(self.page.locator('.v3-editor textarea').input_value()):
+            path = os.path.join(self.media_root, 'user_photos', url.rsplit('/', 1)[1])
+            with Image.open(path) as image:
+                colors.append(image.convert('RGB').getpixel((0, 0)))
+        return colors
+
+    def test_upload_with_an_empty_list_asks_for_a_file(self):
+        self.submit.click()
+        expect(self.status).to_be_visible()
+        expect(self.status).to_have_text('Please choose a file to upload.')
+        self.assertEqual(self.sent, [])
+
+    def test_codes_land_in_list_order_each_on_its_own_line(self):
+        self.textarea.fill(CARET_TEXT)
+        self.textarea.evaluate('(t, i) => { t.focus(); t.setSelectionRange(i, i); }', CARET)
+        self.choose(png('a.png', (200, 0, 0)), png('b.png', (0, 200, 0)),
+                    png('c.png', (0, 0, 200)))
+
+        self.submit.click()
+
+        expect(self.status).to_be_visible()
+        expect(self.status).to_have_text('3 of 3 added')
+        expect(self.status).to_have_class(re.compile(r'\bsuccess\b'))
+        expect(self.textarea).to_have_value(re.compile(
+            r'^first\n(!\[image\]\(\S+\)\n){3}second$'))
+        self.assertEqual(self.colors_inserted(),
+                         [(200, 0, 0), (0, 200, 0), (0, 0, 200)])
+        expect(self.entries).to_have_count(0)
+        expect(self.submit).to_be_enabled()
+        expect(self.submit).to_have_value('Upload')
+
+    def test_a_failure_says_why_and_the_rest_go_on(self):
+        self.choose(png('a.png', (200, 0, 0)), self.NOT_AN_IMAGE,
+                    png('c.png', (0, 0, 200)))
+
+        self.submit.click()
+
+        expect(self.status).to_be_visible()
+        expect(self.status).to_have_text('2 of 3 added')
+        expect(self.status).to_have_class(re.compile(r'\balert\b'))
+        self.assertEqual(self.colors_inserted(), [(200, 0, 0), (0, 0, 200)])
+        self.assertEqual(self.names(), ['notes.jpg'])
+        result = self.entry('notes.jpg').locator('.upload-result')
+        expect(result).to_contain_text('\u2717')
+        expect(result).to_contain_text('Upload a valid image.')
+        expect(self.remove_button('notes.jpg')).to_be_enabled()
+        expect(self.choose_button).to_be_enabled()
+
+    def test_one_request_at_a_time_with_the_controls_disabled(self):
+        held = self.hold_uploads()
+        self.choose(png('a.png', 'red'), png('b.png', 'green'), png('c.png', 'blue'))
+        self.submit.click()
+
+        self.wait_for_held(held, 1)
+        expect(self.submit).to_be_disabled()
+        expect(self.submit).to_have_value('Uploading 1 of 3\u2026')
+        expect(self.choose_button).to_be_disabled()
+        expect(self.input).to_be_disabled()
+        expect(self.remove_button('a.png')).to_be_disabled()
+        expect(self.remove_button('b.png')).to_be_enabled()
+
+        held[0].continue_()
+        self.wait_for_held(held, 2)
+        expect(self.entry('a.png').locator('.upload-result')).to_have_text('\u2713')
+        expect(self.submit).to_be_disabled()
+        expect(self.submit).to_have_value('Uploading 2 of 3\u2026')
+        expect(self.remove_button('a.png')).to_be_disabled()
+        expect(self.remove_button('b.png')).to_be_disabled()
+        expect(self.remove_button('c.png')).to_be_enabled()
+
+        held[1].continue_()
+        self.wait_for_held(held, 3)
+        expect(self.submit).to_be_disabled()
+        held[2].continue_()
+
+        expect(self.status).to_have_text('3 of 3 added')
+        expect(self.submit).to_be_enabled()
+        expect(self.choose_button).to_be_enabled()
+        expect(self.input).to_be_enabled()
+
+    def spinner_animation(self, result):
+        return result.evaluate(
+            "r => getComputedStyle(r, '::before').animationName")
+
+    def test_the_row_being_sent_says_so_with_a_spinner(self):
+        held = self.hold_uploads()
+        self.choose(png('a.png', 'red'), png('b.png', 'green'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+
+        first = self.entry('a.png').locator('.upload-result')
+        second = self.entry('b.png').locator('.upload-result')
+        expect(first).to_have_text('Uploading\u2026')
+        expect(first).to_be_visible()
+        self.assertEqual(self.spinner_animation(first), 'upload-spin')
+        expect(second).to_have_text('')
+        self.assertEqual(self.spinner_animation(second), 'none')
+
+        held[0].continue_()
+        self.wait_for_held(held, 2)
+        expect(first).to_have_text('\u2713')
+        self.assertEqual(self.spinner_animation(first), 'none')
+        expect(second).to_have_text('Uploading\u2026')
+        self.assertEqual(self.spinner_animation(second), 'upload-spin')
+
+    def test_a_failed_row_loses_its_spinner(self):
+        self.choose(self.NOT_AN_IMAGE)
+        self.submit.click()
+        expect(self.status).to_have_text('0 of 1 added')
+        result = self.entry('notes.jpg').locator('.upload-result')
+        expect(result).to_contain_text('\u2717')
+        self.assertEqual(self.spinner_animation(result), 'none')
+
+    def test_a_slow_upload_has_five_minutes(self):
+        """The clock runs while the file is being sent, and a large photo on a
+        slow connection takes far longer than a page's usual request limit."""
+        self.page.clock.install()
+        self.page.reload()
+        self.open_modal()
+        held = self.hold_uploads()
+        self.choose(png('a.png', 'red'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+        result = self.entry('a.png').locator('.upload-result')
+
+        self.page.clock.fast_forward(299 * 1000)
+        self.page.wait_for_timeout(300)
+        expect(result).to_have_text('Uploading\u2026')
+
+        self.page.clock.fast_forward(2 * 1000)
+        expect(result).to_contain_text('The server took too long to answer.')
+        expect(self.status).to_have_text('0 of 1 added')
+
+    def test_a_file_removed_before_upload_is_not_sent(self):
+        self.choose(png('a.png', 'red'), png('b.png', 'green'), png('c.png', 'blue'))
+        self.remove_button('b.png').click()
+
+        self.submit.click()
+
+        expect(self.status).to_have_text('2 of 2 added')
+        self.assertEqual(len(self.sent), 2)
+
+    def test_a_waiting_file_removed_during_the_batch_is_not_sent(self):
+        held = self.hold_uploads()
+        self.choose(png('a.png', 'red'), png('b.png', 'green'), png('c.png', 'blue'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+
+        self.remove_button('c.png').click()
+
+        expect(self.modal).to_be_visible()
+        expect(self.submit).to_have_value('Uploading 1 of 2\u2026')
+        held[0].continue_()
+        self.wait_for_held(held, 2)
+        expect(self.submit).to_have_value('Uploading 2 of 2\u2026')
+        held[1].continue_()
+        expect(self.status).to_have_text('2 of 2 added')
+        self.assertEqual(len(self.sent), 2)
+
+    def test_a_failed_file_removed_is_not_sent_again(self):
+        self.choose(self.NOT_AN_IMAGE)
+        self.submit.click()
+        expect(self.status).to_have_text('0 of 1 added')
+        self.assertEqual(len(self.sent), 1)
+
+        self.remove_button('notes.jpg').click()
+        self.choose(png('new.png', (0, 200, 0)))
+        self.submit.click()
+
+        expect(self.status).to_have_text('1 of 1 added')
+        self.assertEqual(len(self.sent), 2)
+        self.assertEqual(self.colors_inserted(), [(0, 200, 0)])
+        expect(self.entries).to_have_count(0)
+
+    def test_upload_again_retries_a_failed_file(self):
+        self.page.route('**' + self.endpoint, lambda route: route.abort())
+        self.choose(png('a.png', (200, 0, 0)))
+        self.submit.click()
+        expect(self.status).to_have_text('0 of 1 added')
+
+        self.page.unroute('**' + self.endpoint)
+        self.submit.click()
+
+        expect(self.status).to_have_text('1 of 1 added')
+        expect(self.entries).to_have_count(0)
+        self.assertEqual(self.colors_inserted(), [(200, 0, 0)])
+
+    def test_the_mark_of_a_failed_file_clears_when_it_is_retried(self):
+        self.page.route('**' + self.endpoint, lambda route: route.abort())
+        self.choose(png('a.png', 'red'))
+        self.submit.click()
+        expect(self.status).to_have_text('0 of 1 added')
+        self.page.unroute('**' + self.endpoint)
+        held = self.hold_uploads()
+
+        self.submit.click()
+
+        self.wait_for_held(held, 1)
+        result = self.entry('a.png').locator('.upload-result')
+        expect(result).to_have_text('Uploading\u2026')
+        expect(result).not_to_contain_text('\u2717')
+
+    def test_no_response_marks_that_file_and_the_queue_goes_on(self):
+        answered = []
+
+        def abort_the_first(route):
+            if answered:
+                route.continue_()
+            else:
+                answered.append(route)
+                route.abort()
+        self.page.route('**' + self.endpoint, abort_the_first)
+        self.choose(png('a.png', (200, 0, 0)), png('b.png', (0, 200, 0)))
+
+        self.submit.click()
+
+        expect(self.status).to_have_text('1 of 2 added')
+        self.assertEqual(self.names(), ['a.png'])
+        expect(self.entry('a.png').locator('.upload-result')).to_contain_text(
+            'Could not reach the server.')
+        self.assertEqual(self.colors_inserted(), [(0, 200, 0)])
+
+    def test_an_answer_that_cannot_be_read_gets_the_general_message(self):
+        self.page.route('**' + self.endpoint, lambda route: route.fulfill(
+            status=200, content_type='text/html', body='<html>a proxy</html>'))
+        self.choose(png('a.png'))
+
+        self.submit.click()
+
+        expect(self.status).to_have_text('0 of 1 added')
+        expect(self.entry('a.png').locator('.upload-result')).to_have_text(
+            '\u2717 Something went wrong with this image. Please try again.')
+
+    def test_files_leaving_the_list_release_their_thumbnails(self):
+        self.choose(png('a.png', 'red'), self.NOT_AN_IMAGE)
+        thumb_url = self.entry('a.png').locator('img').get_attribute('src')
+
+        self.submit.click()
+
+        expect(self.status).to_have_text('1 of 2 added')
+        self.assertEqual(self.page.evaluate('window.objectURLs.revoked'), [thumb_url])
+
+    def test_closing_during_a_batch_stops_what_has_not_been_sent(self):
+        held = self.hold_uploads()
+        self.choose(png('a.png', (200, 0, 0)), png('b.png', 'green'), png('c.png', 'blue'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+
+        self.modal.get_by_role('button', name='Close modal').last.click()
+        expect(self.modal).to_be_hidden()
+        held[0].continue_()
+
+        # The file in flight finishes, and its code goes in.
+        expect(self.textarea).to_have_value(self.CODE)
+        self.wait_for_held(held, 1)
+        self.assertEqual(self.colors_inserted(), [(200, 0, 0)])
+
+        # An empty list next time, as after any close.
+        self.open_modal()
+        expect(self.entries).to_have_count(0)
+        expect(self.status).to_be_hidden()
+        expect(self.submit).to_be_enabled()
+
+    def test_reopening_during_a_batch_stops_it_and_keeps_the_rest_listed(self):
+        held = self.hold_uploads()
+        self.choose(png('a.png', (200, 0, 0)), png('b.png', 'green'), png('c.png', 'blue'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+
+        self.modal.get_by_role('button', name='Close modal').last.click()
+        expect(self.modal).to_be_hidden()
+        self.open_modal()
+
+        # Still in flight, so the list and the busy state are still there.
+        self.assertEqual(self.names(), ['a.png', 'b.png', 'c.png'])
+        expect(self.submit).to_be_disabled()
+
+        held[0].continue_()
+        expect(self.status).to_have_text('1 of 1 added')
+        self.wait_for_held(held, 1)
+        self.assertEqual(self.names(), ['b.png', 'c.png'])
+        expect(self.submit).to_be_enabled()
+        self.assertEqual(self.colors_inserted(), [(200, 0, 0)])
+
+    def test_a_code_in_flight_goes_where_the_caret_has_moved_to(self):
+        """Closing the modal is the one way to reach the post during a batch."""
+        self.textarea.fill(CARET_TEXT)
+        self.textarea.evaluate('t => { t.focus(); t.setSelectionRange(0, 0); }')
+        held = self.hold_uploads()
+        self.choose(png('a.png', 'red'))
+        self.submit.click()
+        self.wait_for_held(held, 1)
+
+        self.modal.get_by_role('button', name='Close modal').last.click()
+        expect(self.modal).to_be_hidden()
+        self.textarea.evaluate('(t, i) => { t.focus(); t.setSelectionRange(i, i); }', CARET)
+        held[0].continue_()
+
+        expect(self.textarea).to_have_value(IMAGE_AT_CARET)
+
+    def test_the_native_input_is_hidden_behind_the_button(self):
+        expect(self.choose_button).to_be_visible()
+        box = self.input.bounding_box()
+        self.assertLessEqual(box['width'], 1)
+        self.assertLessEqual(box['height'], 1)
+        self.assertNotEqual(self.input.evaluate('i => getComputedStyle(i).display'), 'none')
+
+    def test_the_button_chooses_files(self):
+        self.choose_button.click()
+        chooser = self.next_chooser()
+        self.assertTrue(chooser.is_multiple())
+        chooser.set_files([png('a.png'), png('b.png')])
+
+        expect(self.entries).to_have_count(2)
+        self.assertEqual(self.names(), ['a.png', 'b.png'])
+
+    def choose_with_key(self, key):
+        self.choose_button.focus()
+        expect(self.choose_button).to_be_focused()
+        self.page.keyboard.press(key)
+        self.next_chooser().set_files([png('a.png')])
+        expect(self.entries).to_have_count(1)
+        expect(self.modal).to_be_visible()
+
+    def test_enter_on_the_button_chooses_files(self):
+        self.choose_with_key('Enter')
+
+    def test_space_on_the_button_chooses_files(self):
+        self.choose_with_key('Space')
+
+    def test_the_input_is_not_a_second_tab_stop(self):
+        self.assertEqual(self.input.get_attribute('tabindex'), '-1')
 
 
 class SubmitJQueryTestCase(BrowserTestCase):

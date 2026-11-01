@@ -65,8 +65,11 @@
       enctype="multipart/form-data">{% csrf_token %}
       <div class="row">
          <div class="columns">
-            <input type="file" name="image_file" multiple
+            <input type="file" name="image_file" class="show-for-sr" tabindex="-1" multiple
                accept="image/jpeg,image/png,image/gif,image/webp" />
+            <button type="button" id="photo-upload-choose" class="secondary button">
+               Choose images
+            </button>
             <ul id="photo-upload-list" class="upload-list"></ul>
          </div>
       </div>

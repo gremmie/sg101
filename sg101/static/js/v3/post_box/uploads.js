@@ -4,13 +4,21 @@
 // A file input cannot drop one file from its selection, and a second choice
 // replaces the first, so the list is kept here: each choice is added to it
 // and the input cleared.
+//
+// Upload sends the list one request at a time, in order, and each code goes
+// into the post as its image lands. Closing the modal stops what has not been
+// sent; the file in flight finishes, since the server may already have it.
 
-import { postForm } from '../core/http.js';
+import { postForm, RequestError } from '../core/http.js';
 import { insertAtCursor } from './editor.js';
 import { hideStatus, showStatus } from './status.js';
 
 const MAX_FILES = 10;
-const SUCCESS = 'Success! The image code was added to your post.';
+// Sending the file counts against this, and a large photo on a slow connection
+// takes minutes. The server is not waiting on it: Cloudflare holds the whole
+// upload before passing it on.
+const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+const UNREADABLE = 'Something went wrong with this image. Please try again.';
 
 // A page never sees a file's path, so a file chosen again is recognised by
 // what it can see.
@@ -28,19 +36,33 @@ export function initUploads(getTextarea) {
       return () => {};
    }
    const input = form.elements.image_file;
+   const choose = document.getElementById('photo-upload-choose');
    const list = document.getElementById('photo-upload-list');
    const submit = document.getElementById('photo-upload-submit');
    const status = document.getElementById('photo-status');
    const idle = submit.value;
 
-   // Each entry: { file, url, item }. url is the thumbnail's object URL, which
-   // holds the file until it is revoked.
+   // Each entry: { file, url, item, removeButton, result }. url is the
+   // thumbnail's object URL, which holds the file until it is revoked.
    let entries = [];
+
+   // The batch being sent, or null; and whether the modal has been closed and
+   // opened again since it began.
+   let batch = null;
+   let stopped = false;
+
+   function showProgress() {
+      const total = batch.entries.filter((e) => entries.includes(e)).length;
+      submit.value = `Uploading ${batch.sent} of ${total}\u2026`;
+   }
 
    function remove(entry) {
       URL.revokeObjectURL(entry.url);
       entry.item.remove();
       entries = entries.filter((e) => e !== entry);
+      if (batch) {
+         showProgress();
+      }
    }
 
    function clear() {
@@ -69,18 +91,25 @@ export function initUploads(getTextarea) {
       const name = document.createElement('span');
       name.className = 'upload-name';
       name.textContent = file.name;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'upload-remove';
-      button.setAttribute('aria-label', `Remove ${file.name}`);
-      button.innerHTML = '<span aria-hidden="true">&times;</span>';
-      item.append(thumb, name, button);
+      const result = document.createElement('span');
+      result.className = 'upload-result';
+      const detail = document.createElement('div');
+      detail.className = 'upload-detail';
+      detail.append(name, result);
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'upload-remove';
+      removeButton.setAttribute('aria-label', `Remove ${file.name}`);
+      removeButton.innerHTML = '<span aria-hidden="true">&times;</span>';
+      item.append(thumb, detail, removeButton);
       list.append(item);
 
-      const entry = { file, url, item };
-      button.addEventListener('click', () => remove(entry));
+      const entry = { file, url, item, removeButton, result };
+      removeButton.addEventListener('click', () => remove(entry));
       entries.push(entry);
    }
+
+   choose.addEventListener('click', () => input.click());
 
    input.addEventListener('change', () => {
       hideStatus(status);
@@ -114,7 +143,42 @@ export function initUploads(getTextarea) {
       }
    });
 
-   // For now Upload sends the first file in the list.
+   function setBusy(busy) {
+      submit.disabled = busy;
+      submit.classList.toggle('disabled', busy);
+      choose.disabled = busy;
+      choose.classList.toggle('disabled', busy);
+      input.disabled = busy;
+      if (!busy) {
+         submit.value = idle;
+      }
+   }
+
+   // state is 'sending', 'added' or 'failed'.
+   function mark(entry, state, text) {
+      entry.result.textContent = text;
+      entry.result.className = `upload-result upload-${state}`;
+   }
+
+   // Sends one file; its code goes into the textarea the batch began from.
+   // Returns whether it was added.
+   async function send(entry, textarea) {
+      const data = new FormData(form);
+      data.set('image_file', entry.file);
+      try {
+         const response = await postForm(form.action, data,
+            { timeoutMs: UPLOAD_TIMEOUT_MS });
+         const { url } = await response.json();
+         insertAtCursor(textarea, `![image](${url})`, { ownLine: true });
+         mark(entry, 'added', '\u2713');
+         return true;
+      } catch (error) {
+         const reason = error instanceof RequestError ? error.message : UNREADABLE;
+         mark(entry, 'failed', `\u2717 ${reason}`);
+         return false;
+      }
+   }
+
    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (entries.length === 0) {
@@ -122,29 +186,44 @@ export function initUploads(getTextarea) {
          return;
       }
       hideStatus(status);
-      submit.disabled = true;
-      submit.classList.add('disabled');
-      submit.value = 'Uploading...';
-      try {
-         const data = new FormData(form);
-         data.set('image_file', entries[0].file);
-         const response = await postForm(form.action, data);
-         const { url } = await response.json();
-         insertAtCursor(getTextarea(), `![image](${url})`, { ownLine: true });
-         showStatus(status, SUCCESS, true);
-         clear();
-      } catch (error) {
-         // The list keeps its files, so a mistake can be corrected.
-         showStatus(status, error.message, false);
-      } finally {
-         submit.disabled = false;
-         submit.classList.remove('disabled');
-         submit.value = idle;
+      const textarea = getTextarea();
+      batch = { entries: [...entries], sent: 0 };
+      stopped = false;
+      setBusy(true);
+      const added = [];
+      for (const entry of batch.entries) {
+         // A hidden form has no offsetParent: the modal was closed.
+         if (stopped || form.offsetParent === null) {
+            break;
+         }
+         if (!entries.includes(entry)) {
+            continue;
+         }
+         batch.sent += 1;
+         showProgress();
+         entry.removeButton.disabled = true;
+         mark(entry, 'sending', 'Uploading\u2026');
+         if (await send(entry, textarea)) {
+            added.push(entry);
+         } else {
+            entry.removeButton.disabled = false;
+         }
       }
+      const { sent } = batch;
+      batch = null;
+      added.forEach(remove);
+      setBusy(false);
+      showStatus(status, `${added.length} of ${sent} added`, added.length === sent);
    });
 
    // Called as the modal opens: an empty list and no old message.
    return function reset() {
+      // Only a closed modal can be opened, so this batch was closed on. What it
+      // has in flight is still shown, and it ends when that lands.
+      if (batch) {
+         stopped = true;
+         return;
+      }
       clear();
       form.reset();
       hideStatus(status);

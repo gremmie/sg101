@@ -246,10 +246,60 @@
    text-align: center;
 }
 
-.upload-name {
+.upload-detail {
    flex: auto;
    min-width: 0;
    overflow-wrap: anywhere;
+}
+
+.upload-name,
+.upload-result {
+   display: block;
+}
+
+// How the file is getting on: a spinner while it is sent, then a mark, with the
+// server's reason if it failed.
+.upload-result {
+   font-size: rem-calc(14);
+   white-space: pre-line;
+}
+
+.upload-sending {
+   color: $dark-gray;
+
+   &::before {
+      content: '';
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      margin-right: 0.4em;
+      vertical-align: -0.15em;
+      border: 2px solid $medium-gray;
+      border-top-color: $primary-color;
+      border-radius: 50%;
+      animation: upload-spin 0.8s linear infinite;
+   }
+}
+
+.upload-added {
+   color: $success-color;
+}
+
+.upload-failed {
+   color: $alert-color;
+}
+
+@keyframes upload-spin {
+   to {
+      transform: rotate(360deg);
+   }
+}
+
+// The words say the same without the motion.
+@media (prefers-reduced-motion: reduce) {
+   .upload-sending::before {
+      animation: none;
+   }
 }
 
 .upload-remove {
@@ -263,6 +313,11 @@
    &:hover,
    &:focus {
       color: $black;
+   }
+
+   &:disabled {
+      color: $medium-gray;
+      cursor: not-allowed;
    }
 }
 

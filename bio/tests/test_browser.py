@@ -41,6 +41,36 @@ class EditProfilePostBoxTestCase(BrowserTestCase):
         # The callout starts out hidden, already holding the success text.
         expect(self.page.locator('#hot-link-status')).to_be_visible()
 
+    def test_a_code_in_flight_goes_into_the_box_its_upload_began_from(self):
+        """Opening the modal from another box makes that one active; the upload
+        already under way still belongs to the first."""
+        held = []
+        self.page.route('**' + reverse('user_photos-upload_ajax_v3'),
+                        lambda route: held.append(route))
+        modal = self.page.locator('#upload-modal')
+        boxes = {box: self.page.locator('.v3-editor', has=box)
+                 for box in (self.profile_text, self.signature)}
+        boxes[self.profile_text].locator('.editor-upload').click()
+        expect(modal).to_be_visible()
+        modal.locator('input[name="image_file"]').set_input_files(
+            {'name': 'a.png', 'mimeType': 'image/png', 'buffer': b'unread'})
+        self.page.locator('#photo-upload-submit').click()
+        for _ in range(50):
+            if held:
+                break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(len(held), 1)
+
+        modal.get_by_role('button', name='Close modal').last.click()
+        expect(modal).to_be_hidden()
+        boxes[self.signature].locator('.editor-upload').click()
+        expect(modal).to_be_visible()
+        held[0].fulfill(json={'error_msg': '', 'url': HOT_LINK_URL})
+
+        expect(self.page.locator('#photo-status')).to_have_text('1 of 1 added')
+        expect(self.profile_text).not_to_have_value(CARET_TEXT)
+        expect(self.signature).to_have_value(CARET_TEXT)
+
     def test_hot_link_goes_into_the_second_box_when_its_button_is_used(self):
         self.hot_link_into(self.signature)
         expect(self.signature).to_have_value(IMAGE_AT_CARET)
