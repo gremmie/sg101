@@ -1476,3 +1476,76 @@ Measured through the real route, reading `http://localhost:8000/`: no `djDebug`
 by default; with the line added to `.env` and `up -d web`, present; with `.env`
 restored (byte-identical) and `up -d web`, gone. The smoke check, run alone,
 passed at each. The rest of `site_smoke.py` was not run.
+
+## Step 5 task 04 — the upload walk, the phone check, and shipping
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step05/task-04-upload-walk-and-ship.code-task.md`.
+Branch `multi-upload`, on `7cf1dda5`. **Open:** the phone check, the HEIC check,
+the final runs, the merge and the deploy.
+
+**The walk, by a headless probe** on the dev stack (2026-11-01), logged in as
+pk 2 through a session made directly and deleted after (`last_login`
+unchanged, checked), the toolbar off. Snapshot first:
+`sg101-20261101-183222-before-uploads-walk.dump`.
+
+**The demo, with real uploads to local storage,** on news submit at 1280: 4 PNGs
+and `notes.txt` chosen, the second PNG removed, Upload. 3 codes landed in order
+on their own lines between `first` and `second`; the summary read "3 of 4
+added"; `notes.txt` stayed listed with "✗ Upload a valid image…". No page errors.
+
+**A real slow upload, past the old limit:** a 2.43 MB JPEG through Chromium's
+throttling at 50 KB/s with 400 ms latency took 49.2 s and was added. Under the
+30 s limit it would have failed. This did not go through Cloudflare; that is
+for the live spot check.
+
+**Closing during a batch**, 2 files with the first held: by ×, by Esc and by a
+click outside, the modal closed and 1 request was made each way. Task 03 had
+tested only Cancel, and the probe below closes with it too.
+
+**Every page with a post box, at 375 × 812 and 1280 × 900:** news submit,
+profile edit (both boxes), message compose, message view (a message already
+read), a download's comment form (985), calendar add, downloads add. On each, 10
+files with long names and uploads answered by the probe, the second with a 400:
+
+| Checked | Result |
+|---|---|
+| Horizontal scroll of the page; modal wider than itself | none, everywhere |
+| Upload scrolled to, inside the window, and clicked | everywhere |
+| Summary and what stayed | "9 of 10 added", 1 entry listed, everywhere |
+| Codes in the box it was opened from | 9, everywhere; profile edit's boxes each separately |
+| Cancel reached and closes | everywhere |
+| Page errors, console errors, failed requests other than `/media/` | none |
+
+**A comment form on a poll was not walked:** poll 20 had no post box in the page
+(no other poll tried). The download's comment form is the same template.
+
+**The phone check moves to the live site, Brian's choice (2026-11-01).** His phone
+could not reach the dev stack, on the home Wi-Fi or with the Mac on the phone's
+hotspot; the cause was not found. Every check of that port was made from the Mac
+itself, so no other device has been seen to reach it. The task file allows either
+place, and thumbnails are made on the phone, so the measurement holds. Step 5
+ships before that result; a poor one would make the canvas downscale a follow-up.
+
+**Thumbnails, no answer yet.** In headless Chromium on the Mac, 10 synthetic
+12 MP JPEGs of 5.9 MB each decode in 219 ms (`img.decode()`). That says nothing
+about a phone. An earlier figure from this probe, 0.05 s, measured only
+`img.complete`, which holds once the header is read, and was thrown away.
+
+**The probe's own faults, none in the product.** It first crashed after the real
+uploads and before its cleanup, which left 4 photos, 8 files and 5 counts on the
+quota in dev. They were removed by hand: 184 photos for pk 2 as before, the quota
+from 29 to 24 with its expiry kept. Its first page results also read a previous
+batch's summary from the hidden callout, the trap noted at the top of
+`news/tests/test_browser.py`, and reported box 2 of profile edit as not inserting;
+waiting for the callout to be visible cleared it. The final page run made 0
+photos and 0 files and left the quota as it was.
+
+**Suite and gate, one last time on the branch**, as separate runs with nothing
+else running: 1561 tests OK each; `--tag browser`: 77 OK. The merge is a
+fast-forward: `main` has nothing the branch lacks. No migrations, and nothing
+changed in the requirements, the Dockerfile or the Compose files.
+
+**Safari on macOS, by Brian (2026-11-01):** on the dev stack, from a list of checks
+(a mixed batch, Choose images by mouse and keyboard, remove, closing mid-batch,
+Responsive Design Mode at an iPhone size, a HEIC file from Finder): "safari looks
+good". Which of them he ran was not itemized.
