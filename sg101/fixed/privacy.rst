@@ -53,12 +53,7 @@ beacons, web bugs or clear gifs.
 Social Media Features & Widgets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SurfGuitar101.com uses various social media widgets, such as Facebook "like
-buttons", to easily allow our users to share SurfGuitar101.com content on social
-media sites. These widgets may collect your IP address, which page your are
-visiting, and may also set a cookie on your computer. Your interactions with
-these widgets are governed by the privacy policies of the social media companies
-that provide them.
+SurfGuitar101.com no longer uses any third-party social media widgets.
 
 Online Ad Serving
 ~~~~~~~~~~~~~~~~~
@@ -130,4 +125,4 @@ to our Privacy Policy will be reflected on this page. If there is a
 significant change, we will indicate it on our sites and provide a link
 to the new policy.
 
-*Privacy policy last updated on May 12, 2012*
+*Privacy policy last updated on November 2, 2026*
