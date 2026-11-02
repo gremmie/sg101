@@ -14,6 +14,8 @@ arguments are what the tests assert against -- a chained resource call
 harder to read a wrong argument out of.
 
 """
+import mimetypes
+
 import boto3
 
 # The S3 DeleteObjects API accepts at most 1000 keys per request. boto (v2)
@@ -23,6 +25,10 @@ import boto3
 # exceed 1000 keys in a single delete -- the largest at 2,466. Both the admin's
 # bulk action and antispam's account deactivation can reach them.
 _DELETE_BATCH_SIZE = 1000
+
+# Python's own tables and not the system's, so an object's type does not depend
+# on what the image has installed. They list WebP only as non-strict.
+_MIME_TYPES = mimetypes.MimeTypes(filenames=())
 
 
 def bucket_url_prefix(base_url, bucket_name):
@@ -137,6 +143,12 @@ class S3Bucket(object):
 
         """
         kwargs = {'Bucket': self.name, 'Key': key_name, 'Body': body}
+
+        # S3 stores anything else as binary/octet-stream, which a browser
+        # downloads rather than shows.
+        content_type = _MIME_TYPES.guess_type(key_name, strict=False)[0]
+        if content_type:
+            kwargs['ContentType'] = content_type
 
         if metadata:
             # S3 metadata travels as headers, so botocore requires str values

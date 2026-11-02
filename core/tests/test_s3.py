@@ -10,6 +10,8 @@ import unittest
 
 from unittest.mock import call, patch, mock_open, Mock
 
+from botocore.stub import Stubber
+
 from core.s3 import S3Bucket
 
 
@@ -209,3 +211,64 @@ class S3BucketTestCase(unittest.TestCase):
         self.assertEqual(bucket.base_url, 'base_url/')
         self.assertEqual(bucket.upload_from_string('key_name', 'content'),
                          'base_url/bucket_name/key_name')
+
+
+class S3BucketContentTypeTestCase(unittest.TestCase):
+    """S3 labels an object binary/octet-stream unless told otherwise, and a
+    browser downloads such an object rather than showing it.
+
+    """
+    def _put_kwargs(self, mock_boto3, upload):
+        bucket = S3Bucket('access', 'secret', 'base_url', 'bucket_name')
+        upload(bucket)
+        client = mock_boto3.client.return_value
+        client.put_object.assert_called_once()
+        return client.put_object.call_args.kwargs
+
+    def test_each_image_format_gets_its_type(self):
+        # WebP is the one the system's tables have to supply unless asked for
+        # non-strictly, so it is what fails on an image without them.
+        cases = [('a.jpg', 'image/jpeg'), ('a.jpeg', 'image/jpeg'),
+                 ('a.JPG', 'image/jpeg'), ('a.png', 'image/png'),
+                 ('a.gif', 'image/gif'), ('a.webp', 'image/webp')]
+        for key, expected in cases:
+            with self.subTest(key=key), patch('core.s3.boto3') as mock_boto3:
+                kwargs = self._put_kwargs(
+                    mock_boto3, lambda b: b.upload_from_string(key, 'content'))
+                self.assertEqual(kwargs['ContentType'], expected)
+
+    @patch('core.s3.boto3')
+    def test_a_file_object_gets_its_type(self, mock_boto3):
+        kwargs = self._put_kwargs(
+            mock_boto3, lambda b: b.upload_from_file('a.png', Mock()))
+        self.assertEqual(kwargs['ContentType'], 'image/png')
+
+    @patch('core.s3.boto3')
+    def test_a_named_file_gets_its_type_from_the_key(self, mock_boto3):
+        # The file on disk is a temporary one, whose name says nothing.
+        def upload(bucket):
+            with patch('core.s3.open', mock_open(read_data=b'x'), create=True):
+                bucket.upload_from_filename('a.gif', '/tmp/upload.bin')
+        kwargs = self._put_kwargs(mock_boto3, upload)
+        self.assertEqual(kwargs['ContentType'], 'image/gif')
+
+    @patch('core.s3.boto3')
+    def test_a_key_of_no_known_type_leaves_it_to_s3(self, mock_boto3):
+        kwargs = self._put_kwargs(
+            mock_boto3, lambda b: b.upload_from_string('key_name', 'content'))
+        self.assertNotIn('ContentType', kwargs)
+
+    def test_boto3_itself_accepts_the_call(self):
+        """A real client, stubbed at its network edge, so botocore validates the
+        argument names and types that a mock would take from anything."""
+        bucket = S3Bucket('access', 'secret', 'https://example.com/', 'bucket_name')
+        with Stubber(bucket.client) as stubber:
+            stubber.add_response('put_object', {}, {
+                'Bucket': 'bucket_name',
+                'Key': 'a.webp',
+                'Body': b'content',
+                'ACL': 'public-read',
+                'ContentType': 'image/webp',
+            })
+            bucket.upload_from_string('a.webp', b'content')
+            stubber.assert_no_pending_responses()
