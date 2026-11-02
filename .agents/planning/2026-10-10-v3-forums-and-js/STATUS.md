@@ -1592,7 +1592,68 @@ Restored byte-identical.
 
 Suite and gate, as separate runs: 1566 tests OK each.
 
-**Not done: the objects already stored.** Nothing has listed the bucket, so the
-number affected is unknown. Part 2 of #40 writes to the production bucket and waits
-on Brian. **Not measured until deployed:** a real upload's header, since the dev
-stack stores locally.
+**The objects already stored, measured (2026-11-02), not changed.** Part 2 of #40
+writes to the production bucket and waits on Brian. Every object was listed and read
+with `HEAD`, through the production credentials in dev's `.env`, at Brian's request:
+43,655 objects, 21,828 photos and 21,827 thumbnails (told apart by key length, 22 or
+32 characters against 23 or 33, which is inferred, and every key was one or the
+other).
+
+| | Mislabelled | Of how many |
+|---|---|---|
+| Thumbnails | 21,827 (`application/octet-stream` before 2026, `binary/octet-stream` in 2026) | all of them, since 2013 |
+| Photos, 2026 | 72 `binary/octet-stream`, from the rewrite | all of 2026's still stored |
+| Photos, before 2026 | 90 `application/octet-stream`: 68 `.webp`, and the 22 below | 21,756 |
+
+Of the 162 photos, 140 get a type from the key. 22 do not: 11 with no extension, 7
+`.jfif`, 4 `.jpg fog`. Across photos and thumbnails together 21,945 can be typed from the key and 44 cannot. 29 `.bmp` photos are
+`image/x-ms-bmp`, not `image/bmp`, which is not a fault a browser minds. A thumbnail
+is shown in an `<img>`, where the label does not matter, and is rarely opened alone.
+
+An upload made after the fix does not appear above because Brian deleted his two test
+photos first, which also made a first reading look wrong: they answered 403 and 404
+because they were gone. A first run left botocore's debug log in the session's
+scratch file, holding the access key ID, not the secret; it was deleted.
+
+**The repair tool (2026-11-02), applied; see below.** `tools/fix_s3_content_types.py`
+handles the 140 photos, Brian's choice; thumbnails and the 22 are left alone. A dry
+run by default; `--apply` copies each object onto itself, and `--limit` takes a few
+first. The copy sets the ACL and metadata again, carries the other headers, and is
+conditional on the ETag read. A photo that is not public is left alone. After each
+copy it reads the object back, with credentials and over plain https, and the first
+one not as expected stops the run. `core.s3.content_type_for` is new, so the tool and
+`_put` share one answer.
+
+**Its dry run against the bucket:** 43,655 objects, 21,828 photos, 140 to repair, all
+140 public, 22 with no type from the key. 68 `application/octet-stream` to
+`image/webp`; of `binary/octet-stream`, 55 to `image/jpeg`, 16 to `image/png`, 1 to
+`image/webp`. So every 2026 photo has a usable key, and before 2026 only `.webp` does.
+
+`core.tests.test_fix_s3_content_types`, 12 tests, written with the tool and not
+first, so all of it mutation-checked: 18 mutations, among them the ACL, the metadata
+and the directive dropped, a dry run that writes, thumbnails selected, private photos
+published, the read-back skipped. 17 failed at once. The other, the public status
+unchecked, survived, because the "made private" case also served a wrong type; that
+case now keeps the type and the mutation fails it. The copy's arguments go through a
+real boto3 client with `Stubber`. The tests meet no real copy; `--limit` was for that.
+
+Suite and gate, as separate runs: 1578 tests OK each.
+
+**Applied by Brian (2026-11-02), 140 photos.** First `--apply --limit 3`, one of each
+change. Read separately over plain https, each answered 200 with its new type, its
+`date` and `user` metadata, and bytes that are a valid image; its Last-Modified had
+moved, as expected. Brian opened the WebP in the browser and it displayed. Then
+`--apply` for the other 137, which reported no failure: 67 to `image/webp`, 54 to
+`image/jpeg`, 15 to `image/png`, 1 more to `image/webp`. The dry run afterwards: **0 to
+repair**, the same 22 left alone. 10 of the 137 chosen at random answered 200 with the
+right type. Whether each still shows in its post was not checked one by one; the URLs
+and the public read are unchanged. 21,827 thumbnails and 22 photos stay mislabelled, by
+decision.
+
+**Seen by Brian:** both test photos, opened from the site after the fix, displayed
+in the browser.
+
+**Measured live (2026-11-02), new uploads now right:** two images Brian uploaded
+through the site after deploying, stored a second apart, read back from S3 with
+`HEAD`: a JPEG `image/jpeg`, a PNG `image/png`. Both open as intact images, resized
+to 660 wide. Before the fix, the newest JPEGs measured `binary/octet-stream`.
