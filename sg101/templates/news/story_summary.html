@@ -1,7 +1,6 @@
 {% load static %}
 {% load bio_tags %}
 {% load comment_tags %}
-{% load core_tags %}
 
 <div class="news-story-summary">
 {% if on_home %}
@@ -83,7 +82,6 @@
    </ul>
 </div>
 {% endif %}
-{% social_sharing story.title story.get_absolute_url %}
 <div class="news-last-row">
    <a href="#news-top"><i class="fi-arrow-up"></i> Top</a>
 </div>

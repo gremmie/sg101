@@ -84,24 +84,6 @@ class WhosOnlineTestCase(TestCase):
             rendered)
 
 
-class SocialSharingTestCase(TestCase):
-    TEMPLATE = Template('{% load core_tags %}{% social_sharing "Title" "Url" %}')
-
-    @patch('core.templatetags.core_tags.Site.objects.get_current')
-    def test_renders_ok(self, current_mock):
-        site_mock = Mock()
-        site_mock.configure_mock(name='Site', domain='site.com')
-        current_mock.return_value = site_mock
-        self.TEMPLATE.render(Context({}))
-
-    @patch('core.templatetags.core_tags.Site.objects.get_current')
-    def test_renders_ok_v3(self, current_mock):
-        site_mock = Mock()
-        site_mock.configure_mock(name='Site', domain='site.com')
-        current_mock.return_value = site_mock
-        self.TEMPLATE.render(Context({'V3_DESIGN': True}))
-
-
 class OpenGraphMetaTagsTestCase(TestCase):
     TEMPLATE = Template('{% load core_tags %}{% open_graph_meta_tags %}')
 
