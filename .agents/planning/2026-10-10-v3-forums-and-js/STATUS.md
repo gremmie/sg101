@@ -1477,12 +1477,10 @@ by default; with the line added to `.env` and `up -d web`, present; with `.env`
 restored (byte-identical) and `up -d web`, gone. The smoke check, run alone,
 passed at each. The rest of `site_smoke.py` was not run.
 
-## Step 5 task 04 — the upload walk, the phone check, and shipping
+## Step 5 task 04 — the upload walk, the phone check, and shipping — DONE 2026-11-01
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step05/task-04-upload-walk-and-ship.code-task.md`.
-Branch `multi-upload`, on `7cf1dda5`. **Open:** the phone check, the HEIC check,
-the final runs, the merge and the deploy.
-
+Branch `multi-upload`, on `7cf1dda5`. 
 **The walk, by a headless probe** on the dev stack (2026-11-01), logged in as
 pk 2 through a session made directly and deleted after (`last_login`
 unchanged, checked), the toolbar off. Snapshot first:
@@ -1549,3 +1547,18 @@ changed in the requirements, the Dockerfile or the Compose files.
 (a mixed batch, Choose images by mouse and keyboard, remove, closing mid-batch,
 Responsive Design Mode at an iPhone size, a HEIC file from Finder): "safari looks
 good". Which of them he ran was not itemized.
+
+**Step 5 is complete and deployed** (2026-11-01). `main` was fast-forwarded to
+`multi-upload` at `c49208f4`, CI green on both. Brian deployed. The live stylesheet, read over public HTTP, holds the spinner's `upload-spin`. The checkout and
+containers on leopard were not read from here: an SSH read was refused by this
+session's permissions, so the deployed revision is Brian's report.
+
+**Brian's live checks (2026-11-01):** "spot check and phone check look good". The
+spot check was two images in one batch through Cloudflare. The phone check was 10
+library photos on a Pixel 8 in Chrome: **all the thumbnails showed in about a
+second**, by his estimate. **The canvas downscale is not needed:** no problem was
+seen, and the task adds it only if the result calls for it. A Pixel 8 is a recent
+phone, so this says little about an older one, and iOS was not tried.
+
+Found along the way, not part of this step: new S3 photos have no image content
+type, #40.
