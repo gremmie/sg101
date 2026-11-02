@@ -31,6 +31,11 @@ _DELETE_BATCH_SIZE = 1000
 _MIME_TYPES = mimetypes.MimeTypes(filenames=())
 
 
+def content_type_for(key_name):
+    """The content type a key's extension calls for, or None if it names none."""
+    return _MIME_TYPES.guess_type(key_name, strict=False)[0]
+
+
 def bucket_url_prefix(base_url, bucket_name):
     """The URL prefix shared by every object in a bucket.
 
@@ -146,7 +151,7 @@ class S3Bucket(object):
 
         # S3 stores anything else as binary/octet-stream, which a browser
         # downloads rather than shows.
-        content_type = _MIME_TYPES.guess_type(key_name, strict=False)[0]
+        content_type = content_type_for(key_name)
         if content_type:
             kwargs['ContentType'] = content_type
 
