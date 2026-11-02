@@ -1562,3 +1562,37 @@ phone, so this says little about an older one, and iOS was not tried.
 
 Found along the way, not part of this step: new S3 photos have no image content
 type, #40.
+
+## #40: new S3 photos stored without an image content type — new uploads fixed 2026-11-01
+
+Found by Brian after step 5's merge: a new PNG opened directly in Chrome downloaded
+instead of showing. Not this plan's work; it is here because that is where it
+turned up. The issue holds the cause and the headers measured.
+
+`S3Bucket._put` now sets `ContentType` from the key. It uses
+`mimetypes.MimeTypes(filenames=())` with `strict=False`, Python's own tables and
+not the system's. Measured in the `web` container: WebP comes back from a strict
+lookup only because `/etc/mime.types` supplies it, and from the built-in tables
+only non-strictly. A key of no known type sends no `ContentType`, as before.
+
+`core.tests.test_s3.S3BucketContentTypeTestCase`, written first: each format, the
+key and not the temporary file's name deciding, and one test through a real boto3
+client with botocore's `Stubber`, so botocore checks the argument, which the file's
+mock-based tests cannot.
+
+| Mutation in `core/s3.py` | Failed |
+|---|---|
+| never set | the format, file object, named file and Stubber tests |
+| a strict lookup | `each_image_format` (WebP), the Stubber test |
+| `Content_Type` | the same four as never set |
+| set even when unknown | `a_key_of_no_known_type`, and four existing upload tests |
+| guessed from the bucket's name | the same four as never set |
+
+Restored byte-identical.
+
+Suite and gate, as separate runs: 1566 tests OK each.
+
+**Not done: the objects already stored.** Nothing has listed the bucket, so the
+number affected is unknown. Part 2 of #40 writes to the production bucket and waits
+on Brian. **Not measured until deployed:** a real upload's header, since the dev
+stack stores locally.
