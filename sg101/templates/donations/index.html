@@ -7,14 +7,14 @@
 <h2>Donations</h2>
 <p>
 SurfGuitar101.com is a member supported website. We don't display ads or have other forms of
-sponsorship. If you enjoy this website, the forums, chatting in IRC, the podcasts, surf music news,
-the show calendar, and everything else, please consider making a small donation to help cover server
-and hosting costs.
+sponsorship. If you enjoy this website, the forums, the podcasts, surf music news, the show
+calendar, and everything else, please consider making a small donation to help cover server and
+hosting costs.
 </p>
 <p>
 We are currently using Paypal to receive donations. You don't have to be a Paypal member to donate;
-major credit cards are also accepted. If you really don't do Paypal, please
-<a href="{% url 'contact-form' %}">contact me</a> and we can work something else out.
+major credit cards are also accepted. If you don't do Paypal, see the
+<a href="#other-ways">other options</a> at the bottom of this page.
 </p>
 <p>Thank you for donating to SurfGuitar101.com!</p>
 <div class="row medium-unstack">
@@ -109,5 +109,18 @@ major credit cards are also accepted. If you really don't do Paypal, please
          {% top_donors 20 %}
       {% endcache %}
    </div>
+</div>
+
+<div class="primary callout" id="other-ways">
+   <h3>Other Ways to Donate</h3>
+   <p>
+   If you don't do Paypal, you can donate via my
+   <a href="https://ko-fi.com/brianneal2026">Ko-Fi</a> page. If you'd like to donate automatically
+   each month, support me on <a href="https://www.patreon.com/c/BrianNeal">Patreon</a>.
+   </p>
+   <p>
+   If neither of those work for you, please <a href="{% url 'contact-form' %}">contact me</a> and
+   we can work something else out. Thanks!
+   </p>
 </div>
 {% endblock %}

@@ -132,9 +132,9 @@ class DonationsManagerTestCase(TestCase):
 
     def test_monthly_goal_pct(self):
 
-        self.assertEqual(settings.DONATIONS_GOAL, Decimal('94.00'))
+        self.assertEqual(settings.DONATIONS_GOAL, Decimal('50.00'))
         pct = Donation.objects.monthly_goal_pct(year=2012, month=9)
-        self.assertEqual(pct, 24)
+        self.assertEqual(pct, 46)   # (25.00 - 1.53) / 50.00
 
     def test_monthly_goal_pct2(self):
 
@@ -295,6 +295,27 @@ class DonationsPageTestCase(TestCase):
         response = self.client.get(reverse('donations-index'))
         self.assertEqual(response.status_code, 200)
 
+    def test_index_page_links_the_other_ways_to_donate(self):
+        response = self.client.get(reverse('donations-index'))
+        self.assertContains(response, 'href="https://ko-fi.com/brianneal2026"')
+        self.assertContains(response,
+                            'href="https://www.patreon.com/c/BrianNeal"')
+        self.assertContains(response, 'href="%s"' % reverse('contact-form'))
+
+    def test_index_page_points_to_the_other_options(self):
+        response = self.client.get(reverse('donations-index'))
+        self.assertContains(response, 'href="#other-ways"')
+        self.assertContains(response, 'id="other-ways"')
+
+    def test_index_page_shows_the_goal(self):
+        response = self.client.get(reverse('donations-index'))
+        self.assertContains(response, '<th>Goal:</th><td>$50.00</td>',
+                            html=True)
+
+    def test_index_page_no_longer_mentions_irc(self):
+        response = self.client.get(reverse('donations-index'))
+        self.assertNotContains(response, 'IRC')
+
     def test_thanks_page_renders(self):
         response = self.client.get(reverse('donations-thanks'))
         self.assertEqual(response.status_code, 200)
@@ -386,7 +407,7 @@ class MonthBoundaryTestCase(TestCase):
     def test_monthly_goal_pct_uses_the_same_month(self):
         with timezone.override('UTC'):
             pct = Donation.objects.monthly_goal_pct(year=2026, month=1)
-        self.assertEqual(pct, 20)   # (20.00 - 1.00) / 94.00
+        self.assertEqual(pct, 38)   # (20.00 - 1.00) / 50.00
 
 
 UTC = datetime.timezone.utc
