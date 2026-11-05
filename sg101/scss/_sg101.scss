@@ -433,3 +433,35 @@ table.sg101-stack {
 .cf-turnstile {
    margin-bottom: 1rem;
 }
+
+.shiny {
+   color: $sg101-red;
+}
+
+.green3 {
+   color: $sg101-green3;
+}
+
+.inline-forms {
+   form {
+      display: inline;
+   }
+}
+
+// Usernames and topic titles can be one long word. A cell's minimum width is
+// its longest word, so on a phone a single long name widened the table past
+// the screen. `anywhere`, unlike `break-word`, lowers that minimum. That alone
+// lets the table squeeze the Last Post column until ordinary names split, so
+// the column keeps a width of its own and only a name longer than it breaks.
+// Wider screens have room, and their extra columns would split names too.
+table.forum-table {
+   @include breakpoint(small only) {
+      td {
+         overflow-wrap: anywhere;
+      }
+
+      td:last-child {
+         width: 10rem;
+      }
+   }
+}
