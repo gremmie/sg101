@@ -78,6 +78,13 @@
    margin-bottom: rem-calc(16);
 }
 
+// The top bar's background spans the window; its contents sit in a row, so
+// the row's gutters set where they start and end, as for the page below.
+#base-header > .top-bar {
+   padding-left: 0;
+   padding-right: 0;
+}
+
 .side-block-v3 {
    margin: 0 0 1rem 0;
    padding: 1rem;

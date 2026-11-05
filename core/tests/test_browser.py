@@ -42,3 +42,30 @@ class PhoneMenuTestCase(BrowserTestCase):
         expect(self.icon).to_be_focused()
         self.page.keyboard.press('Enter')
         expect(self.forums).to_be_visible()
+
+
+class HeaderAlignmentTestCase(BrowserTestCase):
+    """The header's blocks end where the page's content does."""
+
+    RIGHT_EDGES = '''() => {
+        const right = sel => document.querySelector(sel).getBoundingClientRect().right;
+        const content = document.querySelector('.small-12.medium-9.columns');
+        return {
+            content: right('.small-12.medium-9.columns') -
+                parseFloat(getComputedStyle(content).paddingRight),
+            search: right('#top-search button'),
+            banner: right('#logo-row img[alt="SG101 Banner"]'),
+            menu: right('#main-menu'),
+        };
+    }'''
+
+    def test_the_header_lines_up_with_the_content(self):
+        # The page's row is 1200 px wide at most: at 1190 it fills the window,
+        # at 1280 it's a little narrower, at 1920 much narrower.
+        for width in (1190, 1280, 1920):
+            self.page.set_viewport_size({'width': width, 'height': 900})
+            self.page.goto(self.live_server_url + reverse('polls-main'))
+            edges = self.page.evaluate(self.RIGHT_EDGES)
+            for name in ('search', 'banner', 'menu'):
+                with self.subTest(width=width, block=name):
+                    self.assertAlmostEqual(edges[name], edges['content'], delta=1)
