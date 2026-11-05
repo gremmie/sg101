@@ -484,3 +484,18 @@ table.forum-table {
       background: $sg101-blue3;
    }
 }
+
+// A long word in a post, usually a pasted link, would run past the card,
+// which hides what overflows it.
+.sg101-card .card-section {
+   overflow-wrap: anywhere;
+}
+
+// The post box toolbar. Foundation's menu doesn't wrap, and on a phone its
+// buttons' default side padding left no room for a seventh button.
+.v3-editor .menu > li > a {
+   @include breakpoint(small only) {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+   }
+}
