@@ -18,6 +18,8 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [ ] Step 11: Remove the shoutbox — **ships**
 - [ ] Step 12: Retire `base.html`, its assets, and `V3_DESIGN` — **ships**
 - [ ] Step 13: The phone banner re-measures when the layout narrows — **ships**
+- [ ] Step 14: Tablet widths: the forum tables and the post box toolbar — **ships**
+- [ ] Step 15: The phone header fits a long username — **ships**
 
 ## How the steps work
 
@@ -36,6 +38,8 @@ when Brian deploys it. `main` always matches what leopard should run.
 | `retire-shoutbox` | 11 | shoutbox removal |
 | `retire-base-html` | 12 | `base.html` retirement |
 | `orbit-remeasure` | 13 | the phone banner fix |
+| `tablet-widths` | 14 | the tablet layout fixes |
+| `phone-header` | 15 | the phone header fix |
 
 **Every step:**
 
@@ -603,3 +607,73 @@ retires the old design, not the V3 scripts.
 **Demo.** In dev tools' phone view, the banner shows without a reload. **Brian,
 on his phone:** open a page in landscape, turn it upright, and the banner
 shows. **Merge and deploy.**
+
+---
+
+## Step 14: Tablet widths: the forum tables and the post box toolbar
+
+**Objective.** No V3 page scrolls sideways from 640 to 1023 px, where the
+sidebar sits beside the content and leaves it 450 px at 640.
+
+**Out of order on purpose.** Added 2026-11-04 from step 6's screenshot review
+(Brian). The forum tables exist only once release 1 has merged, so this
+follows step 8 and branches from `main` after it.
+
+**The faults, measured (STATUS, step 6 tasks 01 and 03).**
+
+- **The forum tables** show all their columns from medium up. `gear`'s topic
+  list scrolls 309 px at 640, 213 at 768 and 21 at 1024; the index 71 at 640.
+- **The post box toolbar** shows all 13 buttons from medium up, 661 px, and
+  doesn't wrap. On every page with a post box: news submit scrolls 211 px at
+  640 and 115 at 768; the forum reply box, inside a fieldset that can't
+  shrink below its contents, 238 and 142. None at 1024 or wider.
+
+**Guidance.**
+
+1. **The tables:** one remedy measured by injected CSS (STATUS, step 6 task
+   01): the extra columns shown from large rather than medium, and the phone
+   rule (`overflow-wrap: anywhere`, Last Post at 10 rem) up to large. It left
+   `gear` 21 px over at exactly 1024, from two long names in Author and Last
+   Post; a 10 rem Author column was proposed for that, not measured.
+2. **The toolbar:** step 6 task 03 cut the buttons' side padding to 0.5 rem
+   below medium. At medium, 13 buttons at that padding come to about 480 px,
+   still over 450. Wrapping needs more than `flex-wrap`: this build's
+   Foundation menu lays its items out as table cells. Options to measure:
+   more buttons `hide-for-small-only` → shown from large, the tighter padding
+   up to large, or a flex menu that wraps.
+3. **Measure before choosing,** at 640, 768, 1023 and 1024, on the forum pages
+   and on every post box page, and show Brian screenshots.
+
+**Tests.** Browser, at 640: no horizontal scroll on the forums index, a
+topic list with long usernames, news submit and a topic's reply box. Each
+fails first.
+
+**Demo.** Dev tools at a tablet width: the forums and a post box page fit.
+**Merge and deploy.**
+
+---
+
+## Step 15: The phone header fits a long username
+
+**Objective.** The V3 header's top bar fits a phone at any username length.
+
+**Out of order on purpose.** Added 2026-11-04 from step 6's screenshot review
+(Brian). It touches only `v3/base.html` and its Sass, depends on no other
+step, and branches from `main` whenever it is taken up.
+
+**The fault, measured (STATUS, step 6 task 03).** At phone width the top bar
+holds home, "<username>'s Profile", "Private Messages" and Logout. For
+`CaptainSpringfield` at 360 px the profile link wraps and Logout ends at 421
+px, so every V3 page scrolls sideways for that member; for `Klas` it fits at
+360 but not at 320 (Logout ends at 324).
+
+**Guidance.** Show Brian options before choosing, for example: a shorter
+label at phone width ("Profile"), an icon for messages with its unread
+count, or the account links moved into the phone menu.
+
+**Tests.** Browser, at 320 and 360, logged in as a member with a 30-character
+username (registration allows at most 30, `accounts/forms.py`, and the
+longest in the dev data is 30): no horizontal scroll, and Logout is
+visible. Fails first.
+
+**Demo.** A long-named member's pages fit a phone. **Merge and deploy.**

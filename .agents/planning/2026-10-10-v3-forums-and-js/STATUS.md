@@ -1764,6 +1764,8 @@ pages. At 1024 `gear` stays 21 over, two long names side by side in Author and
 Last Post (208 px each); a 10 rem Author column was proposed for that and not
 measured. It hides the counts and the author from tablets, a change to `v3-dev`'s
 design, which is why it waits for the screenshot review.
+**Decided in task 03 (Brian, 2026-11-04): a step of its own, plan step 14,**
+with the post box toolbar's tablet overflow found there.
 
 ## Step 6 task 02 — the topic page and the post card on V3 — DONE 2026-11-04
 
@@ -1845,3 +1847,71 @@ cards alternate green, blue from the first; a row appended to the container
 takes the next colour; one post box, and Bold works; no page errors, no failed
 requests other than `/media/`, no horizontal scroll. Two cards were looked at by
 eye at each width.
+
+## Step 6 task 03 — the screenshot review, the phone toolbar — IN PROGRESS
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-03-screenshot-review.code-task.md`.
+Branch `v3-forums-release-1`, on `5ba90760`.
+
+**The shots.** A headless probe on the dev stack (data to 2026-10-07; snapshot
+`before-forums-review` taken first), the debug toolbar off. Subjects by id:
+forum 7 (`gear`, 8684 topics), topic 41216 (72 posts, 4 pages, unlocked; its
+last page, which has the reply box), member `Klas` (no groups, able to reply),
+moderator `CaptainSpringfield` (Forum Moderators). Sessions made directly and
+deleted after; opening a topic marks it read for that account. 18 page shots,
+the three pages at 360 and 1280 for anonymous, member and moderator, plus the
+member's at 640 and 1024 for task 01's open question, all in the session
+scratchpad: they show members' posts, avatars and, to the moderator, posters'
+IP addresses. Nothing reached the repository; the stand-in video button was
+injected by the probe, not written to a template.
+
+**The phone toolbar, measured: seven buttons do not fit.** Foundation's menu
+doesn't wrap, and a fieldset never shrinks below its contents, so a toolbar
+too wide widens the page. On the topic's reply box, at 360:
+
+| | Toolbar | Fieldset / its room | Page scroll |
+|---|---|---|---|
+| Today, 6 buttons | 313 px | 355 / 340 | 5 px |
+| 7, with a stand-in | 366 px | 408 / 340 | 58 px |
+| 7, side padding 0.5 rem | fits | 340 / 340 | 0 |
+
+So **today's six already overran the forum reply box at 360.** `flex-wrap` did
+nothing: this build's menu lays its items out as table cells.
+
+**Found in the shots:**
+
+- **A long link in a post is cut off.** The card hides what overflows it, so
+  the page doesn't scroll and the end of the URL simply isn't there. A first
+  test with a hyphenated URL passed before the fix; a browser breaks lines at
+  hyphens. The test now uses a run with no break point.
+- **The post box toolbar overflows at tablet widths on every page with one**:
+  all 13 buttons, 661 px, from medium up. News submit scrolls 211 px at 640 and
+  115 at 768; the forum reply box 238 and 142; none at 1024 or wider.
+- **The phone header overflows with a long username.** For
+  `CaptainSpringfield` at 360 the profile link wraps and Logout ends at 421
+  px, on every V3 page; for `Klas` it fits at 360, not at 320 (324). First
+  read as moderator-only; it is the name's length. Registration allows 30
+  characters of `\w`, so a name never breaks.
+- **Expected gaps, not faults:** the post tools, signatures, PM and email
+  links and attachments (step 7); the empty Video Attachments box (step 8);
+  missing avatars and photo of the day (dev has no media).
+
+**Decisions (Brian, 2026-11-04), each the recommendation:**
+
+- **The toolbar:** side padding 0.5 rem below medium. **Done.**
+- **Long words in posts:** `overflow-wrap: anywhere` on the card's sections.
+  **Done.**
+- **Tablet widths:** the tables and the toolbar together, as **plan step 14**.
+- **The header:** **plan step 15**, independent of the rest.
+- **The look:** Brian has changes; pending.
+
+**The two fixes**, in `_sg101.scss`, rebuilt; `main.min.css` gains exactly
+those two rules. Browser tests in `forums/tests/test_browser.py`, at 360: the
+reply box leaves no horizontal scroll (failed first, 5 px), and a post's
+unbroken 180-character link stays inside its card (failed first, 1142 px).
+Each rule removed from the built CSS fails its test; restored by hash. On the
+dev topic afterwards, with and without the stand-in: no horizontal scroll at
+360 or 375, and no post cut off. At 320 Logout still overruns by 4 px, which
+is step 15.
+All 80 browser tests pass with the padding, which every post box takes. Suite
+and gate, separate runs: 1596 tests, OK with 1 expected failure, each.
