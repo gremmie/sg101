@@ -465,3 +465,22 @@ table.forum-table {
       }
    }
 }
+
+// A topic's posts, each a row holding an author card and a body card.
+// Alternate rows are coloured by position, so a post appended to the
+// container later takes the right colour without a class of its own.
+.sg101-card {
+   @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
+   height: 100%;
+}
+
+.sg101-card-divider {
+   @include card-divider($background: $sg101-surf-green3);
+}
+
+#forum-topic-post-container > .row:nth-child(even) {
+   .sg101-card,
+   .sg101-card-divider {
+      background: $sg101-blue3;
+   }
+}

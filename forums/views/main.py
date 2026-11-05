@@ -211,9 +211,6 @@ def topic_index(request, id):
             visit_time = last_post_on_page.creation_date
         _update_last_visit(request.user, topic, visit_time)
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     can_moderate = perms.can_moderate(topic.forum, request.user)
 
     can_reply = request.user.is_authenticated and (
@@ -229,13 +226,13 @@ def topic_index(request, id):
         'forum': topic.forum,
         'topic': topic,
         'page': page,
-        'page_nav': page_nav,
         'last_page': last_page,
         'can_moderate': can_moderate,
         'can_reply': can_reply,
         'form': NewPostForm(initial={'topic_id': topic.id}),
         'is_favorite': is_favorite,
         'is_subscribed': is_subscribed,
+        'V3_DESIGN': True,
         })
 
 
@@ -351,7 +348,7 @@ def quick_reply_ajax(request):
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic, timezone.now())
 
-        return render(request, 'forums/display_post.html', {
+        return render(request, 'forums/display_post_v3.html', {
             'post': post,
             'can_moderate': perms.can_moderate(form.topic.forum, request.user),
             'can_reply': True,
