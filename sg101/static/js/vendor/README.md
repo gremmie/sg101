@@ -98,3 +98,15 @@ released), with the changes below. The stylesheet is built from Foundation
   selector `"#" + ""`: jQuery 2 read `#` as an empty ID lookup, jQuery 3 hands
   it to its selector engine, which raises `Syntax error, unrecognized
   expression: #`. 6.2.0's docs show the responsive menu's icon that way.
+- **A click whose target has left the page no longer closes a Reveal
+  modal**, Foundation 6.3.1's guard. Both click-to-close handlers, the
+  overlay's (`this.$overlay…on("click.zf.reveal",…)`) and the overlay-less
+  modal's (`t("body").on("click.zf.reveal",…)`), gain one term:
+  `i.target===e.$element[0]||t.contains(e.$element[0],i.target)||e.close()` →
+  `i.target===e.$element[0]||t.contains(e.$element[0],i.target)||!t.contains(document,i.target)||e.close()`
+
+  A button that removes itself, such as the upload list's remove button, is
+  out of the page by the time the click reaches the overlay, so it is neither
+  the modal nor inside it, and 6.2.0 closed the modal. The overlay guard has
+  a test; the body handler's has none, as the site has no overlay-less modal
+  that closes on click.
