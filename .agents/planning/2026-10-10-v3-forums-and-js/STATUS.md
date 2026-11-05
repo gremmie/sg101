@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-11-04
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -1657,3 +1657,107 @@ in the browser.
 through the site after deploying, stored a second apart, read back from S3 with
 `HEAD`: a JPEG `image/jpeg`, a PNG `image/png`. Both open as intact images, resized
 to 660 wide. Before the fix, the newest JPEGs measured `binary/octet-stream`.
+
+## Step 6 task 01 — the forums index and a forum's topic list on V3 — DONE 2026-11-04
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-01-forum-index-pages.code-task.md`.
+Branch `v3-forums-release-1`, on `c1639add`. Not deployed: this branch ships
+with steps 7 and 8.
+
+**`v3-dev`'s hashes in `research/v3-dev-forums.md` predate the history
+rewrite.** `d8ec4821` is `77e719a2` now; the merge base `24f83e72` is unchanged.
+
+**What each side changed since the merge base, measured file by file.** Of the 14
+templates, `main` changed 6, all by the `staticfiles` line, plus one more change:
+`3155590f` dropped the member map link from `accounts/user_stats_tag.html` when it
+pruned the `membermap` app. `v3-dev`'s copy still links `membermap-index`, which
+would have made `/forums/` a `NoReverseMatch`; the port keeps `main`'s sentence.
+`v3-dev` had also commented out the index's two `{% cache %}` blocks; **they are
+restored (Brian, 2026-11-04)**, so production does the work it does today.
+
+**The fragment split, grepped again:** as the task file has it. `jump_box` is also
+on `topic.html`, which is old until task 02, so that page has the input-group
+markup without Foundation's styles for now; its Go button was walked and works.
+
+**The four V3 variants** are `v3-dev`'s markup in `sg101/templates/forums/v3/`;
+the originals are byte-identical to `main` (`git diff --exit-code main`, with
+`forum_query.js`, `jump_box.js`, `pagination.html`, `topic_list.html` and
+`topic.html`). `last_post_info`, `topic_icons` and `forum_navigation` are now
+`simple_tag(takes_context=True)`, through one helper choosing on `V3_DESIGN`:
+an `inclusion_tag` fixes its template at registration. Each renders the same
+values as before, in a context of their own.
+
+**The Sass:** the blue, surf green and shell pink families, `.shiny`, `.green3`,
+`.inline-forms`. **`.post-odd` left out (Brian, 2026-11-04):** no `v3-dev`
+template uses it, and task 02 alternates with `:nth-child`. The cards are task
+02's. Rebuilt; split on `}`, `main.min.css` differs from `HEAD` by exactly those
+three rules.
+
+**Tests, written first:** `V3PagesTestCase` in `forums/tests/test_views.py`, 7
+tests. Against the old templates, the three for the new behaviour failed (V3 per
+role, pagination, the V3 fragments); the other four passed, as they pin what must
+not change (the moderator's link, the index's stats blocks, the old pages and
+their fragments). Its `setUp` clears the cache: the index's cached blocks render
+no template on a hit. Three `core` tag tests asserted the old markup of
+`max_users` and `whos_online` (the `<div id>` wrappers, one-line sentences); they
+now compare with whitespace collapsed, and `max_users` with no stats renders
+nothing, as the V3 fragment has no wrapper.
+
+**Mutations, 11, all caught, each file restored and its hash checked:** each view
+without `V3_DESIGN`; `page_nav` back in the context; the old pagination include;
+the tag helper always V3, and never; the index's old `forum_query`; the member map
+link back; `whos_online` gone; the moderate link for everyone; `topic.html` on
+`v3/base.html`. The `V3_DESIGN` mutations first surfaced as `KeyError`s; the
+assertion now reads `.get()` and fails as an assertion (rechecked).
+
+**Suite and gate**, separate runs: 1587 tests OK each.
+
+**The walk, by a headless probe** in the web container on the dev stack, at 375 ×
+900 and 1280 × 900, anonymous and as a dev superuser through a session made
+directly and deleted after (it opened one topic, which marks it read for that
+account): the index, `gear`'s topic list (the forum with the most topics), the
+unanswered list and a topic. 90 checks: both Go boxes navigate on both designs,
+breadcrumbs, both paginations, the icon font, the arrows, the moderate link, the
+old pages' PNGs and `forum-nav` headings. No page errors, and no failed requests
+other than `/media/` (dev has no copies). 6 failed:
+
+- **4, the old design at 375**: the unanswered list and the topic are 950 px wide,
+  as today.
+- **2, a finding: `gear`'s topic list is 394 px wide at 375**, 19 over. Long
+  usernames in Last Post have no break point: the widest cell's minimum is 188 px
+  ("SurfbobGremmiepants610"), beside a 150 px topic name ("Prophet/Echobrain?").
+  `surf-music`'s fits (355 px), and so did the index. This is `v3-dev`'s layout
+  meeting today's data, not the port. Fixed below.
+
+**The phone fix (Brian, 2026-11-04): `overflow-wrap: anywhere`.** Both tables
+carry `forum-table`; below medium (`small only`) its cells take `anywhere` and
+the last column a width of 10 rem. `anywhere` alone fixed the overflow but let
+the table squeeze Last Post to 91 px, splitting "johnnyanguish" and wrapping the
+date over three lines; with the width, the date holds one line, ordinary names
+stay whole and only the 22-character name breaks. Unscoped, it also split names
+in the Author column at 1280, where nothing overflowed, so it stops at medium.
+After it: the probe's 90 checks fail only the 4 old-design ones, and `gear` and
+the index have no horizontal scroll at 320, 360, 375, 414 or 639. The suite and
+the gate were rerun after it: 1587 OK each.
+
+**Open, for task 03 (Brian, 2026-11-04): the forum tables overflow at tablet
+widths.** From 640 to 1024 the sidebar sits beside the content, which leaves the
+table 480 px at 640 and 768 px at 1024, and `v3-dev` shows all five columns from
+medium up. `gear`'s table is 774 px wide there. Measured horizontal scroll, with
+the phone fix in place (it does not reach these widths):
+
+| Width | `gear` | the index |
+|---|---|---|
+| 640 | 309 px | 71 px |
+| 768 | 213 px | 0 |
+| 1023 / 1024 | 22 / 21 px | 0 |
+| 1280 | 0 | 0 |
+
+`/news/` and `/profile/members/` have none at 640 or 1024. **One remedy was
+measured, by CSS injected into the page, no file changed:** the extra columns
+(Replies, Author, Views; the index's Topics, Posts) shown from large rather than
+medium, and the phone rule up to large. Overflow 0 at 640, 768 and 1023 on both
+pages. At 1024 `gear` stays 21 over, two long names side by side in Author and
+Last Post (208 px each); a 10 rem Author column was proposed for that and not
+measured. It hides the counts and the author from tablets, a change to `v3-dev`'s
+design, which is why it waits for the screenshot review.

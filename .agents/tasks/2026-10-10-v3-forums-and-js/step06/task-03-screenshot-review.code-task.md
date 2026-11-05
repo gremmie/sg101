@@ -27,6 +27,13 @@ published with the repository. Save them in the session scratchpad and hand
 Brian their paths. `STATUS.md` records his decisions and the toolbar
 measurement in words.
 
+**The forum tables overflow at tablet widths, an open decision for this
+review (Brian, 2026-11-04).** Task 01 fixed phone widths, but from 640 to 1024
+px the forum's topic list scrolls sideways, by up to 309 px on `gear`. The
+measurements, and one remedy measured but not applied, are in `STATUS.md` under
+step 6 task 01. Shoot 640 and 1024 as well, so Brian decides with those in
+front of him.
+
 The dev debug toolbar overlays the phone menu. It is hidden unless `.env` has
 `DEBUG_TOOLBAR=True`, so check `.env` before shooting. Probe sessions log in
 through `settings.AUTHENTICATION_BACKENDS[0]`, not `ModelBackend`. The dev
