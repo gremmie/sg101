@@ -514,6 +514,9 @@ turned up, neither from this change:
   measures 0, and doesn't re-measure. A phone loads at phone width, so visitors
   don't meet it. To check Orbit by hand, narrow the window *then* reload.
   Not fixed; it's Foundation 6.2.0's behaviour.
+  **Correction (2026-11-04):** "visitors don't meet it" overlooks a phone
+  turned from landscape (usually 640 px or wider, medium) to portrait. That is
+  inferred, not seen. The fix is plan step 13.
 
 **Not done here:** the manual walk of the menus, Orbit and Cycle (task 03),
 and Reveal's `aria-hidden` (task 02).

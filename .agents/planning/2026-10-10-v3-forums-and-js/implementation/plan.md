@@ -17,6 +17,7 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [ ] Step 10: The moderator pages — **ships: forums release 3**
 - [ ] Step 11: Remove the shoutbox — **ships**
 - [ ] Step 12: Retire `base.html`, its assets, and `V3_DESIGN` — **ships**
+- [ ] Step 13: The phone banner re-measures when the layout narrows — **ships**
 
 ## How the steps work
 
@@ -34,6 +35,7 @@ when Brian deploys it. `main` always matches what leopard should run.
 | `forums-v3-release-3` | 10 | forums release 3 |
 | `retire-shoutbox` | 11 | shoutbox removal |
 | `retire-base-html` | 12 | `base.html` retirement |
+| `orbit-remeasure` | 13 | the phone banner fix |
 
 **Every step:**
 
@@ -533,3 +535,59 @@ loads Blueprint, jQuery 1.11 or markItUp. The home page, a forum topic, news
 and a profile render as before. **Merge and deploy; close #18 or narrow it
 to what remains:** jQuery itself (tied to Foundation), and replacing jQuery
 UI's datepicker and autocomplete.
+
+---
+
+## Step 13: The phone banner re-measures when the layout narrows
+
+**Objective.** The phone-width banner (the Orbit in `v3/base.html`) shows its
+slides when a page that loaded at medium width or wider narrows to small: a
+phone turned from landscape to portrait, or dev tools' phone view.
+
+**Out of order on purpose.** Added 2026-11-04, after the plan was approved, and
+numbered last so the earlier steps keep their numbers. It touches no forum
+page and depends on no other step: it branches from `main` and ships on its
+own, whenever it is taken up.
+
+**The fault, measured.** Foundation 6.2.0's Orbit measures its slides once,
+at initialisation, and binds no resize handler. The banner is
+`hide-for-medium`, so a page loaded at medium width or wider measures 0 and
+leaves the container at `height: 0` and every slide at `max-height: 0`, still
+rotating. Measured in step 3 task 01 and again for step 6 task 01 (STATUS):
+loaded at 402 px the banner is 102 px high; loaded at 1280 and narrowed to
+402, 0. **The landscape-to-portrait case is inferred, not seen:** a phone in
+landscape is usually at least 640 px wide, which is medium.
+
+**Guidance.**
+
+1. **Look for an upstream fix first.** Read Orbit's source in Foundation 6.3,
+   6.4 and 6.5 for a resize or breakpoint handler. If one exists, port it into
+   the vendored `foundation.min.js`, as with the earlier hand edits, and
+   record it in `sg101/static/js/vendor/README.md` beside them.
+2. **Otherwise, in `sg101/static/js/v3/sg101.js`:** on Foundation's
+   `changed.zf.mediaquery`, when the new size is `small`, clear each Orbit's
+   container height and its slides' `max-height`, then call its
+   `_prepareForOrbit()`. Clearing comes first: the measurement reads the
+   slides' current heights, and a slide held at `max-height: 0` measures 0.
+   `_prepareForOrbit` is internal to Foundation; acceptable on a pinned,
+   vendored 6.2.0 that won't be upgraded (Q13), and the code says so.
+3. **Measure, don't assume, the hidden slide.** Orbit sizes the container to
+   its tallest slide, but a slide hidden at the time measures 0. The two
+   slides are 101.9 and 102 px today, so it should not show; check.
+
+**Tests.**
+
+- **Browser, written first:** load a V3 page at 1280, resize to 402, and the
+  banner is taller than 0 with the logo visible. It fails before the fix.
+  Mutation-check it.
+- **Browser:** loaded at 402, unchanged (still 102 px, rotates, the next
+  button works); and narrowed, widened and narrowed again, still shows.
+- **The suite and the deprecation gate pass.**
+
+**Integration.** `sg101.js` and the vendored Foundation load on every V3
+page, so step 3's browser tests still pass. Step 12 doesn't touch this: it
+retires the old design, not the V3 scripts.
+
+**Demo.** In dev tools' phone view, the banner shows without a reload. **Brian,
+on his phone:** open a page in landscape, turn it upright, and the banner
+shows. **Merge and deploy.**
