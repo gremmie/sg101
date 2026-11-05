@@ -115,7 +115,6 @@ def index(request):
     return render(request, 'forums/index.html', {
         'cats': cats,
         'feeds': feeds,
-        'V3_DESIGN': True,
         })
 
 
@@ -146,14 +145,17 @@ def forum_index(request, slug):
     get_topic_unread_status(forum, page.object_list, request.user)
     attach_topic_page_ranges(page.object_list)
 
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
     can_moderate = perms.can_moderate(forum, request.user)
 
     return render(request, 'forums/forum_index.html', {
         'forum': forum,
         'feed': feed,
         'page': page,
+        'page_nav': page_nav,
         'can_moderate': can_moderate,
-        'V3_DESIGN': True,
         })
 
 
@@ -211,6 +213,9 @@ def topic_index(request, id):
             visit_time = last_post_on_page.creation_date
         _update_last_visit(request.user, topic, visit_time)
 
+    # we do this for the template since it is rendered twice
+    page_nav = render_to_string('forums/pagination.html', {'page': page})
+
     can_moderate = perms.can_moderate(topic.forum, request.user)
 
     can_reply = request.user.is_authenticated and (
@@ -226,13 +231,13 @@ def topic_index(request, id):
         'forum': topic.forum,
         'topic': topic,
         'page': page,
+        'page_nav': page_nav,
         'last_page': last_page,
         'can_moderate': can_moderate,
         'can_reply': can_reply,
         'form': NewPostForm(initial={'topic_id': topic.id}),
         'is_favorite': is_favorite,
         'is_subscribed': is_subscribed,
-        'V3_DESIGN': True,
         })
 
 
@@ -348,7 +353,7 @@ def quick_reply_ajax(request):
         _bump_post_count(request.user)
         _update_last_visit(request.user, form.topic, timezone.now())
 
-        return render(request, 'forums/display_post_v3.html', {
+        return render(request, 'forums/display_post.html', {
             'post': post,
             'can_moderate': perms.can_moderate(form.topic.forum, request.user),
             'can_reply': True,

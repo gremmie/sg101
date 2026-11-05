@@ -45,17 +45,18 @@ class MaxUsersTestCase(TestCase):
     TEMPLATE = Template('{% load core_tags %}{% max_users %}')
 
     @patch('core.templatetags.core_tags.get_stats')
-    def test_renders_nothing_when_no_stats(self, mock_get_stats):
+    def test_renders_empty_div_when_no_stats(self, mock_get_stats):
         mock_get_stats.return_value = None
         rendered = self.TEMPLATE.render(Context({}))
-        self.assertEqual(rendered.strip(), '')
+        rendered_no_ws = re.sub(r'\s', '', rendered)
+        self.assertIn('<divid="max-users"></div>', rendered_no_ws)
 
     @patch('core.templatetags.core_tags.get_stats')
     def test_renders_with_status(self, mock_get_stats):
         mock_get_stats.return_value = Mock(
                 max_users=42,
                 max_users_date=timezone.make_aware(datetime(2025, 6, 28)))
-        rendered = re.sub(r'\s+', ' ', self.TEMPLATE.render(Context({})))
+        rendered = self.TEMPLATE.render(Context({}))
         self.assertIn(
                 'The most registered users ever online was '
                 '<strong>42</strong> on midnight Saturday, June 28, 2025.',
@@ -70,7 +71,7 @@ class WhosOnlineTestCase(TestCase):
     def test_renders_ok(self, mock_visitors, mock_users):
         mock_users.return_value = ['pj', 'eddie']
         mock_visitors.return_value = ['127.0.0.1']
-        rendered = re.sub(r'\s+', ' ', self.TEMPLATE.render(Context({})))
+        rendered = self.TEMPLATE.render(Context({}))
         self.assertIn(
             'There are 3 users online: 2 registered users and 1 guest.',
             rendered)

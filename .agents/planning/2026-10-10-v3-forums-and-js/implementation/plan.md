@@ -10,16 +10,13 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [x] Step 3: jQuery 3.7.1 and jQuery UI 1.13.3, self-hosted — **ships**
 - [x] Step 4: Smileys in the post box (#9) — **ships**
 - [x] Step 5: Upload error messages, then multiple image uploads (#16) — **ships**
-- [x] Step 6: Port the `v3-dev` reading pages, and the screenshot review
+- [ ] Step 6: Port the `v3-dev` reading pages, and the screenshot review
 - [ ] Step 7: The complete post card, and the topic page's JavaScript
 - [ ] Step 8: Posting forms, the video button, and the confirmation pages — **ships: forums release 1**
 - [ ] Step 9: The list pages — **ships: forums release 2**
 - [ ] Step 10: The moderator pages — **ships: forums release 3**
 - [ ] Step 11: Remove the shoutbox — **ships**
 - [ ] Step 12: Retire `base.html`, its assets, and `V3_DESIGN` — **ships**
-- [ ] Step 13: The phone banner re-measures when the layout narrows — **ships**
-- [ ] Step 14: Tablet widths: the forum tables and the post box toolbar — **ships**
-- [ ] Step 15: The phone header fits a long username — **ships**
 
 ## How the steps work
 
@@ -37,9 +34,6 @@ when Brian deploys it. `main` always matches what leopard should run.
 | `forums-v3-release-3` | 10 | forums release 3 |
 | `retire-shoutbox` | 11 | shoutbox removal |
 | `retire-base-html` | 12 | `base.html` retirement |
-| `orbit-remeasure` | 13 | the phone banner fix |
-| `tablet-widths` | 14 | the tablet layout fixes |
-| `phone-header` | 15 | the phone header fix |
 
 **Every step:**
 
@@ -342,11 +336,7 @@ a jQuery-free `forums/static/js/topic.js`.
 **Tests.**
 
 - **Render test:** each R14 element is present for the right roles, and absent
-  for the others.
-- **`bio`'s `UnverifiedAddressIsNotDisplayedTestCase.test_forum_post`** is
-  `@expectedFailure` until the card has its email link (step 6 task 02, in
-  STATUS). Adding the link makes it an unexpected success, which fails the
-  suite: remove the decorator then. For example, delete and IP only for moderators; stranger
+  for the others. For example, delete and IP only for moderators; stranger
   tools only on a stranger's post and not one's own.
 - **Browser:**
   - quick reply appends a post with the next card colour and clears the box.
@@ -383,10 +373,6 @@ the video button, and the three confirmation pages are V3. **Then it ships.**
 - **Delete `forums.js`** and the `fetch_attachments` and `fetch_saved` views
   and URLs once nothing calls them.
 - **If step 6's review moved a button** to fit 360 px, apply it here.
-- **The reply form's "Need help?" link** under Video Attachments is
-  hard-coded as `/forums/topic/18843/` in `new_post_form.html`, as `v3-dev`
-  and today's `show_form.html` have it. Decide whether it stays a fixed
-  topic once the video button exists.
 
 **Tests.**
 
@@ -547,129 +533,3 @@ loads Blueprint, jQuery 1.11 or markItUp. The home page, a forum topic, news
 and a profile render as before. **Merge and deploy; close #18 or narrow it
 to what remains:** jQuery itself (tied to Foundation), and replacing jQuery
 UI's datepicker and autocomplete.
-
----
-
-## Step 13: The phone banner re-measures when the layout narrows
-
-**Objective.** The phone-width banner (the Orbit in `v3/base.html`) shows its
-slides when a page that loaded at medium width or wider narrows to small: a
-phone turned from landscape to portrait, or dev tools' phone view.
-
-**Out of order on purpose.** Added 2026-11-04, after the plan was approved, and
-numbered last so the earlier steps keep their numbers. It touches no forum
-page and depends on no other step: it branches from `main` and ships on its
-own, whenever it is taken up.
-
-**The fault, measured.** Foundation 6.2.0's Orbit measures its slides once,
-at initialisation, and binds no resize handler. The banner is
-`hide-for-medium`, so a page loaded at medium width or wider measures 0 and
-leaves the container at `height: 0` and every slide at `max-height: 0`, still
-rotating. Measured in step 3 task 01 and again for step 6 task 01 (STATUS):
-loaded at 402 px the banner is 102 px high; loaded at 1280 and narrowed to
-402, 0. **The landscape-to-portrait case is inferred, not seen:** a phone in
-landscape is usually at least 640 px wide, which is medium.
-
-**Guidance.**
-
-1. **Look for an upstream fix first.** Read Orbit's source in Foundation 6.3,
-   6.4 and 6.5 for a resize or breakpoint handler. If one exists, port it into
-   the vendored `foundation.min.js`, as with the earlier hand edits, and
-   record it in `sg101/static/js/vendor/README.md` beside them.
-2. **Otherwise, in `sg101/static/js/v3/sg101.js`:** on Foundation's
-   `changed.zf.mediaquery`, when the new size is `small`, clear each Orbit's
-   container height and its slides' `max-height`, then call its
-   `_prepareForOrbit()`. Clearing comes first: the measurement reads the
-   slides' current heights, and a slide held at `max-height: 0` measures 0.
-   `_prepareForOrbit` is internal to Foundation; acceptable on a pinned,
-   vendored 6.2.0 that won't be upgraded (Q13), and the code says so.
-3. **Measure, don't assume, the hidden slide.** Orbit sizes the container to
-   its tallest slide, but a slide hidden at the time measures 0. The two
-   slides are 101.9 and 102 px today, so it should not show; check.
-
-**Tests.**
-
-- **Browser, written first:** load a V3 page at 1280, resize to 402, and the
-  banner is taller than 0 with the logo visible. It fails before the fix.
-  Mutation-check it.
-- **Browser:** loaded at 402, unchanged (still 102 px, rotates, the next
-  button works); and narrowed, widened and narrowed again, still shows.
-- **The suite and the deprecation gate pass.**
-
-**Integration.** `sg101.js` and the vendored Foundation load on every V3
-page, so step 3's browser tests still pass. Step 12 doesn't touch this: it
-retires the old design, not the V3 scripts.
-
-**Demo.** In dev tools' phone view, the banner shows without a reload. **Brian,
-on his phone:** open a page in landscape, turn it upright, and the banner
-shows. **Merge and deploy.**
-
----
-
-## Step 14: Tablet widths: the forum tables and the post box toolbar
-
-**Objective.** No V3 page scrolls sideways from 640 to 1023 px, where the
-sidebar sits beside the content and leaves it 450 px at 640.
-
-**Out of order on purpose.** Added 2026-11-04 from step 6's screenshot review
-(Brian). The forum tables exist only once release 1 has merged, so this
-follows step 8 and branches from `main` after it.
-
-**The faults, measured (STATUS, step 6 tasks 01 and 03).**
-
-- **The forum tables** show all their columns from medium up. `gear`'s topic
-  list scrolls 309 px at 640, 213 at 768 and 21 at 1024; the index 71 at 640.
-- **The post box toolbar** shows all 13 buttons from medium up, 661 px, and
-  doesn't wrap. On every page with a post box: news submit scrolls 211 px at
-  640 and 115 at 768; the forum reply box, inside a fieldset that can't
-  shrink below its contents, 238 and 142. None at 1024 or wider.
-
-**Guidance.**
-
-1. **The tables:** one remedy measured by injected CSS (STATUS, step 6 task
-   01): the extra columns shown from large rather than medium, and the phone
-   rule (`overflow-wrap: anywhere`, Last Post at 10 rem) up to large. It left
-   `gear` 21 px over at exactly 1024, from two long names in Author and Last
-   Post; a 10 rem Author column was proposed for that, not measured.
-2. **The toolbar:** step 6 task 03 cut the buttons' side padding to 0.5 rem
-   below medium. At medium, 13 buttons at that padding come to about 480 px,
-   still over 450. Wrapping needs more than `flex-wrap`: this build's
-   Foundation menu lays its items out as table cells. Options to measure:
-   more buttons `hide-for-small-only` → shown from large, the tighter padding
-   up to large, or a flex menu that wraps.
-3. **Measure before choosing,** at 640, 768, 1023 and 1024, on the forum pages
-   and on every post box page, and show Brian screenshots.
-
-**Tests.** Browser, at 640: no horizontal scroll on the forums index, a
-topic list with long usernames, news submit and a topic's reply box. Each
-fails first.
-
-**Demo.** Dev tools at a tablet width: the forums and a post box page fit.
-**Merge and deploy.**
-
----
-
-## Step 15: The phone header fits a long username
-
-**Objective.** The V3 header's top bar fits a phone at any username length.
-
-**Out of order on purpose.** Added 2026-11-04 from step 6's screenshot review
-(Brian). It touches only `v3/base.html` and its Sass, depends on no other
-step, and branches from `main` whenever it is taken up.
-
-**The fault, measured (STATUS, step 6 task 03).** At phone width the top bar
-holds home, "<username>'s Profile", "Private Messages" and Logout. For
-`CaptainSpringfield` at 360 px the profile link wraps and Logout ends at 421
-px, so every V3 page scrolls sideways for that member; for `Klas` it fits at
-360 but not at 320 (Logout ends at 324).
-
-**Guidance.** Show Brian options before choosing, for example: a shorter
-label at phone width ("Profile"), an icon for messages with its unread
-count, or the account links moved into the phone menu.
-
-**Tests.** Browser, at 320 and 360, logged in as a member with a 30-character
-username (registration allows at most 30, `accounts/forms.py`, and the
-longest in the dev data is 30): no horizontal scroll, and Logout is
-visible. Fails first.
-
-**Demo.** A long-named member's pages fit a phone. **Merge and deploy.**

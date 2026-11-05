@@ -1,9 +1,9 @@
 {% load static %}
 {% if flag_data %}
-<p>
+<div>
    {% for rec in flag_data %}
       <img src="{% static rec.src %}"
            alt="{{ rec.name }}" title="{{ rec.count }} {{ rec.name }}" />
    {% endfor %}
-</p>
+</div>
 {% endif %}

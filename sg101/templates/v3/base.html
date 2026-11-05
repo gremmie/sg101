@@ -27,50 +27,46 @@
 <body>
 <header id="base-header">
    <div class="top-bar">
-      <div class="row">
-         <div class="small-12 columns">
-            <div class="top-bar-left">
-               <ul class="menu">
-                  <li><a href="/"><i class="fi-home size-24" title="SG101 Home"></i></a></li>
-                  {% if user.is_authenticated %}
-                     <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
-                     <li><a href="{% url 'messages-inbox' %}">Private Messages
-                        {% unread_messages %}</a></li>
-                     {# A POST, not a link: LogoutView stopped accepting GET in 5.0, #}
-                     {# because a bare link lets any other page log a member out.    #}
-                     <li>
-                        <form class="logout-form" action="{% url 'accounts-logout' %}" method="post">
-                           {% csrf_token %}
-                           <button class="link-button" type="submit">Logout</button>
-                        </form>
-                     </li>
-                  {% else %}
-                     {% if request.path != "/accounts/logout/" %}
-                        <li><a href="{% url 'accounts-login' %}?next={{ request.path }}">Login</a></li>
-                     {% else %}
-                        <li><a href="{% url 'accounts-login' %}">Login</a></li>
-                     {% endif %}
-                     <li><a href="{% url 'accounts-register' %}">Register</a></li>
-                  {% endif %}
-               </ul>
-            </div>
-            <div class="top-bar-right">
-               <form id="top-search" method="get" action="{% url 'search' %}">
-                  <ul class="menu">
-                     <li><input type="search" placeholder="Search" name="q"></li>
-                     <li><button type="submit" class="button" form="top-search">Search</button></li>
-                  </ul>
-                  <input type="hidden" name="models" value="forums.topic" />
-                  <input type="hidden" name="models" value="forums.post" />
-                  <input type="hidden" name="models" value="news.story" />
-                  <input type="hidden" name="models" value="bio.userprofile" />
-                  <input type="hidden" name="models" value="weblinks.link" />
-                  <input type="hidden" name="models" value="downloads.download" />
-                  <input type="hidden" name="models" value="podcast.item" />
-                  <input type="hidden" name="models" value="ygroup.post" />
-               </form>
-            </div>
-         </div>
+      <div class="top-bar-left">
+         <ul class="menu">
+            <li><a href="/"><i class="fi-home size-24" title="SG101 Home"></i></a></li>
+            {% if user.is_authenticated %}
+               <li><a href="{% url 'bio-me' %}">{{ user.username }}'s Profile</a></li>
+               <li><a href="{% url 'messages-inbox' %}">Private Messages
+                  {% unread_messages %}</a></li>
+               {# A POST, not a link: LogoutView stopped accepting GET in 5.0, #}
+               {# because a bare link lets any other page log a member out.    #}
+               <li>
+                  <form class="logout-form" action="{% url 'accounts-logout' %}" method="post">
+                     {% csrf_token %}
+                     <button class="link-button" type="submit">Logout</button>
+                  </form>
+               </li>
+            {% else %}
+               {% if request.path != "/accounts/logout/" %}
+                  <li><a href="{% url 'accounts-login' %}?next={{ request.path }}">Login</a></li>
+               {% else %}
+                  <li><a href="{% url 'accounts-login' %}">Login</a></li>
+               {% endif %}
+               <li><a href="{% url 'accounts-register' %}">Register</a></li>
+            {% endif %}
+         </ul>
+      </div>
+      <div class="top-bar-right">
+         <form id="top-search" method="get" action="{% url 'search' %}">
+            <ul class="menu">
+               <li><input type="search" placeholder="Search" name="q"></li>
+               <li><button type="submit" class="button" form="top-search">Search</button></li>
+            </ul>
+            <input type="hidden" name="models" value="forums.topic" />
+            <input type="hidden" name="models" value="forums.post" />
+            <input type="hidden" name="models" value="news.story" />
+            <input type="hidden" name="models" value="bio.userprofile" />
+            <input type="hidden" name="models" value="weblinks.link" />
+            <input type="hidden" name="models" value="downloads.download" />
+            <input type="hidden" name="models" value="podcast.item" />
+            <input type="hidden" name="models" value="ygroup.post" />
+         </form>
       </div>
    </div>
 
@@ -79,7 +75,7 @@
    <div class="small-4 columns">
       <a href="/"><img src="{% static "images/v3-logo.png" %}" alt="SG101 logo"></a>
    </div>
-   <div class="small-8 columns text-right">
+   <div class="small-8 columns">
       <img src="{% static "images/sg101-celebrating.jpg" %}" alt="SG101 Banner"
          title="SG101 Celebrating Surf Music"/>
    </div>
@@ -122,7 +118,7 @@
 {#--------------------------- Main Menus -------------------------------------#}
 
 <div class="row">
-   <div class="small-12 columns">
+   <div class="small-12">
       <div class="top-bar" id="main-menu">
          <div class="top-bar-title" id="small-menu">
             <span data-responsive-toggle="medium-menu" data-hide-for="medium">
