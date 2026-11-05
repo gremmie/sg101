@@ -10,7 +10,7 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [x] Step 3: jQuery 3.7.1 and jQuery UI 1.13.3, self-hosted — **ships**
 - [x] Step 4: Smileys in the post box (#9) — **ships**
 - [x] Step 5: Upload error messages, then multiple image uploads (#16) — **ships**
-- [ ] Step 6: Port the `v3-dev` reading pages, and the screenshot review
+- [x] Step 6: Port the `v3-dev` reading pages, and the screenshot review
 - [ ] Step 7: The complete post card, and the topic page's JavaScript
 - [ ] Step 8: Posting forms, the video button, and the confirmation pages — **ships: forums release 1**
 - [ ] Step 9: The list pages — **ships: forums release 2**

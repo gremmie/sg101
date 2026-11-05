@@ -1848,7 +1848,7 @@ takes the next colour; one post box, and Bold works; no page errors, no failed
 requests other than `/media/`, no horizontal scroll. Two cards were looked at by
 eye at each width.
 
-## Step 6 task 03 — the screenshot review, the phone toolbar — IN PROGRESS
+## Step 6 task 03 — the screenshot review, the phone toolbar — DONE 2026-11-04
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-03-screenshot-review.code-task.md`.
 Branch `v3-forums-release-1`, on `5ba90760`.
@@ -1903,7 +1903,8 @@ nothing: this build's menu lays its items out as table cells.
   **Done.**
 - **Tablet widths:** the tables and the toolbar together, as **plan step 14**.
 - **The header:** **plan step 15**, independent of the rest.
-- **The look:** Brian has changes; pending.
+- **The look:** approved with one change, the header's ragged right edge,
+  below. No other changes (Brian, 2026-11-04).
 
 **The two fixes**, in `_sg101.scss`, rebuilt; `main.min.css` gains exactly
 those two rules. Browser tests in `forums/tests/test_browser.py`, at 360: the
@@ -1915,3 +1916,39 @@ dev topic afterwards, with and without the stand-in: no horizontal scroll at
 is step 15.
 All 80 browser tests pass with the padding, which every post box takes. Suite
 and gate, separate runs: 1596 tests, OK with 1 expected failure, each.
+
+**The header's right edge (Brian, from a screenshot at about 1190 px):** the
+menu bar ran past the forum's right edge and the banner stopped short of it.
+Measured at 1280, where the page's row is 40-1240 and the content's edges are
+55 and 1225: the banner ended at 1205 (the 750 px image left-aligned in a 770
+px column), the menu bar spanned 40-1240 (its wrapper was `small-12` without
+`columns`, so it had no gutters), and the top bar spanned the window (Search
+ending at 1272; at 1920, 1912 against content at 1545). Three changes in
+`v3/base.html`, all kept (Brian, 2026-11-04):
+
+1. The menu bar's wrapper takes `columns`.
+2. The banner's column takes `text-right`, so the slack sits between logo and
+   banner: the gap goes from 41 to 61 px at 1280.
+3. The top bar's contents sit in a `row` and `columns`, and
+   `#base-header > .top-bar` loses its side padding, so the row's gutters set
+   its edges; its background still spans the window.
+
+After: Search, banner, menu bar and content end on the same pixel at 768,
+1190, 1280 and 1920 (753, 1175, 1225, 1545), and the logo and menu bar start
+together. At 360 the menu bar is inset 10 px to the content's gutter where it
+had run edge to edge; nothing scrolls sideways at any width measured.
+`main.min.css` gains the one rule. **Test:** `HeaderAlignmentTestCase` in
+`core/tests/test_browser.py` compares the three right edges with the content's
+at 1190, 1280 and 1920, each block separately. It failed before the change;
+each of four mutations was caught by its own block only: the menu bar without
+`columns`, the banner not right-aligned, the top bar's contents outside the
+row, and the padding rule removed, which shows only at 1190, where the row
+fills the window. Restored by hash. Suite and gate, separate runs, browser
+tests included: 1597 tests OK with 1 expected failure each.
+
+**Step 6 is complete** (2026-11-04): the forums index, a forum's topic list
+and the topic page are on V3, reviewed, and ticked in the plan. Not deployed:
+the branch carries steps 7 and 8 before forums release 1 ships. Carried
+forward: plan step 7 (R14, including the full-size image link, and removing
+bio's `@expectedFailure`), step 8 (the reply form's help link), steps 14 and
+15 (tablet widths, the phone header), and step 13 (the phone banner).
