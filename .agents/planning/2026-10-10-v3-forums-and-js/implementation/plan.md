@@ -328,6 +328,9 @@ a jQuery-free `forums/static/js/topic.js`.
   - the stranger highlight, and the IP link to `post_ip`
 
   Tools are buttons with `data-post-id`.
+- **A post image shown smaller than its natural width links to the full
+  size** (R14). In `topic.js`, once the image has loaded, so posts appended by
+  quick reply get it too.
 - **`topic.js`:**
   - quick reply (append, clear, keep the text on failure)
   - flag and delete (keep `confirm()`; a callout instead of `alert()`)
@@ -338,13 +341,18 @@ a jQuery-free `forums/static/js/topic.js`.
 **Tests.**
 
 - **Render test:** each R14 element is present for the right roles, and absent
-  for the others. For example, delete and IP only for moderators; stranger
+  for the others.
+- **`bio`'s `UnverifiedAddressIsNotDisplayedTestCase.test_forum_post`** is
+  `@expectedFailure` until the card has its email link (step 6 task 02, in
+  STATUS). Adding the link makes it an unexpected success, which fails the
+  suite: remove the decorator then. For example, delete and IP only for moderators; stranger
   tools only on a stranger's post and not one's own.
 - **Browser:**
   - quick reply appends a post with the next card colour and clears the box.
     **Mutation:** break the append, and the test fails.
   - `post/<id>/` lands on the post's anchor
   - flag shows the server's reply in a callout
+  - an image wider than its card links to itself; a small one doesn't
 
 **Integration.** Builds on step 6's templates and step 2's `http.js` and post
 box.
@@ -375,6 +383,10 @@ the video button, and the three confirmation pages are V3. **Then it ships.**
 - **Delete `forums.js`** and the `fetch_attachments` and `fetch_saved` views
   and URLs once nothing calls them.
 - **If step 6's review moved a button** to fit 360 px, apply it here.
+- **The reply form's "Need help?" link** under Video Attachments is
+  hard-coded as `/forums/topic/18843/` in `new_post_form.html`, as `v3-dev`
+  and today's `show_form.html` have it. Decide whether it stays a fixed
+  topic once the video button exists.
 
 **Tests.**
 

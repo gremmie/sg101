@@ -1764,3 +1764,84 @@ pages. At 1024 `gear` stays 21 over, two long names side by side in Author and
 Last Post (208 px each); a 10 rem Author column was proposed for that and not
 measured. It hides the counts and the author from tablets, a change to `v3-dev`'s
 design, which is why it waits for the screenshot review.
+
+## Step 6 task 02 — the topic page and the post card on V3 — DONE 2026-11-04
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-02-topic-page.code-task.md`.
+Branch `v3-forums-release-1`, on `40002da6`. Not deployed.
+
+**The templates.** `topic.html` changed on `main` since the merge base only by
+its `staticfiles` line; `display_post_v3.html` and `new_post_form.html` exist
+only on `v3-dev`. Everything they call exists on `main`. Ported from `v3-dev`
+with `{% load static %}`, the two `{% cycle %}` lines gone, one card class
+(`sg101-card`, `sg101-card-divider`), and the scripts cut to the post box
+module (only when the reply form is on the page, as on news submit) and the
+inline `jump_box.js`. Dropped: jQuery UI (only message compose's autocomplete
+uses it), `jquery.form`, `forums.js` and the 2017 `post_box.js`. The modals are
+included once, by `new_post_form.html`.
+
+**The task file was off on one point:** `display_post.html`'s only other user
+is `edit_post.html`, not the list and moderator pages. It stays either way.
+
+**Found, not done here: today's page links an oversized image to its full
+size.** `main`'s `topic.html` shrinks any post image over 660 px after
+`imagesLoaded` and wraps it in a link to the original; `v3-dev` dropped the
+script, and Foundation's `img { max-width: 100% }` only shrinks. **Added to R14
+and step 7 (Brian, 2026-11-04).**
+
+**Replies are lost on this branch until step 7.** `forums.js` is what turns
+the reply form's submit into quick reply; the form itself posts to `.`, which
+`topic_index` ignores. Expected by the plan; it matters only when trying a reply
+on dev.
+
+**The cards.** Each post is a row with an author card (from medium up) and a
+body card. `#forum-topic-post-container > .row:nth-child(even)` colours both
+cards and their dividers blue at 50%; the rest are surf green at 50%. The
+minifier writes `(even)` as `(2n)`. `main.min.css`, split on `}`, gains exactly
+those rules.
+
+**Tests, written first.** Six render tests in `V3PagesTestCase` and a browser
+test, `forums/tests/test_browser.py`. Against the old page the five for new
+behaviour failed, the browser test by timing out on a V3 post box that wasn't
+there; the other two (no post box for anonymous visitors, the edit page's old
+card) passed, as they pin what must not change, and were seen to fail under
+their mutations below. **The browser
+test types and clicks Bold** rather than only collecting page errors: a module
+that fails to load logs a console error and raises no page error. Task 01's
+unconverted-pages test now takes the edit page in place of the topic.
+
+**Mutations, 13, each file restored and its hash checked.** Caught: the topic
+view without `V3_DESIGN` or with `page_nav`; `topic.html` on `base.html`; a
+`{% cycle %}` back; a numbered card class; the `nth-child` rule broken; the
+modals included twice; the module loaded for anonymous visitors; a module
+import broken (by the browser test); quick reply on the old card; the edit page
+on the V3 card; `forums.js` back (by the render test). **Two misses, one
+fixed:**
+
+- **The CSS check first missed its own mutation.** It looked for
+  `…nth-child(2n) .sg101-card`, which also begins the divider's selector, so
+  breaking the card's left it passing. It now requires the selector to end at
+  the card; that and a second mutation (the card selector removed, the
+  divider's kept) are caught.
+- **The browser test does not see `forums.js` back.** On V3 markup it finds
+  nothing to bind and raises nothing. The render test catches it; the task
+  allowed the browser test either this or the broken import.
+
+**An existing test now fails by design: `bio`'s
+`UnverifiedAddressIsNotDisplayedTestCase.test_forum_post`.** It asserts the
+verified address's `mailto` on a forum post, and the V3 card has no email link
+until step 7 (R14). Its guarantee, no unverified address, still holds. **Marked
+`@expectedFailure` (Brian, 2026-11-04)**, so step 7's link turns it into an
+unexpected success, which fails the suite. Checked: with a `mailto` added to
+the card for one run, `FAILED (unexpected successes=1)`; restored by hash.
+
+**Suite and gate**, separate runs: 1594 tests, OK with 1 expected failure, each.
+
+**The walk, by a headless probe** on the dev stack, logged in as a dev
+superuser through a session made directly and deleted after (each topic opened
+is marked read for that account): the last page of topic 41535 (5 posts on it)
+and of 41524 (6), at 375 × 900 and 1280 × 900. 22 checks, all passing: the body
+cards alternate green, blue from the first; a row appended to the container
+takes the next colour; one post box, and Bold works; no page errors, no failed
+requests other than `/media/`, no horizontal scroll. Two cards were looked at by
+eye at each width.

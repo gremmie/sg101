@@ -101,6 +101,11 @@ Consolidated from `idea-honing.md`. The question each comes from is in brackets.
   - attachments, signatures and "Last edited"
   - PM and email links
   - the stranger highlight, and the IP link for moderators
+  - a post image shrunk to fit links to its full size. Today's `topic.html`
+    sets any image wider than 660 px to 660 and wraps it in a link to the
+    original, after `imagesLoaded`. `v3-dev` dropped the script, and
+    Foundation's `img { max-width: 100% }` only does the shrinking. (Added
+    2026-11-04, Brian, found porting the topic page in step 6 task 02.)
 
   [research `v3-dev-forums.md`]
 
