@@ -1788,8 +1788,16 @@ is `edit_post.html`, not the list and moderator pages. It stays either way.
 **Found, not done here: today's page links an oversized image to its full
 size.** `main`'s `topic.html` shrinks any post image over 660 px after
 `imagesLoaded` and wraps it in a link to the original; `v3-dev` dropped the
-script, and Foundation's `img { max-width: 100% }` only shrinks. **Added to R14
-and step 7 (Brian, 2026-11-04).**
+script, and Foundation's `img { max-width: 100% }` only shrinks. Added to R14
+and step 7 (Brian, 2026-11-04), then **taken out again the same day (Brian):
+the link would show nothing more.** Measured on the dev copy of production's
+data: of 32,946 posts with images, all but about 200 images are on the site's
+own photo storage (S3 or `/media/user_photos`); since 2024, 3,477 of 3,478.
+Uploads and hot-links alike are resized to fit 660 × 720, and a `Photo` keeps
+only that image and a thumbnail, so there is no larger original to link to.
+The browser fits each to its card. The exceptions, about 200 images
+hot-linked straight from Dropbox, Google and others, mostly older, are not
+resized, and the card shows them shrunk.
 
 **Replies are lost on this branch until step 7.** `forums.js` is what turns
 the reply form's submit into quick reply; the form itself posts to `.`, which

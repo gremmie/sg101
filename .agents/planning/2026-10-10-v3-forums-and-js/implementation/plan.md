@@ -332,9 +332,6 @@ a jQuery-free `forums/static/js/topic.js`.
   - the stranger highlight, and the IP link to `post_ip`
 
   Tools are buttons with `data-post-id`.
-- **A post image shown smaller than its natural width links to the full
-  size** (R14). In `topic.js`, once the image has loaded, so posts appended by
-  quick reply get it too.
 - **`topic.js`:**
   - quick reply (append, clear, keep the text on failure)
   - flag and delete (keep `confirm()`; a callout instead of `alert()`)
@@ -356,7 +353,6 @@ a jQuery-free `forums/static/js/topic.js`.
     **Mutation:** break the append, and the test fails.
   - `post/<id>/` lands on the post's anchor
   - flag shows the server's reply in a callout
-  - an image wider than its card links to itself; a small one doesn't
 
 **Integration.** Builds on step 6's templates and step 2's `http.js` and post
 box.
