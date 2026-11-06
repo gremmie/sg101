@@ -1,12 +1,15 @@
 {% load bio_tags %}
 {% load forum_tags %}
-<div class="row collapse">
+{% load messages_tags %}
+<div class="row collapse" id="post-{{ post.id }}">
+   {# Old permalinks, and goto_post, end in #p<id>. #}
+   <span id="p{{ post.id }}"></span>
    <div class="small-12 medium-3 column">
       <div class="sg101-card show-for-medium">
          <div class="sg101-card-divider">
-            {% profile_link post.user.username %}
+            <strong>{% profile_link post.user.username %}</strong>
          </div>
-         <div class="card-section quiet">
+         <div class="card-section forum-post-author-details">
             {% avatar post.user %}<br />
             Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
             Posts: {{ post.user.profile.forum_post_count }}<br />
@@ -24,7 +27,7 @@
    </div>
    <div class="small-12 medium-9 column">
       <div class="sg101-card">
-         <div class="sg101-card-divider">
+         <div class="sg101-card-divider{% if post.user.profile.is_stranger %} stranger{% endif %}">
             <div class="show-for-medium">
                {% if post.unread %}
                   <i class="fi-burst-new shiny"></i>
@@ -33,7 +36,7 @@
                      <i class="fi-link"></i></a>
                <span class="quiet">Posted on {% forum_date post.creation_date user %}</span>
                {% if can_moderate %}
-                  <span class="quiet">from IP: {{ post.user_ip }}</span>
+                  <span class="quiet">from IP: <a href="{% url 'forums-post_ip_info' post_id=post.id %}">{{ post.user_ip }}</a></span>
                {% endif %}
             </div>
             <div class="hide-for-medium">
@@ -42,17 +45,66 @@
                {% endif %}
                <a href="{{ post.get_absolute_url }}" title="Link to this post">
                      <i class="fi-link"></i></a>
-               <span>
-                  {% profile_link post.user.username %}
-               </span><br />
+               <strong>{% profile_link post.user.username %}</strong><br />
                <span class="quiet">{% forum_date post.creation_date user %}</span>
                {% if can_moderate %}
-                  <span class="quiet">- {{ post.user_ip }}</span>
+                  <span class="quiet">- <a href="{% url 'forums-post_ip_info' post_id=post.id %}">{{ post.user_ip }}</a></span>
                {% endif %}
             </div>
          </div>
          <div class="card-section">
             {{ post.html|safe }}
+            {% if post.has_been_edited %}
+               <p class="forum-post-edited">Last edited: {% forum_date post.update_date user %}</p>
+            {% endif %}
+            {% if post.user.profile.signature_html %}
+               <div class="forum-post-signature">
+                  <hr />
+                  {{ post.user.profile.signature_html|safe }}
+               </div>
+            {% endif %}
+            {% for item in post.attachments.all %}
+               <div class="forum-attachment">{{ item.html|safe }}</div>
+            {% endfor %}
+         </div>
+         <div class="card-section forum-post-tools">
+            <a href="#top" class="quiet" title="Go to the top of the page">Top</a>
+            <span class="forum-post-tool-icons">
+            {% if can_reply %}
+               <a href="{% url 'forums-new_post' topic_id=post.topic_id %}?quote={{ post.id }}" title="Reply with quote">
+                  <i class="fi-comment-quotes" aria-hidden="true"></i><span class="show-for-sr">Reply with quote</span></a>
+            {% endif %}
+            {% if post.user_id == user.id or can_moderate %}
+               <a href="{% url 'forums-edit_post' id=post.id %}" title="Edit post">
+                  <i class="fi-pencil" aria-hidden="true"></i><span class="show-for-sr">Edit post</span></a>
+            {% endif %}
+            {% if user.is_authenticated %}
+               <button type="button" class="post-flag" data-post-id="{{ post.id }}"
+                  title="Flag this post as spam, abuse, or a violation of site rules">
+                  <i class="fi-flag" aria-hidden="true"></i><span class="show-for-sr">Flag post</span></button>
+            {% endif %}
+            {% if can_moderate %}
+               <button type="button" class="post-delete" data-post-id="{{ post.id }}" title="Delete this post">
+                  <i class="fi-trash" aria-hidden="true"></i><span class="show-for-sr">Delete post</span></button>
+            {% endif %}
+            {% if user.is_authenticated %}
+               <a href="{% send_pm_url post.user.username %}" title="Send a private message to {{ post.user.username }}">
+                  <i class="fi-comment" aria-hidden="true"></i><span class="show-for-sr">Private message</span></a>
+               {% if not post.user.profile.hide_email %}
+                  <a href="mailto:{{ post.user.email }}" title="Send an email to {{ post.user.username }}">
+                     <i class="fi-mail" aria-hidden="true"></i><span class="show-for-sr">Email</span></a>
+               {% endif %}
+            {% endif %}
+            </span>
+            {% if can_moderate and post.user_id != user.id and post.user.profile.is_stranger %}
+               <span class="forum-post-stranger-tools">
+                  <span class="quiet">Stranger:</span>
+                  <a href="{% url 'forums-stranger' post_id=post.id %}" title="This stranger seems legitimate">
+                     <i class="fi-check" aria-hidden="true"></i><span class="show-for-sr">Acquaintance</span></a>
+                  <a href="{% url 'forums-spammer' post_id=post.id %}" title="This is spam">
+                     <i class="fi-skull" aria-hidden="true"></i><span class="show-for-sr">Spammer</span></a>
+               </span>
+            {% endif %}
          </div>
       </div>
    </div>

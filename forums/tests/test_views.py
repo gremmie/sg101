@@ -2,6 +2,7 @@
 Tests for the views in the forums application.
 
 """
+import datetime
 import pathlib
 
 from django.conf import settings
@@ -11,9 +12,11 @@ from django.template.loader import get_template
 from django.test import TestCase
 from django.urls import reverse
 
-from forums.models import Forum, Topic
+from bio.models import STA_ACTIVE, STA_STRANGER
+from forums.models import Attachment, Forum, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
 from forums.views.main import TOPICS_PER_PAGE
+from oembed.models import Oembed
 
 
 class ForumPostTestCase(TestCase):
@@ -377,3 +380,212 @@ class V3PagesTestCase(TestCase):
         self.assertOldDesign(response)
         self.assertTemplateUsed(response, 'forums/display_post.html')
         self.assertTemplateNotUsed(response, 'forums/display_post_v3.html')
+
+
+class PostCardTestCase(TestCase):
+    """Each part of the V3 post card, shown to the viewers who may use it and
+    to no one else."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = self.make_user('author', STA_ACTIVE)
+        self.member = self.make_user('member', STA_ACTIVE)
+        self.moderator = self.make_user('moderator', STA_ACTIVE)
+        mod_group = Group.objects.get(name='Forum Moderators')
+        self.moderator.groups.add(mod_group)
+        self.forum.moderators.add(mod_group)
+        self.stranger = self.make_user('stranger', STA_STRANGER)
+
+        self.topic = make_topic(self.forum, self.author)
+        self.post = add_post(self.topic, self.author)
+
+    def make_user(self, username, status):
+        # A new profile is a stranger's with the email hidden; set both.
+        user = User.objects.create_user(username, username + '@example.com', 'pw')
+        user.profile.status = status
+        user.profile.hide_email = False
+        user.profile.save(content_update=False)
+        return user
+
+    def view(self, viewer, topic=None):
+        """The topic page as viewer sees it; None is an anonymous visitor."""
+        self.client.logout()
+        if viewer is not None:
+            self.assertTrue(self.client.login(username=viewer.username,
+                                              password='pw'))
+        topic = topic or self.topic
+        response = self.client.get(
+            reverse('forums-topic_index', kwargs={'id': topic.id}))
+        self.assertEqual(response.status_code, 200)
+        return response.content.decode()
+
+    def stranger_post(self):
+        topic = make_topic(self.forum, self.stranger, name='a stranger topic')
+        return topic, add_post(topic, self.stranger, body='a stranger post')
+
+    def button(self, name, post):
+        return (r'<button type="button"[^>]*class="[^"]*\b%s\b[^"]*"'
+                r'[^>]*data-post-id="%d"' % (name, post.id))
+
+    def assertShownTo(self, needle, shown, hidden, topic=None):
+        for viewer in shown:
+            with self.subTest(needle=needle, viewer=viewer and viewer.username):
+                self.assertIn(needle, self.view(viewer, topic))
+        for viewer in hidden:
+            with self.subTest(needle=needle, absent_for=viewer and viewer.username):
+                self.assertNotIn(needle, self.view(viewer, topic))
+
+    def assertButtonShownTo(self, name, post, shown, hidden, topic=None):
+        pattern = self.button(name, post)
+        for viewer in shown:
+            with self.subTest(button=name, viewer=viewer and viewer.username):
+                self.assertRegex(self.view(viewer, topic), pattern)
+        for viewer in hidden:
+            with self.subTest(button=name, absent_for=viewer and viewer.username):
+                self.assertNotRegex(self.view(viewer, topic), pattern)
+
+    def test_every_post_has_both_anchors(self):
+        # p<id> is where goto_post sends a permalink; post-<id> is the post's
+        # element, which the page's script removes on delete.
+        second = add_post(self.topic, self.member)
+        page = self.view(None)
+        for post in (self.post, second):
+            with self.subTest(post=post.id):
+                self.assertIn('id="p%d"' % post.id, page)
+                self.assertIn('id="post-%d"' % post.id, page)
+
+    def test_quote_reply_for_those_who_can_reply(self):
+        url = (reverse('forums-new_post', kwargs={'topic_id': self.topic.id}) +
+               '?quote=%d' % self.post.id)
+        self.assertShownTo(url, shown=[self.member, self.moderator],
+                           hidden=[None])
+
+    def test_edit_for_the_author_and_moderators(self):
+        url = reverse('forums-edit_post', kwargs={'id': self.post.id})
+        self.assertShownTo(url, shown=[self.author, self.moderator],
+                           hidden=[self.member, None])
+
+    def test_flag_for_signed_in_viewers(self):
+        self.assertButtonShownTo('post-flag', self.post,
+                                 shown=[self.member, self.author, self.moderator],
+                                 hidden=[None])
+
+    def test_delete_for_moderators(self):
+        self.assertButtonShownTo('post-delete', self.post,
+                                 shown=[self.moderator],
+                                 hidden=[self.author, self.member, None])
+
+    def test_ip_link_for_moderators(self):
+        url = reverse('forums-post_ip_info', kwargs={'post_id': self.post.id})
+        self.assertShownTo(url, shown=[self.moderator],
+                           hidden=[self.author, self.member, None])
+
+    def test_stranger_tools_for_moderators_on_a_strangers_post(self):
+        topic, post = self.stranger_post()
+        for name in ('forums-stranger', 'forums-spammer'):
+            url = reverse(name, kwargs={'post_id': post.id})
+            self.assertShownTo(url, shown=[self.moderator],
+                               hidden=[self.member, self.stranger, None],
+                               topic=topic)
+
+    def test_no_stranger_tools_on_a_members_post(self):
+        url = reverse('forums-stranger', kwargs={'post_id': self.post.id})
+        self.assertShownTo(url, shown=[], hidden=[self.moderator])
+
+    def test_no_stranger_tools_on_a_moderators_own_post(self):
+        # A new moderator account is still a stranger.
+        self.moderator.profile.status = STA_STRANGER
+        self.moderator.profile.save(content_update=False)
+        post = add_post(self.topic, self.moderator, body='a moderator post')
+        url = reverse('forums-stranger', kwargs={'post_id': post.id})
+        self.assertShownTo(url, shown=[], hidden=[self.moderator])
+
+    def test_pm_link_for_signed_in_viewers(self):
+        url = reverse('messages-compose') + '?to=author'
+        self.assertShownTo(url, shown=[self.member, self.moderator],
+                           hidden=[None])
+
+    def test_email_link_for_signed_in_viewers(self):
+        self.assertShownTo('mailto:author@example.com',
+                           shown=[self.member, self.moderator], hidden=[None])
+
+    def test_no_email_link_when_the_author_hides_it(self):
+        self.author.profile.hide_email = True
+        self.author.profile.save(content_update=False)
+        self.assertShownTo('mailto:author@example.com', shown=[],
+                           hidden=[self.member, self.moderator])
+
+    def test_signature(self):
+        self.author.profile.signature = 'Keep on surfin'
+        self.author.profile.save()
+        self.assertShownTo('Keep on surfin', shown=[None, self.member], hidden=[])
+
+    def test_the_authors_name_is_bold(self):
+        # Once in the author card, once in the phone's header.
+        link = '<strong><a href="%s"' % reverse(
+            'bio-view_profile', kwargs={'username': 'author'})
+        self.assertEqual(self.view(None).count(link), 2)
+
+    def test_a_rule_then_the_signature_after_the_edit_note(self):
+        self.author.profile.signature = 'Keep on surfin'
+        self.author.profile.save()
+        Post.objects.filter(pk=self.post.pk).update(
+            update_date=self.post.creation_date + datetime.timedelta(hours=1))
+
+        page = self.view(None)
+
+        self.assertRegex(page, r'class="forum-post-signature">\s*<hr />\s*<p>Keep on surfin')
+        self.assertLess(page.index('Last edited'), page.index('forum-post-signature'))
+
+    def test_last_edited_only_once_edited(self):
+        self.assertShownTo('Last edited', shown=[], hidden=[None, self.member])
+        Post.objects.filter(pk=self.post.pk).update(
+            update_date=self.post.creation_date + datetime.timedelta(hours=1))
+        self.assertShownTo('Last edited', shown=[None, self.member], hidden=[])
+
+    def test_last_edited_is_in_the_viewers_time_zone(self):
+        # 03:00 UTC is 2 PM in Sydney in January (AEDT, +11), and 9 PM the
+        # day before in Chicago, the site's zone. Posted an hour earlier.
+        edited = datetime.datetime(2026, 1, 15, 3, 0, tzinfo=datetime.timezone.utc)
+        Post.objects.filter(pk=self.post.pk).update(
+            creation_date=edited - datetime.timedelta(hours=1), update_date=edited)
+        self.member.profile.time_zone = 'Australia/Sydney'
+        self.member.profile.use_24_time = False
+        self.member.profile.save(content_update=False)
+
+        page = self.view(self.member)
+
+        self.assertIn('Last edited: Jan 15 2026 02:00 PM', page)
+        self.assertNotIn('Jan 14', page)
+
+    def test_attachments(self):
+        embed = Oembed.objects.create(
+            url='https://example.com/video', type=Oembed.VIDEO, width=480,
+            height=360, html='<iframe class="an-attached-video"></iframe>')
+        Attachment.objects.create(post=self.post, embed=embed, order=0)
+        self.assertShownTo('an-attached-video', shown=[None, self.member],
+                           hidden=[])
+
+    def test_stranger_highlight(self):
+        topic, post = self.stranger_post()
+        self.assertIn('sg101-card-divider stranger', self.view(None, topic))
+        self.assertNotIn('sg101-card-divider stranger', self.view(None))
+
+    def test_quick_reply_returns_the_complete_card(self):
+        self.assertTrue(self.client.login(username='moderator', password='pw'))
+
+        response = self.client.post(reverse('forums-quick_reply'), {
+            'body': 'a moderator reply',
+            'topic_id': self.topic.id,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        post = Post.objects.get(body='a moderator reply')
+        page = response.content.decode()
+        self.assertIn('id="post-%d"' % post.id, page)
+        self.assertIn(reverse('forums-edit_post', kwargs={'id': post.id}), page)
+        self.assertIn(
+            reverse('forums-post_ip_info', kwargs={'post_id': post.id}), page)
+        self.assertRegex(page, self.button('post-delete', post))
+        self.assertRegex(page, self.button('post-flag', post))

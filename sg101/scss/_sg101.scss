@@ -479,6 +479,18 @@ table.forum-table {
 .sg101-card {
    @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
    height: 100%;
+   display: flex;
+   flex-direction: column;
+}
+
+// When the author card is the taller, the post card stretches to match; the
+// post takes the spare height, so its tools stay on the card's bottom edge.
+.sg101-card > .card-section {
+   flex-grow: 1;
+}
+
+.sg101-card > .forum-post-tools {
+   flex-grow: 0;
 }
 
 .sg101-card-divider {
@@ -489,6 +501,65 @@ table.forum-table {
    .sg101-card,
    .sg101-card-divider {
       background: $sg101-blue3;
+   }
+}
+
+// A stranger's post, for moderators to spot. As specific as the even-row
+// rule above and after it, so it wins on either colour.
+#forum-topic-post-container > .row .sg101-card-divider.stranger {
+   background: #fff6bf;
+}
+
+// The tools under a post: Top on the left, the icons on the right, and a
+// moderator's stranger tools on a line of their own below. The buttons act
+// in place, so they look like the links beside them.
+.forum-post-tools {
+   border-top: 1px solid rgba(0, 0, 0, 0.1);
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   justify-content: space-between;
+   row-gap: 0.25rem;
+
+   .forum-post-tool-icons a,
+   .forum-post-stranger-tools a,
+   button {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      font-size: 1.25rem;
+      line-height: 1;
+   }
+
+   button {
+      color: $anchor-color;
+      cursor: pointer;
+   }
+}
+
+.forum-post-stranger-tools {
+   flex-basis: 100%;
+   text-align: right;
+}
+
+// The rule between a post and its author's signature: light, short and
+// on the left.
+.forum-post-signature hr {
+   border-bottom-color: rgba(0, 0, 0, 0.15);
+   margin: 1rem 0;
+   width: 33%;
+}
+
+// What is about the post rather than the post itself, a step back from it:
+// the author's details, the note that it was edited, and the signature.
+// Smaller and a softer grey; the signature's paragraphs sit closer.
+.forum-post-author-details,
+.forum-post-edited,
+.forum-post-signature {
+   color: #555;
+   font-size: 0.875rem;
+
+   p {
+      margin-bottom: 0.5rem;
    }
 }
 

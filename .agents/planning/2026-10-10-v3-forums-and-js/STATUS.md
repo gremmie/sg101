@@ -1957,6 +1957,160 @@ tests included: 1597 tests OK with 1 expected failure each.
 **Step 6 is complete** (2026-11-04): the forums index, a forum's topic list
 and the topic page are on V3, reviewed, and ticked in the plan. Not deployed:
 the branch carries steps 7 and 8 before forums release 1 ships. Carried
-forward: plan step 7 (R14, including the full-size image link, and removing
-bio's `@expectedFailure`), step 8 (the reply form's help link), steps 14 and
+forward: plan step 7 (R14, and removing bio's `@expectedFailure`; the
+full-size image link was taken back out, under task 02 above), step 8 (the reply form's help link), steps 14 and
 15 (tablet widths, the phone header), and step 13 (the phone banner).
+
+## Step 7 task 01 — the complete post card — DONE 2026-11-06
+
+`display_post_v3.html` has every R14 item, item for item against
+`display_post.html`, which is unchanged (`edit_post.html` uses it). Flag and
+delete are `<button type="button">`s with `data-post-id`; they do nothing
+until task 02's `topic.js`. The post's row is `id="post-N"`, and an empty
+`<span id="pN">` inside it takes the `#pN` that `goto_post` and old links end
+in. **Permalinks had been landing at the top of the page on this branch since
+step 6**, as the V3 card had neither anchor.
+
+**Decisions (Brian, 2026-11-06), each the recommendation:**
+
+- **Flag: signed-in viewers only.** Today's card shows it to everyone and
+  `flag_post` refuses an anonymous visitor.
+- **Edit: an inline condition in the card**, the author or a moderator.
+  `post_edit_button` stays for the old card. A `forums/v3/` variant chosen on
+  `V3_DESIGN` would have given quick-replied posts the old PNG:
+  `quick_reply_ajax`'s context has no `V3_DESIGN`.
+- **PM and email: in a tools row under the post, at every width.** The author
+  card is `show-for-medium`, so links only there would be gone on phones.
+
+**Provisional icons, for task 03's review:** quote `fi-comment-quotes`, edit
+`fi-pencil`, flag `fi-flag`, delete `fi-trash`, PM `fi-comment`, email
+`fi-mail`, acquaintance `fi-check`, spammer `fi-skull`. Each has a `title`
+and a `show-for-sr` label.
+
+**The stranger highlight** is the old colour, `#fff6bf`, on the post's header
+bar. The rule is `#forum-topic-post-container > .row
+.sg101-card-divider.stranger`: as specific as the even-row rule and after it.
+One notch less specific loses on blue rows only (a mutation, below).
+`main.min.css` gained that rule and the tools row's, below; it lost none.
+
+**Tests.** `PostCardTestCase` in `forums/tests/test_views.py`, 17 tests, and two more below: each
+item for the viewers who may see it and absent for the others. The viewers are
+anonymous, a member, the author and a moderator, on an active member's post
+and on a stranger's. New profiles default to stranger with the email hidden,
+so the tests set both. Also covered: a moderator's quick reply returns edit,
+delete, flag and the IP link. Five browser tests in `forums/tests/test_browser.py` (three are below):
+a permalink to post 40 of 40 lands on page 2 with the post in the viewport,
+and a stranger's header differs from an ordinary one on both card colours and
+matches itself across them. bio's `test_forum_post` lost its
+`@expectedFailure` and passes.
+
+Before the card: 27 failures and 1 error. The error was the colour test not
+finding `#post-N`, so its colour assertion was proved by mutation instead.
+**Eleven mutations, each caught by its own test, each file restored by hash:**
+delete, the IP link, edit or flag shown too widely; stranger tools on the
+moderator's own post or on a member's; email despite `hide_email`; no `pN`
+(both the render test and the permalink test, run separately); no `stranger`
+class; the CSS rule removed (headers equal, surf green); the rule one notch
+less specific (headers equal, blue).
+
+**On dev, as a moderator, at 360 and 1280:** a stranger's post, one with
+attachments, and one edited with a signature all render every item, with no
+page error and no sideways scroll.
+
+**The name, the signature and "Last edited" (Brian, 2026-11-06):**
+
+- **The author's name is bold**, in the author card and in the phone's
+  header: wrapped in `<strong>` in the card, as `profile_link` is used
+  site-wide.
+- **The signature follows a short, light rule** in place of the "&mdash;",
+  which had sat on a line of its own as the signature is its own paragraph.
+  The rule is a third of the post's width, on the left, at 15% black; a
+  full-width rule was tried and Brian chose the short one.
+- **The signature steps back:** 0.875 rem and `#555`, about 6:1 against the
+  lighter card colour, with its paragraphs 0.5 rem apart.
+- **"Last edited" moved above the rule**, under the post it describes, in the
+  signature's size and grey (`.forum-post-edited`). Under the signature it had
+  read as the signature's last line. The header bar, beside "Posted on", was
+  the other place considered; it would wrap for a moderator and add a fourth
+  line on a phone.
+
+- **The author card's details follow suit** (Brian, 2026-11-06): its
+  section's `quiet` (which made it `smaller`, about 13.3 px, and left it
+  near-black) became `.forum-post-author-details`, in the same rule as the
+  signature and the edit note. The name above stays bold and full size.
+- **"Last edited" is in the viewer's time zone.** It used Django's `date`
+  filter, and nothing activates a member's zone, so it rendered in
+  `TIME_ZONE` (Chicago), 24-hour with seconds, for everyone, while "Posted
+  on" above it used `forum_date` and the member's zone and 12/24-hour
+  preference. Today's card does the same. Now `forum_date` for both. **Test:**
+  a member in `Australia/Sydney` on 12-hour time, a post made at 02:00 UTC on
+  2026-01-15 and edited at 03:00: it reads "Jan 15 2026 02:00 PM". Before the
+  fix the same page read "Posted on Jan 15 2026 01:00 PM" and "Last edited:
+  Jan 14, 2026 21:00:00". The test's first version set only the edit time,
+  earlier than the post's creation, so the card showed no edit note and the
+  test failed for that reason; caught by printing the rendered note, and the
+  creation time added.
+
+**`quiet` means two things.** Blueprint's `.quiet` is `color: #666`, which
+is why "Last edited" is grey on today's pages. V3's, in `_sg101.scss` since
+the first V3 commit (`2c46c1fe`, 2016), is `font-size: smaller` with no
+colour, so on V3 it is smaller and not greyer. The card's other `quiet`
+items ("Posted on", the author card, the IP) are the same. Greying V3's
+`quiet` would change every V3 page that uses it (the topic page, photo of the
+day, the store, the Yahoo group archive), so "Last edited" took its own class
+instead. Open: whether V3's `quiet` should be grey.
+
+**Tests:** in `PostCardTestCase`, the name's link is wrapped in `<strong>`
+twice; the signature section opens with the `<hr />`; "Last edited" comes
+before it. In the browser, at 1280, the signature, the edit note and the author's
+details are each smaller than the post's text and a different colour, and the rule is under
+half the section's width. Written after the change, so eight mutations, each
+caught and restored by hash: the author card's name not bold (1 of 2); no
+rule; the edit note back under the signature; the edit note unstyled (16 px,
+the post's size); the author details out of the shared rule (16 px); the
+signature full size; the signature not grey
+(`rgb(10, 10, 10)`, the post's colour); the rule full width (618 px against
+325).
+
+**Seen on dev, for step 8: an attached video is wider than the card on a
+phone**, and the card hides the overflow. At 360 an embed's title ends
+mid-word. The embed's `<iframe>` has a fixed width. Brian chose step 8 for
+the fix, which is about video attachments.
+
+**The tools row sat above empty card** wherever the author card was the
+taller: the post card stretches to match (`height: 100%`) and the spare height
+fell below its tools. **Brian chose (2026-11-06) to put the spare height above
+the tools.** `.sg101-card` is a column flexbox, its `.card-section`s grow, and
+the tools row doesn't. On phones the author card stays hidden:
+`.show-for-medium` is `display: none !important`, which beats the `flex`.
+`main.min.css` gains three rules and `.sg101-card{height:100%}` becomes one
+with `display:flex;flex-direction:column`. **Test:**
+`test_the_tools_sit_on_the_bottom_of_a_short_post`, at 1280, a one-line post
+beside an author card with a location and a flag. It failed first with 118 px
+under the tools; removing the `flex-grow` or the `display: flex` from the
+built CSS each brings back the same 118 px, restored by hash. On the three dev
+posts afterwards, the gap is 1 px (the border) at 360 and 1280, and the author
+card hidden at 360 and shown at 1280.
+
+**The tools row's layout (Brian, 2026-11-06):** right-aligned, more padding,
+and the stranger tools on a line of their own. The row is a wrapping flexbox
+with `space-between`: Top stays on the left, and the icons, now in a
+`.forum-post-tool-icons` group, go right. Each icon is 1.25 rem with 0.25 rem
+by 0.5 rem padding, which is also a bigger target to tap. The stranger tools
+take `flex-basis: 100%` and `text-align: right`. **Test:**
+`test_the_tools_sit_right_with_the_stranger_tools_below`, as a moderator on a
+stranger's post at 1280: both lines end at the section's right edge, and the
+stranger tools start below the icons. A first version also checked the delete
+button sat past halfway; that passed before the change, so it was replaced.
+Removing `justify-content` from the built CSS leaves the icons 425 px short of
+the edge; removing the stranger rule leaves those tools 276 px short, beside
+the icons. Both restored by hash. Re-shot on dev at 360 and 1280: as intended,
+no sideways scroll, the tools still on the card's bottom edge.
+
+**Found, not fixed (#41): `flag_icon` 500s on a country code it doesn't know.**
+`bio_tags.flag_icon` sets `name` only when the code is in `FLAG_DATA`, so any
+other code raises `UnboundLocalError` and the page fails. The keys are
+lowercase; the test first used `'US'` and got a 500. No dev profile has a
+code outside the data (counted 2026-11-06), so it is dormant.
+
+Suite and gate, separate runs, browser tests included: 1622 tests, OK, each.

@@ -6,7 +6,6 @@ import datetime
 from io import BytesIO
 import logging
 import os
-import unittest
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -739,10 +738,6 @@ class UnverifiedAddressIsNotDisplayedTestCase(TestCase):
 
         self.assertPublishesVerifiedAddressOnly(response)
 
-    # The V3 post card has no email link yet, so there is no mailto to find.
-    # Once it has one this passes, and the unexpected success fails the suite:
-    # remove the decorator then.
-    @unittest.expectedFailure
     def test_forum_post(self):
         self.client.post(
             reverse('forums-new_topic', kwargs={'slug': 'shallow-end'}),
