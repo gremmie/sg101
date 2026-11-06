@@ -2,11 +2,18 @@
 Tests for the views in the forums application.
 
 """
+import pathlib
+
+from django.conf import settings
+from django.contrib.auth.models import Group, User
+from django.core.cache import cache
+from django.template.loader import get_template
 from django.test import TestCase
-from django.contrib.auth.models import User
 from django.urls import reverse
 
 from forums.models import Forum, Topic
+from forums.tests.test_moderation import add_post, make_topic
+from forums.views.main import TOPICS_PER_PAGE
 
 
 class ForumPostTestCase(TestCase):
@@ -153,3 +160,220 @@ class PostsForUserTestCase(TestCase):
         response = self.client.get(reverse('forums-posts_for_user',
                                            kwargs={'username': 'nobody'}))
         self.assertEqual(response.status_code, 404)
+
+
+class V3PagesTestCase(TestCase):
+    """The forums index and a forum's topic list render on the V3 design; the
+    pages not yet converted keep the old design and the old fragments."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        # The index caches two of its blocks; a block served from the cache
+        # renders no template, so the template assertions would depend on test
+        # order.
+        cache.clear()
+
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('member', '', 'pw')
+        self.moderator = User.objects.create_user('moderator', '', 'pw')
+        mod_group = Group.objects.get(name='Forum Moderators')
+        self.moderator.groups.add(mod_group)
+        self.forum.moderators.add(mod_group)
+
+        self.topic = make_topic(self.forum, self.member, name='A sticky topic',
+                                sticky=True)
+        add_post(self.topic, self.member)
+
+        self.index_url = reverse('forums-index')
+        self.forum_url = reverse('forums-forum_index',
+                                 kwargs={'slug': self.forum.slug})
+
+    def login(self, user):
+        self.assertTrue(self.client.login(username=user.username, password='pw'))
+
+    def assertV3(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertIs(response.context.get('V3_DESIGN'), True)
+
+    def assertOldDesign(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'base.html')
+        self.assertTemplateNotUsed(response, 'v3/base.html')
+
+    def test_both_pages_are_v3_for_each_role(self):
+        for user in (None, self.member, self.moderator):
+            with self.subTest(user=user and user.username):
+                self.client.logout()
+                if user:
+                    self.login(user)
+                self.assertV3(self.client.get(self.index_url))
+                self.assertV3(self.client.get(self.forum_url))
+
+    def test_only_a_moderator_gets_the_moderate_link(self):
+        mod_url = reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})
+
+        self.login(self.member)
+        self.assertNotContains(self.client.get(self.forum_url), mod_url)
+
+        self.login(self.moderator)
+        self.assertContains(self.client.get(self.forum_url), mod_url)
+
+    def test_index_renders_its_stats_fragments(self):
+        response = self.client.get(self.index_url)
+
+        for name in ('accounts/user_stats_tag.html',
+                     'core/max_users_tag.html',
+                     'core/whos_online_tag.html',
+                     'forums/forum_stats_tag.html'):
+            self.assertTemplateUsed(response, name)
+        self.assertContains(response, 'around the world:')
+        self.assertContains(response, 'online:')
+
+    def test_forum_pagination_comes_from_the_v3_fragment(self):
+        for n in range(TOPICS_PER_PAGE):
+            add_post(make_topic(self.forum, self.member, name='t%d' % n),
+                     self.member)
+
+        response = self.client.get(self.forum_url, {'page': 2})
+
+        self.assertV3(response)
+        self.assertTemplateUsed(response, 'core/v3/pagination.html')
+        self.assertTemplateNotUsed(response, 'forums/pagination.html')
+        self.assertNotIn('page_nav', response.context)
+
+    def test_v3_pages_get_the_v3_fragments(self):
+        self.login(self.member)
+
+        response = self.client.get(self.forum_url)
+        for name in ('topic_icons_tag', 'last_post_info', 'navigation_tag'):
+            with self.subTest(fragment=name):
+                self.assertTemplateUsed(response, 'forums/v3/%s.html' % name)
+                self.assertTemplateNotUsed(response, 'forums/%s.html' % name)
+        self.assertContains(response, 'fi-asterisk')
+        self.assertContains(response, 'class="breadcrumbs"')
+
+        response = self.client.get(self.index_url)
+        self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
+        self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
+
+    def test_old_pages_keep_the_old_fragments(self):
+        self.login(self.member)
+
+        response = self.client.get(reverse('forums-unanswered_topics'))
+        self.assertOldDesign(response)
+        for name in ('topic_icons_tag', 'last_post_info', 'forum_query'):
+            with self.subTest(fragment=name):
+                self.assertTemplateUsed(response, 'forums/%s.html' % name)
+                self.assertTemplateNotUsed(response, 'forums/v3/%s.html' % name)
+        self.assertContains(response, 'icons/asterisk_orange.png')
+        self.assertContains(response, 'icons/note_go.png')
+
+        response = self.client.get(reverse('forums-new_topic',
+                                           kwargs={'slug': self.forum.slug}))
+        self.assertOldDesign(response)
+        self.assertTemplateUsed(response, 'forums/navigation_tag.html')
+        self.assertTemplateNotUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertContains(response, 'class="forum-nav"')
+
+    def test_unconverted_pages_stay_on_the_old_design(self):
+        self.login(self.moderator)
+        for url in (reverse('forums-unanswered_topics'),
+                    reverse('forums-new_topic', kwargs={'slug': self.forum.slug}),
+                    reverse('forums-edit_post',
+                            kwargs={'id': self.topic.last_post.id}),
+                    reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})):
+            with self.subTest(url=url):
+                self.assertOldDesign(self.client.get(url))
+
+    def topic_url(self):
+        return reverse('forums-topic_index', kwargs={'id': self.topic.id})
+
+    def add_replies(self, *bodies):
+        for body in bodies:
+            add_post(self.topic, self.member, body=body)
+
+    def test_topic_page_is_v3_with_every_post_for_each_role(self):
+        self.add_replies('second reply', 'third reply')
+        for user in (None, self.member, self.moderator):
+            with self.subTest(user=user and user.username):
+                self.client.logout()
+                if user:
+                    self.login(user)
+                response = self.client.get(self.topic_url())
+                self.assertV3(response)
+                for body in ('a post', 'second reply', 'third reply'):
+                    self.assertContains(response, body)
+                self.assertTemplateUsed(response, 'core/v3/pagination.html')
+                self.assertNotIn('page_nav', response.context)
+
+    def test_topic_cards_share_one_class_and_alternate_by_css(self):
+        self.add_replies('second reply', 'third reply')
+
+        response = self.client.get(self.topic_url())
+
+        used = [t.name for t in response.templates]
+        self.assertEqual(used.count('forums/display_post_v3.html'), 3)
+        self.assertTemplateNotUsed(response, 'forums/display_post.html')
+        # The author card, shown from medium up, and the post body.
+        self.assertContains(response, 'class="sg101-card show-for-medium"',
+                            count=3)
+        self.assertContains(response, 'class="sg101-card"', count=3)
+        self.assertNotContains(response, 'sg101-card1')
+        self.assertNotContains(response, 'sg101-card2')
+
+        source = get_template('forums/topic.html').template.source
+        self.assertNotIn('{% cycle', source)
+        css = (pathlib.Path(settings.PROJECT_PATH) / 'static' / 'css' / 'v3' /
+               'main.min.css').read_text()
+        # The minifier writes (even) as (2n). The selector must end at the
+        # card: the divider's selector begins with the same text.
+        self.assertRegex(
+            css, r'#forum-topic-post-container>\.row:nth-child\(2n\) \.sg101-card[,{]')
+
+    def test_topic_reply_box_is_the_post_box_module(self):
+        self.login(self.member)
+
+        response = self.client.get(self.topic_url())
+
+        self.assertContains(
+            response,
+            '<script type="module" src="/static/js/v3/post_box/post_box.js">',
+            count=1)
+        used = [t.name for t in response.templates]
+        self.assertEqual(used.count('core/v3/post_box_modals.html'), 1)
+        for script in ('js/forums.js', 'jquery.form', 'js/v3/post_box.js',
+                       'jquery-ui'):
+            with self.subTest(script=script):
+                self.assertNotContains(response, script)
+
+    def test_anonymous_topic_page_has_no_post_box(self):
+        response = self.client.get(self.topic_url())
+
+        self.assertNotContains(response, 'post_box/post_box.js')
+        self.assertTemplateNotUsed(response, 'core/v3/post_box_modals.html')
+
+    def test_quick_reply_renders_the_v3_card(self):
+        self.login(self.member)
+
+        response = self.client.post(reverse('forums-quick_reply'), {
+            'body': 'a quick reply',
+            'topic_id': self.topic.id,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'forums/display_post_v3.html')
+        self.assertTemplateNotUsed(response, 'forums/display_post.html')
+        self.assertContains(response, 'a quick reply')
+
+    def test_edit_page_keeps_the_old_card(self):
+        self.login(self.member)
+
+        response = self.client.get(reverse(
+            'forums-edit_post', kwargs={'id': self.topic.last_post.id}))
+
+        self.assertOldDesign(response)
+        self.assertTemplateUsed(response, 'forums/display_post.html')
+        self.assertTemplateNotUsed(response, 'forums/display_post_v3.html')

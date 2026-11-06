@@ -1,12 +1,16 @@
 {% load bio_tags %}
-<div id="whos-online">
-There {{ total|pluralize:"is,are"}} {{ total }} user{{ total|pluralize }} online: {{ num_users }} registered user{{ num_users|pluralize }} and {{ num_guests }} guest{{ num_guests|pluralize }}.
+<p>
+   There {{ total|pluralize:"is,are"}} {{ total }} user{{ total|pluralize }}
+   online: {{ num_users }} registered user{{ num_users|pluralize }} and
+   {{ num_guests }} guest{{ num_guests|pluralize }}.
+</p>
 {% if num_users %}
-Registered users:
-<ul class="inline-list">
-{% for user in users %}
-<li>{% profile_link user %}</li>
-{% endfor %}
-</ul>
+   <p>
+      Registered users:
+   </p>
+   <ul class="inline-no-bullet-list">
+      {% for user in users %}
+         <li>{% profile_link user %}</li>
+      {% endfor %}
+   </ul>
 {% endif %}
-</div>

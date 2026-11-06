@@ -1,0 +1,17 @@
+{% load core_tags %}
+<form action="." method="post">{% csrf_token %}
+   <fieldset class="fieldset">
+      <legend>Reply to Topic</legend>
+      {{ form.non_field_errors }}
+      {% post_box form.body %}
+      {{ form.topic_id }}
+      <input type="submit" value="Reply" id="forums-reply-post"
+         class="primary button" />
+      <fieldset class="fieldset">
+         <legend>Video Attachments</legend>
+         <p><a href="/forums/topic/18843/">Need help?</a></p>
+         <div id="attachment"></div>
+      </fieldset>
+   </fieldset>
+</form>
+{% include 'core/v3/post_box_modals.html' %}

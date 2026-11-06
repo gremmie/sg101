@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-11-04
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -514,6 +514,9 @@ turned up, neither from this change:
   measures 0, and doesn't re-measure. A phone loads at phone width, so visitors
   don't meet it. To check Orbit by hand, narrow the window *then* reload.
   Not fixed; it's Foundation 6.2.0's behaviour.
+  **Correction (2026-11-04):** "visitors don't meet it" overlooks a phone
+  turned from landscape (usually 640 px or wider, medium) to portrait. That is
+  inferred, not seen. The fix is plan step 13.
 
 **Not done here:** the manual walk of the menus, Orbit and Cycle (task 03),
 and Reveal's `aria-hidden` (task 02).
@@ -1657,3 +1660,303 @@ in the browser.
 through the site after deploying, stored a second apart, read back from S3 with
 `HEAD`: a JPEG `image/jpeg`, a PNG `image/png`. Both open as intact images, resized
 to 660 wide. Before the fix, the newest JPEGs measured `binary/octet-stream`.
+
+## Step 6 task 01 — the forums index and a forum's topic list on V3 — DONE 2026-11-04
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-01-forum-index-pages.code-task.md`.
+Branch `v3-forums-release-1`, on `c1639add`. Not deployed: this branch ships
+with steps 7 and 8.
+
+**`v3-dev`'s hashes in `research/v3-dev-forums.md` predate the history
+rewrite.** `d8ec4821` is `77e719a2` now; the merge base `24f83e72` is unchanged.
+
+**What each side changed since the merge base, measured file by file.** Of the 14
+templates, `main` changed 6, all by the `staticfiles` line, plus one more change:
+`3155590f` dropped the member map link from `accounts/user_stats_tag.html` when it
+pruned the `membermap` app. `v3-dev`'s copy still links `membermap-index`, which
+would have made `/forums/` a `NoReverseMatch`; the port keeps `main`'s sentence.
+`v3-dev` had also commented out the index's two `{% cache %}` blocks; **they are
+restored (Brian, 2026-11-04)**, so production does the work it does today.
+
+**The fragment split, grepped again:** as the task file has it. `jump_box` is also
+on `topic.html`, which is old until task 02, so that page has the input-group
+markup without Foundation's styles for now; its Go button was walked and works.
+
+**The four V3 variants** are `v3-dev`'s markup in `sg101/templates/forums/v3/`;
+the originals are byte-identical to `main` (`git diff --exit-code main`, with
+`forum_query.js`, `jump_box.js`, `pagination.html`, `topic_list.html` and
+`topic.html`). `last_post_info`, `topic_icons` and `forum_navigation` are now
+`simple_tag(takes_context=True)`, through one helper choosing on `V3_DESIGN`:
+an `inclusion_tag` fixes its template at registration. Each renders the same
+values as before, in a context of their own.
+
+**The Sass:** the blue, surf green and shell pink families, `.shiny`, `.green3`,
+`.inline-forms`. **`.post-odd` left out (Brian, 2026-11-04):** no `v3-dev`
+template uses it, and task 02 alternates with `:nth-child`. The cards are task
+02's. Rebuilt; split on `}`, `main.min.css` differs from `HEAD` by exactly those
+three rules.
+
+**Tests, written first:** `V3PagesTestCase` in `forums/tests/test_views.py`, 7
+tests. Against the old templates, the three for the new behaviour failed (V3 per
+role, pagination, the V3 fragments); the other four passed, as they pin what must
+not change (the moderator's link, the index's stats blocks, the old pages and
+their fragments). Its `setUp` clears the cache: the index's cached blocks render
+no template on a hit. Three `core` tag tests asserted the old markup of
+`max_users` and `whos_online` (the `<div id>` wrappers, one-line sentences); they
+now compare with whitespace collapsed, and `max_users` with no stats renders
+nothing, as the V3 fragment has no wrapper.
+
+**Mutations, 11, all caught, each file restored and its hash checked:** each view
+without `V3_DESIGN`; `page_nav` back in the context; the old pagination include;
+the tag helper always V3, and never; the index's old `forum_query`; the member map
+link back; `whos_online` gone; the moderate link for everyone; `topic.html` on
+`v3/base.html`. The `V3_DESIGN` mutations first surfaced as `KeyError`s; the
+assertion now reads `.get()` and fails as an assertion (rechecked).
+
+**Suite and gate**, separate runs: 1587 tests OK each.
+
+**The walk, by a headless probe** in the web container on the dev stack, at 375 ×
+900 and 1280 × 900, anonymous and as a dev superuser through a session made
+directly and deleted after (it opened one topic, which marks it read for that
+account): the index, `gear`'s topic list (the forum with the most topics), the
+unanswered list and a topic. 90 checks: both Go boxes navigate on both designs,
+breadcrumbs, both paginations, the icon font, the arrows, the moderate link, the
+old pages' PNGs and `forum-nav` headings. No page errors, and no failed requests
+other than `/media/` (dev has no copies). 6 failed:
+
+- **4, the old design at 375**: the unanswered list and the topic are 950 px wide,
+  as today.
+- **2, a finding: `gear`'s topic list is 394 px wide at 375**, 19 over. Long
+  usernames in Last Post have no break point: the widest cell's minimum is 188 px
+  ("SurfbobGremmiepants610"), beside a 150 px topic name ("Prophet/Echobrain?").
+  `surf-music`'s fits (355 px), and so did the index. This is `v3-dev`'s layout
+  meeting today's data, not the port. Fixed below.
+
+**The phone fix (Brian, 2026-11-04): `overflow-wrap: anywhere`.** Both tables
+carry `forum-table`; below medium (`small only`) its cells take `anywhere` and
+the last column a width of 10 rem. `anywhere` alone fixed the overflow but let
+the table squeeze Last Post to 91 px, splitting "johnnyanguish" and wrapping the
+date over three lines; with the width, the date holds one line, ordinary names
+stay whole and only the 22-character name breaks. Unscoped, it also split names
+in the Author column at 1280, where nothing overflowed, so it stops at medium.
+After it: the probe's 90 checks fail only the 4 old-design ones, and `gear` and
+the index have no horizontal scroll at 320, 360, 375, 414 or 639. The suite and
+the gate were rerun after it: 1587 OK each.
+
+**Open, for task 03 (Brian, 2026-11-04): the forum tables overflow at tablet
+widths.** From 640 to 1024 the sidebar sits beside the content, which leaves the
+table 480 px at 640 and 768 px at 1024, and `v3-dev` shows all five columns from
+medium up. `gear`'s table is 774 px wide there. Measured horizontal scroll, with
+the phone fix in place (it does not reach these widths):
+
+| Width | `gear` | the index |
+|---|---|---|
+| 640 | 309 px | 71 px |
+| 768 | 213 px | 0 |
+| 1023 / 1024 | 22 / 21 px | 0 |
+| 1280 | 0 | 0 |
+
+`/news/` and `/profile/members/` have none at 640 or 1024. **One remedy was
+measured, by CSS injected into the page, no file changed:** the extra columns
+(Replies, Author, Views; the index's Topics, Posts) shown from large rather than
+medium, and the phone rule up to large. Overflow 0 at 640, 768 and 1023 on both
+pages. At 1024 `gear` stays 21 over, two long names side by side in Author and
+Last Post (208 px each); a 10 rem Author column was proposed for that and not
+measured. It hides the counts and the author from tablets, a change to `v3-dev`'s
+design, which is why it waits for the screenshot review.
+**Decided in task 03 (Brian, 2026-11-04): a step of its own, plan step 14,**
+with the post box toolbar's tablet overflow found there.
+
+## Step 6 task 02 — the topic page and the post card on V3 — DONE 2026-11-04
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-02-topic-page.code-task.md`.
+Branch `v3-forums-release-1`, on `40002da6`. Not deployed.
+
+**The templates.** `topic.html` changed on `main` since the merge base only by
+its `staticfiles` line; `display_post_v3.html` and `new_post_form.html` exist
+only on `v3-dev`. Everything they call exists on `main`. Ported from `v3-dev`
+with `{% load static %}`, the two `{% cycle %}` lines gone, one card class
+(`sg101-card`, `sg101-card-divider`), and the scripts cut to the post box
+module (only when the reply form is on the page, as on news submit) and the
+inline `jump_box.js`. Dropped: jQuery UI (only message compose's autocomplete
+uses it), `jquery.form`, `forums.js` and the 2017 `post_box.js`. The modals are
+included once, by `new_post_form.html`.
+
+**The task file was off on one point:** `display_post.html`'s only other user
+is `edit_post.html`, not the list and moderator pages. It stays either way.
+
+**Found, not done here: today's page links an oversized image to its full
+size.** `main`'s `topic.html` shrinks any post image over 660 px after
+`imagesLoaded` and wraps it in a link to the original; `v3-dev` dropped the
+script, and Foundation's `img { max-width: 100% }` only shrinks. Added to R14
+and step 7 (Brian, 2026-11-04), then **taken out again the same day (Brian):
+the link would show nothing more.** Measured on the dev copy of production's
+data: of 32,946 posts with images, all but about 200 images are on the site's
+own photo storage (S3 or `/media/user_photos`); since 2024, 3,477 of 3,478.
+Uploads and hot-links alike are resized to fit 660 × 720, and a `Photo` keeps
+only that image and a thumbnail, so there is no larger original to link to.
+The browser fits each to its card. The exceptions, about 200 images
+hot-linked straight from Dropbox, Google and others, mostly older, are not
+resized, and the card shows them shrunk.
+
+**Replies are lost on this branch until step 7.** `forums.js` is what turns
+the reply form's submit into quick reply; the form itself posts to `.`, which
+`topic_index` ignores. Expected by the plan; it matters only when trying a reply
+on dev.
+
+**The cards.** Each post is a row with an author card (from medium up) and a
+body card. `#forum-topic-post-container > .row:nth-child(even)` colours both
+cards and their dividers blue at 50%; the rest are surf green at 50%. The
+minifier writes `(even)` as `(2n)`. `main.min.css`, split on `}`, gains exactly
+those rules.
+
+**Tests, written first.** Six render tests in `V3PagesTestCase` and a browser
+test, `forums/tests/test_browser.py`. Against the old page the five for new
+behaviour failed, the browser test by timing out on a V3 post box that wasn't
+there; the other two (no post box for anonymous visitors, the edit page's old
+card) passed, as they pin what must not change, and were seen to fail under
+their mutations below. **The browser
+test types and clicks Bold** rather than only collecting page errors: a module
+that fails to load logs a console error and raises no page error. Task 01's
+unconverted-pages test now takes the edit page in place of the topic.
+
+**Mutations, 13, each file restored and its hash checked.** Caught: the topic
+view without `V3_DESIGN` or with `page_nav`; `topic.html` on `base.html`; a
+`{% cycle %}` back; a numbered card class; the `nth-child` rule broken; the
+modals included twice; the module loaded for anonymous visitors; a module
+import broken (by the browser test); quick reply on the old card; the edit page
+on the V3 card; `forums.js` back (by the render test). **Two misses, one
+fixed:**
+
+- **The CSS check first missed its own mutation.** It looked for
+  `…nth-child(2n) .sg101-card`, which also begins the divider's selector, so
+  breaking the card's left it passing. It now requires the selector to end at
+  the card; that and a second mutation (the card selector removed, the
+  divider's kept) are caught.
+- **The browser test does not see `forums.js` back.** On V3 markup it finds
+  nothing to bind and raises nothing. The render test catches it; the task
+  allowed the browser test either this or the broken import.
+
+**An existing test now fails by design: `bio`'s
+`UnverifiedAddressIsNotDisplayedTestCase.test_forum_post`.** It asserts the
+verified address's `mailto` on a forum post, and the V3 card has no email link
+until step 7 (R14). Its guarantee, no unverified address, still holds. **Marked
+`@expectedFailure` (Brian, 2026-11-04)**, so step 7's link turns it into an
+unexpected success, which fails the suite. Checked: with a `mailto` added to
+the card for one run, `FAILED (unexpected successes=1)`; restored by hash.
+
+**Suite and gate**, separate runs: 1594 tests, OK with 1 expected failure, each.
+
+**The walk, by a headless probe** on the dev stack, logged in as a dev
+superuser through a session made directly and deleted after (each topic opened
+is marked read for that account): the last page of topic 41535 (5 posts on it)
+and of 41524 (6), at 375 × 900 and 1280 × 900. 22 checks, all passing: the body
+cards alternate green, blue from the first; a row appended to the container
+takes the next colour; one post box, and Bold works; no page errors, no failed
+requests other than `/media/`, no horizontal scroll. Two cards were looked at by
+eye at each width.
+
+## Step 6 task 03 — the screenshot review, the phone toolbar — DONE 2026-11-04
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step06/task-03-screenshot-review.code-task.md`.
+Branch `v3-forums-release-1`, on `5ba90760`.
+
+**The shots.** A headless probe on the dev stack (data to 2026-10-07; snapshot
+`before-forums-review` taken first), the debug toolbar off. Subjects by id:
+forum 7 (`gear`, 8684 topics), topic 41216 (72 posts, 4 pages, unlocked; its
+last page, which has the reply box), member `Klas` (no groups, able to reply),
+moderator `CaptainSpringfield` (Forum Moderators). Sessions made directly and
+deleted after; opening a topic marks it read for that account. 18 page shots,
+the three pages at 360 and 1280 for anonymous, member and moderator, plus the
+member's at 640 and 1024 for task 01's open question, all in the session
+scratchpad: they show members' posts, avatars and, to the moderator, posters'
+IP addresses. Nothing reached the repository; the stand-in video button was
+injected by the probe, not written to a template.
+
+**The phone toolbar, measured: seven buttons do not fit.** Foundation's menu
+doesn't wrap, and a fieldset never shrinks below its contents, so a toolbar
+too wide widens the page. On the topic's reply box, at 360:
+
+| | Toolbar | Fieldset / its room | Page scroll |
+|---|---|---|---|
+| Today, 6 buttons | 313 px | 355 / 340 | 5 px |
+| 7, with a stand-in | 366 px | 408 / 340 | 58 px |
+| 7, side padding 0.5 rem | fits | 340 / 340 | 0 |
+
+So **today's six already overran the forum reply box at 360.** `flex-wrap` did
+nothing: this build's menu lays its items out as table cells.
+
+**Found in the shots:**
+
+- **A long link in a post is cut off.** The card hides what overflows it, so
+  the page doesn't scroll and the end of the URL simply isn't there. A first
+  test with a hyphenated URL passed before the fix; a browser breaks lines at
+  hyphens. The test now uses a run with no break point.
+- **The post box toolbar overflows at tablet widths on every page with one**:
+  all 13 buttons, 661 px, from medium up. News submit scrolls 211 px at 640 and
+  115 at 768; the forum reply box 238 and 142; none at 1024 or wider.
+- **The phone header overflows with a long username.** For
+  `CaptainSpringfield` at 360 the profile link wraps and Logout ends at 421
+  px, on every V3 page; for `Klas` it fits at 360, not at 320 (324). First
+  read as moderator-only; it is the name's length. Registration allows 30
+  characters of `\w`, so a name never breaks.
+- **Expected gaps, not faults:** the post tools, signatures, PM and email
+  links and attachments (step 7); the empty Video Attachments box (step 8);
+  missing avatars and photo of the day (dev has no media).
+
+**Decisions (Brian, 2026-11-04), each the recommendation:**
+
+- **The toolbar:** side padding 0.5 rem below medium. **Done.**
+- **Long words in posts:** `overflow-wrap: anywhere` on the card's sections.
+  **Done.**
+- **Tablet widths:** the tables and the toolbar together, as **plan step 14**.
+- **The header:** **plan step 15**, independent of the rest.
+- **The look:** approved with one change, the header's ragged right edge,
+  below. No other changes (Brian, 2026-11-04).
+
+**The two fixes**, in `_sg101.scss`, rebuilt; `main.min.css` gains exactly
+those two rules. Browser tests in `forums/tests/test_browser.py`, at 360: the
+reply box leaves no horizontal scroll (failed first, 5 px), and a post's
+unbroken 180-character link stays inside its card (failed first, 1142 px).
+Each rule removed from the built CSS fails its test; restored by hash. On the
+dev topic afterwards, with and without the stand-in: no horizontal scroll at
+360 or 375, and no post cut off. At 320 Logout still overruns by 4 px, which
+is step 15.
+All 80 browser tests pass with the padding, which every post box takes. Suite
+and gate, separate runs: 1596 tests, OK with 1 expected failure, each.
+
+**The header's right edge (Brian, from a screenshot at about 1190 px):** the
+menu bar ran past the forum's right edge and the banner stopped short of it.
+Measured at 1280, where the page's row is 40-1240 and the content's edges are
+55 and 1225: the banner ended at 1205 (the 750 px image left-aligned in a 770
+px column), the menu bar spanned 40-1240 (its wrapper was `small-12` without
+`columns`, so it had no gutters), and the top bar spanned the window (Search
+ending at 1272; at 1920, 1912 against content at 1545). Three changes in
+`v3/base.html`, all kept (Brian, 2026-11-04):
+
+1. The menu bar's wrapper takes `columns`.
+2. The banner's column takes `text-right`, so the slack sits between logo and
+   banner: the gap goes from 41 to 61 px at 1280.
+3. The top bar's contents sit in a `row` and `columns`, and
+   `#base-header > .top-bar` loses its side padding, so the row's gutters set
+   its edges; its background still spans the window.
+
+After: Search, banner, menu bar and content end on the same pixel at 768,
+1190, 1280 and 1920 (753, 1175, 1225, 1545), and the logo and menu bar start
+together. At 360 the menu bar is inset 10 px to the content's gutter where it
+had run edge to edge; nothing scrolls sideways at any width measured.
+`main.min.css` gains the one rule. **Test:** `HeaderAlignmentTestCase` in
+`core/tests/test_browser.py` compares the three right edges with the content's
+at 1190, 1280 and 1920, each block separately. It failed before the change;
+each of four mutations was caught by its own block only: the menu bar without
+`columns`, the banner not right-aligned, the top bar's contents outside the
+row, and the padding rule removed, which shows only at 1190, where the row
+fills the window. Restored by hash. Suite and gate, separate runs, browser
+tests included: 1597 tests OK with 1 expected failure each.
+
+**Step 6 is complete** (2026-11-04): the forums index, a forum's topic list
+and the topic page are on V3, reviewed, and ticked in the plan. Not deployed:
+the branch carries steps 7 and 8 before forums release 1 ships. Carried
+forward: plan step 7 (R14, including the full-size image link, and removing
+bio's `@expectedFailure`), step 8 (the reply form's help link), steps 14 and
+15 (tablet widths, the phone header), and step 13 (the phone banner).

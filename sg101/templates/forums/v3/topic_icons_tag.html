@@ -1,0 +1,11 @@
+{% if topic.has_unread %}
+   <a href="{% url 'forums-topic_unread' id=topic.id %}" title="New Posts">
+      <i class="fi-burst-new size-36 shiny"></i>
+   </a>
+{% endif %}
+{% if topic.sticky %}
+   <i class="fi-asterisk size-36 green3"></i>
+{% endif %}
+{% if topic.locked %}
+   <i class="fi-lock size-36 green3"></i>
+{% endif %}

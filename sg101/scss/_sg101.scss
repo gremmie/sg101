@@ -78,6 +78,13 @@
    margin-bottom: rem-calc(16);
 }
 
+// The top bar's background spans the window; its contents sit in a row, so
+// the row's gutters set where they start and end, as for the page below.
+#base-header > .top-bar {
+   padding-left: 0;
+   padding-right: 0;
+}
+
 .side-block-v3 {
    margin: 0 0 1rem 0;
    padding: 1rem;
@@ -432,4 +439,70 @@ table.sg101-stack {
 // it. Same 1rem the controls above it carry.
 .cf-turnstile {
    margin-bottom: 1rem;
+}
+
+.shiny {
+   color: $sg101-red;
+}
+
+.green3 {
+   color: $sg101-green3;
+}
+
+.inline-forms {
+   form {
+      display: inline;
+   }
+}
+
+// Usernames and topic titles can be one long word. A cell's minimum width is
+// its longest word, so on a phone a single long name widened the table past
+// the screen. `anywhere`, unlike `break-word`, lowers that minimum. That alone
+// lets the table squeeze the Last Post column until ordinary names split, so
+// the column keeps a width of its own and only a name longer than it breaks.
+// Wider screens have room, and their extra columns would split names too.
+table.forum-table {
+   @include breakpoint(small only) {
+      td {
+         overflow-wrap: anywhere;
+      }
+
+      td:last-child {
+         width: 10rem;
+      }
+   }
+}
+
+// A topic's posts, each a row holding an author card and a body card.
+// Alternate rows are coloured by position, so a post appended to the
+// container later takes the right colour without a class of its own.
+.sg101-card {
+   @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
+   height: 100%;
+}
+
+.sg101-card-divider {
+   @include card-divider($background: $sg101-surf-green3);
+}
+
+#forum-topic-post-container > .row:nth-child(even) {
+   .sg101-card,
+   .sg101-card-divider {
+      background: $sg101-blue3;
+   }
+}
+
+// A long word in a post, usually a pasted link, would run past the card,
+// which hides what overflows it.
+.sg101-card .card-section {
+   overflow-wrap: anywhere;
+}
+
+// The post box toolbar. Foundation's menu doesn't wrap, and on a phone its
+// buttons' default side padding left no room for a seventh button.
+.v3-editor .menu > li > a {
+   @include breakpoint(small only) {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+   }
 }

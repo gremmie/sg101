@@ -1,18 +1,26 @@
-<form action="." method="get" id="forum-jumpbox-form">
-   <select id="forum-jumpbox-select">
-      <option value="{% url 'forums-forum_index' slug='surfguitar101-website' %}">SurfGuitar101 Website</option>
-      <option value="{% url 'forums-forum_index' slug='suggestion-box' %}">Suggestion Box</option>
-      <option value="{% url 'forums-forum_index' slug='sg101-podcast' %}">SG101 Podcast</option>
-      <option value="{% url 'forums-forum_index' slug='surf-music' %}">Surf Music General Discussion</option>
-      <option value="{% url 'forums-forum_index' slug='gigs' %}">Show Announcements</option>
-      <option value="{% url 'forums-forum_index' slug='surf-musician' %}">Surf Musician</option>
-      <option value="{% url 'forums-forum_index' slug='gear' %}">Gear</option>
-      <option value="{% url 'forums-forum_index' slug='recording-corner' %}">Recording Corner</option>
-      <option value="{% url 'forums-forum_index' slug='surf-videos' %}">Surf Videos</option>
-      <option value="{% url 'forums-forum_index' slug='best-sg101' %}">Best-Of SG101</option>
-      <option value="{% url 'forums-forum_index' slug='for-sale-trade' %}">For Sale / Trade</option>
-      <option value="{% url 'forums-forum_index' slug='musicians-gigs-wanted' %}">Musicians &amp; Gigs Wanted</option>
-      <option value="{% url 'forums-forum_index' slug='shallow-end' %}">The Shallow End</option>
-   </select>
-   <button type="button" id="forum-jumpbox-button">Go</button>
-</form>
+<div class="row align-right">
+   <div class="small-12 medium-6 columns">
+      <form action="." method="get" id="forum-jumpbox-form">
+         <div class="input-group">
+            <select id="forum-jumpbox-select" class="input-group-field">
+               <option value="{% url 'forums-forum_index' slug='surfguitar101-website' %}">SurfGuitar101 Website</option>
+               <option value="{% url 'forums-forum_index' slug='suggestion-box' %}">Suggestion Box</option>
+               <option value="{% url 'forums-forum_index' slug='sg101-podcast' %}">SG101 Podcast</option>
+               <option value="{% url 'forums-forum_index' slug='surf-music' %}">Surf Music General Discussion</option>
+               <option value="{% url 'forums-forum_index' slug='gigs' %}">Show Announcements</option>
+               <option value="{% url 'forums-forum_index' slug='surf-musician' %}">Surf Musician</option>
+               <option value="{% url 'forums-forum_index' slug='gear' %}">Gear</option>
+               <option value="{% url 'forums-forum_index' slug='recording-corner' %}">Recording Corner</option>
+               <option value="{% url 'forums-forum_index' slug='surf-videos' %}">Surf Videos</option>
+               <option value="{% url 'forums-forum_index' slug='best-sg101' %}">Best-Of SG101</option>
+               <option value="{% url 'forums-forum_index' slug='for-sale-trade' %}">For Sale / Trade</option>
+               <option value="{% url 'forums-forum_index' slug='musicians-gigs-wanted' %}">Musicians &amp; Gigs Wanted</option>
+               <option value="{% url 'forums-forum_index' slug='shallow-end' %}">The Shallow End</option>
+            </select>
+            <div class="input-group-button">
+               <button type="button" id="forum-jumpbox-button" class="button">Go</button>
+            </div>
+         </div>
+      </form>
+   </div>
+</div>
