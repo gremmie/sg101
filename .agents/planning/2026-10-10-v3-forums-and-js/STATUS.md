@@ -2114,3 +2114,74 @@ lowercase; the test first used `'US'` and got a 500. No dev profile has a
 code outside the data (counted 2026-11-06), so it is dormant.
 
 Suite and gate, separate runs, browser tests included: 1622 tests, OK, each.
+
+## Step 7 task 02 — `topic.js`: quick reply, flag and delete — DONE 2026-11-06
+
+`sg101/static/js/v3/forums/topic.js`, an ES module with no jQuery, loaded
+on every V3 topic page (flag and delete are on every page; the reply box only
+on the last). Every request goes through `core/http.js`; nothing calls
+`alert()`.
+
+- **Quick reply** takes the reply form's `submit`, so Enter works as well as
+  the button. It sends `new FormData(form)` (body, `topic_id`, any
+  `attachment` inputs) to `/forums/quick-reply/`, appends the returned card to
+  `#forum-topic-post-container`, and clears the box. On failure the text
+  stays and the message shows in a red callout above the button. The button
+  is disabled and relabelled while it posts.
+- **Flag and delete** keep today's `confirm()` wording. The server's reply,
+  either way, shows in a callout at the end of that post's body. They are
+  handled by one listener on the container, so a quick-replied post's tools
+  work at once. **A fix, not parity:** `forums.js` bound them once at load,
+  so a quick-replied post's tools did nothing until a reload.
+- **Delete topic** keeps its `confirm()`; cancelling stops the submit.
+  Without the script (this branch since step 6) the button deleted at once.
+
+**Decisions (Brian, 2026-11-06), each the recommendation:**
+
+- **The module lives at `js/v3/forums/topic.js`**, not `forums/static/js/`
+  as the plan and design §4.4 say. From there it imports `../core/http.js`
+  as the post box modules do, and `test_the_site_modules_import_only_hashed_files`
+  covers it unchanged (it collects only `sg101/static/js/v3`). Step 8's and
+  later modules follow it.
+- **A deleted post fades (1.5 s, Web Animations) and is then removed**, so
+  later posts re-alternate their colours. Today's page only hid it.
+
+**A bug found on dev, after the tests passed:** the flag's callout went into
+the author card. `post.querySelector('.medium-9 .card-section')` matches
+against the whole document, and the page's own content column is a
+`.medium-9`, so the post's first `.card-section`, the author card's,
+matched. At 360 that card is hidden and the reply was never seen; from medium
+up it would have shown in the author column. The browser test had checked
+the callout's text anywhere in the post, which passes for hidden text. The
+selector is now `:scope > .medium-9 .card-section`, and the test checks the
+callout is visible inside the post's own card, at 1280 and in a new test at
+360. Both failed before the fix.
+
+**Tests.** `TopicScriptTestCase` in `forums/tests/test_browser.py`, 8 tests.
+Each records every dialog, so an `alert()` fails it. Quick reply appends a
+post in the next colour, clears the box, and a `window` marker survives (no
+reload). A refused reply (the topic locked after the page loads, 403) keeps
+its text and shows the message. Flag shows the reply in the post's card, at
+1280 and 360; a cancelled flag sends nothing. A moderator's delete removes the
+post from the page and the database. Flag works on a quick-replied post. A
+cancelled topic delete leaves the topic. Plus a render test: `topic.js` loads
+once on page 1 of 2, anonymous and signed in. All failed before the module.
+
+**Eight mutations, each caught by its test and restored by hash:** the append
+removed (2 posts, not 3); the box cleared on failure; the tools bound per
+button at load (the quick-replied post's flag shows nothing); the script tag
+removed (the render test, and flag); the delete-topic confirm not wired (no
+dialog); `alert()` for the flag's reply; the selector without `:scope` (the
+360 test); the `http.js` import without its semicolon (the real-tree test
+names `js/v3/forums/topic.<hash>.js` importing the unhashed file).
+
+**On dev**, as a moderator at 360 and 1280, with the flag and quick-reply
+requests answered in the browser (`page.route`), so the database was
+unchanged (posts, flags and topics counted before and after): the flag's
+reply shows at the end of the post, green, and a refused reply keeps its text
+under a red callout. No page errors.
+
+`forums.js` stays: the old-design new topic, reply and edit forms load it
+until step 8.
+
+Suite and gate, separate runs, browser tests included: 1631 tests, OK, each.

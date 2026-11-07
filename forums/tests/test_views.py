@@ -15,7 +15,7 @@ from django.urls import reverse
 from bio.models import STA_ACTIVE, STA_STRANGER
 from forums.models import Attachment, Forum, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
-from forums.views.main import TOPICS_PER_PAGE
+from forums.views.main import POSTS_PER_PAGE, TOPICS_PER_PAGE
 from oembed.models import Oembed
 
 
@@ -351,6 +351,20 @@ class V3PagesTestCase(TestCase):
                        'jquery-ui'):
             with self.subTest(script=script):
                 self.assertNotContains(response, script)
+
+    def test_every_topic_page_loads_the_topic_script(self):
+        # Flag and delete are on every page, not only the last, which is
+        # the only one with the reply box.
+        for n in range(POSTS_PER_PAGE):
+            add_post(self.topic, self.member)
+        script = '<script type="module" src="/static/js/v3/forums/topic.js">'
+        for user in (None, self.member):
+            with self.subTest(user=user and user.username):
+                self.client.logout()
+                if user:
+                    self.login(user)
+                response = self.client.get(self.topic_url(), {'page': 1})
+                self.assertContains(response, script, count=1)
 
     def test_anonymous_topic_page_has_no_post_box(self):
         response = self.client.get(self.topic_url())
