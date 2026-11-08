@@ -7,8 +7,8 @@ because a `{% url %}` naming a route that no longer exists raises
 `NoReverseMatch` at *render* time -- an import-level or string-level check sees
 nothing, and the page 500s in a browser.
 
-The site runs two live designs and both need the link: the forums and flatpages
-still use `base.html`, everything else uses `v3/base.html`.
+The site runs two live designs and both need the link: the forums still use
+`base.html`, everything else uses `v3/base.html`.
 
 """
 from django.test import TestCase

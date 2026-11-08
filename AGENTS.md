@@ -97,8 +97,8 @@ docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
   100 KB x 10, about three weeks, so its history before then is short. For
   spam deactivations ask the database (`UserProfile.status`), not the log.
 - **Two page designs coexist.** Most templates extend `v3/base.html`
-  (Foundation 6, jQuery 3, the post box's ES modules); the forums, shoutbox,
-  `ygroup` and the flatpage template still extend the old `base.html`
+  (Foundation 6, jQuery 3, the post box's ES modules); the forums and
+  shoutbox still extend the old `base.html`
   (Blueprint, markItUp). Check which one a page extends before changing it.
 - **The `messages` app collides with `django.contrib.messages`.** Resolved in
   `sg101/apps.py` (`DjangoMessagesConfig`), which relabels the built-in app to
