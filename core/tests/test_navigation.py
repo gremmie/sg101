@@ -8,8 +8,8 @@ entries pointing at a hostname that is about to stop resolving.
 These render real pages rather than grepping the templates, for the same reason
 the calendar's navigation tests do -- a template is only a claim about what a
 page contains until something renders it. The site runs two live designs and
-both carried the link: the forums and flatpages wear `base.html`, everything
-else wears `v3/base.html`.
+both carried the link: the forums wear `base.html`, everything else wears
+`v3/base.html`.
 
 The wiki's content is archived under `archive/wiki/`.
 

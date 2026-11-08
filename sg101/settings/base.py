@@ -128,7 +128,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.InactiveUserMiddleware',
     'core.middleware.WhosOnline',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
 # Not Django's default of same-origin, which sends no Referer to other sites:
@@ -167,7 +166,6 @@ INSTALLED_APPS = [
     'django.contrib.admindocs',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.flatpages',
     'django.contrib.humanize',
     'sg101.apps.DjangoMessagesConfig',
     'django.contrib.postgres',
