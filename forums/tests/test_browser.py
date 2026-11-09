@@ -181,9 +181,11 @@ class TopicScriptTestCase(BrowserTestCase):
         mod_group = Group.objects.get(name='Forum Moderators')
         self.moderator.groups.add(mod_group)
         self.forum.moderators.add(mod_group)
-        self.topic = make_topic(self.forum, self.member)
-        self.first = add_post(self.topic, self.member, body='the first post')
-        self.second = add_post(self.topic, self.member, body='the second post')
+        # Another member's posts: a post's own author has no flag.
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.topic = make_topic(self.forum, self.author)
+        self.first = add_post(self.topic, self.author, body='the first post')
+        self.second = add_post(self.topic, self.author, body='the second post')
 
     def open_topic(self, user):
         self.login(user)
@@ -290,17 +292,19 @@ class TopicScriptTestCase(BrowserTestCase):
         self.assertFalse(Post.objects.filter(pk=self.second.pk).exists())
         self.assertEqual(seen, ['confirm'])
 
-    def test_flag_works_on_a_quick_reply(self):
-        self.open_topic(self.member)
+    def test_tools_work_on_a_quick_reply(self):
+        # A quick reply is the poster's own, so it has no flag; a moderator's
+        # delete is the tool to try on it.
+        self.open_topic(self.moderator)
         seen = self.answer_dialogs(accept=True)
-        self.reply('flag me')
+        self.reply('delete me')
         expect(self.page.locator('#forum-topic-post-container > .row')).to_have_count(3)
-        post = Post.objects.get(body='flag me')
+        post = Post.objects.get(body='delete me')
 
-        self.page.locator('#post-%d .post-flag' % post.id).click()
+        self.page.locator('#post-%d .post-delete' % post.id).click()
 
-        self.assertFlagReplyShown(post)
-        self.assertTrue(FlaggedPost.objects.filter(post=post).exists())
+        expect(self.page.locator('#post-%d' % post.id)).to_have_count(0)
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
         self.assertNotIn('alert', seen)
 
     def test_a_cancelled_topic_delete_keeps_the_topic(self):

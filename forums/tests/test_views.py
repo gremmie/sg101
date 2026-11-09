@@ -480,10 +480,10 @@ class PostCardTestCase(TestCase):
         self.assertShownTo(url, shown=[self.author, self.moderator],
                            hidden=[self.member, None])
 
-    def test_flag_for_signed_in_viewers(self):
+    def test_flag_for_signed_in_viewers_but_not_the_author(self):
         self.assertButtonShownTo('post-flag', self.post,
-                                 shown=[self.member, self.author, self.moderator],
-                                 hidden=[None])
+                                 shown=[self.member, self.moderator],
+                                 hidden=[self.author, None])
 
     def test_delete_for_moderators(self):
         self.assertButtonShownTo('post-delete', self.post,
@@ -515,14 +515,15 @@ class PostCardTestCase(TestCase):
         url = reverse('forums-stranger', kwargs={'post_id': post.id})
         self.assertShownTo(url, shown=[], hidden=[self.moderator])
 
-    def test_pm_link_for_signed_in_viewers(self):
+    def test_pm_link_for_signed_in_viewers_but_not_the_author(self):
         url = reverse('messages-compose') + '?to=author'
         self.assertShownTo(url, shown=[self.member, self.moderator],
-                           hidden=[None])
+                           hidden=[self.author, None])
 
-    def test_email_link_for_signed_in_viewers(self):
+    def test_email_link_for_signed_in_viewers_but_not_the_author(self):
         self.assertShownTo('mailto:author@example.com',
-                           shown=[self.member, self.moderator], hidden=[None])
+                           shown=[self.member, self.moderator],
+                           hidden=[self.author, None])
 
     def test_no_email_link_when_the_author_hides_it(self):
         self.author.profile.hide_email = True
@@ -602,4 +603,7 @@ class PostCardTestCase(TestCase):
         self.assertIn(
             reverse('forums-post_ip_info', kwargs={'post_id': post.id}), page)
         self.assertRegex(page, self.button('post-delete', post))
-        self.assertRegex(page, self.button('post-flag', post))
+        # The reply is the moderator's own: nothing to flag, PM or email.
+        self.assertNotRegex(page, self.button('post-flag', post))
+        self.assertNotIn(reverse('messages-compose') + '?to=moderator', page)
+        self.assertNotIn('mailto:moderator@example.com', page)

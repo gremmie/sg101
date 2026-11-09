@@ -743,6 +743,9 @@ class UnverifiedAddressIsNotDisplayedTestCase(TestCase):
             reverse('forums-new_topic', kwargs={'slug': 'shallow-end'}),
             {'name': 'A test topic', 'body': 'testing 1, 2, 3...'})
         topic = Topic.objects.get(name='A test topic')
+        # As another member: a post's card has no email link for its author.
+        User.objects.create_user('ringo', '', 'pw')
+        self.assertTrue(self.client.login(username='ringo', password='pw'))
 
         response = self.client.get(reverse('forums-topic_index',
                                            kwargs={'id': str(topic.pk)}))

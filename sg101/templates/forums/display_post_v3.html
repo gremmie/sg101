@@ -72,13 +72,13 @@
             <span class="forum-post-tool-icons">
             {% if can_reply %}
                <a href="{% url 'forums-new_post' topic_id=post.topic_id %}?quote={{ post.id }}" title="Reply with quote">
-                  <i class="fi-comment-quotes" aria-hidden="true"></i><span class="show-for-sr">Reply with quote</span></a>
+                  <i class="fi-quote" aria-hidden="true"></i><span class="show-for-sr">Reply with quote</span></a>
             {% endif %}
             {% if post.user_id == user.id or can_moderate %}
                <a href="{% url 'forums-edit_post' id=post.id %}" title="Edit post">
                   <i class="fi-pencil" aria-hidden="true"></i><span class="show-for-sr">Edit post</span></a>
             {% endif %}
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and post.user_id != user.id %}
                <button type="button" class="post-flag" data-post-id="{{ post.id }}"
                   title="Flag this post as spam, abuse, or a violation of site rules">
                   <i class="fi-flag" aria-hidden="true"></i><span class="show-for-sr">Flag post</span></button>
@@ -87,7 +87,7 @@
                <button type="button" class="post-delete" data-post-id="{{ post.id }}" title="Delete this post">
                   <i class="fi-trash" aria-hidden="true"></i><span class="show-for-sr">Delete post</span></button>
             {% endif %}
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and post.user_id != user.id %}
                <a href="{% send_pm_url post.user.username %}" title="Send a private message to {{ post.user.username }}">
                   <i class="fi-comment" aria-hidden="true"></i><span class="show-for-sr">Private message</span></a>
                {% if not post.user.profile.hide_email %}
