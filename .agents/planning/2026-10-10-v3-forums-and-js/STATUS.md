@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-04
+**Last updated:** 2026-11-09
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2185,3 +2185,92 @@ under a red callout. No page errors.
 until step 8.
 
 Suite and gate, separate runs, browser tests included: 1631 tests, OK, each.
+
+## Step 7 task 03 — the walk, the icons, own-post tools — DONE 2026-11-09
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step07/task-03-walk.code-task.md`.
+Branch `v3-forums-release-1`, on `532766a1`.
+
+**The walk, by a headless probe** on the dev stack (data to 2026-10-07), the
+debug toolbar off, mail to the console backend (`.env` sets no
+`EMAIL_BACKEND`), so a flag sent nothing. Snapshot first:
+`sg101-20261109-123029-before-step7-walk.dump`. Subjects by id: topic 41216's
+last page (page 4), post 483917 for the permalink (30th of 72, so page 2),
+post 485644 (topic 41534, email shown), post 485470 (a stranger's, topic
+41505), member `Klas` (pk 7), moderator `CaptainSpringfield` (pk 12).
+Sessions made directly through `AUTHENTICATION_BACKENDS[0]` and deleted after;
+`last_login` unchanged, checked. At 360 and 1280, each role in its own
+context, recording dialogs, page errors and main-frame navigations:
+
+| Role | Checked | 360 | 1280 |
+|---|---|---|---|
+| anonymous | reads page 4; no flag button | ✓ | ✓ |
+| member | permalink lands on page 2 with the post at the top | ✓ | ✓ (see below) |
+| member | quick reply appends, next card colour, box cleared, no reload | ✓ | ✓ |
+| member | flag: the reply in the post's own card, no reload | ✓ | ✓ |
+| moderator | delete removes the member's reply in place, no reload | ✓ | ✓ |
+| moderator | delete topic asks; cancel stays on the page | ✓ | ✓ |
+| all | dialogs `confirm` only, no `alert()`; no page errors | ✓ | ✓ |
+
+Two checks failed first, neither in the card. **At 1280 the permalink check
+failed** on the post's top at −0.x px: it lands, and the probe's `top >= 0`
+was too strict. **At 360 the moderator's page scrolls sideways** by 63 px:
+the header's Logout ends at 423 for the long username, which is plan step 15.
+The member's page at 360 has none.
+
+**What the walk left in the dev database: nothing.** Its two replies were
+deleted by the walk itself, and their flags with them (cascade). Topic and
+forum counts and `last_post` matched the before-state. Put back by hand: the
+view counts of the three topics opened, two `TopicLastVisit` rows, and the
+`end_date` of three `ForumLastVisit` rows. Two were recorded before the walk.
+The third, the moderator's for forum 6, opened by the stranger's post, was
+not, and took its value from the snapshot. A state record taken
+after cleanup was identical to the one before. **Redis had drifted before the
+walk:** `rebuild_redis --check` found 11 problems, with the public post count 5
+high and the topic count 2 high, where the walk added 2 posts and no topics.
+Rebuilt; it matches.
+
+**Decisions (Brian, 2026-11-09), each the recommendation:**
+
+- **Quote is `fi-quote`**, the bare “ ” mark. `fi-comment-quotes` and PM's
+  `fi-comment` were both speech bubbles, side by side in the tools row.
+- **The other six icons stay:** edit `fi-pencil`, flag `fi-flag`, delete
+  `fi-trash`, email `fi-mail`, acquaintance `fi-check`, spammer `fi-skull`.
+- **Flag, PM and email are hidden on your own post.** The old card shows all
+  three, and the walk flagged the member's own reply. A quick reply is
+  always the poster's own, so it now has none of them.
+- **The phone layout and the anonymous flag** were settled in task 01 (under
+  task 01 above) and looked right in the shots: the moderator's six icons fit
+  at 360.
+
+**Tests.** In `PostCardTestCase`, flag, PM and email are now absent for the
+post's author as well as for anonymous visitors. The quick-reply test checks
+the moderator's own reply has none of the three. All four failed before the
+template change, each only on the author. **Browser:** `TopicScriptTestCase`'s
+posts are now another member's (`author`), as the member flagged their own.
+`test_flag_works_on_a_quick_reply` became
+`test_tools_work_on_a_quick_reply`, a moderator deleting their own quick
+reply, since nobody else's quick reply is on the page. **bio's
+`test_forum_post`** now views the topic as another member, as the post's
+author no longer sees a `mailto` on it. Its point is the address shown to
+other people.
+
+**Three mutations, each caught and restored by hash:** flag shown on your own
+post (the flag test and the quick-reply test); PM and email shown on it (the
+PM, email and quick-reply tests); the tools bound to each post at load
+instead of the container (`test_tools_work_on_a_quick_reply`, which fails on the
+post still being there, after the reply was appended).
+
+**Re-shot** at 360 and 1280: Klas's own post shows quote and edit only; on
+others' posts the member gets quote, flag, PM, email and the moderator all
+six. No page errors; the moderator's 63 px at 360 is the header again.
+Screenshots stay in the session scratchpad.
+
+**Still open, carried forward:** whether V3's `.quiet` should be grey (task
+01, above); #41 (`flag_icon`); the header at 360 (plan step 15).
+
+Suite and gate, separate runs, browser tests included: 1631 tests, OK, each.
+
+**Step 7 is complete** (2026-11-09): the V3 topic page has every capability
+of today's, run by `topic.js`, walked on dev and ticked in the plan. Not
+deployed: forums release 1 ships at the end of step 8.
