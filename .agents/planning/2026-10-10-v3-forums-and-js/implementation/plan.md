@@ -387,6 +387,17 @@ the video button, and the three confirmation pages are V3. **Then it ships.**
   hard-coded as `/forums/topic/18843/` in `new_post_form.html`, as `v3-dev`
   and today's `show_form.html` have it. Decide whether it stays a fixed
   topic once the video button exists.
+- **An attached video fits the card on a phone** (Brian, 2026-11-06, in
+  STATUS under step 7 task 01). The embed's `<iframe>` has a fixed width, and
+  the card hides what overflows it, so at 360 the embed is cut off.
+- **V3's `.quiet` becomes grey everywhere** (Brian, 2026-11-09), as
+  Blueprint's is (`color: #666`); today it is only `font-size: smaller`, in
+  `_sg101.scss`. It reaches every V3 page that uses it, so screenshot those
+  pages before and after: the topic page, photo of the day, the store, the
+  Yahoo group archive, and any other found by grepping the templates. Check
+  the contrast on both card colours. Then decide whether the post card's own
+  grey classes (`.forum-post-edited`, `.forum-post-author-details`, the
+  signature) fold back into `quiet`.
 
 **Tests.**
 

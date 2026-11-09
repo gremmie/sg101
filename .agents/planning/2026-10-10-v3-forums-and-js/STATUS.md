@@ -2058,7 +2058,8 @@ colour, so on V3 it is smaller and not greyer. The card's other `quiet`
 items ("Posted on", the author card, the IP) are the same. Greying V3's
 `quiet` would change every V3 page that uses it (the topic page, photo of the
 day, the store, the Yahoo group archive), so "Last edited" took its own class
-instead. Open: whether V3's `quiet` should be grey.
+instead. Whether V3's `quiet` should be grey: **yes, everywhere, in plan
+step 8** (Brian, 2026-11-09).
 
 **Tests:** in `PostCardTestCase`, the name's link is wrapped in `<strong>`
 twice; the signature section opens with the `<hr />`; "Last edited" comes
@@ -2266,8 +2267,8 @@ others' posts the member gets quote, flag, PM, email and the moderator all
 six. No page errors; the moderator's 63 px at 360 is the header again.
 Screenshots stay in the session scratchpad.
 
-**Still open, carried forward:** whether V3's `.quiet` should be grey (task
-01, above); #41 (`flag_icon`); the header at 360 (plan step 15).
+**Still open, carried forward:** V3's `.quiet` turning grey (plan step 8);
+#41 (`flag_icon`); the header at 360 (plan step 15).
 
 Suite and gate, separate runs, browser tests included: 1631 tests, OK, each.
 
