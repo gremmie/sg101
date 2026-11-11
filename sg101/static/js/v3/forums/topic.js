@@ -54,6 +54,8 @@ function initQuickReply() {
          const response = await postForm(QUICK_REPLY_URL, new FormData(form));
          container.insertAdjacentHTML('beforeend', await response.text());
          textarea.value = '';
+         // The videos went with the reply; on a failure they stay, as the text does.
+         form.querySelector('[data-attachments]')?.replaceChildren();
          hideStatus(status);
       } catch (error) {
          // The text stays in the box, to try again.

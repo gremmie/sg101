@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.template import Context, Template
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import call, patch, Mock
 
@@ -260,6 +261,22 @@ class PostBoxTestCase(TestCase):
         self.assertIn('aria-label="Smileys"', button.group(0))
         self.assertNotIn('hide-for-small-only', button.group(0))
 
+    def test_no_video_button_unless_asked_for(self):
+        field = AddNewsForm()['short_markup']
+        rendered = self.TEMPLATE.render(Context({'field': field}))
+        self.assertNotIn('editor-video', rendered)
+        self.assertNotIn('video-modal', rendered)
+
+    def test_video_button_shown_on_small_screens_when_asked_for(self):
+        field = AddNewsForm()['short_markup']
+        template = Template('{% load core_tags %}{% post_box field video=True %}')
+        rendered = template.render(Context({'field': field}))
+        buttons = re.findall(r'<a [^>]*class="editor-video[^"]*"[^>]*>\s*<i [^>]*>', rendered)
+        self.assertEqual(len(buttons), 1)
+        self.assertIn('data-open="video-modal"', buttons[0])
+        self.assertIn('fi-video', buttons[0])
+        self.assertNotIn('hide-for-small-only', buttons[0])
+
 
 class PostBoxModalsTestCase(TestCase):
     """The modals a page's post boxes share, one set per page."""
@@ -277,3 +294,27 @@ class PostBoxModalsTestCase(TestCase):
         self.assertIsNotNone(modal)
         self.assertIn('data-code=', modal.group(0))
         self.assertRegex(modal.group(0), r'<button [^>]*data-close[^>]*>\s*Done\s*</button>')
+
+    def test_no_video_modal_unless_asked_for(self):
+        rendered = Template("{% include 'core/v3/post_box_modals.html' %}").render(Context({}))
+        self.assertNotIn('video-modal', rendered)
+        self.assertNotIn('attachment-entry', rendered)
+
+    def test_the_video_modal_posts_a_url_to_the_oembed_fetch(self):
+        template = Template("{% include 'core/v3/post_box_modals.html' with video=True %}")
+        rendered = template.render(Context({}))
+        modals = re.findall(r'<div [^>]*id="video-modal"', rendered)
+        self.assertEqual(len(modals), 1)
+        form = re.search(r'<form [^>]*id="video-form"[^>]*>', rendered)
+        self.assertIsNotNone(form)
+        self.assertIn('action="%s"' % reverse('oembed-fetch_media'), form.group(0))
+        self.assertRegex(rendered, r'<input [^>]*name="q"')
+
+    def test_the_video_modal_brings_the_entry_for_the_script_to_copy(self):
+        template = Template("{% include 'core/v3/post_box_modals.html' with video=True %}")
+        rendered = template.render(Context({}))
+        entry = re.search(r'<template id="attachment-entry">(.*?)</template>', rendered, re.S)
+        self.assertIsNotNone(entry)
+        self.assertIn('class="forum-attachment"', entry.group(1))
+        self.assertRegex(entry.group(1), r'<button [^>]*class="[^"]*attachment-remove')
+        self.assertRegex(entry.group(1), r'<input type="hidden" name="attachment" value=""')

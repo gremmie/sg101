@@ -137,6 +137,24 @@ def show_form(legend_text, form, submit_value, is_ajax):
     }
 
 
+@register.inclusion_tag('forums/v3/post_attachments.html')
+def post_attachments(form):
+    """
+    The attachment list of a posting form, rendered as post_box/video.js
+    builds it: the attachments posted with a bound form, or the post's own for
+    an unbound edit form. Posted ids with no Oembed row are left out.
+
+    """
+    if form.is_bound:
+        embeds = form.attach_proc.embeds
+        embeds = [embeds[pk] for pk in form.attach_proc.get_ids() if pk in embeds]
+    elif getattr(form, 'instance', None) is not None and form.instance.pk:
+        embeds = form.instance.attachments.order_by('attachment__order')
+    else:
+        embeds = []
+    return {'embeds': embeds}
+
+
 @register.inclusion_tag('forums/new_posts_tag.html')
 def new_posts():
     """

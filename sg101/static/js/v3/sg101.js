@@ -24,18 +24,4 @@ $(document).ready(function() {
            }
        }
    });
-   $('iframe').each(function(index) {
-      $this = $(this);
-      var src = $this.attr('src');
-      var srcYouTube = src.includes('youtube');
-      var srcVimeo = src.includes('vimeo');
-      if (srcYouTube || srcVimeo) {
-         var wrapper = $this.closest('div.flex-video');
-         if (wrapper.length == 0) {
-            var html = srcVimeo ? '<div class="flex-video vimeo"></div>'
-                                : '<div class="flex-video"></div>';
-            $this.wrap(html);
-         }
-      }
-   });
 });

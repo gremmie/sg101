@@ -7,9 +7,10 @@ from playwright.sync_api import expect
 
 from bio.models import STA_ACTIVE
 from core.tests.browser import BrowserTestCase
-from forums.models import FlaggedPost, Forum, Post, Topic
+from forums.models import Attachment, FlaggedPost, Forum, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
 from forums.views.main import POSTS_PER_PAGE
+from oembed.models import Oembed
 
 
 class TopicPageTestCase(BrowserTestCase):
@@ -352,3 +353,214 @@ class TopicScriptTestCase(BrowserTestCase):
         self.assertEqual(seen, ['confirm'])
         self.assertEqual(self.page.url, url)
         self.assertTrue(Topic.objects.filter(pk=self.topic.pk).exists())
+
+
+class VideoAttachmentTestCase(BrowserTestCase):
+    """The quick reply's video button and attachment list, in a real browser."""
+    fixtures = ['forums.json']
+    VIDEO_URL = 'https://www.youtube.com/watch?v=sg101test'
+    # The fetch view answers from this row, and the players' requests are
+    # answered by the test, so nothing leaves it.
+    EMBED = ('<iframe width="480" height="270" src="https://www.youtube.com/embed/sg101test"'
+             ' title="test video"></iframe>')
+    PLAYERS = re.compile(r'^https://(www\.youtube\.com|player\.vimeo\.com|w\.soundcloud\.com)/')
+
+    def setUp(self):
+        super().setUp()
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.topic = make_topic(Forum.objects.get(slug='shallow-end'), self.author)
+        self.first = add_post(self.topic, self.author, body='the first post')
+        self.embed = Oembed.objects.create(
+            url=self.VIDEO_URL, type=Oembed.VIDEO, title='test video',
+            width=480, height=270, html=self.EMBED)
+        self.dialogs = []
+        self.page.on('dialog', lambda dialog: (self.dialogs.append(dialog.type),
+                                               dialog.dismiss()))
+        self.context.route(self.PLAYERS, lambda route: route.fulfill(
+            content_type='text/html', body='<html><body></body></html>'))
+
+    def open_topic(self):
+        self.login(self.member)
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+    def entries(self):
+        return self.page.locator('form [data-attachments] .forum-attachment-entry')
+
+    def add_video(self, url=VIDEO_URL):
+        self.page.locator('.editor-video').click()
+        modal = self.page.locator('#video-modal')
+        expect(modal).to_be_visible()
+        modal.locator('input[name="q"]').fill(url)
+        modal.locator('#video-form-submit').click()
+
+    def reply(self, text):
+        """Sends a quick reply; returns the request's body once it is answered.
+
+        Waiting for the answer keeps the server's work inside the test: a
+        request still running when the test's tables are flushed deadlocks
+        with the flush.
+        """
+        self.page.locator('.v3-editor textarea').fill(text)
+        with self.page.expect_response('**/forums/quick-reply/') as response:
+            self.page.locator('#forums-reply-post').click()
+        response.value.finished()
+        return response.value.request.post_data
+
+    def test_an_added_video_is_sent_with_the_reply(self):
+        self.open_topic()
+        self.add_video()
+
+        expect(self.page.locator('#video-modal')).to_be_hidden()
+        expect(self.entries()).to_have_count(1)
+        expect(self.entries().locator('iframe[title="test video"]')).to_be_attached()
+        body = self.reply('a reply with a video')
+
+        self.assertIn('name="attachment"\r\n\r\n%d\r\n' % self.embed.pk, body)
+        rows = self.page.locator('#forum-topic-post-container > .row')
+        expect(rows).to_have_count(2)
+        expect(rows.last.locator('.forum-attachment iframe[title="test video"]')).to_be_attached()
+        expect(self.entries()).to_have_count(0)
+        post = Post.objects.get(body='a reply with a video')
+        self.assertEqual(list(post.attachments.all()), [self.embed])
+        self.assertEqual(self.dialogs, [])
+
+    def test_a_removed_video_is_not_sent(self):
+        self.open_topic()
+        self.add_video()
+        expect(self.entries()).to_have_count(1)
+
+        self.entries().locator('.attachment-remove').click()
+
+        expect(self.entries()).to_have_count(0)
+        body = self.reply('changed my mind')
+        self.assertNotIn('name="attachment"', body)
+
+    def test_a_refused_video_says_why_in_the_modal(self):
+        self.page.route('**/oembed/fetch/', lambda route: route.fulfill(
+            status=400, content_type='text/plain',
+            body='Sorry, we could not retrieve your video (test)'))
+        self.open_topic()
+
+        self.add_video('https://www.youtube.com/watch?v=nosuchvideo')
+
+        status = self.page.locator('#video-status')
+        expect(status).to_be_visible()
+        expect(status).to_have_text('Sorry, we could not retrieve your video (test)')
+        expect(self.page.locator('#video-modal')).to_be_visible()
+        expect(self.page.locator('#video-modal input[name="q"]')).to_have_value(
+            'https://www.youtube.com/watch?v=nosuchvideo')
+        expect(self.entries()).to_have_count(0)
+        self.assertEqual(self.dialogs, [])
+
+    def test_a_refused_reply_keeps_its_videos(self):
+        self.open_topic()
+        self.add_video()
+        expect(self.entries()).to_have_count(1)
+        Topic.objects.filter(pk=self.topic.pk).update(locked=True)
+
+        self.reply('my reply')
+
+        expect(self.page.get_by_text("You don't have permission to post")).to_be_visible()
+        expect(self.entries()).to_have_count(1)
+
+    def width_overrun(self, iframe, box):
+        """How far the iframe's right edge passes its box's content edge."""
+        return iframe.evaluate(
+            """(frame, box) => {
+                  const inner = box.getBoundingClientRect().left + box.clientLeft
+                     + box.clientWidth - parseFloat(getComputedStyle(box).paddingRight);
+                  return frame.getBoundingClientRect().right - inner;
+               }""", box.element_handle())
+
+    def test_a_posted_video_fits_its_card_on_a_phone(self):
+        Attachment.objects.create(post=self.first, embed=self.embed, order=0)
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.open_topic()
+
+        card = self.page.locator('#post-%d .card-section:has(.forum-attachment)' % self.first.id)
+        iframe = card.locator('.forum-attachment iframe')
+        expect(iframe).to_be_attached()
+        self.assertLessEqual(self.width_overrun(iframe, card), 0)
+
+    def test_an_attached_video_fits_the_form_on_a_phone(self):
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.open_topic()
+        self.add_video()
+
+        # A fieldset is never narrower than its contents, so a video too wide
+        # widens the list with it, and the page.
+        iframe = self.entries().locator('iframe')
+        expect(iframe).to_be_attached()
+        overrun = iframe.evaluate('f => f.getBoundingClientRect().right - window.innerWidth')
+        self.assertLessEqual(overrun, 0)
+        self.assertLessEqual(self.page.evaluate(
+            'document.documentElement.scrollWidth - window.innerWidth'), 0)
+
+    def frame_size(self, iframe):
+        """The iframe's width and height, the content width of its box, and
+        the height of what holds it."""
+        return iframe.evaluate("""f => {
+              const box = f.closest('.card-section, [data-attachments]');
+              const cs = getComputedStyle(box);
+              const r = f.getBoundingClientRect();
+              return {w: r.width, h: r.height, box: box.clientWidth
+                 - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+                 around: f.parentElement.getBoundingClientRect().height};
+           }""")
+
+    def assertFillsAt16x9(self, iframe):
+        size = self.frame_size(iframe)
+        self.assertAlmostEqual(size['w'], size['box'], delta=1)
+        self.assertAlmostEqual(size['w'] / size['h'], 16 / 9, delta=0.02)
+        # Nothing around it holds a taller space open below it. An inline
+        # iframe sits on a text line, so a few pixels of the line show.
+        self.assertLess(size['around'] - size['h'], 8)
+
+    def posted(self, html, url):
+        embed = Oembed.objects.create(url=url, type=Oembed.VIDEO, title='posted',
+                                      width=480, height=270, html=html)
+        Attachment.objects.create(post=self.first, embed=embed, order=0)
+        return self.page.locator('#post-%d .forum-attachment iframe' % self.first.id)
+
+    def test_a_posted_video_fills_its_card_at_16_9(self):
+        iframe = self.posted(self.EMBED, 'https://www.youtube.com/watch?v=posted')
+        for width in (360, 1280):
+            with self.subTest(width=width):
+                self.page.set_viewport_size({'width': width, 'height': 800})
+                self.open_topic()
+                expect(iframe).to_be_attached()
+                self.assertFillsAt16x9(iframe)
+
+    def test_a_posted_vimeo_video_is_16_9_too(self):
+        iframe = self.posted(
+            '<iframe src="https://player.vimeo.com/video/1" width="480" height="270"></iframe>',
+            'https://vimeo.com/1')
+        self.open_topic()
+        expect(iframe).to_be_attached()
+        self.assertFillsAt16x9(iframe)
+
+    def test_an_added_video_and_its_reply_are_16_9(self):
+        # Neither was in the page when it loaded.
+        self.page.set_viewport_size({'width': 1280, 'height': 800})
+        self.open_topic()
+        self.add_video()
+        expect(self.entries()).to_have_count(1)
+        self.assertFillsAt16x9(self.entries().locator('iframe'))
+
+        self.reply('a reply with a video')
+
+        rows = self.page.locator('#forum-topic-post-container > .row')
+        expect(rows).to_have_count(2)
+        self.assertFillsAt16x9(rows.last.locator('.forum-attachment iframe'))
+
+    def test_a_player_that_is_not_a_video_keeps_its_height(self):
+        iframe = self.posted(
+            '<iframe width="480" height="295" src="https://w.soundcloud.com/player/?t=1">'
+            '</iframe>', 'https://soundcloud.com/a/b')
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.open_topic()
+        expect(iframe).to_be_attached()
+        size = self.frame_size(iframe)
+        self.assertLessEqual(size['w'], size['box'])
+        self.assertEqual(size['h'], 295)

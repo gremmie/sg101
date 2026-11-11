@@ -11,12 +11,14 @@ import { initHotLink } from './hot_link.js';
 import { showPreview } from './preview.js';
 import { initSmileys } from './smileys.js';
 import { initUploads } from './uploads.js';
+import { initVideo } from './video.js';
 
 let active = null;
 const getActive = () => active;
 
 const resetHotLink = initHotLink(getActive);
 const resetUploads = initUploads(getActive);
+const resetVideo = initVideo(getActive);
 initSmileys(getActive);
 
 const TEXT_BUTTONS = {
@@ -39,6 +41,7 @@ const TEXT_BUTTONS = {
 const MODAL_BUTTONS = {
    '.editor-hot-link': () => resetHotLink(),
    '.editor-upload': () => resetUploads(),
+   '.editor-video': () => resetVideo(),
    '.editor-smiley': () => {},
    '.editor-preview': (textarea) => showPreview(textarea),
    '.editor-help': () => {},

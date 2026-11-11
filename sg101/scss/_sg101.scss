@@ -569,6 +569,29 @@ table.forum-table {
    overflow-wrap: anywhere;
 }
 
+// A video player fills the width of its column at 16:9, wherever it is and
+// whenever it was added. The player letterboxes a video of another shape
+// inside it. Any other embed, such as SoundCloud's, keeps the size its
+// provider set, narrowed to fit a phone.
+iframe[src*="youtube"],
+iframe[src*="vimeo"] {
+   width: 100%;
+   height: auto;
+   aspect-ratio: 16 / 9;
+}
+
+.forum-attachment iframe {
+   max-width: 100%;
+}
+
+.forum-attachment-entry {
+   margin-bottom: 1rem;
+
+   .attachment-remove {
+      margin: 0.25rem 0 0;
+   }
+}
+
 // The post box toolbar. Foundation's menu doesn't wrap, and on a phone its
 // buttons' default side padding left no room for a seventh button.
 .v3-editor .menu > li > a {

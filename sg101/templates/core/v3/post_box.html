@@ -18,6 +18,10 @@
                <i class="fi-photo size-21" title="Hot-Link Image"></i></a></li>
             <li><a class="editor-upload" data-open="upload-modal">
                <i class="fi-upload size-21" title="Upload Image"></i></a></li>
+            {% if video %}
+            <li><a class="editor-video" data-open="video-modal">
+               <i class="fi-video size-21" title="Attach Video"></i></a></li>
+            {% endif %}
             <li><a class="editor-preview" data-open="preview-modal">
                <i class="fi-eye size-21" title="Preview"></i></a></li>
             <li><a class="editor-help" data-open="help-modal">

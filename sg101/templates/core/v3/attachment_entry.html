@@ -1,0 +1,6 @@
+{# One video in a posting form's attachment list. Rendered blank in the video modal's <template>, for post_box/video.js to fill. #}
+<div class="forum-attachment-entry">
+   <div class="forum-attachment">{{ embed.html|safe }}</div>
+   <button type="button" class="tiny secondary button attachment-remove">Remove</button>
+   <input type="hidden" name="attachment" value="{{ embed.pk|default_if_none:'' }}" />
+</div>

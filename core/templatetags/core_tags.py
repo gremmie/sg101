@@ -232,7 +232,9 @@ def slideshow_images():
 
 
 @register.inclusion_tag('core/v3/post_box.html')
-def post_box(form_field):
+def post_box(form_field, video=False):
+    """The Markdown post box. video adds the video button, for the forums."""
     return {
         'form_field': form_field,
+        'video': video,
     }

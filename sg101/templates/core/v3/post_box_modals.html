@@ -241,3 +241,50 @@ This is not part of the quote because of the blank line.
       </div>
    </div>
 </div>
+{% if video %}
+
+<div class="small reveal" id="video-modal" data-reveal>
+   <button class="close-button" data-close aria-label="Close modal" type="button">
+      <span aria-hidden="true">&times;</span>
+   </button>
+   <div class="row">
+      <div class="columns">
+         <p class="lead">Attach Video</p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="columns">
+         <p>
+         To attach a video from YouTube or Vimeo, or a track from SoundCloud, copy &amp;
+         paste its address to the box below and click "Attach". It will appear below your
+         post.
+         </p>
+      </div>
+   </div>
+   <form id="video-form" action="{% url 'oembed-fetch_media' %}" method="post">{% csrf_token %}
+      <div class="row">
+         <div class="columns">
+            <label>Video Address
+               <input type="url" name="q" placeholder="https://" />
+            </label>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns">
+            <div id="video-status" class="hidden callout"></div>
+         </div>
+      </div>
+      <div class="row">
+         <div class="columns text-right">
+            <button class="secondary button" data-close aria-label="Close modal" type="button">
+               Cancel
+            </button>
+            <input type="submit" id="video-form-submit" class="primary button"
+               name="submit" value="Attach" />
+         </div>
+      </div>
+   </form>
+</div>
+
+<template id="attachment-entry">{% include 'core/v3/attachment_entry.html' with embed=None %}</template>
+{% endif %}
