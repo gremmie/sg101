@@ -550,7 +550,7 @@ class PostCardTestCase(TestCase):
 
         page = self.view(None)
 
-        self.assertRegex(page, r'class="forum-post-signature">\s*<hr />\s*<p>Keep on surfin')
+        self.assertRegex(page, r'class="forum-post-signature[^"]*">\s*<hr />\s*<p>Keep on surfin')
         self.assertLess(page.index('Last edited'), page.index('forum-post-signature'))
 
     def test_last_edited_only_once_edited(self):

@@ -18,12 +18,12 @@
    {% for post in page_obj.object_list %}
    <dt><a name="p{{ post.id }}"></a>{{ post.poster }} - {{ post.creation_date|date:"d M Y H:i:s" }}
    <a href="{{ post.get_absolute_url }}" rel="nofollow">
-      <i class="fi-link size-16" title="permalink" /></i></a></dt>
+      <i class="fi-link size-16" title="permalink"></i></a></dt>
    <dd>
    <div class="callout word-wrap">
       {{ post.msg|linebreaks }}
    </div>
-   <p><a href="#top" class="quiet" title="Goto top of page">Top</a></p>
+   <p class="quiet"><a href="#top" title="Goto top of page">Top</a></p>
    </dd>
    {% endfor %}
 </dl>

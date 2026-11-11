@@ -168,6 +168,40 @@ class PostCardTestCase(BrowserTestCase):
         rule = section.locator('.forum-post-signature hr').bounding_box()
         self.assertLess(rule['width'], section.bounding_box()['width'] / 2)
 
+    def test_quiet_text_is_one_grey(self):
+        self.member.profile.signature = 'Keep on surfin'
+        self.member.profile.save()
+        post = add_post(self.topic, self.member)
+        Post.objects.filter(pk=post.pk).update(
+            update_date=post.creation_date + datetime.timedelta(hours=1))
+        self.page.set_viewport_size({'width': 1280, 'height': 900})
+
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+        styles = self.page.locator('.quiet').evaluate_all(
+            'es => es.map(e => { const s = getComputedStyle(e);'
+            ' return [e.className, s.color, s.fontSize]; })')
+        # The posted date, the "Top" links, and what is about the post: the
+        # author's details, the edit note and the signature.
+        self.assertGreaterEqual(len(styles), 6)
+        for name, colour, size in styles:
+            with self.subTest(element=name):
+                self.assertEqual((colour, size), ('rgb(85, 85, 85)', '14px'))
+
+    def test_the_top_links_look_like_links(self):
+        add_post(self.topic, self.member)
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+        tops = self.page.locator('a[href="#top"]')
+        # One under the post, one under the topic.
+        self.assertEqual(tops.count(), 2)
+        link_colour = self.page.evaluate(
+            'getComputedStyle(document.querySelector(".sg101-card a")).color')
+        for colour, size in tops.evaluate_all(
+                'es => es.map(e => { const s = getComputedStyle(e);'
+                ' return [s.color, s.fontSize]; })'):
+            self.assertEqual((colour, size), (link_colour, '14px'))
+
 
 class TopicScriptTestCase(BrowserTestCase):
     """The topic page's script: quick reply, flag and delete, in place."""

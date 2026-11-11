@@ -6,8 +6,11 @@
    max-width: 100%;
 }
 
+// Text a step back from what is around it: smaller and a softer grey. A link
+// inside it keeps the link colour, so put the class around a link, not on it.
 .quiet {
-   font-size: smaller;
+   color: #555;
+   font-size: 0.875rem;
 }
 
 .breadcrumbs {
@@ -549,15 +552,12 @@ table.forum-table {
    width: 33%;
 }
 
-// What is about the post rather than the post itself, a step back from it:
+// What is about the post rather than the post itself, which is `quiet`:
 // the author's details, the note that it was edited, and the signature.
-// Smaller and a softer grey; the signature's paragraphs sit closer.
+// Their paragraphs sit closer.
 .forum-post-author-details,
 .forum-post-edited,
 .forum-post-signature {
-   color: #555;
-   font-size: 0.875rem;
-
    p {
       margin-bottom: 0.5rem;
    }

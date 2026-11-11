@@ -9,7 +9,7 @@
          <div class="sg101-card-divider">
             <strong>{% profile_link post.user.username %}</strong>
          </div>
-         <div class="card-section forum-post-author-details">
+         <div class="card-section forum-post-author-details quiet">
             {% avatar post.user %}<br />
             Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
             Posts: {{ post.user.profile.forum_post_count }}<br />
@@ -55,10 +55,10 @@
          <div class="card-section">
             {{ post.html|safe }}
             {% if post.has_been_edited %}
-               <p class="forum-post-edited">Last edited: {% forum_date post.update_date user %}</p>
+               <p class="forum-post-edited quiet">Last edited: {% forum_date post.update_date user %}</p>
             {% endif %}
             {% if post.user.profile.signature_html %}
-               <div class="forum-post-signature">
+               <div class="forum-post-signature quiet">
                   <hr />
                   {{ post.user.profile.signature_html|safe }}
                </div>
@@ -68,7 +68,7 @@
             {% endfor %}
          </div>
          <div class="card-section forum-post-tools">
-            <a href="#top" class="quiet" title="Go to the top of the page">Top</a>
+            <span class="quiet"><a href="#top" title="Go to the top of the page">Top</a></span>
             <span class="forum-post-tool-icons">
             {% if can_reply %}
                <a href="{% url 'forums-new_post' topic_id=post.topic_id %}?quote={{ post.id }}" title="Reply with quote">
