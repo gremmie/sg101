@@ -2343,3 +2343,126 @@ the band map the change was stashed and popped; the diff's hash matched
 before and after.
 
 Suite and gate, separate runs, browser tests included: 1634 tests, OK, each.
+
+## Step 8 task 02 — the video button and the attachment list — DONE 2026-11-11, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-02-video-button.code-task.md`.
+Branch `v3-forums-release-1`, on `e8f8b9e7`.
+
+**What it is.** `{% post_box field video=True %}` adds a video button
+(`fi-video`, Brian's suggestion; shown on phones). `post_box_modals.html`
+included `with video=True` adds the video modal and a
+`<template id="attachment-entry">`. `post_box/video.js` POSTs `q` to
+`/oembed/fetch/`, fills a copy of that template (embed, Remove, hidden
+`attachment` input) into the active post box's form's `[data-attachments]`
+list, and closes the modal; an error shows in the modal's callout, the URL kept.
+Remove is one listener on the document, so it works on server-rendered entries
+too (the edit form, task 03). `{% post_attachments form %}` (in `forum_tags`:
+it needs the forum form, and `core` imports no app) renders the list from a
+bound form's posted ids in posted order, unknown ids left out, or an unbound
+edit form's `post.attachments` by `attachment__order`. The entry markup is one
+include, `core/v3/attachment_entry.html`, used by the tag and by the
+`<template>`, so server and script can't drift.
+
+**Where the module loads.** `post_box.js` imports `video.js`; `initVideo` is a
+no-op without `#video-form`, like `hot_link.js`. One entry module for the post
+box, at the cost of about 2 KB on pages without video.
+
+**Quick reply.** `new_post_form.html` has the button, the list in its "Video
+Attachments" fieldset (the old empty `#attachment` div is gone) and the modals
+`with video=True`. `topic.js` empties the list after an accepted reply; a
+refused reply keeps it, as it keeps the text.
+
+**Video width: every YouTube and Vimeo player fills its column at 16:9**
+(Brian, 2026-11-11), by one rule in `_sg101.scss`: `iframe[src*="youtube"],
+iframe[src*="vimeo"]` get `width: 100%; height: auto; aspect-ratio: 16 / 9`.
+Any other embed keeps its provider's size, capped by `max-width: 100%` on
+`.forum-attachment iframe` (SoundCloud and ReverbNation, 35 rows, fixed height).
+
+How it got there. Brian first chose the cap alone, over scaling each embed at
+its own ratio, on my claim that a 16:9 box would distort the ~40% of embeds
+that are 393x295. **That claim was wrong:** a YouTube or Vimeo iframe holds a
+player, which letterboxes the video inside whatever box it is given; nothing
+stretches. Then dev showed that `sg101.js` already wrapped every YouTube and
+Vimeo iframe on a V3 page (src containing `youtube` or `vimeo`) in
+Foundation's `.flex-video`, 4:3 and full width, once, at page load: 16:9
+videos letterboxed top and bottom at every width, and iframes added later
+(the attachment list, a quick reply's post) not wrapped at all. Brian asked
+whether to do it differently; the jQuery block is deleted and the CSS rule
+replaces it, so a player is the same shape whenever it arrives. The selector
+matches what `sg101.js` matched, so the store's two `youtube-nocookie.com`
+embeds are still covered.
+
+Dev data, measured: 14,828 `Oembed` rows; iframe sources 14,209
+`www.youtube.com/embed/`, 61 `player.vimeo.com/video/`, 32 SoundCloud, 3
+ReverbNation, 523 not an iframe (old link markup). Other V3 iframes: news
+`Story.short_text` (22 YouTube, 1 Vimeo), the store (2 `youtube-nocookie`),
+the calendar (Google, untouched). Old-design pages don't load `main.min.css`.
+
+Measured on dev, anonymous, before and after, at 360 and 1280 (topics 41527
+16:9, 41530 4:3, 41499 SoundCloud, a Vimeo topic; news stories 641 and 605;
+the store): every YouTube and Vimeo iframe went from 4:3 to 16:9 at its
+column's full width, e.g. 306x230 to 306x172 in a card at 360, 619x464 to
+619x348 at 1280, the store 870x653 to 870x489; SoundCloud unchanged (306x295
+at 360, 480x295 at 1280); no page scrolls sideways at either width. A 4:3
+video now shows bars at its sides. Shots in the session scratchpad.
+
+**Toolbar at 360**, measured on dev: 7 phone buttons (link, smiley, hot-link,
+upload, video, preview, help), one row, the menu not overflowing. The page
+does scroll 9 px for the probe's member: the header's logout button (plan
+step 15), not the toolbar. `test_the_reply_box_fits_a_phone` covers the
+toolbar in the suite.
+
+**Tests.** `core/tests/templatetags/test_core_tags.py`: button only with
+`video=True` and shown on phones; modal and `<template>` only with
+`video=True`, the form posting `q` to `oembed-fetch_media`.
+`forums/tests/test_forum_tags.py` (new): empty list; posted ids in posted
+order with an unknown one skipped (fixture order is not id order); an edit
+form in `order` (neither id nor embed order); a posted edit form shows what
+was posted. `VideoAttachmentTestCase` in `forums/tests/test_browser.py`, from
+`Oembed` rows so nothing leaves the test (the players' own requests answered by
+`context.route`), errors by `page.route`: an added video's id is in the
+reply's request, the post shows it, the list empties; a removed one isn't
+sent; a 400 shows its message in the modal with no dialog; a refused reply
+keeps the list; at 360 a posted video fits its card and an added one fits the
+screen; a posted YouTube video fills its card at 16:9 at 360 and 1280, with
+nothing holding a taller space below it; Vimeo too; an added video and its
+quick reply's post are 16:9; a SoundCloud player at 360 keeps 295 px and fits.
+Red runs: all 13 first tests failed (two negative tests passed before any
+code, as they must); of the 16:9 tests, all but SoundCloud's (unchanged
+behaviour) failed against the 4:3 wrapper.
+
+**Mutations**, each restored byte-identical (`main.min.css` rebuilt and
+hash-checked), 18 of 18 caught: button always shown; button
+`hide-for-small-only`; modal always shown; reply sent without attachments;
+list not cleared; list cleared on failure too; posted order reversed; edit
+order by attachment id; unknown ids kept (KeyError); Remove does nothing;
+error not shown; no width cap; the jQuery wrap put back; no `aspect-ratio`;
+no `width: 100%`; YouTube not matched; Vimeo not matched; every iframe matched.
+Two were first survivors, both test gaps, not bad mutations. The width cap's:
+the list test measured the iframe against its own list, and a fieldset widens
+to fit a 480 px iframe, so the list grew with it; it now measures against the
+window and the page's scroll. The jQuery wrap's: under the new rule a wrapped
+iframe is still 16:9, inside a 4:3 wrapper that leaves an empty band below
+it, and the test measured only the iframe; it now also checks the height of
+what holds it.
+
+**Probe footprint.** Dev, as an existing member through a session made
+directly (no login signals), the quick-reply request blocked by `page.route`,
+the video added from a saved `Oembed` row. Saved first and restored after,
+checked equal: the member's `ForumLastVisit` and `TopicLastVisit` rows for the
+topic opened, and the view counts of topics 41527, 41499, 41530. The session
+row was deleted. Screenshots stay in the session scratchpad. The before/after
+width probe was anonymous; its only writes were the four topics' view
+counts, read first and restored, checked equal.
+
+**A race in the first draft of these tests.** One full-suite run errored in
+two of them: `deadlock detected` flushing `test_sg101`, then the next test's
+setUp hitting the user the failed flush left behind. `reply()` returned once
+the quick-reply request was sent, so `test_a_removed_video_is_not_sent` could
+end while the live server was still saving the post, and the teardown's
+TRUNCATE deadlocked with it. `reply()` now waits for the response to finish.
+`forums.tests.test_browser` then passed three runs in a row, and the suite
+and gate below.
+
+Suite and gate, separate runs, browser tests included: 1653 tests, OK, each.
