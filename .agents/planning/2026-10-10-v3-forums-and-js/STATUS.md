@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-10
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2275,3 +2275,71 @@ Suite and gate, separate runs, browser tests included: 1631 tests, OK, each.
 **Step 7 is complete** (2026-11-09): the V3 topic page has every capability
 of today's, run by `topic.js`, walked on dev and ticked in the plan. Not
 deployed: forums release 1 ships at the end of step 8.
+
+## Step 8 task 01 — `.quiet` is one grey — DONE 2026-11-10, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-01-quiet-grey.code-task.md`.
+Branch `v3-forums-release-1`, on `12c3d891`.
+
+**Brian chose `#555` at `0.875rem`** (2026-11-10), the post card's own grey,
+over the plan's Blueprint `#666` at `smaller`. He chose after a three-way
+comparison on dev (today, `#666`, `#555`; topic page, photo of the day,
+store; 360 and 1280), each variant injected into the page by the probe. With
+`#666` the card had two greys: the posted date lighter than the author details
+and edit note beside it.
+
+**The fold-back follows from that choice.** `.quiet` in `_sg101.scss` is now
+`color: #555; font-size: 0.875rem`. The card's author details, edit note and
+signature carry `quiet` and keep their own classes for the closer paragraph
+spacing and the short rule only.
+
+**A link keeps the link colour when `quiet` is around it, not on it** (Brian).
+`<a class="quiet">` turns the link grey, because a class rule beats `a`, so the
+"Top" links lost their green. The class moved to a wrapper, as the store's
+"Back to Top" already had it: `<span class="quiet"><a href="#top">` in
+`display_post_v3.html` and `topic.html`, `<p class="quiet"><a href="#top">` in
+`ygroup/v3/thread.html`. The comment on `.quiet` says so.
+
+**Pages it reaches** (templates grepped): the topic page and post card,
+`ygroup/v3/thread.html` and `post.html`, photo of the day, the store, and the
+band map (`bandmap/map.html`, through `bandmap_base.html`, not in the task
+file's list). Old-design pages use Blueprint's rule and are unchanged.
+
+**Contrast**, computed from the Sass colours with the cards at 50% over white,
+not measured from pixels: `#555` is 7.46 on white, 6.14 on the odd (surf
+green) card, 6.11 on the even (blue) card, 6.81 on the stranger highlight.
+`#666` would have been 5.74, 4.73, 4.71 and 5.25.
+
+**Measured on dev after the change**, computed style: every `.quiet` on the
+five pages is `rgb(85, 85, 85)` at 14 px; the "Top" and "Back to Top" links
+are `rgb(50, 147, 166)` at 14 px. Before: `.quiet` was the body colour at
+13.33 px. Before and after shots at 360 and 1280 are in the session
+scratchpad, not the repository. A second `npm run build:css` left
+`main.min.css` byte-identical.
+
+**Also fixed:** `<i … /></i>` in `ygroup/v3/thread.html` and `post.html` (the
+permalink icon) became `<i …></i>`. Browsers tolerated it; Django's
+`assertContains(html=True)` refused to parse the page.
+
+**Tests.** `PostCardTestCase.test_quiet_text_is_one_grey` (every `.quiet` on
+the topic page, at least six, is `#555` at 14 px),
+`test_the_top_links_look_like_links` (both "Top" links have a card link's
+colour at 14 px), and `ygroup/tests/test_views.py`, the app's first test (the
+thread's "Top" is a link inside `p.quiet`). The red run failed all three. The
+view test `test_a_rule_then_the_signature_after_the_edit_note` matched the
+signature's exact class list; its regex now allows more classes.
+
+**Mutations**, each restored byte-identical (CSS rebuilt and checked): `.quiet`
+without its colour (7 subtests fail); the card's "Top" and the topic's "Top"
+each with the class back on the link (fail on colour, `rgb(85, 85, 85)`
+against `rgb(50, 147, 166)`); the edit note without `quiet` (caught by
+`test_what_is_about_the_post_steps_back_from_it`); the thread's "Top" back on
+the link (the ygroup test). Five of five caught.
+
+**Probe footprint.** The shots were taken anonymously; each view of topic
+41216 adds to `view_count`, which was read first (9820) and set back after
+each run. No other writes. For the before shots of the Yahoo group thread and
+the band map the change was stashed and popped; the diff's hash matched
+before and after.
+
+Suite and gate, separate runs, browser tests included: 1634 tests, OK, each.
