@@ -1,22 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
-{% load script_tags %}
 {% load static %}
 {% block title %}Forums: Edit Post{% endblock %}
-{% block custom_js %}
-   {% script_tags 'jquery-ui markitup' %}
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/forums.js" %}"></script>
-{% endblock %}
 {% block content %}
 {% forum_navigation topic "Edit Post" %}
-
 <div class="forum-block">
-<table class="forum-topic" id="forum-topic">
-{% include 'forums/display_post.html' %}
-</table>
-
-<a name="forum-reply-form"></a>
-{% show_form "Edit Post" form "Update Post" 0 %}
+   {# The topic page's container, so topic.js runs the card's tools. #}
+   <div id="forum-topic-post-container">
+      {% include 'forums/display_post_v3.html' %}
+   </div>
+   <div id="forum-reply-form">
+      {% include 'forums/v3/post_form.html' with legend="Edit Post" submit_value="Update Post" %}
+   </div>
 </div>
+{% endblock %}
+{% block custom_js %}
+   <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
+   <script type="module" src="{% static "js/v3/forums/topic.js" %}"></script>
 {% endblock %}

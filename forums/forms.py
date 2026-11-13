@@ -71,8 +71,7 @@ class NewTopicForm(forms.Form):
     Superusers and moderators can also create the topic as a sticky or initially
     locked.
     """
-    name = forms.CharField(label='Subject', max_length=255,
-            widget=forms.TextInput(attrs={'style': 'width:70%'}))
+    name = forms.CharField(label='Subject', max_length=255)
     body = forms.CharField(label='', required=False,
             widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
     user = None
@@ -91,17 +90,6 @@ class NewTopicForm(forms.Form):
 
         attachments = args[0].getlist('attachment') if len(args) else []
         self.attach_proc = AttachmentProcessor(attachments)
-
-        # If this form is being POSTed, and the user is trying to add 
-        # attachments, create hidden fields to list the Oembed ids. In
-        # case the form isn't valid, the client-side javascript will know
-        # which Oembed media to ask for when the form is displayed with
-        # errors.
-        if self.attach_proc.has_attachments():
-            pks = self.attach_proc.get_ids()
-            self.fields['attachment'] = forms.MultipleChoiceField(label='',
-                    widget=forms.MultipleHiddenInput(),
-                    choices=[(v, v) for v in pks])
 
     def clean_body(self):
         body = self.cleaned_data['body']
@@ -163,27 +151,13 @@ class PostForm(forms.ModelForm):
         if topic_name is not None:
             # this is a "first post", add a field for a topic name
             new_fields = OrderedDict(name=forms.CharField(
-                            label='Subject', max_length=255,
-                            widget=forms.TextInput(attrs={
-                                'class': 'title',
-                                'style': 'width: 90%',
-                            })))
+                            label='Subject', max_length=255))
             new_fields.update(self.fields)
             self.fields = new_fields
             self.initial['name'] = topic_name
 
         attachments = args[0].getlist('attachment') if len(args) else []
         self.attach_proc = AttachmentProcessor(attachments)
-
-        # If this form is being used to edit an existing post, and that post
-        # has attachments, create a hidden post_id field. The client-side
-        # AJAX will use this as a cue to retrieve the HTML for the embedded
-        # media.
-        if 'instance' in kwargs:
-            post = kwargs['instance']
-            if post.attachments.count():
-                self.fields['post_id'] = forms.CharField(label='',
-                        widget=forms.HiddenInput(attrs={'value': post.id}))
 
     def clean_body(self):
         body = self.cleaned_data['body']

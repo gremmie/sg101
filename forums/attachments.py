@@ -35,12 +35,14 @@ class AttachmentProcessor(object):
     def save_attachments(self, post):
         """
         Create and save attachments to the supplied post object.
-        Any existing attachments on the post are removed first.
+        Any existing attachments on the post are removed first. An id with no
+        Oembed object, forged or since deleted, is skipped.
 
         """
         post.attachments.clear()
 
-        for n, pk in enumerate(self.pks):
+        known = [pk for pk in self.pks if pk in self.embeds]
+        for n, pk in enumerate(known):
             attachment = Attachment(post=post, embed=self.embeds[pk], order=n)
             attachment.save()
 

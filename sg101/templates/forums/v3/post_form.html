@@ -1,0 +1,49 @@
+{% load core_tags forum_tags %}
+{# The form of the new topic, new post and edit post pages. legend and submit_value name it; quick_search adds the Quick Search to the subject. #}
+<form action="." method="post">{% csrf_token %}
+   <fieldset class="fieldset">
+      <legend>{{ legend }}</legend>
+      {{ form.non_field_errors }}
+      {% if form.name %}
+         {{ form.name.errors }}
+         <div class="row">
+            <div class="columns"{% if quick_search %} data-quick-search{% endif %}>
+               {% if quick_search %}
+                  <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                  <div class="quick-search-field">
+                     {{ form.name }}
+                     <button type="button" id="quick-search" class="small secondary button"
+                        title="Search for similar topics"><i class="fi-magnifying-glass"
+                        aria-hidden="true"></i><span>Search</span></button>
+                  </div>
+               {% else %}
+                  <label for="{{ form.name.id_for_label }}">{{ form.name.label }}
+                     {{ form.name }}
+                  </label>
+               {% endif %}
+            </div>
+         </div>
+      {% endif %}
+      {% post_box form.body video=True %}
+      {% if form.sticky or form.locked %}
+         <div class="row">
+            <div class="columns">
+               {% if form.sticky %}
+                  {{ form.sticky.errors }}
+                  {{ form.sticky }}<label for="{{ form.sticky.id_for_label }}">Sticky</label>
+               {% endif %}
+               {% if form.locked %}
+                  {{ form.locked.errors }}
+                  {{ form.locked }}<label for="{{ form.locked.id_for_label }}">Locked</label>
+               {% endif %}
+            </div>
+         </div>
+      {% endif %}
+      <input type="submit" id="forum-post-submit" class="primary button" value="{{ submit_value }}" />
+      <fieldset class="fieldset">
+         <legend>Video Attachments</legend>
+         {% post_attachments form %}
+      </fieldset>
+   </fieldset>
+</form>
+{% include 'core/v3/post_box_modals.html' with video=True %}

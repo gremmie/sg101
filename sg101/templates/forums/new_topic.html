@@ -1,15 +1,12 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
-{% load script_tags %}
 {% load static %}
 {% block title %}Forums: New Topic{% endblock %}
-{% block custom_js %}
-   {% script_tags 'jquery-ui markitup' %}
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/forums.js" %}"></script>
-{% endblock %}
 {% block content %}
 {% forum_navigation forum "New Topic" %}
-
-{% show_form "New Topic" form "Submit" 0 %}
+{% include 'forums/v3/post_form.html' with legend="New Topic" submit_value="Submit" quick_search=True %}
+{% endblock %}
+{% block custom_js %}
+   <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
+   <script type="module" src="{% static "js/v3/forums/quick_search.js" %}"></script>
 {% endblock %}

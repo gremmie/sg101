@@ -1,26 +1,21 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
-{% load script_tags %}
 {% load static %}
 {% block title %}Forums: New Post{% endblock %}
-{% block custom_js %}
-   {% script_tags 'jquery-ui markitup' %}
-   <script src="{% static "js/jquery.form.min.js" %}"></script>
-   <script src="{% static "js/forums.js" %}"></script>
-{% endblock %}
 {% block content %}
 {% forum_navigation topic "New Post" %}
-
+<div class="forum-block" id="forum-reply-form">
 {% if can_post %}
-<div class="forum-block">
-<a name="forum-reply-form"></a>
-{% show_form "New Post" form "Submit Post" 0 %}
+   {% include 'forums/v3/post_form.html' with legend="New Post" submit_value="Submit Post" %}
+{% elif topic.locked %}
+   <div class="callout">This topic is locked.</div>
 {% else %}
-   {% if topic.locked %}
-   <p>This topic is locked.</p>
-   {% else %}
-   <p>You don't have permission to post to this topic.</p>
-   {% endif %}
+   <div class="callout">You don't have permission to post to this topic.</div>
 {% endif %}
 </div>
+{% endblock %}
+{% block custom_js %}
+   {% if can_post %}
+      <script type="module" src="{% static "js/v3/post_box/post_box.js" %}"></script>
+   {% endif %}
 {% endblock %}

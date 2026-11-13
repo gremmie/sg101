@@ -69,25 +69,3 @@ def fetch_media(request):
                     content_type='application/json')
 
     return HttpResponseBadRequest("Sorry, we couldn't find that video.")
-
-
-def fetch_saved_media(request):
-    """
-    This view returns the HTML embed information for previously saved Oembed
-    objects as JSON. This view is the target of an AJAX request.
-    """
-    if not request.user.is_authenticated:
-        return HttpResponseForbidden('Please login or register.')
-
-    embed_ids = request.GET.getlist('embeds')
-    if not embed_ids:
-        return HttpResponseBadRequest('Missing embed list.')
-
-    embeds = Oembed.objects.in_bulk(embed_ids)
-
-    # build results in order
-    results = []
-    for pk in embeds:
-        results.append(dict(id=pk, html=embeds[pk].html))
-
-    return HttpResponse(json.dumps(results), content_type='application/json')

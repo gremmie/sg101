@@ -318,3 +318,11 @@ class PostBoxModalsTestCase(TestCase):
         self.assertIn('class="forum-attachment"', entry.group(1))
         self.assertRegex(entry.group(1), r'<button [^>]*class="[^"]*attachment-remove')
         self.assertRegex(entry.group(1), r'<input type="hidden" name="attachment" value=""')
+
+    def test_the_video_modal_has_no_help_link(self):
+        # The Embedding Videos help topic is out of date, so the modal does not link to it.
+        template = Template("{% include 'core/v3/post_box_modals.html' with video=True %}")
+        rendered = template.render(Context({}))
+        modal = re.search(r'<div [^>]*id="video-modal".*?</form>', rendered, re.S).group(0)
+        self.assertNotIn('/forums/topic/18843/', modal)
+        self.assertNotIn('Need help?', modal)

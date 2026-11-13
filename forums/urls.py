@@ -3,7 +3,6 @@ URLs for the forums application.
 """
 from django.urls import path, re_path
 
-import forums.views.attachments as attachments
 import forums.views.favorites as favorites
 import forums.views.main as main
 import forums.views.spam as spam
@@ -55,5 +54,4 @@ urlpatterns = [
     path('spammer/nailed/<int:spammer_id>/', spam.spammer_nailed, name='forums-spammer_nailed'),
     path('stranger/<int:post_id>/', spam.stranger, name='forums-stranger'),
 
-    path('fetch_attachments/', attachments.fetch_attachments, name='forums-fetch_attachments'),
 ]

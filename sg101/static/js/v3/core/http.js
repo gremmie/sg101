@@ -87,6 +87,11 @@ async function request(url, options, timeoutMs) {
    return response;
 }
 
+// GETs url and returns the Response, or throws RequestError.
+export function get(url, { timeoutMs = 30000 } = {}) {
+   return request(url, { method: 'GET' }, timeoutMs);
+}
+
 // POSTs formData to url and returns the Response, or throws RequestError.
 export function postForm(url, formData, { timeoutMs = 30000 } = {}) {
    return request(url, { method: 'POST', body: formData }, timeoutMs);

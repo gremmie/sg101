@@ -592,6 +592,32 @@ iframe[src*="vimeo"] {
    }
 }
 
+// The new topic's subject with Quick Search on its line from medium up; on a
+// phone the button stays under the subject. Both keep their bottom margins, so
+// stretching makes the button the input's height. A flex button drops the
+// space between its icon and words, so a margin keeps them apart instead.
+.quick-search-field {
+   .button i {
+      margin-right: 0.4em;
+   }
+
+   @include breakpoint(medium) {
+      display: flex;
+      align-items: stretch;
+      gap: 0.5rem;
+
+      input {
+         flex: auto;
+      }
+
+      .button {
+         flex: none;
+         display: flex;
+         align-items: center;
+      }
+   }
+}
+
 // The post box toolbar. Foundation's menu doesn't wrap, and on a phone its
 // buttons' default side padding left no room for a seventh button.
 .v3-editor .menu > li > a {

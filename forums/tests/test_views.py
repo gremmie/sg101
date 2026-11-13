@@ -4,15 +4,20 @@ Tests for the views in the forums application.
 """
 import datetime
 import pathlib
+import re
 
 from django.conf import settings
 from django.contrib.auth.models import Group, User
+from django.contrib.staticfiles import finders
+from django.http import QueryDict
 from django.core.cache import cache
+from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.test import TestCase
 from django.urls import reverse
 
 from bio.models import STA_ACTIVE, STA_STRANGER
+from forums.forms import NewTopicForm, PostForm
 from forums.models import Attachment, Forum, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
 from forums.views.main import POSTS_PER_PAGE, TOPICS_PER_PAGE
@@ -274,7 +279,8 @@ class V3PagesTestCase(TestCase):
         self.assertContains(response, 'icons/asterisk_orange.png')
         self.assertContains(response, 'icons/note_go.png')
 
-        response = self.client.get(reverse('forums-new_topic',
+        self.login(self.moderator)
+        response = self.client.get(reverse('forums-mod_forum',
                                            kwargs={'slug': self.forum.slug}))
         self.assertOldDesign(response)
         self.assertTemplateUsed(response, 'forums/navigation_tag.html')
@@ -284,9 +290,7 @@ class V3PagesTestCase(TestCase):
     def test_unconverted_pages_stay_on_the_old_design(self):
         self.login(self.moderator)
         for url in (reverse('forums-unanswered_topics'),
-                    reverse('forums-new_topic', kwargs={'slug': self.forum.slug}),
-                    reverse('forums-edit_post',
-                            kwargs={'id': self.topic.last_post.id}),
+                    reverse('forums-mod_topic_move', kwargs={'id': self.topic.id}),
                     reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})):
             with self.subTest(url=url):
                 self.assertOldDesign(self.client.get(url))
@@ -351,6 +355,8 @@ class V3PagesTestCase(TestCase):
                        'jquery-ui'):
             with self.subTest(script=script):
                 self.assertNotContains(response, script)
+        # The Embedding Videos help topic is out of date, so nothing links to it.
+        self.assertNotContains(response, '/forums/topic/18843/')
 
     def test_every_topic_page_loads_the_topic_script(self):
         # Flag and delete are on every page, not only the last, which is
@@ -384,16 +390,6 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateUsed(response, 'forums/display_post_v3.html')
         self.assertTemplateNotUsed(response, 'forums/display_post.html')
         self.assertContains(response, 'a quick reply')
-
-    def test_edit_page_keeps_the_old_card(self):
-        self.login(self.member)
-
-        response = self.client.get(reverse(
-            'forums-edit_post', kwargs={'id': self.topic.last_post.id}))
-
-        self.assertOldDesign(response)
-        self.assertTemplateUsed(response, 'forums/display_post.html')
-        self.assertTemplateNotUsed(response, 'forums/display_post_v3.html')
 
 
 class PostCardTestCase(TestCase):
@@ -607,3 +603,193 @@ class PostCardTestCase(TestCase):
         self.assertNotRegex(page, self.button('post-flag', post))
         self.assertNotIn(reverse('messages-compose') + '?to=moderator', page)
         self.assertNotIn('mailto:moderator@example.com', page)
+
+
+class PostingPagesTestCase(TestCase):
+    """New topic, new post and edit post, on the V3 design with the post box,
+    its video button and the attachment list."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('member', '', 'pw')
+        self.moderator = User.objects.create_user('moderator', '', 'pw')
+        mod_group = Group.objects.get(name='Forum Moderators')
+        self.moderator.groups.add(mod_group)
+        self.forum.moderators.add(mod_group)
+        self.topic = make_topic(self.forum, self.member, name='Fender Twins')
+        self.first = add_post(self.topic, self.member, body='the first post')
+        self.reply = add_post(self.topic, self.member, body='a reply')
+        # Created a then b: b's id is higher, so an order that follows the
+        # ids is not the order asked for.
+        self.a = self.make_embed('first')
+        self.b = self.make_embed('second')
+
+    def make_embed(self, name):
+        return Oembed.objects.create(
+            url='https://www.youtube.com/watch?v=%s' % name, type=Oembed.VIDEO,
+            title=name, width=480, height=270,
+            html='<iframe width="480" height="270" title="%s"></iframe>' % name)
+
+    def login(self, user):
+        self.assertTrue(self.client.login(username=user.username, password='pw'))
+
+    def urls(self):
+        return {
+            'new topic': reverse('forums-new_topic', kwargs={'slug': self.forum.slug}),
+            'new post': reverse('forums-new_post', kwargs={'topic_id': self.topic.id}),
+            'edit post': reverse('forums-edit_post', kwargs={'id': self.reply.id}),
+        }
+
+    def attachment_ids(self, response):
+        """The attachment ids the page's form would send, in page order."""
+        return [int(pk) for pk in re.findall(
+            r'<input type="hidden" name="attachment" value="(\d+)"',
+            response.content.decode())]
+
+    def test_each_page_is_v3_with_the_video_post_box(self):
+        self.login(self.member)
+        for name, url in self.urls().items():
+            with self.subTest(page=name):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, 'v3/base.html')
+                self.assertTemplateNotUsed(response, 'base.html')
+                self.assertIs(response.context.get('V3_DESIGN'), True)
+                self.assertContains(response, 'class="editor-video"', count=1)
+                self.assertContains(response, 'id="video-modal"', count=1)
+                self.assertContains(response, 'data-attachments', count=1)
+                self.assertContains(
+                    response,
+                    '<script type="module" src="/static/js/v3/post_box/post_box.js">',
+                    count=1)
+                for old in ('js/forums.js', 'jquery.form', 'markitup', 'jquery-ui',
+                            'forums/show_form.html'):
+                    self.assertNotContains(response, old)
+                self.assertTemplateNotUsed(response, 'forums/show_form.html')
+                self.assertNotContains(response, '/forums/topic/18843/')
+
+    def test_new_topic_has_the_subject_and_quick_search(self):
+        self.login(self.member)
+        response = self.client.get(self.urls()['new topic'])
+        self.assertContains(response, 'name="name"', count=1)
+        self.assertContains(response, 'id="quick-search"', count=1)
+        self.assertContains(
+            response,
+            '<script type="module" src="/static/js/v3/forums/quick_search.js">',
+            count=1)
+        self.assertNotContains(response, 'name="sticky"')
+        self.assertNotContains(response, 'name="locked"')
+
+    def test_a_moderator_can_start_a_topic_sticky_or_locked(self):
+        self.login(self.moderator)
+        response = self.client.get(self.urls()['new topic'])
+        self.assertContains(response, 'name="sticky"', count=1)
+        self.assertContains(response, 'name="locked"', count=1)
+
+    def test_new_post_has_no_subject_or_quick_search(self):
+        self.login(self.member)
+        response = self.client.get(self.urls()['new post'])
+        self.assertNotContains(response, 'name="name"')
+        self.assertNotContains(response, 'quick-search')
+
+    def test_quote_fills_the_body(self):
+        self.login(self.member)
+        response = self.client.get(self.urls()['new post'], {'quote': self.first.id})
+        self.assertEqual(response.context['form']['body'].value(),
+                         '*member wrote:*\n\n> the first post\n\n')
+        self.assertContains(response, '&gt; the first post')
+
+    def test_new_post_to_a_locked_topic_says_so(self):
+        Topic.objects.filter(pk=self.topic.pk).update(locked=True)
+        self.login(self.member)
+        response = self.client.get(self.urls()['new post'])
+        self.assertContains(response, 'This topic is locked.')
+        self.assertNotContains(response, 'data-post-box')
+        self.assertNotContains(response, '<textarea')
+
+    def test_edit_post_shows_the_post_on_the_v3_card(self):
+        self.login(self.member)
+        response = self.client.get(self.urls()['edit post'])
+        self.assertTemplateUsed(response, 'forums/display_post_v3.html')
+        self.assertContains(response, 'id="post-%d"' % self.reply.id, count=1)
+        self.assertNotContains(response, 'name="name"')
+
+    def test_editing_the_first_post_edits_the_subject(self):
+        self.login(self.member)
+        response = self.client.get(
+            reverse('forums-edit_post', kwargs={'id': self.first.id}))
+        self.assertContains(response, 'name="name"', count=1)
+        self.assertContains(response, 'value="Fender Twins"')
+
+    def test_edit_post_lists_its_saved_videos_once_in_order(self):
+        Attachment.objects.create(post=self.reply, embed=self.a, order=1)
+        Attachment.objects.create(post=self.reply, embed=self.b, order=0)
+        self.login(self.member)
+        response = self.client.get(self.urls()['edit post'])
+        self.assertEqual(self.attachment_ids(response), [self.b.pk, self.a.pk])
+        self.assertContains(response, 'title="second"', count=2)  # the card, the list
+        self.assertNotContains(response, 'name="post_id"')
+        self.assertNotContains(response, 'fetch_attachments')
+
+    def test_a_new_topic_with_an_error_keeps_its_video_once(self):
+        self.login(self.member)
+        response = self.client.post(self.urls()['new topic'], {
+            'name': '', 'body': 'no subject', 'attachment': [str(self.b.pk), str(self.a.pk)]})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['form'].errors['name'])
+        self.assertEqual(self.attachment_ids(response), [self.b.pk, self.a.pk])
+
+    def test_a_new_post_with_an_error_keeps_its_video(self):
+        self.login(self.member)
+        response = self.client.post(self.urls()['new post'], {
+            'body': '![image](http://example.com/a.jpg)', 'attachment': str(self.b.pk)})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['form'].errors['body'])
+        self.assertEqual(self.attachment_ids(response), [self.b.pk])
+
+    def test_an_edit_with_an_error_keeps_what_was_posted(self):
+        Attachment.objects.create(post=self.reply, embed=self.a, order=0)
+        self.login(self.member)
+        response = self.client.post(self.urls()['edit post'], {
+            'body': '![image](http://example.com/a.jpg)', 'attachment': str(self.b.pk)})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.attachment_ids(response), [self.b.pk])
+
+    def test_an_unknown_attachment_id_is_skipped(self):
+        self.login(self.member)
+        response = self.client.post(self.urls()['new post'], {
+            'body': 'with videos',
+            'attachment': [str(self.b.pk), '999999', str(self.a.pk)]})
+        self.assertEqual(response.status_code, 302)
+        post = Post.objects.get(body='with videos')
+        self.assertEqual(list(post.attachments.order_by('attachment__order')),
+                         [self.b, self.a])
+
+    def test_the_forms_carry_no_hidden_attachment_fields(self):
+        # The attachment list carries the ids; a hidden field as well would
+        # send each one twice, from any template that renders every field.
+        Attachment.objects.create(post=self.reply, embed=self.a, order=0)
+        data = QueryDict(mutable=True)
+        data.update({'name': '', 'body': 'x', 'attachment': str(self.a.pk)})
+        forms = {
+            'new topic': NewTopicForm(self.member, self.forum, data),
+            'edit post': PostForm(instance=self.reply),
+            'edit post, posted': PostForm(data, instance=self.reply),
+        }
+        for name, form in forms.items():
+            with self.subTest(form=name):
+                self.assertEqual(set(form.fields) - {'name', 'body'}, set())
+
+    def test_the_old_attachment_endpoints_are_gone(self):
+        self.login(self.member)
+        for url in ('/forums/fetch_attachments/?pid=%d' % self.reply.id,
+                    '/oembed/fetch_saved/?embeds=%d' % self.a.pk):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertIsNone(finders.find('js/forums.js'))
+        for name in ('forums/show_form.html', 'forums/display_post.html',
+                     'forums/post_edit_button.html', 'user_photos/image_forms.html'):
+            with self.subTest(template=name):
+                with self.assertRaises(TemplateDoesNotExist):
+                    get_template(name)

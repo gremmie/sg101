@@ -58,15 +58,6 @@ def forum_page_navigation(page):
     return {'page': page}
 
 
-@register.inclusion_tag('forums/post_edit_button.html')
-def post_edit_button(post, user, can_moderate):
-    show_button = post.user.id == user.id or can_moderate
-    return {
-        'post': post,
-        'show_button': show_button,
-    }
-
-
 def get_time_prefs(user):
     """
     Return the supplied user's time preferences in the form of a 2-tuple:
@@ -122,19 +113,6 @@ def forum_date(date, user, long_format=True, none_date_retval='Never'):
     date = timezone.localtime(date, user_tz)
 
     return date.strftime(fmt[0 if long_format else 1])
-
-
-@register.inclusion_tag('forums/show_form.html')
-def show_form(legend_text, form, submit_value, is_ajax):
-    """
-    This tag displays the common HTML for a forum form.
-    """
-    return {
-        'legend_text': legend_text,
-        'form': form,
-        'submit_value': submit_value,
-        'is_ajax': is_ajax,
-    }
 
 
 @register.inclusion_tag('forums/v3/post_attachments.html')

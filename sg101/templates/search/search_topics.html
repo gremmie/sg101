@@ -1,6 +1,6 @@
 {% load core_tags %}
 <div id="quick-search-results">
-<fieldset><legend>Quick search results</legend>
+<fieldset class="fieldset"><legend>Quick search results</legend>
 {% if page.object_list %}
 <ul>
    {% for result in page.object_list %}
@@ -20,9 +20,9 @@
    <a href="{% url 'search' %}?{% encode_params request.GET 'q' %}&amp;models=forums.topic">search page</a>.
    </p>
    {% endif %}
-   <p><input type="button" id="hide-search-results" value="Hide" /></p>
 {% else %}
    <p>No results found for <em>{{ query }}</em>.</p>
 {% endif %}
+<button type="button" id="hide-search-results" class="small secondary button">Hide</button>
 </fieldset>
 </div>

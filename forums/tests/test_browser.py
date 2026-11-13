@@ -3,6 +3,7 @@ import datetime
 import re
 
 from django.contrib.auth.models import Group, User
+from django.urls import reverse
 from playwright.sync_api import expect
 
 from bio.models import STA_ACTIVE
@@ -11,6 +12,29 @@ from forums.models import Attachment, FlaggedPost, Forum, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
 from forums.views.main import POSTS_PER_PAGE
 from oembed.models import Oembed
+from search.models import SearchDocument
+
+
+# The players' own requests, answered by the tests so nothing leaves them.
+PLAYERS = re.compile(r'^https://(www\.youtube\.com|player\.vimeo\.com|w\.soundcloud\.com)/')
+
+
+def add_video(page, url):
+    """Attaches the video at url through the post box's video modal."""
+    page.locator('.editor-video').click()
+    modal = page.locator('#video-modal')
+    expect(modal).to_be_visible()
+    modal.locator('input[name="q"]').fill(url)
+    modal.locator('#video-form-submit').click()
+
+
+def boxes(page, *selectors):
+    """The boxes of the elements selected, measured together, so a reflow can't
+    fall between one measurement and the next."""
+    return page.evaluate('''(selectors) => selectors.map((s) => {
+        const r = document.querySelector(s).getBoundingClientRect();
+        return {x: r.x, y: r.y, width: r.width, height: r.height};
+    })''', list(selectors))
 
 
 class TopicPageTestCase(BrowserTestCase):
@@ -363,7 +387,6 @@ class VideoAttachmentTestCase(BrowserTestCase):
     # answered by the test, so nothing leaves it.
     EMBED = ('<iframe width="480" height="270" src="https://www.youtube.com/embed/sg101test"'
              ' title="test video"></iframe>')
-    PLAYERS = re.compile(r'^https://(www\.youtube\.com|player\.vimeo\.com|w\.soundcloud\.com)/')
 
     def setUp(self):
         super().setUp()
@@ -377,7 +400,7 @@ class VideoAttachmentTestCase(BrowserTestCase):
         self.dialogs = []
         self.page.on('dialog', lambda dialog: (self.dialogs.append(dialog.type),
                                                dialog.dismiss()))
-        self.context.route(self.PLAYERS, lambda route: route.fulfill(
+        self.context.route(PLAYERS, lambda route: route.fulfill(
             content_type='text/html', body='<html><body></body></html>'))
 
     def open_topic(self):
@@ -388,11 +411,7 @@ class VideoAttachmentTestCase(BrowserTestCase):
         return self.page.locator('form [data-attachments] .forum-attachment-entry')
 
     def add_video(self, url=VIDEO_URL):
-        self.page.locator('.editor-video').click()
-        modal = self.page.locator('#video-modal')
-        expect(modal).to_be_visible()
-        modal.locator('input[name="q"]').fill(url)
-        modal.locator('#video-form-submit').click()
+        add_video(self.page, url)
 
     def reply(self, text):
         """Sends a quick reply; returns the request's body once it is answered.
@@ -564,3 +583,183 @@ class VideoAttachmentTestCase(BrowserTestCase):
         size = self.frame_size(iframe)
         self.assertLessEqual(size['w'], size['box'])
         self.assertEqual(size['h'], 295)
+
+
+class PostingPagesBrowserTestCase(BrowserTestCase):
+    """New topic, new post and edit post, and the new topic's Quick Search."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        self.embeds = [Oembed.objects.create(
+            url='https://www.youtube.com/watch?v=%s' % name, type=Oembed.VIDEO,
+            title=name, width=480, height=270,
+            html='<iframe width="480" height="270" src="https://www.youtube.com/embed/%s"'
+                 ' title="%s"></iframe>' % (name, name))
+            for name in ('one', 'two')]
+        self.context.route(PLAYERS, lambda route: route.fulfill(
+            content_type='text/html', body='<html><body></body></html>'))
+        self.dialogs = []
+        self.accept_dialogs = False
+        self.page.on('dialog', lambda dialog: (
+            self.dialogs.append(dialog.type),
+            dialog.accept() if self.accept_dialogs else dialog.dismiss()))
+        self.requests = []
+        self.page.on('request', lambda request: self.requests.append(request.url))
+        self.login(self.member)
+
+    def goto(self, name, **kwargs):
+        self.page.goto(self.live_server_url + reverse(name, kwargs=kwargs))
+
+    def submit(self):
+        with self.page.expect_navigation():
+            self.page.locator('#forum-post-submit').click()
+
+    def entries(self):
+        return self.page.locator('form [data-attachments] .forum-attachment-entry')
+
+    def test_start_a_topic_reply_with_a_quote_then_edit_the_reply(self):
+        one, two = self.embeds
+        self.goto('forums-new_topic', slug=self.forum.slug)
+        self.page.locator('#id_name').fill('Reverb tanks')
+        self.page.locator('.v3-editor textarea').fill('Which tank?')
+        add_video(self.page, one.url)
+        expect(self.entries()).to_have_count(1)
+        self.submit()
+        topic = Topic.objects.get(name='Reverb tanks')
+        first = topic.posts.get()
+        self.assertEqual(list(first.attachments.all()), [one])
+
+        self.page.goto('%s%s?quote=%d' % (
+            self.live_server_url,
+            reverse('forums-new_post', kwargs={'topic_id': topic.id}), first.id))
+        textarea = self.page.locator('.v3-editor textarea')
+        expect(textarea).to_have_value(re.compile(r'> Which tank\?'))
+        add_video(self.page, two.url)
+        expect(self.entries()).to_have_count(1)
+        self.submit()
+        reply = topic.posts.exclude(pk=first.pk).get()
+        self.assertEqual(list(reply.attachments.all()), [two])
+
+        self.goto('forums-edit_post', id=reply.id)
+        expect(self.entries()).to_have_count(1)
+        add_video(self.page, one.url)
+        expect(self.entries()).to_have_count(2)
+        self.submit()
+        self.assertEqual(list(reply.attachments.order_by('attachment__order')), [two, one])
+
+        self.assertFalse([url for url in self.requests if 'fetch_' in url and 'fetch/' not in url])
+        self.assertEqual(self.dialogs, [])
+
+    def test_quick_search_shows_matches_under_the_subject(self):
+        topic = make_topic(self.forum, self.member, name='Reverb tank drip')
+        SearchDocument.objects.index_object(topic)
+        self.goto('forums-new_topic', slug=self.forum.slug)
+
+        self.page.locator('#id_name').fill('reverb')
+        self.page.locator('#quick-search').click()
+
+        results = self.page.locator('[data-quick-search] #quick-search-results')
+        expect(results).to_be_visible()
+        expect(results.get_by_role('link', name='Reverb tank drip')).to_be_visible()
+        expect(self.page.locator('#quick-search')).to_be_enabled()
+
+        results.get_by_role('button', name='Hide').click()
+
+        expect(self.page.locator('#quick-search-results')).to_have_count(0)
+        self.assertEqual(self.dialogs, [])
+
+    def test_quick_search_is_an_icon_and_search_and_says_searching_while_busy(self):
+        held = []
+        self.page.route('**/search/topics/**', lambda route: held.append(route))
+        self.goto('forums-new_topic', slug=self.forum.slug)
+        button = self.page.locator('#quick-search')
+        icon = button.locator('i.fi-magnifying-glass')
+        expect(button).to_have_text('Search')
+        expect(icon).to_be_visible()
+
+        self.page.locator('#id_name').fill('reverb')
+        button.click()
+        expect(button).to_have_text('Searching…')
+        expect(button).to_be_disabled()
+        expect(icon).to_be_visible()
+        while not held:
+            self.page.wait_for_timeout(50)
+        held[0].continue_()
+
+        expect(self.page.locator('#quick-search-results')).to_be_visible()
+        expect(button).to_have_text('Search')
+        expect(button).to_be_enabled()
+        expect(icon).to_be_visible()
+
+    def test_quick_search_errors_show_in_a_callout(self):
+        self.page.route('**/search/topics/**', lambda route: route.fulfill(
+            status=500, content_type='text/plain', body='Search is resting'))
+        self.goto('forums-new_topic', slug=self.forum.slug)
+
+        self.page.locator('#id_name').fill('reverb')
+        self.page.locator('#quick-search').click()
+
+        expect(self.page.locator('[data-quick-search] .callout')).to_have_text(
+            'Search is resting')
+        expect(self.page.locator('#quick-search')).to_be_enabled()
+        self.assertEqual(self.dialogs, [])
+
+    def test_quick_search_is_beside_the_subject_on_desktop_and_under_it_on_a_phone(self):
+        # Each width is a fresh load: a resize reflows the header while it is measured.
+        self.page.set_viewport_size({'width': 1280, 'height': 900})
+        self.goto('forums-new_topic', slug=self.forum.slug)
+        field, search = boxes(self.page, '#id_name', '#quick-search')
+        # On the subject's line, the same height, filling the rest of it.
+        self.assertAlmostEqual(search['y'], field['y'], delta=1)
+        self.assertAlmostEqual(search['height'], field['height'], delta=1)
+        self.assertGreater(search['x'], field['x'] + field['width'])
+        self.assertLess(search['x'] - (field['x'] + field['width']), 24)
+        self.assertGreater(field['width'], 4 * search['width'])
+
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.goto('forums-new_topic', slug=self.forum.slug)
+        field, search = boxes(self.page, '#id_name', '#quick-search')
+        self.assertGreaterEqual(search['y'], field['y'] + field['height'])
+        self.assertEqual(self.page.evaluate(
+            'document.documentElement.scrollWidth > window.innerWidth'), False)
+
+    def test_quick_search_has_the_same_gap_between_icon_and_words_at_each_width(self):
+        gaps = []
+        for width in (1280, 360):
+            self.page.set_viewport_size({'width': width, 'height': 900})
+            self.goto('forums-new_topic', slug=self.forum.slug)
+            left, right = boxes(self.page, '#quick-search i', '#quick-search span')
+            gaps.append(right['x'] - (left['x'] + left['width']))
+        for gap in gaps:
+            self.assertGreaterEqual(gap, 3)
+        self.assertAlmostEqual(gaps[0], gaps[1], delta=0.5)
+
+    def test_quick_search_without_a_subject_asks_for_one(self):
+        self.goto('forums-new_topic', slug=self.forum.slug)
+
+        self.page.locator('#quick-search').click()
+
+        expect(self.page.locator('[data-quick-search] .callout')).to_be_visible()
+        self.assertFalse([url for url in self.requests if '/search/topics/' in url])
+
+    def test_the_edit_pages_card_tools_work(self):
+        # A moderator editing another member's post has the card's flag.
+        moderator = User.objects.create_user('mod', '', 'pw')
+        mod_group = Group.objects.get(name='Forum Moderators')
+        moderator.groups.add(mod_group)
+        self.forum.moderators.add(mod_group)
+        topic = make_topic(self.forum, self.member)
+        post = add_post(topic, self.member, body='flag me')
+        self.context.clear_cookies()
+        self.login(moderator)
+        self.accept_dialogs = True
+        self.goto('forums-edit_post', id=post.id)
+
+        self.page.locator('#post-%d .post-flag' % post.id).click()
+
+        expect(self.page.locator('#post-%d .callout' % post.id)).to_contain_text(
+            'The post was flagged')
+        self.assertTrue(FlaggedPost.objects.filter(post=post).exists())

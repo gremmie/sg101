@@ -309,6 +309,7 @@ def new_topic(request, slug):
     return render(request, 'forums/new_topic.html', {
         'forum': forum,
         'form': form,
+        'V3_DESIGN': True,
         })
 
 
@@ -460,6 +461,7 @@ def edit_post(request, id):
         'post': post,
         'form': form,
         'can_moderate': can_moderate,
+        'V3_DESIGN': True,
         })
 
 
@@ -614,6 +616,7 @@ def new_post(request, topic_id):
         'topic': topic,
         'form': form,
         'can_post': can_post,
+        'V3_DESIGN': True,
         })
 
 

@@ -2,7 +2,8 @@
 Tests for the forums' duplicate-topic quick search.
 
 The fragment behind `/search/topics/`, which the new-topic form requests when a
-member clicks "Quick Search" beside the title field.
+member clicks Quick Search (the magnifying glass and "Search") beside the title
+field.
 
 """
 
@@ -40,16 +41,17 @@ class QuickSearchTestCase(TestCase):
         return SearchDocument.objects.index_object(topic)
 
     def check(self, title, **extra):
-        """Requests the fragment the way forums.js does: a title, nothing else."""
+        """Requests the fragment the way quick_search.js does: a title, nothing else."""
         params = {'q': title}
         params.update(extra)
         return self.client.get(self.url, params)
 
-    # -- the contract with forums.js -----------------------------------
+    # -- the contract with quick_search.js ------------------------------
 
     def test_the_path_the_javascript_hardcodes_still_resolves(self):
-        # forums/static/js/forums.js requests this literally rather than
-        # reversing the route name, so the path is part of the contract.
+        # sg101/static/js/v3/forums/quick_search.js requests this literally
+        # rather than reversing the route name, so the path is part of the
+        # contract.
         self.assertEqual(self.url, '/search/topics/')
 
     def test_a_matching_topic_is_found(self):
@@ -85,7 +87,7 @@ class QuickSearchTestCase(TestCase):
         self.assertNotContains(response, 'All about tremolo')
 
     def test_the_type_restriction_is_not_taken_from_the_request(self):
-        # forums.js no longer sends `models` at all, and this is why it does not
+        # The script sends no `models` at all, and this is why it does not
         # need to: a caller asking for something else still gets topics.
         self.index_topic('Tremolo shootout')
         SearchDocument.objects.index_object(Story.objects.create(
@@ -216,7 +218,7 @@ class QuickSearchTestCase(TestCase):
                     self.assertNotIn(token, html)
 
     def test_the_overflow_link_keeps_the_search_page_on_topics(self):
-        # The trap in dropping `models` from forums.js: this link used to
+        # The trap in sending no `models`: this link used to
         # forward it from the request, so with nothing to forward the full
         # search page would have opened across all eight types.
         for n in range(25):

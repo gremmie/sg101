@@ -96,8 +96,9 @@ def search_topics(request):
 
     Not a general-purpose endpoint, and deliberately not built to become one. A
     member writing a new topic clicks the "Quick Search" button beside the title
-    field, `forums/static/js/forums.js` sends the title here, and the matches
-    render inline so they can see whether their question already exists.
+    field, `sg101/static/js/v3/forums/quick_search.js` sends the title here,
+    and the matches render inline so they can see whether their question
+    already exists.
 
     That JavaScript requests `/search/topics/` literally rather than reversing
     this route, so the path is part of the contract even though the route name
