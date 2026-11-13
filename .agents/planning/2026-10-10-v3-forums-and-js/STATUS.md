@@ -2466,3 +2466,152 @@ TRUNCATE deadlocked with it. `reply()` now waits for the response to finish.
 and gate below.
 
 Suite and gate, separate runs, browser tests included: 1653 tests, OK, each.
+
+## Step 8 task 03 — the posting forms on V3, `forums.js` removed — DONE 2026-11-12, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-03-posting-forms.code-task.md`.
+Branch `v3-forums-release-1`, on `1828db61`.
+
+**The three pages are V3.** `new_topic`, `new_post` and `edit_post` set
+`V3_DESIGN` and extend `v3/base.html`. They share one form template,
+`forums/v3/post_form.html`: the subject (new topic, and editing a first
+post), the post box with the video button, sticky and locked for moderators,
+the submit button (`#forum-post-submit`), and the Video Attachments fieldset
+holding `{% post_attachments form %}`; the modals are included `with
+video=True`. The template renders only the fields it names. `new_post` shows
+"This topic is locked." or the no-permission text in a callout when the
+member can't post. `edit_post` shows the post on `display_post_v3.html`
+inside the topic page's `#forum-topic-post-container`, and loads `topic.js`,
+so the card's flag and delete work as they did with `forums.js` (my choice;
+tested). The subject inputs lost their inline widths (`width:70%`, `90%`);
+the body widgets keep their unused `markItUp smileyTarget` classes, as the
+quick reply's always had.
+
+**Quick Search** is `sg101/static/js/v3/forums/quick_search.js`: the subject
+GETs `/search/topics/` through a new `get()` in `core/http.js`, the fragment
+goes under the subject (`[data-quick-search]`), errors and an empty subject
+show in a `status.js` callout, the button disables while searching, and Hide
+removes the results. The fragment (`search/search_topics.html`) gets
+Foundation's `fieldset` and a `small secondary button` Hide, now also under
+"No results found". `search/urls.py`, `search/views.py` and the quick search
+tests' comments name the new module instead of `forums.js`.
+
+**Quick Search beside the subject (Brian, 2026-11-12):** from medium up the
+button sits on the subject's line, in a `.quick-search-field` flex row
+(`_sg101.scss`); stretched, it takes the input's height, since both keep
+Foundation's bottom margin. On a phone it stays under the subject. The label
+moves out to sit above the row only when Quick Search is on, so the
+first post's edit page keeps the label that wraps its input. **The button
+reads as the magnifying glass and "Search" (Brian, 2026-11-12)**, its title
+still "Search for similar topics". While a search runs, only the words, in a
+`<span>`, change to "Searching…", so the icon stays. The icon comes first, as
+leading icons name the action (trailing ones mean direction: an arrow, a
+caret). From medium up the button is a flex box, to centre its words when
+stretched, and a flex box drops the space between icon and `<span>`: Brian saw
+none on desktop. The space is gone from the markup and the icon has a 0.4em
+right margin at every width instead.
+
+**Hidden fields removed:** `NewTopicForm`'s `attachment` and `PostForm`'s
+`post_id`, with their comments. **`KeyError` fixed:**
+`AttachmentProcessor.save_attachments` skips an id with no `Oembed` row,
+numbering the rest from 0; the failing test came first (red run:
+`KeyError: 999999`).
+
+**"Need help?" (Brian, 2026-11-12): removed.** It first moved into the video
+modal, opening topic 18843 ("Embedding Videos") in a new tab. On testing, that topic's
+images are broken and its advice dated, so Brian dropped the link: nothing links to
+the topic now, and the tests assert it. The modal's own text explains how to attach.
+
+**Deleted**, each after a grep of every template, both static trees, Python
+and tests: `forums/static/js/forums.js`; `forums/views/attachments.py`
+(`fetch_attachments` was all it held) and the URL `forums-fetch_attachments`;
+`oembed.views.fetch_saved_media` and `oembed-fetch_saved_media`; the
+`show_form` tag and `forums/show_form.html`; `forums/display_post.html`. Its
+last user gone, **also deleted (Brian: delete the orphans too)**: the
+`post_edit_button` tag and `forums/post_edit_button.html` (only
+`display_post.html` used them), and `user_photos/image_forms.html` (only
+`show_form.html` included it). The `{# show_form ... #}` comment in
+`topic.html` went too. No tests existed for the two endpoints.
+
+**Left orphaned, not deleted (outside this task):** with
+`image_forms.html` gone, no template loads markItUp (grep: only
+`comments/markdown_preview.html` mentions it, and it loads nothing), so
+`static/js/markitup/` and its `set.js` image dialogs, `jquery.form`, and the
+old `user_photos.views.upload_ajax` (`user_photos-upload_ajax`, still
+tested) have no page using them. The plan's later step already removes
+markItUp and its `script_tags` entries (plan.md, around line 528);
+`upload_ajax` and `jquery.form.min.js` are not on that list.
+
+**Tests.** `PostingPagesTestCase` (`forums/tests/test_views.py`): each page
+V3 with the video post box, the video modal, the list, `post_box.js` once, the
+help link once, and no `forums.js`, `jquery.form`, markItUp or jQuery UI; new
+topic has the subject, Quick Search and its module, sticky and locked only
+for a moderator; new post has neither; `?quote=` fills the body (the
+form's value, exactly); a locked topic says so with no post box; edit shows the
+V3 card, and the subject only for a first post; edit lists the saved videos
+in `order`, once each; a new topic, a new post and an edit re-shown after an
+error keep what was posted; an unknown id is skipped and the post saves; the
+forms carry no field beyond `name` and `body`; the old URLs 404 and the
+deleted files are gone. Two `V3PagesTestCase` tests used new topic and edit
+post as their old-design examples; they now use `mod_forum` and
+`mod_topic_move`. `test_edit_page_keeps_the_old_card` is removed. The help
+link, now removed: a core tag test and the posting and topic pages' tests
+assert nothing links to topic 18843. `PostingPagesBrowserTestCase`: start a topic with a video,
+reply with a quote and a second video, edit the reply to add the first
+(saved attachments `[two, one]`, no request to a removed endpoint, no
+dialog); Quick Search results under the subject and Hide; its error in a
+callout; an empty subject asks for one and sends nothing; the button
+beside the subject at 1280 (same top and height, within 24 px of it) and
+under it at 360, with no sideways scroll; the icon and "Search", becoming
+"Searching…" with the icon kept while the request is held, then back; the
+same gap, at least 3 px, between icon and words at 1280 and 360 (red run: 0 px
+at 1280). **One flaky run, fixed:** the layout test first shrank a page
+loaded at 1280 to 360 and measured the subject and the button with two
+`bounding_box()` calls. A resize reflows the header, and in one full gate run
+of three the reflow fell between them: "422 not greater than or equal to
+597.875", the subject 176 px lower than the button that sat under it. Passed 5
+of 5 alone; a probe subclassing the case reproduced it. Both layout tests now
+load the page fresh at each width and take both boxes in one `evaluate`
+(`boxes()` in `test_browser.py`), so a reflow cannot split a measurement;
+ten runs in a row passed, and the three layout mutations are still caught. (A
+guess that the header's known 2 px overflow at 360 was to blame was wrong: the
+probe found no overflow at 360, fonts loaded or blocked.) a moderator flags
+from the edit page's card. `add_video` and `PLAYERS` are now module level in
+`test_browser.py`, shared with `VideoAttachmentTestCase`.
+
+Red run: 19 of the new tests failed or errored. Those that passed before any
+change guard behaviour the move must keep: the quote, the moderator fields,
+the locked text, the first post's subject, and new post without a subject.
+
+**Mutations**, each restored byte-identical, 20 of 20 caught: `new_post`
+without `V3_DESIGN`; `?quote=` ignored; the `KeyError` fix undone; the form
+without the attachment list; without the video button; without sticky; edit
+without the card; edit without `topic.js`; new topic without
+`quick_search.js`; the search error not shown; Hide doing nothing; an empty
+subject sent; the help link back in the modal (5 failures across the
+three tests); the help link back under the quick reply's list; the layout
+rule without flex; the layout rule at every width; the busy text set on the whole button
+(the icon lost); the icon's margin from medium up only (0 px at 360); `PostForm.post_id` back; `NewTopicForm`'s hidden
+`attachment` back. The last two first ran against the edit page's HTML and
+`post_id` **survived**: the new template renders only the fields it names,
+so a hidden field added back never reaches the page; the mutation could not
+reproduce the fault there. The form-level test was added so a template that
+renders every field can't bring the double-sent ids back; both are caught
+by it.
+
+**Dev check**, 360 and 1280, as a member (the author of post 485249, two
+videos, not a first post) and a moderator: every page V3 with the video
+button; new post `?quote=` filled; edit lists both videos (scrolled into
+view, all four iframes load: 619x348 in the card, 786x442 in the list);
+the moderator's new topic has Sticky and Locked. The only sideways scroll at
+360 is the header's logout button (2 px for the member, 63 px for the
+moderator; plan step 15). Console 404s are dev media missing (a photo of
+the day thumbnail, an avatar), not these pages. Dev's search index holds 4
+documents, so the Quick Search answered "No results found", rendered with
+Hide. **Footprint:** two sessions made directly, deleted after; GETs that
+write nothing; one Quick Search, which logs a line. Screenshots stay in the
+session scratchpad. On Brian's dev run, `reindex_search --model forums.topic`
+indexed 35344 topics, so Quick Search there now finds real matches.
+Screenshots of the new topic form at 1280 and 360 match the layout above.
+
+Suite and gate, separate runs, browser tests included: 1676 tests, OK, each.
