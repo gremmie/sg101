@@ -46,30 +46,30 @@
 {% endif %}
 
 {% if user.is_authenticated %}
-<div class="row medium-unstack">
+<div class="row medium-unstack topic-actions">
    <div class="columns">
       <form action={% if is_favorite %}"{% url 'forums-unfavorite_topic' topic.id %}"{% else %}"{% url 'forums-favorite_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
          {% if is_favorite %}
-            <input type="submit" class="alert expanded button" value="Remove from favorites" />
+            <button type="submit" class="alert expanded button"><i class="fi-heart" aria-hidden="true"></i>Remove from favorites</button>
          {% else %}
-            <input type="submit" class="primary expanded button" value="Save to favorites" />
+            <button type="submit" class="primary expanded button"><i class="fi-heart" aria-hidden="true"></i>Save to favorites</button>
          {% endif %}
       </form>
    </div>
    <div class="columns">
-      <a class="secondary expanded button" href="{% url 'forums-manage_favorites' %}">Manage favorites</a>
+      <a class="secondary expanded button" href="{% url 'forums-manage_favorites' %}"><i class="fi-heart" aria-hidden="true"></i>Manage favorites</a>
    </div>
    <div class="columns">
       <form action={% if is_subscribed %}"{% url 'forums-unsubscribe_topic' topic.id %}"{% else %}"{% url 'forums-subscribe_topic' topic.id %}"{% endif %} method="post">{% csrf_token %}
          {% if is_subscribed %}
-            <input type="submit" class="alert expanded button" value="Unsubscribe Me" />
+            <button type="submit" class="alert expanded button"><i class="fi-mail" aria-hidden="true"></i>Unsubscribe Me</button>
          {% else %}
-            <input type="submit" class="primary expanded button" value="Subscribe via Email" />
+            <button type="submit" class="primary expanded button"><i class="fi-mail" aria-hidden="true"></i>Subscribe via Email</button>
          {% endif %}
       </form>
    </div>
    <div class="columns">
-      <a class="secondary expanded button" href="{% url 'forums-manage_subscriptions' %}">Manage Subscriptions</a>
+      <a class="secondary expanded button" href="{% url 'forums-manage_subscriptions' %}"><i class="fi-mail" aria-hidden="true"></i>Manage Subscriptions</a>
    </div>
 </div>
 {% endif %}
