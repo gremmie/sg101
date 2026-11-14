@@ -1,11 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% block title %}Forums: New Topic Created{% endblock %}
 {% block content %}
 {% forum_navigation topic "New Topic Created" %}
 
 <p>
-You have successfully created a new topic called &quot;
-<a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>&quot;.
+You have successfully created a new topic called
+&quot;<a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>&quot;.
 </p>
 {% endblock %}

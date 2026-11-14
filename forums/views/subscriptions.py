@@ -79,6 +79,7 @@ def subscription_status(request, topic_id):
     return render(request, 'forums/subscription_status.html', {
         'topic': topic,
         'is_subscribed': is_subscribed,
+        'V3_DESIGN': True,
         })
 
 

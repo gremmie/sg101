@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% block title %}Forums: {% if is_subscribed %}S{% else %}Uns{% endif %}ubscribed to Topic{% endblock %}
 {% block content %}
@@ -8,7 +8,7 @@
 You are now subscribed to the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.
 You will receive an email notification whenever a new reply is posted.
 {% else %}
-You have successfully unsubscribed to the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.
+You have successfully unsubscribed from the forum topic <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>.
 You will no longer receive emails when new replies are posted.
 {% endif %}
 </p>

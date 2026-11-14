@@ -763,3 +763,37 @@ class PostingPagesBrowserTestCase(BrowserTestCase):
         expect(self.page.locator('#post-%d .callout' % post.id)).to_contain_text(
             'The post was flagged')
         self.assertTrue(FlaggedPost.objects.filter(post=post).exists())
+
+
+class ForumNavBrowserTestCase(BrowserTestCase):
+    """The select boxes that take a member to a forum or a list of topics."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        self.topic = make_topic(self.forum, self.member)
+        add_post(self.topic, self.member)
+        self.login(self.member)
+
+    def choose_and_go(self, start, label, destination):
+        self.page.goto(self.live_server_url + start)
+        box = self.page.locator('[data-forum-nav]')
+        box.locator('select').select_option(label=label)
+        box.get_by_role('button', name='Go').click()
+        expect(self.page).to_have_url(self.live_server_url + destination)
+
+    def test_the_topic_pages_jump_box_goes_to_the_chosen_forum(self):
+        self.choose_and_go(self.topic.get_absolute_url(), 'Gear',
+                           reverse('forums-forum_index', kwargs={'slug': 'gear'}))
+
+    def test_the_forum_pages_jump_box_goes_to_the_chosen_forum(self):
+        self.choose_and_go(
+            reverse('forums-forum_index', kwargs={'slug': self.forum.slug}),
+            'Surf Videos',
+            reverse('forums-forum_index', kwargs={'slug': 'surf-videos'}))
+
+    def test_the_index_query_box_goes_to_the_chosen_list(self):
+        self.choose_and_go(reverse('forums-index'), 'Show unanswered topics',
+                           reverse('forums-unanswered_topics'))

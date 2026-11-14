@@ -1,4 +1,5 @@
 {% extends 'v3/base.html' %}
+{% load static %}
 {% load forum_tags %}
 {% load bio_tags %}
 {% block custom_head %}
@@ -80,5 +81,5 @@
 {% endblock %}
 
 {% block custom_js %}
-   {% include "forums/jump_box.js" %}
+   <script type="module" src="{% static "js/v3/forums/nav.js" %}"></script>
 {% endblock %}

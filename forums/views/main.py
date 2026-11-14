@@ -322,6 +322,7 @@ def new_topic_thanks(request, tid):
     return render(request, 'forums/new_topic_thanks.html', {
         'forum': topic.forum,
         'topic': topic,
+        'V3_DESIGN': True,
         })
 
 

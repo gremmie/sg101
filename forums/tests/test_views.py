@@ -392,6 +392,96 @@ class V3PagesTestCase(TestCase):
         self.assertContains(response, 'a quick reply')
 
 
+class ConfirmationPagesTestCase(TestCase):
+    """The pages a member lands on after starting a topic, or after adding it
+    to or removing it from their favorites or subscriptions, are V3."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('member', '', 'pw')
+        self.topic = make_topic(self.forum, self.member, name='A topic')
+        add_post(self.topic, self.member)
+        self.assertTrue(self.client.login(username='member', password='pw'))
+
+    def post(self, name, topic):
+        return self.client.post(reverse(name, args=[topic.id]), follow=True)
+
+    def assertConfirmation(self, response, topic, *texts):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.redirect_chain), 1)
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertIs(response.context.get('V3_DESIGN'), True)
+        self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertContains(
+            response, '<a href="%s">%s</a>' % (topic.get_absolute_url(), topic.name))
+        for text in texts:
+            self.assertContains(response, text)
+
+    def test_a_new_topic_lands_on_the_v3_thanks_page(self):
+        response = self.client.post(
+            reverse('forums-new_topic', kwargs={'slug': self.forum.slug}),
+            {'name': 'A new topic', 'body': 'testing 1, 2, 3...'}, follow=True)
+
+        topic = Topic.objects.get(name='A new topic')
+        self.assertConfirmation(
+            response, topic,
+            '&quot;<a href="%s">A new topic</a>&quot;.' % topic.get_absolute_url())
+
+    def test_favorite_and_unfavorite_land_on_the_v3_status_page(self):
+        self.assertConfirmation(
+            self.post('forums-favorite_topic', self.topic), self.topic,
+            'has been added to your')
+        self.assertConfirmation(
+            self.post('forums-unfavorite_topic', self.topic), self.topic,
+            'has been removed from your')
+
+    def test_subscribe_and_unsubscribe_land_on_the_v3_status_page(self):
+        self.assertConfirmation(
+            self.post('forums-subscribe_topic', self.topic), self.topic,
+            'You are now subscribed to the forum topic')
+        self.assertConfirmation(
+            self.post('forums-unsubscribe_topic', self.topic), self.topic,
+            'You have successfully unsubscribed from the forum topic')
+
+
+class ForumNavTestCase(TestCase):
+    """The V3 forum pages' select boxes are driven by the nav.js module, not by
+    inline jQuery; the old pages keep their inline script for now."""
+    fixtures = ['forums.json']
+    NAV = '<script type="module" src="/static/js/v3/forums/nav.js"></script>'
+
+    def setUp(self):
+        cache.clear()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('member', '', 'pw')
+        self.topic = make_topic(self.forum, self.member, name='A topic')
+        add_post(self.topic, self.member)
+        self.assertTrue(self.client.login(username='member', password='pw'))
+
+    def test_v3_pages_load_nav_and_no_inline_navigation_script(self):
+        for url in (reverse('forums-index'),
+                    reverse('forums-forum_index', kwargs={'slug': self.forum.slug}),
+                    self.topic.get_absolute_url()):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, self.NAV, count=1)
+                self.assertContains(response, 'data-forum-nav', count=1)
+                self.assertNotContains(response, 'forum-jumpbox-select')
+                self.assertNotContains(response, 'forum-query-select')
+                self.assertNotContains(response, 'window.location = dest')
+
+    def test_the_jump_box_script_is_gone(self):
+        with self.assertRaises(TemplateDoesNotExist):
+            get_template('forums/jump_box.js')
+
+    def test_old_pages_keep_the_inline_forum_query_script(self):
+        response = self.client.get(reverse('forums-unanswered_topics'))
+        self.assertTemplateUsed(response, 'forums/forum_query.js')
+        self.assertNotContains(response, self.NAV)
+
+
 class PostCardTestCase(TestCase):
     """Each part of the V3 post card, shown to the viewers who may use it and
     to no one else."""

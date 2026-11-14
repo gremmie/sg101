@@ -77,6 +77,7 @@ def favorites_status(request, topic_id):
     return render(request, 'forums/favorite_status.html', {
         'topic': topic,
         'is_favorite': is_favorite,
+        'V3_DESIGN': True,
         })
 
 
