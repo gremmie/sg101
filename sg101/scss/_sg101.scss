@@ -6,6 +6,13 @@
    max-width: 100%;
 }
 
+// Foundation's .button sets no font, so a <button> or submit input dressed as
+// one keeps normalize's plain sans-serif while a link has the body font: next
+// to each other, their words differ in face and sit at different heights.
+.button {
+   font-family: inherit;
+}
+
 // Text a step back from what is around it: smaller and a softer grey. A link
 // inside it keeps the link colour, so put the class around a link, not on it.
 .quiet {
@@ -592,16 +599,9 @@ iframe[src*="vimeo"] {
    }
 }
 
-// The favorite and subscribe buttons under a topic: two <button>s and two
-// links in one row. Foundation's .button sets no font, so a <button> keeps
-// normalize's plain sans-serif while a link has the body font, and their words
-// sit at different heights; inheriting gives all four the body font.
-.topic-actions .button {
-   font-family: inherit;
-
-   i {
-      margin-right: 0.4em;
-   }
+// The favorite and subscribe buttons under a topic.
+.topic-actions .button i {
+   margin-right: 0.4em;
 }
 
 // The new topic's subject with Quick Search on its line from medium up; on a
