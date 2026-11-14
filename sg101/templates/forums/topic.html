@@ -79,30 +79,27 @@
 {% if can_moderate %}
 <div class="secondary callout more-top-margin">
    <h5 class="text-center">Moderator Controls</h5>
-<div class="row medium-unstack inline-forms">
+<div class="row medium-unstack inline-forms topic-actions">
    <div class="columns">
       <form action="{% url 'forums-mod_topic_stick' topic.id %}" method="post">{% csrf_token %}
-         <input type="submit" class="warning expanded button"
-            value="{% if topic.sticky %}Unstick{% else %}Stick{% endif %} Topic" />
+         <button type="submit" class="warning expanded button"><i class="fi-asterisk" aria-hidden="true"></i>{% if topic.sticky %}Unstick{% else %}Stick{% endif %}</button>
       </form>
    </div>
    <div class="columns">
       <form action="{% url 'forums-mod_topic_lock' topic.id %}" method="post">{% csrf_token %}
-         <input type="submit" class="warning expanded button"
-            value="{% if topic.locked %}Unlock{% else %}Lock{% endif %} Topic" />
+         <button type="submit" class="warning expanded button">{% if topic.locked %}<i class="fi-unlock" aria-hidden="true"></i>Unlock{% else %}<i class="fi-lock" aria-hidden="true"></i>Lock{% endif %}</button>
       </form>
    </div>
    <div class="columns">
       <form action="{% url 'forums-mod_topic_delete' topic.id %}" method="post">{% csrf_token %}
-         <input type="submit" class="alert expanded button"
-            value="Delete Topic" id="forum-mod-del-topic" />
+         <button type="submit" class="alert expanded button" id="forum-mod-del-topic"><i class="fi-trash" aria-hidden="true"></i>Delete</button>
       </form>
    </div>
    <div class="columns">
-      <a class="warning expanded button" href="{% url 'forums-mod_topic_move' topic.id %}">Move this topic</a>
+      <a class="warning expanded button" href="{% url 'forums-mod_topic_move' topic.id %}"><i class="fi-arrow-right" aria-hidden="true"></i>Move</a>
    </div>
    <div class="columns">
-      <a class="warning expanded button" href="{% url 'forums-mod_topic_split' topic.id %}">Split this topic</a>
+      <a class="warning expanded button" href="{% url 'forums-mod_topic_split' topic.id %}"><i class="fi-arrows-expand" aria-hidden="true"></i>Split</a>
    </div>
 </div>
 </div>
