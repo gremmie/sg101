@@ -439,6 +439,8 @@ and favorites and subscriptions management are V3.
   `active_topics`, `my_posts`, `posts_for_user`, `manage_favorites`,
   `manage_subscriptions`).
 - **Pagination:** use `core/v3/pagination.html`, as the reading pages do.
+- **Delete `forum_query.js`** once these pages use `nav.js` (STATUS, step 8
+  task 04).
 - **`manage_topics`'s checkboxes** reuse the master-checkbox behaviour,
   through step 10's `mod.js` or a shared module if it lands first.
 

@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-10
+**Last updated:** 2026-11-14
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2615,3 +2615,69 @@ indexed 35344 topics, so Quick Search there now finds real matches.
 Screenshots of the new topic form at 1280 and 360 match the layout above.
 
 Suite and gate, separate runs, browser tests included: 1676 tests, OK, each.
+
+## Step 8 task 04 — the confirmation pages on V3, and `nav.js` — DONE 2026-11-14, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-04-confirmation-pages-and-nav.code-task.md`.
+Branch `v3-forums-release-1`, on `798f5610`.
+
+**The three confirmation pages are V3.** `new_topic_thanks`,
+`favorites_status` and `subscription_status` set `V3_DESIGN`, and their
+templates extend `v3/base.html`; nothing else in them changed but two slips
+of wording, both approved by Brian: the thanks page no longer shows a space
+inside the opening quote (`&quot;` and the link were a line apart), and the
+subscription page says "unsubscribed **from**", not "to". The `v3-dev`
+versions were identical to today's, so there was nothing to port.
+
+**`sg101/static/js/v3/forums/nav.js`** drives both select boxes: each is
+marked `data-forum-nav`, and its Go button takes the browser to the chosen
+option's URL. **Brian chose a click on Go** over a `<form>` and its `submit`:
+with no server endpoint to send the choice to, a form makes nothing work with
+JavaScript off, so it gains nothing. The jump box lost its unused
+`<form action=".">` wrapper, and both boxes lost their ids, which nothing else
+used. Each `<select>` gained an `aria-label` ("Forum", "Topics"), since
+neither has a visible label (my addition, not in the task file).
+`index.html`, `forum_index.html` (which now loads `static`) and `topic.html`
+load the module. **`jump_box.js` is deleted.**
+
+**`forum_query.js` stays until step 9.** `topic_list.html`, `post_list.html`
+and `manage_topics.html`, still on `base.html`, include it with the old
+`forums/forum_query.html`. Step 9 converts those pages and **deletes
+`forum_query.js`**;
+`ForumNavTestCase.test_old_pages_keep_the_inline_forum_query_script` will
+then fail by design and goes with it.
+
+**Tests.** `ConfirmationPagesTestCase` (`test_views.py`) follows each POST's
+redirect (new topic; favorite and unfavorite; subscribe and unsubscribe) and
+checks the V3 template and flag, the V3 crumb, the link to the topic, and the
+wording of each branch. `ForumNavTestCase` checks that the three V3 pages
+load `nav.js` once with one `data-forum-nav` box and no inline navigation
+script, that the `jump_box.js` template is gone, and that an old list page
+still gets `forum_query.js`. `ForumNavBrowserTestCase` (`test_browser.py`)
+chooses and clicks Go from the topic page's and the forum page's jump box and
+the index's query box, and expects the chosen URL. Red run: 9 of the 10
+failed; the old-page test passed, as it guards what must stay.
+
+**Mutations**, each restored byte-identical, 13 of 13 caught: each of the
+three views without `V3_DESIGN`; the subscription page back on `base.html`;
+the space back inside the quote; "unsubscribed to" back; `nav.js`'s selector
+broken; `nav.js` going to the first option whatever is chosen; the index with
+the inline script and no `nav.js`; the query box without `data-forum-nav`;
+the topic page without `nav.js`; the old topic list without
+`forum_query.js`; `jump_box.js` restored.
+
+**Dev check**, 360 and 1280: the three confirmation pages as a member
+(topic 41482), the index and a forum page anonymously. Every page V3 with its
+crumb; the select and Go on one row at both widths; Go went to
+`/forums/unanswered/` from the index and `/forums/forum/gear/` from a forum
+page. The only sideways scroll is the header's logout button at 360 for the
+member (2 px; plan step 15). Console 404s are dev's missing photo of the day
+thumbnail. The topic page's jump box was not opened on dev (viewing a topic
+bumps `view_count`); it is the same include as the forum page's and is
+covered by the browser test. **Footprint:** the probe ran three times
+and a width probe once, each with one session made directly and deleted
+after, `last_login` unchanged; GETs that write nothing. Screenshots
+stay in the session scratchpad.
+
+Browser tests (`make test-browser`), suite and gate, separate runs: 117
+browser tests OK; suite and gate 1685 tests, OK, each.
