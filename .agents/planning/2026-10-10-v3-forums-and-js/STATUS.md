@@ -2681,3 +2681,91 @@ stay in the session scratchpad.
 
 Browser tests (`make test-browser`), suite and gate, separate runs: 117
 browser tests OK; suite and gate 1685 tests, OK, each.
+
+## Step 8 task 05 — the release 1 walk, the worker's mail, shipping — walked 2026-11-16, not yet shipped
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-05-walk-and-ship.code-task.md`.
+Branch `v3-forums-release-1`, on `a4682a9e`.
+
+**Setup.** A headless Chromium probe on the dev stack (data to 2026-10-07),
+the debug toolbar off (`DEBUG_TOOLBAR=False`), mail to the console backend
+(`.env` sets no `EMAIL_BACKEND`). Snapshot first:
+`sg101-20261116-184642-before-release1-walk.dump`. Subjects by id: member
+`Klas` (pk 7), subscriber `Tiki` (pk 6), moderator `CaptainSpringfield`
+(pk 12), forum 4 (`shallow-end`) for the demo, topic 41216 page 4 for a long
+existing topic. Videos: two YouTube `Oembed` rows already in dev's table
+(5320, 5322), so `/oembed/fetch/` answered from the database and nothing went
+to YouTube; the players' own requests were answered in the browser. Sessions
+were made directly through `AUTHENTICATION_BACKENDS[0]` and deleted after;
+`last_login` was unchanged (checked). **The worker was restarted first:** it
+had been up 13 days, so it was still running modules from before the branch's
+changes. **Redis had drifted before the walk** (`rebuild_redis --check`: 9
+problems, the public post and topic counts each 2 high). It was rebuilt
+before the walk so the check after it would mean something; the drift is
+#43.
+
+**The demo**, as the member at 1280, real writes: new topic with video 1 →
+the thanks page (topic 41542) → the topic shows one embed → the first post's
+quote tool opens `new_post?quote=` with `*Klas wrote:*` and the quoted text →
+reply with video 2 → the reply shows one embed → its edit tool opens
+`edit_post` with the one video listed; video 1 added, 2 listed → after saving,
+the reply shows **two** embeds → Save to favorites → `favorites_status` → back
+on the topic, Subscribe via Email (Klas was not auto-subscribed) →
+`subscription_status`. Every page in the path is V3. No page errors, no
+dialogs, no sideways scroll.
+
+**The subscription mail, sent by a real worker.** The subscriber subscribed
+from the topic page; then the member sent a quick reply (200). The worker's
+log shows `forums.tasks.new_post_task` received and succeeded. The console
+backend printed the mail (subject `[SurfGuitar101.com] Topic Reply: <topic
+name>`, from `admin@surfguitar101.com`), and the mail log line recorded
+`category=topic_notification outcome=sent`. The demo's own reply sent no mail,
+as the topic's only subscriber then was its poster, who is excluded.
+
+**The walk**: 10 pages (`index`, `forum_index`, the demo topic, topic
+41216's page 4, `new_topic`, `new_post`, `edit_post`, `new_topic_thanks`,
+`favorite_status`, `subscription_status`), × anonymous, member and moderator
+× 360 and 1280: 60 loads, all 200.
+
+| Role | Pages | V3 | Page errors | Sideways scroll |
+|---|---|---|---|---|
+| anonymous | 4 open; the 6 that need a login go to `/accounts/login/?next=`, which is V3 too | ✓ | none | none |
+| member | all 10 | ✓ | none | none |
+| moderator | all 10 | ✓ | none | **63 px at 360**, none at 1280 |
+
+The moderator's 63 px is the header: the logout form ends at 423 for the long
+username, the same 63 px as step 7 task 03 (plan step 15). The page bodies
+don't overflow. No `blueprint` stylesheet on any page. The only failed requests
+are dev's missing media: the photo of the day thumbnail and 6 members'
+avatars, all 404. Screenshots (71) stay in the session scratchpad.
+
+**What the walk left in the dev database: nothing.** The demo topic (3 posts,
+its attachments' links, subscriptions and favorites) was deleted through
+`forums.views.main._delete_topic`, the function the moderator's delete
+runs. A state record (table counts, every forum's counts and `last_post`, the
+opened topics, the three members' `last_login`, post count, subscriptions,
+favorites, and all their `ForumLastVisit` and `TopicLastVisit` rows) was
+diffed before and after. Four differences, all put back by hand: topic 41216's
+`view_count` (+6, one per signed-in role and width); four `ForumLastVisit`
+rows (forums 4 and 7 for the member and the moderator) back to their values
+from before; the subscriber's new forum 4 row deleted; and **the member's
+`forum_post_count` (+3)**. `_delete_topic` leaves authors' counts alone on
+purpose, as its docstring says; filed as #42. The record after
+cleanup was identical to the one before. Redis then read 3 posts and 1 topic
+high, exactly the deleted topic, since deletions never decrement those counts
+(#43). Rebuilt, and it matches.
+
+**Found, not fixed, filed 2026-11-16:**
+
+- **#42:** deleting a topic leaves its posts in the authors' post counts
+  (deliberate per `_delete_topic`'s docstring; filed as an enhancement to
+  revisit that choice).
+- **#43:** Redis's public post and topic counts are `INCR`-only, recounted only
+  when the key is missing, so every deletion leaves them high on production
+  too. This is the drift found before this walk and before step 7's.
+
+**Still open, carried forward:** #41 (`flag_icon`); #42; #43;
+`forum_query.js`, deleted in step 9; steps 13 (phone banner), 14 (tablet
+widths) and 15 (phone header, the moderator's 63 px above).
+
+Suite and gate, separate runs, after the walk: 1685 tests, OK, each.
