@@ -10,18 +10,22 @@
             <strong>{% profile_link post.user.username %}</strong>
          </div>
          <div class="card-section forum-post-author-details quiet">
-            {% avatar post.user %}<br />
-            Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
-            Posts: {{ post.user.profile.forum_post_count }}<br />
-            {% if post.user.profile.location %}
-               {{ post.user.profile.location }}<br />
-            {% endif %}
-            {% if post.user.profile.country %}
-               {% flag_icon post.user.profile.country 'small' %}<br />
-            {% endif %}
-            {% for bo in post.user.profile.badge_ownership %}
-               <img src="{{ bo.badge.image.url }}" alt="{{ bo.badge_count_str }}" title="{{ bo.badge_count_str }}" />
-            {% endfor %}
+            <div class="forum-post-avatar">{% avatar post.user %}</div>
+            <p>
+               Joined: {{ post.user.date_joined|date:"M d, Y" }}<br />
+               Posts: {{ post.user.profile.forum_post_count }}
+               {% if post.user.profile.location %}
+                  <br />{{ post.user.profile.location }}
+               {% endif %}
+            </p>
+            <div class="forum-post-badges">
+               {% if post.user.profile.country %}
+                  {% flag_icon post.user.profile.country 'small' %}
+               {% endif %}
+               {% for bo in post.user.profile.badge_ownership %}
+                  <img src="{{ bo.badge.image.url }}" alt="{{ bo.badge_count_str }}" title="{{ bo.badge_count_str }}" />
+               {% endfor %}
+            </div>
          </div>
       </div>
    </div>

@@ -574,7 +574,8 @@ $post-colors: (
 
 // The tools under a post: Top on the left, the icons on the right, and a
 // moderator's stranger tools on a line of their own below. The buttons act
-// in place, so they look like the links beside them.
+// in place, so they look like the links beside them. The tools are grey
+// until pointed at, so a page of posts isn't a column of coloured icons.
 .forum-post-tools {
    border-top: 1px solid rgba(0, 0, 0, 0.1);
    display: flex;
@@ -592,8 +593,20 @@ $post-colors: (
       line-height: 1;
    }
 
+   .forum-post-tool-icons a,
+   .forum-post-stranger-tools a,
    button {
-      color: $anchor-color;
+      // Foundation's $dark-gray is only about 3:1 on the tinted posts.
+      color: #767676;
+
+      &:hover,
+      &:focus-visible {
+         color: $anchor-color-hover;
+         text-decoration: none;
+      }
+   }
+
+   button {
       cursor: pointer;
    }
 }
@@ -620,6 +633,32 @@ $post-colors: (
    p {
       margin-bottom: 0.5rem;
    }
+}
+
+// A note about the post, not part of it.
+.forum-post-edited {
+   font-style: italic;
+}
+
+// The author card in three groups: the avatar, the facts, and a row of the
+// country's flag followed by the badges, rather than a stack of lines.
+.forum-post-avatar {
+   margin-bottom: 0.75rem;
+
+   img {
+      display: block;
+   }
+}
+
+.forum-post-author-details > p {
+   line-height: 1.4;
+}
+
+.forum-post-badges {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   gap: 0.25rem;
 }
 
 // A long word in a post, usually a pasted link, would run past the card,
