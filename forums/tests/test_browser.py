@@ -220,8 +220,10 @@ class PostCardTestCase(BrowserTestCase):
         tops = self.page.locator('a[href="#top"]')
         # One under the post, one under the topic.
         self.assertEqual(tops.count(), 2)
+        # A link in a card's body; the header's links are a darker shade.
         link_colour = self.page.evaluate(
-            'getComputedStyle(document.querySelector(".sg101-card a")).color')
+            'getComputedStyle(document.querySelector('
+            '".sg101-card .card-section a")).color')
         for colour, size in tops.evaluate_all(
                 'es => es.map(e => { const s = getComputedStyle(e);'
                 ' return [s.color, s.fontSize]; })'):

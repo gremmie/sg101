@@ -507,14 +507,49 @@ table.forum-table {
    }
 }
 
-// A topic's posts, each a row holding an author card and a body card.
-// Alternate rows are coloured by position, so a post appended to the
-// container later takes the right colour without a class of its own.
+// A topic's posts, each a row holding an author card and a body card, with a
+// gap between posts so each reads as one piece.
+//
+// Posts cycle white, foam green and sonic blue, coloured by position, so a
+// post appended to the container later takes the right colour without a
+// class of its own. Each post's header is a stronger shade of its body's
+// colour; the white post's header is the table stripe's green. The colours
+// are opaque on purpose: the header is painted over the card, so a
+// translucent pair stacks and the header comes out about twice as dark.
+$post-colors: (
+   // (body, header)
+   1: ($white, mix($sg101-green, $white, 25%)),
+   2: (mix($sg101-surf-green, $white, 20%), mix($sg101-surf-green, $white, 45%)),
+   0: (mix($sg101-blue, $white, 20%), mix($sg101-blue, $white, 45%)),
+);
+
 .sg101-card {
-   @include card-container($background: $sg101-surf-green3, $border: 1px solid rgba(0, 0, 0, 0.1));
+   @include card-container($background: $white, $border: 1px solid rgba(0, 0, 0, 0.1));
    height: 100%;
    display: flex;
    flex-direction: column;
+}
+
+#forum-topic-post-container > .row {
+   margin-bottom: 0.75rem;
+}
+
+@each $n, $colors in $post-colors {
+   #forum-topic-post-container > .row:nth-child(3n + #{$n}) {
+      .sg101-card {
+         background: nth($colors, 1);
+      }
+
+      .sg101-card-divider {
+         background: nth($colors, 2);
+      }
+   }
+}
+
+// The site's green is too light to read as text on the header colours; the
+// username and IP there are the labels a reader looks for.
+.sg101-card-divider a {
+   color: mix($sg101-green, $black, 72%);
 }
 
 // When the author card is the taller, the post card stretches to match; the
@@ -528,18 +563,11 @@ table.forum-table {
 }
 
 .sg101-card-divider {
-   @include card-divider($background: $sg101-surf-green3);
+   @include card-divider($background: nth(map-get($post-colors, 1), 2));
 }
 
-#forum-topic-post-container > .row:nth-child(even) {
-   .sg101-card,
-   .sg101-card-divider {
-      background: $sg101-blue3;
-   }
-}
-
-// A stranger's post, for moderators to spot. As specific as the even-row
-// rule above and after it, so it wins on either colour.
+// A stranger's post, for moderators to spot. As specific as the post-colour
+// rules above and after them, so it wins on any colour.
 #forum-topic-post-container > .row .sg101-card-divider.stranger {
    background: #fff6bf;
 }

@@ -335,10 +335,13 @@ class V3PagesTestCase(TestCase):
         self.assertNotIn('{% cycle', source)
         css = (pathlib.Path(settings.PROJECT_PATH) / 'static' / 'css' / 'v3' /
                'main.min.css').read_text()
-        # The minifier writes (even) as (2n). The selector must end at the
+        # Posts cycle through three colours. The selector must end at the
         # card: the divider's selector begins with the same text.
-        self.assertRegex(
-            css, r'#forum-topic-post-container>\.row:nth-child\(2n\) \.sg101-card[,{]')
+        for position in ('3n+1', '3n+2', '3n+0'):
+            with self.subTest(position=position):
+                self.assertRegex(
+                    css, r'#forum-topic-post-container>\.row:nth-child\(%s\) '
+                    r'\.sg101-card[,{]' % re.escape(position))
 
     def test_topic_reply_box_is_the_post_box_module(self):
         self.login(self.member)
