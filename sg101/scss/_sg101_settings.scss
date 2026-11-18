@@ -27,6 +27,10 @@ $sg101-shell-pink4: rgba($sg101-shell-pink, 0.25);
 // 4. Base Typography
 // ------------------
 $anchor-color: $sg101-green; //$primary-color;
+// Set here, not left to Foundation: its _settings.scss computes the hover
+// colour from its own primary blue, before the colour above is read.
+$anchor-color-hover: $sg101-red;
+$anchor-text-decoration-hover: underline;
 
 // 25. Pagination
 // --------------
@@ -35,12 +39,16 @@ $pagination-item-background-current: $sg101-red; // $primary-color;
 
 // 30. Table
 // ---------
-$table-background: $sg101-green4;
-$table-border: 1px solid smart-scale($table-background, $table-color-scale);
-$table-row-hover: darken($table-background, $table-hover-scale);
-$table-row-stripe-hover: darken($table-background, $table-color-scale + $table-hover-scale);
-$table-striped-background: smart-scale($table-background, $table-color-scale);
+// Opaque on purpose. Foundation paints the striped rows over the table body's
+// background, so a translucent pair stacks and the stripe comes out about
+// twice as dark as either colour.
+$table-background: $white;
+$table-striped-background: mix($sg101-green, $white, 25%);
+// Darker than the stripe so the cell borders show on the striped rows too.
+$table-border: 1px solid mix($sg101-green, $white, 45%);
+$table-row-hover: mix($sg101-green, $white, 35%);
+$table-row-stripe-hover: $table-row-hover;
 $table-stripe: even;
 $table-head-background: $sg101-red;
-$table-foot-background: smart-scale($table-background, $table-color-scale);
+$table-foot-background: $table-striped-background;
 $table-head-font-color: $white;

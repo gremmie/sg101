@@ -362,6 +362,8 @@ div.band-balloon {
   thead {
     th {
       display: block;
+      // Stacked, every header cell's right side is the table's edge.
+      border-color: $table-head-background;
     }
   }
 
@@ -463,6 +465,28 @@ table.sg101-stack {
    form {
       display: inline;
    }
+}
+
+// Real cell borders. Left to the browser, cells are separated by gaps that
+// show the page through them: lines on the green rows, nothing on the white.
+// The header's outer edge is its own colour, so it lines up with the body's
+// border; only the lines between its cells are white. Between two collapsed
+// cells the left one's border wins a tie, hence border-right.
+table {
+   border-collapse: collapse;
+}
+
+td,
+th {
+   border: $table-border;
+}
+
+thead th {
+   border-color: $table-head-background;
+}
+
+thead th:not(:last-child) {
+   border-right-color: $white;
 }
 
 // Usernames and topic titles can be one long word. A cell's minimum width is
