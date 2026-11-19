@@ -2682,7 +2682,7 @@ stay in the session scratchpad.
 Browser tests (`make test-browser`), suite and gate, separate runs: 117
 browser tests OK; suite and gate 1685 tests, OK, each.
 
-## Step 8 task 05 — the release 1 walk, the worker's mail, shipping — walked 2026-11-16, not yet shipped
+## Step 8 task 05 — the release 1 walk, the worker's mail, shipping — walked 2026-11-16, shipped 2026-11-18
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step08/task-05-walk-and-ship.code-task.md`.
 Branch `v3-forums-release-1`, on `a4682a9e`.
@@ -2788,3 +2788,9 @@ CSS and one template, before merging:
   `large-2` a window just over 1024 px leaves about 130 px for a 100 px avatar.
 
 Suite and gate, separate runs, after the style pass: 1685 tests, OK, each.
+
+**Shipped 2026-11-18.** `main` merged into the branch (`e7620c53`), CI green;
+`main` fast-forwarded to it, CI green. Brian deployed (`git pull`,
+`make prod-up`; no migrations) and checked live: the site looks right. Branch
+`v3-forums-release-1` deleted, remote and local. **Forums release 1 is live;
+step 8 is complete.**
