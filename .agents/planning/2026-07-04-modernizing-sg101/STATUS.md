@@ -1,6 +1,6 @@
 # Project Status — Modernizing SG101
 
-**Last updated:** 2026-10-26
+**Last updated:** 2026-11-17
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`)
 
 ## Where things live — split 2026-08-26
@@ -42,6 +42,74 @@ When work is committed, the heading is part of the commit.
    3,539 lines — 30% of the file — because it was opened on 08-17, never closed,
    and absorbed task 10's work, eleven readings and a decision belonging to task
    07. A running journal wants a log file, not a status heading.
+
+## Follow-up — DMARC `p=reject` on surfguitar101.com and themadeira.net, and a DNS audit — DONE 2026-11-17
+
+Closes the two DMARC follow-ups Brian set on 2026-10-22 (Step 21 task 11,
+"Follow-ups, not task 11's"), a day ahead of the mid-November revisit.
+
+### The reading behind `p=reject`
+
+`tools/dmarc_fetch.py` brought 73 new reports into `~/dmarc` (295 in the
+corpus). Every report whose window begins 10-21 through 11-16 was read: **73
+reports, 473 messages, all under `p=quarantine`.**
+
+| class | messages | under `p=reject` |
+|---|---|---|
+| Postmark, DKIM and SPF both aligned and passing | 348 | delivered |
+| forwarded (Gmail relays, Cloudflare Email Routing, others): SPF fails, the `surfguitar101.com` DKIM signature passes | 25 | delivered |
+| passing on SPF alone (the old Postfix DSN class) | 0 | — |
+| spoofs: DKIM and SPF both unaligned | 100 | rejected |
+
+- **The 100 failures are one campaign**, Yahoo's 11-04 window: mail sent
+  through Google's infrastructure, authenticated as `intertradegroup.info`,
+  with `From: surfguitar101.com`. Every row was already `quarantine`.
+- **jaguar's last two messages** fall in Google's 10-21 and 10-22 windows,
+  before its SPF entry was removed. None since.
+- With task 10's post-cutover log (47 reports, 374 messages, 10-08 → 10-20),
+  **about 120 reports and 850 messages since the cutover, and every DMARC
+  failure among them a spoof.** No legitimate mail would have been rejected.
+
+**Decided and published (Brian, 2026-11-17):** `_dmarc.surfguitar101.com` is
+`v=DMARC1; p=reject;` with both `rua=` destinations unchanged. Only `p=`
+changed: no `sp=`, so subdomains inherit `reject`; alignment stays relaxed,
+because Postmark's SPF aligns through `pm-bounces.surfguitar101.com` and
+`aspf=s` would cost that path for nothing.
+
+**The `rua=` copy to `admin@surfguitar101.com` stays for now.** The 10-22
+follow-up said it could go once this was decided. It was kept because it is
+the only copy with per-row detail (reporter, source, auth results); the
+Cloudflare copy keeps totals. If `reject` ever drops real mail, that detail
+is how it is found. **It goes in mid-December**, after a clean month on
+`reject` (Brian, 2026-11-17; on his calendar). Until then
+`tools/dmarc_fetch.py` still collects it for any spot check.
+
+### themadeira.net
+
+`_dmarc.themadeira.net` is `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`
+with no `rua=`, as bravenewsurf.com (Brian, 2026-11-17), and
+`themadeira.net._report._dmarc.surfguitar101.com` is deleted. Both read the
+same at `ada` and `cash.ns.cloudflare.com`, 1.1.1.1 and 8.8.8.8. The first
+edit did not take; the authoritative server still answered `p=none` until
+Brian corrected it the same day.
+
+### The surfguitar101.com zone — nothing to remove
+
+Read from a dashboard export (2026-11-17), which is kept out of the
+repository because it contains the origin address. Thirteen records:
+
+| record | what it is | verdict |
+|---|---|---|
+| SOA, NS ×2 | Cloudflare | keep |
+| apex and `www` A, proxied | the site | keep |
+| `wiki` A `192.0.2.1`, proxied | the wiki's 301 redirect (task 11) | keep |
+| MX ×3 `route{1,2,3}.mx.cloudflare.net`, apex SPF `include:_spf.mx.cloudflare.net -all`, `cf2024-1._domainkey` | Cloudflare Email Routing | keep |
+| `pm-bounces` CNAME `pm.mtasv.net`, `20260817033844pm._domainkey` | Postmark return path and DKIM key (added 2026-08-17) | keep |
+| `_dmarc` | above | keep |
+| apex `google-site-verification` TXT | Google Search Console ownership; the property is listed and its alerts are wanted | keep (Brian) |
+
+Nothing points at jaguar, Linode or a retired service; task 11's 10-22
+cleanup left nothing behind.
 
 ## Step 22 task 04 — the flip — DONE 2026-10-26: `gremmie/sg101` is public, hardened and checked from outside; Step 22 closed, and with it the plan
 
@@ -782,6 +850,9 @@ section, both dated 2026-10-23. **Step 21 is closed**; Step 22 (opening the
 repository) is the plan's last.
 
 ### Follow-ups, not task 11's (Brian, 2026-10-22)
+
+**Both DONE 2026-11-17** — see "Follow-up — DMARC `p=reject` on
+surfguitar101.com and themadeira.net" at the top of this file.
 
 - **SG101's `p=reject` decision**, open since the DMARC readings ("no
   longer blocked, and not decided"). Revisit mid-November, with about four
