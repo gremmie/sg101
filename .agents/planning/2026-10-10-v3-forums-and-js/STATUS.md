@@ -2769,3 +2769,22 @@ high, exactly the deleted topic, since deletions never decrement those counts
 widths) and 15 (phone header, the moderator's 63 px above).
 
 Suite and gate, separate runs, after the walk: 1685 tests, OK, each.
+
+**Brian's style pass, 2026-11-17 to 11-18, after the walk.** Three commits,
+CSS and one template, before merging:
+
+- `1a988774`: tables. Opaque white and light-green rows (the translucent
+  stripe stacked to twice its strength), collapsed mid-green cell borders,
+  links hover red and underlined.
+- `180ab513`: topic posts. Opaque colours cycling by position through white,
+  light foam green and light sonic blue, each post's header a stronger shade
+  of its body (the translucent header stacked on its card the same way);
+  darker header links (the site green was about 3:1 there); a gap between
+  posts. Two tests that pinned the old two-colour CSS and the header's link
+  colour were updated and mutation-checked.
+- `10354c72`: post tools grey (#767676) until hovered or focused; the edit
+  note italic; the author card grouped as avatar, facts, and the flag leading
+  the badge row. A narrower author column was measured and dropped: at
+  `large-2` a window just over 1024 px leaves about 130 px for a 100 px avatar.
+
+Suite and gate, separate runs, after the style pass: 1685 tests, OK, each.
