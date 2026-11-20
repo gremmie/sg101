@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-14
+**Last updated:** 2026-11-20
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2794,3 +2794,72 @@ Suite and gate, separate runs, after the style pass: 1685 tests, OK, each.
 `make prod-up`; no migrations) and checked live: the site looks right. Branch
 `v3-forums-release-1` deleted, remote and local. **Forums release 1 is live;
 step 8 is complete.**
+
+## #44: years-old posts marked new — fixed 2026-11-20 (`061b67b4`)
+
+Seen by Brian on the dev stack, after a test reply in topic 23946 (501 posts,
+26 pages, from May 2014). Not this plan's work: the read-tracking logic is
+from 2009, and the old forums showed the same per-post marker (`icons/new.png`
+in `display_post.html`, present at `cutover-2026-10-07`). V3's shiny
+`fi-burst-new` only made it noticeable. The issue holds the cases and the
+replay.
+
+**The cause.** Read tracking keeps a window of at most 14 days per forum
+(`THRESHOLD`), but only the forums index enforced it, and only when its
+catch-up ran. Two paths escaped it. Reading an earlier page of an old topic
+recorded a `TopicLastVisit` dated from that page's last post. Reaching a topic
+without loading the forums index left a stale window, and every post after its
+`end_date` counted as new.
+
+**Replayed on topic 23946, measured.** The viewer's records were restored to
+their state just before the reply was seen, and the pages were requested in
+order inside a transaction that was rolled back; the records were compared
+before and after, and were unchanged. On the old code, page 1 showed 0 of 20
+posts as new and recorded its last post (2014-07-05) as the visit. Pages 2, 13
+and 25 each showed 20 of 20, and page 26 showed the new reply. With the fix,
+only the reply. So the burst first reported on page 1 was on a later page;
+from the records' state page 1 cannot show it. One input was assumed: the
+forum window as the 2026-11-19 catch-up left it. Any later `end_date` gives
+the same result for posts from 2014.
+
+**The fix.** `read_floor()` in `forums/unread.py`: the later of `begin_date`
+and 14 days ago. The topic page, a forum's topic list, the Unread Topics page
+and "jump to first unread" apply it where they read the records, so stale rows
+need no data migration. A clamp where `_update_last_visit` writes was tried
+first and removed, once no test could tell it apart from no clamp.
+
+**A behaviour change, Brian's choice.** For a topic with no
+`TopicLastVisit`, the topic list counted posts after `begin_date` as unread,
+and the topic page only those after `end_date`. A topic could be listed as new
+with no new post on its page. The topic page now follows the list. The
+characterization test that pinned the old rule is now
+`test_without_tlv_posts_after_begin_date_are_unread`.
+
+**Tests**, in `forums/tests/test_unread.py`: `UnreadFloorTests` (6) and
+`TopicListFloorTests` (5), and the changed test. All were written first and
+seen to fail on their intended assertion.
+
+| Mutation | Failed |
+|---|---|
+| the topic page ignores the floor (`begin_date` only) | `stale_window_without_tlv`, `ancient_begin_date` |
+| the floor ignores `begin_date` | `catchup_inside_threshold`, `without_tlv_posts_after_begin_date`, `topic_updated_before_window_is_read` |
+| the topic page without a TLV uses `end_date` | `without_tlv_posts_after_begin_date`, `reading_an_earlier_page`, `with_tlv_posts_after_last_visit` |
+| the topic list's per-topic check uses `begin_date` | both `topic_list` tests, once each had a recent second topic; at first the whole-forum shortcut hid it |
+| the Unread Topics page filters on `begin_date` | `unread_topics_page` |
+| the jump starts from `begin_date` | both `jump_to_unread` tests |
+| the jump ignores the floor when a TLV exists | `jump_to_unread_ignores_a_tlv` |
+| the topic list's shortcut uses `begin_date` | none: it only saves work, and each topic is checked against the floor after it |
+
+Restored byte-identical.
+
+**In production**, `forum_cleanup` (`core.tasks.cleanup`, Celery beat) deletes
+`TopicLastVisit` rows older than 28 days and `ForumLastVisit` rows whose
+`end_date` is. That limits how long a stale record lasts, but the first path
+wrote a new one on every visit to an earlier page.
+
+**Not checked:** the fix in a browser; the replay stands in for it.
+
+Suite and gate, separate runs: 1700 tests, OK, each. CI green on `061b67b4`.
+
+**Merged to `main` 2026-11-20**, for Brian to deploy.
+
