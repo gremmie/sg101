@@ -97,14 +97,17 @@ class GetPostUnreadStatusTests(TestCase):
         get_post_unread_status(topic, [post], self.reader)
         self.assertFalse(post.unread)
 
-    def test_without_tlv_posts_after_end_date_are_unread(self):
-        topic, old_post = make_topic_at(self.forum, self.author, NOW - 5 * DAY)
-        new_post = add_post_at(topic, self.author, NOW)
-        # Window ends 3 days ago; no per-topic visit record.
+    def test_without_tlv_posts_after_begin_date_are_unread(self):
+        topic, before = make_topic_at(self.forum, self.author, NOW - 7 * DAY)
+        inside = add_post_at(topic, self.author, NOW - 5 * DAY)
+        after = add_post_at(topic, self.author, NOW)
+        # Window 6 to 3 days ago, and no per-topic visit record: the reader has
+        # not read this topic since the window opened, as the topic list says.
         make_flv(self.reader, self.forum, NOW - 6 * DAY, NOW - 3 * DAY)
-        get_post_unread_status(topic, [old_post, new_post], self.reader)
-        self.assertFalse(old_post.unread)   # before end_date
-        self.assertTrue(new_post.unread)    # after end_date
+        get_post_unread_status(topic, [before, inside, after], self.reader)
+        self.assertFalse(before.unread)    # before begin_date
+        self.assertTrue(inside.unread)     # inside the window, topic unvisited
+        self.assertTrue(after.unread)      # after end_date
 
     def test_with_tlv_posts_after_last_visit_are_unread(self):
         topic, old_post = make_topic_at(self.forum, self.author, NOW - 5 * DAY)
@@ -321,3 +324,161 @@ class UnreadJourneyTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(ForumLastVisit.objects.filter(
             user=self.reader, forum=self.forum).exists())
+
+
+class UnreadFloorTests(TestCase):
+    """
+    Nothing older than the read-tracking window can be unread: not before the
+    forum window's begin_date, and not more than THRESHOLD (14 days) ago.
+    Before this was enforced on the topic page, years-old posts were marked new
+    (issue #44).
+    """
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.reader = User.objects.create_user('reader', '', 'pw')
+
+    def _old_topic_with_new_reply(self, old_posts):
+        """A topic of ``old_posts`` posts from two years ago, then one reply now."""
+        long_ago = NOW - 730 * DAY
+        topic, first = make_topic_at(self.forum, self.author, long_ago)
+        for n in range(1, old_posts):
+            add_post_at(topic, self.author, long_ago + n * datetime.timedelta(minutes=1))
+        reply = add_post_at(topic, self.author, NOW)
+        return Topic.objects.get(pk=topic.pk), reply
+
+    def test_stale_window_without_tlv_marks_only_recent_posts(self):
+        # The reader's forum window closed two years ago and they reached the
+        # topic without loading the forum index, so no catch-up ran.
+        topic, reply = self._old_topic_with_new_reply(5)
+        make_flv(self.reader, self.forum, NOW - 800 * DAY, NOW - 800 * DAY)
+        posts = list(topic.posts.all())
+        get_post_unread_status(topic, posts, self.reader)
+        self.assertEqual([p for p in posts if p.unread], [reply])
+
+    def test_tlv_older_than_window_marks_only_recent_posts(self):
+        # A TopicLastVisit from years back that outlived its window.
+        topic, reply = self._old_topic_with_new_reply(5)
+        make_flv(self.reader, self.forum, NOW - 2 * DAY, NOW - 2 * DAY)
+        TopicLastVisit.objects.create(user=self.reader, topic=topic,
+                                      last_visit=NOW - 900 * DAY)
+        posts = list(topic.posts.all())
+        get_post_unread_status(topic, posts, self.reader)
+        self.assertEqual([p for p in posts if p.unread], [reply])
+
+    def test_ancient_begin_date_does_not_widen_the_window(self):
+        # begin_date never advanced, so it alone cannot be the floor.
+        topic, reply = self._old_topic_with_new_reply(5)
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 2 * DAY)
+        TopicLastVisit.objects.create(user=self.reader, topic=topic,
+                                      last_visit=NOW - 850 * DAY)
+        posts = list(topic.posts.all())
+        get_post_unread_status(topic, posts, self.reader)
+        self.assertEqual([p for p in posts if p.unread], [reply])
+
+    def test_catchup_inside_threshold_is_respected(self):
+        # The reader caught up 2 days ago; a post from 5 days ago is read even
+        # though a TopicLastVisit from 10 days ago predates it.
+        topic, older = make_topic_at(self.forum, self.author, NOW - 5 * DAY)
+        reply = add_post_at(topic, self.author, NOW)
+        make_flv(self.reader, self.forum, NOW - 2 * DAY, NOW - 2 * DAY)
+        TopicLastVisit.objects.create(user=self.reader, topic=topic,
+                                      last_visit=NOW - 10 * DAY)
+        posts = [older, reply]
+        get_post_unread_status(topic, posts, self.reader)
+        self.assertEqual([p for p in posts if p.unread], [reply])
+
+    def test_reading_an_earlier_page_does_not_mark_later_old_posts_unread(self):
+        # 25 old posts and a new reply: page 1 holds 20, page 2 the rest.
+        topic, reply = self._old_topic_with_new_reply(25)
+        make_flv(self.reader, self.forum, NOW - 2 * DAY, NOW - 2 * DAY)
+        self.client.login(username='reader', password='pw')
+        url = reverse('forums-topic_index', kwargs={'id': str(topic.id)})
+
+        self.client.get(url)
+        response = self.client.get(url, {'page': 2})
+
+        unread = [p for p in response.context['page'].object_list if p.unread]
+        self.assertEqual(unread, [reply])
+
+    def test_reading_an_earlier_page_keeps_jump_to_unread_on_the_new_reply(self):
+        topic, reply = self._old_topic_with_new_reply(25)
+        make_flv(self.reader, self.forum, NOW - 2 * DAY, NOW - 2 * DAY)
+        self.client.login(username='reader', password='pw')
+
+        self.client.get(reverse('forums-topic_index', kwargs={'id': str(topic.id)}))
+        response = self.client.get(reverse('forums-topic_unread', args=[topic.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('#p%s' % reply.id, response['Location'])
+
+
+class TopicListFloorTests(TestCase):
+    """
+    The topic list, the Unread Topics page and "jump to first unread" share the
+    topic page's floor: nothing older than the later of begin_date and
+    THRESHOLD ago is unread (issue #44).
+    """
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.reader = User.objects.create_user('reader', '', 'pw')
+
+    def test_topic_list_ignores_activity_older_than_threshold(self):
+        # begin_date never advanced and the window closed 25 days ago, so the
+        # topic's activity 20 days ago is after end_date but below the floor.
+        # A recent topic keeps the whole forum from being skipped as read.
+        topic, _ = make_topic_at(self.forum, self.author, NOW - 20 * DAY)
+        make_topic_at(self.forum, self.author, NOW, name='recent')
+        forum = Forum.objects.get(pk=self.forum.pk)
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 25 * DAY)
+        get_topic_unread_status(forum, [topic], self.reader)
+        self.assertFalse(topic.has_unread)
+
+    def test_topic_list_ignores_a_tlv_older_than_threshold(self):
+        topic, _ = make_topic_at(self.forum, self.author, NOW - 20 * DAY)
+        make_topic_at(self.forum, self.author, NOW, name='recent')
+        forum = Forum.objects.get(pk=self.forum.pk)
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 2 * DAY)
+        TopicLastVisit.objects.create(user=self.reader, topic=topic,
+                                      last_visit=NOW - 850 * DAY)
+        get_topic_unread_status(forum, [topic], self.reader)
+        self.assertFalse(topic.has_unread)
+
+    def test_unread_topics_page_ignores_activity_older_than_threshold(self):
+        old, _ = make_topic_at(self.forum, self.author, NOW - 20 * DAY, name='old')
+        recent, _ = make_topic_at(self.forum, self.author, NOW - DAY, name='recent')
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 25 * DAY)
+        unread = get_unread_topics(self.reader)
+        self.assertNotIn(old, unread)
+        self.assertIn(recent, unread)
+
+    def test_jump_to_unread_skips_posts_older_than_threshold(self):
+        topic, _ = make_topic_at(self.forum, self.author, NOW - 730 * DAY)
+        add_post_at(topic, self.author, NOW - 729 * DAY)
+        reply = add_post_at(topic, self.author, NOW)
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 2 * DAY)
+        self.client.login(username='reader', password='pw')
+
+        response = self.client.get(reverse('forums-topic_unread', args=[topic.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('#p%s' % reply.id, response['Location'])
+
+    def test_jump_to_unread_ignores_a_tlv_older_than_threshold(self):
+        topic, _ = make_topic_at(self.forum, self.author, NOW - 730 * DAY)
+        add_post_at(topic, self.author, NOW - 729 * DAY)
+        reply = add_post_at(topic, self.author, NOW)
+        make_flv(self.reader, self.forum, NOW - 900 * DAY, NOW - 2 * DAY)
+        TopicLastVisit.objects.create(user=self.reader, topic=topic,
+                                      last_visit=NOW - 850 * DAY)
+        self.client.login(username='reader', password='pw')
+
+        response = self.client.get(reverse('forums-topic_unread', args=[topic.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('#p%s' % reply.id, response['Location'])

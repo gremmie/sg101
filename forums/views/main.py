@@ -32,7 +32,7 @@ from forums.models import (Forum, Topic, Post, FlaggedPost, TopicLastVisit,
 from forums.forms import (NewTopicForm, NewPostForm, PostForm, MoveTopicForm,
         SplitTopicForm)
 from forums.unread import (get_forum_unread_status, get_topic_unread_status,
-        get_post_unread_status, get_unread_topics)
+        get_post_unread_status, get_unread_topics, read_floor)
 
 import forums.permissions as perms
 from forums.signals import (notify_new_topic, notify_updated_topic,
@@ -246,18 +246,21 @@ def topic_unread(request, id):
 
     if request.user.is_authenticated:
         topic = get_object_or_404(Topic.objects.select_related('forum', 'user'), pk=id)
-        try:
-            tlv = TopicLastVisit.objects.get(user=request.user, topic=topic)
-        except TopicLastVisit.DoesNotExist:
-            try:
-                flv = ForumLastVisit.objects.get(user=request.user,
-                        forum=topic.forum)
-            except ForumLastVisit.DoesNotExist:
-                return HttpResponseRedirect(topic_url)
-            else:
-                last_visit = flv.begin_date
-        else:
-            last_visit = tlv.last_visit
+        flv = ForumLastVisit.objects.filter(user=request.user,
+                forum=topic.forum).first()
+        tlv = TopicLastVisit.objects.filter(user=request.user,
+                topic=topic).first()
+        if flv is None and tlv is None:
+            return HttpResponseRedirect(topic_url)
+
+        # The first unread post is after the last visit to this topic, and
+        # never below the floor, as the topic page marks them.
+        candidates = []
+        if flv is not None:
+            candidates.append(read_floor(flv))
+        if tlv is not None:
+            candidates.append(tlv.last_visit)
+        last_visit = max(candidates)
 
         posts = Post.objects.filter(topic=topic, creation_date__gt=last_visit)
         if posts:

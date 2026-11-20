@@ -14,6 +14,17 @@ from forums.models import ForumLastVisit, TopicLastVisit, Topic, Forum
 
 THRESHOLD = datetime.timedelta(days=14)
 
+
+def read_floor(flv, now=None):
+    """
+    Returns the time before which every post counts as read for the user whose
+    ForumLastVisit is flv: the later of the window's begin_date and THRESHOLD
+    ago. No TopicLastVisit or stale window can make an older post unread.
+    """
+    if now is None:
+        now = timezone.now()
+    return max(flv.begin_date, now - THRESHOLD)
+
 #######################################################################
 
 def get_forum_unread_status(qs, user):
@@ -150,8 +161,9 @@ def get_topic_unread_status(forum, topics, user):
             topic.has_unread = False
         return
 
-    # Are all the posts before our window? If so, all have been read.
-    if forum.last_post.creation_date < flv.begin_date:
+    # Are all the posts below the floor? If so, all have been read.
+    floor = read_floor(flv, now)
+    if forum.last_post.creation_date < floor:
         for topic in topics:
             topic.has_unread = False
         return
@@ -162,7 +174,7 @@ def get_topic_unread_status(forum, topics, user):
 
     # Otherwise we have to go through the topics one by one:
     for topic in topics:
-        if topic.update_date < flv.begin_date:
+        if topic.update_date < floor:
             topic.has_unread = False
         elif topic.update_date > flv.end_date:
             topic.has_unread = True
@@ -195,17 +207,18 @@ def get_post_unread_status(topic, posts, user):
             post.unread = False
         return
 
-    # Do we have a topic last visit record for this topic?
-
+    # Posts are unread after the user's last visit to this topic, or, with no
+    # record of one, after the floor, as the topic list counts them.
+    last_read = read_floor(flv)
     try:
         tlv = TopicLastVisit.objects.get(user=user, topic=topic)
     except TopicLastVisit.DoesNotExist:
-        # No we don't, we could be all caught up, or all are new
-        for post in posts:
-            post.unread = post.creation_date > flv.end_date
+        pass
     else:
-        for post in posts:
-            post.unread = post.creation_date > tlv.last_visit
+        last_read = max(last_read, tlv.last_visit)
+
+    for post in posts:
+        post.unread = post.creation_date > last_read
 
 #######################################################################
 
@@ -238,7 +251,7 @@ def get_unread_topics(user):
         else:
             flv = flvs[forum.id]
             topics |= Topic.objects.filter(forum=forum,
-                update_date__gt=flv.begin_date).order_by('-update_date').select_related(
+                update_date__gt=read_floor(flv, now)).order_by('-update_date').select_related(
                     'forum', 'user', 'last_post', 'last_post__user')
 
     if topics is not None:
