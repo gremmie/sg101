@@ -2861,5 +2861,9 @@ wrote a new one on every visit to an earlier page.
 
 Suite and gate, separate runs: 1700 tests, OK, each. CI green on `061b67b4`.
 
-**Merged to `main` 2026-11-20**, for Brian to deploy.
+**Shipped 2026-11-20.** `main` fast-forwarded to the branch, CI green on
+`c22e61c1`. Brian deployed (`git pull`, `make prod-up`; no migrations) and
+checked live: reading an earlier page of an old topic with a new post no
+longer marks its later posts as new. Branch `fix-unread-floor` deleted, remote
+and local.
 
