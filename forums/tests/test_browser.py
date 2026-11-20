@@ -229,6 +229,64 @@ class PostCardTestCase(BrowserTestCase):
                 ' return [s.color, s.fontSize]; })'):
             self.assertEqual((colour, size), (link_colour, '14px'))
 
+    def phone_avatar(self, post):
+        return self.page.locator('#post-%d .forum-post-phone-avatar img' % post.id)
+
+    def test_a_phone_shows_a_small_avatar_beside_the_name_and_date(self):
+        post = add_post(self.topic, self.member)
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+        avatar = self.phone_avatar(post)
+        expect(avatar).to_be_visible()
+        header = '#post-%d .medium-9 .sg101-card-divider .hide-for-medium' % post.id
+        avatar_box, text_box = boxes(
+            self.page, header + ' .forum-post-phone-avatar img',
+            header + ' .forum-post-phone-byline')
+        self.assertEqual((avatar_box['width'], avatar_box['height']), (40, 40))
+        # Left of the name and date, and no taller than them, so the header
+        # is the height it was without it.
+        self.assertLessEqual(avatar_box['x'] + avatar_box['width'], text_box['x'])
+        self.assertLessEqual(avatar_box['height'], text_box['height'])
+
+    def test_a_phone_avatar_that_is_not_square_is_cropped_not_stretched(self):
+        # An upload narrower than the limit is never cropped square.
+        post = add_post(self.topic, self.member)
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+        avatar = self.phone_avatar(post)
+
+        avatar.evaluate('''img => new Promise((resolve) => {
+            img.onload = resolve;
+            img.src = 'data:image/svg+xml,' + encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="60"/>');
+        })''')
+
+        box = avatar.bounding_box()
+        self.assertEqual((box['width'], box['height']), (40, 40))
+        self.assertEqual(avatar.evaluate('e => getComputedStyle(e).objectFit'), 'cover')
+
+    def test_the_phone_avatar_is_not_a_second_link_to_the_profile(self):
+        post = add_post(self.topic, self.member)
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+        holder = self.page.locator('#post-%d .forum-post-phone-avatar' % post.id)
+        self.assertEqual(holder.locator('a').count(), 0)
+        self.assertEqual(holder.get_attribute('aria-hidden'), 'true')
+
+    def test_the_desktop_has_only_the_author_cards_avatar(self):
+        post = add_post(self.topic, self.member)
+        self.page.set_viewport_size({'width': 1280, 'height': 900})
+
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+
+        expect(self.phone_avatar(post)).to_be_hidden()
+        expect(self.page.locator(
+            '#post-%d .forum-post-avatar img' % post.id)).to_be_visible()
+
 
 class TopicScriptTestCase(BrowserTestCase):
     """The topic page's script: quick reply, flag and delete, in place."""

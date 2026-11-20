@@ -43,17 +43,21 @@
                   <span class="quiet">from IP: <a href="{% url 'forums-post_ip_info' post_id=post.id %}">{{ post.user_ip }}</a></span>
                {% endif %}
             </div>
-            <div class="hide-for-medium">
-               {% if post.unread %}
-                  <i class="fi-burst-new shiny"></i>
-               {% endif %}
-               <a href="{{ post.get_absolute_url }}" title="Link to this post">
-                     <i class="fi-link"></i></a>
-               <strong>{% profile_link post.user.username %}</strong><br />
-               <span class="quiet">{% forum_date post.creation_date user %}</span>
-               {% if can_moderate %}
-                  <span class="quiet">- <a href="{% url 'forums-post_ip_info' post_id=post.id %}">{{ post.user_ip }}</a></span>
-               {% endif %}
+            <div class="hide-for-medium forum-post-phone-header">
+               {# The username beside it is the link to the profile. #}
+               <span class="forum-post-phone-avatar" aria-hidden="true">{% avatar post.user profile_link=False %}</span>
+               <div class="forum-post-phone-byline">
+                  {% if post.unread %}
+                     <i class="fi-burst-new shiny"></i>
+                  {% endif %}
+                  <a href="{{ post.get_absolute_url }}" title="Link to this post">
+                        <i class="fi-link"></i></a>
+                  <strong>{% profile_link post.user.username %}</strong><br />
+                  <span class="quiet">{% forum_date post.creation_date user %}</span>
+                  {% if can_moderate %}
+                     <span class="quiet">- <a href="{% url 'forums-post_ip_info' post_id=post.id %}">{{ post.user_ip }}</a></span>
+                  {% endif %}
+               </div>
             </div>
          </div>
          <div class="card-section">

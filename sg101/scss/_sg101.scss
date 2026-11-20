@@ -650,6 +650,30 @@ $post-colors: (
    }
 }
 
+// On a phone the author card is hidden, so a small avatar sits in the post's
+// header beside the name and date, no taller than their two lines. An avatar
+// is not always square, so it is cropped to fit rather than stretched.
+.forum-post-phone-header {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+}
+
+.forum-post-phone-avatar {
+   flex: none;
+
+   img {
+      display: block;
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+   }
+}
+
+.forum-post-phone-byline {
+   min-width: 0;
+}
+
 .forum-post-author-details > p {
    line-height: 1.4;
 }
