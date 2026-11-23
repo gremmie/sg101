@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-20
+**Last updated:** 2026-11-22
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2866,4 +2866,61 @@ Suite and gate, separate runs: 1700 tests, OK, each. CI green on `061b67b4`.
 checked live: reading an earlier page of an old topic with a new post no
 longer marks its later posts as new. Branch `fix-unread-floor` deleted, remote
 and local.
+
+## Step 9 task 01 — the unread, unanswered and active topic lists on V3 — DONE 2026-11-22, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step09/task-01-topic-lists.code-task.md`.
+Branch `v3-forums-release-2`, on `61eec6cc`.
+
+**`topic_list.html` is V3**, built from `forum_index.html`'s table and its
+V3 pagination above and below. `unread_topics`, `unanswered_topics` and
+`active_topics` set `V3_DESIGN` and no longer render `page_nav`;
+`mod_forum` still does, until step 10. The page loads `nav.js` with the V3
+forum query box, and no longer includes `forum_query.js`.
+
+**Brian's choices.** The forum shows as a grey (`.quiet`) "in <Forum>" line
+under each title, at every width, rather than the old page's Forum column, so
+a phone keeps the forum page's two columns. The page gains an `<h2>` with its
+title, as the forum page has; "Mark All Forums Read" stays below the table
+only, now a secondary button. Unread titles still link to "jump to first
+unread", and the empty text is unchanged.
+
+**Three tests used the unanswered list as their old page**, and were
+repointed rather than deleted: `test_old_pages_keep_the_old_fragments` checks
+the old `forum_query` on "my posts" and the old `navigation_tag` and
+`last_post_info` on `mod_forum`;
+`test_unconverted_pages_stay_on_the_old_design` drops the list; and
+`test_old_pages_keep_the_inline_forum_query_script` requests "my posts".
+**The old `forums/topic_icons_tag.html` is now rendered by no page**
+(`mod_forum` doesn't use the tag), so the fragment test no longer checks it;
+step 12 deletes the old variants.
+
+**Tests.** `TopicListsTestCase` (`test_views.py`), 7 tests, written first.
+The active list reads its topic ids from Redis, so its test writes
+`forums.latest`'s set itself and deletes it after. Red run: 4 failed (9
+failures across subtests), each on V3, the forum line or V3 pagination. The
+other 3 passed, as they guard behaviour the old page already had: unread
+title links, the catch-up button, the empty text.
+
+| Mutation | Failed |
+|---|---|
+| `unanswered_topics` without `V3_DESIGN` | `each_list_is_v3`, `anonymous_visitors` |
+| unread titles link to the topic | `unread_titles_jump` |
+| the catch-up button on every list | `only_a_non_empty_unread_list` |
+| the catch-up button on an empty unread list | `only_a_non_empty_unread_list` |
+| no forum line | `each_topic_names_its_forum` (3 subtests) |
+| the old pagination below the table | `pagination_is_v3` |
+| `nav.js` not loaded | `each_list_is_v3`, `anonymous_visitors` |
+| the empty text changed | `an_empty_list_says_so`, `only_a_non_empty_unread_list` |
+
+Restored byte-identical.
+
+**On dev**, headless Chromium at 360 and 1280: the active and unanswered lists
+anonymously, the unread list as Brian. All 200, no page errors, no sideways
+scroll. Brian's `ForumLastVisit` and `TopicLastVisit` rows and `last_login`
+were compared before and after: unchanged. Brian had no unread topics on dev,
+so the catch-up button was seen only in the tests. Screenshots stay in the
+session scratchpad.
+
+Browser tests: 121, OK. Suite and gate, separate runs: 1707 tests, OK, each.
 
