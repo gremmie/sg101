@@ -831,14 +831,11 @@ def unread_topics(request):
 
     attach_topic_page_ranges(page.object_list)
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     return render(request, 'forums/topic_list.html', {
         'title': 'Topics With Unread Posts',
         'page': page,
-        'page_nav': page_nav,
         'unread': True,
+        'V3_DESIGN': True,
         })
 
 
@@ -859,14 +856,11 @@ def unanswered_topics(request):
 
     attach_topic_page_ranges(page.object_list)
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     return render(request, 'forums/topic_list.html', {
         'title': 'Unanswered Topics',
         'page': page,
-        'page_nav': page_nav,
         'unread': False,
+        'V3_DESIGN': True,
         })
 
 
@@ -901,16 +895,13 @@ def active_topics(request, num):
 
     attach_topic_page_ranges(page.object_list)
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     title = 'Last %d Active Topics' % num
 
     return render(request, 'forums/topic_list.html', {
         'title': title,
         'page': page,
-        'page_nav': page_nav,
         'unread': False,
+        'V3_DESIGN': True,
         })
 
 

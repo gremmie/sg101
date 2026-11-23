@@ -15,10 +15,13 @@ from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from bio.models import STA_ACTIVE, STA_STRANGER
+from core.services import get_redis_connection
 from forums.forms import NewTopicForm, PostForm
-from forums.models import Attachment, Forum, Post, Topic
+from forums.latest import UPDATED_TOPICS_SET_KEY
+from forums.models import Attachment, Forum, ForumLastVisit, Post, Topic
 from forums.tests.test_moderation import add_post, make_topic
 from forums.views.main import POSTS_PER_PAGE, TOPICS_PER_PAGE
 from oembed.models import Oembed
@@ -270,27 +273,25 @@ class V3PagesTestCase(TestCase):
     def test_old_pages_keep_the_old_fragments(self):
         self.login(self.member)
 
-        response = self.client.get(reverse('forums-unanswered_topics'))
+        response = self.client.get(reverse('forums-my_posts'))
         self.assertOldDesign(response)
-        for name in ('topic_icons_tag', 'last_post_info', 'forum_query'):
-            with self.subTest(fragment=name):
-                self.assertTemplateUsed(response, 'forums/%s.html' % name)
-                self.assertTemplateNotUsed(response, 'forums/v3/%s.html' % name)
-        self.assertContains(response, 'icons/asterisk_orange.png')
-        self.assertContains(response, 'icons/note_go.png')
+        self.assertTemplateUsed(response, 'forums/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/v3/forum_query.html')
 
         self.login(self.moderator)
         response = self.client.get(reverse('forums-mod_forum',
                                            kwargs={'slug': self.forum.slug}))
         self.assertOldDesign(response)
-        self.assertTemplateUsed(response, 'forums/navigation_tag.html')
-        self.assertTemplateNotUsed(response, 'forums/v3/navigation_tag.html')
+        for name in ('navigation_tag', 'last_post_info'):
+            with self.subTest(fragment=name):
+                self.assertTemplateUsed(response, 'forums/%s.html' % name)
+                self.assertTemplateNotUsed(response, 'forums/v3/%s.html' % name)
         self.assertContains(response, 'class="forum-nav"')
+        self.assertContains(response, 'icons/note_go.png')
 
     def test_unconverted_pages_stay_on_the_old_design(self):
         self.login(self.moderator)
-        for url in (reverse('forums-unanswered_topics'),
-                    reverse('forums-mod_topic_move', kwargs={'id': self.topic.id}),
+        for url in (reverse('forums-mod_topic_move', kwargs={'id': self.topic.id}),
                     reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})):
             with self.subTest(url=url):
                 self.assertOldDesign(self.client.get(url))
@@ -480,9 +481,144 @@ class ForumNavTestCase(TestCase):
             get_template('forums/jump_box.js')
 
     def test_old_pages_keep_the_inline_forum_query_script(self):
-        response = self.client.get(reverse('forums-unanswered_topics'))
+        response = self.client.get(reverse('forums-my_posts'))
         self.assertTemplateUsed(response, 'forums/forum_query.js')
         self.assertNotContains(response, self.NAV)
+
+
+class TopicListsTestCase(TestCase):
+    """The unread, unanswered and active topic lists are V3: each topic names
+    its forum under its title, unread titles jump to the first unread post,
+    and only the unread list offers to mark everything read."""
+    fixtures = ['forums.json']
+    NAV = '<script type="module" src="/static/js/v3/forums/nav.js"></script>'
+
+    def setUp(self):
+        cache.clear()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.member = User.objects.create_user('member', '', 'pw')
+
+        # Unanswered: a single post. Unread for the member: posted after the
+        # member's window for the forum closed.
+        self.topic = make_topic(self.forum, self.author, name='Reverb tank question')
+        add_post(self.topic, self.author)
+        now = timezone.now()
+        ForumLastVisit.objects.create(user=self.member, forum=self.forum,
+                                      begin_date=now - datetime.timedelta(days=1),
+                                      end_date=now - datetime.timedelta(days=1))
+
+        # The active list reads its topic ids from forums.latest's Redis set.
+        conn = get_redis_connection()
+        conn.delete(UPDATED_TOPICS_SET_KEY)
+        conn.zadd(UPDATED_TOPICS_SET_KEY, {self.topic.id: 1})
+        self.addCleanup(conn.delete, UPDATED_TOPICS_SET_KEY)
+
+        self.unread_url = reverse('forums-unread_topics')
+        self.unanswered_url = reverse('forums-unanswered_topics')
+        self.active_url = reverse('forums-active_topics', args=[30])
+        self.titles = {
+            self.unread_url: 'Topics With Unread Posts',
+            self.unanswered_url: 'Unanswered Topics',
+            self.active_url: 'Last 30 Active Topics',
+        }
+
+    def login(self):
+        self.assertTrue(self.client.login(username='member', password='pw'))
+
+    def title_link(self, url):
+        return '<a href="%s">%s</a>' % (url, self.topic.name)
+
+    def assertV3List(self, response, title):
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'forums/topic_list.html')
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertIs(response.context.get('V3_DESIGN'), True)
+        self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/forum_query.js')
+        self.assertContains(response, self.NAV, count=1)
+        self.assertContains(response, 'data-forum-nav', count=1)
+        self.assertContains(response, '<h2>%s</h2>' % title, html=True)
+
+    def test_each_list_is_v3_for_a_member(self):
+        self.login()
+        for url, title in self.titles.items():
+            with self.subTest(url=url):
+                self.assertV3List(self.client.get(url), title)
+
+    def test_anonymous_visitors_get_the_open_lists_and_a_login_for_unread(self):
+        for url in (self.unanswered_url, self.active_url):
+            with self.subTest(url=url):
+                self.assertV3List(self.client.get(url), self.titles[url])
+
+        response = self.client.get(self.unread_url)
+        self.assertRedirects(
+            response, '%s?next=%s' % (reverse(settings.LOGIN_URL), self.unread_url),
+            fetch_redirect_response=False)
+
+    def test_each_topic_names_its_forum_under_the_title(self):
+        self.login()
+        forum_link = 'in <a href="%s">%s</a>' % (self.forum.get_absolute_url(),
+                                                  self.forum.name)
+        for url in self.titles:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, forum_link, count=1)
+                self.assertNotContains(response, '<th class="col-0">Forum</th>')
+
+    def test_unread_titles_jump_to_the_first_unread_post(self):
+        self.login()
+        unread = reverse('forums-topic_unread', kwargs={'id': self.topic.id})
+
+        response = self.client.get(self.unread_url)
+        self.assertContains(response, self.title_link(unread), count=1)
+        self.assertNotContains(response, self.title_link(self.topic.get_absolute_url()))
+
+        for url in (self.unanswered_url, self.active_url):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(
+                    response, self.title_link(self.topic.get_absolute_url()), count=1)
+                self.assertNotContains(response, self.title_link(unread))
+
+    def test_only_a_non_empty_unread_list_offers_to_mark_all_read(self):
+        self.login()
+        catchup = 'action="%s"' % reverse('forums-catchup_all')
+
+        response = self.client.get(self.unread_url)
+        self.assertContains(response, catchup, count=1)
+        self.assertContains(response, 'value="Mark All Forums Read"', count=1)
+
+        for url in (self.unanswered_url, self.active_url):
+            with self.subTest(url=url):
+                self.assertNotContains(self.client.get(url), catchup)
+
+        self.client.post(reverse('forums-catchup_all'))
+        response = self.client.get(self.unread_url)
+        self.assertContains(response, 'No topics meet your search criteria.')
+        self.assertNotContains(response, catchup)
+
+    def test_pagination_is_v3_above_and_below_the_table(self):
+        for n in range(TOPICS_PER_PAGE):
+            add_post(make_topic(self.forum, self.author, name='Topic %d' % n),
+                     self.author)
+
+        response = self.client.get(self.unanswered_url, {'page': 2})
+
+        self.assertEqual(len(response.context['page'].object_list), 1)
+        self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
+        self.assertTemplateNotUsed(response, 'forums/pagination.html')
+        self.assertNotIn('page_nav', response.context)
+        self.assertContains(response, '<ul class="pagination', count=2)
+        self.assertContains(response, 'href="./?page=1"')
+
+    def test_an_empty_list_says_so(self):
+        Topic.objects.filter(pk=self.topic.pk).update(post_count=2)
+        response = self.client.get(self.unanswered_url)
+        self.assertContains(response, 'No topics meet your search criteria.')
 
 
 class PostCardTestCase(TestCase):
