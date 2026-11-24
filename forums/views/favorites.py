@@ -66,6 +66,7 @@ def manage_favorites(request):
         'page_title': 'Favorite Topics',
         'description': 'Your favorite topics are listed below.',
         'page': page,
+        'V3_DESIGN': True,
         })
 
 

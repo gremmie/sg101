@@ -271,13 +271,6 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
 
     def test_old_pages_keep_the_old_fragments(self):
-        self.login(self.member)
-
-        response = self.client.get(reverse('forums-manage_favorites'))
-        self.assertOldDesign(response)
-        self.assertTemplateUsed(response, 'forums/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/v3/forum_query.html')
-
         self.login(self.moderator)
         response = self.client.get(reverse('forums-mod_forum',
                                            kwargs={'slug': self.forum.slug}))
@@ -480,10 +473,11 @@ class ForumNavTestCase(TestCase):
         with self.assertRaises(TemplateDoesNotExist):
             get_template('forums/jump_box.js')
 
-    def test_old_pages_keep_the_inline_forum_query_script(self):
-        response = self.client.get(reverse('forums-manage_favorites'))
-        self.assertTemplateUsed(response, 'forums/forum_query.js')
-        self.assertNotContains(response, self.NAV)
+    def test_the_forum_query_script_and_its_old_box_are_gone(self):
+        for name in ('forums/forum_query.js', 'forums/forum_query.html'):
+            with self.subTest(template=name):
+                with self.assertRaises(TemplateDoesNotExist):
+                    get_template(name)
 
 
 class TopicListsTestCase(TestCase):
@@ -733,6 +727,97 @@ class PostListsTestCase(TestCase):
                     self.client.get(url),
                     '%s?next=%s' % (reverse(settings.LOGIN_URL), url),
                     fetch_redirect_response=False)
+
+
+class ManageTopicsTestCase(TestCase):
+    """A member's favorite and subscribed topics are listed on the V3 design,
+    with a checkbox per topic, a master checkbox, and the warning and question
+    the check_all module asks before removing anything."""
+    fixtures = ['forums.json']
+    NAV = '<script type="module" src="/static/js/v3/forums/nav.js"></script>'
+    CHECK_ALL = '<script type="module" src="/static/js/v3/forums/check_all.js"></script>'
+    NONE_CHECKED = 'Please select some topics to remove.'
+    CONFIRM = 'Are you sure you wish to remove the selected topics from your list?'
+
+    def setUp(self):
+        cache.clear()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('member', '', 'pw')
+        self.topic = make_topic(self.forum, self.member, name='Reverb tank question')
+        add_post(self.topic, self.member)
+        self.member.favorite_topics.add(self.topic)
+        self.member.subscriptions.add(self.topic)
+        self.assertTrue(self.client.login(username='member', password='pw'))
+        self.pages = {
+            reverse('forums-manage_favorites'): 'Favorite Topics',
+            reverse('forums-manage_subscriptions'): 'Topic Subscriptions',
+        }
+
+    def test_both_pages_are_v3(self):
+        for url, title in self.pages.items():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, 'forums/manage_topics.html')
+                self.assertTemplateUsed(response, 'v3/base.html')
+                self.assertTemplateNotUsed(response, 'base.html')
+                self.assertIs(response.context.get('V3_DESIGN'), True)
+                self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+                self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
+                self.assertContains(response, self.NAV, count=1)
+                self.assertContains(response, self.CHECK_ALL, count=1)
+                self.assertNotContains(response, '$(document).ready')
+                self.assertContains(response, '<h2>%s</h2>' % title, html=True)
+
+    def test_each_row_has_a_checkbox_the_topic_and_its_forum(self):
+        for url in self.pages:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(
+                    response, '<input type="checkbox" name="delete_ids" value="%d" '
+                    'data-check-item aria-label="Select %s">' % (self.topic.id, self.topic.name),
+                    count=1, html=True)
+                self.assertContains(response, '<a href="%s">%s</a>' % (
+                    self.topic.get_absolute_url(), self.topic.name), count=1)
+                self.assertContains(response, 'in <a href="%s">%s</a>' % (
+                    self.forum.get_absolute_url(), self.forum.name), count=1)
+
+    def test_the_header_has_the_master_checkbox(self):
+        for url in self.pages:
+            with self.subTest(url=url):
+                self.assertContains(
+                    self.client.get(url),
+                    '<input type="checkbox" data-check-all aria-label="Select all">',
+                    count=1, html=True)
+
+    def test_the_form_carries_the_warning_and_the_question(self):
+        for url in self.pages:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, 'data-none-checked="%s"' % self.NONE_CHECKED,
+                                    count=1)
+                self.assertContains(response, 'data-confirm="%s"' % self.CONFIRM, count=1)
+                self.assertNotContains(response, 'name="page"')
+
+    def test_pagination_is_v3_above_and_below_the_table(self):
+        for n in range(20):
+            topic = make_topic(self.forum, self.member, name='Topic %d' % n)
+            add_post(topic, self.member)
+            self.member.favorite_topics.add(topic)
+
+        response = self.client.get(reverse('forums-manage_favorites'), {'page': 2})
+
+        self.assertEqual(len(response.context['page'].object_list), 1)
+        self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
+        self.assertTemplateNotUsed(response, 'forums/pagination.html')
+        self.assertContains(response, '<ul class="pagination', count=2)
+
+    def test_an_empty_list_says_so_and_offers_nothing_to_delete(self):
+        self.member.favorite_topics.clear()
+        response = self.client.get(reverse('forums-manage_favorites'))
+        self.assertContains(response, 'No topics found')
+        self.assertNotContains(response, 'Delete Selected')
+        self.assertNotContains(response, 'data-check-item')
 
 
 class PostCardTestCase(TestCase):

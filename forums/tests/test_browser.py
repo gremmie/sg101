@@ -887,3 +887,102 @@ class PostListBrowserTestCase(BrowserTestCase):
             self.assertLess(card['bottom'] - card['bodyBottom'], 50)
         # The second card follows the first with only the gap between them.
         self.assertLess(cards[1]['top'] - cards[0]['bottom'], 50)
+
+
+class ManageTopicsBrowserTestCase(BrowserTestCase):
+    """The favorites page's master checkbox, and the warning and question
+    asked before anything is removed."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        self.topics = []
+        for name in ('First topic', 'Second topic', 'Third topic'):
+            topic = make_topic(forum, self.member, name=name)
+            add_post(topic, self.member)
+            self.member.favorite_topics.add(topic)
+            self.topics.append(topic)
+        self.login(self.member)
+        self.page.goto(self.live_server_url + reverse('forums-manage_favorites'))
+        self.master = self.page.locator('[data-check-all]')
+        self.boxes = self.page.locator('[data-check-item]')
+
+        self.posts = []
+        self.page.on('request', lambda request: request.method == 'POST'
+                     and self.posts.append(request.url))
+
+    def answer_dialogs(self, accept):
+        """Accept or dismiss every dialog; return what each said."""
+        seen = []
+
+        def handle(dialog):
+            seen.append((dialog.type, dialog.message))
+            if accept:
+                dialog.accept()
+            else:
+                dialog.dismiss()
+
+        self.page.on('dialog', handle)
+        return seen
+
+    def tick(self, *names):
+        for name in names:
+            self.page.get_by_role('checkbox', name='Select %s' % name).check()
+
+    def submit(self):
+        self.page.get_by_role('button', name='Delete Selected').click()
+
+    def favorites(self):
+        return set(self.member.favorite_topics.values_list('name', flat=True))
+
+    def test_the_master_checks_and_unchecks_every_box(self):
+        self.assertEqual(self.boxes.count(), 3)
+        self.master.check()
+        for i in range(3):
+            expect(self.boxes.nth(i)).to_be_checked()
+        self.master.uncheck()
+        for i in range(3):
+            expect(self.boxes.nth(i)).not_to_be_checked()
+
+    def test_unticking_one_box_unticks_the_master(self):
+        self.master.check()
+        self.boxes.nth(1).uncheck()
+        expect(self.master).not_to_be_checked()
+        expect(self.boxes.nth(0)).to_be_checked()
+        expect(self.boxes.nth(2)).to_be_checked()
+
+    def test_nothing_ticked_warns_and_posts_nothing(self):
+        seen = self.answer_dialogs(accept=True)
+        self.submit()
+        self.assertEqual(seen, [('alert', 'Please select some topics to remove.')])
+        self.assertEqual(self.posts, [])
+        self.assertEqual(len(self.favorites()), 3)
+
+    def test_dismissing_the_question_removes_nothing(self):
+        seen = self.answer_dialogs(accept=False)
+        self.tick('First topic', 'Third topic')
+        self.submit()
+        self.assertEqual(seen, [(
+            'confirm', 'Are you sure you wish to remove the selected topics from your list?')])
+        self.assertEqual(self.posts, [])
+        self.assertEqual(len(self.favorites()), 3)
+
+    def test_accepting_the_question_removes_exactly_the_ticked_topics(self):
+        seen = self.answer_dialogs(accept=True)
+        self.tick('First topic', 'Third topic')
+        self.submit()
+        expect(self.boxes).to_have_count(1)
+        self.assertEqual([kind for kind, _ in seen], ['confirm'])
+        self.assertEqual(self.favorites(), {'Second topic'})
+
+    def test_on_a_phone_the_checkboxes_take_only_their_own_width(self):
+        self.page.set_viewport_size({'width': 360, 'height': 800})
+        self.page.reload()
+        check, topic = (self.page.locator('tbody tr').first.locator('td').nth(i)
+                        .evaluate('e => e.getBoundingClientRect().width')
+                        for i in (0, 1))
+        self.assertLess(check, 50)
+        self.assertGreater(topic, 200)
+

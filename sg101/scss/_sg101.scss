@@ -507,6 +507,12 @@ table.forum-table {
    }
 }
 
+// A column of checkboxes is as narrow as its boxes, even beside the phone
+// rule's fixed last column.
+table.forum-table .forum-table-check {
+   width: 1%;
+}
+
 // A topic's posts, each a row holding an author card and a body card, with a
 // gap between posts so each reads as one piece.
 //

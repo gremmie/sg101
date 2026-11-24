@@ -119,4 +119,5 @@ def manage_subscriptions(request):
         'page_title': 'Topic Subscriptions',
         'description': 'The forum topics you are currently subscribed to are listed below.',
         'page': page,
+        'V3_DESIGN': True,
         })
