@@ -3202,3 +3202,82 @@ Restored byte-identical.
 
 Browser tests: 137, OK. Suite and gate, separate runs: 1742 tests, OK, each.
 
+## #47: a tighter box for the forum's posting forms — DONE 2026-11-24, unstaged for review
+
+From member feedback (forum topic 23946, post 486387); Brian agreed to
+tighten the Reply to Topic box. Done on `v3-forums-release-2`.
+
+**Measured first, at 1280.** The reply box (`forums/new_post_form.html`) was
+485 px. Its empty space was Foundation's fieldset defaults: 20 px of padding
+all round; the Reply button's 16 px margin and the Video Attachments box's
+18 px between them; that box, 65 px while empty, then 18 px and 20 px more
+below it. The toolbar (44 px) and the 10-row writing area (202 px) are the
+writing space and were left alone.
+
+**Brian's choices, from prototypes injected into the page.** Version A:
+padding 12 px; the Video Attachments box 12 px above it and none below, and
+4/8 px inside, so the empty box is a slim strip; the submit button's bottom
+margin 0. Applied to **all four forum forms**: the reply box and, through
+`forums/v3/post_form.html`, the new topic, new post and edit post pages. A
+class on the outer fieldset, `forum-post-form`, scopes it; the site's other
+`.fieldset` forms keep Foundation's. At every width, not only desktop: on a
+phone the narrower padding gives the writing area room.
+
+Version B, the Reply button moved below the attachments, was measured (413 px)
+and not taken: all four forum forms put the submit button first, and the
+reply box alone would have broken that. If wanted, it is a change to all four.
+
+**Then, at Brian's request, the Video Attachments box shows only while it
+holds a video.** Its entries are `.forum-attachment-entry` elements in the
+`data-attachments` list: the server renders a post's existing ones, and
+`post_box/video.js` appends and removes them; quick reply empties the list.
+So one CSS rule, `:not(:has(.forum-attachment-entry))`, hides the box, and
+the browser follows each change with no script. A browser without `:has()`
+(before Chrome 105, Safari 15.4, Firefox 121) shows the empty box as before.
+With nothing attached, the toolbar's video button is the form's only mention
+of video, as it was always the only way to attach one.
+
+**A scoping bug, caught by the full runs.** The rules first named the box as
+any `.fieldset` inside the form. The new topic page's Quick Search puts its
+results in another fieldset in the same form, so the hiding rule hid them:
+`test_quick_search_shows_matches_under_the_subject` and
+`test_quick_search_is_an_icon_and_search_and_says_searching_while_busy`
+failed in all three runs. The padding from version A had reached that box
+too, unnoticed, since it stayed visible. The Video Attachments box now has
+its own class, `forum-post-attachments`, in both templates, and the rules
+name it; the Quick Search results keep Foundation's fieldset. Passing counts
+had been written into this entry before the runs were read; they were taken
+out, and the ones below are from the runs after the fix.
+
+**Measured after,** with the empty Video Attachments box hidden: the reply box
+and the new post page's form 352 px at 1280 (485 before, −27%), 351 px at 360;
+the new topic form 465 px at 1280, 515 at 360, taller for its subject and, for
+a moderator, Sticky and Locked. With the box still showing, version A alone
+was 401 px. The writing area is
+844 px wide at 1280 and 314 at 360. No page errors, no sideways scroll. The
+probes signed in as Brian; his read-tracking rows for the forum and topic, and
+the topic's view count, were recorded and restored.
+
+**Tests**, kept few as for #46: `PostFormDensityBrowserTestCase`
+(`test_browser.py`, 2): the reply box and the new post page get the tighter
+box, and the search page's fieldset keeps Foundation's 20 px. In
+`VideoAttachmentTestCase`, 2 more: the reply box's Video Attachments box is
+hidden, shows once a video is added through the toolbar, and hides again
+after Remove; and the edit page of a post with a video shows it. The first
+failed before the rule; the second passed, as it guards the box a video
+needs.
+
+| Mutation | Failed |
+|---|---|
+| the reply box without the class | `reply_box_and_the_posting_pages` |
+| the posting pages without the class | `reply_box_and_the_posting_pages` |
+| the rule on every fieldset | `other_fieldsets_keep_foundations_padding` |
+| the stylesheet not rebuilt | `reply_box_and_the_posting_pages` |
+| the hiding rule dropped (built CSS) | `shows_only_while_it_holds_a_video` |
+| the box hidden always (built CSS) | `shows_only_while_it_holds_a_video`, `editing_a_post_with_a_video`, two existing video tests |
+| the hiding rule on every fieldset in the form, the bug (built CSS) | both quick search tests |
+
+Restored byte-identical.
+
+Browser tests: 141, OK. Suite and gate, separate runs: 1746 tests, OK, each.
+
