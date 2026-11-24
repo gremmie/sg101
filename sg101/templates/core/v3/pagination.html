@@ -1,7 +1,20 @@
+{% comment %}
+Previous and Next are buttons at every width, an icon and a word. On a phone
+the page numbers and the words are hidden, and First, Last and the page the
+reader is on join the icons. A greyed button at either end leads nowhere, so
+it is hidden from screen readers.
+
+The icons are Foundation's media-player glyphs, whose names run the other way
+from the buttons': fi-previous is skip-to-start, so First, and fi-next is
+skip-to-end, so Last.
+{% endcomment %}
 <ul class="pagination text-center" role="navigation" aria-label="Pagination">
-   <li class="pagination-previous{% if not page.has_previous %} disabled{% endif %}">
-   {% if page.has_previous %}<a href="./?page={{ page.previous_page_number }}">{% endif %}Previous
-   {% if page.has_previous %}</a>{% endif %}</li>
+   <li class="pagination-button hide-for-medium">
+   {% if page.has_previous %}<a class="button small" href="./?page=1" aria-label="First page"><i class="fi-previous" aria-hidden="true"></i></a>
+   {% else %}<span class="button small disabled" aria-hidden="true"><i class="fi-previous" aria-hidden="true"></i></span>{% endif %}</li>
+   <li class="pagination-button">
+   {% if page.has_previous %}<a class="button small" href="./?page={{ page.previous_page_number }}" aria-label="Previous page"><i class="fi-rewind" aria-hidden="true"></i><span class="show-for-medium">Previous</span></a>
+   {% else %}<span class="button small disabled" aria-hidden="true"><i class="fi-rewind" aria-hidden="true"></i><span class="show-for-medium">Previous</span></span>{% endif %}</li>
    {% for num in page.page_range %}
       {% if num %}
          {% if num == page.number %}
@@ -13,7 +26,11 @@
          <li class="ellipsis" aria-hidden="true"></li>
       {% endif %}
    {% endfor %}
-   <li class="pagination-next{% if not page.has_next %} disabled{% endif %}">
-   {% if page.has_next %}<a href="./?page={{ page.next_page_number }}">{% endif %}Next
-   {% if page.has_next %}</a>{% endif %}</li>
+   <li class="pagination-status hide-for-medium">{{ page.number }} of {{ page.paginator.num_pages }}</li>
+   <li class="pagination-button">
+   {% if page.has_next %}<a class="button small" href="./?page={{ page.next_page_number }}" aria-label="Next page"><span class="show-for-medium">Next</span><i class="fi-fast-forward" aria-hidden="true"></i></a>
+   {% else %}<span class="button small disabled" aria-hidden="true"><span class="show-for-medium">Next</span><i class="fi-fast-forward" aria-hidden="true"></i></span>{% endif %}</li>
+   <li class="pagination-button hide-for-medium">
+   {% if page.has_next %}<a class="button small" href="./?page={{ page.paginator.num_pages }}" aria-label="Last page"><i class="fi-next" aria-hidden="true"></i></a>
+   {% else %}<span class="button small disabled" aria-hidden="true"><i class="fi-next" aria-hidden="true"></i></span>{% endif %}</li>
 </ul>

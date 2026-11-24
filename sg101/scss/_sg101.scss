@@ -759,3 +759,56 @@ iframe[src*="vimeo"] {
       padding-right: 0.5rem;
    }
 }
+
+// The pagination fragment, core/v3/pagination.html. Its Previous and Next, and
+// on a phone First and Last, are small icon buttons; on a phone the page the
+// reader is on replaces the numbers. Foundation shows only an item list's first
+// and last items on a phone, so these are shown by class instead. The rules
+// undo what Foundation's pagination gives every link: black text, its own
+// padding and a green hover.
+.pagination {
+   li.pagination-button,
+   li.pagination-status {
+      display: inline-block;
+   }
+
+   .pagination-status {
+      padding: $pagination-item-padding;
+   }
+
+   .button {
+      margin: 0;
+      padding: $button-padding;
+      color: $button-color;
+
+      // The glyphs are small at the button's own size. A bigger one makes the
+      // line, and so the button, taller; the negative margins let it overlap
+      // the line instead, leaving the button as tall as a text one.
+      i {
+         display: inline-block;
+         margin: -0.2em 0;
+         font-size: 1.4em;
+         line-height: 1;
+         vertical-align: -0.15em;
+      }
+
+      // The gap between an icon and its word, only where the word shows: on a
+      // phone the word is hidden, and Next's gap, on its icon, would remain.
+      @include breakpoint(medium) {
+         i + span,
+         span + i {
+            margin-left: 0.4em;
+         }
+      }
+
+      &:hover {
+         background: $button-background-hover;
+      }
+   }
+
+   .button.disabled,
+   .button.disabled:hover {
+      background: $button-background;
+      color: $button-color;
+   }
+}

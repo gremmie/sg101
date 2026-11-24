@@ -986,3 +986,96 @@ class ManageTopicsBrowserTestCase(BrowserTestCase):
         self.assertLess(check, 50)
         self.assertGreater(topic, 200)
 
+
+
+class PaginationBrowserTestCase(BrowserTestCase):
+    """Pagination on a phone: First, Previous, the page, Next and Last, as blue
+    icon buttons on one line; on a wider screen, Previous, the numbers and
+    Next, each button an icon and a word."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        forum = Forum.objects.get(slug='shallow-end')
+        member = User.objects.create_user('pjmoto', '', 'pw')
+        self.topic = make_topic(forum, member)
+        for n in range(2 * POSTS_PER_PAGE + 5):
+            add_post(self.topic, member, body='Post %d' % n)
+        self.login(member)
+        self.pagination = self.page.locator('ul.pagination').first
+
+    def open(self, width, page):
+        self.page.set_viewport_size({'width': width, 'height': 800})
+        self.page.goto('%s%s?page=%d' % (self.live_server_url,
+                                         self.topic.get_absolute_url(), page))
+
+    def button(self, label):
+        return self.pagination.get_by_role('link', name=label)
+
+    def test_a_phone_gets_first_previous_the_page_next_and_last_on_one_line(self):
+        # 320 px, the narrowest phone in common use.
+        self.open(320, 2)
+        labels = ('First page', 'Previous page', 'Next page', 'Last page')
+        for label in labels:
+            expect(self.button(label)).to_be_visible()
+        status = self.pagination.locator('li', has_text='2 of 3')
+        expect(status).to_be_visible()
+        expect(self.pagination.get_by_role('link', name='Page 1')).to_be_hidden()
+        expect(self.pagination.get_by_text('Previous', exact=True)).to_be_hidden()
+        # Each icon is a glyph from the icon font, not an empty box.
+        for icon in self.pagination.locator('.button i').all():
+            self.assertNotIn(icon.evaluate(
+                "e => getComputedStyle(e, '::before').content"), ('none', 'normal', ''))
+        # The text item sits a pixel or two lower than the buttons; a wrapped
+        # item would be a whole line lower.
+        tops = [self.button(label).bounding_box()['y'] for label in labels]
+        tops.append(status.bounding_box()['y'])
+        self.assertLess(max(tops) - min(tops), 10)
+        # The pagination itself, not the page: at 320 the signed-in header's
+        # Logout button is wider than the screen on its own.
+        right, scroll, client = self.pagination.evaluate(
+            'u => [u.getBoundingClientRect().right, u.scrollWidth, u.clientWidth]')
+        self.assertLessEqual(right, 320)
+        self.assertLessEqual(scroll, client)
+
+    def test_a_wider_screen_gets_previous_the_numbers_and_next(self):
+        self.open(1280, 2)
+        expect(self.button('Previous page')).to_have_text('Previous')
+        expect(self.button('Next page')).to_have_text('Next')
+        expect(self.pagination.get_by_text('Previous', exact=True)).to_be_visible()
+        expect(self.pagination.get_by_text('Next', exact=True)).to_be_visible()
+        expect(self.pagination.get_by_role('link', name='Page 1')).to_be_visible()
+        expect(self.pagination.get_by_role('link', name='Page 3')).to_be_visible()
+        expect(self.button('First page')).to_be_hidden()
+        expect(self.button('Last page')).to_be_hidden()
+        expect(self.pagination.locator('li', has_text='2 of 3')).to_be_hidden()
+
+    def test_the_buttons_look_like_the_pages_other_buttons(self):
+        self.open(1280, 2)
+        colours = 'e => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color]'
+        expected = self.page.locator('a.button', has_text='New Reply').first.evaluate(colours)
+        for label in ('Previous page', 'Next page'):
+            with self.subTest(button=label):
+                self.assertEqual(self.button(label).evaluate(colours), expected)
+
+    def test_on_a_phone_the_icon_buttons_are_the_same_width(self):
+        self.open(360, 2)
+        widths = [self.button(label).bounding_box()['width']
+                  for label in ('First page', 'Previous page', 'Next page', 'Last page')]
+        # The glyphs differ by a pixel or so; a hidden word's gap would add more.
+        self.assertLess(max(widths) - min(widths), 2)
+
+    def test_an_icon_does_not_make_its_button_taller(self):
+        # On a wider screen, where the button keeps its word without the icon.
+        self.open(1280, 2)
+        button = self.button('Next page')
+        with_icon = button.bounding_box()['height']
+        button.locator('i').evaluate("e => e.style.display = 'none'")
+        self.assertLess(with_icon - button.bounding_box()['height'], 2)
+
+    def test_last_goes_to_the_last_page_and_greys_out_there(self):
+        self.open(360, 1)
+        self.button('Last page').click()
+        expect(self.pagination.locator('li', has_text='3 of 3')).to_be_visible()
+        self.assertEqual(self.button('Next page').count(), 0)
+        self.assertEqual(self.button('Last page').count(), 0)
