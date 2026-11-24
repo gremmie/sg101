@@ -3,6 +3,7 @@ import datetime
 import re
 
 from django.contrib.auth.models import Group, User
+from django.core.cache import cache
 from django.urls import reverse
 from playwright.sync_api import expect
 
@@ -1079,3 +1080,64 @@ class PaginationBrowserTestCase(BrowserTestCase):
         expect(self.pagination.locator('li', has_text='3 of 3')).to_be_visible()
         self.assertEqual(self.button('Next page').count(), 0)
         self.assertEqual(self.button('Last page').count(), 0)
+
+
+class ForumDensityBrowserTestCase(BrowserTestCase):
+    """On wider screens the forum tables and a thread's post chrome are tighter
+    than Foundation's defaults; phones keep the defaults. The exact sizes are
+    the stylesheet's; these check the breakpoint, the one rule that changes
+    behaviour, and that the rebuilt stylesheet is the one served."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        member = User.objects.create_user('pjmoto', '', 'pw')
+        self.topic = make_topic(self.forum, member, name='A sticky topic', sticky=True)
+        add_post(self.topic, member)
+        add_post(self.topic, member)
+        self.forum_url = reverse('forums-forum_index', kwargs={'slug': self.forum.slug})
+        self.post = '#forum-topic-post-container > .row'
+
+    def open(self, width, url):
+        self.page.set_viewport_size({'width': width, 'height': 900})
+        self.page.goto(self.live_server_url + url)
+
+    def style(self, selector, prop):
+        return self.page.locator(selector).first.evaluate(
+            '(e, p) => getComputedStyle(e)[p]', prop)
+
+    def test_phones_keep_todays_spacing(self):
+        self.open(360, reverse('forums-index'))
+        self.assertEqual(self.style('h3.forum-category', 'fontSize'), '19px')
+        self.assertEqual(self.style('table.forum-table td', 'padding'), '8px 10px 10px')
+        self.assertEqual(self.style('table.forum-table td p', 'marginBottom'), '16px')
+
+        self.open(360, self.forum_url)
+        self.assertEqual(self.style('table.forum-table td i.fi-asterisk', 'fontSize'), '36px')
+
+        self.open(360, self.topic.get_absolute_url())
+        self.assertEqual(self.style(self.post + ' .medium-9 .sg101-card-divider', 'paddingTop'),
+                         '16px')
+        self.assertEqual(self.style(self.post + ' .forum-post-tools', 'paddingTop'), '16px')
+
+    def test_the_last_posts_date_stays_on_one_line_only_on_wider_screens(self):
+        time = 'table.forum-table .forum-last-post-time'
+        self.open(1280, self.forum_url)
+        self.assertEqual(self.style(time, 'whiteSpace'), 'nowrap')
+        # One box per link and one for the space between: on one line, they
+        # share a top.
+        tops = self.page.locator(time).first.evaluate(
+            'e => Array.from(e.getClientRects(), (r) => Math.round(r.top))')
+        self.assertEqual(len(set(tops)), 1)
+        # On a phone the Last Post column is 10rem wide, and the date must wrap.
+        self.open(360, self.forum_url)
+        self.assertEqual(self.style(time, 'whiteSpace'), 'normal')
+
+    def test_wider_screens_get_the_tighter_layout(self):
+        self.open(1280, reverse('forums-index'))
+        self.assertEqual(self.style('table.forum-table td', 'padding'), '6px 10px')
+        self.open(1280, self.topic.get_absolute_url())
+        self.assertEqual(self.style(self.post + ' .medium-9 .sg101-card-divider', 'paddingTop'),
+                         '8px')

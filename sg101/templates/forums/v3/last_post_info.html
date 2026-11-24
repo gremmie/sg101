@@ -2,8 +2,8 @@
 {% load forum_tags %}
 {% load static %}
 {% if post %}
-<a href="{{ post.get_absolute_url }}" title="Goto last post"><i class="fi-arrow-right"></i></a>
-<a href="{{ post.get_absolute_url }}" title="Goto last post">{% forum_date post.creation_date user %}</a><br />
+<span class="forum-last-post-time"><a href="{{ post.get_absolute_url }}" title="Goto last post"><i class="fi-arrow-right"></i></a>
+<a href="{{ post.get_absolute_url }}" title="Goto last post">{% forum_date post.creation_date user %}</a></span><br />
 {% profile_link post.user.username %}
 {% else %}
 <i>No posts</i>
