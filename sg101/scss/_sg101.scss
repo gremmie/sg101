@@ -870,3 +870,29 @@ iframe[src*="vimeo"] {
    }
 }
 
+// The forum's posting forms, the reply box under a thread and the new topic,
+// new post and edit post pages: a tighter box than Foundation's fieldset. The
+// writing area keeps its size. Other fieldsets keep Foundation's defaults.
+//
+// The Video Attachments box shows only while it holds a video. post_box's
+// video.js adds and removes the entries, and :has() follows them; a browser
+// without :has() shows the empty box, as before. It is named by its own class:
+// the new topic page's Quick Search puts its results in another fieldset in
+// the same form.
+.fieldset.forum-post-form {
+   padding: 0.75rem;
+
+   > .button {
+      margin-bottom: 0;
+   }
+
+   .forum-post-attachments {
+      margin: 0.75rem 0 0;
+      padding: 0.25rem 0.75rem 0.5rem;
+
+      &:not(:has(.forum-attachment-entry)) {
+         display: none;
+      }
+   }
+}
+

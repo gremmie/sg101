@@ -1,7 +1,7 @@
 {% load core_tags forum_tags %}
 {# The form of the new topic, new post and edit post pages. legend and submit_value name it; quick_search adds the Quick Search to the subject. #}
 <form action="." method="post">{% csrf_token %}
-   <fieldset class="fieldset">
+   <fieldset class="fieldset forum-post-form">
       <legend>{{ legend }}</legend>
       {{ form.non_field_errors }}
       {% if form.name %}
@@ -40,7 +40,7 @@
          </div>
       {% endif %}
       <input type="submit" id="forum-post-submit" class="primary button" value="{{ submit_value }}" />
-      <fieldset class="fieldset">
+      <fieldset class="fieldset forum-post-attachments">
          <legend>Video Attachments</legend>
          {% post_attachments form %}
       </fieldset>

@@ -1,13 +1,13 @@
 {% load core_tags forum_tags %}
 <form action="." method="post">{% csrf_token %}
-   <fieldset class="fieldset">
+   <fieldset class="fieldset forum-post-form">
       <legend>Reply to Topic</legend>
       {{ form.non_field_errors }}
       {% post_box form.body video=True %}
       {{ form.topic_id }}
       <input type="submit" value="Reply" id="forums-reply-post"
          class="primary button" />
-      <fieldset class="fieldset">
+      <fieldset class="fieldset forum-post-attachments">
          <legend>Video Attachments</legend>
          {% post_attachments form %}
       </fieldset>

@@ -487,6 +487,27 @@ class VideoAttachmentTestCase(BrowserTestCase):
         response.value.finished()
         return response.value.request.post_data
 
+    def attachments_box(self):
+        return self.page.locator('fieldset.forum-post-form .forum-post-attachments')
+
+    def test_the_attachments_box_shows_only_while_it_holds_a_video(self):
+        self.open_topic()
+        expect(self.attachments_box()).to_be_hidden()
+        self.add_video()
+        expect(self.entries()).to_have_count(1)
+        expect(self.attachments_box()).to_be_visible()
+        self.entries().first.locator('.attachment-remove').click()
+        expect(self.entries()).to_have_count(0)
+        expect(self.attachments_box()).to_be_hidden()
+
+    def test_editing_a_post_with_a_video_shows_the_attachments_box(self):
+        post = add_post(self.topic, self.member, body='a post with a video')
+        Attachment.objects.create(post=post, embed=self.embed, order=0)
+        self.login(self.member)
+        self.page.goto(self.live_server_url + reverse('forums-edit_post', kwargs={'id': post.id}))
+        expect(self.entries()).to_have_count(1)
+        expect(self.attachments_box()).to_be_visible()
+
     def test_an_added_video_is_sent_with_the_reply(self):
         self.open_topic()
         self.add_video()
@@ -1141,3 +1162,39 @@ class ForumDensityBrowserTestCase(BrowserTestCase):
         self.open(1280, self.topic.get_absolute_url())
         self.assertEqual(self.style(self.post + ' .medium-9 .sg101-card-divider', 'paddingTop'),
                          '8px')
+
+
+class PostFormDensityBrowserTestCase(BrowserTestCase):
+    """The forum's posting forms, the reply box and the new topic, new post and
+    edit post pages, have a tighter box than Foundation's fieldset; other
+    fieldsets keep its default."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        self.topic = make_topic(forum, self.member)
+        add_post(self.topic, self.member)
+        self.login(self.member)
+
+    def style(self, selector, prop):
+        return self.page.locator(selector).first.evaluate(
+            '(e, p) => getComputedStyle(e)[p]', prop)
+
+    def assertTight(self, submit):
+        form = 'fieldset.fieldset:has(%s)' % submit
+        self.assertEqual(self.style(form, 'padding'), '12px')
+        self.assertEqual(self.style(form + ' .forum-post-attachments', 'paddingTop'), '4px')
+        self.assertEqual(self.style(submit, 'marginBottom'), '0px')
+
+    def test_the_reply_box_and_the_posting_pages_are_tighter(self):
+        self.page.goto(self.live_server_url + self.topic.get_absolute_url())
+        self.assertTight('#forums-reply-post')
+        self.page.goto(self.live_server_url + reverse(
+            'forums-new_post', kwargs={'topic_id': self.topic.id}))
+        self.assertTight('#forum-post-submit')
+
+    def test_other_fieldsets_keep_foundations_padding(self):
+        self.page.goto(self.live_server_url + reverse('search'))
+        self.assertEqual(self.style('fieldset.fieldset', 'padding'), '20px')
