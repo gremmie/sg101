@@ -3139,3 +3139,66 @@ screenshots of each in the session scratchpad.
 
 Browser tests: 134, OK. Suite and gate, separate runs: 1739 tests, OK, each.
 
+## #46: denser forum tables and post chrome on wider screens — DONE 2026-11-24
+
+From member feedback (forum topic 23946, post 486387): on a laptop the forums
+took too much room. Done on `v3-forums-release-2`.
+
+**Measured first, at 1280.** The cell padding was modest (8/10 px); rows were
+tall from their content: category headings 31 px, forum names 25 px and topic
+titles 20 px, each with 8 px below; a 16 px margin after each forum's
+description, inside the cell; 36 px icons, taller than a topic title; and the
+Last Post date wrapping, so that cell took three lines. A thread's short posts
+are as tall as their author card, and each post's header bars and tools row
+are mostly padding around one small line.
+
+**The changes, from medium (640 px) up; phones keep Foundation's defaults.**
+Category headings 22 px (`h3.forum-category`, a new class), forum names
+18 px, topic titles 17 px, 4 px under each; 8 px after a description; cell
+padding 6/10 px; icons in cells 24 px; the Last Post date and time on one line
+(`.forum-last-post-time`, a span in `forums/v3/last_post_info.html`, so the
+favorites page's topic titles, its last column, still wrap). In a thread,
+post header bars and the tools row 8 px top and bottom, the author card
+12 px; the post's text keeps its 16 px.
+
+**Brian's choices, from prototypes injected into dev pages.** The gap after a
+description, 8 px of the 0, 4, 8 and 16 px compared, for readability; the
+heading gap 4 px rather than 2. The page titles (`h2`, 40 px) are left: every
+V3 page shares them. The thread trim was in the issue as out of scope; Brian
+asked to revisit it, and it went in at about 7%, the text untouched. A smaller
+author card, the one change that would shorten short posts much further, was
+not taken.
+
+**Measured after, first eight rows:**
+
+| Page | 1280 before | 1280 after | 360 |
+|---|---|---|---|
+| Forums index | 933 px | 709 px (−24%) | unchanged |
+| Gear | 920 px | 669 px (−27%) | unchanged |
+| Topic 23946, page 25 | 2,348 px | 2,180 px (−7%) | unchanged |
+
+Phones were compared row by row against the committed stylesheet, with the
+changes stashed: identical on the index, Gear, the thread and the unanswered
+list. At tablet widths the forum tables already overflow (Gear 303 px at 640,
+108 at 900); with these changes 277 and 82. That is plan step 14.
+
+**Tests.** `ForumDensityBrowserTestCase` (`test_browser.py`), 3, Brian's call
+to keep them few: the exact sizes are the stylesheet's, and a test per value
+would only restate it. They check that phones keep today's spacing, that the
+date stays on one line only on wider screens, and one desktop value each for
+the tables and the thread, which proves the rebuilt stylesheet is served. The
+date test first counted the span's client boxes, but Chromium gives one per
+link and one for the space between, all on one line; it now checks they share
+a top.
+
+| Mutation | Failed |
+|---|---|
+| the rules applied on phones too | `phones_keep_todays_spacing`, `last_posts_date` |
+| no `nowrap` on the date | `last_posts_date` |
+| no thread trim | `tighter_layout` |
+| the stylesheet not rebuilt | `last_posts_date`, `tighter_layout` |
+
+Restored byte-identical.
+
+Browser tests: 137, OK. Suite and gate, separate runs: 1742 tests, OK, each.
+
