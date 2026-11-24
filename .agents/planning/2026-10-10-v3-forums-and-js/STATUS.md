@@ -2990,3 +2990,71 @@ before and after: unchanged. Screenshots stay in the session scratchpad.
 
 Browser tests: 122, OK. Suite and gate, separate runs: 1716 tests, OK, each.
 
+## Step 9 task 03 — favorites and subscriptions on V3, `check_all.js`, `forum_query.js` deleted — DONE 2026-11-23, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step09/task-03-manage-topics.code-task.md`.
+Branch `v3-forums-release-2`, on `6d3acf46`.
+
+**`manage_topics.html` is V3.** `manage_favorites` and `manage_subscriptions`
+set `V3_DESIGN`; the page has an `<h2>` with its title, the V3 forum query box
+with `nav.js`, and V3 pagination above and below.
+
+**Brian's choices.**
+
+- **The checkbox column first**, then the topic with the grey "in <Forum>"
+  line under it, as task 01's lists; no Forum column.
+- **One module, opt-in:** `sg101/static/js/v3/forums/check_all.js`. A box
+  marked `data-check-all` ticks or unticks every `data-check-item` box in its
+  form, and unticking one unticks the master, as `forums_mod.js` does. A form
+  with `data-none-checked` shows that warning (an `alert()`) instead of
+  submitting when nothing is ticked; one with `data-confirm` asks that
+  question first. The wording stays in the template, unchanged. Step 10's
+  `mod_forum` can use the checkbox half alone.
+- **The hidden `page` input is dropped**; both views ignored it.
+
+Each checkbox has an `aria-label` ("Select all", "Select <topic>"), since
+neither has a visible label (my addition). The views' `delete_all` branch,
+which no page sends, is unchanged and still tested in `test_subscriptions.py`.
+
+**A phone fix found on dev.** At 360 the checkbox column took half the table:
+`forum-table`'s phone rule fixes the last column at 10rem, here the topic, so
+the spare width went to the checkboxes (179 px). The checkbox cells take
+`.forum-table-check`, `width: 1%`, in `_sg101.scss`, rebuilt into
+`main.min.css`: 34 px against the topic's 305 at 360, and 34 against 835 at
+1280. A second rule giving the topic cell `width: auto` was written with it,
+then removed: with it gone the phone test still passed, so it did nothing.
+
+**`forum_query.js` and the old `forums/forum_query.html` are deleted**;
+nothing references either. `test_old_pages_keep_the_inline_forum_query_script`
+became `test_the_forum_query_script_and_its_old_box_are_gone`, and
+`test_old_pages_keep_the_old_fragments` keeps only its `mod_forum` half.
+
+**Tests**, written first. `ManageTopicsTestCase` (`test_views.py`, 6) and
+`ManageTopicsBrowserTestCase` (`test_browser.py`, 6, the phone width test
+written when the problem was found). Red run: 12 failures and 3 browser
+timeouts (no checkbox to tick on the old page). Two passed, as they guard
+behaviour the old page already had: the nothing-ticked warning and the empty
+list. The phone test failed at 179 px before the Sass.
+
+| Mutation | Failed |
+|---|---|
+| the master changes no box | `master_checks_and_unchecks`, `unticking_one_box` |
+| unticking a box leaves the master ticked | `unticking_one_box` |
+| no nothing-ticked check | `nothing_ticked_warns` |
+| no question asked | `dismissing_the_question`, `accepting_the_question` |
+| `manage_favorites` without `V3_DESIGN` | `both_pages_are_v3` |
+| `check_all.js` not loaded | `both_pages_are_v3`, and all five behaviour tests |
+| the question reworded | `form_carries_the_warning_and_the_question`, `dismissing_the_question` |
+| the checkbox column's width dropped (built CSS) | `on_a_phone_the_checkboxes` |
+| `forum_query.js` put back | `forum_query_script_and_its_old_box_are_gone` |
+
+Restored byte-identical.
+
+**On dev**, headless Chromium at 360 and 1280, as Brian: his favorites (53, so
+three pages) and subscriptions (none). All 200, no page errors, no sideways
+scroll; the master ticked all 20 boxes, and nothing was posted. His favorites,
+subscriptions and `last_login` were compared before and after: unchanged.
+Screenshots stay in the session scratchpad.
+
+Browser tests: 128, OK. Suite and gate, separate runs: 1728 tests, OK, each.
+
