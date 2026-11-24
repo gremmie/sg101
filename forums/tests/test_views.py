@@ -273,7 +273,7 @@ class V3PagesTestCase(TestCase):
     def test_old_pages_keep_the_old_fragments(self):
         self.login(self.member)
 
-        response = self.client.get(reverse('forums-my_posts'))
+        response = self.client.get(reverse('forums-manage_favorites'))
         self.assertOldDesign(response)
         self.assertTemplateUsed(response, 'forums/forum_query.html')
         self.assertTemplateNotUsed(response, 'forums/v3/forum_query.html')
@@ -481,7 +481,7 @@ class ForumNavTestCase(TestCase):
             get_template('forums/jump_box.js')
 
     def test_old_pages_keep_the_inline_forum_query_script(self):
-        response = self.client.get(reverse('forums-my_posts'))
+        response = self.client.get(reverse('forums-manage_favorites'))
         self.assertTemplateUsed(response, 'forums/forum_query.js')
         self.assertNotContains(response, self.NAV)
 
@@ -619,6 +619,120 @@ class TopicListsTestCase(TestCase):
         Topic.objects.filter(pk=self.topic.pk).update(post_count=2)
         response = self.client.get(self.unanswered_url)
         self.assertContains(response, 'No topics meet your search criteria.')
+
+
+class PostListsTestCase(TestCase):
+    """A member's posts, theirs or another member's, are listed on the V3 design
+    as plain cards, newest first, each headed by where the post lives."""
+    fixtures = ['forums.json']
+    NAV = '<script type="module" src="/static/js/v3/forums/nav.js"></script>'
+    CARD = '<div class="sg101-card">'
+
+    def setUp(self):
+        cache.clear()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = User.objects.create_user('author', '', 'pw')
+        self.reader = User.objects.create_user('reader', '', 'pw')
+        self.topic = make_topic(self.forum, self.author, name='Reverb tank question')
+        now = timezone.now()
+        self.older = add_post(self.topic, self.author, body='The older post',
+                              when=now - datetime.timedelta(days=1))
+        self.newer = add_post(self.topic, self.author, body='The newer post', when=now)
+
+        self.my_posts = reverse('forums-my_posts')
+        self.authors_posts = reverse('forums-posts_for_user',
+                                     kwargs={'username': 'author'})
+
+    def login(self, username):
+        self.assertTrue(self.client.login(username=username, password='pw'))
+
+    def assertV3List(self, response, title):
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'forums/post_list.html')
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertIs(response.context.get('V3_DESIGN'), True)
+        self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
+        self.assertTemplateNotUsed(response, 'forums/forum_query.js')
+        self.assertContains(response, self.NAV, count=1)
+        self.assertContains(response, 'data-forum-nav', count=1)
+        self.assertContains(response, '<h2>%s</h2>' % title, html=True)
+
+    def test_both_lists_are_v3(self):
+        self.login('author')
+        self.assertV3List(self.client.get(self.my_posts), 'My Posts')
+        self.login('reader')
+        self.assertV3List(self.client.get(self.authors_posts), 'Posts by author')
+
+    def test_one_card_per_post_newest_first(self):
+        self.login('reader')
+        content = self.client.get(self.authors_posts).content.decode()
+        self.assertEqual(content.count(self.CARD), 2)
+        self.assertLess(content.index('The newer post'), content.index('The older post'))
+
+    def test_each_card_links_its_forum_topic_and_post(self):
+        self.login('reader')
+        response = self.client.get(self.authors_posts)
+        self.assertContains(response, '<a href="%s">%s</a>' % (
+            self.forum.get_absolute_url(), self.forum.name), count=2)
+        self.assertContains(response, '<a href="%s">%s</a>' % (
+            self.topic.get_absolute_url(), self.topic.name), count=2)
+        for post in (self.older, self.newer):
+            with self.subTest(post=post.body):
+                self.assertContains(response, 'href="%s"' % post.get_absolute_url(),
+                                    count=1)
+
+    def test_a_card_shows_the_body_only(self):
+        embed = Oembed.objects.create(
+            url='https://example.com/video', type=Oembed.VIDEO, width=480,
+            height=360, html='<iframe class="an-attached-video"></iframe>')
+        Attachment.objects.create(post=self.newer, embed=embed, order=0)
+        self.login('reader')
+        response = self.client.get(self.authors_posts)
+        self.assertContains(response, self.newer.html, count=1)
+        self.assertNotContains(response, 'an-attached-video')
+
+    def test_a_member_with_no_posts_is_told_so(self):
+        self.login('reader')
+        response = self.client.get(self.my_posts)
+        self.assertV3List(response, 'My Posts')
+        self.assertContains(response, 'No posts found.')
+        self.assertNotContains(response, self.CARD)
+
+    def test_posts_in_a_forum_the_reader_cannot_see_are_left_out(self):
+        gear = Forum.objects.get(slug='gear')
+        hidden = make_topic(gear, self.author, name='A private topic')
+        add_post(hidden, self.author, body='A private post')
+        gear.category.groups.add(Group.objects.create(name='Inner Circle'))
+        cache.clear()
+
+        self.login('reader')
+        response = self.client.get(self.authors_posts)
+        self.assertContains(response, self.CARD, count=2)
+        self.assertNotContains(response, 'A private post')
+
+    def test_pagination_is_v3_above_and_below_the_list(self):
+        for n in range(POSTS_PER_PAGE - 1):
+            add_post(self.topic, self.author, body='Post %d' % n)
+
+        self.login('reader')
+        response = self.client.get(self.authors_posts, {'page': 2})
+
+        self.assertEqual(len(response.context['page'].object_list), 1)
+        self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
+        self.assertTemplateNotUsed(response, 'forums/pagination.html')
+        self.assertNotIn('page_nav', response.context)
+        self.assertContains(response, '<ul class="pagination', count=2)
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for url in (self.my_posts, self.authors_posts):
+            with self.subTest(url=url):
+                self.assertRedirects(
+                    self.client.get(url),
+                    '%s?next=%s' % (reverse(settings.LOGIN_URL), url),
+                    fetch_redirect_response=False)
 
 
 class PostCardTestCase(TestCase):

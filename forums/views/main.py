@@ -954,13 +954,10 @@ def _user_posts(request, target_user, req_user, page_title):
     except InvalidPage:
         raise Http404
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
-
     return render(request, 'forums/post_list.html', {
         'title': page_title,
         'page': page,
-        'page_nav': page_nav,
+        'V3_DESIGN': True,
         })
 
 

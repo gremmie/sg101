@@ -1,31 +1,34 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
+{% load static %}
 {% load forum_tags %}
 {% block title %}Forums: {{ title }}{% endblock %}
-{% block custom_js %}
-{% include "forums/forum_query.js" %}
-{% endblock %}
 {% block content %}
 {% forum_navigation title %}
-{% include "forums/forum_query.html" %}
-<div class="forum-block">
-{{ page_nav }}
-{% if page.object_list %}
-<dl id="forums-post-list">
-   {% for post in page.object_list %}
-   <dt>
-      <a href="{{ post.topic.forum.get_absolute_url }}" title="Visit Forum">{{ post.topic.forum.name }}</a> &raquo;
-         <a href="{{ post.topic.get_absolute_url }}" title="Visit Topic">{{ post.topic.name }}</a> &raquo;
-         <a href="{{ post.get_absolute_url }}" title="View Post in Context">
-            {% forum_date post.creation_date user %}</a>
-   </dt>
-   <dd class="{% cycle 'odd' 'even' %}">
-      {{ post.html|safe }}
-   </dd>
-   {% endfor %}
-</dl>
-{% else %}
-   <h4>No posts found.</h4>
-{% endif %}
-{{ page_nav }}
+<h2>{{ title }}</h2>
+{% include "forums/v3/forum_query.html" %}
+
+{% include 'core/v3/pagination.html' %}
+{% for post in page.object_list %}
+{# The card is height: 100%, to match the author card on the topic page; in #}
+{# a wrapper of its own it is as tall as its post, not as the whole column. #}
+<div>
+   <div class="sg101-card">
+      <div class="sg101-card-divider">
+         <a href="{{ post.topic.forum.get_absolute_url }}">{{ post.topic.forum.name }}</a> &raquo;
+         <a href="{{ post.topic.get_absolute_url }}">{{ post.topic.name }}</a> &raquo;
+         <a href="{{ post.get_absolute_url }}" title="View post in context">{% forum_date post.creation_date user %}</a>
+      </div>
+      <div class="card-section">
+         {{ post.html|safe }}
+      </div>
+   </div>
 </div>
+{% empty %}
+<p><i>No posts found.</i></p>
+{% endfor %}
+{% include 'core/v3/pagination.html' %}
+{% endblock %}
+
+{% block custom_js %}
+   <script type="module" src="{% static "js/v3/forums/nav.js" %}"></script>
 {% endblock %}

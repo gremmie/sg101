@@ -857,3 +857,33 @@ class ForumNavBrowserTestCase(BrowserTestCase):
     def test_the_index_query_box_goes_to_the_chosen_list(self):
         self.choose_and_go(reverse('forums-index'), 'Show unanswered topics',
                            reverse('forums-unanswered_topics'))
+
+
+class PostListBrowserTestCase(BrowserTestCase):
+    """A member's posts are listed as cards, each as tall as its post."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        forum = Forum.objects.get(slug='shallow-end')
+        self.member = User.objects.create_user('pjmoto', '', 'pw')
+        topic = make_topic(forum, self.member)
+        add_post(topic, self.member, body='A short post.')
+        add_post(topic, self.member, body='Another short post.')
+        self.login(self.member)
+
+    def test_each_card_is_as_tall_as_its_post(self):
+        self.page.goto(self.live_server_url + reverse('forums-my_posts'))
+        cards = self.page.evaluate('''() => Array.from(
+            document.querySelectorAll('.sg101-card'), (card) => {
+                const r = card.getBoundingClientRect();
+                const body = card.querySelector('.card-section p').getBoundingClientRect();
+                return {top: r.top, bottom: r.bottom, bodyBottom: body.bottom};
+            })''')
+
+        self.assertEqual(len(cards), 2)
+        for card in cards:
+            # The card ends below its one line of text by no more than its padding.
+            self.assertLess(card['bottom'] - card['bodyBottom'], 50)
+        # The second card follows the first with only the gap between them.
+        self.assertLess(cards[1]['top'] - cards[0]['bottom'], 50)
