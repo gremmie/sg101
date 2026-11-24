@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-22
+**Last updated:** 2026-11-23
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -2923,4 +2923,70 @@ so the catch-up button was seen only in the tests. Screenshots stay in the
 session scratchpad.
 
 Browser tests: 121, OK. Suite and gate, separate runs: 1707 tests, OK, each.
+
+## Step 9 task 02 — "my posts" and a member's posts on V3 — DONE 2026-11-23, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step09/task-02-post-lists.code-task.md`.
+Branch `v3-forums-release-2`, on `876bcf98`.
+
+**`post_list.html` is V3.** `_user_posts`, behind `my_posts` and
+`posts_for_user`, sets `V3_DESIGN` and no longer renders `page_nav`; the page
+has V3 pagination above and below, an `<h2>` with its title (as task 01's
+lists), and the V3 forum query box with `nav.js`.
+
+**Brian's choices.** Each post is a **plain** `sg101-card`: the default light
+green header, a white body, and the card's own bottom margin as the gap, so
+no Sass changed. **Each card sits in a plain `<div>` of its own**, which is
+load-bearing: `.sg101-card` is `height: 100%`, so the post card matches the
+author card on the topic page, and without a wrapper that resolves against
+the whole content column. See below. The topic page's colour cycling stays scoped to its post
+container. The header is forum » topic » date, the date linking to the post
+in context. The body is **the post's cached HTML only**, as the old list
+showed: no video attachments, no "last edited" note. The empty text is
+unchanged.
+
+**Two tests repointed again.** Task 01 moved
+`test_old_pages_keep_the_old_fragments` (its `forum_query` half) and
+`test_old_pages_keep_the_inline_forum_query_script` onto "my posts"; they now
+request the favorites page, old until task 03.
+
+**Tests.** `PostListsTestCase` (`test_views.py`), 8 tests, written first. A
+private forum is made by giving Gear's category a group, as
+`PrivateCategoryTests` does. Red run: 6 failed, each on V3, the cards, the
+links or V3 pagination. The other 2 passed, as they guard behaviour the old
+page already had: a card shows the body only, and visitors who aren't logged
+in are sent to log in.
+
+| Mutation | Failed |
+|---|---|
+| `_user_posts` without `V3_DESIGN` | `both_lists_are_v3`, `no_posts_is_told_so` |
+| oldest first | `newest_first` |
+| no link to the post | `links_its_forum_topic_and_post` (2 subtests) |
+| no link to the forum | `links_its_forum_topic_and_post` |
+| the old pagination below | `pagination_is_v3` |
+| `nav.js` not loaded | `both_lists_are_v3`, `no_posts_is_told_so` |
+| attachments shown in the card | `shows_the_body_only` |
+| the empty text changed | `no_posts_is_told_so` |
+| posts not limited to the forums the reader can see | `cannot_see_are_left_out` |
+
+Restored byte-identical.
+
+**Found by Brian on dev, after the first report: every card as tall as the
+column.** The screenshots below were taken with the wrapper `<div>`; I then
+removed it as unused, ran the tests, and reported that nothing should look
+different. It did: one line of text, then about 900 px of empty card. The
+cause is the `height: 100%` above. `PostListBrowserTestCase`
+(`test_browser.py`) now checks that each card ends within 50 px of its text
+and that the next follows with only the gap. Without the wrapper it failed
+(908 px below the text); with it back, it passes. Measured after the fix:
+cards 116 to 141 px at 1280, 188 to 264 px at 360.
+
+**On dev**, headless Chromium at 360 and 1280, as Brian: his posts, and
+normj's (the first other poster in topic 23946, chosen by query). All 200,
+20 cards each, no page errors, no sideways scroll, and no image in a card past
+the viewport's edge; normj's first page has photos, which fit at 360. Brian's
+`ForumLastVisit` and `TopicLastVisit` rows and `last_login` were compared
+before and after: unchanged. Screenshots stay in the session scratchpad.
+
+Browser tests: 122, OK. Suite and gate, separate runs: 1716 tests, OK, each.
 
