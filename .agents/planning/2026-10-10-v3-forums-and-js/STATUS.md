@@ -1,6 +1,6 @@
 # Project Status — the V3 forums, the post box, and the site's JavaScript
 
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-24
 **Methodology:** Prompt-Driven Development (`/agent-sops:pdd`), then
 `/agent-sops:code-assist` per task
 
@@ -3057,4 +3057,85 @@ subscriptions and `last_login` were compared before and after: unchanged.
 Screenshots stay in the session scratchpad.
 
 Browser tests: 128, OK. Suite and gate, separate runs: 1728 tests, OK, each.
+
+## #45: pagination, First and Last on phones, Previous and Next as buttons — DONE 2026-11-24, unstaged for review
+
+From member feedback (forum topic 23946): Previous and Next were too subtle,
+and there was no way to the last page; a member clicked Next 28 times. On a
+phone the site showed only Previous and Next (`$pagination-mobile-items` and
+`$pagination-mobile-current-item` are both `false`), not even the current
+page. Done on the release 2 branch, `v3-forums-release-2`, so it ships with
+the list pages.
+
+**Brian's choices.** First and Last **on phones only**: desktop's numbers
+already reach page 1 and the last page (`tail=2`), so there they would sit
+beside "1" and "28". A phone shows **"N of M"** between the buttons. The
+buttons are **small and blue**, greyed at the ends rather than hidden, so the
+row doesn't shift. Then, at Brian's suggestion, **Foundation icons**: on a
+phone icons alone, and on desktop an icon and a word. The glyphs are the
+media player's, whose names run the other way from the buttons': First is
+`fi-previous` (skip to start), Previous `fi-rewind`, Next `fi-fast-forward`,
+Last `fi-next` (skip to end). The template says so.
+
+**The fragment, `core/v3/pagination.html`**, is shared by 16 templates, ten
+outside the forums. Each button link has an `aria-label` ("First page",
+...); a greyed button is `aria-hidden`. `title`s were added and then dropped,
+Brian's choice: phone browsers never show them, a long press shows the link's
+address instead, and on desktop the buttons already carry their word. The
+global phone setting is unchanged, since the search page and the ygroup
+archive use Foundation's pagination without this fragment; the fragment's
+items are shown by class instead.
+
+**Sass** (`_sg101.scss`, rebuilt): show the buttons and the status by class on
+a phone, and undo what Foundation's pagination gives every link (black text,
+its own padding, a green hover). The glyphs are 1.4em, small otherwise. That
+made the buttons 40 px tall against 34.4 px with words; measured with
+alternatives, the height came from the icon's size, not its alignment, and
+`margin: -0.2em 0` on an inline-block icon brings it to 35.3 px.
+
+**Found by Brian on dev: on a phone Next was wider than the rest.** The gap
+between an icon and its word was a margin on whichever came second. Previous
+is icon then word, so its gap sat on the hidden word; Next is word then icon,
+so its gap sat on the icon and stayed: 44.7 px against 38 to 39 px. The gap
+now applies only from medium up, where the words show: 38 to 39 px for all
+four at 360, and Previous and Next keep their gap at 1280 (89.5 and 69.4 px).
+`test_on_a_phone_the_icon_buttons_are_the_same_width` failed first (6.7 px
+apart) and passes after. **Not tested:** the desktop gap itself; its loss would
+only crowd the word against its icon.
+
+**The word version, measured first:** five text buttons wrapped onto two
+lines at 360 (about 345 px of items in 340). "Prev" and tighter phone padding
+fitted them; the icons replaced both. With icons the phone row is 208 px of
+300 at 320.
+
+**Tests.** `core/tests/test_v3_pagination.py` (5, the fragment's markup on the
+first, a middle and the last page) and `PaginationBrowserTestCase`
+(`forums/tests/test_browser.py`, 5, a three-page topic). The phone test runs
+at 320 and checks the pagination itself rather than the page: signed in, the
+header's Logout button overflows at 320 on its own (9 px, plan step 15). Two
+test mistakes were found and fixed along the way: a "one line" check that
+compared exact tops (the status sits 2 px lower than the buttons), and an
+icon-height check run at 360, where hiding the only content empties the
+button. Two checks were added before the mutation battery, as nothing tested
+them: the buttons' text colour, and that an icon doesn't make its button
+taller.
+
+| Mutation | Failed |
+|---|---|
+| First always greyed | `middle_page_links_every_way`, `last_page_greys_out`, the phone test |
+| Last shown on wider screens | the three page tests, `wider_screen` |
+| no page status | `phone_is_told_which_page`, the phone test, `last_goes_to_the_last_page` |
+| Last links the next page | `middle_page`, `first_page`, `last_goes_to_the_last_page` |
+| First's and Last's icons swapped | `middle_page`, `last_page` |
+| a greyed button left to screen readers | `first_page_greys_out` |
+| the buttons not shown by class on a phone (built CSS) | the phone test, `last_goes_to_the_last_page` |
+| the buttons' white text dropped (built CSS) | `look_like_the_pages_other_buttons` |
+| the icon's negative margin dropped (built CSS) | `icon_does_not_make_its_button_taller` |
+
+Restored byte-identical.
+
+**On dev**, topic 23946 (26 pages) at 320, 360 and 1280, logged out:
+screenshots of each in the session scratchpad.
+
+Browser tests: 134, OK. Suite and gate, separate runs: 1739 tests, OK, each.
 
