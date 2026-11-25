@@ -3432,3 +3432,63 @@ moderator's header, plan step 15; the old page overflowed 590 px).
 Screenshots stay in the session scratchpad.
 
 Suite under the gate, after the button icons: 1761 tests, OK.
+
+## Step 10 task 02 — split topic and move topic on V3 — DONE 2026-11-25, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step10/task-02-split-and-move.code-task.md`.
+Branch `v3-forums-release-3`, on `dc786e83`.
+
+**Both pages are V3.** `mod_topic_split` and `mod_topic_move` set
+`V3_DESIGN`; each page has the V3 crumb and an `<h2>` naming the topic
+("Split Topic: …", "Move Topic: …"), and its form in the posting forms'
+tighter fieldset (`forum-post-form`, #47), with the fields rendered one by
+one as labels around their inputs. Split's `custom_js` block emitted
+`{{ form.media }}`, empty for these fields; it is gone. The permission
+behaviour is unchanged: split still redirects a non-moderator to the topic,
+and move refuses one with a 403.
+
+**Brian's choices, 2026-11-25.**
+
+- **Split shows its posts as simple cards**, one plain `sg101-card` per post
+  (`forum-split-post`), each in its own wrapper `<div>` as on the post lists
+  (the card is `height: 100%`). The header is the checkbox (every post but the
+  first, with an `aria-label`), the author, the date linking to the post in
+  context, and the IP; the body is the cached `post.html`. Chosen over the
+  topic page's full post cards and over a compact table of excerpts.
+- **Split starts on the topic's own forum** (`initial`), not on an empty
+  choice.
+- **The two split buttons come before and after the posts.** The page lists
+  every post, unpaginated as before: on dev, topics run to a median of 6
+  posts, 26 at the 90th percentile, 98 at the 99th, and 7,649 at most; a
+  155-post topic's split page is 52,112 px tall at 1280.
+
+**The step 9 old-page tests.** With `move_topic` converted, no page renders
+the old forum navigation fragment, so `test_old_pages_keep_the_old_fragments`
+is deleted; `test_unconverted_pages_stay_on_the_old_design` now uses the post
+IP page, old until task 03.
+
+**Tests**, written first. `SplitAndMovePageTests` (`test_moderation.py`, 8).
+Red run: 4 failed (V3, the cards, the preselected forum, and the empty-split
+error rendered on the old base). Three passed, as they guard behaviour the old
+pages already had: the checkboxes, the split-at error, and move's 403. The
+button test was added with Brian's choice, and failed before the second set.
+
+| Mutation | Failed |
+|---|---|
+| split without `V3_DESIGN` | `both_pages_are_v3` |
+| move without `V3_DESIGN` | `both_pages_are_v3` |
+| no initial forum | `split_starts_on_the_topics_forum` |
+| a checkbox on the first post | `every_post_but_the_first_has_a_checkbox` |
+| no IP | `split_shows_each_post_as_a_card_with_its_ip` |
+| no card class | `split_shows_each_post_as_a_card_with_its_ip` |
+| no form errors | both error tests |
+| move lets a member in | `move_is_refused_to_a_member` |
+
+Restored byte-identical.
+
+**On dev**, headless Chromium as the moderator, topics 41523 (6 posts) and
+34348 (155), POSTs aborted in the browser: all 200, no page errors, no
+sideways scroll at 1280, 63 px at 360 (the moderator's header, plan step 15).
+Screenshots stay in the session scratchpad: they show members' IPs.
+
+Suite under the gate: 1768 tests, OK.
