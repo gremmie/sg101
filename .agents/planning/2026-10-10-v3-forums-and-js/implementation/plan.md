@@ -466,7 +466,8 @@ longer use `base.html`.
 
 - **Convert** `mod_forum`, `mod_split_topic`, `move_topic`, `post_ip`,
   `stranger`, `spammer` and `spammer_nailed`, with `V3_DESIGN` on their views.
-- **`forums/static/js/mod.js`** replaces `forums_mod.js`.
+- **`check_all.js`** (step 9) replaces `forums_mod.js`, which is deleted; no
+  `mod.js` (Brian, 2026-11-25: `check_all.js` already does what it does).
 - **Afterwards, grep** that no forum template extends `base.html`.
 
 **Tests.**
