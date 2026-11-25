@@ -3342,3 +3342,93 @@ to merge. CI green on the branch; `main` fast-forwarded to it, CI green.
 Brian deployed (`git pull`, `make prod-up`; no migrations) and checked live:
 the changes look good. #45, #46 and #47 closed. Branch `v3-forums-release-2`
 deleted, remote and local. **Forums release 2 is live; step 9 is complete.**
+
+## Step 10 task 01 — the moderate-forum page on V3, `check_all.js` in place of `forums_mod.js` — DONE 2026-11-25, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step10/task-01-mod-forum.code-task.md`.
+Branch `v3-forums-release-3`, on `2e49c89e`.
+
+**`mod_forum.html` is V3.** `mod_forum` sets `V3_DESIGN` and no longer
+renders `page_nav` (so `render_to_string` left `forums/views/main.py`); the
+page has the V3 crumb, an `<h2>` "Moderate Forum: <forum>", V3 pagination
+above and below, and the step 9 table: the checkbox column first
+(`.forum-table-check`), the topic with its V3 icons, Replies and Author from
+medium up, and Last Post. **`check_all.js` replaces `forums_mod.js`**, which
+is deleted; nothing references it.
+
+**A bug in production, found while measuring: Toggle Sticky, Toggle Lock and
+Delete could not submit.** `MoveTopicForm`'s forum select renders with
+`required` (Django 1.8 didn't render it; 5.2 does), and the form had no
+`novalidate`, so the browser refused every button until a forum was chosen
+in the Move select. A first dev probe clicked Toggle Lock and nothing
+reached the server; dev was checked against the 11-24 snapshot (Gear's 21
+locked topics, same ids) and was unchanged. The three buttons now carry
+`formnovalidate`; Move keeps the browser's check, and the server's "This
+field is required." still shows. When it broke was not measured; the
+cutover (2026-10-08) is the likely date.
+
+**Brian's choices, 2026-11-25.**
+
+- **A bulk action returns to its page.** The form posted to `.`, dropping
+  `?page=`; the page went in a hidden `page` field the view never read
+  (`get_page_num` reads `GET`), so the redirect went to page 1 (measured on
+  Gear page 3, nothing submitted). The form now posts to `?page=N`, the hidden
+  field is gone, and **the redirect is clamped to the last page**: deleting or
+  moving every topic on the last page would otherwise redirect to a page that
+  no longer exists, a 404 (seen in the red run).
+- **Delete asks first, and only Delete.** `check_all.js` gained a per-button
+  `data-confirm`, read from `event.submitter` before the form's own: "Are you
+  sure you want to delete the selected topics?". After testing on dev, Brian
+  asked for Delete in red with a trash icon: it is now a `<button>` (an icon
+  can't go in an `<input>`), `alert button`, `fi-trash` before the word, same
+  name and value. The markup test checks both, and fails without `alert`.
+  The icon's gap is the topic page's: `.forum-mod-controls .button i` joins
+  the `.topic-actions` rule (`0.4em`, 5.76 px on Foundation's 0.9rem button
+  text), rebuilt into `main.min.css`;
+  `test_the_delete_icon_is_spaced_from_its_word` failed at 0 px before it.
+  Then Toggle Sticky (`fi-asterisk`) and Toggle Lock (`fi-lock`) got icons
+  the same way, at Brian's request; Brian declined a hotfix for the
+  `required` select bug, so it ships with release 3.
+- **Nothing ticked warns**, through the existing `data-none-checked`: "Please
+  select some topics.". Both wordings are mine, for Brian's review.
+- **Move joined to its select**: three buttons, then a Foundation input group
+  with the "Move To:" button on the left of the forum select (first built
+  with "Move" on the right; Brian moved it back to "Move To:" on the left). The select gets
+  `input-group-field` and an `aria-label` in the view; `MoveTopicForm` is
+  shared with the move-topic page, and Django copies fields per form.
+  `test_the_move_control_is_a_bare_select` now allows the group's own two
+  `<div>`s and still rejects any wrapper from rendering the field.
+- **Phone columns as the step 9 lists**: checkbox, topic, Last Post.
+
+**The step 9 old-page tests** now use the move-topic page, old until task 02.
+
+**Tests**, written first. `ModForumPageTests` (`test_moderation.py`, 7) and
+`ModForumBrowserTestCase` (`test_browser.py`, 6). Red run: 7 failures and 4
+browser timeouts; `test_a_bulk_action_returns_to_its_page` passed already, as
+the view handles a `?page=` it is given; the fault was the form's action,
+which `test_the_form_posts_back_to_its_page` covers. The Lock browser test was
+the one that exposed the `required` select.
+
+| Mutation | Failed |
+|---|---|
+| the button's `data-confirm` ignored | both Delete question tests |
+| Lock without `formnovalidate` | `lock_asks_nothing_and_locks` |
+| the action without the page | `form_posts_back_to_its_page` |
+| the redirect not clamped | `emptying_the_last_page` |
+| the redirect drops the page | `bulk_action_returns_to_its_page` |
+| every button asks | `lock_asks_nothing`, `checkboxes_and_buttons_carry_their_checks` |
+| no `data-none-checked` | `nothing_ticked_warns`, `checkboxes_and_buttons` |
+| no master checkbox | `checkboxes_and_buttons`, both master tests |
+| `V3_DESIGN` not passed | `page_is_v3` |
+| the select not in the input group | `move_joins_its_select` |
+
+Restored byte-identical. A `form:has([data-confirm])` selector clause was
+written and removed before the battery: no form needs it, so no test could
+fail without it.
+
+**On dev**, headless Chromium as the moderator on Gear page 3, POSTs aborted
+in the browser: no page errors; no sideways scroll at 1280, 63 px at 360 (the
+moderator's header, plan step 15; the old page overflowed 590 px).
+Screenshots stay in the session scratchpad.
+
+Suite under the gate, after the button icons: 1761 tests, OK.
