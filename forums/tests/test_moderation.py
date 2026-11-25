@@ -8,9 +8,11 @@ views is covered separately in test_permissions; here a moderator (superuser)
 performs the action and we assert what actually changed.
 """
 import datetime
+from unittest import mock
 
 import bio.models
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
@@ -184,8 +186,10 @@ class ModForumBulkTests(TestCase):
         self.client.login(username='admin', password='pw')
         controls = self._controls(self.client.get(self.url))
         self.assertIn('<select name="forums"', controls)
-        for markup in ['<tr', '<th', '<td', '<div', '<label']:
+        for markup in ['<tr', '<th', '<td', '<label']:
             self.assertNotIn(markup, controls)
+        # Only the template's own input group: none from rendering the field.
+        self.assertEqual(controls.count('<div'), 2)
 
     def test_a_move_with_no_destination_shows_the_error(self):
         """The field error has to survive rendering the field on its own."""
@@ -203,7 +207,92 @@ class ModForumBulkTests(TestCase):
         html = response.content.decode('utf-8')
         opening = '<div class="forum-mod-controls">'
         start = html.index(opening) + len(opening)
-        return html[start:html.index('</div>', start)]
+        return html[start:html.index('</form>', start)]
+
+
+class ModForumPageTests(TestCase):
+    """The moderate-forum page is V3, its checkboxes are found by
+    check_all.js, and a bulk action returns to the page it was taken on."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        author = User.objects.create_user('author', '', 'pw')
+        User.objects.create_superuser('admin', 'a@example.com', 'pw')
+        self.topics = []
+        for n in range(5):
+            topic = make_topic(self.forum, author, name='t%d' % n)
+            add_post(topic, author)
+            self.topics.append(topic)
+        self.url = reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})
+        self.client.login(username='admin', password='pw')
+
+    def test_the_page_is_v3(self):
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertTemplateUsed(response, 'core/v3/pagination.html')
+        self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
+        self.assertNotIn('page_nav', response.context)
+        self.assertContains(response, '<h2>Moderate Forum: %s</h2>' % self.forum.name,
+                            html=True)
+
+    def test_check_all_replaces_forums_mod(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, '/static/js/v3/forums/check_all.js')
+        self.assertNotContains(response, 'forums_mod.js')
+        self.assertIsNone(finders.find('js/forums_mod.js'))
+
+    def test_the_checkboxes_and_buttons_carry_their_checks(self):
+        response = self.client.get(self.url)
+        html = response.content.decode('utf-8')
+        self.assertEqual(html.count('data-check-all'), 1)
+        self.assertEqual(html.count('data-check-item'), len(self.topics))
+        self.assertContains(response, 'data-none-checked="Please select some topics."')
+        self.assertEqual(html.count('data-confirm='), 1)
+        self.assertRegex(html, r'<button[^>]*class="alert button" name="delete"[^>]*'
+                               r'data-confirm="Are you sure you want to delete the selected '
+                               r'topics\?"><i class="fi-trash" aria-hidden="true"></i>Delete</button>')
+
+    def test_sticky_and_lock_carry_their_icons(self):
+        html = self.client.get(self.url).content.decode('utf-8')
+        for name, icon, label in (('sticky', 'fi-asterisk', 'Toggle Sticky'),
+                                  ('lock', 'fi-lock', 'Toggle Lock')):
+            with self.subTest(button=name):
+                self.assertRegex(html, r'<button type="submit" class="button" name="%s"'
+                                       r' value="1" formnovalidate><i class="%s"'
+                                       r' aria-hidden="true"></i>%s</button>'
+                                       % (name, icon, label))
+
+    def test_move_joins_its_select(self):
+        response = self.client.get(self.url)
+        self.assertRegex(response.content.decode('utf-8'),
+            r'(?s)<div class="input-group">\s*'
+            r'<div class="input-group-button">\s*<input type="submit" class="button"'
+            r' value="Move To:" name="move" />\s*</div>\s*'
+            r'<select name="forums" class="input-group-field" aria-label="Move to forum"')
+
+    @mock.patch('forums.views.main.TOPICS_PER_PAGE', 2)
+    def test_the_form_posts_back_to_its_page(self):
+        response = self.client.get(self.url + '?page=2')
+        self.assertContains(response, 'action="?page=2"')
+        self.assertNotContains(response, 'name="page"')
+
+    @mock.patch('forums.views.main.TOPICS_PER_PAGE', 2)
+    def test_a_bulk_action_returns_to_its_page(self):
+        response = self.client.post(self.url + '?page=2',
+                                    {'topic_ids': [str(self.topics[0].id)], 'lock': '1'})
+        self.assertRedirects(response, self.url + '?page=2')
+
+    @mock.patch('forums.views.main.TOPICS_PER_PAGE', 2)
+    def test_emptying_the_last_page_returns_to_the_new_last_page(self):
+        # Five topics, two a page: page 3 holds one topic.
+        last = self.client.get(self.url + '?page=3').context['page'].object_list
+        self.assertEqual(len(last), 1)
+        response = self.client.post(self.url + '?page=3',
+                                    {'topic_ids': [str(last[0].id)], 'delete': '1'})
+        self.assertRedirects(response, self.url + '?page=2')
 
 
 class SpammerToolTests(TestCase):

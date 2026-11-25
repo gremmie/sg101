@@ -272,22 +272,17 @@ class V3PagesTestCase(TestCase):
 
     def test_old_pages_keep_the_old_fragments(self):
         self.login(self.moderator)
-        response = self.client.get(reverse('forums-mod_forum',
-                                           kwargs={'slug': self.forum.slug}))
+        response = self.client.get(reverse('forums-mod_topic_move',
+                                           kwargs={'id': self.topic.id}))
         self.assertOldDesign(response)
-        for name in ('navigation_tag', 'last_post_info'):
-            with self.subTest(fragment=name):
-                self.assertTemplateUsed(response, 'forums/%s.html' % name)
-                self.assertTemplateNotUsed(response, 'forums/v3/%s.html' % name)
+        self.assertTemplateUsed(response, 'forums/navigation_tag.html')
+        self.assertTemplateNotUsed(response, 'forums/v3/navigation_tag.html')
         self.assertContains(response, 'class="forum-nav"')
-        self.assertContains(response, 'icons/note_go.png')
 
     def test_unconverted_pages_stay_on_the_old_design(self):
         self.login(self.moderator)
-        for url in (reverse('forums-mod_topic_move', kwargs={'id': self.topic.id}),
-                    reverse('forums-mod_forum', kwargs={'slug': self.forum.slug})):
-            with self.subTest(url=url):
-                self.assertOldDesign(self.client.get(url))
+        url = reverse('forums-mod_topic_move', kwargs={'id': self.topic.id})
+        self.assertOldDesign(self.client.get(url))
 
     def topic_url(self):
         return reverse('forums-topic_index', kwargs={'id': self.topic.id})

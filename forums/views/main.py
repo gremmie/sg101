@@ -16,7 +16,6 @@ from django.urls import reverse
 from django.core.paginator import InvalidPage
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.db.models import F
@@ -711,40 +710,47 @@ def mod_forum(request, slug):
     except InvalidPage:
         raise Http404
 
-    # we do this for the template since it is rendered twice
-    page_nav = render_to_string('forums/pagination.html', {'page': page})
     form = None
 
     if request.method == 'POST':
         topic_ids = request.POST.getlist('topic_ids')
-        url = reverse('forums-mod_forum', kwargs={'slug':forum.slug})
-        url += '?page=%s' % page_num
 
         if len(topic_ids):
             if request.POST.get('sticky'):
                 _bulk_sticky(forum, topic_ids)
-                return HttpResponseRedirect(url)
+                return _mod_forum_redirect(forum, page_num)
             elif request.POST.get('lock'):
                 _bulk_lock(forum, topic_ids)
-                return HttpResponseRedirect(url)
+                return _mod_forum_redirect(forum, page_num)
             elif request.POST.get('delete'):
                 _bulk_delete(forum, topic_ids)
-                return HttpResponseRedirect(url)
+                return _mod_forum_redirect(forum, page_num)
             elif request.POST.get('move'):
                 form = MoveTopicForm(request.user, request.POST)
                 if form.is_valid():
                     _bulk_move(topic_ids, forum, form.cleaned_data['forums'])
-                    return HttpResponseRedirect(url)
+                    return _mod_forum_redirect(forum, page_num)
 
     if form is None:
         form = MoveTopicForm(request.user)
+    # The select is joined to its Move To: button in a Foundation input group.
+    form.fields['forums'].widget.attrs.update({
+        'class': 'input-group-field', 'aria-label': 'Move to forum'})
 
     return render(request, 'forums/mod_forum.html', {
         'forum': forum,
         'page': page,
-        'page_nav': page_nav,
         'form': form,
+        'V3_DESIGN': True,
         })
+
+
+def _mod_forum_redirect(forum, page_num):
+    """Returns to the moderate page a bulk action was taken on, or to the new
+    last page if deleting or moving topics emptied it."""
+    last_page = create_topic_paginator(forum.topics.all()).num_pages
+    url = reverse('forums-mod_forum', kwargs={'slug': forum.slug})
+    return HttpResponseRedirect('%s?page=%d' % (url, min(page_num, last_page)))
 
 
 @login_required

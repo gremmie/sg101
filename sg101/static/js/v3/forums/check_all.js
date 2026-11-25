@@ -3,7 +3,9 @@
 // A box marked data-check-all ticks or unticks every data-check-item box in
 // its form, and unticking one of those unticks the master. A form may also
 // carry data-none-checked, a warning shown instead of submitting when no box
-// is ticked, and data-confirm, a question asked before it submits.
+// is ticked, and data-confirm, a question asked before it submits. In such a
+// form, a submit button may carry its own data-confirm, asked only when that
+// button is used.
 
 function initCheckAll() {
    for (const master of document.querySelectorAll('[data-check-all]')) {
@@ -32,7 +34,7 @@ function initFormChecks() {
             event.preventDefault();
             return;
          }
-         const question = form.dataset.confirm;
+         const question = event.submitter?.dataset.confirm ?? form.dataset.confirm;
          if (question && !window.confirm(question)) {
             event.preventDefault();
          }

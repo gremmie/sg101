@@ -1009,6 +1009,105 @@ class ManageTopicsBrowserTestCase(BrowserTestCase):
         self.assertGreater(topic, 200)
 
 
+class ModForumBrowserTestCase(BrowserTestCase):
+    """The moderate-forum page's master checkbox, the warning when nothing is
+    ticked, and the question asked before Delete, and only before Delete."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        super().setUp()
+        self.forum = Forum.objects.get(slug='shallow-end')
+        member = User.objects.create_user('pjmoto', '', 'pw')
+        for name in ('First topic', 'Second topic', 'Third topic'):
+            add_post(make_topic(self.forum, member, name=name), member)
+        self.login(User.objects.create_superuser('admin', 'a@example.com', 'pw'))
+        self.page.goto(self.live_server_url +
+                       reverse('forums-mod_forum', kwargs={'slug': self.forum.slug}))
+        self.master = self.page.locator('[data-check-all]')
+        self.boxes = self.page.locator('[data-check-item]')
+
+        self.posts = []
+        self.page.on('request', lambda request: request.method == 'POST'
+                     and self.posts.append(request.url))
+
+    def answer_dialogs(self, accept):
+        """Accept or dismiss every dialog; return what each said."""
+        seen = []
+
+        def handle(dialog):
+            seen.append((dialog.type, dialog.message))
+            if accept:
+                dialog.accept()
+            else:
+                dialog.dismiss()
+
+        self.page.on('dialog', handle)
+        return seen
+
+    def tick(self, *names):
+        for name in names:
+            self.page.get_by_role('checkbox', name='Select %s' % name).check()
+
+    def press(self, label):
+        self.page.get_by_role('button', name=label, exact=True).click()
+
+    def topics(self, **filters):
+        return set(self.forum.topics.filter(**filters).values_list('name', flat=True))
+
+    def test_the_master_checks_and_unchecks_every_box(self):
+        self.assertEqual(self.boxes.count(), 3)
+        self.master.check()
+        for i in range(3):
+            expect(self.boxes.nth(i)).to_be_checked()
+        self.master.uncheck()
+        for i in range(3):
+            expect(self.boxes.nth(i)).not_to_be_checked()
+
+    def test_unticking_one_box_unticks_the_master(self):
+        self.master.check()
+        self.boxes.nth(1).uncheck()
+        expect(self.master).not_to_be_checked()
+        expect(self.boxes.nth(0)).to_be_checked()
+        expect(self.boxes.nth(2)).to_be_checked()
+
+    def test_nothing_ticked_warns_and_posts_nothing(self):
+        seen = self.answer_dialogs(accept=True)
+        self.press('Toggle Lock')
+        self.assertEqual(seen, [('alert', 'Please select some topics.')])
+        self.assertEqual(self.posts, [])
+
+    def test_dismissing_the_delete_question_deletes_nothing(self):
+        seen = self.answer_dialogs(accept=False)
+        self.tick('First topic', 'Third topic')
+        self.press('Delete')
+        self.assertEqual(seen, [(
+            'confirm', 'Are you sure you want to delete the selected topics?')])
+        self.assertEqual(self.posts, [])
+        self.assertEqual(len(self.topics()), 3)
+
+    def test_accepting_the_delete_question_deletes_exactly_the_ticked_topics(self):
+        seen = self.answer_dialogs(accept=True)
+        self.tick('First topic', 'Third topic')
+        self.press('Delete')
+        expect(self.boxes).to_have_count(1)
+        self.assertEqual([kind for kind, _ in seen], ['confirm'])
+        self.assertEqual(self.topics(), {'Second topic'})
+
+    def test_the_delete_icon_is_spaced_from_its_word(self):
+        icon = self.page.get_by_role('button', name='Delete', exact=True).locator('i')
+        margin, font_size = icon.evaluate(
+            'e => [getComputedStyle(e).marginRight, getComputedStyle(e).fontSize]'
+            '.map(parseFloat)')
+        self.assertAlmostEqual(margin, 0.4 * font_size, places=2)
+
+    def test_lock_asks_nothing_and_locks_the_ticked_topics(self):
+        seen = self.answer_dialogs(accept=True)
+        self.tick('Second topic')
+        with self.page.expect_navigation():
+            self.press('Toggle Lock')
+        self.assertEqual(seen, [])
+        self.assertEqual(self.topics(locked=True), {'Second topic'})
+
 
 class PaginationBrowserTestCase(BrowserTestCase):
     """Pagination on a phone: First, Previous, the page, Next and Last, as blue

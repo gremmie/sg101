@@ -1,40 +1,44 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load static %}
 {% load bio_tags %}
 {% load forum_tags %}
 {% block title %}Moderate Forum: {{ forum.name }}{% endblock %}
-{% block custom_js %}
-<script type="text/javascript" src="{% static "js/forums_mod.js" %}"></script>
-{% endblock %}
 {% block content %}
 {% forum_navigation forum "Moderate Forum" %}
+<h2>Moderate Forum: {{ forum.name }}</h2>
 
-<div class="forum-block">
-{{ page_nav }}
-<form action="." method="post">{% csrf_token %}
-<table class="forum-index-table">
+{% include 'core/v3/pagination.html' %}
+{% comment %}
+The action keeps the page number, so the redirect after a bulk action returns
+to the page it was taken on.
+{% endcomment %}
+<form action="?page={{ page.number }}" method="post"
+   data-none-checked="Please select some topics.">{% csrf_token %}
+<table class="forum-table">
    <thead>
       <tr>
-         <th class="forum-index_title">Topics</th>
-         <th class="forum-index_replies">Replies</th>
-         <th class="forum-index_author">Author</th>
-         <th class="forum-index_last_post">Last Post</th>
-         <th class="forum-index_select">Select<br /><input type="checkbox" id="forums-master-topic" /></th>
+         <th class="forum-table-check"><input type="checkbox" data-check-all aria-label="Select all" /></th>
+         <th>Topics</th>
+         <th class="text-center show-for-medium">Replies</th>
+         <th class="text-center show-for-medium">Author</th>
+         <th class="text-center">Last Post</th>
       </tr>
    </thead>
    <tbody>
    {% for topic in page.object_list %}
-      <tr class="{% cycle 'odd' 'even' %}">
-         <td>{% if topic.sticky %}<img src="{% static "icons/asterisk_orange.png" %}" alt="Sticky" title="Sticky" class="forums-topic-icon" />{% endif %}
-            {% if topic.locked %}<img src="{% static "icons/lock.png" %}" alt="Locked" title="Locked"
-            class="forums-topic-icon" />{% endif %}
-         <h4><a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a></h4></td>
-         <td class="forum-index_replies">{{ topic.reply_count }}</td>
-         <td class="forum-index_author">{% profile_link topic.user.username %}</td>
-         <td class="forum-index_last_post">
+      <tr>
+         <td class="forum-table-check"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" data-check-item aria-label="Select {{ topic.name }}" /></td>
+         <td>
+            <h5>
+               {% topic_icons topic %}
+               <a href="{{ topic.get_absolute_url }}">{{ topic.name }}</a>
+            </h5>
+         </td>
+         <td class="text-center show-for-medium">{{ topic.reply_count }}</td>
+         <td class="text-center show-for-medium">{% profile_link topic.user.username %}</td>
+         <td class="text-center">
             {% last_post_info topic.last_post %}
          </td>
-         <td class="forum-index_select"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" class="forums-topic_check" /></td>
       </tr>
    {% empty %}
       <tr>
@@ -45,20 +49,33 @@
    {% endfor %}
    </tbody>
 </table>
-{{ page_nav }}
+{% include 'core/v3/pagination.html' %}
+{% comment %}
+The move destination is a required field, so the buttons that don't use it
+skip the browser's validation; without formnovalidate they couldn't submit
+until a forum was chosen.
+{% endcomment %}
 <div class="forum-mod-controls">
-   <input type="submit" value="Toggle Sticky" name="sticky" />
-   <input type="submit" value="Toggle Lock" name="lock" />
-   <input type="submit" value="Delete" name="delete" /><br />
-   <input type="submit" value="Move To:" name="move" />
+   <button type="submit" class="button" name="sticky" value="1" formnovalidate><i class="fi-asterisk" aria-hidden="true"></i>Toggle Sticky</button>
+   <button type="submit" class="button" name="lock" value="1" formnovalidate><i class="fi-lock" aria-hidden="true"></i>Toggle Lock</button>
+   <button type="submit" class="alert button" name="delete" value="1" formnovalidate
+      data-confirm="Are you sure you want to delete the selected topics?"><i class="fi-trash" aria-hidden="true"></i>Delete</button>
    {% comment %}
    The one field, rendered directly: this control bar is not a table, and a
    whole-form render puts the field in one -- table rows the browser then
    discards, and a div once that becomes the default.
    {% endcomment %}
-   {{ form.forums.errors }}{{ form.forums }}
-   <input type="hidden" name="page" value="{{ page.number }}" />
+   {{ form.forums.errors }}
+   <div class="input-group">
+      <div class="input-group-button">
+         <input type="submit" class="button" value="Move To:" name="move" />
+      </div>
+      {{ form.forums }}
+   </div>
 </div>
 </form>
-</div>
+{% endblock %}
+
+{% block custom_js %}
+   <script type="module" src="{% static "js/v3/forums/check_all.js" %}"></script>
 {% endblock %}
