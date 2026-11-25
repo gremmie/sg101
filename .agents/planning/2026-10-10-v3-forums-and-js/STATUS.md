@@ -3281,3 +3281,58 @@ Restored byte-identical.
 
 Browser tests: 141, OK. Suite and gate, separate runs: 1746 tests, OK, each.
 
+
+## Step 9 task 04 — the release 2 walk and shipping — walked 2026-11-24
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step09/task-04-walk-and-ship.code-task.md`.
+Branch `v3-forums-release-2`, on `9e246f3c`.
+
+**Setup.** A headless Chromium probe in the `web` container against the dev
+server (data to 2026-10-07, plus dev's own test posts to 2026-11-20), the
+debug toolbar off (`DEBUG_TOOLBAR=False`). Snapshot first:
+`sg101-20261124-183928-before-release2-walk.dump`. Subjects by id: member
+`dp` (pk 32, 13 favorites and 13 subscriptions, so the demo needed no data
+added), moderator `CaptainSpringfield` (pk 12, as in release 1), and `Tiki`
+(pk 6) for a member's posts. Sessions were made directly through
+`AUTHENTICATION_BACKENDS[0]` in the `cached_db` store and deleted after;
+`last_login` was unchanged (checked). Nothing in release 2 is deferred work,
+so no worker check.
+
+**The walk**: the seven URLs × anonymous, member and moderator × 360 and
+1280: 42 loads, all 200.
+
+| Role | Pages | V3 | Page errors | Sideways scroll |
+|---|---|---|---|---|
+| anonymous | unanswered and active open; the 5 that need a login go to `/accounts/login/?next=`, which is V3 too | ✓ | none | none |
+| member | all 7 | ✓ | none | none |
+| moderator | all 7 | ✓ | none | **63 px at 360**, none at 1280 |
+
+The moderator's 63 px is the header again (the long username's logout link
+ends at 423), the same as step 8 task 05; plan step 15. No page loads a
+`blueprint` stylesheet or `forum_query.js`, and every signed-in page has the
+forum query box. The only failed request is dev's missing photo of the day
+thumbnail (404). The probe's own selector missed the post cards on the two
+post lists; the screenshots show them, with pagination (the member's "1 of 177"). Screenshots
+(44) stay in the session scratchpad.
+
+**The demo**, as the member at 1280: all seven URLs open with their
+headings; on Favorites, one topic checked and Delete Selected → the confirm
+dialog (accepted) → back on `/forums/favorites/` with 12 topics, the removed
+one gone. **The forum query box**, from `/forums/unanswered/`, each entry
+chosen and Go clicked: anonymous 2 entries, member and moderator 6 each, every
+one landed on its own URL.
+
+**What the walk left in the dev database: nothing.** A state record (table
+counts, every forum's counts and `last_post`, and for both walkers
+`last_login`, post count, favorites, subscriptions, and all their
+`ForumLastVisit` and `TopicLastVisit` rows) was diffed before and after. Two
+differences, both expected and put back: the member's 15 new
+`ForumLastVisit` rows, which the unread list creates for every forum without
+one (deleted), and the removed favorite (re-added). The record after cleanup
+was byte-identical to the one before.
+
+**Still open, carried forward:** #41 (`flag_icon`); #42; #43; steps 13
+(phone banner), 14 (tablet widths) and 15 (phone header, the moderator's
+63 px above).
+
+Suite under the gate, after the walk: 1746 tests, OK.

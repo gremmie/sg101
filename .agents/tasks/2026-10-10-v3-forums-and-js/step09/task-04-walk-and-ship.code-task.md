@@ -54,8 +54,7 @@ it with the worker running.
 
 **Shipping.**
 
-- Run the suite and the deprecation gate, separately, one at a time (they
-  share `test_sg101`).
+- Run the full suite once, under the deprecation gate (`AGENTS.md`).
 - Tick step 9 in `implementation/plan.md` and record it in `STATUS.md`,
   carrying forward what is still open (#41, #42, #43, steps 13-15, and the
   moderator's header overflow at 360).
@@ -90,7 +89,7 @@ The plan's branch name is a placeholder; release 1 used
 2. The demo, run end to end, with each step's result recorded.
 3. No release 2 template extends `base.html`, and `forum_query.js` is gone.
 4. The dev database left as found, or what remains recorded.
-5. The suite and the deprecation gate pass, run separately.
+5. The full suite passes under the deprecation gate.
 6. Step 9 ticked in the plan and recorded in `STATUS.md`. CI green on the
    branch and on `main`.
 7. Brian deploys, and `STATUS.md` records the deploy and his live check.
@@ -105,8 +104,8 @@ The plan's branch name is a placeholder; release 1 used
 2. Walk the pages by role and width, then run the demo.
 3. Hand Brian the screenshots and anything found. Stop for his answers, and
    fix what he asks for with tests.
-4. Clean the dev database and diff it against the record. Run the suite,
-   then the gate. Tick the step.
+4. Clean the dev database and diff it against the record. Run the full suite
+   under the gate. Tick the step.
 5. Leave the docs unstaged for review. Commit, merge `main` in, push and
    check CI, after Brian says to. Then the fast-forward of `main`, and Brian's
    deploy.

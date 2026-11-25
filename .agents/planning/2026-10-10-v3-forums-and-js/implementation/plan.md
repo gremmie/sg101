@@ -13,7 +13,7 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [x] Step 6: Port the `v3-dev` reading pages, and the screenshot review
 - [x] Step 7: The complete post card, and the topic page's JavaScript
 - [x] Step 8: Posting forms, the video button, and the confirmation pages — **ships: forums release 1**
-- [ ] Step 9: The list pages — **ships: forums release 2**
+- [x] Step 9: The list pages — **ships: forums release 2**
 - [ ] Step 10: The moderator pages — **ships: forums release 3**
 - [ ] Step 11: Remove the shoutbox — **ships**
 - [ ] Step 12: Retire `base.html`, its assets, and `V3_DESIGN` — **ships**
