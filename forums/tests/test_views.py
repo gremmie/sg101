@@ -270,18 +270,9 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateNotUsed(response, 'forums/forum_query.html')
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
 
-    def test_old_pages_keep_the_old_fragments(self):
-        self.login(self.moderator)
-        response = self.client.get(reverse('forums-mod_topic_move',
-                                           kwargs={'id': self.topic.id}))
-        self.assertOldDesign(response)
-        self.assertTemplateUsed(response, 'forums/navigation_tag.html')
-        self.assertTemplateNotUsed(response, 'forums/v3/navigation_tag.html')
-        self.assertContains(response, 'class="forum-nav"')
-
     def test_unconverted_pages_stay_on_the_old_design(self):
         self.login(self.moderator)
-        url = reverse('forums-mod_topic_move', kwargs={'id': self.topic.id})
+        url = reverse('forums-post_ip_info', kwargs={'post_id': self.topic.last_post.id})
         self.assertOldDesign(self.client.get(url))
 
     def topic_url(self):

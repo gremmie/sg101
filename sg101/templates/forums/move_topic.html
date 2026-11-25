@@ -1,16 +1,17 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% block title %}Forums: Move Topic{% endblock %}
 {% block content %}
 {% forum_navigation topic "Move Topic" %}
-
-<div class="forum-block">
+<h2>Move Topic: {{ topic.name }}</h2>
 <form action="." method="post">{% csrf_token %}
-<fieldset>
-<legend>Move Topic: {{ topic.name }}</legend>
-   {{ form.as_p }}
-   <input type="submit" value="Move Topic" />
-</fieldset>
+   <fieldset class="fieldset forum-post-form">
+      <legend>Move to another forum</legend>
+      {{ form.forums.errors }}
+      <label for="{{ form.forums.id_for_label }}">{{ form.forums.label }}
+         {{ form.forums }}
+      </label>
+      <input type="submit" class="button" value="Move Topic" />
+   </fieldset>
 </form>
-</div>
 {% endblock %}

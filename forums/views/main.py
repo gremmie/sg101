@@ -688,6 +688,7 @@ def mod_topic_move(request, id):
         'forum': topic.forum,
         'topic': topic,
         'form': form,
+        'V3_DESIGN': True,
         })
 
 
@@ -810,7 +811,7 @@ def mod_topic_split(request, id):
 
             return HttpResponseRedirect(topic.get_absolute_url())
     else:
-        form = SplitTopicForm(request.user)
+        form = SplitTopicForm(request.user, initial={'forums': topic.forum})
 
     posts = topic.posts.select_related()
 
@@ -819,6 +820,7 @@ def mod_topic_split(request, id):
         'topic': topic,
         'posts': posts,
         'form': form,
+        'V3_DESIGN': True,
         })
 
 

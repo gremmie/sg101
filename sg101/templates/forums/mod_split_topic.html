@@ -1,46 +1,50 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'v3/base.html' %}
 {% load forum_tags %}
 {% block title %}Forums: Split Topic{% endblock %}
-{% block custom_js %}{{ form.media }}{% endblock %}
 {% block content %}
 {% forum_navigation topic "Split Topic" %}
+<h2>Split Topic: {{ topic.name }}</h2>
+<p>
+Using the form below, you can split a topic into two. You can either specify which posts get
+split to the new topic ("Split Selected Posts"), or by selecting a post such that all posts
+at or below the selection get split ("Split At Selected Post").
+</p>
+<form action="." method="post">{% csrf_token %}
+   <fieldset class="fieldset forum-post-form">
+      <legend>New Topic</legend>
+      {{ form.non_field_errors }}
+      {{ form.name.errors }}
+      <label for="{{ form.name.id_for_label }}">{{ form.name.label }}
+         {{ form.name }}
+      </label>
+      {{ form.forums.errors }}
+      <label for="{{ form.forums.id_for_label }}">{{ form.forums.label }}
+         {{ form.forums }}
+      </label>
+      <input type="submit" class="button" name="split-selected" value="Split Selected Posts" />
+      <input type="submit" class="button" name="split-at" value="Split At Selected Post" />
+   </fieldset>
 
-<div class="forum-block">
-   <p>
-   Using the form below, you can split a topic into two. You can either specify which posts get
-   split to the new topic ("Split Selected Posts"), or by selecting a post such that all posts
-   at or below the selection get split ("Split At Selected Post").
-   <p>
-   <form action="." method="post">{% csrf_token %}
-   <table>
-   {{ form.as_table }}
-   <tr><td>&nbsp;</td><td>
-   <input type="submit" name="split-selected" value="Split Selected Posts" />
-      <input type="submit" name="split-at" value="Split At Selected Post" /></td></tr>
-   </table>
-
-<table class="forum-topic" id="forum-topic">
-{% for post in posts %}
-<tr class="forum-post {% cycle 'odd' 'even' %}" id="post-{{ post.id }}">
-   <td class="forum-post-author">{{ post.user.username }}</td>
-   <td class="forum-post-body">
-      <div class="forum-post-info quiet">
-      <a href="{{ post.get_absolute_url }}"><img src="{% static "icons/link.png" %}" alt="Link" title="Link to this post" /></a>
-         Posted on {{ post.creation_date|date:"M d, Y H:i" }} from IP: {{ post.user_ip }}
+   {% for post in posts %}
+   {# The card is height: 100%; in a wrapper of its own it is as tall as its post. #}
+   <div>
+      <div class="sg101-card forum-split-post" id="post-{{ post.id }}">
+         <div class="sg101-card-divider">
+            {% if not forloop.first %}
+               <input type="checkbox" name="post_ids" value="{{ post.id }}" aria-label="Select the post by {{ post.user.username }}" />
+            {% endif %}
+            <strong>{{ post.user.username }}</strong> &middot;
+            <a href="{{ post.get_absolute_url }}" title="View post in context">{% forum_date post.creation_date user %}</a> &middot;
+            IP: {{ post.user_ip }}
+         </div>
+         <div class="card-section">
+            {{ post.html|safe }}
+         </div>
       </div>
-      <div class="forum-post-body-split">
-         {{ post.html|safe }}
-      </div>
-   </td>
-   <td class="forum-post-split-check">
-      {% if not forloop.first %}
-      <input type="checkbox" name="post_ids" value="{{ post.id }}" />
-      {% endif %}
-   </td>
-</tr>
-{% endfor %}
-</table>
+   </div>
+   {% endfor %}
+   {# Again below the posts, so a long topic needn't be scrolled back up. #}
+   <input type="submit" class="button" name="split-selected" value="Split Selected Posts" />
+   <input type="submit" class="button" name="split-at" value="Split At Selected Post" />
 </form>
-</div>
 {% endblock %}

@@ -8,6 +8,7 @@ views is covered separately in test_permissions; here a moderator (superuser)
 performs the action and we assert what actually changed.
 """
 import datetime
+import re
 from unittest import mock
 
 import bio.models
@@ -125,6 +126,86 @@ class ModTopicActionTests(TestCase):
              'post_ids': [str(reply.id)]})
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Topic.objects.filter(name='Nope').exists())
+
+
+class SplitAndMovePageTests(TestCase):
+    """The split and move pages are V3. Split shows every post as a card with
+    its date and IP, a checkbox on all but the first, and starts on the
+    topic's own forum; its two selection errors still render."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        self.author = User.objects.create_user('author', '', 'pw')
+        User.objects.create_superuser('admin', 'a@example.com', 'pw')
+        self.topic = make_topic(self.forum, self.author, name='Original')
+        self.posts = [add_post(self.topic, self.author, body='post %d' % n,
+                               when=timezone.now() - (3 - n) * DAY) for n in range(3)]
+        for post in self.posts:
+            post.user_ip = '192.0.2.%d' % (post.id % 250)
+            post.save()
+        self.split_url = reverse('forums-mod_topic_split', args=[self.topic.id])
+        self.move_url = reverse('forums-mod_topic_move', args=[self.topic.id])
+        self.client.login(username='admin', password='pw')
+
+    def assertV3(self, response, title):
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
+        self.assertContains(response, '<h2>%s: Original</h2>' % title, html=True)
+
+    def test_both_pages_are_v3(self):
+        self.assertV3(self.client.get(self.split_url), 'Split Topic')
+        self.assertV3(self.client.get(self.move_url), 'Move Topic')
+
+    def test_split_shows_each_post_as_a_card_with_its_ip(self):
+        response = self.client.get(self.split_url)
+        html = response.content.decode('utf-8')
+        self.assertEqual(html.count('class="sg101-card forum-split-post"'), 3)
+        for post in self.posts:
+            with self.subTest(post=post.id):
+                self.assertContains(response, 'IP: %s' % post.user_ip)
+                self.assertContains(response, 'post %d' % self.posts.index(post))
+
+    def test_every_post_but_the_first_has_a_checkbox(self):
+        html = self.client.get(self.split_url).content.decode('utf-8')
+        values = re.findall(r'<input type="checkbox" name="post_ids" value="(\d+)"', html)
+        self.assertEqual(values, [str(p.id) for p in self.posts[1:]])
+
+    def test_the_split_buttons_come_before_and_after_the_posts(self):
+        html = self.client.get(self.split_url).content.decode('utf-8')
+        first_card = html.index('forum-split-post')
+        last_card = html.rindex('forum-split-post')
+        for name in ('split-selected', 'split-at'):
+            with self.subTest(button=name):
+                places = [m.start() for m in re.finditer(r'name="%s"' % name, html)]
+                self.assertEqual(len(places), 2)
+                self.assertLess(places[0], first_card)
+                self.assertGreater(places[1], last_card)
+
+    def test_split_starts_on_the_topics_forum(self):
+        html = self.client.get(self.split_url).content.decode('utf-8')
+        self.assertRegex(html, r'<option value="%d" selected>' % self.forum.id)
+
+    def test_splitting_nothing_explains_and_splits_nothing(self):
+        response = self.client.post(self.split_url, {'name': 'New', 'forums': self.forum.id,
+                                                     'split-selected': '1'})
+        self.assertContains(response, 'Please select some posts')
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertEqual(Topic.objects.get(pk=self.topic.id).post_count, 3)
+
+    def test_splitting_at_two_posts_explains_and_splits_nothing(self):
+        response = self.client.post(self.split_url, {
+            'name': 'New', 'forums': self.forum.id, 'split-at': '1',
+            'post_ids': [str(self.posts[1].id), str(self.posts[2].id)]})
+        self.assertContains(response, 'Please select only one post to split the topic at')
+        self.assertEqual(Topic.objects.get(pk=self.topic.id).post_count, 3)
+
+    def test_move_is_refused_to_a_member(self):
+        self.client.logout()
+        User.objects.create_user('member', '', 'pw')
+        self.client.login(username='member', password='pw')
+        self.assertEqual(self.client.get(self.move_url).status_code, 403)
 
 
 class ModForumBulkTests(TestCase):
