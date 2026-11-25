@@ -3282,7 +3282,7 @@ Restored byte-identical.
 Browser tests: 141, OK. Suite and gate, separate runs: 1746 tests, OK, each.
 
 
-## Step 9 task 04 — the release 2 walk and shipping — walked 2026-11-24
+## Step 9 task 04 — the release 2 walk and shipping — walked and shipped 2026-11-24
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step09/task-04-walk-and-ship.code-task.md`.
 Branch `v3-forums-release-2`, on `9e246f3c`.
@@ -3336,3 +3336,9 @@ was byte-identical to the one before.
 63 px above).
 
 Suite under the gate, after the walk: 1746 tests, OK.
+
+**Shipped 2026-11-24.** Docs committed (`e7a74162`); `main` had nothing new
+to merge. CI green on the branch; `main` fast-forwarded to it, CI green.
+Brian deployed (`git pull`, `make prod-up`; no migrations) and checked live:
+the changes look good. #45, #46 and #47 closed. Branch `v3-forums-release-2`
+deleted, remote and local. **Forums release 2 is live; step 9 is complete.**

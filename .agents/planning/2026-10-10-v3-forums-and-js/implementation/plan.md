@@ -45,7 +45,7 @@ when Brian deploys it. `main` always matches what leopard should run.
 
 - **Tests come first or alongside.** Each browser test is mutation-checked:
   break what it guards once, see it fail, restore.
-- **The suite passes,** and so does the deprecation gate as its own run
+- **The full suite passes under the deprecation gate,** run once
   (AGENTS.md).
 - **A Sass change is committed with its rebuilt `main.min.css`.**
 - **Code comments describe the code,** never this plan's step numbers.
