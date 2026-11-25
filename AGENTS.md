@@ -47,21 +47,26 @@ match app names** (`bio` → `/profile/`, `weblinks` → `/links/`, `gcalendar` 
 
 ## Running things
 
+**The suite is run under the deprecation gate**, which promotes deprecation
+warnings to errors and is what has caught every Django removal a version before
+it landed. It is the same suite with the same settings, so a gated pass implies
+an ungated one; CI runs only this, and so should you before calling work done:
+
 ```
 docker compose up -d
-docker compose exec web python manage.py test --settings=sg101.settings.docker_test
-```
-
-**The deprecation gate is a second, separate run**, and it is what has caught
-every Django removal a version before it landed:
-
-```
 docker compose run --rm -e PYTHONWARNINGS="$(tools/deprecation_gate.sh)" web \
     python manage.py test --noinput --settings=sg101.settings.docker_test
 ```
 
 `tools/deprecation_gate.sh` only *prints* the filter. Running it and seeing exit
 0 is **not** the gate passing.
+
+While iterating, run just the affected app against the running stack; it is far
+faster than the full suite:
+
+```
+docker compose exec web python manage.py test forums --settings=sg101.settings.docker_test
+```
 
 ## Non-obvious things
 

@@ -90,8 +90,10 @@ than importing conventions from elsewhere.
 
 ## Verifying
 
-The suite and the deprecation gate are **two separate runs**; both must pass
-before reporting completion. Commands are in [`AGENTS.md`](AGENTS.md).
+Iterate on the affected app's tests alone, then run the **full suite once,
+under the deprecation gate**, before reporting completion. The gated run is the
+suite run; a separate ungated run adds nothing. Commands are in
+[`AGENTS.md`](AGENTS.md).
 
 **Browser-test anything touching deferred work or a rendered page.** The suite
 cannot see it: `CELERY_TASK_ALWAYS_EAGER` hides worker faults by construction,
