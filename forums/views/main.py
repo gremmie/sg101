@@ -942,6 +942,7 @@ def post_ip_info(request, post_id):
     return render(request, 'forums/post_ip.html', {
         'post': post,
         'ip_users': ip_users,
+        'V3_DESIGN': True,
         })
 
 

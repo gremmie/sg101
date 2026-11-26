@@ -208,11 +208,6 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateNotUsed(response, 'base.html')
         self.assertIs(response.context.get('V3_DESIGN'), True)
 
-    def assertOldDesign(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'base.html')
-        self.assertTemplateNotUsed(response, 'v3/base.html')
-
     def test_both_pages_are_v3_for_each_role(self):
         for user in (None, self.member, self.moderator):
             with self.subTest(user=user and user.username):
@@ -270,10 +265,11 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateNotUsed(response, 'forums/forum_query.html')
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
 
-    def test_unconverted_pages_stay_on_the_old_design(self):
-        self.login(self.moderator)
-        url = reverse('forums-post_ip_info', kwargs={'post_id': self.topic.last_post.id})
-        self.assertOldDesign(self.client.get(url))
+    def test_no_forum_template_extends_the_old_base(self):
+        templates = pathlib.Path(settings.PROJECT_PATH) / 'templates' / 'forums'
+        old = [path.name for path in sorted(templates.rglob('*.html'))
+               if re.search(r"""{%\s*extends\s+['"]base\.html['"]""", path.read_text())]
+        self.assertEqual(old, [])
 
     def topic_url(self):
         return reverse('forums-topic_index', kwargs={'id': self.topic.id})

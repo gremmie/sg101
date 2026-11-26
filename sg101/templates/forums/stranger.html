@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% block title %}Promote Stranger: {{ post.user.username }}{% endblock %}
 {% block content %}
@@ -16,7 +16,7 @@ has posted at least 10 times before making your decision.</p>
 <em>stranger</em> status based on <a href="{% url 'forums-goto_post' post.id %}">this post</a>. 
 </p>
 <form action="." method="post">{% csrf_token %}
-   <input type="submit" value="Yes, {{ post.user.username }} seems legit and is not a stranger" />
+   <input type="submit" class="button" value="Yes, {{ post.user.username }} seems legit and is not a stranger" />
 </form>
 {% else %}
    {% if can_moderate %}

@@ -437,3 +437,94 @@ class SpammerToolTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(User.objects.get(pk=self.stranger.id).profile.status,
                          bio.models.STA_ACTIVE)
+
+
+class ModToolPagesTests(TestCase):
+    """The post IP, stranger, spammer and spammer-nailed pages are V3, keep
+    their refusals, and style their buttons by what they do."""
+    fixtures = ['forums.json']
+
+    def setUp(self):
+        self.forum = Forum.objects.get(slug='shallow-end')
+        # A freshly created user's profile defaults to STA_STRANGER.
+        self.stranger = User.objects.create_user('stranger', 's@example.com', 'pw')
+        User.objects.create_superuser('admin', 'a@example.com', 'pw')
+        User.objects.create_user('member', 'm@example.com', 'pw')
+        topic = make_topic(self.forum, self.stranger)
+        self.post = add_post(topic, self.stranger, body='spammy content')
+        self.post.user_ip = '192.0.2.7'
+        self.post.save()
+        self.client.login(username='admin', password='pw')
+
+    def url(self, name):
+        return reverse(name, args=[self.post.id])
+
+    def assertV3(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'v3/base.html')
+        self.assertTemplateNotUsed(response, 'base.html')
+        # The header's tags follow V3_DESIGN.
+        self.assertTemplateUsed(response, 'messages/v3/unread_messages_tag.html')
+
+    def assertNoActionButton(self, response):
+        """Neither page's own button: the site header has submits of its own."""
+        self.assertNotContains(response, 'value="Deactivate')
+        self.assertNotContains(response, 'seems legit')
+
+    def test_all_four_pages_are_v3(self):
+        for name in ('forums-post_ip_info', 'forums-stranger', 'forums-spammer'):
+            with self.subTest(page=name):
+                self.assertV3(self.client.get(self.url(name)))
+        with self.subTest(page='forums-spammer_nailed'):
+            self.assertV3(self.client.get(
+                reverse('forums-spammer_nailed', args=[self.stranger.id])))
+
+    def test_deactivate_is_a_red_button_and_promote_a_blue_one(self):
+        self.assertContains(self.client.get(self.url('forums-spammer')),
+                            '<input type="submit" class="alert button" value="Deactivate stranger" />',
+                            html=True)
+        self.assertContains(self.client.get(self.url('forums-stranger')),
+                            '<input type="submit" class="button" value="Yes, stranger seems legit'
+                            ' and is not a stranger" />', html=True)
+
+    def test_a_non_stranger_is_explained_and_offered_no_button(self):
+        profile = self.stranger.profile
+        profile.status = bio.models.STA_ACTIVE
+        profile.save()
+        for name, sentence in (('forums-spammer', "That user is no longer a stranger, and can't be deactivated"),
+                               ('forums-stranger', "That user is no longer a stranger, and can't be promoted")):
+            with self.subTest(page=name):
+                response = self.client.get(self.url(name))
+                self.assertV3(response)
+                self.assertContains(response, sentence)
+                self.assertNoActionButton(response)
+
+    def test_a_member_is_refused_and_offered_no_button(self):
+        self.client.logout()
+        self.client.login(username='member', password='pw')
+        for name in ('forums-spammer', 'forums-stranger'):
+            with self.subTest(page=name):
+                response = self.client.get(self.url(name))
+                self.assertV3(response)
+                self.assertContains(response, "Sorry, but you don't have permission")
+                self.assertNoActionButton(response)
+
+    def test_post_ip_lists_the_ips_posters_and_links_arin(self):
+        other = User.objects.create_user('other', '', 'pw')
+        post = add_post(self.post.topic, other)
+        post.user_ip = '192.0.2.7'
+        post.save()
+        response = self.client.get(self.url('forums-post_ip_info'))
+        self.assertContains(response, 'href="https://search.arin.net/rdap/?query=192.0.2.7"')
+        self.assertContains(response, '<a href="https://ipinfo.io/192.0.2.7"'
+                                      ' title="Where this address is">location</a>')
+        self.assertNotContains(response, 'dnsstuff')
+        for username in ('other', 'stranger'):
+            with self.subTest(user=username):
+                self.assertContains(response, 'href="%s"' % reverse(
+                    'forums-posts_for_user', kwargs={'username': username}))
+
+    def test_post_ip_is_refused_to_a_member(self):
+        self.client.logout()
+        self.client.login(username='member', password='pw')
+        self.assertEqual(self.client.get(self.url('forums-post_ip_info')).status_code, 403)

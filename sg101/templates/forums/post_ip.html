@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% block title %}Post IP Address Info: {{ post.user_ip }}{% endblock %}
 {% block content %}
@@ -6,7 +6,8 @@
 <p>
 This <a href="{{ post.get_absolute_url }}">post</a> was created by
 {% profile_link post.user.username %} from the IP address
-<a href="http://www.dnsstuff.com/tools/whois/?ip={{ post.user_ip }}">{{ post.user_ip }}</a>.
+<a href="https://search.arin.net/rdap/?query={{ post.user_ip }}" title="Look up this address at ARIN">{{ post.user_ip }}</a>
+(<a href="https://ipinfo.io/{{ post.user_ip }}" title="Where this address is">location</a>).
 </p>
 {% if ip_users %}
 <p>All users who have posted from {{ post.user_ip }}:</p>

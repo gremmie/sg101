@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'v3/base.html' %}
 {% load bio_tags %}
 {% block title %}Deactivate Spammer: {{ post.user.username }}{% endblock %}
 {% block content %}
@@ -13,7 +13,7 @@ left by the user will be deleted.</p>
 <p><strong>This is a drastic action, so please be absolutely sure
 you wish to proceed!</strong></p>
 <form action="." method="post">{% csrf_token %}
-   <input type="submit" value="Deactivate {{ post.user.username }}" />
+   <input type="submit" class="alert button" value="Deactivate {{ post.user.username }}" />
 </form>
 {% else %}
    {% if can_moderate %}
