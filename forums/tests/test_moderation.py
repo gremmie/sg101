@@ -12,8 +12,9 @@ import re
 from unittest import mock
 
 import bio.models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.contrib.staticfiles import finders
+from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
@@ -523,6 +524,26 @@ class ModToolPagesTests(TestCase):
             with self.subTest(user=username):
                 self.assertContains(response, 'href="%s"' % reverse(
                     'forums-posts_for_user', kwargs={'username': username}))
+
+    def test_spammer_nailed_is_refused_to_a_member(self):
+        self.client.logout()
+        self.client.login(username='member', password='pw')
+        response = self.client.get(reverse('forums-spammer_nailed', args=[self.stranger.id]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_spammer_nailed_is_open_to_a_forum_moderator(self):
+        moderator = User.objects.create_user('moderator', '', 'pw')
+        group = Group.objects.create(name='Shallow End moderators')
+        moderator.groups.add(group)
+        self.forum.moderators.add(group)
+        # forums.permissions caches each forum's moderator groups; an earlier
+        # test may have cached this forum's without the new group.
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.client.logout()
+        self.client.login(username='moderator', password='pw')
+        response = self.client.get(reverse('forums-spammer_nailed', args=[self.stranger.id]))
+        self.assertEqual(response.status_code, 200)
 
     def test_post_ip_is_refused_to_a_member(self):
         self.client.logout()

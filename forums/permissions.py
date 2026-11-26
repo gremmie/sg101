@@ -53,6 +53,20 @@ def can_moderate(forum, user):
     return bool(user_groups & forum_groups)
 
 
+def can_moderate_any(user):
+    """
+    Returns True if the user can moderate at least one forum.
+
+    """
+    if not user.is_authenticated:
+        return False
+    elif user.is_superuser:
+        return True
+
+    from forums.models import Forum
+    return any(can_moderate(forum, user) for forum in Forum.objects.all())
+
+
 def can_post(topic, user):
     """
     Returns True if the user can post in the topic and False otherwise.

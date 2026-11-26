@@ -6,7 +6,7 @@ import textwrap
 
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.contrib.auth.models import User
@@ -76,8 +76,12 @@ def spammer(request, post_id):
 @login_required
 def spammer_nailed(request, spammer_id):
     """This view presents a confirmation screen that the spammer has been
-    deactivated.
+    deactivated. Only moderators may see it: it says whether an account was
+    deactivated for spam.
     """
+    if not perms.can_moderate_any(request.user):
+        return HttpResponseForbidden()
+
     user = get_object_or_404(User, pk=spammer_id)
     profile = user.profile
 
