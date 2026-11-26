@@ -3637,3 +3637,77 @@ branch (`3e37a0a4`); `main` fast-forwarded to it, CI green. Brian deployed
 #17 closed. Branch `v3-forums-release-3` deleted, remote and local.
 **Forums release 3 is live; step 10 is complete, and with it
 every forum page is V3.**
+
+## Step 11 task 01 — the shouts archived — DONE 2026-11-25 (`8813fd17`)
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step11/task-01-archive-the-shouts.code-task.md`.
+Branch `retire-shoutbox`, cut from `main` at `95ce0681`.
+
+**What was left running.** Members stopped seeing the shoutbox when the last
+page extending the old `base.html` went V3, but the app was installed,
+`/shout/` was mounted with seven routes (history and single-shout pages still
+rendered; the `shout`, `edit`, `delete` and `flag` endpoints still took POSTs
+from signed-in members), and the tables held their data. Production's last
+shout is from 2026-11-11, after the cutover.
+
+**The export.** The command was dry-run on dev first (1,890 shouts, LF line
+endings, authors as usernames), then Brian ran it on leopard, with `exec -T`
+rather than `make prod-manage`, whose `exec` without `-T` would hand the JSON
+back through a TTY with CRLF endings:
+`dumpdata shoutbox.Shout --natural-foreign --indent 2`. Production counted
+**1,894** at the export; the file holds 1,894, 2011-02-26 to 2026-11-11, by
+332 members, every author a username, every id unique.
+
+**Brian's choices, 2026-11-25.**
+
+- **Shouts only**, as the repository is public: the flags (who reported
+  which shout, never public) were not exported. The plan's `dumpdata
+  shoutbox` was narrowed to match.
+- **Four email addresses redacted.** Shouts 116, 667, 757 and 1854
+  (2011–2018) each gave a member's address, as text and as a `mailto:` link
+  whose text was the address cut short. Each became `[email removed]`,
+  edited as text so `dumpdata`'s formatting is kept; a parse of both files
+  showed only those four objects differ. No IPv4 address was in the export.
+
+**`archive/shoutbox/`**: `shouts.json`, a `README.md` (what it was, the fields,
+the command, what was left out and why) and a `MANIFEST.json` (count, authors,
+date range, the export's count, the redacted ids, and the byte count and
+SHA-256 of the redacted file), after `archive/wiki/`.
+
+## Step 11 task 02 — the shoutbox app removed — DONE 2026-11-25, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step11/task-02-remove-the-app.code-task.md`.
+Branch `retire-shoutbox`, on `8813fd17`.
+
+**Removed:** `shoutbox/` (models, views, forms, admin, tags, its one
+migration, its static files) and `sg101/templates/shoutbox/` (six
+templates); `'shoutbox'` from `INSTALLED_APPS`; the `/shout/` include;
+`ShoutFlag` and `flagged_shouts` from `custom_admin_tags.py` and the admin
+dashboard template; the shout deletion in `deactivate_spammer`, and the shout
+from its test; and the old `base.html`'s `shoutbox_tags` load, `{% shoutbox
+%}`, `css/shoutbox.css` and `js/shoutbox.js`. **`js/shoutbox.js` never
+existed**: `base.html` had been loading a missing file.
+`jquery.cycle.all3.0.3.js`, there perhaps only for the shoutbox's scroller,
+is one of `base.html`'s own assets and goes with it in step 12. **No template
+now extends `base.html`.** `AGENTS.md`'s "two page designs" note is
+rewritten to say so; `.agents/summary/` is a dated snapshot and is left.
+
+**The grep.** `git grep -il shout` outside the planning record and the
+archive finds only the new test; the six hits in `archive/wiki/` are "Banzai
+Washout".
+
+**The tables must be dropped before this deploys** (`migrate shoutbox zero`
+on leopard, while the deployed code still has the app; task 03), as the
+flatpages removal did (`fdb9b5f5`, #33). `makemigrations --check`: no
+changes.
+
+**Tests.** `core/tests/test_pruned.py` lists the shoutbox with the other
+removed apps: not installed, `/shout/` and `/shout/view/history/` 404, and
+`shoutbox-history` and `shoutbox-shout` don't reverse. All three failed
+before the removal. The dashboard tag test drops its `ShoutFlag` patch and
+asserts no "Shouts" line; it passed before too, as an unpatched count of 0
+hid the line, so it guards against the line returning (a "Shouts" line added
+to the template fails it). `deactivate_spammer`'s test keeps its other
+checks.
+
+Suite under the gate: 1776 tests, OK.
