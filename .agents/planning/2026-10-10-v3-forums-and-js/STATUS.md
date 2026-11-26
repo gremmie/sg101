@@ -3729,3 +3729,56 @@ prod-up`; no migrations) straight after, to close the window in which
 404. Branch `retire-shoutbox` deleted, remote and local. **The shoutbox is
 gone; step 11 is complete.** With it, no template
 extends `base.html`, which step 12 deletes.
+
+## Step 12 task 01 — `base.html` and its assets removed — DONE 2026-11-26, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step12/task-01-retire-base-html.code-task.md`.
+Branch `retire-base-html`, on `161ac3b0`.
+
+**Removed:** `sg101/templates/base.html`, `sg101/templates/navbar.html`,
+`static/css/blueprint/` (screen, print, ie), `static/css/base.css`,
+`static/themes/` (only `kds/`: `sgLogo.png`, `bg.png`, `headerbg.png`), and
+the `jquery` entry in `GPP_THIRD_PARTY_JS` (Google's CDN jQuery 1.11.1).
+
+**The grep, before deleting.** Each path and basename across the tracked
+tree, `.agents/` and `archive/` excepted. Every hit was inside the deleted
+files themselves (`base.html` names the CSS, the theme logo, `navbar.html`
+and `script_tags "jquery"`; `base.css` names the two theme backgrounds),
+or a test asserting absence (`news/tests/test_browser.py`: nothing from
+Google's CDN), or a docstring rewritten below. `tools/ssg101/` extends its
+own `base.html` in its own template directory, out of scope.
+`DOCKER.md`'s "blueprint" is the English word.
+
+**Tests changed:**
+
+- The nine `assertTemplateNotUsed(response, 'base.html')` in the forum tests
+  are gone; each was paired with `assertTemplateUsed(response,
+  'v3/base.html')`, which stays.
+- `test_no_forum_template_extends_the_old_base` (step 10 task 03) is gone:
+  with the file deleted, a template extending it fails when rendered.
+- `test_script_tags` no longer asks for `jquery` (`markitup` waits for task
+  02).
+- **The two-design tests became one (Brian's option A).** The wiki-link,
+  calendar-link and logout tests each rendered the forums index as "the
+  `base.html` design" and a V3 page; since release 1 both rendered the same
+  base. Each now renders one V3 page, and its docstring says why.
+  `V3PagesTestCase`'s docstring no longer mentions unconverted pages.
+
+**`AGENTS.md`** says `base.html` is gone and that `V3_DESIGN` remains until
+task 03.
+
+**Not done, by decision (Brian, 2026-11-26).** The plan's two new tests,
+the URL walk over argument-free routes and a static "nothing extends
+`base.html`" check, were dropped. The task is to prove the old files can
+go; the proof is the grep above, the suite, and task 04's browser walk.
+The walk covered only argument-free routes (114 of 461 named, measured),
+which leaves out topics, profiles and stories, and most of it redirects or
+renders an empty database; it also needed a skip for `donations-ipn`, which
+posts to PayPal on any request. A permanent guard for future deletions
+would be its own improvement. Tasks 02 and 03's files were changed to
+match: no walk; task 03's `V3_DESIGN` check is a recorded grep, and its
+write-first test is a tag rendered from a bare `Context()`.
+
+**No new test, so nothing to watch fail.** Suite under the gate: 1773 tests,
+OK; step 11 ended at 1776, and the three fewer are the forums static check
+and the two forums-index navigation tests.

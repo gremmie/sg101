@@ -96,11 +96,13 @@ harmless, and why.
 3. Every deleted template and static file has a recorded grep showing no
    reference.
 4. The stylesheet is rebuilt from the Sass, and both are committed together.
-5. `core/tests/test_static.py` and task 01's URL walk still pass.
+5. `core/tests/test_static.py` still passes.
 
 ## Dependencies
-- Task 01: `base.html` gone, and the URL walk in place to catch a template
-  deleted in error.
+- Task 01: `base.html` gone. Task 01 added no URL walk or static template
+  check (Brian, 2026-11-26; `STATUS.md`, step 12 task 01): a template deleted
+  in error is caught by the grep before deleting, the suite, and task 04's
+  browser walk.
 
 ## Implementation Approach
 1. Write the tests first, and watch them fail: `/comments/markdown/`,
@@ -129,7 +131,7 @@ harmless, and why.
 
 3. **No live template or asset was deleted**
    - Given the deletions
-   - When the URL walk, `test_static.py` and the full suite run under the gate
+   - When `test_static.py` and the full suite run under the gate
    - Then they pass
 
 4. **The shipped stylesheet matches the Sass**

@@ -57,10 +57,10 @@ Rewrite that bullet for what's true afterwards. `.agents/summary/` is a dated
 snapshot: leave it.
 
 **`git grep V3_DESIGN`**, outside `.agents/` and `archive/`, finds nothing
-afterwards. Extend task 01's static check to say so. If a check under
-`core/tests/` can't run `git` (the test image may have no `.git`), walk
-the source tree from `settings.BASE_DIR` instead, skipping `.agents/`,
-`archive/` and `node_modules/`.
+afterwards. Record that grep in `STATUS.md`. It's the proof, not a test: task
+01 dropped the plan's static checks, since the job is to show the flag can
+go, not to guard against its return (Brian, 2026-11-26; `STATUS.md`, step 12
+task 01).
 
 ## Reference Documentation
 **Required:**
@@ -78,17 +78,18 @@ the source tree from `settings.BASE_DIR` instead, skipping `.agents/`,
    the tags no longer name them.
 3. No Python file sets `V3_DESIGN`, and no context dict or `extra_context`
    is left empty because of its removal.
-4. The static check asserts that `V3_DESIGN` appears nowhere in the source.
+4. `git grep V3_DESIGN`, outside `.agents/` and `archive/`, finds nothing,
+   and `STATUS.md` records it.
 5. The work is one commit, separate from tasks 01 and 02.
 
 ## Dependencies
-- Tasks 01 and 02: `base.html` gone, the URL walk and static check in place.
+- Tasks 01 and 02: `base.html` and the old design's assets gone.
 
 ## Implementation Approach
-1. Extend the static check for `V3_DESIGN` and watch it fail.
+1. Write the test first: one of the tags, rendered from a bare
+   `Context()`, gives its `v3/` template's markup. Watch it fail.
 2. Change the eight tags, then delete the old templates. Rendering any
-   page without the flag should now give the V3 sidebar and header. A
-   test of one tag rendered from a bare `Context()` shows it.
+   page without the flag should now give the V3 sidebar and header.
 3. Remove the flag from the views and `accounts/urls.py`, file by file, and
    update the tests.
 4. Run each touched app's tests against the running stack, one run at a
@@ -107,12 +108,12 @@ the source tree from `settings.BASE_DIR` instead, skipping `.agents/`,
 
 2. **The flag is gone**
    - Given the source outside the planning record and the archive
-   - When the static check runs
-   - Then `V3_DESIGN` is found nowhere and the check passes
+   - When it is searched for `V3_DESIGN`
+   - Then nothing is found
 
 3. **Every page still renders on the V3 chrome**
    - Given the flag removed from every view
-   - When the URL walk, the full suite under the gate and step 3's browser tests run
+   - When the full suite under the gate and step 3's browser tests run
    - Then they pass
 
 4. **One commit**
