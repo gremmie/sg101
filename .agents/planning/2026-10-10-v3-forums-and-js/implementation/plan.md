@@ -494,8 +494,9 @@ app is gone.
 
 **Guidance (design §4.5, items 1–3).**
 
-1. **Commit `archive/shoutbox/`,** a `dumpdata shoutbox` export taken from
-   production. **Brian runs the export on leopard.**
+1. **Commit `archive/shoutbox/`,** a `dumpdata shoutbox.Shout` export taken
+   from production: shouts only, not flags, as the repository is public
+   (Brian, 2026-11-25; step 11 task 01). **Brian runs the export on leopard.**
 2. **On leopard, before deploying the removal:** `make prod-manage
    cmd="migrate shoutbox zero"`. **Brian runs it.**
 3. **Remove** `shoutbox/`, the `/shout/` URLs, its templates and static
