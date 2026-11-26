@@ -94,9 +94,6 @@ def deactivate_spammer(user):
     user.instant_messenger_profiles.all().delete()
     user.website_profiles.all().delete()
 
-    # delete shouts
-    user.shout_set.all().delete()
-
     # delete any uploaded photos
     photos = user.uploaded_photos.all()
     if len(photos):

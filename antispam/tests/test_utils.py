@@ -18,7 +18,6 @@ from antispam.utils import contains_spam, deactivate_spammer, spam_check
 from comments.models import Comment
 from polls.models import Poll
 from elsewhere.models import WebsiteProfile
-from shoutbox.models import Shout
 from bio.models import STA_ACTIVE, STA_SPAMMER, STA_STRANGER, STA_SUSPENDED
 
 
@@ -90,9 +89,6 @@ class AntispamUtilsCase(TestCase):
         website = WebsiteProfile(user=user, name='spam', url='spam')
         website.save()
 
-        shout = Shout(user=user, shout_date=now, shout='spam')
-        shout.save()
-
         deactivate_spammer(user)
 
         profile = user.profile
@@ -113,7 +109,6 @@ class AntispamUtilsCase(TestCase):
 
         self.assertEqual(Comment.objects.filter(user=user).count(), 0)
         self.assertEqual(WebsiteProfile.objects.filter(user=user).count(), 0)
-        self.assertEqual(Shout.objects.filter(user=user).count(), 0)
 
 
 class AntispamSpamCheckTestCase(TestCase):

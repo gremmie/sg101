@@ -79,7 +79,6 @@ urlpatterns = [
    path('potd/', include('potd.urls')),
    path('profile/', include('bio.urls')),
    path('search/', include('search.urls')),
-   path('shout/', include('shoutbox.urls')),
    path('smiley/', include('smiley.urls')),
    path('user_photos/', include('user_photos.urls')),
    path('ygroup/', include('ygroup.urls')),

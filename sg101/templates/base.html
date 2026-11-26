@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-{% load shoutbox_tags %}
 {% load potd_tags %}
 {% load script_tags %}
 {% load poll_tags %}
@@ -22,13 +21,11 @@
 <link rel="stylesheet" href="{% static "css/blueprint/ie.css" %}" type="text/css" media="screen, projection" />
 <![endif]-->
 <link rel="stylesheet" href="{% static "css/base.css" %}" />
-<link rel="stylesheet" href="{% static "css/shoutbox.css" %}" />
 {% script_tags "jquery" %}
 {% block custom_head %}{% endblock %}
 {% block custom_css %}{% endblock %}
 {% block custom_js %}{% endblock %}
 <script src="{% static "js/jquery.cycle.all3.0.3.js" %}"></script>
-<script src="{% static "js/shoutbox.js" %}"></script>
 <link rel="shortcut icon" href="{% static "favicon.ico" %}" />
 </head>
 <body>{% block begin_body %}{% endblock %}
@@ -68,7 +65,6 @@
    {% cache 300 potd_block %}
       {% photo_of_the_day %}
    {% endcache %}
-   {% shoutbox %}
    {% cache 3600 poll_block %}
       {% latest_poll_block %}
    {% endcache %}

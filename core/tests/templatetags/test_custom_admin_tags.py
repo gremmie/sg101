@@ -25,7 +25,6 @@ class AdminDashboardTestCase(TestCase):
 
     @patch('core.templatetags.custom_admin_tags.BandEntry.objects.new_entry_count')
     @patch('core.templatetags.custom_admin_tags.PmFlag.objects.count')
-    @patch('core.templatetags.custom_admin_tags.ShoutFlag.objects.count')
     @patch('core.templatetags.custom_admin_tags.FlaggedLink.objects.count')
     @patch('core.templatetags.custom_admin_tags.PendingLink.objects.count')
     @patch('core.templatetags.custom_admin_tags.PendingStory.objects.count')
@@ -38,7 +37,7 @@ class AdminDashboardTestCase(TestCase):
                        mock_pending_download_count, mock_flagged_post_count,
                        mock_event_objects, mock_pending_story_count,
                        mock_pending_link_count, mock_flagged_link_count,
-                       mock_shout_flag_count, mock_pm_flag_count,
+                       mock_pm_flag_count,
                        mock_band_entry_count):
 
         mock_profile_count.return_value = 1
@@ -51,7 +50,6 @@ class AdminDashboardTestCase(TestCase):
         mock_pending_story_count.return_value = 6
         mock_pending_link_count.return_value = 7
         mock_flagged_link_count.return_value = 8
-        mock_shout_flag_count.return_value = 9
         mock_pm_flag_count.return_value = 10
         mock_band_entry_count.return_value = 11
 
@@ -64,7 +62,7 @@ class AdminDashboardTestCase(TestCase):
         self.assertIsNotNone(re.search(r'\bNews.*: 6', rendered))
         self.assertIsNotNone(re.search(r'\bNew Links.*: 7', rendered))
         self.assertIsNotNone(re.search(r'\bBroken Links.*: 8', rendered))
-        self.assertIsNotNone(re.search(r'\bShouts.*: 9', rendered))
+        self.assertNotIn('Shouts', rendered)
         self.assertIsNotNone(re.search(r"\bPM's.*: 10", rendered))
         self.assertIsNotNone(re.search(r"\bBand Map.*: 11", rendered))
 

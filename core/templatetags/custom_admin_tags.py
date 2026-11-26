@@ -11,7 +11,6 @@ from forums.models import FlaggedPost
 from gcalendar.models import Event
 from news.models import PendingStory
 from weblinks.models import PendingLink, FlaggedLink
-from shoutbox.models import ShoutFlag
 from messages.models import Flag as PmFlag
 from bandmap.models import BandEntry
 
@@ -36,7 +35,6 @@ def admin_dashboard(user):
     new_stories = PendingStory.objects.count()
     new_links = PendingLink.objects.count()
     broken_links = FlaggedLink.objects.count()
-    flagged_shouts = ShoutFlag.objects.count()
     flagged_msgs = PmFlag.objects.count()
     new_bands = BandEntry.objects.new_entry_count()
 
@@ -50,7 +48,6 @@ def admin_dashboard(user):
         'new_stories': new_stories,
         'new_links': new_links,
         'broken_links': broken_links,
-        'flagged_shouts': flagged_shouts,
         'flagged_msgs': flagged_msgs,
         'new_bands': new_bands,
         }

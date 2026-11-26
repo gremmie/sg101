@@ -195,7 +195,6 @@ INSTALLED_APPS = [
     'polls',
     'potd',
     'search',
-    'shoutbox',
     'smiley',
     'user_photos',
     'weblinks',

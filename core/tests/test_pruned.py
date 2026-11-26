@@ -1,7 +1,8 @@
 """Tests that removed dead/disabled code stays gone.
 
-The `irc`, `legacy`, `membermap`, and `custom_search` apps (and the disabled
-Xapian/Haystack search stack) were removed. These assertions fail loudly if any
+The `irc`, `legacy`, `membermap`, `custom_search` and `shoutbox` apps (and the
+disabled Xapian/Haystack search stack) were removed; the shouts are archived
+under `archive/shoutbox/`. These assertions fail loudly if any
 of them get reintroduced -- e.g. an app slipped back into INSTALLED_APPS, or a
 URL include resurrected.
 
@@ -15,7 +16,7 @@ from django.urls import NoReverseMatch, reverse
 from django.test import TestCase
 
 
-REMOVED_APPS = ['irc', 'legacy', 'membermap', 'custom_search']
+REMOVED_APPS = ['irc', 'legacy', 'membermap', 'custom_search', 'shoutbox']
 
 
 class PrunedAppsTests(TestCase):
@@ -30,11 +31,11 @@ class PrunedAppsTests(TestCase):
                 msg='%r should not be an installed app' % label)
 
     def test_removed_urls_return_404(self):
-        for path in ['/irc/', '/member_map/']:
+        for path in ['/irc/', '/member_map/', '/shout/', '/shout/view/history/']:
             self.assertEqual(self.client.get(path).status_code, 404,
                              msg='%s should no longer resolve' % path)
 
     def test_removed_url_names_are_gone(self):
-        for name in ['irc-main', 'membermap-index']:
+        for name in ['irc-main', 'membermap-index', 'shoutbox-history', 'shoutbox-shout']:
             with self.assertRaises(NoReverseMatch):
                 reverse(name)

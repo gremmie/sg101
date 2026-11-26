@@ -101,10 +101,10 @@ docker compose exec web python manage.py test forums --settings=sg101.settings.d
   production's rate and years for `auth.log`. Until 2026-10-22 `sg101.log` was
   100 KB x 10, about three weeks, so its history before then is short. For
   spam deactivations ask the database (`UserProfile.status`), not the log.
-- **Two page designs coexist.** Most templates extend `v3/base.html`
-  (Foundation 6, jQuery 3, the post box's ES modules); the forums and
-  shoutbox still extend the old `base.html`
-  (Blueprint, markItUp). Check which one a page extends before changing it.
+- **Every page extends `v3/base.html`** (Foundation 6, jQuery 3, the post
+  box's ES modules). The old `base.html` (Blueprint, markItUp) still exists
+  but nothing extends it; it and the `V3_DESIGN` flag, which picks the V3
+  variant of the shared tags, are retired together.
 - **The `messages` app collides with `django.contrib.messages`.** Resolved in
   `sg101/apps.py` (`DjangoMessagesConfig`), which relabels the built-in app to
   `django_messages`. Don't rename this app or its `AppConfig` without
