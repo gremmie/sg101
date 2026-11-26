@@ -3561,7 +3561,7 @@ scratchpad.
 
 Suite under the gate, with the location link: 1774 tests, OK.
 
-## Step 10 task 04 — the release 3 walk — walked 2026-11-25
+## Step 10 task 04 — the release 3 walk and shipping — walked and shipped 2026-11-25
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step10/task-04-walk-and-ship.code-task.md`.
 Branch `v3-forums-release-3`, on `573cfd0d`.
@@ -3630,3 +3630,10 @@ only superusers fails the second.
 widths) and 15 (phone header, the moderator's 63 px above).
 
 Suite under the gate, after the walk and the fix: 1776 tests, OK.
+
+**Shipped 2026-11-25.** `main` had nothing new to merge; CI green on the
+branch (`3e37a0a4`); `main` fast-forwarded to it, CI green. Brian deployed
+(`git pull`, `make prod-up`; no migrations) and checked live: it looks good.
+#17 closed. Branch `v3-forums-release-3` deleted, remote and local.
+**Forums release 3 is live; step 10 is complete, and with it
+every forum page is V3.**
