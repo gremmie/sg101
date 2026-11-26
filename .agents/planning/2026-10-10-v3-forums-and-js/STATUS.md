@@ -3560,3 +3560,73 @@ moderator's header, plan step 15). Screenshots stay in the session
 scratchpad.
 
 Suite under the gate, with the location link: 1774 tests, OK.
+
+## Step 10 task 04 — the release 3 walk — walked 2026-11-25
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step10/task-04-walk-and-ship.code-task.md`.
+Branch `v3-forums-release-3`, on `573cfd0d`.
+
+**Setup.** A headless Chromium probe in the `web` container against the dev
+server, the debug toolbar off. **Brian chose the cleanup**: a snapshot taken
+just before the walk and restored after it, in place of undoing each change
+by hand, since the demo writes (locks, a split, a move, a promotion, and with
+them search, Redis and read-tracking). Snapshot:
+`sg101-20261125-195104-before-release3-walk.dump`. Subjects by id: moderator
+`CaptainSpringfield` (pk 12, moderates Gear), member `dp` (pk 32, moderates
+nothing), Gear (forum 7), topics 41534 and 41437 to lock (the first two on
+Gear's page 1 neither sticky nor locked), topic 41523 (6 posts) to split,
+The Shallow End (forum 4) to move to, and the stranger `MickBanger`'s post
+485470. Sessions made through `AUTHENTICATION_BACKENDS[0]`. These views queue
+no Celery work on the demo's paths (the only `email_admins` is on
+deactivation, not pressed), so no worker check.
+
+**The walk**: the seven pages × anonymous, member and moderator × 360 and
+1280: 42 loads.
+
+| Role | Result |
+|---|---|
+| anonymous | all 7 go to `/accounts/login/?next=`, V3 |
+| member | `mod_forum`, `move_topic`, `post_ip`: a bare 403, as before; split redirects to the topic (V3); stranger and spammer render V3 with "Sorry, but you don't have permission"; the nailed page rendered V3 (see below) |
+| moderator | all 7 V3; **63 px at 360** (the header, plan step 15), none at 1280 |
+
+No page errors, no `blueprint` stylesheet; the only failed request is dev's
+missing photo of the day thumbnail (404). No template under
+`sg101/templates/forums/` extends `base.html`; outside the forums only the
+three shoutbox templates do (step 11). `forums_mod.js` is gone. Screenshots
+(46) stay in the session scratchpad: the IP pages show members' addresses.
+
+**The demo**, as the moderator at 1280: on Gear's moderate page, 41534 and
+41437 ticked, Toggle Lock → back on `?page=1`, both rows with the lock icon,
+no dialog; split 41523 with the forum preselected as Gear, its last two
+posts ticked, Split Selected Posts → on the topic, the posts in a new topic
+41543 (2 posts), 41523 left with 4; move 41543 to The Shallow End → on the
+topic, its crumb naming the new forum; promote the stranger → on the post,
+and the stranger page then says the user is no longer a stranger. The
+database agreed at each step.
+
+**What the walk left in the dev database: nothing.** The snapshot was
+restored, the search index rebuilt (`reconcile_search` clean) and Redis
+rebuilt (`rebuild_redis --check`: matches). A state record (table counts,
+every forum's counts and `last_post`, the three demo topics, the split
+topic's posts, the stranger's status, both walkers' `last_login` and
+read-tracking rows) was byte-identical before and after.
+
+**Found in the walk, fixed at Brian's request: the spammer-nailed page had
+no permission check.** Any signed-in member could open
+`/forums/spammer/nailed/<user id>/` for any account and learn whether it had
+been deactivated for spam. It has always been so. The view now refuses with
+a 403 anyone who moderates no forum, through a new
+`forums.permissions.can_moderate_any` (a superuser, or a moderator of at
+least one forum: the nailed page has no forum of its own, the spammer's
+posts being gone). Two tests in `ModToolPagesTests`: a member gets a 403
+(failed before the check), and a group moderator of one forum gets the page
+(guards against a check too strict); the second clears the permission cache,
+which keeps each forum's moderator groups for four hours across tests.
+Mutations: the check removed fails the first; `can_moderate_any` allowing
+only superusers fails the second.
+
+**Still open, carried forward:** #41 (`flag_icon`); #42; #43; steps 11
+(shoutbox), 12 (`base.html` and `V3_DESIGN`), 13 (phone banner), 14 (tablet
+widths) and 15 (phone header, the moderator's 63 px above).
+
+Suite under the gate, after the walk and the fix: 1776 tests, OK.
