@@ -7,8 +7,7 @@ because a `{% url %}` naming a route that no longer exists raises
 `NoReverseMatch` at *render* time -- an import-level or string-level check sees
 nothing, and the page 500s in a browser.
 
-The site runs two live designs and both need the link: the forums still use
-`base.html`, everything else uses `v3/base.html`.
+Every page wears `v3/base.html`, so the home page stands for the site's menu.
 
 """
 from django.test import TestCase
@@ -26,10 +25,5 @@ class CalendarNavigationTestCase(TestCase):
             '<a href="%s">Calendar</a>' % reverse('gcalendar-index'),
             html=True)
 
-    def test_the_forums_design_links_to_the_calendar(self):
-        """`base.html`, still worn by the busiest part of the site."""
-        self._assert_links_to_the_calendar('forums-index')
-
-    def test_the_v3_design_links_to_the_calendar(self):
-        """`v3/base.html`, worn by everything else, the home page included."""
+    def test_the_menu_links_to_the_calendar(self):
         self._assert_links_to_the_calendar('home')

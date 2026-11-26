@@ -151,7 +151,6 @@ class SplitAndMovePageTests(TestCase):
 
     def assertV3(self, response, title):
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertContains(response, '<h2>%s: Original</h2>' % title, html=True)
 
@@ -312,7 +311,6 @@ class ModForumPageTests(TestCase):
     def test_the_page_is_v3(self):
         response = self.client.get(self.url)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertTemplateUsed(response, 'core/v3/pagination.html')
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
@@ -463,7 +461,6 @@ class ModToolPagesTests(TestCase):
     def assertV3(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         # The header's tags follow V3_DESIGN.
         self.assertTemplateUsed(response, 'messages/v3/unread_messages_tag.html')
 

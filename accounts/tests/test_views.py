@@ -906,25 +906,19 @@ class LogoutTest(TestCase):
         self.assertEqual(response.status_code, 405)
         self.assertTrue(self.logged_in())
 
-    def test_the_navbars_submit_logout_as_a_post(self):
-        """The templates have to agree with the view, or the site cannot log out.
+    def test_the_navbar_submits_logout_as_a_post(self):
+        """The template has to agree with the view, or the site cannot log out.
 
-        A page is rendered rather than the templates being read, so this fails
-        if either navbar goes back to a plain link. The two URLs are not
-        interchangeable: the forums index renders `navbar.html` through
-        `base.html`, and a profile renders `v3/base.html`, so between them they
-        cover both of the site's navbars. Repointing either at the other design
-        would quietly halve what this covers.
+        A page is rendered rather than the template being read, so this fails
+        if the navbar in `v3/base.html` goes back to a plain link.
 
         """
-        for url in [reverse('forums-index'), reverse('bio-me')]:
-            with self.subTest(url=url):
-                html = self.client.get(url).content.decode()
-                logout_url = reverse('accounts-logout')
+        html = self.client.get(reverse('bio-me')).content.decode()
+        logout_url = reverse('accounts-logout')
 
-                self.assertIn(f'action="{logout_url}" method="post"', html)
-                self.assertNotIn(f'<a href="{logout_url}"', html)
-                self.assertIn('csrfmiddlewaretoken', html)
+        self.assertIn(f'action="{logout_url}" method="post"', html)
+        self.assertNotIn(f'<a href="{logout_url}"', html)
+        self.assertIn('csrfmiddlewaretoken', html)
 
 
 class EmailChangeConfirmTestCase(TestCase):

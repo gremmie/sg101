@@ -476,9 +476,6 @@ GPP_THIRD_PARTY_JS = {
     'imagesloaded': [
         'js/jquery.imagesloaded.min.js',
     ],
-    'jquery': [
-        'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js',
-    ],
     'jquery-jeditable': [
         'js/jquery.jeditable.mini.js',
     ],

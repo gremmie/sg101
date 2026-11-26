@@ -174,8 +174,7 @@ class PostsForUserTestCase(TestCase):
 
 
 class V3PagesTestCase(TestCase):
-    """The forums index and a forum's topic list render on the V3 design; the
-    pages not yet converted keep the old design and the old fragments."""
+    """The forum pages render on the V3 design, with the V3 fragments."""
     fixtures = ['forums.json']
 
     def setUp(self):
@@ -205,7 +204,6 @@ class V3PagesTestCase(TestCase):
     def assertV3(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertIs(response.context.get('V3_DESIGN'), True)
 
     def test_both_pages_are_v3_for_each_role(self):
@@ -264,12 +262,6 @@ class V3PagesTestCase(TestCase):
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
         self.assertTemplateNotUsed(response, 'forums/forum_query.html')
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
-
-    def test_no_forum_template_extends_the_old_base(self):
-        templates = pathlib.Path(settings.PROJECT_PATH) / 'templates' / 'forums'
-        old = [path.name for path in sorted(templates.rglob('*.html'))
-               if re.search(r"""{%\s*extends\s+['"]base\.html['"]""", path.read_text())]
-        self.assertEqual(old, [])
 
     def topic_url(self):
         return reverse('forums-topic_index', kwargs={'id': self.topic.id})
@@ -390,7 +382,6 @@ class ConfirmationPagesTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.redirect_chain), 1)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertContains(
@@ -509,7 +500,6 @@ class TopicListsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'forums/topic_list.html')
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
@@ -626,7 +616,6 @@ class PostListsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'forums/post_list.html')
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertTemplateNotUsed(response, 'base.html')
         self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
@@ -742,7 +731,6 @@ class ManageTopicsTestCase(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, 'forums/manage_topics.html')
                 self.assertTemplateUsed(response, 'v3/base.html')
-                self.assertTemplateNotUsed(response, 'base.html')
                 self.assertIs(response.context.get('V3_DESIGN'), True)
                 self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
                 self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
@@ -1064,7 +1052,6 @@ class PostingPagesTestCase(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, 'v3/base.html')
-                self.assertTemplateNotUsed(response, 'base.html')
                 self.assertIs(response.context.get('V3_DESIGN'), True)
                 self.assertContains(response, 'class="editor-video"', count=1)
                 self.assertContains(response, 'id="video-modal"', count=1)
