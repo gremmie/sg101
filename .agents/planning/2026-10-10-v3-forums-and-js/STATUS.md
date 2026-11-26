@@ -3492,3 +3492,71 @@ sideways scroll at 1280, 63 px at 360 (the moderator's header, plan step 15).
 Screenshots stay in the session scratchpad: they show members' IPs.
 
 Suite under the gate: 1768 tests, OK.
+
+## Step 10 task 03 — the post IP, stranger and spammer pages on V3; no forum template on `base.html` — DONE 2026-11-25, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step10/task-03-ip-stranger-spammer.code-task.md`.
+Branch `v3-forums-release-3`, on `a198d237`.
+
+**The four pages are V3.** `post_ip.html`, `stranger.html`, `spammer.html`
+and `spammer_nailed.html` extend `v3/base.html`, and their four views
+(`post_ip_info` in `main.py`; `spammer`, `spammer_nailed`, `stranger` in
+`spam.py`) set `V3_DESIGN`. Their wording and branches are unchanged; none
+had a crumb, and none has one now. **With them, no template under
+`sg101/templates/forums/` extends `base.html`**, the plan's grep, now a test.
+
+**`V3_DESIGN` matters here though no forum fragment does.** The header's and
+sidebar's tags switch on it (`unread_messages`, `birthday_block`, the polls,
+photo of the day and others), so without it a V3 page renders their old
+templates. The tests check `messages/v3/unread_messages_tag.html`; the
+birthday block was tried first and dropped, as it sits in a `{% cache %}`
+block and renders only on a cold cache.
+
+**Brian's choices, 2026-11-25.**
+
+- **The IP links to ARIN's RDAP search**,
+  `https://search.arin.net/rdap/?query=<ip>`. The old link,
+  `http://www.dnsstuff.com/tools/whois/?ip=<ip>`, now 301s to HTTPS and then
+  to dnsstuff's general `/freetools` page, dropping the address (measured
+  with `192.0.2.1`). ARIN and ipinfo.io both answered 200 with the address
+  kept, for IPv4 and IPv6 (`192.0.2.1`, `2001:db8::1`); ARIN's follows
+  referrals to the other registries. Chosen over ipinfo.io and over no link;
+  then, after trying it on dev, Brian asked for the location too: a
+  "location" link to `https://ipinfo.io/<ip>` follows the address.
+- **Deactivate is a red `alert button`, promote a blue `button`.**
+
+**The step 9 old-page test** is gone with the last old forum page, and so is
+its `assertOldDesign` helper; `test_no_forum_template_extends_the_old_base`
+(`V3PagesTestCase`) takes its place, reading every template under
+`sg101/templates/forums/`.
+
+**Tests**, written first. `ModToolPagesTests` (`test_moderation.py`, 6) and
+the static check. Red run: 10 failures across subtests, each on V3, the
+buttons or the link; the static check named exactly the four templates.
+`post_ip_info` had no view test before; it now has two (the IP's posters and
+the ARIN link; a member's 403). The first draft of the refusal tests looked
+for no `type="submit"` at all and failed on the header's search and logout
+buttons; they now look for each page's own button.
+
+| Mutation | Failed |
+|---|---|
+| `post_ip` on the old base | `all_four_pages_are_v3`, the static check |
+| `spammer_nailed` on the old base | `all_four_pages_are_v3`, the static check |
+| `stranger` without `V3_DESIGN` | `all_four_pages_are_v3` |
+| `post_ip_info` without `V3_DESIGN` | `all_four_pages_are_v3` |
+| Deactivate not red | `deactivate_is_a_red_button_and_promote_a_blue_one` |
+| promote unstyled | same |
+| the old whois link | `post_ip_lists_the_ips_posters_and_links_arin` |
+| the spammer button always shown | both refusal tests |
+| the promote button always shown | both refusal tests |
+| `post_ip_info` lets a member in | `post_ip_is_refused_to_a_member` |
+
+Restored byte-identical.
+
+**On dev**, headless Chromium as the moderator, a stranger's post (485470)
+and user 6 for the nailed page, opened only, POSTs aborted in the browser:
+all 200, no page errors, no sideways scroll at 1280, 63 px at 360 (the
+moderator's header, plan step 15). Screenshots stay in the session
+scratchpad.
+
+Suite under the gate, with the location link: 1774 tests, OK.
