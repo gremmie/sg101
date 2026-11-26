@@ -1,0 +1,18 @@
+{
+  "file": "shouts.json",
+  "model": "shoutbox.shout",
+  "shouts": 1894,
+  "authors": 332,
+  "first_shout": "2011-02-26T03:09:12Z",
+  "last_shout": "2026-11-11T08:42:57.538Z",
+  "exported": "2026-11-25",
+  "production_count_at_export": 1894,
+  "redacted_shouts": [
+    116,
+    667,
+    757,
+    1854
+  ],
+  "bytes": 620613,
+  "sha256": "bb0b691f3112e16ac2a21f68cb8926bc37f789e019f647e4e14f53b58da5ef1e"
+}
