@@ -3711,3 +3711,21 @@ to the template fails it). `deactivate_spammer`'s test keeps its other
 checks.
 
 Suite under the gate: 1776 tests, OK.
+
+## Step 11 task 03 — the tables dropped and the removal shipped — shipped 2026-11-25
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step11/task-03-drop-the-tables-and-ship.code-task.md`.
+Branch `retire-shoutbox`, on `46da51e3` (CI green).
+
+**In order, on leopard (Brian):** the re-count against the deployed code,
+**1,894**, matching the archive, so no shout was posted between the export
+and the drop; then `make prod-manage cmd="migrate shoutbox zero"`, run while
+the deployed code still had the app. `main` had nothing new to merge.
+
+**Shipped 2026-11-25.** `main` fast-forwarded to `46da51e3` (the same
+commit CI had passed on the branch), and Brian deployed (`git pull`, `make
+prod-up`; no migrations) straight after, to close the window in which
+`/shout/` answered 500 with its tables gone; CI on `main` then passed too. Checked live: `/shout/` answers
+404. Branch `retire-shoutbox` deleted, remote and local. **The shoutbox is
+gone; step 11 is complete.** With it, no template
+extends `base.html`, which step 12 deletes.
