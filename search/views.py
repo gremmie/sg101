@@ -79,7 +79,6 @@ def search(request):
     return render(request, 'search/search.html', {
         'form': form,
         'page': the_page,
-        'V3_DESIGN': True,
         })
 
 

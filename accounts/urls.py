@@ -33,13 +33,11 @@ urlpatterns += [
     path('login/',
         log_auth_failures('Login')(auth_views.LoginView.as_view(
             template_name='accounts/login.html',
-            extra_context={'V3_DESIGN': True},
         )),
         name='accounts-login'),
     path('logout/',
         auth_views.LogoutView.as_view(
             template_name='accounts/logout.html',
-            extra_context={'V3_DESIGN': True},
         ),
         name='accounts-logout'),
     path('password/',
@@ -48,7 +46,6 @@ urlpatterns += [
             # LOGIN_REDIRECT_URL is a URL name; success_url is used verbatim,
             # so it has to be reversed here (the old view did that itself).
             success_url=reverse_lazy(settings.LOGIN_REDIRECT_URL),
-            extra_context={'V3_DESIGN': True},
         ),
         name='accounts-password_change'),
     path('password/reset/',
@@ -56,7 +53,6 @@ urlpatterns += [
             template_name='accounts/password_reset.html',
             email_template_name='accounts/password_reset_email.txt',
             success_url=reverse_lazy('accounts-password_reset_sent'),
-            extra_context={'V3_DESIGN': True},
             # Without this the stock form sends the reset email itself,
             # inline in the request and outside the site's mail wrapper.
             form_class=SitePasswordResetForm,
@@ -65,7 +61,6 @@ urlpatterns += [
     path('password/reset/sent/',
         auth_views.PasswordResetDoneView.as_view(
             template_name='accounts/password_reset_sent.html',
-            extra_context={'V3_DESIGN': True},
         ),
         name='accounts-password_reset_sent'),
     # PasswordResetConfirmView answers a valid token with a redirect to this
@@ -79,13 +74,11 @@ urlpatterns += [
         auth_views.PasswordResetConfirmView.as_view(
             template_name='accounts/password_reset_confirm.html',
             success_url=reverse_lazy('accounts-password_reset_success'),
-            extra_context={'V3_DESIGN': True},
         ),
         name='accounts-password_reset_confirm'),
     path('password/reset/success/',
         auth_views.PasswordResetCompleteView.as_view(
             template_name='accounts/password_reset_complete.html',
-            extra_context={'V3_DESIGN': True},
         ),
         name='accounts-password_reset_success'),
     path('username/query/',

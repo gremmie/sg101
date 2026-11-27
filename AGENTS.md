@@ -102,9 +102,9 @@ docker compose exec web python manage.py test forums --settings=sg101.settings.d
   100 KB x 10, about three weeks, so its history before then is short. For
   spam deactivations ask the database (`UserProfile.status`), not the log.
 - **Every page extends `v3/base.html`** (Foundation 6, jQuery 3, the post
-  box's ES modules). The old `base.html` (Blueprint, jQuery 1.11) is gone.
-  The `V3_DESIGN` flag, which picks the V3 variant of the shared tags, is
-  still set by every view until it is retired.
+  box's ES modules). The old `base.html` (Blueprint, jQuery 1.11, markItUp)
+  and the `V3_DESIGN` flag that chose between the designs are gone. Templates
+  still live under `v3/` directories; the name no longer has a counterpart.
 - **The `messages` app collides with `django.contrib.messages`.** Resolved in
   `sg101/apps.py` (`DjangoMessagesConfig`), which relabels the built-in app to
   `django_messages`. Don't rename this app or its `AppConfig` without

@@ -20,9 +20,7 @@ def countdown_events(context):
         if delta.days >= 0:
             results.append((delta.days, event))
 
-    template_name = ('countdown/v3/countdown_tag.html'
-            if 'V3_DESIGN' in context else 'countdown/countdown_tag.html')
-    t = template.loader.get_template(template_name)
+    t = template.loader.get_template('countdown/v3/countdown_tag.html')
     with context.push():
         context['events'] = results
         return t.render(context.flatten())

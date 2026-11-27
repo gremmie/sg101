@@ -66,7 +66,6 @@ def manage_favorites(request):
         'page_title': 'Favorite Topics',
         'description': 'Your favorite topics are listed below.',
         'page': page,
-        'V3_DESIGN': True,
         })
 
 
@@ -78,7 +77,6 @@ def favorites_status(request, topic_id):
     return render(request, 'forums/favorite_status.html', {
         'topic': topic,
         'is_favorite': is_favorite,
-        'V3_DESIGN': True,
         })
 
 

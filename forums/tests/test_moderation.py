@@ -461,7 +461,6 @@ class ModToolPagesTests(TestCase):
     def assertV3(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'v3/base.html')
-        # The header's tags follow V3_DESIGN.
         self.assertTemplateUsed(response, 'messages/v3/unread_messages_tag.html')
 
     def assertNoActionButton(self, response):

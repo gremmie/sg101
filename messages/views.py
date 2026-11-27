@@ -77,7 +77,6 @@ def inbox(request):
         'page': page,
         'inbox_pct': pct_used,
         'outbox_pct': None,
-        'V3_DESIGN': True,
         })
 
 
@@ -95,7 +94,6 @@ def outbox(request):
         'page': page,
         'inbox_pct': None,
         'outbox_pct': pct_used,
-        'V3_DESIGN': True,
         })
 
 
@@ -111,7 +109,6 @@ def trash(request):
         'page': page,
         'inbox_pct': None,
         'outbox_pct': None,
-        'V3_DESIGN': True,
         })
 
 
@@ -135,7 +132,6 @@ def options(request):
     return render(request, 'messages/options.html', {
         'tab': 'options',
         'form': form,
-        'V3_DESIGN': True,
         })
 
 
@@ -164,7 +160,6 @@ def compose(request):
     return render(request, 'messages/compose.html', {
         'tab': 'compose',
         'compose_form': compose_form,
-        'V3_DESIGN': True,
         })
 
 
@@ -216,7 +211,6 @@ def view(request, msg_id):
         'msg': msg,
         'form': form,
         'msg_flag': msg_flag,
-        'V3_DESIGN': True,
         })
 
 
@@ -373,7 +367,6 @@ def report(request, msg_id):
     return render(request, 'messages/report_message.html', {
         'msg': msg,
         'form': form,
-        'V3_DESIGN': True,
         })
 
 

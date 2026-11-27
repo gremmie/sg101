@@ -114,7 +114,6 @@ def index(request):
     return render(request, 'forums/index.html', {
         'cats': cats,
         'feeds': feeds,
-        'V3_DESIGN': True,
         })
 
 
@@ -152,7 +151,6 @@ def forum_index(request, slug):
         'feed': feed,
         'page': page,
         'can_moderate': can_moderate,
-        'V3_DESIGN': True,
         })
 
 
@@ -231,7 +229,6 @@ def topic_index(request, id):
         'form': NewPostForm(initial={'topic_id': topic.id}),
         'is_favorite': is_favorite,
         'is_subscribed': is_subscribed,
-        'V3_DESIGN': True,
         })
 
 
@@ -311,7 +308,6 @@ def new_topic(request, slug):
     return render(request, 'forums/new_topic.html', {
         'forum': forum,
         'form': form,
-        'V3_DESIGN': True,
         })
 
 
@@ -324,7 +320,6 @@ def new_topic_thanks(request, tid):
     return render(request, 'forums/new_topic_thanks.html', {
         'forum': topic.forum,
         'topic': topic,
-        'V3_DESIGN': True,
         })
 
 
@@ -464,7 +459,6 @@ def edit_post(request, id):
         'post': post,
         'form': form,
         'can_moderate': can_moderate,
-        'V3_DESIGN': True,
         })
 
 
@@ -619,7 +613,6 @@ def new_post(request, topic_id):
         'topic': topic,
         'form': form,
         'can_post': can_post,
-        'V3_DESIGN': True,
         })
 
 
@@ -688,7 +681,6 @@ def mod_topic_move(request, id):
         'forum': topic.forum,
         'topic': topic,
         'form': form,
-        'V3_DESIGN': True,
         })
 
 
@@ -742,7 +734,6 @@ def mod_forum(request, slug):
         'forum': forum,
         'page': page,
         'form': form,
-        'V3_DESIGN': True,
         })
 
 
@@ -820,7 +811,6 @@ def mod_topic_split(request, id):
         'topic': topic,
         'posts': posts,
         'form': form,
-        'V3_DESIGN': True,
         })
 
 
@@ -843,7 +833,6 @@ def unread_topics(request):
         'title': 'Topics With Unread Posts',
         'page': page,
         'unread': True,
-        'V3_DESIGN': True,
         })
 
 
@@ -868,7 +857,6 @@ def unanswered_topics(request):
         'title': 'Unanswered Topics',
         'page': page,
         'unread': False,
-        'V3_DESIGN': True,
         })
 
 
@@ -909,7 +897,6 @@ def active_topics(request, num):
         'title': title,
         'page': page,
         'unread': False,
-        'V3_DESIGN': True,
         })
 
 
@@ -942,7 +929,6 @@ def post_ip_info(request, post_id):
     return render(request, 'forums/post_ip.html', {
         'post': post,
         'ip_users': ip_users,
-        'V3_DESIGN': True,
         })
 
 
@@ -966,7 +952,6 @@ def _user_posts(request, target_user, req_user, page_title):
     return render(request, 'forums/post_list.html', {
         'title': page_title,
         'page': page,
-        'V3_DESIGN': True,
         })
 
 

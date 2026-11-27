@@ -12,9 +12,7 @@ register = template.Library()
 
 @register.simple_tag(takes_context=True)
 def monthly_goal(context):
-    template_name = ('donations/v3/monthly_goal_tag.html'
-            if 'V3_DESIGN' in context else 'donations/monthly_goal_tag.html')
-    t = template.loader.get_template(template_name)
+    t = template.loader.get_template('donations/v3/monthly_goal_tag.html')
 
     with context.push():
         context['pct'] = Donation.objects.monthly_goal_pct()

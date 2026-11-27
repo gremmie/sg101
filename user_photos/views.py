@@ -46,7 +46,6 @@ def upload(request):
     return render(request, 'user_photos/upload_form.html', {
         'enabled': uploads_enabled,
         'form': form,
-        'V3_DESIGN': True,
         },
         status=200 if uploads_enabled else 503)
 
@@ -153,7 +152,6 @@ class GalleryView(ListView):
     def get_context_data(self, **kwargs):
         context = super(GalleryView, self).get_context_data(**kwargs)
         context['gallery_owner'] = self.gallery_owner
-        context['V3_DESIGN'] = True
         context['page'] = context['page_obj']
         return context
 
@@ -166,11 +164,6 @@ class PhotoView(DetailView):
     """A DetailView for displaying a user's photo"""
 
     model = Photo
-
-    def get_context_data(self, **kwargs):
-        context = super(PhotoView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context
 
 
 @login_required

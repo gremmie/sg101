@@ -197,11 +197,6 @@ class BirthdayBlockTestCase(TestCase):
         self.assertIn('/profile/view/paul', rendered)
         self.assertNotIn('/profile/view/eddie', rendered)
 
-    def test_render_v3(self):
-        rendered = self.TEMPLATE.render(Context({'V3_DESIGN': True}))
-        self.assertIn('/profile/view/paul', rendered)
-        self.assertNotIn('/profile/view/eddie', rendered)
-
 
 class EncodeParamsTestCase(TestCase):
     TEMPLATE = Template(

@@ -40,7 +40,6 @@ def register(request):
     return render(request, 'accounts/register.html', {
         'form': form,
         'TURNSTILE_SITE_KEY': settings.TURNSTILE_SITE_KEY,
-        'V3_DESIGN': True,
     })
 
 #######################################################################
@@ -49,9 +48,7 @@ def register_thanks(request):
     if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
-    return render(request, 'accounts/register_thanks.html', {
-        'V3_DESIGN': True,
-    })
+    return render(request, 'accounts/register_thanks.html')
 
 #######################################################################
 
@@ -71,21 +68,18 @@ def register_confirm(request, username, key):
                      ip, username)
         return render(request, 'accounts/register_failure.html', {
             'username': username,
-            'V3_DESIGN': True,
         })
 
     if not secrets.compare_digest(pending_user.key, key):
         logger.error('Accounts register_confirm [%s]: key error: %s', ip, username)
         return render(request, 'accounts/register_failure.html', {
             'username': username,
-            'V3_DESIGN': True,
         })
 
     create_new_user(pending_user, ip)
 
     return render(request, 'accounts/register_success.html', {
         'username': username,
-        'V3_DESIGN': True,
     })
 
 #######################################################################
@@ -93,7 +87,6 @@ def register_confirm(request, username, key):
 def _email_change_failure(request, reason):
     return render(request, 'accounts/email_change_failure.html', {
         'reason': reason,
-        'V3_DESIGN': True,
     })
 
 
@@ -145,7 +138,6 @@ def email_change_confirm(request, username, key):
 
     return render(request, 'accounts/email_change_success.html', {
         'new_email': user.email,
-        'V3_DESIGN': True,
     })
 
 #######################################################################
@@ -165,14 +157,8 @@ def username_query(request):
 
     return render(request, 'accounts/username_query.html', {
         'form': form,
-        'V3_DESIGN': True,
     })
 
 
 class UsernameSentView(TemplateView):
     template_name = 'accounts/username_sent.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(UsernameSentView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context

@@ -204,7 +204,6 @@ class V3PagesTestCase(TestCase):
     def assertV3(self, response):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertIs(response.context.get('V3_DESIGN'), True)
 
     def test_both_pages_are_v3_for_each_role(self):
         for user in (None, self.member, self.moderator):
@@ -253,13 +252,11 @@ class V3PagesTestCase(TestCase):
         for name in ('topic_icons_tag', 'last_post_info', 'navigation_tag'):
             with self.subTest(fragment=name):
                 self.assertTemplateUsed(response, 'forums/v3/%s.html' % name)
-                self.assertTemplateNotUsed(response, 'forums/%s.html' % name)
         self.assertContains(response, 'fi-asterisk')
         self.assertContains(response, 'class="breadcrumbs"')
 
         response = self.client.get(self.index_url)
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
         self.assertTemplateUsed(response, 'forums/v3/last_post_info.html')
 
     def topic_url(self):
@@ -290,7 +287,6 @@ class V3PagesTestCase(TestCase):
 
         used = [t.name for t in response.templates]
         self.assertEqual(used.count('forums/display_post_v3.html'), 3)
-        self.assertTemplateNotUsed(response, 'forums/display_post.html')
         # The author card, shown from medium up, and the post body.
         self.assertContains(response, 'class="sg101-card show-for-medium"',
                             count=3)
@@ -358,7 +354,6 @@ class V3PagesTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'forums/display_post_v3.html')
-        self.assertTemplateNotUsed(response, 'forums/display_post.html')
         self.assertContains(response, 'a quick reply')
 
 
@@ -381,7 +376,6 @@ class ConfirmationPagesTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.redirect_chain), 1)
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertContains(
             response, '<a href="%s">%s</a>' % (topic.get_absolute_url(), topic.name))
@@ -499,11 +493,8 @@ class TopicListsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'forums/topic_list.html')
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/forum_query.js')
         self.assertContains(response, self.NAV, count=1)
         self.assertContains(response, 'data-forum-nav', count=1)
         self.assertContains(response, '<h2>%s</h2>' % title, html=True)
@@ -614,11 +605,8 @@ class PostListsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'forums/post_list.html')
         self.assertTemplateUsed(response, 'v3/base.html')
-        self.assertIs(response.context.get('V3_DESIGN'), True)
         self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
         self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/forum_query.html')
-        self.assertTemplateNotUsed(response, 'forums/forum_query.js')
         self.assertContains(response, self.NAV, count=1)
         self.assertContains(response, 'data-forum-nav', count=1)
         self.assertContains(response, '<h2>%s</h2>' % title, html=True)
@@ -728,7 +716,6 @@ class ManageTopicsTestCase(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, 'forums/manage_topics.html')
                 self.assertTemplateUsed(response, 'v3/base.html')
-                self.assertIs(response.context.get('V3_DESIGN'), True)
                 self.assertTemplateUsed(response, 'forums/v3/navigation_tag.html')
                 self.assertTemplateUsed(response, 'forums/v3/forum_query.html')
                 self.assertContains(response, self.NAV, count=1)
@@ -1048,7 +1035,6 @@ class PostingPagesTestCase(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, 'v3/base.html')
-                self.assertIs(response.context.get('V3_DESIGN'), True)
                 self.assertContains(response, 'class="editor-video"', count=1)
                 self.assertContains(response, 'id="video-modal"', count=1)
                 self.assertContains(response, 'data-attachments', count=1)
@@ -1059,7 +1045,6 @@ class PostingPagesTestCase(TestCase):
                 for old in ('js/forums.js', 'jquery.form', 'markitup', 'jquery-ui',
                             'forums/show_form.html'):
                     self.assertNotContains(response, old)
-                self.assertTemplateNotUsed(response, 'forums/show_form.html')
                 self.assertNotContains(response, '/forums/topic/18843/')
 
     def test_new_topic_has_the_subject_and_quick_search(self):

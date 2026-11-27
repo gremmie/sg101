@@ -69,7 +69,6 @@ def spammer(request, post_id):
         'can_moderate': can_moderate,
         'can_deactivate': can_deactivate,
         'post': post,
-        'V3_DESIGN': True,
         })
 
 
@@ -90,7 +89,6 @@ def spammer_nailed(request, spammer_id):
     return render(request, 'forums/spammer_nailed.html', {
         'spammer': user,
         'success': success,
-        'V3_DESIGN': True,
         })
 
 
@@ -118,5 +116,4 @@ def stranger(request, post_id):
         'can_moderate': can_moderate,
         'can_promote': can_promote,
         'post': post,
-        'V3_DESIGN': True,
         })

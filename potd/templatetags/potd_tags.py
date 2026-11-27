@@ -9,9 +9,7 @@ register = template.Library()
 @register.simple_tag(takes_context=True)
 def photo_of_the_day(context):
     potd = Current.objects.get_current_photo()
-    template_name = ('potd/v3/potd_block.html'
-            if 'V3_DESIGN' in context else 'potd/potd_block.html')
-    t = template.loader.get_template(template_name)
+    t = template.loader.get_template('potd/v3/potd_block.html')
     with context.push():
         context['potd'] = potd
         return t.render(context.flatten())

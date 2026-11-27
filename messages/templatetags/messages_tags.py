@@ -20,9 +20,7 @@ def unread_messages(context):
     else:
         unread_count = None
     context['unread_count'] = unread_count
-    template_name = ('messages/v3/unread_messages_tag.html'
-            if 'V3_DESIGN' in context else 'messages/unread_messages_tag.html')
-    t = template.loader.get_template(template_name)
+    t = template.loader.get_template('messages/v3/unread_messages_tag.html')
     return t.render(context.flatten())
 
 

@@ -32,14 +32,8 @@ def contact_form(request):
     return render(request, 'contact/contact_form.html', {
         'form': form,
         'TURNSTILE_SITE_KEY': settings.TURNSTILE_SITE_KEY,
-        'V3_DESIGN': True,
     })
 
 
 class ContactThanksView(TemplateView):
     template_name = 'contact/contact_thanks.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(ContactThanksView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context

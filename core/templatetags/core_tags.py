@@ -172,9 +172,7 @@ def birthday_block(context):
     context['birthdays'] = birthdays
     context['today'] = today
 
-    template_name = ('core/v3/birthday_block.html'
-            if 'V3_DESIGN' in context else 'core/birthday_block.html')
-    t = template.loader.get_template(template_name)
+    t = template.loader.get_template('core/v3/birthday_block.html')
     return t.render(context.flatten())
 
 

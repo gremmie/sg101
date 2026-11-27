@@ -34,23 +34,12 @@ DATE_FMT_12 = (
 DEFAULT_TZ = ZoneInfo('US/Pacific')
 
 
-def render_fragment(context, name, values):
-    """
-    Renders the forums fragment `name` with `values`, taking the V3 variant
-    under forums/v3/ when the page is on the V3 design. The old-design pages
-    still share these fragments.
-    """
-    template_name = ('forums/v3/%s' if 'V3_DESIGN' in context
-            else 'forums/%s') % name
-    return template.loader.get_template(template_name).render(values)
-
-
-@register.simple_tag(takes_context=True)
+@register.inclusion_tag('forums/v3/last_post_info.html', takes_context=True)
 def last_post_info(context, post):
-    return render_fragment(context, 'last_post_info.html', {
+    return {
         'post': post,
         'user': context['user'],
-    })
+    }
 
 
 def get_time_prefs(user):
@@ -152,12 +141,12 @@ def forum_stats():
     }
 
 
-@register.simple_tag(takes_context=True)
-def topic_icons(context, topic):
+@register.inclusion_tag('forums/v3/topic_icons_tag.html')
+def topic_icons(topic):
     """Displays the "unread", "sticky", and "locked" icons for a given topic."""
-    return render_fragment(context, 'topic_icons_tag.html', {
+    return {
         'topic': topic,
-    })
+    }
 
 
 @register.inclusion_tag('forums/topic_page_range_tag.html')
@@ -168,8 +157,8 @@ def topic_page_range(topic):
     }
 
 
-@register.simple_tag(takes_context=True)
-def forum_navigation(context, obj, subtitle=None):
+@register.inclusion_tag('forums/v3/navigation_tag.html')
+def forum_navigation(obj, subtitle=None):
     """
     Generates forum navigation links based upon the arguments passed.
     If obj is:
@@ -195,6 +184,6 @@ def forum_navigation(context, obj, subtitle=None):
     if subtitle:
         nav_list.append(dict(name=subtitle, url=None))
 
-    return render_fragment(context, 'navigation_tag.html', {
+    return {
         'nav_list': nav_list,
-    })
+    }

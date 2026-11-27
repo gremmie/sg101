@@ -56,7 +56,6 @@ def index(request):
     return render(request, 'gcalendar/index.html', {
         'tz': tz,
         'embed_url': _embed_url(tz),
-        'V3_DESIGN': True,
         })
 
 
@@ -79,7 +78,6 @@ def add_event(request):
         'form': form,
         'is_new': True,
         'thanks_flag': thanks_flag,
-        'V3_DESIGN': True,
         })
 
 
@@ -97,7 +95,6 @@ def edit_events(request):
     return render(request, 'gcalendar/edit.html', {
         'page': page,
         'thanks_flag': bool(request.GET.get('thanks', False)),
-        'V3_DESIGN': True,
         })
 
 
@@ -126,7 +123,6 @@ def edit_event(request, event_id):
         'title': 'Change Calendar Event',
         'form': form,
         'is_new': False,
-        'V3_DESIGN': True,
         })
 
 

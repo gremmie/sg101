@@ -44,16 +44,9 @@ class ContestsTemplateTagsTestCase(TestCase):
         self.assertNotIn('Non-public Contest', rendered)
         self.assertNotIn('Past Contest', rendered)
 
-    def test_latest_contests_block_v3(self):
-        rendered = self.render_template({'V3_DESIGN': True})
-
-        self.assertIn('Active Contest', rendered)
-        self.assertNotIn('Non-public Contest', rendered)
-        self.assertNotIn('Past Contest', rendered)
-
     def test_latest_contests_block_with_no_contests(self):
         Contest.objects.all().delete()
-        rendered = self.render_template({'V3_DESIGN': True})
+        rendered = self.render_template()
 
         self.assertNotIn('Active Contest', rendered)
         self.assertNotIn('Non-public Contest', rendered)

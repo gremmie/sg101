@@ -17,20 +17,10 @@ class ContestListView(ListView):
     context_object_name = 'contests'
     queryset=Contest.public_objects.all()
 
-    def get_context_data(self, **kwargs):
-        context = super(ContestListView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context
-
 
 class ContestDetailView(DetailView):
     context_object_name = 'contest'
     queryset=Contest.public_objects.all().prefetch_related('winners')
-
-    def get_context_data(self, **kwargs):
-        context = super(ContestDetailView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context
 
 
 @require_POST

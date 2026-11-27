@@ -54,7 +54,6 @@ def index(request):
         'title': 'Main Index',
         'page': the_page,
         'section': 'main',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -72,7 +71,6 @@ def archive_index(request):
         'title': 'News Archive',
         'dates': dates,
         'section': 'archives',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -101,7 +99,6 @@ def archive(request, year, month):
         'title': 'Archive for %s, %s' % (month_name, year),
         'page': the_page,
         'section': 'archives',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -115,7 +112,6 @@ def category_index(request):
     return render(request, 'news/category_index.html', {
         'cat_list': cat_list,
         'section': 'categories',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -137,7 +133,6 @@ def category(request, slug):
         'title': 'Category: ' + category.title,
         'page': the_page,
         'section': 'categories',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -147,7 +142,6 @@ def story(request, story_id):
                 'submitter', 'category', 'forums_topic'), pk=story_id)
     return render(request, 'news/story.html', {
         'story': story,
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -165,16 +159,13 @@ def submit(request):
     return render(request, 'news/submit_news.html', {
         'add_form': add_form,
         'section': 'submit',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
 
 @login_required
 def submit_thanks(request):
-    return render(request, 'news/submit_news.html', {
-        'V3_DESIGN': True,
-        })
+    return render(request, 'news/submit_news.html')
 
 #######################################################################
 
@@ -183,7 +174,6 @@ def tags(request):
     return render(request, 'news/tag_index.html', {
         'tags': tags,
         'section': 'tags',
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -218,5 +208,4 @@ def tag(request, tag_name):
     return render(request, 'news/index.html', {
         'title': 'Stories with tag: "%s"' % tag_name,
         'page': the_page,
-        'V3_DESIGN': True,
         })

@@ -57,7 +57,6 @@ def member_list(request, type='user'):
         'page': the_page,
         'type': type,
         'num_members': num_members,
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -78,7 +77,6 @@ def my_profile(request):
         # profile page: view_profile redirects here when the subject is you.
         'pending_change': PendingEmailChange.objects.active().filter(
             user=request.user).first(),
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -103,7 +101,6 @@ def view_profile(request, username):
         'hide_email': hide_email,
         'this_is_me': False,
         'badge_collection': badge_collection,
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -139,7 +136,6 @@ def edit_profile(request):
         'profile_form': profile_form,
         'pending_change': PendingEmailChange.objects.active().filter(
             user=request.user).first(),
-        'V3_DESIGN': True,
          })
 
 #######################################################################
@@ -227,7 +223,6 @@ def change_avatar(request):
 
     return render(request, 'bio/avatar.html', {
         'form': form,
-        'V3_DESIGN': True,
          })
 
 #######################################################################
@@ -309,7 +304,6 @@ def edit_elsewhere(request):
     return render(request, 'bio/edit_elsewhere.html', {
         'sn_form': sn_form,
         'w_form': w_form,
-        'V3_DESIGN': True,
         })
 
 #######################################################################
@@ -324,5 +318,4 @@ def member_search(request):
 
     return render(request, 'bio/member_search.html', {
         'form': form,
-        'V3_DESIGN': True,
     })

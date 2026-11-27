@@ -79,7 +79,6 @@ def subscription_status(request, topic_id):
     return render(request, 'forums/subscription_status.html', {
         'topic': topic,
         'is_subscribed': is_subscribed,
-        'V3_DESIGN': True,
         })
 
 
@@ -119,5 +118,4 @@ def manage_subscriptions(request):
         'page_title': 'Topic Subscriptions',
         'description': 'The forum topics you are currently subscribed to are listed below.',
         'page': page,
-        'V3_DESIGN': True,
         })

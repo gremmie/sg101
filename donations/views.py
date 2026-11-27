@@ -97,17 +97,11 @@ def index(request):
         'item_number': settings.DONATIONS_ITEM_NUM,
         'item_anon_number': settings.DONATIONS_ITEM_ANON_NUM,
         'domain': current_site.domain,
-        'V3_DESIGN': True,
         })
 
 
 class ThanksView(TemplateView):
     template_name = 'donations/thanks.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(ThanksView, self).get_context_data(**kwargs)
-        context['V3_DESIGN'] = True
-        return context
 
 
 @csrf_exempt
