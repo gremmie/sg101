@@ -1,4 +1,6 @@
 """Browser tests for what every page wearing `v3/base.html` shares."""
+import re
+
 from django.urls import reverse
 from playwright.sync_api import expect
 
@@ -69,3 +71,63 @@ class HeaderAlignmentTestCase(BrowserTestCase):
             for name in ('search', 'banner', 'menu'):
                 with self.subTest(width=width, block=name):
                     self.assertAlmostEqual(edges[name], edges['content'], delta=1)
+
+
+class PhoneBannerTestCase(BrowserTestCase):
+    """The phone-width banner (an Orbit) shows its slides at small width.
+
+    It is hidden from medium up, so a page that loads wide measures it as 0
+    high; it has to measure again when the layout narrows.
+    """
+
+    WIDE = {'width': 1280, 'height': 900}
+    NARROW = {'width': 402, 'height': 900}
+    HEIGHTS = """() => ({
+        banner: document.querySelector('.orbit .orbit-container').getBoundingClientRect().height,
+        logo: document.querySelector('.orbit img[alt="SG101 logo"]').getBoundingClientRect().height,
+    })"""
+
+    def load(self, size):
+        self.page.set_viewport_size(size)
+        self.page.goto(self.live_server_url + reverse('polls-main'))
+
+    def wait_for_banner(self):
+        self.page.wait_for_function(
+            "document.querySelector('.orbit .orbit-container').getBoundingClientRect().height > 0",
+            timeout=3000)
+        return self.page.evaluate(self.HEIGHTS)
+
+    def test_the_banner_shows_after_the_layout_narrows(self):
+        self.load(self.WIDE)
+        self.page.set_viewport_size(self.NARROW)
+        heights = self.wait_for_banner()
+        self.assertGreater(heights['logo'], 0)
+
+    def test_loaded_at_phone_width_the_banner_is_unchanged(self):
+        self.load(self.NARROW)
+        heights = self.wait_for_banner()
+        self.assertAlmostEqual(heights['banner'], 102, delta=3)
+        self.assertGreater(heights['logo'], 0)
+        self.page.locator('.orbit .orbit-next').click()
+        expect(self.page.locator('.orbit-slide').nth(1)).to_have_class(re.compile('is-active'))
+
+    def test_the_shown_slide_stays_shown_after_narrowing_twice(self):
+        # Re-measuring hides every slide but one; it has to keep the one
+        # showing, not go back to the first.
+        self.load(self.WIDE)
+        self.page.set_viewport_size(self.NARROW)
+        self.wait_for_banner()
+        self.page.locator('.orbit .orbit-next').click()
+        second = self.page.locator('.orbit-slide').nth(1)
+        expect(second).to_have_class(re.compile('is-active'))
+        self.page.set_viewport_size(self.WIDE)
+        # Foundation debounces its resize trigger, so wait for the re-measure
+        # after narrowing before looking at the slide.
+        self.page.evaluate("""() => {
+            window.remeasured = 0;
+            $('.orbit').on('resizeme.zf.trigger', () => window.remeasured++);
+        }""")
+        self.page.set_viewport_size(self.NARROW)
+        self.page.wait_for_function('window.remeasured > 0', timeout=3000)
+        self.wait_for_banner()
+        expect(second).to_be_visible()

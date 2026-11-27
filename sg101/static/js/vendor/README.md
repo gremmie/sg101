@@ -110,3 +110,25 @@ released), with the changes below. The stylesheet is built from Foundation
   the modal nor inside it, and 6.2.0 closed the modal. The overlay guard has
   a test; the body handler's has none, as the site has no overlay-less modal
   that closes on click.
+- **Orbit measures its slides again when the window resizes**, Foundation
+  6.3.0's fix (`js/foundation.orbit.js`, unchanged through 6.5.3). Four
+  edits:
+  - `_init` gives the Orbit an id and `data-resize`, so the resize trigger
+    reaches it: `…filter(".is-active");` →
+    `…filter(".is-active"),i=this.$element[0].id||Foundation.GetYoDigits(6,"orbit");this.$element.attr({"data-resize":i,id:i});`
+  - `_events` starts by binding it:
+    `this.$element.off(".resizeme.zf.trigger").on({"resizeme.zf.trigger":this._prepareForOrbit.bind(this)})`
+  - `_prepareForOrbit` is just `this._setWrapperHeight()`: it no longer caps
+    every slide's `max-height` at the measured height.
+  - `_setWrapperHeight` hides every slide but the active one, not every
+    slide but the first (`s&&t(this).css(…)` →
+    `o.$slides.filter(".is-active")[0]!==o.$slides.eq(s)[0]&&t(this).css(…)`),
+    and its callback is optional (`e(n)` → `e&&e(n)`).
+
+  6.2.0 measured once, at initialisation. The phone banner is
+  `hide-for-medium`, so a page that loaded wide measured it as 0, capped
+  both slides at `max-height: 0`, and showed nothing when the window
+  narrowed. All four are needed: without the cap gone a re-measure reads 0
+  again, and without the active-slide check one taken while the second
+  slide shows hides it. The browser tests in `core/tests/test_browser.py`
+  (`PhoneBannerTestCase`) catch each edit's removal.
