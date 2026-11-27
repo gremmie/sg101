@@ -3891,7 +3891,7 @@ and `show_form.html` from steps 8 and 9 (Brian: drop them here).
 Suite under the gate: 1769 tests, OK (task 02 left 1770: two `_v3` twins
 removed, one new test).
 
-## Step 12 task 04 — the one-design walk — walked 2026-11-26, not yet shipped
+## Step 12 task 04 — the one-design walk and shipping — walked and shipped 2026-11-26
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step12/task-04-walk-and-ship.code-task.md`.
 Branch `retire-base-html`, on `a91278bd` (CI green).
@@ -3947,3 +3947,17 @@ the session scratchpad; some show a member's profile form.
 **#18, drafted for Brian:** narrow rather than close. What remains is
 jQuery itself, which Foundation 6.2's JavaScript needs, and jQuery UI's
 datepicker and autocomplete.
+
+**Shipped 2026-11-26.** Docs committed (`1433be5a`); `main` had nothing new
+to merge. CI green on the branch; `main` fast-forwarded to `1433be5a` and
+pushed (Brian said to, after the permission check stopped the first try);
+CI green on `main` too.
+Brian deployed (`git pull`, `make prod-up`; no migrations) and checked
+live: it looks good. **#18 narrowed, not closed** (comment posted): what
+remains is jQuery itself, which Foundation needs, and jQuery UI's
+datepicker and autocomplete. **`base.html`, its assets and `V3_DESIGN` are
+gone from production; step 12 is complete.**
+
+**Still open, carried forward:** #41 (`flag_icon`); #42; #43; #50 (a long
+link in a news story scrolls narrow phones sideways); steps 13 (phone
+banner), 14 (tablet widths) and 15 (phone header).
