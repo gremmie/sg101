@@ -3890,3 +3890,60 @@ and `show_form.html` from steps 8 and 9 (Brian: drop them here).
 
 Suite under the gate: 1769 tests, OK (task 02 left 1770: two `_v3` twins
 removed, one new test).
+
+## Step 12 task 04 — the one-design walk — walked 2026-11-26, not yet shipped
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step12/task-04-walk-and-ship.code-task.md`.
+Branch `retire-base-html`, on `a91278bd` (CI green).
+
+**Setup.** A headless Chromium probe in the `web` container against the dev
+server, the debug toolbar off. Snapshot first:
+`sg101-20261126-194237-before-step12-walk.dump`. Subjects by id: member
+`dp` (pk 32), topic 41535, story 1845, download 985, poll 20, `Tiki`'s
+profile. The member's session was made directly through
+`AUTHENTICATION_BACKENDS[0]`; every POST except the preview was aborted.
+**The six sidebar fragment caches were deleted first** (their keys didn't
+change with the tags, so a cached block would have shown what the old code
+rendered, not this branch).
+
+**The walk**: twelve pages (home, forums index, a topic, the news index, a
+story, a profile, a download, a closed poll, news submit, the calendar's
+add-event page, PM compose, the profile editor) × anonymous and member ×
+360 and 1280: 48 loads, all 200, every one on the V3 stylesheet. The seven
+that need a login send the anonymous visitor to the V3 login page.
+
+- **No request for Blueprint, `css/base.css`, markItUp, jQuery 1.11 or
+  Google's CDN** on any page. No page errors, no failed requests.
+- **The sidebar** (photo of the day, polls, contests, donations) on every
+  page at 1280; at 360 it is hidden, as designed (`show-for-medium` in
+  `v3/base.html`, unchanged).
+- **Sideways scroll: 34 px at 360 on the home page and the news index**,
+  both roles; nowhere else. **It predates this step**: the same probe on
+  `main` (`161ac3b0`) measures the same 384 px right edge. Story 1841's
+  Bandcamp link wraps, but its longest unbreakable piece is about 374 px,
+  so the column can't narrow below it: 74 px at 320, 4 at 390, none from
+  412 (Brian saw the link wrap on his phone preset). The image scales and
+  isn't the cause. Filed as #50, not fixed here.
+
+**The widgets**, as the member at 1280: the smiley picker opens and the
+preview renders (news submit's post box; poll 20 is closed and shows
+none), the datepicker opens on the profile editor, and the PM autocomplete
+suggests names. The first datepicker screenshot looked translucent; re-shot
+1.5 s later it is opaque and on top (jQuery UI's fade-in, caught mid-way).
+
+**What the walk left in the dev database: nothing.** The state record
+(every model's row count, `dp`'s `last_login`, `ForumLastVisit` and
+`TopicLastVisit` rows, the topic's views, every forum's counts and
+`last_post`, the download's hits) was diffed before and after: `dp`'s 15
+new `ForumLastVisit` rows (the forums index creates them for a member with
+none) were deleted, the topic's view count put back from 216 to 208, and
+one session left by an aborted first run deleted. After that the record
+was identical, and no session for `dp` remained. Screenshots (52) stay in
+the session scratchpad; some show a member's profile form.
+
+**The suite** was not run again: no code changed after task 03's gated run
+(1769 tests, OK), and CI passed on the same commit.
+
+**#18, drafted for Brian:** narrow rather than close. What remains is
+jQuery itself, which Foundation 6.2's JavaScript needs, and jQuery UI's
+datepicker and autocomplete.
