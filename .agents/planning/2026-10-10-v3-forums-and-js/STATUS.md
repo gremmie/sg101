@@ -4017,3 +4017,37 @@ it pauses it** (Foundation's `pauseOnHover`, default on, unchanged by the
 port; 12 s hovered stayed on slide 0, rotated within 5 s of the mouse
 leaving). With the pointer off the banner it rotated for him too. A phone
 has no hover.
+
+## Step 13 task 02 — the dev walk and Brian's phone check — walked 2026-11-26, not yet shipped
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step13/task-02-walk-and-ship.code-task.md`.
+Branch `orbit-remeasure`, on `08fa6c6e` (CI green).
+
+**The walk**, headless Chromium in the `web` container against the dev
+server, anonymous, the debug toolbar off: the home page, the forums index,
+topic 41535 and the polls page, each loaded at 1280, narrowed to 402, 375
+and 360, then widened back to 1280.
+
+| Width | Banner | Next button | Page errors |
+|---|---|---|---|
+| loaded at 1280 | hidden | — | none |
+| 402 | 101 px, logo showing | moves | none |
+| 375 | 95 px (the second slide, after Next at 402) | moves | none |
+| 360 | 89 px, logo showing | moves | none |
+| back to 1280 | hidden; the desktop logo 200 px | — | none |
+
+The same on all four pages. The only sideways scroll is the home page's 19
+px at 375 and 34 px at 360: story 1841, #50, which predates this step.
+Screenshots (16) stay in the session scratchpad. **The walk left the dev
+database as found**: the topic's one anonymous view (208 → 209) was put
+back.
+
+**Brian's phone check**, on the dev server at the Mac's LAN address (Chrome
+on the phone needed the local-network permission first): in landscape the
+banner is hidden and the desktop header shows; turned upright, without a
+reload, the banner appears above the menu; left alone, it slides to the
+next image. **The landscape-to-portrait case, inferred since step 3, is
+now seen working.**
+
+**The suite** was not run again: no code changed after task 01's gated run
+(1772 tests, OK), and CI passed on the same commit.

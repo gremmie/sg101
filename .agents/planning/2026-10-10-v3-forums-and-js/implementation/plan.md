@@ -17,7 +17,7 @@ Design: `../design/detailed-design.md`. Requirements: `../idea-honing.md`
 - [x] Step 10: The moderator pages — **ships: forums release 3**
 - [x] Step 11: Remove the shoutbox — **ships**
 - [x] Step 12: Retire `base.html`, its assets, and `V3_DESIGN` — **ships**
-- [ ] Step 13: The phone banner re-measures when the layout narrows — **ships**
+- [x] Step 13: The phone banner re-measures when the layout narrows — **ships**
 - [ ] Step 14: Tablet widths: the forum tables and the post box toolbar — **ships**
 - [ ] Step 15: The phone header fits a long username — **ships**
 
