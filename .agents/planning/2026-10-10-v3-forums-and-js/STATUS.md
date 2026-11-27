@@ -3961,3 +3961,59 @@ gone from production; step 12 is complete.**
 **Still open, carried forward:** #41 (`flag_icon`); #42; #43; #50 (a long
 link in a news story scrolls narrow phones sideways); steps 13 (phone
 banner), 14 (tablet widths) and 15 (phone header).
+
+## Step 13 task 01 — the phone banner re-measures — DONE 2026-11-26, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step13/task-01-orbit-remeasures.code-task.md`.
+Branch `orbit-remeasure`, on `e69ed9e5`.
+
+**Upstream, read first.** `js/foundation.orbit.js` at v6.2.0, v6.3.0,
+v6.3.1, v6.4.0, v6.4.3, v6.5.0 and v6.5.3 (raw from GitHub). **6.3.0 added
+the fix and 6.4 and 6.5 keep it**: `_init` sets `data-resize` and an id on
+the Orbit, and `_events` binds `resizeme.zf.trigger` to `_prepareForOrbit`.
+6.3.0 also changed the measuring: `_prepareForOrbit` stopped capping each
+slide's `max-height` (`_setSlideHeight`), and `_setWrapperHeight` hides all
+but the active slide rather than all but the first. The vendored 6.2.0
+already fires `resizeme.zf.trigger` on `[data-resize]` elements for other
+plugins.
+
+**Brian chose the port (option A)** over a `changed.zf.mediaquery` handler
+in `sg101.js`: the port is Foundation's own fix, needs no clearing step
+(nothing caps the heights any more), and fixes 6.2.0's re-measure hiding
+the shown slide. The four edits to `sg101/static/js/v3/foundation.min.js`
+are recorded as the seventh hand edit in `sg101/static/js/vendor/README.md`.
+
+**Tests**, in `core/tests/test_browser.py` (`PhoneBannerTestCase`), written
+first. Red run: the two narrowing tests timed out with the banner at 0;
+the loaded-at-402 test passed (102 px, next button works), pinning today's
+behaviour. Green: all three, and the class passed three more runs.
+
+**Measured after the port**, headless on the dev server: loaded at 1280
+and narrowed to 402, the banner is 101 px; with the second slide showing,
+widened and narrowed again, it stays the shown slide; narrowed further to
+360 the banner re-measures to 91 px (6.2.0 never re-measured at all);
+autoplay still rotates; no page error. **The hidden slide**: at re-measure
+the inactive slide measures 0, so the banner takes the active slide's
+height. The two differ by at most 2 px (89 and 91 at 360), so nothing
+visibly clips.
+
+**Mutations, each restored byte-identical (checksummed):** each of the four
+edits reverted alone.
+
+1. No `data-resize`: both narrowing tests fail.
+2. No `resizeme` binding: both fail.
+3. The `max-height` cap back: both fail (the re-measure reads 0).
+4. All-but-first hiding back: **at first nothing failed**. The slide test
+   checked visibility before Foundation's debounced resize trigger had
+   fired. It now waits for `resizeme.zf.trigger` after narrowing, and the
+   mutation fails it alone.
+
+Suite under the gate: 1772 tests, OK (1769 plus the three).
+
+**Brian's dev check:** the banner appears on narrowing without a reload.
+At first it didn't rotate for him: measured headless, the narrowed banner
+rotates every 5 s exactly as one loaded at 402, but **the mouse resting on
+it pauses it** (Foundation's `pauseOnHover`, default on, unchanged by the
+port; 12 s hovered stayed on slide 0, rotated within 5 s of the mouse
+leaving). With the pointer off the banner it rotated for him too. A phone
+has no hover.
