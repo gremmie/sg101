@@ -21,7 +21,7 @@ class NewPostForm(forms.Form):
     """Form for creating a new post."""
     body = forms.CharField(label='',
             required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+            widget=forms.Textarea)
     topic_id = forms.IntegerField(widget=forms.HiddenInput)
     topic = None
 
@@ -73,7 +73,7 @@ class NewTopicForm(forms.Form):
     """
     name = forms.CharField(label='Subject', max_length=255)
     body = forms.CharField(label='', required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+            widget=forms.Textarea)
     user = None
     forum = None
     has_mod_fields = False
@@ -138,7 +138,7 @@ class PostForm(forms.ModelForm):
     """
     body = forms.CharField(label='',
             required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+            widget=forms.Textarea)
 
     class Meta:
         model = Post

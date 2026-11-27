@@ -134,33 +134,6 @@ A user has flagged a comment for review.
 
 
 @require_POST
-def markdown_preview(request):
-    """
-    This function should be the target of an AJAX POST. It takes the 'data' parameter
-    from the POST parameters and returns a rendered HTML page from the data, which
-    is assumed to be in markdown format. The HTML page is suitable for the preview
-    function for a javascript editor such as markItUp.
-    """
-    if not request.user.is_authenticated:
-        return HttpResponseForbidden('This service is only available to logged-in users.')
-
-    data = request.POST.get('data', None)
-    if data is None:
-        return HttpResponseBadRequest('No data')
-
-    html = site_markup(data)
-    if html:
-        try:
-            image_check(html)
-        except ImageCheckError as ex:
-            html = PREVIEW_UNAVAILABLE.format(ex)
-
-    return render(request, 'comments/markdown_preview.html', {
-        'data': html,
-        })
-
-
-@require_POST
 def markdown_preview_v3(request):
     if not request.user.is_authenticated:
         return HttpResponseForbidden(

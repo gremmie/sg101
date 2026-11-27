@@ -53,11 +53,6 @@ def last_post_info(context, post):
     })
 
 
-@register.inclusion_tag('forums/pagination.html')
-def forum_page_navigation(page):
-    return {'page': page}
-
-
 def get_time_prefs(user):
     """
     Return the supplied user's time preferences in the form of a 2-tuple:

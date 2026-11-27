@@ -17,7 +17,7 @@ class AddDownloadForm(forms.ModelForm):
     title = forms.CharField(required=True,
             widget=forms.TextInput(attrs={'size': 64, 'maxlength': 64}))
     description = forms.CharField(required=False,
-            widget=forms.Textarea(attrs={'class': 'markItUp smileyTarget'}))
+            widget=forms.Textarea)
 
     def clean_description(self):
         description = self.cleaned_data['description'].strip()

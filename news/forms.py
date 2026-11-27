@@ -19,7 +19,6 @@ class AddNewsForm(forms.ModelForm):
                 'id': 'id_body',    # needed for image related js
                 'rows': 60,
                 'cols': 80,
-                'class': 'markItUp smileyTarget',
                 'style': 'height:500px',
             }))
 

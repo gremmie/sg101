@@ -8,7 +8,7 @@ from django.test import TestCase
 
 class ScriptTagsTestCase(TestCase):
     TEMPLATE = Template(
-        "{% load script_tags %}{% script_tags 'jquery-ui markitup' %}")
+        "{% load script_tags %}{% script_tags 'jquery-ui' %}")
 
     def test_script_tags(self):
         # Just making sure nothing blows up.
@@ -17,7 +17,7 @@ class ScriptTagsTestCase(TestCase):
 
 class CssTagsTestCase(TestCase):
     TEMPLATE = Template(
-        "{% load script_tags %}{% css_tags 'jquery-ui markitup' %}")
+        "{% load script_tags %}{% css_tags 'jquery-ui' %}")
 
     def test_css_tags(self):
         # Just making sure nothing blows up.
@@ -26,7 +26,7 @@ class CssTagsTestCase(TestCase):
 
 class JsTagsTestCase(TestCase):
     TEMPLATE = Template(
-        "{% load script_tags %}{% js_tags 'jquery-ui markitup tiny_mce' %}")
+        "{% load script_tags %}{% js_tags 'jquery-ui tiny_mce' %}")
 
     def test_js_tags(self):
         # Just making sure nothing blows up.

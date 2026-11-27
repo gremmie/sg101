@@ -244,7 +244,6 @@ class V3PagesTestCase(TestCase):
 
         self.assertV3(response)
         self.assertTemplateUsed(response, 'core/v3/pagination.html')
-        self.assertTemplateNotUsed(response, 'forums/pagination.html')
         self.assertNotIn('page_nav', response.context)
 
     def test_v3_pages_get_the_v3_fragments(self):
@@ -576,7 +575,6 @@ class TopicListsTestCase(TestCase):
 
         self.assertEqual(len(response.context['page'].object_list), 1)
         self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
-        self.assertTemplateNotUsed(response, 'forums/pagination.html')
         self.assertNotIn('page_nav', response.context)
         self.assertContains(response, '<ul class="pagination', count=2)
         self.assertContains(response, 'href="./?page=1"')
@@ -687,7 +685,6 @@ class PostListsTestCase(TestCase):
 
         self.assertEqual(len(response.context['page'].object_list), 1)
         self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
-        self.assertTemplateNotUsed(response, 'forums/pagination.html')
         self.assertNotIn('page_nav', response.context)
         self.assertContains(response, '<ul class="pagination', count=2)
 
@@ -779,7 +776,6 @@ class ManageTopicsTestCase(TestCase):
 
         self.assertEqual(len(response.context['page'].object_list), 1)
         self.assertTemplateUsed(response, 'core/v3/pagination.html', count=2)
-        self.assertTemplateNotUsed(response, 'forums/pagination.html')
         self.assertContains(response, '<ul class="pagination', count=2)
 
     def test_an_empty_list_says_so_and_offers_nothing_to_delete(self):

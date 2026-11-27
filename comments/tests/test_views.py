@@ -177,42 +177,6 @@ class FlagCommentTestCase(TestCase):
         self.assertGreater(flag.flag_date, now - delta)
         self.assertLess(flag.flag_date, now + delta)
 
-class MarkdownPreviewTestCase(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user('pjmoto', '', 'pw')
-        self.user.save()
-        self.client.login(username='pjmoto', password='pw')
-        self.post_url = reverse('comments-markdown_preview')
-
-    def test_not_logged_in(self):
-        self.client.logout()
-        response = self.client.post(self.post_url, data={
-            'data': 'Test',
-        })
-        self.assertEqual(response.status_code, 403)
-
-    def test_no_data_supplied(self):
-        response = self.client.post(self.post_url, data={})
-        self.assertEqual(response.status_code, 400)
-
-    def test_happy_path(self):
-        response = self.client.post(self.post_url, data={
-            'data': 'Test',
-        })
-        self.assertEqual(response.status_code, 200)
-        expected_content = (
-            '<!DOCTYPE html>\n'
-            '<html lang="en">\n'
-            '<head>\n'
-            '<meta charset="utf-8" />\n'
-            '<title>Markdown Preview</title>\n'
-            '<link rel="stylesheet" href="/static/js/markitup/templates/preview.css" />\n'
-            '</head>\n'
-            '<p>Test</p>\n'
-            '</body>\n'
-            '</html>')
-        self.assertEqual(response.content.decode().strip(), expected_content)
-
 class MarkdownPreviewV3TestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('pjmoto', '', 'pw')

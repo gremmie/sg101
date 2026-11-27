@@ -473,18 +473,8 @@ OGP_SITE_DESCRIPTION = ('The premier community website for friends and fans of'
 # These dictionaries are used by core/templatetags/script_tags, and
 # should also be used by developers when creating form media classes.
 GPP_THIRD_PARTY_JS = {
-    'imagesloaded': [
-        'js/jquery.imagesloaded.min.js',
-    ],
-    'jquery-jeditable': [
-        'js/jquery.jeditable.mini.js',
-    ],
     'jquery-ui': [
         'js/vendor/jquery-ui-1.13.3/jquery-ui.min.js',
-    ],
-    'markitup': [
-        'js/markitup/jquery.markitup1.1.14.min.js',
-        'js/markitup/sets/markdown/set.js',
     ],
     'tiny_mce': [
         'js/tiny_mce_preinit.js',
@@ -496,9 +486,5 @@ GPP_THIRD_PARTY_JS = {
 GPP_THIRD_PARTY_CSS = {
     'jquery-ui': [
         'js/vendor/jquery-ui-1.13.3/jquery-ui.min.css',
-    ],
-    'markitup': [
-        'js/markitup/skins/markitup/style.css',
-        'js/markitup/sets/markdown/style.css',
     ],
 }
