@@ -3834,3 +3834,59 @@ for `markitup`.
 
 Suite under the gate: 1770 tests, OK (task 01 left 1773; the three fewer
 are `MarkdownPreviewTestCase`'s tests).
+
+## Step 12 task 03 — the `V3_DESIGN` flag retired — DONE 2026-11-26, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step12/task-03-retire-v3-design.code-task.md`.
+Branch `retire-base-html`, on `2eca4e92`.
+
+**The tags.** The seven header and sidebar tags (`latest_contests_block`,
+`birthday_block`, `countdown_events`, `monthly_goal`, `unread_messages`,
+`latest_poll_block`, `photo_of_the_day`) load their `v3/` template
+unconditionally. `render_fragment` is gone: `last_post_info`,
+`topic_icons` and `forum_navigation` are plain `inclusion_tag`s naming
+`forums/v3/…` (only `last_post_info` still takes the context, for the
+user). `current_news` no longer puts the flag in its context.
+
+**Deleted:** the ten old variants (`contests/latest_contests_block_tag.html`,
+`core/birthday_block.html`, `countdown/countdown_tag.html`,
+`donations/monthly_goal_tag.html`, `messages/unread_messages_tag.html`,
+`polls/latest_poll_block_tag.html`, `potd/potd_block.html`,
+`forums/last_post_info.html`, `forums/navigation_tag.html`,
+`forums/topic_icons_tag.html`), and `static/icons/new.png`, which only the
+old `topic_icons_tag.html` used. `side_block.html`, which the old variants
+extended, stays: `core/mp3comp_block.html` extends it.
+
+**The flag, from 25 files:** 87 dict entries, the 7 `extra_context` kwargs
+in `accounts/urls.py`, and 13 `context['V3_DESIGN'] = True` lines. Ten of
+those were the only thing their `get_context_data` did, so the override
+went (`UsernameSentView`, `ContactThanksView`, `ContestListView`,
+`ContestDetailView`, `ThanksView`, `HomePageView`, `StoreView`,
+`PhotoView`, `ThreadIndexView`, ygroup's `PostView`). Three `render()`
+calls left with `{}` lost the argument, and bandmap's inline one too.
+
+**`git grep V3_DESIGN`** outside `.agents/` and `archive/` finds one line:
+`AGENTS.md` saying the flag is gone, rewritten for that.
+
+**Tests.** Written first: `core/tests/templatetags/test_shared_tags.py`
+renders each of the seven tags from a bare context and asserts its `v3/`
+template. Red run: 7 failures, each naming the old template. The forum
+fragments needed no new test: `V3PagesTestCase` already asserts
+`forums/v3/…` on real pages, which stopped setting the flag. Removed:
+the contests and birthday `_v3` twins (duplicates once there is one
+variant), the six asserts on `response.context['V3_DESIGN']`, and nine
+`assertTemplateNotUsed` lines for templates already gone: the old
+fragments, and `forum_query.html`, `forum_query.js`, `display_post.html`
+and `show_form.html` from steps 8 and 9 (Brian: drop them here).
+
+**Mutations, each restored byte-identical (checksummed):**
+
+1. `unread_messages` pointed back at its restored old template:
+   `test_shared_tags` fails on that tag alone.
+2. `topic_icons` pointed back at its restored old template:
+   `V3PagesTestCase.test_v3_pages_get_the_v3_fragments` fails on the
+   fragment, and on the page's `fi-asterisk`, which the old fragment
+   doesn't emit.
+
+Suite under the gate: 1769 tests, OK (task 02 left 1770: two `_v3` twins
+removed, one new test).
