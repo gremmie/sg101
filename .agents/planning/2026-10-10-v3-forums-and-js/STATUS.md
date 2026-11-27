@@ -4018,7 +4018,7 @@ port; 12 s hovered stayed on slide 0, rotated within 5 s of the mouse
 leaving). With the pointer off the banner it rotated for him too. A phone
 has no hover.
 
-## Step 13 task 02 — the dev walk and Brian's phone check — walked 2026-11-26, not yet shipped
+## Step 13 task 02 — the dev walk, Brian's phone check and shipping — walked and shipped 2026-11-26
 
 Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step13/task-02-walk-and-ship.code-task.md`.
 Branch `orbit-remeasure`, on `08fa6c6e` (CI green).
@@ -4051,3 +4051,14 @@ now seen working.**
 
 **The suite** was not run again: no code changed after task 01's gated run
 (1772 tests, OK), and CI passed on the same commit.
+
+**Shipped 2026-11-26.** Docs committed (`a25ea882`); `main` had nothing new
+to merge. CI green on the branch; `main` fast-forwarded to `a25ea882` and
+pushed on Brian's word; CI green on `main` too. Brian deployed (`git pull`, `make prod-up`; no
+migrations) and checked on his phone at surfguitar101.com: it works as
+expected. **The phone banner re-measures in production; step 13 is
+complete.**
+
+**Still open, carried forward:** #41 (`flag_icon`); #42; #43; #50 (a long
+link in a news story scrolls narrow phones sideways); steps 14 (tablet
+widths) and 15 (phone header).
