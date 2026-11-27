@@ -3782,3 +3782,55 @@ write-first test is a tag rendered from a bare `Context()`.
 **No new test, so nothing to watch fail.** Suite under the gate: 1773 tests,
 OK; step 11 ended at 1776, and the three fewer are the forums static check
 and the two forums-index navigation tests.
+
+## Step 12 task 02 — markItUp, the smiley farm and the old design's orphans removed — DONE 2026-11-26, unstaged for review
+
+Task file: `.agents/tasks/2026-10-10-v3-forums-and-js/step12/task-02-markitup-smiley-farm-and-orphans.code-task.md`.
+Branch `retire-base-html`, on `4ac5723e`.
+
+**markItUp:** `static/js/markitup/`; its `GPP_THIRD_PARTY_JS` and
+`GPP_THIRD_PARTY_CSS` entries; the old preview endpoint `/comments/markdown/`
+(`markdown_preview`, its URL, `comments/markdown_preview.html` and
+`MarkdownPreviewTestCase`), which only markItUp's `set.js` called; the
+`markItUp smileyTarget` class on the six body textareas (comments,
+downloads, news, and three in forums). The post box finds its textarea by
+tag inside `.v3-editor`, and no JS or CSS read either class. Also
+`.markItUpEditor` from `_sg101.scss`, and `gcalendar/static/css/gcalendar.css`
+with its link in `gcalendar/event.html`: the file held only markItUp
+rules, and the calendar's form never carried the class. **The rebuilt
+`main.min.css` differs from the committed one by exactly that rule**
+(`.markItUpEditor{…}` removed, the rest byte-identical, checked).
+`/comments/markdown/v3/` and its tests are unchanged.
+
+**The smiley farm:** `smiley/views.py` and `smiley/urls.py`, which held
+only the farm, the `smiley/` include in `sg101/urls.py`, the `smiley_farm`
+tag and `smiley/smiley_farm.html`. No test used them. The picker stays.
+
+**Templates nothing rendered** (each name grepped across Python, templates,
+Apache config, the Makefile and `tools/`): `core/pagination.html`,
+`core/pagination_query.html`, `core/django_pagination.html`,
+`core/rfb_block.html`, `core/social_block.html`, `ygroup/pagination.html`,
+`sopa.html` (the 2012 SOPA protest page; Brian chose delete over archive),
+and `forums/pagination.html` with its tag `forum_page_navigation`, which no
+template called. **The task file was wrong** that pages still included
+it. Its four `assertTemplateNotUsed` lines in the forum tests went with it.
+`offline.html` stays: Apache serves it in maintenance mode.
+
+**Old static files nothing loaded:** `static/js/jquery.form.min.js`,
+`jquery.cycle.all.min.js` (the home page loads `all3.0.3`),
+`jquery.imagesloaded.min.js` and `jquery.jeditable.mini.js` with their
+settings entries, and `static/css/pagination.css` and `tab-nav.css`, which
+leaves `static/css/` empty and gone. `icons/new.png` is used only by
+`forums/topic_icons_tag.html`, which task 03 deletes.
+
+**The final grep** for every removed name finds only the forum tests'
+absence assertions (`jquery.form`, `markitup`) and Foundation's internal
+`ImagesLoaded`.
+
+**No new tests** (Brian, 2026-11-26), not even `test_pruned` entries for
+the two removed URLs: they could only come back by being written again on
+purpose, which such a test wouldn't stop. `test_script_tags` no longer asks
+for `markitup`.
+
+Suite under the gate: 1770 tests, OK (task 01 left 1773; the three fewer
+are `MarkdownPreviewTestCase`'s tests).
